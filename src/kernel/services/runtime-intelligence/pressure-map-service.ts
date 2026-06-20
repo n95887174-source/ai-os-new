@@ -175,6 +175,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
     this.trendHistory = [];
     this.alerts = [];
     this.listeners = [];
+    this._initialized = false;
   }
 
   private refresh() {

@@ -51,6 +51,7 @@ const CachePanel: React.FC = () => {
   }, [loadStats]);
 
   const handleClear = async () => {
+    if (!window.confirm('Are you sure you want to clear the entire cache?')) return;
     setClearing(true);
     try {
       if (modelFilter.trim()) {

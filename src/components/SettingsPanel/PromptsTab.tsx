@@ -31,6 +31,7 @@ const PromptsTab: React.FC = () => {
   };
 
   const handleReset = () => {
+    if (!window.confirm('Are you sure you want to reset all prompts to defaults? This cannot be undone.')) return;
     resetAllPrompts();
     setPrompts(getAllPrompts());
     setResetDone(true);

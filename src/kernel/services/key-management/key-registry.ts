@@ -114,7 +114,7 @@ export class KeyRegistry {
     // committed to memory by loadKeys(); subsequent calls would risk
     // re-reading from storage layers that were intentionally excluded.
     if (isBootstrapPhase()) {
-      if (import.meta.env.DEV) console.log('[KEY_REGISTRY] reload() no-op during bootstrap phase');
+      if (import.meta.env.DEV) LOGGER.info('KeyRegistry', 'reload() no-op during bootstrap phase');
       return;
     }
 
@@ -127,14 +127,11 @@ export class KeyRegistry {
         await logDexieIdentityWithCount('KeyRegistry.reload:peek', dexieDb as unknown as Parameters<typeof logDexieIdentityWithCount>[1]);
         const dexieKeys = await dexieDb.apiKeys.toArray();
         if (dexieKeys.length === 0) {
-          console.warn(
-            '[KeyRegistry] reload() BLOCKED: registry has', this.keys.length,
-            'keys but dexie source is empty. Skipping reload to avoid overwrite.'
-          );
+          LOGGER.warn('KeyRegistry', `reload() BLOCKED: registry has ${this.keys.length} keys but dexie source is empty. Skipping reload to avoid overwrite.`);
           return;
         }
       } catch (e) {
-        console.warn('[KeyRegistry] reload() precheck failed, proceeding with loadKeys()', e);
+        LOGGER.warn('KeyRegistry', 'reload() precheck failed, proceeding with loadKeys()', { error: e });
       }
     }
 
@@ -159,7 +156,7 @@ export class KeyRegistry {
         const snapshotRaw = readBootstrapSnapshot();
         if (snapshotRaw && snapshotRaw.length > 0) {
           const snapshot: ApiKey[] = [...snapshotRaw];
-          console.log('[KEY_REGISTRY] using bootstrap snapshot ONLY, count:', snapshot.length);
+          LOGGER.info('KeyRegistry', `using bootstrap snapshot ONLY, count: ${snapshot.length}`);
           // ── STAGE: normalize (map) ──────────────────────────────
           const mapped: ApiKey[] = snapshot.map((k: ApiKey) => {
             const stats = k.stats || this.initStats();
@@ -239,7 +236,7 @@ export class KeyRegistry {
       if (droppedIds.length > 0) {
         try {
           await Promise.all(droppedIds.map(id => dexieDb.apiKeys.delete(id)));
-          if (import.meta.env.DEV) console.log(`[KeyRegistry] Cleaned ${droppedIds.length} empty-key demo entries from Dexie`);
+          if (import.meta.env.DEV) LOGGER.info('KeyRegistry', `Cleaned ${droppedIds.length} empty-key demo entries from Dexie`);
         } catch { /* non-critical */ }
       }
 
@@ -256,11 +253,7 @@ export class KeyRegistry {
       // Most likely a race during init where another service cleared dexie
       // before the snapshot was mirrored back.
       if (this.keys.length > 0 && final.length === 0) {
-        console.warn(
-          '[KeyRegistry] loadKeys() BLOCKED: registry has', this.keys.length,
-          'keys but dexie source is empty — refusing to overwrite. Trace the',
-          'caller that emptied dexie.'
-        );
+        LOGGER.warn('KeyRegistry', `loadKeys() BLOCKED: registry has ${this.keys.length} keys but dexie source is empty — refusing to overwrite. Trace the caller that emptied dexie.`);
         return;
       }
 
@@ -269,7 +262,7 @@ export class KeyRegistry {
       this.setKeysInternal('loadKeys:dexie', final);
       this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
     } catch (e) {
-      console.warn('[KeyRegistry] Failed to load API keys:', e);
+      LOGGER.warn('KeyRegistry', 'Failed to load API keys:', { error: e });
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to load API keys, using defaults', type: 'error' });
       // Only fall back to defaults if registry is currently empty. If we
       // already have keys committed, prefer to keep them over a throw-time
@@ -279,7 +272,7 @@ export class KeyRegistry {
         this.setKeysInternal('loadKeys:defaults-fallback', defaults, { force: true });
         this.traceKeyDrop(_dropRun, 'assign-defaults', 0, this.keys.length, this.keys, { error: true });
       } else {
-        console.warn('[KeyRegistry] loadKeys() threw but registry non-empty — keeping existing state');
+        LOGGER.warn('KeyRegistry', 'loadKeys() threw but registry non-empty — keeping existing state');
         this.traceKeyDrop(_dropRun, 'assign-keep-existing', this.keys.length, this.keys.length, this.keys, { error: true });
       }
     } finally {
@@ -311,10 +304,7 @@ export class KeyRegistry {
     }));
     const arrow = beforeCount > 0 || afterCount > 0 ? `${beforeCount} -> ${afterCount}` : `${afterCount}`;
     const dropMarker = afterCount === 0 && beforeCount > 0 ? '  ❌ DROP HERE' : '';
-    console.log(
-      `[KEY_TRACE] ${stage}: ${arrow}${dropMarker}`,
-      { sample: safeSample, ...extra }
-    );
+    LOGGER.info('KeyRegistry', `[KEY_TRACE] ${stage}: ${arrow}${dropMarker}`, { sample: safeSample, ...extra });
   }
 
   /**
@@ -366,7 +356,7 @@ export class KeyRegistry {
         .then(() => this.doSaveKeysWithSnapshot(snapshot))
         .then(resolve)
         .catch((err) => {
-          console.error('[KeyRegistry] saveKeys failed, resetting queue:', err);
+          LOGGER.error('KeyRegistry', 'saveKeys failed, resetting queue:', { error: err });
           this.saveQueue = Promise.resolve();
           reject(err);
         });
@@ -401,7 +391,7 @@ export class KeyRegistry {
         }
       }
     } catch (e) {
-      console.error('[KeyRegistry] IndexedDB save failed', e);
+      LOGGER.error('KeyRegistry', 'IndexedDB save failed', { error: e });
       throw e;
     }
   }
@@ -559,11 +549,7 @@ export class KeyRegistry {
 
     // Hard invariant: N > 0 → 0 is forbidden unless explicitly forced.
     if (prevCount > 0 && nextCount === 0 && !opts.force) {
-      console.warn(
-        '[KEY_REGISTRY_OVERWRITE] BLOCKED: refusing to overwrite',
-        prevCount, 'keys with empty array. Source:', source,
-        '— pass { force: true } if this is an explicit user reset.'
-      );
+      LOGGER.warn('KeyRegistry', `[KEY_REGISTRY_OVERWRITE] BLOCKED: refusing to overwrite ${prevCount} keys with empty array. Source: ${source} — pass { force: true } if this is an explicit user reset.`);
       return;
     }
 

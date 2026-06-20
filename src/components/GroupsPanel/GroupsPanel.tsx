@@ -85,6 +85,7 @@ const GroupsPanel: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (id === '__default__') return;
+    if (!window.confirm('Are you sure you want to delete this group? Associated keys will be ungrouped.')) return;
     try {
       await groupManager.deleteGroup(id);
       setDeleteConfirm(null);
@@ -94,9 +95,14 @@ const GroupsPanel: React.FC = () => {
   };
 
   const handleMoveKey = async (keyId: string, targetGroup: string) => {
-    await groupManager.assignKeyToGroup(keyId, targetGroup);
-    setMoveKeyId(null);
-    await refresh();
+    try {
+      await groupManager.assignKeyToGroup(keyId, targetGroup);
+      setMoveKeyId(null);
+      await refresh();
+    } catch (e) {
+      console.error('Failed to move key:', e);
+      alert('Failed to move key to group');
+    }
   };
 
   if (groups.length === 0) {

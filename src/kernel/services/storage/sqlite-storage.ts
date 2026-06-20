@@ -27,6 +27,8 @@ import type { ChatSession } from '../../contracts/storage/session-store';
 import type { Role } from '../../contracts/storage/roles-store';
 import type { Skill } from '../../contracts/storage/skills-store';
 import { dexieDb } from '../database-service';
+import { rootLogger } from '../logger-service';
+const LOGGER = rootLogger.child('SqliteStorage');
 const SCHEMA_VERSION = 1;
 
 const SCHEMA = `
@@ -833,7 +835,7 @@ async function seedDefaultKeys(db: SqlJsDb): Promise<void> {
 
   // Save immediately so IndexedDB has the seeded data
   await saveDbBlob(new Uint8Array(db.export()));
-    if (seedKeys.length > 0 && import.meta.env.DEV) console.log(`[Storage] seeded ${seedKeys.length} default keys`);
+    if (seedKeys.length > 0 && import.meta.env.DEV) LOGGER.info('SqliteStorage', `seeded ${seedKeys.length} default keys`);
 }
 
 // ── Shared DB channel (cross-browser sync) ─────────────────────────
@@ -862,7 +864,7 @@ export class SharedDbChannel {
       });
       if (!res.ok) throw new Error(`PUT /api/db returned ${res.status}`);
     } catch (e) {
-      console.warn('[SharedDbChannel] save failed:', e);
+      LOGGER.warn('SqliteStorage', 'SharedDbChannel: save failed', { error: e });
       throw e;
     }
   }
@@ -877,7 +879,7 @@ export class SharedDbChannel {
       if (!res.ok) throw new Error(`GET /api/db returned ${res.status}`);
       return new Uint8Array(await res.arrayBuffer());
     } catch (e) {
-      console.warn('[SharedDbChannel] load failed:', e);
+      LOGGER.warn('SqliteStorage', 'SharedDbChannel: load failed', { error: e });
       return undefined;
     }
   }
@@ -899,7 +901,7 @@ export class SharedDbChannel {
     this.ws = new WebSocket(wsUrl, protocols);
 
     this.ws.onopen = () => {
-      console.log('[SharedDbChannel] WebSocket connected');
+      LOGGER.info('SqliteStorage', 'SharedDbChannel: WebSocket connected');
     };
 
     this.ws.onmessage = (event) => {
@@ -912,7 +914,7 @@ export class SharedDbChannel {
     };
 
     this.ws.onclose = () => {
-      console.log('[SharedDbChannel] WebSocket disconnected, reconnecting in 5s');
+      LOGGER.info('SqliteStorage', 'SharedDbChannel: WebSocket disconnected, reconnecting in 5s');
       this.reconnectTimer = setTimeout(() => this.connectWs(), 5000);
     };
 
@@ -951,14 +953,14 @@ export async function enableSharedDb(serverUrl: string, timeoutMs = 500): Promis
     const res = await fetch(`${serverUrl}/api/health`, { signal: controller.signal });
     if (!res.ok) throw new Error(`health check returned ${res.status}`);
   } catch {
-    console.warn('[Storage] sync-server not available, using IndexedDB only');
+    LOGGER.warn('SqliteStorage', 'sync-server not available, using IndexedDB only');
     return false;
   } finally {
     clearTimeout(timer);
   }
 
   _sharedChannel = new SharedDbChannel(serverUrl);
-  console.log(`[Storage] cross-browser sync enabled via ${serverUrl}`);
+  LOGGER.info('SqliteStorage', `cross-browser sync enabled via ${serverUrl}`);
   return true;
 }
 
@@ -966,7 +968,7 @@ export function disableSharedDb(): void {
   if (_sharedChannel) {
     _sharedChannel.destroy();
     _sharedChannel = null;
-    console.log('[Storage] cross-browser sync disabled');
+    LOGGER.info('SqliteStorage', 'cross-browser sync disabled');
   }
 }
 
@@ -994,7 +996,7 @@ async function saveDbBlobWithSync(data: Uint8Array): Promise<void> {
     try {
       await _sharedChannel.save(data);
     } catch {
-      console.warn('[Storage] failed to push to sync-server');
+      LOGGER.warn('SqliteStorage', 'failed to push to sync-server');
     }
   }
 }
@@ -1005,13 +1007,13 @@ async function loadDbBlob(): Promise<Uint8Array | undefined> {
     try {
       const fromServer = await _sharedChannel.load();
       if (fromServer && isValidSqliteBlob(fromServer)) {
-        console.log('[Storage] loaded DB from sync-server');
+        LOGGER.info('SqliteStorage', 'loaded DB from sync-server');
         // Also cache locally in IndexedDB
-        await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(fromServer), createdAt: Date.now() }).catch(e => console.warn('[Storage] IndexedDB sync failed:', e));
+        await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(fromServer), createdAt: Date.now() }).catch(e => LOGGER.warn('SqliteStorage', 'IndexedDB sync failed', { error: e }));
         return fromServer;
       }
       if (fromServer && !isValidSqliteBlob(fromServer)) {
-        console.warn('[Storage] sync-server returned invalid SQLite blob, falling back to IndexedDB');
+        LOGGER.warn('SqliteStorage', 'sync-server returned invalid SQLite blob, falling back to IndexedDB');
       }
     } catch { /* fall through to IndexedDB */ }
   }
@@ -1020,7 +1022,7 @@ async function loadDbBlob(): Promise<Uint8Array | undefined> {
   if (record?.value && Array.isArray(record.value)) {
     const blob = new Uint8Array(record.value as number[]);
     if (isValidSqliteBlob(blob)) return blob;
-    console.warn('[Storage] IndexedDB blob is corrupt (invalid SQLite header), removing');
+    LOGGER.warn('SqliteStorage', 'IndexedDB blob is corrupt (invalid SQLite header), removing');
     // M10-04+others: Silent is fine — if delete fails, corrupt blob stays but won't be used (isValidSqliteBlob already returned false)
     await dexieDb.keyValue.delete(DB_BLOB_KEY).catch(() => {});
   }
@@ -1207,16 +1209,16 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
       if (Number(prevVersion) < SCHEMA_VERSION) {
         _dbInstance.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
         if (Number(prevVersion) > 0) {
-          console.log(`[Storage] sql.js schema migrated: v${prevVersion} → v${SCHEMA_VERSION}`);
+          LOGGER.info('SqliteStorage', `sql.js schema migrated: v${prevVersion} → v${SCHEMA_VERSION}`);
         }
       }
       await seedDefaultKeys(_dbInstance);
       startAutoPersist();
-      console.log('[Storage] sql.js initialised', { fromBlob: !!blob, byteLength: blob?.length ?? 0 });
+      LOGGER.info('SqliteStorage', 'sql.js initialised', { fromBlob: !!blob, byteLength: blob?.length ?? 0 });
       _instance = createSqliteLayer();
       return _instance;
     } catch (e) {
-      console.error('[Storage] sql.js init failed, falling back to in-memory', e);
+      LOGGER.error('SqliteStorage', 'sql.js init failed, falling back to in-memory', { error: e });
       _dbInstance = null;
       _instance = createInMemoryStorage();
       return _instance;
@@ -1240,7 +1242,7 @@ export async function persistSqliteDb(): Promise<void> {
     localStorage.setItem('sqlite_persist_ts', String(ts));
     await saveDbBlobWithSync(new Uint8Array(data));
   }).catch(err => {
-    console.error('[SQLite] persist failed, queue stays alive:', err);
+    LOGGER.error('SqliteStorage', 'persist failed, queue stays alive', { error: err });
   });
   return _persistQueue;
 }

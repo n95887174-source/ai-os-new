@@ -58,6 +58,7 @@ export class AgentHealthMonitor implements ILifecycle {
     this.unsubs = [];
     this.records = [];
     this.healthCache.clear();
+    this._started = false;
   }
 
   ingest(agentId: string, duration: number, success: boolean) {

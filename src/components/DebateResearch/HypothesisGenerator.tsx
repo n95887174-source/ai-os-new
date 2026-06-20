@@ -72,6 +72,7 @@ const HypothesisGenerator: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this hypothesis?')) return;
     await hypothesisService.remove(id);
     refresh();
   };

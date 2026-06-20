@@ -44,7 +44,7 @@ export type EventMap = {
   'debate:updated': unknown;
   'debate:started': unknown;
   'debate:argument': unknown;
-  'debate:consensus': { topic: string; consensus: string; convergenceScore: number; synthesis?: string };
+  'debate:consensus': { topic: string; consensus: string; convergenceScore: number; synthesis?: { consensus: string; coreDisagreement: string; resolvedPoints: string[]; unresolvedPoints: string[]; phase: string } };
   
   // Debate Runtime
   'debate-runtime:session:created': { sessionId: string; topic: string; topologyType: string };

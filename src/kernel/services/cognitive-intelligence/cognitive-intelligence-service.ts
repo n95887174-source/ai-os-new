@@ -26,6 +26,7 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
   private unsubs: Array<() => void> = [];
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private sessionSummaries = new Map<string, CognitiveSessionSummary>();
+  private _initialized = false;
 
   constructor(eventBus: IEventBus) {
     this.eventBus = eventBus;
@@ -36,6 +37,8 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
   }
 
   async init(): Promise<void> {
+    if (this._initialized) return;
+    this._initialized = true;
     this.unsubs.push(
       this.eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>(DebateRuntimeEvents.AGENT_RESPONDED, (d) => {
         this.updateSessionSummary(d.sessionId, {
@@ -136,6 +139,7 @@ export class CognitiveIntelligenceService implements ICognitiveIntelligenceServi
   }
 
   destroy(): void {
+    this._initialized = false;
     this.unsubs.forEach(u => u());
     this.unsubs = [];
     if (this.refreshInterval) {

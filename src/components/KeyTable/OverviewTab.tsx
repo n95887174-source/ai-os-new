@@ -184,6 +184,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   };
 
   const handleResetMetrics = async () => {
+    if (!window.confirm('Are you sure you want to reset metrics for this key?')) return;
     setResetting(true);
     try {
       if (typeof keyService.resetStats === 'function') {

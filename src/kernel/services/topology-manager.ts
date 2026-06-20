@@ -54,6 +54,7 @@ export class TopologyManager implements ILifecycle {
       this.checkInterval = null;
     }
     this.lastCloneAt.clear();
+    this._started = false;
   }
 
   setEnabled(enabled: boolean) {

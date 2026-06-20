@@ -36,6 +36,8 @@ import { eventBus } from '../events/event-bus';
 
 import { getSqliteDb } from './storage/sqlite-storage';
 import type { ApiKey } from '../types/metrics-types';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('KeyReconciler');
 
 const STORAGE_KEY = 'super_agents_api_keys';
 const KERNEL_STATE_KEY = 'super_agents_kernel_state';
@@ -342,45 +344,37 @@ function logScan(sources: Record<StorageSource, SourceSnapshot>): void {
     dexie: sources.dexie.keys.length,
     sql: sources.sql.keys.length,
   };
-  console.log('[KEY_SCAN]', counts);
-  console.log(
-    '[KEY_SCAN_REAL]',
-    {
-      localStorage: sources.localStorage.realKeys.length,
-      kernelState: sources.kernelState.realKeys.length,
-      dexie: sources.dexie.realKeys.length,
-      sql: sources.sql.realKeys.length,
-    }
-  );
-  console.log(
-    '[KEY_SCAN_PLACEHOLDERS]',
-    {
-      localStorage: sources.localStorage.placeholders.length,
-      kernelState: sources.kernelState.placeholders.length,
-      dexie: sources.dexie.placeholders.length,
-      sql: sources.sql.placeholders.length,
-    }
-  );
+  LOGGER.info('KeyReconciler', 'scan', counts);
+  LOGGER.info('KeyReconciler', 'scan_real', {
+    localStorage: sources.localStorage.realKeys.length,
+    kernelState: sources.kernelState.realKeys.length,
+    dexie: sources.dexie.realKeys.length,
+    sql: sources.sql.realKeys.length,
+  });
+  LOGGER.info('KeyReconciler', 'scan_placeholders', {
+    localStorage: sources.localStorage.placeholders.length,
+    kernelState: sources.kernelState.placeholders.length,
+    dexie: sources.dexie.placeholders.length,
+    sql: sources.sql.placeholders.length,
+  });
 }
 
 function logUnifiedView(sources: Record<StorageSource, SourceSnapshot>): void {
   if (!import.meta.env.DEV) return;
-  console.log('[KEY_UNIFIED_VIEW] localStorage sample:', safeSample(sources.localStorage.realKeys));
-  console.log('[KEY_UNIFIED_VIEW] kernelState sample:', safeSample(sources.kernelState.realKeys));
-  console.log('[KEY_UNIFIED_VIEW] dexie sample:', safeSample(sources.dexie.realKeys));
-  console.log('[KEY_UNIFIED_VIEW] sql sample:', safeSample(sources.sql.realKeys));
+  LOGGER.info('KeyReconciler', 'unified_view', { source: 'localStorage', sample: safeSample(sources.localStorage.realKeys) });
+  LOGGER.info('KeyReconciler', 'unified_view', { source: 'kernelState', sample: safeSample(sources.kernelState.realKeys) });
+  LOGGER.info('KeyReconciler', 'unified_view', { source: 'dexie', sample: safeSample(sources.dexie.realKeys) });
+  LOGGER.info('KeyReconciler', 'unified_view', { source: 'sql', sample: safeSample(sources.sql.realKeys) });
 }
 
 function logMissing(missing: ReconciliationReport['missing']): void {
   if (!import.meta.env.DEV) return;
   if (missing.length === 0) {
-    console.log('[KEY_MISSING] none — all real keys present in all sources');
+    LOGGER.info('KeyReconciler', 'missing', { missingCount: 0 });
     return;
   }
   for (const m of missing) {
-    console.log(
-      `[KEY_MISSING] id=${m.key.id} provider=${m.key.provider} from=${m.fromSource} notIn=[${m.notIn.join(', ')}]`
-    );
+    LOGGER.info('KeyReconciler', 'missing', { id: m.key.id, provider: m.key.provider, from: m.fromSource, notIn: m.notIn });
   }
 }
 
@@ -394,7 +388,7 @@ function logSync(insertedIntoDexie: number, _skipped: number, _realMerged: ApiKe
 function logFinalState(report: ReconciliationReport): void {
   if (!import.meta.env.DEV) return;
   const t = report.totals;
-  console.log('[KEY_FINAL_STATE]', {
+  LOGGER.info('KeyReconciler', 'final_state', {
     finalDexieCount: t.dexie,
     finalLocalStorageCount: t.localStorage,
     finalKernelStateCount: t.kernelState,

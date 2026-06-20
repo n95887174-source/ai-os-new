@@ -63,7 +63,7 @@ export type DomainEventMap = {
   'debate:updated': { sessionId: string; type: string; override?: unknown; event?: unknown };
   'debate:started': { sessionId: string; topic: string };
   'debate:argument': { sessionId: string; argumentId: string; content: string; speaker: string; round: number };
-  'debate:consensus': { topic: string; consensus: string; convergenceScore: number; synthesis?: string };
+  'debate:consensus': { topic: string; consensus: string; convergenceScore: number; synthesis?: { consensus: string; coreDisagreement: string; resolvedPoints: string[]; unresolvedPoints: string[]; phase: string } };
   'memory:updated': MemoryEntry[];
   'tools:updated': ToolDefinition[];
   'tool:execution:start': { toolId: string; input: unknown };

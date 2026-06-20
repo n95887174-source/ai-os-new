@@ -385,7 +385,13 @@ export class ChatService {
           || errMsg.toLowerCase().includes('quota');
         if (is429) {
           excludedProviders.add(provider);
-          const fallback = this.deps.routerService.resolveWithFallback('auto', provider, keyObj.id);
+          let excludedProvider = provider;
+          let fallback = this.deps.routerService.resolveWithFallback('auto', excludedProvider, keyObj.id);
+          for (let i = 0; i < 5 && fallback && excludedProviders.has(fallback.provider); i++) {
+            excludedProviders.add(fallback.provider);
+            excludedProvider = fallback.provider;
+            fallback = this.deps.routerService.resolveWithFallback('auto', excludedProvider, keyObj.id);
+          }
           if (fallback && !excludedProviders.has(fallback.provider)) {
             const activeKeyId = keyObj.id;
             if (activeKeyId) {

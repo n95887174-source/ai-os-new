@@ -34,6 +34,8 @@ import type { IEventBus } from '../types/interfaces';
 import type { StorageLayer } from '../contracts/storage/storage-layer';
 import type { KeyService } from './key-management/key-service';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('KeyReset');
 
 const STORAGE_KEY = 'super_agents_api_keys';
 const KERNEL_STATE_KEY = 'super_agents_kernel_state';
@@ -168,7 +170,7 @@ async function recoverSeedFromOtherSources(deps: ResetDeps): Promise<SeedSource>
       return { source: 'dexieDb.apiKeys', keys: dexieKeys };
     }
   } catch (e) {
-    console.warn('[KEY_SEED] dexieDb.apiKeys read failed:', e);
+    LOGGER.warn('KeyReset', 'dexieDb.apiKeys read failed', { error: e });
   }
 
   // Priority 2: sqlite_db_blob (for forward compat with sql.js re-enable)
@@ -246,7 +248,7 @@ export async function resetKeyStorageToCanonical(deps: ResetDeps): Promise<Reset
 
   // 1) Read the canonical source first.
   const localKeys = readLocalStorageKeys();
-  console.log('[KEY_RESET] initial sources count:', { localStorage: localKeys.length });
+  LOGGER.info('KeyReset', 'initial sources count', { localStorage: localKeys.length });
 
   // 2) If localStorage is empty/invalid, recover from secondary sources
   //    in priority order. The order is critical: the first non-empty
@@ -258,8 +260,8 @@ export async function resetKeyStorageToCanonical(deps: ResetDeps): Promise<Reset
     snapshot = await recoverSeedFromOtherSources(deps);
   }
 
-  console.log('[KEY_SEED] snapshot source selected:', snapshot.source);
-  console.log('[KEY_SEED] snapshot count before reset:', snapshot.keys.length);
+  LOGGER.info('KeyReset', 'snapshot source selected', { source: snapshot.source });
+  LOGGER.info('KeyReset', 'snapshot count before reset', { count: snapshot.keys.length });
 
   // 3) Stash the raw snapshot for safety-guard fallback.
   setSeedCache([...snapshot.keys]);
@@ -270,7 +272,7 @@ export async function resetKeyStorageToCanonical(deps: ResetDeps): Promise<Reset
 
   // 1) Deduplicate.
   const { canonical: deduped, dedupedAway } = dedupKeys(snapshot.keys);
-  console.log('[KEY_RESET] canonical count after dedupe:', deduped.length, '(removed', dedupedAway, ')');
+  LOGGER.info('KeyReset', 'canonical count after dedupe', { count: deduped.length, removed: dedupedAway });
 
   // 2) Trim to MAX_KEYS.
   const trimmed = trimToMax(deduped, MAX_KEYS);
@@ -280,7 +282,7 @@ export async function resetKeyStorageToCanonical(deps: ResetDeps): Promise<Reset
   //    the original data, even if it's a bit messy.
   let final: ApiKey[] = trimmed;
   if (final.length === 0 && snapshot.keys.length > 0) {
-    console.warn('[KEY_RESET] canonical result is empty — falling back to seed snapshot');
+    LOGGER.warn('KeyReset', 'canonical result is empty — falling back to seed snapshot');
     final = trimToMax(snapshot.keys, MAX_KEYS);
   }
 
@@ -288,16 +290,16 @@ export async function resetKeyStorageToCanonical(deps: ResetDeps): Promise<Reset
   //    do NOT overwrite the existing localStorage (avoid data loss).
   if (final.length > 0) {
     const wipedDexie = await wipeAllSources(deps);
-    console.log('[KEY_RESET] wiped dexie entries:', wipedDexie);
+    LOGGER.info('KeyReset', 'wiped dexie entries', { wipedDexie });
 
     await persistCanonical(final);
-    console.log('[KEY_RESET] persisted count:', final.length);
-    console.log('[KEY_RESET] rebuild complete');
+    LOGGER.info('KeyReset', 'persisted count', { count: final.length });
+    LOGGER.info('KeyReset', 'rebuild complete');
 
     // Clear the seed cache — the canonical is now persisted.
     setSeedCache(null);
   } else {
-    console.warn('[KEY_RESET] no data to persist — keeping current state untouched');
+    LOGGER.warn('KeyReset', 'no data to persist — keeping current state untouched');
     // Seed cache is kept for the next run.
   }
 

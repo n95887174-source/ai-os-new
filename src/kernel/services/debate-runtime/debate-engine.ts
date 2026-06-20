@@ -16,6 +16,8 @@ import type {
 } from '../../contracts/debate-runtime';
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
+import { rootLogger } from '../logger-service';
+const LOGGER = rootLogger.child('DebateEngine');
 
 interface KeyServiceLike {
   getKeys(): Array<{ id: string; key: string; provider: string; status: string; model?: string; availableModels?: string[] }>;
@@ -144,13 +146,13 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 confidence: verdict.confidence,
                 generatedAt: verdict.generatedAt,
                 roundsTotal: verdict.roundsTotal,
-                totalTokens: verdict.totalTokens,
-              }).catch(e => console.warn('[DebateEngine] verdict persist failed:', e));
+                 totalTokens: verdict.totalTokens,
+               }).catch(e => LOGGER.warn('DebateEngine', 'verdict persist failed', { error: e }));
             }
             this.deps.eventBus.emit('debate:verdict:generated', { sessionId: id, verdict });
-          }).catch(e => console.warn('[DebateEngine] LLM-enhanced verdict failed, using heuristic:', e));
+          }).catch(e => LOGGER.warn('DebateEngine', 'LLM-enhanced verdict failed, using heuristic', { error: e }));
         }
-        this.saveSnapshot(id).catch(e => console.warn('[DebateEngine] auto-checkpoint failed:', e));
+        this.saveSnapshot(id).catch(e => LOGGER.warn('DebateEngine', 'auto-checkpoint failed', { error: e }));
       }
     });
 
@@ -426,7 +428,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         this.llmFailureCount.delete(participant.agentId);
 
-        console.debug('[ENGINE_MODEL]', {
+        LOGGER.debug('DebateEngine', 'ENGINE_MODEL', {
           agent: participant.agentId,
           provider: resolvedKey.provider,
           model: modelId,
@@ -438,7 +440,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             task: 'debate',
             round: session.round,
           });
-        } catch { console.warn('[DebateEngine] Failed to record reasoning trace'); }
+        } catch { LOGGER.warn('DebateEngine', 'Failed to record reasoning trace'); }
 
         clearTimeout(timeout);
         this.sessionAbortControllers.delete(sessionId);
@@ -570,7 +572,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     this.orchestrator.abort(sessionId);
     session.transition('paused');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_PAUSED, { sessionId });
-    this.saveSnapshot(sessionId).catch(e => console.warn('[DebateEngine] pause checkpoint failed:', e));
+    this.saveSnapshot(sessionId).catch(e => LOGGER.warn('DebateEngine', 'pause checkpoint failed', { error: e }));
   }
 
   resumeSession(sessionId: string): void {
@@ -582,7 +584,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     // DR-2: Don't set phase here — startSession handles transitions
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
     this.startSession(sessionId, true).catch(e => {
-      console.error(`[DebateEngine] resumeSession failed for ${sessionId}:`, e);
+      LOGGER.error('DebateEngine', 'resumeSession failed', { sessionId, error: e });
       this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, { sessionId, error: String(e) });
     });
   }
@@ -698,12 +700,12 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
                   reasoning: verdict.reasoning, confidence: verdict.confidence,
                   generatedAt: verdict.generatedAt, roundsTotal: verdict.roundsTotal,
                   totalTokens: verdict.totalTokens,
-                }).catch(e => console.warn('[DebateEngine] verdict persist failed:', e));
+              }).catch(e => LOGGER.warn('DebateEngine', 'verdict persist failed', { error: e }));
               }
               this.deps.eventBus.emit('debate:verdict:generated', { sessionId: record.id, verdict });
-            }).catch(e => console.warn('[DebateEngine] LLM-enhanced verdict failed, using heuristic:', e));
+          }).catch(e => LOGGER.warn('DebateEngine', 'LLM-enhanced verdict failed, using heuristic', { error: e }));
           }
-          this.saveSnapshot(record.id).catch(e => console.warn('[DebateEngine] auto-checkpoint failed:', e));
+          this.saveSnapshot(record.id).catch(e => LOGGER.warn('DebateEngine', 'auto-checkpoint failed', { error: e }));
         }
       });
 
@@ -717,7 +719,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
 
       return session.snapshot();
     } catch (e) {
-      console.warn('[DebateEngine] Failed to reconstruct session from snapshot:', e);
+      LOGGER.warn('DebateEngine', 'Failed to reconstruct session from snapshot', { error: e });
       return null;
     }
   }
@@ -788,5 +790,6 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     this.timeline.destroy();
     this.orchestrator.destroy();
     if (this.cleanupInterval) { clearInterval(this.cleanupInterval); this.cleanupInterval = null; }
+    this._started = false;
   }
 }

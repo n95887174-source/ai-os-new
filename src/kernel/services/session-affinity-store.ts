@@ -64,6 +64,7 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
     this.unsubs = [];
     if (this._cleanupTimer) clearInterval(this._cleanupTimer);
     this.bindings.clear();
+    this._started = false;
   }
 
   removeKey(keyId: string): void {

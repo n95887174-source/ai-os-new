@@ -57,6 +57,7 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
   }, [branching, refresh]);
 
   const handleDelete = useCallback((id: string) => {
+    if (!window.confirm('Are you sure you want to delete this branch?')) return;
     branching.deleteBranch(id);
     refresh();
   }, [branching, refresh]);

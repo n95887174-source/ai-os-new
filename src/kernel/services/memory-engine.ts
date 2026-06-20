@@ -5,6 +5,8 @@ import { estimateTokenCount } from '../../llm/utils/token-counter';
 import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
 import type { IMemoryEngine, MemoryCapability } from '../contracts/memory';
 import { FEATURE_FLAGS } from '../contracts/feature-flags';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('MemoryEngine');
 
 const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
 
@@ -96,7 +98,7 @@ export class MemoryService implements IMemoryEngine {
       this.memories = this.memories.filter(m => (m.metadata.timestamp ?? 0) >= cutoff);
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     } catch (e) {
-      console.error('[Memory] Prune cycle failed', e);
+      LOGGER.error('MemoryEngine', 'Prune cycle failed', { error: e });
     }
   }
 
@@ -111,11 +113,11 @@ export class MemoryService implements IMemoryEngine {
     try {
       this.worker = new Worker(WORKER_URL, { type: 'module' });
       this.worker.onmessage = this.handleWorkerMessage.bind(this);
-      this.worker.onerror = (e) => console.error('[Memory] Worker error', e);
+      this.worker.onerror = (e) => LOGGER.error('MemoryEngine', 'Worker error', { error: e });
       await this.sendToWorker('init', { memories: this.memories });
       this.isDbReady = true;
     } catch (e) {
-      console.warn('[Memory] Worker not available, using local search', e);
+      LOGGER.warn('MemoryEngine', 'Worker not available, using local search', { error: e });
       this.isDbReady = false;
     }
   }
@@ -128,9 +130,9 @@ export class MemoryService implements IMemoryEngine {
     try {
       await this.sendToWorker('enable_semantic');
       this.semanticReady = true;
-      console.log('[Memory] Semantic search ready (lazy)');
+      LOGGER.info('MemoryEngine', 'Semantic search ready (lazy)');
     } catch (e) {
-      console.warn('[Memory] Semantic search unavailable:', e);
+      LOGGER.warn('MemoryEngine', 'Semantic search unavailable:', { error: e });
     }
   }
 
@@ -152,7 +154,7 @@ export class MemoryService implements IMemoryEngine {
       await this.deps.database.db.memories.update(id, { vector } as Partial<MemoryEntry>);
       const mem = this.memories.find(m => m.id === id);
       if (mem) (mem as unknown as { vector: number[] }).vector = vector;
-    } catch (e) { console.warn('[Memory] Failed to persist embedding vector', e); }
+    } catch (e) { LOGGER.warn('MemoryEngine', 'Failed to persist embedding vector', { error: e }); }
   }
 
   private sendToWorker(type: string, payload?: unknown): Promise<{ type: string; payload: unknown }> {
@@ -182,7 +184,7 @@ export class MemoryService implements IMemoryEngine {
         await this.deps.database.db.memories.bulkAdd(this.memories);
         storageAdapter.removeItem('super_agents_os_memory');
       }
-    } catch (e) { console.error('Failed to load memory mesh', e); }
+    } catch (e) { LOGGER.error('MemoryEngine', 'Failed to load memory mesh', { error: e }); }
   }
 
   private setupListeners() {
@@ -222,11 +224,11 @@ export class MemoryService implements IMemoryEngine {
       this.ensureWorker().then(() => {
         if (this.worker) {
           this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady })
-            .catch((e) => { console.warn('[Memory] Worker insert failed', e); this.semanticReady = false; });
+            .catch((e) => { LOGGER.warn('MemoryEngine', 'Worker insert failed', { error: e }); this.semanticReady = false; });
         }
-      }).catch((e) => { console.warn('[Memory] insertMemory dexie fallback failed', e); this.semanticReady = false; });
+      }).catch((e) => { LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e }); this.semanticReady = false; });
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-    } catch (e) { console.error('[Memory] Failed to persist to Dexie', e); throw e; }
+    } catch (e) { LOGGER.error('MemoryEngine', 'Failed to persist to Dexie', { error: e }); throw e; }
   }
 
   async upsert(entry: Omit<MemoryEntry, 'id'>) {
@@ -246,11 +248,11 @@ export class MemoryService implements IMemoryEngine {
       this.ensureWorker().then(() => {
         if (this.worker) {
           this.sendToWorker('upsert', { entry: newEntry, generateEmbedding: this.semanticReady })
-            .catch((e) => { console.warn('[Memory] Worker upsert failed', e); this.semanticReady = false; });
+            .catch((e) => { LOGGER.warn('MemoryEngine', 'Worker upsert failed', { error: e }); this.semanticReady = false; });
         }
-      }).catch((e) => { console.warn('[Memory] insertMemory dexie fallback failed', e); this.semanticReady = false; });
+      }).catch((e) => { LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e }); this.semanticReady = false; });
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-    } catch (e) { console.error('[Memory] Upsert failed', e); throw e; }
+    } catch (e) { LOGGER.error('MemoryEngine', 'Upsert failed', { error: e }); throw e; }
   }
 
   private computeId(content: string, source: string, type: string): string {
@@ -281,11 +283,11 @@ export class MemoryService implements IMemoryEngine {
         if (this.worker) {
           Promise.all(newEntries.map(e =>
             this.sendToWorker('insert', { entry: e, generateEmbedding: false })
-          )).catch((err) => console.warn('[Memory] Batch insert to worker failed', err));
+          )).catch((err) => LOGGER.warn('MemoryEngine', 'Batch insert to worker failed', { error: err }));
         }
-      }).catch((e) => { console.warn('[Memory] insertMemory dexie fallback failed', e); this.semanticReady = false; });
+      }).catch((e) => { LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e }); this.semanticReady = false; });
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-    } catch (e) { console.error('[Memory] Batch store failed', e); }
+    } catch (e) { LOGGER.error('MemoryEngine', 'Batch store failed', { error: e }); }
   }
 
   getMemories(limit?: number): MemoryEntry[] {
@@ -302,14 +304,14 @@ export class MemoryService implements IMemoryEngine {
     try {
       await this.deps.database.db.memories.delete(id);
     } catch (e) {
-      console.error('[Memory] Dexie delete failed — in-memory state preserved', e);
+      LOGGER.error('MemoryEngine', 'Dexie delete failed — in-memory state preserved', { error: e });
       return;
     }
     this.memories.splice(idx, 1);
     if (!this.worker) {
-      await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
+      await this.ensureWorker().catch((e) => LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }));
     }
-    if (this.worker) this.sendToWorker('remove', { id }).catch((e) => console.warn('[Memory] Worker remove failed', e));
+    if (this.worker) this.sendToWorker('remove', { id }).catch((e) => LOGGER.warn('MemoryEngine', 'Worker remove failed', { error: e }));
     this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
   }
 
@@ -320,16 +322,16 @@ export class MemoryService implements IMemoryEngine {
     try {
       await this.deps.database.db.memories.put(updated);
     } catch (e) {
-      console.error('[Memory] Dexie put failed — in-memory state preserved', e);
+      LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', { error: e });
       return;
     }
     Object.assign(entry, updated);
     if (!this.worker) {
-      await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
+      await this.ensureWorker().catch((e) => LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }));
     }
     if (this.worker) this.sendToWorker('remove', { id }).then(() =>
       this.sendToWorker('insert', { entry, generateEmbedding: false })
-    ).catch((e) => console.warn('[Memory] Worker update failed', e));
+    ).catch((e) => LOGGER.warn('MemoryEngine', 'Worker update failed', { error: e }));
     this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
   }
 
@@ -338,7 +340,7 @@ export class MemoryService implements IMemoryEngine {
     if (!query.trim()) return this.memories.slice(0, limit).map(e => ({ entry: e, score: 0, matchedOn: 'keyword' }));
 
     if (!this.worker) {
-      await this.ensureWorker().catch((e) => console.warn('[Memory] ensureWorker failed', e));
+      await this.ensureWorker().catch((e) => LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }));
     }
 
     if (this.isDbReady && this.worker) {
@@ -349,14 +351,14 @@ export class MemoryService implements IMemoryEngine {
           return ((result.payload as { hits: (MemoryEntry & { score: number })[] }).hits || []).map(h => ({
             entry: h, score: h.score, matchedOn: 'semantic' as const,
           }));
-        } catch (e) { console.warn('[Memory] Semantic search failed, falling back', e); }
+        } catch (e) { LOGGER.warn('MemoryEngine', 'Semantic search failed, falling back', { error: e }); }
       }
       try {
         const result = await this.sendToWorker('search', { query, limit });
         return ((result.payload as { hits: { document: MemoryEntry; score: number }[] }).hits || []).map(h => ({
           entry: h.document, score: h.score, matchedOn: 'keyword' as const,
         }));
-      } catch (e) { console.warn('[Memory] Worker search failed, falling back to local filter', e); }
+      } catch (e) { LOGGER.warn('MemoryEngine', 'Worker search failed, falling back to local filter', { error: e }); }
     }
 
     return this.memories
@@ -416,7 +418,7 @@ await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff)
         details.push({ type: 'importanceBelow', count: low.length });
         if (!options.dryRun) {
           for (const m of low) {
-            await this.deps.database.db.memories.delete(m.id).catch((e) => console.warn('[Memory] Failed to delete low-importance memory', e));
+            await this.deps.database.db.memories.delete(m.id).catch((e) => LOGGER.warn('MemoryEngine', 'Failed to delete low-importance memory', { error: e }));
           }
           this.memories = this.memories.filter(m => (m.metadata.importance ?? 0) >= importanceBelow);
         }
@@ -430,7 +432,7 @@ await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff)
   async clear() {
     this.memories = [];
     await this.deps.database.db.memories.clear();
-    if (this.worker) this.sendToWorker('init', { memories: [] }).catch((e) => console.warn('[Memory] Worker re-init after clear failed', e));
+    if (this.worker) this.sendToWorker('init', { memories: [] }).catch((e) => LOGGER.warn('MemoryEngine', 'Worker re-init after clear failed', { error: e }));
     this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
   }
 

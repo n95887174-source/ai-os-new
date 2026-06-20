@@ -47,6 +47,18 @@ export const KeyNoteSchema = z.object({
   author: z.string().optional(),
 });
 
+export const ApiKeyStatsSchema = z.object({
+  successCount: z.number(),
+  errorCount: z.number(),
+  totalTokens: z.number(),
+  avgLatency: z.number(),
+  minLatency: z.number(),
+  maxLatency: z.number(),
+  lastModel: z.string().optional(),
+  lastError: z.object({ message: z.string(), timestamp: z.string() }).optional(),
+  extended: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const ApiKeySchema = z.object({
   id: z.string(),
   provider: z.string(),
@@ -58,7 +70,7 @@ export const ApiKeySchema = z.object({
   model: z.string().optional(),
   status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quota_exhausted', 'invalid', 'duplicate', 'quarantined', 'probation', 'compromised']),
   availableModels: z.array(z.string()).optional(),
-  stats: z.record(z.string(), z.unknown()).optional(),
+  stats: ApiKeyStatsSchema.optional(),
   latency: z.number().optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   isEncrypted: z.boolean().optional(),
@@ -489,8 +501,8 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'agent:lifecycle:change': z.object({ id: z.string(), from: AgentLifecycleStateSchema, to: AgentLifecycleStateSchema }),
   'agent:health:change': z.object({
     id: z.string(),
-    from: z.enum(['healthy', 'degraded', 'unhealthy']),
-    to: z.enum(['healthy', 'degraded', 'unhealthy']),
+    from: z.enum(['healthy', 'degraded', 'unhealthy', 'unknown']),
+    to: z.enum(['healthy', 'degraded', 'unhealthy', 'unknown']),
     errorRate: z.number(),
     consecutiveErrors: z.number(),
   }),

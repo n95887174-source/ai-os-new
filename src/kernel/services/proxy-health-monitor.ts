@@ -76,6 +76,7 @@ class ProxyHealthMonitor {
       clearInterval(timer);
     }
     this.timers.clear();
+    this._started = false;
     LOGGER.info('ProxyMonitor', 'Monitoring stopped');
   }
 

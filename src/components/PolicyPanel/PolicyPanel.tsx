@@ -185,7 +185,7 @@ const PolicyPanel: React.FC = () => {
           {showViolations ? <EyeOff size={16} /> : <Eye size={16} />}           {showViolations ? t('policy.hide_violations') : t('policy.show_violations', { count: stats?.activeViolations ?? 0 })}
         </button>
         {violations.length > 0 && (
-          <button onClick={() => { policyService.clearViolations(); refresh(); }}
+          <button onClick={() => { if (!window.confirm('Are you sure you want to clear all policy violations?')) return; policyService.clearViolations(); refresh(); }}
             style={{ padding: '0.85rem 1.25rem', borderRadius: 12, fontWeight: 700, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Trash2 size={16} /> {t('policy.clear_all')}
           </button>

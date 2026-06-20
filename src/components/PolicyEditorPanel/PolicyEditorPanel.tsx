@@ -293,6 +293,7 @@ const PolicyEditorPanel: React.FC = () => {
   }, [editing, refresh, showToast]);
 
   const handleDelete = useCallback((id: string) => {
+    if (!window.confirm('Are you sure you want to delete this rule? This cannot be undone.')) return;
     debatePolicyEngine.removeRule(id);
     showToast('Rule deleted');
     if (selectedId === id) { setSelectedId(null); setEditing(null); }
@@ -331,6 +332,7 @@ const PolicyEditorPanel: React.FC = () => {
   }, [jsonOutput, refresh, showToast]);
 
   const handleReset = useCallback(() => {
+    if (!window.confirm('Are you sure you want to reset all debate rules? This cannot be undone.')) return;
     debatePolicyEngine.reset();
     showToast('All rules cleared');
     setSelectedId(null);

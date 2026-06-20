@@ -337,23 +337,22 @@ class SchedulerService {
 
     // Try up to 366 days ahead for annual patterns
     for (let d = 0; d <= 366; d++) {
-      const candidate = new Date(now);
-      candidate.setDate(candidate.getDate() + d);
-      candidate.setSeconds(0, 0);
+      for (let h = 0; h < 24; h++) {
+        if (!this.cronMatchesField(h, parts.hour)) continue;
+        for (let m = 0; m < 60; m++) {
+          if (!this.cronMatchesField(m, parts.minute)) continue;
 
-      const m = parts.minute;
-      const h = parts.hour;
-      const dom = parts.dayOfMonth;
-      const month = parts.month;
-      const dow = parts.dayOfWeek;
+          const candidate = new Date(now);
+          candidate.setDate(candidate.getDate() + d);
+          candidate.setHours(h, m, 0, 0);
 
-      if (!this.cronMatchesField(candidate.getMinutes(), m)) continue;
-      if (!this.cronMatchesField(candidate.getHours(), h)) continue;
-      if (!this.cronMatchesField(candidate.getDate(), dom)) continue;
-      if (!this.cronMatchesField(candidate.getMonth() + 1, month)) continue;
-      if (!this.cronMatchesField(candidate.getDay(), dow)) continue;
+          if (!this.cronMatchesField(candidate.getDate(), parts.dayOfMonth)) continue;
+          if (!this.cronMatchesField(candidate.getMonth() + 1, parts.month)) continue;
+          if (!this.cronMatchesField(candidate.getDay(), parts.dayOfWeek)) continue;
 
-      if (candidate.getTime() > now.getTime()) return candidate.getTime();
+          if (candidate.getTime() > now.getTime()) return candidate.getTime();
+        }
+      }
     }
 
     // Fallback: next hour

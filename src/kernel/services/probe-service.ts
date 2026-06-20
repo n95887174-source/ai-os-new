@@ -91,6 +91,7 @@ export class ProbeService implements IProbeService, ILifecycle {
       clearInterval(this.probeIntervalId);
       this.probeIntervalId = null;
     }
+    this._started = false;
   }
 
   async probeKey(keyId: string, model?: string): Promise<ProbeResult> {

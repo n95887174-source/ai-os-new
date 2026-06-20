@@ -78,6 +78,7 @@ class KeyRotationPolicyService {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
     if (this.intervalId) clearInterval(this.intervalId);
+    this.initialized = false;
   }
 
   private setupEventListeners(): void {

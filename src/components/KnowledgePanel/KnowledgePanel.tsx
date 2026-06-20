@@ -134,6 +134,7 @@ const KnowledgePanel: React.FC = () => {
   };
 
   const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this memory node?')) return;
     if (!selectedNode) return;
     try {
       await memoryService.deleteMemory(selectedNode.id as string);

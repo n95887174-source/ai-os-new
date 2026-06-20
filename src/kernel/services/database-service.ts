@@ -8,6 +8,9 @@ import type { Role } from '../types/role-types';
 import { MemoryEntrySchema, CognitiveTraceSchema, ChatSessionSchema, KeyNoteSchema, RoleSchema, ExecutionTraceSchema, CognitiveSkillSchema, ConnectorSchema, KeyValueSchema, ApiKeySchema } from '../../types/schemas';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('DatabaseService');
+
 export interface QueryResult<T> {
   rows: T[];
   affectedRows: number;
@@ -163,7 +166,7 @@ export class SuperAgentsDB extends Dexie {
           return true; // Allow valid data
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          console.error(`[DatabaseService] ${label} validation FAILED — rejecting write: ${msg}`);
+          LOGGER.error('DatabaseService', `${label} validation FAILED — rejecting write: ${msg}`);
           return false; // Reject invalid data
         }
       };
@@ -174,7 +177,7 @@ export class SuperAgentsDB extends Dexie {
         MemoryEntrySchema.parse({ ...obj, ...mods });
         return undefined; // Allow
       } catch (e) {
-        console.error('[DatabaseService] MemoryEntry update validation FAILED:', e);
+        LOGGER.error('DatabaseService', 'MemoryEntry update validation FAILED', { error: e });
         return false; // Reject
       }
     });
@@ -185,7 +188,7 @@ export class SuperAgentsDB extends Dexie {
         CognitiveTraceSchema.parse({ ...obj, ...mods });
         return undefined;
       } catch (e) {
-        console.error('[DatabaseService] CognitiveTrace update validation FAILED:', e);
+        LOGGER.error('DatabaseService', 'CognitiveTrace update validation FAILED', { error: e });
         return false;
       }
     });
@@ -196,7 +199,7 @@ export class SuperAgentsDB extends Dexie {
         ChatSessionSchema.parse({ ...obj, ...mods });
         return undefined;
       } catch (e) {
-        console.error('[DatabaseService] ChatSession update validation FAILED:', e);
+        LOGGER.error('DatabaseService', 'ChatSession update validation FAILED', { error: e });
         return false;
       }
     });
@@ -204,43 +207,43 @@ export class SuperAgentsDB extends Dexie {
     this.notes.hook('creating', rejectHook(KeyNoteSchema, 'KeyNote'));
     this.notes.hook('updating', (mods, _primKey, obj) => {
       try { KeyNoteSchema.parse({ ...obj, ...mods }); return undefined; }
-      catch { console.error(`[DatabaseService] KeyNote update validation FAILED`); return false; }
+      catch { LOGGER.error('DatabaseService', 'KeyNote update validation FAILED'); return false; }
     });
 
     this.apiKeys.hook('creating', rejectHook(ApiKeySchema, 'ApiKey'));
     this.apiKeys.hook('updating', (mods, _primKey, obj) => {
       try { ApiKeySchema.parse({ ...obj, ...mods }); return undefined; }
-      catch { console.error(`[DatabaseService] ApiKey update validation FAILED`); return false; }
+      catch { LOGGER.error('DatabaseService', 'ApiKey update validation FAILED'); return false; }
     });
 
     this.roles.hook('creating', rejectHook(RoleSchema, 'Role'));
     this.roles.hook('updating', (mods, _primKey, obj) => {
       try { RoleSchema.parse({ ...obj, ...mods }); return undefined; }
-      catch { console.error(`[DatabaseService] Role update validation FAILED`); return false; }
+      catch { LOGGER.error('DatabaseService', 'Role update validation FAILED'); return false; }
     });
 
     this.traces.hook('creating', rejectHook(ExecutionTraceSchema, 'ExecutionTrace'));
     this.traces.hook('updating', (mods, _primKey, obj) => {
       try { ExecutionTraceSchema.parse({ ...obj, ...mods }); return undefined; }
-      catch { console.error(`[DatabaseService] ExecutionTrace update validation FAILED`); return false; }
+      catch { LOGGER.error('DatabaseService', 'ExecutionTrace update validation FAILED'); return false; }
     });
 
     this.skills.hook('creating', rejectHook(CognitiveSkillSchema, 'CognitiveSkill'));
     this.skills.hook('updating', (mods, _primKey, obj) => {
       try { CognitiveSkillSchema.parse({ ...obj, ...mods }); return undefined; }
-      catch { console.error(`[DatabaseService] CognitiveSkill update validation FAILED`); return false; }
+      catch { LOGGER.error('DatabaseService', 'CognitiveSkill update validation FAILED'); return false; }
     });
 
     this.connectors.hook('creating', rejectHook(ConnectorSchema, 'Connector'));
     this.connectors.hook('updating', (mods, _primKey, obj) => {
       try { ConnectorSchema.parse({ ...obj, ...mods }); return undefined; }
-      catch { console.error(`[DatabaseService] Connector update validation FAILED`); return false; }
+      catch { LOGGER.error('DatabaseService', 'Connector update validation FAILED'); return false; }
     });
 
     this.keyValue.hook('creating', rejectHook(KeyValueSchema, 'KeyValue'));
     this.keyValue.hook('updating', (mods, _primKey, obj) => {
       try { KeyValueSchema.parse({ ...obj, ...mods }); return undefined; }
-      catch { console.error(`[DatabaseService] KeyValue update validation FAILED`); return false; }
+      catch { LOGGER.error('DatabaseService', 'KeyValue update validation FAILED'); return false; }
     });
 
     this.validateMigrations();
@@ -265,12 +268,12 @@ export class SuperAgentsDB extends Dexie {
       const curr = versionDefs[i];
       for (const table of Object.keys(prev.tables)) {
         if (!curr.tables[table]) {
-          console.warn(`[DatabaseService] Migration v${prev.v}→v${curr.v}: table '${table}' dropped. Data loss possible if upgrade handler missing.`);
+          LOGGER.warn('DatabaseService', `Migration v${prev.v}→v${curr.v}: table '${table}' dropped. Data loss possible if upgrade handler missing.`);
         } else if (prev.tables[table] !== curr.tables[table]) {
           const prevIdxs = prev.tables[table].split(', ').sort().join(', ');
           const currIdxs = curr.tables[table].split(', ').sort().join(', ');
           if (prevIdxs !== currIdxs) {
-            console.info(`[DatabaseService] Migration v${prev.v}→v${curr.v}: table '${table}' indexes changed: [${prev.tables[table]}] → [${curr.tables[table]}]`);
+            LOGGER.info('DatabaseService', `Migration v${prev.v}→v${curr.v}: table '${table}' indexes changed: [${prev.tables[table]}] → [${curr.tables[table]}]`);
           }
         }
       }
@@ -309,7 +312,7 @@ export function getDexieDb(): SuperAgentsDB {
     import('./dexie-identity').then((mod) => {
       void mod.anchorDexieInstance('database-service:singleton', _dexieDb! as unknown as Parameters<typeof mod.anchorDexieInstance>[1]);
     }).catch((e) => {
-      console.warn('[database-service] failed to anchor dexie singleton', e);
+      LOGGER.warn('DatabaseService', 'failed to anchor dexie singleton', { error: e });
     });
   }
   return _dexieDb;
@@ -327,15 +330,12 @@ export const dexieDb = new Proxy({} as SuperAgentsDB, {
 try {
   const probe = (globalThis as unknown as { __DEXIE_INSTANCE__?: unknown }).__DEXIE_INSTANCE__;
   if (probe !== undefined && probe !== dexieDb) {
-    console.error(
-      '[DEXIE_IDENTITY_FATAL] globalThis.__DEXIE_INSTANCE__ is already set to a',
-      'different instance BEFORE database-service.ts loaded. Module ordering is',
-      'broken — check that database-service.ts is imported before any other',
-      'module that uses dexieDb.'
+    LOGGER.error('DatabaseService',
+      'globalThis.__DEXIE_INSTANCE__ is already set to a different instance BEFORE database-service.ts loaded. Module ordering is broken — check that database-service.ts is imported before any other module that uses dexieDb.'
     );
   }
 } catch (e) {
-  console.warn('[database-service] globalThis self-test failed', e);
+  LOGGER.warn('DatabaseService', 'globalThis self-test failed', { error: e });
 }
 
 export class DatabaseService {
@@ -359,7 +359,7 @@ export class DatabaseService {
     if (!record) return null;
     // N-07: log instead of silently dropping uncloneable values
     try { structuredClone(record.value); } catch (e) {
-      console.warn(`[DatabaseService] getKv(${id}): value not cloneable — returning directly`, e);
+      LOGGER.warn('DatabaseService', `getKv(${id}): value not cloneable — returning directly`, { error: e });
     }
     return record.value as T;
   }
@@ -425,23 +425,23 @@ export class DatabaseService {
             const keyValue = typeof row.key === 'string' ? row.key : '';
             const isMasked = keyValue === '****' || (keyValue.length > 8 && keyValue.includes('****'));
             if (isMasked) {
-              console.warn(`[DatabaseService] importFromJson: skipping masked API key "${row.id ?? row.label ?? 'unknown'}" — would overwrite real key with ****`);
+              LOGGER.warn('DatabaseService', `importFromJson: skipping masked API key "${row.id ?? row.label ?? 'unknown'}" — would overwrite real key with ****`);
             }
             return !isMasked;
           });
           if (valid.length !== before) {
-            console.warn(`[DatabaseService] importFromJson: filtered ${before - valid.length} masked apiKeys to protect existing real keys`);
+            LOGGER.warn('DatabaseService', `importFromJson: filtered ${before - valid.length} masked apiKeys to protect existing real keys`);
           }
         }
 
         if (valid.length !== rows.length) {
-          console.warn(`[DatabaseService] importFromJson: filtered ${rows.length - valid.length} invalid rows from ${tableName}`);
+          LOGGER.warn('DatabaseService', `importFromJson: filtered ${rows.length - valid.length} invalid rows from ${tableName}`);
         }
         if (valid.length > 0) {
           try {
             await (table as Table).bulkPut(valid);
           } catch (addErr) {
-            console.error(`[DatabaseService] importFromJson: bulkPut failed for ${tableName}, transaction will rollback`, addErr);
+            LOGGER.error('DatabaseService', `importFromJson: bulkPut failed for ${tableName}, transaction will rollback`, { error: addErr });
             throw addErr;
           }
         }

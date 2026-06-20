@@ -2,6 +2,8 @@
 import { CONFIG } from './config-registry';
 import { estimateTokens } from '../utils/tokenEstimate';
 import type { ICostCalculator, BudgetInfo, ProviderBudget, CostEstimate } from '../contracts/pricing';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('PricingService');
 
 const FALLBACK_PRICING: Record<string, { input: number; output: number; provider?: string }> = {
   'gpt-4o': { input: 2.50, output: 10.00, provider: 'openai' },
@@ -85,13 +87,13 @@ export class PricingService implements ICostCalculator {
         data: this.pricingData,
         timestamp: Date.now(),
       });
-    } catch (e) { console.warn('[Pricing] Failed to save cache', e); }
+    } catch (e) { LOGGER.warn('PricingService', 'Failed to save cache', { error: e }); }
   }
 
   protected async saveHistory() {
     try {
       await this.deps.database.setKv('super_agents_cost_history', this.costHistory);
-    } catch (e) { console.warn('[Pricing] Failed to save history', e); }
+    } catch (e) { LOGGER.warn('PricingService', 'Failed to save history', { error: e }); }
   }
 
   private async loadCache() {
@@ -101,21 +103,21 @@ export class PricingService implements ICostCalculator {
         this.pricingData = { ...FALLBACK_PRICING, ...cached.data };
         this.lastFetch = cached.timestamp;
       }
-    } catch (e) { console.warn('[Pricing] Failed to load pricing cache', e); }
+    } catch (e) { LOGGER.warn('PricingService', 'Failed to load pricing cache', { error: e }); }
   }
 
   private async loadBudget() {
     try {
       const saved = await this.deps.database.getKv<{ monthlyBudget: number }>(BUDGET_KEY);
       if (saved) this.monthlyBudget = saved.monthlyBudget;
-    } catch (e) { console.warn('[Pricing] Failed to load budget', e); }
+    } catch (e) { LOGGER.warn('PricingService', 'Failed to load budget', { error: e }); }
   }
 
   private async loadProviderBudgets() {
     try {
       const saved = await this.deps.database.getKv<Record<string, number>>('provider_budgets');
       if (saved) this.providerBudgets = saved;
-    } catch (e) { console.warn('[Pricing] Failed to load provider budgets', e); }
+    } catch (e) { LOGGER.warn('PricingService', 'Failed to load provider budgets', { error: e }); }
   }
 
   private async loadHistory() {
@@ -134,18 +136,18 @@ export class PricingService implements ICostCalculator {
           timestamp: c.timestamp,
         }));
       }
-    } catch (e) { console.warn('[Pricing] Failed to load cost history', e); }
+    } catch (e) { LOGGER.warn('PricingService', 'Failed to load cost history', { error: e }); }
   }
 
   private async loadOverrides() {
     try {
       const saved = await this.deps.database.getKv<Record<string, ModelPricing>>(OVERRIDES_KEY);
       if (saved) this.userOverrides = saved;
-    } catch (e) { console.warn('[Pricing] Failed to load overrides', e); }
+    } catch (e) { LOGGER.warn('PricingService', 'Failed to load overrides', { error: e }); }
   }
 
   private async saveOverrides() {
-    try { await this.deps.database.setKv(OVERRIDES_KEY, this.userOverrides); } catch (e) { console.warn('[Pricing] Failed to save overrides', e); }
+    try { await this.deps.database.setKv(OVERRIDES_KEY, this.userOverrides);     } catch (e) { LOGGER.warn('PricingService', 'Failed to save overrides', { error: e }); }
   }
 
   protected lookup(model: string): { input: number; output: number; provider?: string } {
@@ -307,13 +309,13 @@ export class PricingService implements ICostCalculator {
   setMonthlyBudget(budget: number) {
     this.budgetInfoCache = null;
     this.monthlyBudget = budget;
-    this.deps.database.setKv(BUDGET_KEY, { monthlyBudget: budget }).catch(e => console.warn('[Pricing] Persist budget failed:', e));
+    this.deps.database.setKv(BUDGET_KEY, { monthlyBudget: budget }).catch(e => LOGGER.warn('PricingService', 'Persist budget failed', { error: e }));
   }
 
   setProviderBudget(provider: string, budget: number) {
     this.budgetInfoCache = null;
     this.providerBudgets[provider.toLowerCase()] = budget;
-    this.deps.database.setKv('provider_budgets', this.providerBudgets).catch(e => console.warn('[Pricing] Persist provider budget failed:', e));
+    this.deps.database.setKv('provider_budgets', this.providerBudgets).catch(e => LOGGER.warn('PricingService', 'Persist provider budget failed', { error: e }));
   }
 
   getCostHistory(limit = 50): CostEstimate[] {
@@ -342,7 +344,7 @@ export class PricingService implements ICostCalculator {
         this.prefixCache.clear();
         await this.saveCache();
         this.deps.eventBus.emit(EVENTS.PRICING_UPDATED, this.pricingData);
-      } catch { console.warn('[Pricing] OpenRouter sync failed, using fallback prices'); }
+      } catch { LOGGER.warn('PricingService', 'OpenRouter sync failed, using fallback prices'); }
       finally { this.fetchPromise = null; }
     })();
     return this.fetchPromise;

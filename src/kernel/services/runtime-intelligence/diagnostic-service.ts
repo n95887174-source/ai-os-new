@@ -162,5 +162,6 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
     this.providerDiagnostics.clear();
     this.lastSystemDiagnostic = null;
     this.listeners = [];
+    this._initialized = false;
   }
 }

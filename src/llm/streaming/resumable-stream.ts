@@ -458,6 +458,7 @@ class ResumableStream {
         latency: state.endTime - state.startTime,
       });
       } finally {
+        reader?.cancel('Provider switched').catch(() => {});
         clearTimeout(timeoutId);
       }
     })();

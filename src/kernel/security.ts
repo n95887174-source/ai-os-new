@@ -1,5 +1,7 @@
 import type { ISecurityService } from './types/interfaces';
 import { storageAdapter } from './storage-adapter-instance';
+import { rootLogger } from './services/logger-service';
+const LOGGER = rootLogger.child('Security');
 
 export class SecurityService implements ISecurityService {
   private masterKey: CryptoKey | null = null;
@@ -75,7 +77,7 @@ export class SecurityService implements ISecurityService {
       if (!msg.includes('Too many failed attempts')) {
         this.recordFailedAttempt(userId);
       }
-      console.error('[Security] Failed to derive key:', e);
+      LOGGER.error('Security', 'Failed to derive key', { error: e });
       return false;
     }
   }
@@ -127,18 +129,18 @@ export class SecurityService implements ISecurityService {
       try {
         storageAdapter.setItem(saltKey, hex);
       } catch (e) {
-        console.error('[Security] Failed to persist salt after re-encryption, attempting rollback:', e);
+        LOGGER.error('Security', 'Failed to persist salt after re-encryption, attempting rollback', { error: e });
         try {
           await reEncrypt(encryptWithOld);
           if (previousSalt) storageAdapter.setItem(saltKey, previousSalt);
           else storageAdapter.removeItem(saltKey);
         } catch (rollbackError) {
-          console.error('[Security] Password change rollback failed:', rollbackError);
+          LOGGER.error('Security', 'Password change rollback failed', { error: rollbackError });
         }
         return false;
       }
     } else {
-      console.warn('[Security] changePassword called without reEncrypt — previously encrypted data will become unrecoverable after this operation');
+      LOGGER.warn('Security', 'changePassword called without reEncrypt — previously encrypted data will become unrecoverable after this operation');
       storageAdapter.setItem(saltKey, hex);
     }
 
@@ -166,7 +168,7 @@ export class SecurityService implements ISecurityService {
       }
       return btoa(binary);
     } catch (e) {
-      console.error('[Security] Encryption with specific key failed:', e);
+      LOGGER.error('Security', 'Encryption with specific key failed', { error: e });
       return null;
     }
   }
@@ -192,7 +194,7 @@ export class SecurityService implements ISecurityService {
       }
       return btoa(binary);
     } catch (e) {
-      console.error('[Security] Encryption failed:', e);
+      LOGGER.error('Security', 'Encryption failed', { error: e });
       return null;
     }
   }
@@ -212,7 +214,7 @@ export class SecurityService implements ISecurityService {
 
       return new TextDecoder().decode(decrypted);
     } catch (e) {
-      console.error('[Security] Decryption failed:', e);
+      LOGGER.error('Security', 'Decryption failed', { error: e });
       return null;
     }
   }

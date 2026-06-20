@@ -21,6 +21,7 @@ export const ResearchSchedulerPanel: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this schedule?')) return;
     await researchSchedulerService.delete(id);
     setSchedules(researchSchedulerService.getAll());
   };
