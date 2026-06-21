@@ -181,7 +181,7 @@ export class DebateService {
       buildHistoryMessages: (id) => this.buildHistoryMessages(id),
     });
     this.runtimeAdapter = new DebateRuntimeAdapter(
-      deps,
+      { eventBus: deps.eventBus },
       {
         getActiveSession: () => this.activeSession,
         setActiveSession: (s) => { this.activeSession = s; },
@@ -663,8 +663,13 @@ export class DebateService {
         payload: a, 
         timestamp: a.timestamp 
       }));
-      const verdict = this.conclusionEngine.generateVerdict(this.activeSession as import('../contracts/debate-runtime').DebateSessionSnapshot, timeline);
-      this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, { sessionId: this.activeSession.id, verdict });
+      let verdict: import('../contracts/debate-types').DebateVerdict | undefined;
+      try {
+        verdict = this.conclusionEngine.generateVerdict(this.activeSession as unknown as import('../contracts/debate-runtime').DebateSessionSnapshot, timeline);
+      } catch (e) {
+        LOGGER.warn('DebateService', 'Verdict generation failed (legacy stop path)', { error: e });
+      }
+      if (verdict) this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, { sessionId: this.activeSession.id, verdict });
       
       this.clearTimeout();
       this.saveToHistory();

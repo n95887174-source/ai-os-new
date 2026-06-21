@@ -21,6 +21,7 @@ const ru = {
   'nav.debate_replay': 'Replay Дебатов',
   'nav.tournament': 'Турнир',
   'nav.debate_live': 'Дебаты Live',
+  'nav.debate_runtime': 'Runtime Дебатов',
   'nav.argument_graph': 'Граф Аргументов',
   'nav.strategy_builder': 'Конструктор Стратегий',
   'nav.debate_analysis': 'Анализ Дебатов',

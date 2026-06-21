@@ -22,6 +22,7 @@ const DebateReplayPanel = React.lazy(() => import('./components/DebateReplayPane
 const TournamentPanel = React.lazy(() => import('./components/TournamentPanel'));
 const SREAgentPanel = React.lazy(() => import('./components/SREAgentPanel/SREAgentPanel'));
 const WhatIfPanel = React.lazy(() => import('./components/WhatIfPanel/WhatIfPanel'));
+const DebateRuntimePanel = React.lazy(() => import('./components/DebateRuntimePanel/DebateRuntimePanel'));
 const DocsHealthPanel = React.lazy(() => import('./components/DocsHealthPanel'));
 const WebhooksPanel = React.lazy(() => import('./components/WebhooksPanel'));
 const RotationsPanel = React.lazy(() => import('./components/RotationsPanel'));
@@ -170,7 +171,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/debate-replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
       <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />
       <Route path="/debate-history" element={<PanelLoader name="DebateHistory"><DebateHistoryPage /></PanelLoader>} />
-      <Route path="/debate-runtime" element={<Navigate to="/debate" replace />} />
+      <Route path="/debate-runtime" element={<PanelLoader name="DebateRuntime"><DebateRuntimePanel /></PanelLoader>} />
       <Route path="/debate-live" element={<PanelLoader name="DebateLive"><DebateLivePanel /></PanelLoader>} />
       <Route path="/argument-graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
       <Route path="/debate-workspace" element={<PanelLoader name="DebateWorkspace"><DebateWorkspacePanel /></PanelLoader>} />

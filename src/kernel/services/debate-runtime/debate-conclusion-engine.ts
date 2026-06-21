@@ -123,7 +123,7 @@ export class DebateConclusionEngine {
       balanced: 'аргументы сбалансированы',
       'no_clear_winner': 'ясного победителя нет',
     };
-    return `Тема: ${snapshot.topic}. ${typeLabels[conclusionType]}. ${stanceLabels[stanceResult]}. Участников: ${snapshot.agentStates.length}, раундов: ${snapshot.round}.`;
+    return `Тема: ${snapshot.topic}. ${typeLabels[conclusionType]}. ${stanceLabels[stanceResult]}. Участников: ${snapshot.agentStates?.length ?? 0}, раундов: ${snapshot.round}.`;
   }
 
   private buildReasoning(

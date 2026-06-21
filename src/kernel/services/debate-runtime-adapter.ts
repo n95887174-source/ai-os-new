@@ -1,10 +1,8 @@
 import { EVENTS } from '../events/event-names';
-import { FEATURE_FLAGS } from '../contracts/feature-flags';
 import type {
   DebateConfig,
   DebateParticipant,
   DebateSession,
-  DebateServiceDeps,
   DebateStrategy,
 } from '../contracts/debate-types';
 import type { IDebateEngine } from '../contracts/debate-runtime';
@@ -32,6 +30,11 @@ export interface DebateRuntimeAdapterHooks {
   saveToHistory: () => void;
 }
 
+type EventBusLike = {
+  emit: (event: string, payload: unknown) => void;
+  on: (event: string, cb: (d: unknown) => void) => () => void;
+};
+
 export class DebateRuntimeAdapter {
   private engine: IDebateEngine | null = null;
   private sessionId: string | null = null;
@@ -39,7 +42,7 @@ export class DebateRuntimeAdapter {
   private unsubs: Array<() => void> = [];
 
   constructor(
-    private deps: Pick<DebateServiceDeps, 'eventBus' | 'getFeatureFlagService'>,
+    private deps: { eventBus: EventBusLike },
     private hooks: DebateRuntimeAdapterHooks,
     private interpreter: DebateInterpreter,
   ) {}
@@ -49,8 +52,7 @@ export class DebateRuntimeAdapter {
   }
 
   isEnabled(): boolean {
-    if (!this.engine) return false;
-    return this.deps.getFeatureFlagService?.().isEnabled(FEATURE_FLAGS.DEBATE_RUNTIME_ENGINE) ?? false;
+    return this.engine !== null;
   }
 
   isActive(): boolean {

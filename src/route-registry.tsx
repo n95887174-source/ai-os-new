@@ -112,6 +112,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'debate-replay',   labelKey: 'nav.debate_replay',     icon: <History size={18} />,          color: '#6b7280', lazy: true },
       { id: 'debate-tournament', labelKey: 'nav.tournament',     icon: <TournamentZap size={18} />,    color: '#f97316', lazy: true },
       { id: 'debate-live',     labelKey: 'nav.debate_live',        icon: <Radio size={18} />,           color: '#ef4444', lazy: true },
+      { id: 'debate-runtime',  labelKey: 'nav.debate_runtime',     icon: <Zap size={18} />,             color: '#22c55e', lazy: true },
       { id: 'argument-graph',  labelKey: 'nav.argument_graph',     icon: <GitBranch size={18} />,       color: '#8b5cf6', lazy: true },
       { id: 'strategy-builder', labelKey: 'nav.strategy_builder', icon: <GitMerge size={18} />,         color: '#06b6d4', lazy: true },
       { id: 'debate-analysis', labelKey: 'nav.debate_analysis',   icon: <Brain size={18} />,           color: '#a855f7', lazy: true },

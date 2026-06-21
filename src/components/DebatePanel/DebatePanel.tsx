@@ -354,7 +354,7 @@ const DebatePanel: React.FC = () => {
                 <button onClick={() => { try { debateService.resumeDebate(); setError(null); } catch { if (isMountedRef.current) { setError(t('debate.error_resume')); clearError(); } } }} className="btn-secondary" style={{ ...btnControlBase, color: '#10b981', borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }} title={t('debate.resume')} aria-label={t('debate.resume')}><Play size={18} fill="currentColor" aria-hidden="true" /></button>
               ) : null}
               {session.status !== 'completed' && (
-                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch { if (isMountedRef.current) { setError(t('debate.error_stop')); clearError(); } } }} className="btn-secondary" style={{ ...btnControlBase, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title={t('debate.stop')} aria-label={t('debate.stop')}><Square size={18} fill="currentColor" aria-hidden="true" /></button>
+                <button onClick={() => { try { debateService.stopDebate(); setError(null); } catch (e) { if (isMountedRef.current) { console.error('stopDebate failed:', e); setError(t('debate.error_stop')); clearError(); } } }} className="btn-secondary" style={{ ...btnControlBase, color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title={t('debate.stop')} aria-label={t('debate.stop')}><Square size={18} fill="currentColor" aria-hidden="true" /></button>
               )}
               {session.status !== 'completed' && (
                 <select
