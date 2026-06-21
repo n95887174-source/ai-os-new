@@ -66,6 +66,7 @@ const WorkspacePanel = React.lazy(() => import('./components/WorkspacePanel/Work
 const DebateWorkspacePanel = React.lazy(() => import('./components/DebatePanel/DebateWorkspacePanel'));
 const DebateStrategyBuilderPanel = React.lazy(() => import('./components/DebatePanel/DebateStrategyBuilder'));
 const DebateHistoryPage = React.lazy(() => import('./components/DebatePanel/DebateHistoryPage'));
+const DebateLivePanel = React.lazy(() => import('./components/DebateLive/DebateLivePanel'));
 const PolicyEditorPanelLazy = React.lazy(() => import('./components/PolicyEditorPanel'));
 
 // Direct imports (non-lazy)
@@ -170,6 +171,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />
       <Route path="/debate-history" element={<PanelLoader name="DebateHistory"><DebateHistoryPage /></PanelLoader>} />
       <Route path="/debate-runtime" element={<Navigate to="/debate" replace />} />
+      <Route path="/debate-live" element={<PanelLoader name="DebateLive"><DebateLivePanel /></PanelLoader>} />
       <Route path="/argument-graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
       <Route path="/debate-workspace" element={<PanelLoader name="DebateWorkspace"><DebateWorkspacePanel /></PanelLoader>} />
       <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />

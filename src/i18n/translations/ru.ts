@@ -20,6 +20,7 @@ const ru = {
   'nav.debate_rooms': 'Комнаты Дебатов',
   'nav.debate_replay': 'Replay Дебатов',
   'nav.tournament': 'Турнир',
+  'nav.debate_live': 'Дебаты Live',
   'nav.argument_graph': 'Граф Аргументов',
   'nav.strategy_builder': 'Конструктор Стратегий',
   'nav.debate_analysis': 'Анализ Дебатов',
