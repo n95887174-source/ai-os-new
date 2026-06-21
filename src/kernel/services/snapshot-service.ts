@@ -57,12 +57,17 @@ export class SnapshotService {
     this.deps = deps;
   }
 
+  private _initialized = false;
+
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.setupListeners();
     await this.load();
   }
 
   async destroy() {
+    this._initialized = false;
     await this.save();
     this.unsubs.forEach(u => u());
     if (this.autoCaptureInterval) {

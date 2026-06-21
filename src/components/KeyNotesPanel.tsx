@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { keyService } from '../kernel/instances';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween } from '../styles/common';
+import { useConfirm } from '../hooks/useConfirm';
 import type { KeyNote } from '../kernel/types/metrics-types';
 
 interface AttachedFile {
@@ -23,6 +24,7 @@ const MAX_TOTAL_SIZE = 3 * 1024 * 1024;
 
 const KeyNotesPanel: React.FC = () => {
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [keys, setKeys] = useState<Array<{ id: string; provider: string; label: string; notes: EnhancedNote[] }>>([]);
   const [selectedKeyId, setSelectedKeyId] = useState<string>('');
   const [search, setSearch] = useState('');
@@ -130,7 +132,7 @@ const KeyNotesPanel: React.FC = () => {
 
   const handleDeleteNote = useCallback(async (noteId: string) => {
     if (!selectedKeyId) return;
-    if (!window.confirm('Delete this note?')) return;
+    if (!await confirm({ title: 'Delete Note', message: 'Delete this note?', variant: 'danger' })) return;
     try {
       const k = keyService.getKeys().find(x => x.id === selectedKeyId);
       if (!k) return;
@@ -140,7 +142,7 @@ const KeyNotesPanel: React.FC = () => {
     } catch (err) {
       if (isMountedRef.current) setError(String(err));
     }
-  }, [selectedKeyId, loadNotes]);
+  }, [selectedKeyId, loadNotes, confirm]);
 
   const filteredNotes = (() => {
     if (!selectedKeyId) return [];
@@ -374,6 +376,7 @@ const KeyNotesPanel: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <ConfirmDialog />
     </div>
   );
 };

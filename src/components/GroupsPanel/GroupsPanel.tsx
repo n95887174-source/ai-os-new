@@ -7,6 +7,7 @@ import {
   Key, Shield, AlertTriangle, FolderTree, RefreshCw,
 } from 'lucide-react';
 import type { KeyGroup } from '../../kernel/contracts/group-manager';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const CARD: React.CSSProperties = {
   background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.1)',
@@ -26,9 +27,9 @@ const GroupsPanel: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [moveKeyId, setMoveKeyId] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const refresh = useCallback(async () => {
     setGroups(groupManager.getGroups());
@@ -85,10 +86,8 @@ const GroupsPanel: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (id === '__default__') return;
-    if (!window.confirm('Are you sure you want to delete this group? Associated keys will be ungrouped.')) return;
     try {
       await groupManager.deleteGroup(id);
-      setDeleteConfirm(null);
       if (selectedGroupId === id) setSelectedGroupId(null);
       await refresh();
     } catch (e) { setError((e as Error).message); }
@@ -101,13 +100,15 @@ const GroupsPanel: React.FC = () => {
       await refresh();
     } catch (e) {
       console.error('Failed to move key:', e);
-      alert('Failed to move key to group');
+      setError('Failed to move key to group');
     }
   };
 
   if (groups.length === 0) {
     return (
       <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#e2e8f0' }}>
+        {error && <div onClick={() => setError(null)} style={{ position: 'fixed', top: 20, right: 20, padding: '8px 14px', borderRadius: 6, fontSize: 11, background: 'rgba(239,68,68,0.9)', color: '#fff', zIndex: 9999, cursor: 'pointer' }}>{error}</div>}
+        <ConfirmDialog />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
           <FolderTree size={24} color="#3b82f6" />
           <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{t('groups.title')}</h1>
@@ -152,6 +153,8 @@ const GroupsPanel: React.FC = () => {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#e2e8f0', display: 'flex', gap: 20, height: 'calc(100vh - 120px)' }}>
+      {error && <div onClick={() => setError(null)} style={{ position: 'fixed', top: 20, right: 20, padding: '8px 14px', borderRadius: 6, fontSize: 11, background: 'rgba(239,68,68,0.9)', color: '#fff', zIndex: 9999, cursor: 'pointer' }}>{error}</div>}
+      <ConfirmDialog />
       {/* Left sidebar — group list */}
       <div style={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -162,7 +165,7 @@ const GroupsPanel: React.FC = () => {
           <button onClick={() => setCreateOpen(true)}
             style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa',
               border: 'none', borderRadius: 6, padding: '0.3rem 0.5rem', cursor: 'pointer' }}
-            title={t('groups.create')}>
+            title={t('groups.create')} aria-label={t('groups.create')}>
             <Plus size={14} />
           </button>
         </div>
@@ -250,7 +253,8 @@ const GroupsPanel: React.FC = () => {
                       {selectedGroup.id !== '__default__' && (
                         <button onClick={() => { setEditingId(selectedGroup.id); setEditName(selectedGroup.name); }}
                           style={{ background: 'transparent', border: 'none', borderRadius: 6,
-                            padding: '0.25rem', cursor: 'pointer', color: '#64748b' }}>
+                            padding: '0.25rem', cursor: 'pointer', color: '#64748b' }}
+                          aria-label="Edit group name">
                           <Edit3 size={13} />
                         </button>
                       )}
@@ -273,22 +277,12 @@ const GroupsPanel: React.FC = () => {
                     title="Refresh">
                     <RefreshCw size={14} />
                   </button>
-                  {deleteConfirm === selectedGroup.id ? (
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>{t('groups.delete_confirm')}</span>
-                      <button onClick={() => handleDelete(selectedGroup.id)}
-                        style={{ background: 'rgba(239,68,68,0.15)', border: 'none', borderRadius: 6,
-                          padding: '0.3rem 0.6rem', cursor: 'pointer', color: '#ef4444', fontSize: '0.75rem' }}>
-                        {t('common.yes')}
-                      </button>
-                      <button onClick={() => setDeleteConfirm(null)}
-                        style={{ background: 'transparent', border: 'none', borderRadius: 6,
-                          padding: '0.3rem 0.5rem', cursor: 'pointer', color: '#94a3b8', fontSize: '0.75rem' }}>
-                        {t('common.no')}
-                      </button>
-                    </div>
-                  ) : selectedGroup.id !== '__default__' ? (
-                    <button onClick={() => setDeleteConfirm(selectedGroup.id)}
+                  {selectedGroup.id !== '__default__' ? (
+                    <button onClick={async () => {
+                      if (await confirm({ title: t('groups.delete'), message: 'Are you sure you want to delete this group? Associated keys will be ungrouped.', variant: 'danger' })) {
+                        await handleDelete(selectedGroup.id);
+                      }
+                    }}
                       style={{ background: 'rgba(239,68,68,0.1)', border: 'none', borderRadius: 6,
                         padding: '0.3rem 0.5rem', cursor: 'pointer', color: '#ef4444' }}
                       title={t('groups.delete')}>

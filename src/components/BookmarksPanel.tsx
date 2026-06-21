@@ -95,9 +95,9 @@ const BookmarksPanel: React.FC = () => {
   useEffect(() => { refresh(); }, [search, activeTag, refresh]);
 
   const handleRemove = useCallback(async (id: string) => {
-    if (!window.confirm('Remove this bookmark?')) return;
+    if (!await confirm({ title: 'Remove Bookmark', message: 'Remove this bookmark?', variant: 'danger' })) return;
     await bookmarksService.removeBookmark(id);
-  }, []);
+  }, [confirm]);
 
   const handleCopy = useCallback((b: ChatBookmark) => {
     navigator.clipboard?.writeText(b.content).then(() => {

@@ -2,6 +2,7 @@ import type { ApiKey, RotationEvent } from '../types/metrics-types';
 
 export interface IKeyRotationManager {
   getKeys(): ApiKey[];
+  getKey(id: string): ApiKey | undefined;
   addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey>;
   updateKey(id: string, data: Partial<ApiKey>): void;
 }

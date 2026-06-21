@@ -82,6 +82,7 @@ export class AgentService {
   }
 
   destroy() {
+    this._initialized = false;
     this.unsubs.forEach(u => u());
   }
 

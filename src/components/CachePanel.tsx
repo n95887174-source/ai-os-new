@@ -5,6 +5,7 @@ import { cacheService } from '../kernel/instances';
 import { eventBus } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
+import { useConfirm } from '../hooks/useConfirm';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textWhiteXs, flexBetween } from '../styles/common';
 import { PanelLoading } from './PanelStates';
 
@@ -22,6 +23,7 @@ const CachePanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [modelFilter, setModelFilter] = useState('');
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const isMountedRef = useRef(true);
   const clearError = useAutoClearError(setError);
 
@@ -51,7 +53,7 @@ const CachePanel: React.FC = () => {
   }, [loadStats]);
 
   const handleClear = async () => {
-    if (!window.confirm('Are you sure you want to clear the entire cache?')) return;
+    if (!await confirm({ title: 'Clear Cache', message: 'Are you sure you want to clear the entire cache?', variant: 'danger' })) return;
     setClearing(true);
     try {
       if (modelFilter.trim()) {
@@ -190,6 +192,8 @@ const CachePanel: React.FC = () => {
       <div style={textMutedXs}>
         {t('cache.entries_count', { count: safeStats.size })}
       </div>
+
+      <ConfirmDialog />
     </div>
   );
 };

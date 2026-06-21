@@ -1,4 +1,7 @@
 import type { ISNode } from '../contracts/topology';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('TemplateService');
 
 export interface AgentTemplate {
   id: string;
@@ -41,7 +44,8 @@ export class TemplateService {
   }
 
   async saveAsTemplate(node: ISNode, description?: string): Promise<AgentTemplate> {
-    const { id, position, ...rest } = node;
+    const { id: _nodeId, position: _pos, ...rest } = node;
+    void _nodeId; void _pos;
     const existing = this.templates.find(t => t.name === rest.label);
     if (existing) {
       existing.node = rest;
@@ -74,6 +78,10 @@ export class TemplateService {
   }
 
   private async persist() {
-    await this.deps.database.setKv(TEMPLATES_KEY, this.templates);
+    try {
+      await this.deps.database.setKv(TEMPLATES_KEY, this.templates);
+    } catch (e) {
+      LOGGER.warn('TemplateService', 'Persist failed', { error: e });
+    }
   }
 }

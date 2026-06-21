@@ -56,6 +56,7 @@ function isKeyLevelError(e: unknown): boolean {
 export interface ProbeServiceDeps {
   keyService: {
     getKeys: () => ApiKey[];
+    getKey: (id: string) => ApiKey | undefined;
     isProviderCircuitOpen: (provider: string) => boolean;
     isProviderRateLimited: (provider: string) => boolean;
     recordUsage: (keyId: string, latency: number, tokens: number, model: string, extra?: Record<string, unknown>) => void;
@@ -99,7 +100,7 @@ export class ProbeService implements IProbeService, ILifecycle {
   }
 
   async probeKey(keyId: string, model?: string): Promise<ProbeResult> {
-    const key = this.deps.keyService.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyService.getKey(keyId);
     if (!key) {
       return {
         status: 'broken', provider: 'unknown', keyId, keyLabel: 'unknown', model: model || 'auto',

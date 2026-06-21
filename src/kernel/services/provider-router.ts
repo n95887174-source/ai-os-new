@@ -44,6 +44,7 @@ export interface RouterServiceDeps {
   };
   keyService: {
     getKeys: () => ApiKey[];
+    getKey: (id: string) => ApiKey | undefined;
     getPoolKeys: (provider: string) => ApiKey[];
     selectFromPool: (provider: string) => ApiKey | undefined;
     selectWithBurst?: (provider: string) => ApiKey | undefined;
@@ -338,7 +339,7 @@ export class RouterService {
 
   getSelectionTrace(keyId?: string): readonly RouterDecision[] {
     if (!keyId) return this.lastDecisions;
-    const key = this.deps.keyService.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyService.getKey(keyId);
     return this.lastDecisions.filter(d =>
       d.skipped.some(s => s.keyId === keyId) ||
       (key !== undefined && d.selected === key.provider) ||

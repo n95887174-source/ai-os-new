@@ -2,6 +2,9 @@ import { genId } from '../../utils/gen-id';
 import type { IHypothesisService, ProposeHypothesisInput } from '../contracts/hypothesis';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../types/research-types';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('HypothesisService');
 
 const STORAGE_KEY = 'research_hypotheses';
 
@@ -114,7 +117,11 @@ export class HypothesisService implements IHypothesisService {
   }
 
   private async persist(): Promise<void> {
-    await this.deps.database.setKv(STORAGE_KEY, this.hypotheses);
+    try {
+      await this.deps.database.setKv(STORAGE_KEY, this.hypotheses);
+    } catch (e) {
+      LOGGER.warn('HypothesisService', 'Persist failed', { error: e });
+    }
   }
 
   private mockTitle(category: HypothesisCategory, sourceFile: string | undefined, description: string): string {

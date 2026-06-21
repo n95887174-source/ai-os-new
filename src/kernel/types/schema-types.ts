@@ -474,7 +474,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'observability:health:changed': z.object({ status: z.string(), score: z.number(), timestamp: z.number() }),
 
   // ── Domain / Cognitive Events ──────────────────────────────────────
-  'request:incoming': z.object({ requestId: z.string(), messages: z.array(z.unknown()) }),
+  'request:incoming': z.object({ requestId: z.string(), messages: z.array(ChatMessageSchema) }),
   'request:completed': z.object({ final_data: z.object({ traceId: z.string(), output: z.string() }) }),
   'cognitive:step:active': z.object({ nodeId: z.string(), traceId: z.string(), metadata: z.record(z.string(), z.unknown()).optional() }),
   'cognitive:step:completed': z.object({ nodeId: z.string(), traceId: z.string(), status: z.enum(['done', 'error']), duration: z.number(), output: z.string(), fullContent: z.string().optional(), provider: z.string().optional(), model: z.string().optional() }),

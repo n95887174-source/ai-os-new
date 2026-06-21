@@ -5,6 +5,7 @@ import { BUILTIN_POLICY_RULES } from '../../kernel/services/debate-runtime/debat
 import type { DebatePhase } from '../../kernel/contracts/debate-runtime';
 import type { PolicyType } from '../../kernel/contracts/debate-mode-system';
 import { Plus, Trash2, Save, Upload, CheckCircle, AlertCircle, X, Power, PowerOff, Copy, Zap, GitBranch } from 'lucide-react';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const CONDITION_TYPES = [
   { value: 'phase_is', label: 'Phase is', group: 'Phase' },
@@ -168,7 +169,7 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({ condition, onChange, 
         {showValues && (
           <input type="text" value={(condition as { values: string[] }).values.join(', ')} onChange={e => onChange({ ...condition, values: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } as PolicyCondition)} style={{ ...s.input, width: 140, fontSize: 10 }} placeholder="phase1, phase2" />
         )}
-        {onRemove && <button onClick={onRemove} style={s.iconBtn}><X size={12} /></button>}
+        {onRemove && <button onClick={onRemove} style={s.iconBtn} aria-label="Remove condition"><X size={12} /></button>}
       </div>
       {isLogical && (condition as { conditions: PolicyCondition[] }).conditions.map((sub, i) => (
         <ConditionEditor key={i} condition={sub} depth={depth + 1}
@@ -239,7 +240,7 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange, onRemove 
         </>
       )}
       {action.type === 'pause' && <span style={{ fontSize: 10, color: '#64748b' }}>(no config needed)</span>}
-      <button onClick={onRemove} style={s.iconBtn}><X size={12} /></button>
+      <button onClick={onRemove} style={s.iconBtn} aria-label="Remove action"><X size={12} /></button>
     </div>
   );
 };
@@ -252,6 +253,7 @@ const PolicyEditorPanel: React.FC = () => {
   const [editing, setEditing] = useState<PolicyRule | null>(null);
   const [jsonOutput, setJsonOutput] = useState('');
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const showToast = useCallback((msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); }, []);
 
@@ -292,13 +294,13 @@ const PolicyEditorPanel: React.FC = () => {
     } catch (e) { showToast(`Save failed: ${e}`, false); }
   }, [editing, refresh, showToast]);
 
-  const handleDelete = useCallback((id: string) => {
-    if (!window.confirm('Are you sure you want to delete this rule? This cannot be undone.')) return;
+  const handleDelete = useCallback(async (id: string) => {
+    if (!await confirm({ title: 'Delete Rule', message: 'Are you sure you want to delete this rule? This cannot be undone.', variant: 'danger' })) return;
     debatePolicyEngine.removeRule(id);
     showToast('Rule deleted');
     if (selectedId === id) { setSelectedId(null); setEditing(null); }
     refresh();
-  }, [selectedId, refresh, showToast]);
+  }, [selectedId, refresh, showToast, confirm]);
 
   const handleToggle = useCallback((id: string, enabled: boolean) => {
     if (enabled) debatePolicyEngine.enableRule(id);
@@ -331,14 +333,14 @@ const PolicyEditorPanel: React.FC = () => {
     }
   }, [jsonOutput, refresh, showToast]);
 
-  const handleReset = useCallback(() => {
-    if (!window.confirm('Are you sure you want to reset all debate rules? This cannot be undone.')) return;
+  const handleReset = useCallback(async () => {
+    if (!await confirm({ title: 'Reset All Rules', message: 'Are you sure you want to reset all debate rules? This cannot be undone.', variant: 'danger' })) return;
     debatePolicyEngine.reset();
     showToast('All rules cleared');
     setSelectedId(null);
     setEditing(null);
     refresh();
-  }, [refresh, showToast]);
+  }, [refresh, showToast, confirm]);
 
   const loadPresets = useCallback(() => {
     for (const rule of BUILTIN_POLICY_RULES) {
@@ -377,7 +379,7 @@ const PolicyEditorPanel: React.FC = () => {
             <div key={rule.id} style={s.ruleCard(rule.enabled, selectedId === rule.id)} onClick={() => selectRule(rule.id)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <button onClick={e => { e.stopPropagation(); handleToggle(rule.id, !rule.enabled); }} style={{ ...s.iconBtn, color: rule.enabled ? '#22c55e' : '#64748b' }}>
+                  <button onClick={e => { e.stopPropagation(); handleToggle(rule.id, !rule.enabled); }} style={{ ...s.iconBtn, color: rule.enabled ? '#22c55e' : '#64748b' }} aria-label={rule.enabled ? 'Disable rule' : 'Enable rule'}>
                     {rule.enabled ? <Power size={11} /> : <PowerOff size={11} />}
                   </button>
                   <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0' }}>{rule.name || rule.id.slice(0, 16)}</span>
@@ -482,6 +484,7 @@ const PolicyEditorPanel: React.FC = () => {
           {toast.msg}
         </div>
       )}
+      <ConfirmDialog />
     </div>
   );
 };

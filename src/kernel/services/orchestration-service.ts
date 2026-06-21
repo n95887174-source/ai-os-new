@@ -66,11 +66,16 @@ export class OrchestrationService {
     );
   }
 
+  private _initialized = false;
+
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     this.setupListeners();
   }
 
   destroy() {
+    this._initialized = false;
     this.unsubs.forEach(u => u());
     this.unsubs = [];
     this.queue.clear();

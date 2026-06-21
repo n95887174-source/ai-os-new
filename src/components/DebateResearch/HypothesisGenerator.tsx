@@ -3,6 +3,7 @@ import { Lightbulb, Plus, X, Trash2, Zap, BookOpen, Route, Shield, ChevronDown, 
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { hypothesisService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useConfirm } from '../../hooks/useConfirm';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../../kernel/types/research-types';
 
 const CATEGORY_CONFIG: Record<HypothesisCategory, { icon: React.ReactNode; color: string; labelKey: string }> = {
@@ -24,6 +25,7 @@ type FilterTab = 'all' | HypothesisCategory;
 
 const HypothesisGenerator: React.FC = () => {
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [hypotheses, setHypotheses] = useState<ResearchHypothesis[]>([]);
@@ -72,7 +74,7 @@ const HypothesisGenerator: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this hypothesis?')) return;
+    if (!await confirm({ title: 'Delete Hypothesis', message: 'Are you sure you want to delete this hypothesis?', variant: 'danger' })) return;
     await hypothesisService.remove(id);
     refresh();
   };
@@ -397,6 +399,8 @@ const HypothesisGenerator: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog />
     </div>
   );
 };

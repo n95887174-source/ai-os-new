@@ -66,7 +66,7 @@ export class RotationService implements IRotationService {
     // (cancelRotation / handleExpiry delete from this.timers)
     const entries = [...this.timers.entries()];
     for (const [keyId, rt] of entries) {
-      const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+      const key = this.deps.keyManager.getKey(keyId);
       if (!key?.rotationConfig || key.rotationConfig.ttlHours <= 0) {
         this.cancelRotation(keyId);
         continue;
@@ -101,7 +101,7 @@ export class RotationService implements IRotationService {
   }
 
   private async handleExpiry(keyId: string) {
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     if (!key || !key.rotationConfig) return;
 
     this.cancelRotation(keyId);
@@ -137,7 +137,7 @@ export class RotationService implements IRotationService {
   }
 
   async autoRotateKey(keyId: string): Promise<boolean> {
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     if (!key || !key.key) return false;
 
     try {
@@ -193,7 +193,7 @@ export class RotationService implements IRotationService {
         type: 'success',
       });
 
-      const updatedKey = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+      const updatedKey = this.deps.keyManager.getKey(keyId);
       if (updatedKey?.rotationConfig) {
         const newKey = this.deps.keyManager.getKeys().find(k => k.key === result.newKey);
         if (newKey) {
@@ -212,7 +212,7 @@ export class RotationService implements IRotationService {
     this.cancelRotation(keyId);
     if (ttlHours <= 0) return;
 
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     if (!key) return;
 
     const expiresAt = Date.now() + ttlHours * 3600000;
@@ -239,7 +239,7 @@ export class RotationService implements IRotationService {
   }
 
   async rotateNow(keyId: string): Promise<boolean> {
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     if (!key) return false;
 
     this.deps.keyManager.updateKey(keyId, { status: 'checking' });
@@ -259,7 +259,7 @@ export class RotationService implements IRotationService {
       return;
     }
 
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     if (!key) return;
 
     const config = key.rotationConfig || { ttlHours, autoRotate, notifyBefore: '24,1' };
@@ -276,7 +276,7 @@ export class RotationService implements IRotationService {
   }
 
   getTTLStatus(keyId: string): { remainingMs: number; expiresAt: string | null; active: boolean } {
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     const rt = this.timers.get(keyId);
     return {
       remainingMs: rt ? Math.max(0, rt.expiresAt - Date.now()) : 0,
@@ -286,7 +286,7 @@ export class RotationService implements IRotationService {
   }
 
   private addRotationEvent(keyId: string, partial: Omit<RotationEvent, 'id' | 'keyId' | 'timestamp'>) {
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     if (!key) return;
 
     const event: RotationEvent = {
@@ -327,7 +327,7 @@ export class RotationService implements IRotationService {
   }
 
   getRotationHistory(keyId: string): RotationEvent[] {
-    const key = this.deps.keyManager.getKeys().find(k => k.id === keyId);
+    const key = this.deps.keyManager.getKey(keyId);
     return key?.rotationHistory ?? [];
   }
 }

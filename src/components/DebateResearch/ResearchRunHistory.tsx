@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle2, XCircle, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useConfirm } from '../../hooks/useConfirm';
 import { ResearchRunService, type ResearchRun } from '../../kernel/services/research-run-service';
 
 interface ResearchRunHistoryProps {
@@ -27,6 +28,7 @@ const statusIcon = (status: ResearchRun['status']) => {
 };
 
 const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runService }) => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [runs, setRuns] = useState<ResearchRun[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -34,8 +36,8 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
     setRuns(runService.getRunsByModule(module));
   }, [module, runService]);
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm('Delete this research run?')) return;
+  const handleDelete = async (id: string) => {
+    if (!await confirm({ title: 'Delete Run', message: 'Delete this research run?', variant: 'danger' })) return;
     runService.deleteRun(id);
     setRuns(runService.getRunsByModule(module));
   };
@@ -44,6 +46,7 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
     return (
       <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
         No run history yet. Run an analysis to see history here.
+        <ConfirmDialog />
       </div>
     );
   }
@@ -99,6 +102,7 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
           </motion.div>
         ))}
       </AnimatePresence>
+      <ConfirmDialog />
     </div>
   );
 };

@@ -237,6 +237,7 @@ export interface DebateServiceDeps {
   };
   keyService: {
     getKeys: () => ApiKey[];
+    getKey: (id: string) => ApiKey | undefined;
     getActiveKeys: () => ApiKey[];
     recordUsage: (keyId: string, latency: number, tokens: number, model: string, extra?: Record<string, unknown>) => void;
   };

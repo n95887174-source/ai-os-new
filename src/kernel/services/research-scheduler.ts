@@ -49,7 +49,11 @@ export class ResearchScheduler implements ILifecycle {
     this.onRun = fn;
   }
 
+  private _initialized = false;
+
   async init(): Promise<void> {
+    if (this._initialized) return;
+    this._initialized = true;
     try {
       const stored = this.storage?.getItem(STORAGE_KEY);
       if (stored) this.schedules = JSON.parse(stored);
@@ -62,6 +66,7 @@ export class ResearchScheduler implements ILifecycle {
   }
 
   async destroy(): Promise<void> {
+    this._initialized = false;
     if (this.timer) clearInterval(this.timer);
   }
 

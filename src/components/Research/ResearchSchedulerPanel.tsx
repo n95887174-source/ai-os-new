@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Play } from 'lucide-react'
 import { researchSchedulerService } from '../../kernel/services/research/research-scheduler';
 import type { ResearchSchedule } from '../../kernel/services/research/research-scheduler';
+import { useConfirm } from '../../hooks/useConfirm';
 
 export const ResearchSchedulerPanel: React.FC = () => {
   const [schedules, setSchedules] = useState<ResearchSchedule[]>([]);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   useEffect(() => {
     setSchedules(researchSchedulerService.getAll());
@@ -21,7 +23,7 @@ export const ResearchSchedulerPanel: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this schedule?')) return;
+    if (!await confirm({ title: 'Delete Schedule', message: 'Are you sure you want to delete this schedule?', variant: 'danger' })) return;
     await researchSchedulerService.delete(id);
     setSchedules(researchSchedulerService.getAll());
   };
@@ -30,7 +32,7 @@ export const ResearchSchedulerPanel: React.FC = () => {
     <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0, color: '#f8fafc' }}>Research Scheduler</h3>
-        <button onClick={handleCreate} style={{ padding: '0.5rem', background: '#3b82f6', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }}>
+        <button onClick={handleCreate} style={{ padding: '0.5rem', background: '#3b82f6', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }} aria-label="Create schedule">
           <Plus size={16} />
         </button>
       </div>
@@ -43,16 +45,17 @@ export const ResearchSchedulerPanel: React.FC = () => {
               <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{researchSchedulerService.getModuleDisplayName(s.module)} - {s.cronExpression}</div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => researchSchedulerService.trigger(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #3b82f6', borderRadius: 6, color: '#3b82f6', cursor: 'pointer' }}>
+              <button onClick={() => researchSchedulerService.trigger(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #3b82f6', borderRadius: 6, color: '#3b82f6', cursor: 'pointer' }} aria-label="Trigger schedule">
                 <Play size={14} />
               </button>
-              <button onClick={() => handleDelete(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #ef4444', borderRadius: 6, color: '#ef4444', cursor: 'pointer' }}>
+              <button onClick={() => handleDelete(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #ef4444', borderRadius: 6, color: '#ef4444', cursor: 'pointer' }} aria-label="Delete schedule">
                 <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };

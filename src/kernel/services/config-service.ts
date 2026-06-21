@@ -15,6 +15,8 @@ import type {
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 
+const LOGGER = rootLogger.child('ConfigService');
+
 export interface ConfigServiceDeps {
   database: {
     getKv: <T>(id: string) => Promise<T | null>;
@@ -244,7 +246,11 @@ export class ConfigService {
   }
 
   private async persist() {
-    await this.deps.database.setKv(OVERLAYS_KEY, this.overlays);
+    try {
+      await this.deps.database.setKv(OVERLAYS_KEY, this.overlays);
+    } catch (e) {
+      LOGGER.warn('ConfigService', 'Persist failed', { error: e });
+    }
   }
 
   private applyOverlays(overlays: ConfigOverlays) {

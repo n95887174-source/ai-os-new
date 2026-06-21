@@ -69,7 +69,7 @@ export class DebateLLMCaller {
     if (!key) {
       const cached = this.state.participantProviderMap.get(participant.id);
       if (cached) {
-        const cachedKey = this.deps.keyService.getKeys().find(k => k.id === cached.keyId);
+        const cachedKey = this.deps.keyService.getKey(cached.keyId);
         if (cachedKey && cachedKey.status !== 'error' && !this.isProviderFailed(cachedKey.provider)) {
           key = cachedKey;
         }

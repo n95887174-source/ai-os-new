@@ -264,6 +264,8 @@ export class ChatService {
         this.activeRequests.set(requestId, controller);
         const startTime = Date.now();
 
+        const promptText = messages.map(m => m.content).join(' ');
+
         if (settings.streamingEnabled) {
           this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
 
@@ -296,7 +298,7 @@ export class ChatService {
           const duration = (latency - (ttft || 0)) / 1000;
           const tps = duration > 0 ? (tokens / duration) : 0;
 
-          session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), tokens);
+          session?.recordTokens(estimateTokens(promptText), tokens);
           session?.complete(latency);
 
           this.deps.eventBus.emit(EVENTS.STREAM_END, {
@@ -312,7 +314,7 @@ export class ChatService {
 
           this.deps.keyService.recordUsage(provider, latency, tokens, resolvedModel, { ttft, tps });
           this.deps.budgetService?.recordSpend(agentId || null, provider, (tokens || 0) * 0.000002);
-          this.deps.cacheService.set(cacheKey, fullContent, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), tokens);
+          this.deps.cacheService.set(cacheKey, fullContent, resolvedModel, provider, estimateTokens(promptText), tokens);
         } else {
           session?.activate();
 
@@ -326,7 +328,7 @@ export class ChatService {
             maxTokens: req.options?.maxTokens,
           });
 
-          session?.recordTokens(estimateTokens(messages.map(m => m.content).join(' ')), response.tokens);
+          session?.recordTokens(estimateTokens(promptText), response.tokens);
           session?.complete(response.latency);
 
           if (response.error) {
@@ -359,7 +361,7 @@ export class ChatService {
           this.deps.keyService.recordUsage(provider, response.latency, response.tokens, resolvedModel);
           this.deps.budgetService?.recordSpend(agentId || null, provider, (response.tokens || 0) * 0.000002);
           const outputTokens = typeof response.tokens === 'number' ? response.tokens : 0;
-          this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(messages.map(m => m.content).join(' ')), outputTokens);
+          this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(promptText), outputTokens);
         }
       } catch (error: unknown) {
         session?.fail(error instanceof Error ? error.message : String(error));

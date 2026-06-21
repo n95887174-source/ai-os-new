@@ -104,7 +104,7 @@ class ResearchAdvisorService {
    */
   dismiss(suggestionId: string): void {
     this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
-    this.save();
+    this.save().catch(e => LOGGER.warn('ResearchAdvisor', 'Save failed', { error: e }));
   }
 
   /**

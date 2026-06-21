@@ -42,6 +42,7 @@ export interface KeyRegistryDeps {
 
 export class KeyRegistry {
   private keys: ApiKey[] = [];
+  #keyMap = new Map<string, number>();
   private unsubs: Array<() => void> = [];
   private deps: KeyRegistryDeps;
 
@@ -59,7 +60,8 @@ export class KeyRegistry {
   }
 
   getKey(id: string): ApiKey | undefined {
-    return this.keys.find(k => k.id === id);
+    const idx = this.#keyMap.get(id);
+    return idx !== undefined ? this.keys[idx] : undefined;
   }
 
   getKeysByProvider(provider: string): ApiKey[] {
@@ -276,7 +278,6 @@ export class KeyRegistry {
         this.traceKeyDrop(_dropRun, 'assign-keep-existing', this.keys.length, this.keys.length, this.keys, { error: true });
       }
     } finally {
-      console.groupEnd();
       this.loadingKeys = false;
     }
   }
@@ -344,9 +345,7 @@ export class KeyRegistry {
       this.setKeysInternal('forceResyncFromDexie', loaded, { force: true });
       this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
       return this.keys.length;
-    } finally {
-      console.groupEnd();
-    }
+    } finally { /* no-op */ }
   }
 
   async saveKeys(): Promise<void> {
@@ -472,6 +471,7 @@ export class KeyRegistry {
     };
 
     this.keys.push(newKey);
+    this.#keyMap.set(newKey.id, this.keys.length - 1);
     await this.saveKeys();
     return newKey;
   }
@@ -489,7 +489,7 @@ export class KeyRegistry {
   }
 
   pushHistory(keyId: string, action: KeyHistoryEntry['action'], detail: string): void {
-    const key = this.keys.find(k => k.id === keyId);
+    const key = this.getKey(keyId);
     if (!key) return;
     if (!key.history) key.history = [];
     key.history.push({
@@ -554,6 +554,7 @@ export class KeyRegistry {
     }
 
     this.keys = Array.isArray(newKeys) ? [...newKeys] : [];
+    this.#keyMap = new Map(this.keys.map((k, i) => [k.id, i]));
   }
 
   updateKey(id: string, updates: Partial<ApiKey>): void {
@@ -562,7 +563,7 @@ export class KeyRegistry {
   }
 
   modifyKey(id: string, fn: (key: ApiKey) => void): void {
-    const key = this.keys.find(k => k.id === id);
+    const key = this.getKey(id);
     if (key) {
       fn(key);
       this.setKeysInternal('modifyKey', [...this.keys]);
@@ -653,7 +654,7 @@ export class KeyRegistry {
       type,
       author,
     };
-    const key = this.keys.find(k => k.id === keyId);
+    const key = this.getKey(keyId);
     if (key) {
       key.notes = [...(key.notes || []), note];
     }
@@ -662,7 +663,7 @@ export class KeyRegistry {
   }
 
   async removeNote(keyId: string, noteId: string): Promise<void> {
-    const key = this.keys.find(k => k.id === keyId);
+    const key = this.getKey(keyId);
     if (key?.notes) {
       key.notes = key.notes.filter(n => n.id !== noteId);
     }

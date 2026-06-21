@@ -239,7 +239,7 @@ class CrossResearchPatternLearningService {
       }
     }
 
-    void this.save();
+    void this.save().catch(e => LOGGER.warn('PatternLearning', 'Save failed', { error: e }));
   }
 
   private matchesPattern(finding: string, pattern: Pattern): boolean {

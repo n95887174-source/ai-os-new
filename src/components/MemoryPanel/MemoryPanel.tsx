@@ -166,6 +166,7 @@ const MemoryPanel: React.FC = () => {
   };
 
   const handleDeleteMemory = async (id: string) => {
+    if (!await confirm({ title: 'Delete Memory', message: 'Delete this memory entry?', variant: 'danger' })) return;
     try {
       await memoryService.deleteMemory(id);
       if (isMountedRef.current) {

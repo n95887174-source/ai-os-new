@@ -10,6 +10,7 @@ export interface HealthServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
   keyService: {
     getKeys: () => { id: string; provider: string; key: string; status: string }[];
+    getKey: (id: string) => { id: string; provider: string; key: string; status: string } | undefined;
     updateKeyStatus: (id: string, status: string, latency?: number) => void;
     handleProviderError: (id: string, error: string) => void;
     updateAvailableModels: (id: string, models?: string[]) => void;
@@ -100,7 +101,7 @@ export class HealthService implements IHealthService {
   getResult(keyId: string): KeyHealthCheckResult | undefined {
     const state = this.deps.keyStateStore.get(keyId);
     if (!state) {
-      const key = this.deps.keyService.getKeys().find(k => k.id === keyId);
+      const key = this.deps.keyService.getKey(keyId);
       if (!key) return;
       return {
         keyId,
@@ -194,7 +195,7 @@ export class HealthService implements IHealthService {
   }
 
   async checkKey(id: string): Promise<KeyHealthCheckResult | null> {
-    const key = this.deps.keyService.getKeys().find(k => k.id === id);
+    const key = this.deps.keyService.getKey(id);
     if (!key) return null;
 
     this.deps.keyService.updateKeyStatus(id, 'checking');

@@ -125,9 +125,9 @@ const AgentJournalPanel: React.FC = () => {
   }, [newEntry, t]);
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!window.confirm('Delete this journal entry?')) return;
+    if (!await confirm({ title: 'Delete Entry', message: 'Delete this journal entry?', variant: 'danger' })) return;
     await service.remove(id);
-  }, []);
+  }, [confirm]);
 
   const handleClear = useCallback(async () => {
     if (!await confirm({ title: 'Clear Agent Journal', message: t('agent_journal.confirm_clear'), variant: 'danger' })) return;

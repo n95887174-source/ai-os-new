@@ -8,6 +8,7 @@ import {
 import { keyService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
+import { useConfirm } from '../../hooks/useConfirm';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ApiKey } from '../../types/metrics';
 import type { ProviderAlert } from '../../kernel/types/metrics-types';
@@ -50,6 +51,7 @@ interface OverviewTabProps {
 
 const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   const { t } = useTranslation();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [copied, setCopied] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +187,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   };
 
   const handleResetMetrics = async () => {
-    if (!window.confirm('Are you sure you want to reset metrics for this key?')) return;
+    if (!await confirm({ title: 'Reset Metrics', message: 'Are you sure you want to reset metrics for this key?', variant: 'danger' })) return;
     setResetting(true);
     try {
       if (typeof keyService.resetStats === 'function') {
@@ -555,6 +557,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog />
     </motion.div>
   );
 };

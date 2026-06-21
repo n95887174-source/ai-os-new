@@ -159,7 +159,7 @@ class BrowserSTTService {
 
         this.state = 'error';
         LOGGER.error('BrowserSTTService', errorMessage, { error: event.error });
-        EventBus.emit(EVENTS.STT_STATE_CHANGED, { state: this.state, error: errorMessage } as never);
+        EventBus.emit(EVENTS.STT_STATE_CHANGED, { state: this.state, error: errorMessage });
         EventBus.emit(EVENTS.STT_ERROR, { error: errorMessage });
 
         // Notify error listeners

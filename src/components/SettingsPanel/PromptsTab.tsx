@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
 import { getAllPrompts, setPrompt, resetAllPrompts, type PromptRole } from '../../kernel/services/prompt-store';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const PROMPT_LABELS: Record<PromptRole, string> = {
   attacker: 'Attacker',
@@ -16,6 +17,7 @@ const PromptsTab: React.FC = () => {
   const [prompts, setPrompts] = useState(getAllPrompts());
   const [saved, setSaved] = useState(false);
   const [resetDone, setResetDone] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   useEffect(() => {
     if (saved || resetDone) {
@@ -30,8 +32,8 @@ const PromptsTab: React.FC = () => {
     setSaved(true);
   };
 
-  const handleReset = () => {
-    if (!window.confirm('Are you sure you want to reset all prompts to defaults? This cannot be undone.')) return;
+  const handleReset = async () => {
+    if (!await confirm({ title: 'Reset Prompts', message: 'Are you sure you want to reset all prompts to defaults? This cannot be undone.', variant: 'danger' })) return;
     resetAllPrompts();
     setPrompts(getAllPrompts());
     setResetDone(true);
@@ -77,6 +79,7 @@ const PromptsTab: React.FC = () => {
           </div>
         ))}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };

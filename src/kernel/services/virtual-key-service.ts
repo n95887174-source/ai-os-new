@@ -15,6 +15,7 @@ export interface VirtualKeyServiceDeps {
   };
   keyService: {
     getKeys: () => Array<{ id: string; provider: string }>;
+    getKey: (id: string) => { id: string; provider: string } | undefined;
   };
 }
 
@@ -135,7 +136,7 @@ export class VirtualKeyService implements IVirtualKeyService {
 
   private getRealKey(realKeyId: string): { provider: string } | undefined {
     try {
-      const key = this.deps.keyService.getKeys().find(k => k.id === realKeyId);
+      const key = this.deps.keyService.getKey(realKeyId);
       return key ? { provider: key.provider } : undefined;
     } catch (e) {
       LOGGER.warn('VirtualKeyService', 'Failed to get real key', { realKeyId, error: e });

@@ -4,12 +4,14 @@ import {
   Zap, Link, Brain, Network, GitCommit, FileText, Search, X, Trash2, Save, AlertTriangle
 } from 'lucide-react';
 import { t } from '../../i18n/translations';
+import { useConfirm } from '../../hooks/useConfirm';
 import { memoryService } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { errorBanner, dismissBtn, flexCenterGap6px, flexCenterGap3, flexGap2, flexColGap2, grid2, textSmBoldUppercase, textXsUppercaseBold, textSmWeight600FlexGap6, infoCardBorderVar, flexBetweenStart, edgeRow } from '../../styles/common';
 
 const KnowledgePanel: React.FC = () => {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [memories, setMemories] = useState(() => { try { return memoryService.getMemories(); } catch { return []; } });
   const [selectedNode, setSelectedNode] = useState<Record<string, unknown> | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,7 +136,7 @@ const KnowledgePanel: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this memory node?')) return;
+    if (!await confirm({ title: 'Delete Memory', message: 'Are you sure you want to delete this memory node?', variant: 'danger' })) return;
     if (!selectedNode) return;
     try {
       await memoryService.deleteMemory(selectedNode.id as string);
@@ -455,6 +457,7 @@ const KnowledgePanel: React.FC = () => {
       </div>
 
       <ModuleInfo moduleKey="knowledge" />
+      <ConfirmDialog />
     </div>
   );
 };

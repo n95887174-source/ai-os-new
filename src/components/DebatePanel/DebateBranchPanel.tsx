@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { GitBranch, GitMerge, RotateCcw, Trash2, Plus } from 'lucide-react';
 import { DebateBranching, type DebateBranch } from '../../kernel/services/debate-runtime/debate-branching';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface DebateBranchPanelProps {
   branching: DebateBranching;
@@ -16,6 +17,7 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
   const [branches, setBranches] = useState<DebateBranch[]>(branching.getBranches());
   const [forkName, setForkName] = useState('');
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const refresh = useCallback(() => {
     setBranches(branching.getBranches());
@@ -56,11 +58,11 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
     refresh();
   }, [branching, refresh]);
 
-  const handleDelete = useCallback((id: string) => {
-    if (!window.confirm('Are you sure you want to delete this branch?')) return;
+  const handleDelete = useCallback(async (id: string) => {
+    if (!await confirm({ title: 'Delete Branch', message: 'Are you sure you want to delete this branch?', variant: 'danger' })) return;
     branching.deleteBranch(id);
     refresh();
-  }, [branching, refresh]);
+  }, [branching, refresh, confirm]);
 
   const handleActivate = useCallback((id: string) => {
     branching.setActiveBranch(id);
@@ -176,6 +178,7 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
           </div>
         ))}
       </div>
+      <ConfirmDialog />
     </div>
   );
 };
