@@ -3,6 +3,9 @@ import { CognitiveSkillSchema } from '../types/schema-types';
 import { EVENTS } from '../events/event-names';
 import type { SkillsStore } from '../contracts/storage/skills-store';
 import { storageAdapter } from '../storage-adapter-instance';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('SkillService');
 
 export interface SkillServiceDeps {
   eventBus: {
@@ -50,7 +53,7 @@ export class SkillService {
             await this.deps.skillsStore.bulkAdd(this.skills);
             storageAdapter.removeItem(STORAGE_KEY);
           } catch (e) {
-            console.warn('[SkillService] Failed to migrate skills from localStorage:', e);
+            LOGGER.warn('SkillService', 'Failed to migrate skills from localStorage', { error: e });
             this.skills = DEFAULT_SKILLS;
             await this.deps.skillsStore.bulkAdd(this.skills);
           }
@@ -60,7 +63,7 @@ export class SkillService {
         }
       }
     } catch (e) {
-      console.error('[SkillService] Failed to load skills', e);
+      LOGGER.error('SkillService', 'Failed to load skills', { error: e });
       this.skills = DEFAULT_SKILLS;
     }
   }
@@ -69,7 +72,7 @@ export class SkillService {
     try {
       await this.deps.skillsStore.bulkPut(this.skills);
     } catch (e) {
-      console.error('[SkillService] Failed to persist skills', e);
+      LOGGER.error('SkillService', 'Failed to persist skills', { error: e });
     }
   }
 
@@ -138,8 +141,8 @@ export class SkillService {
       this.emit();
       return count;
     } catch (e) {
-      console.error('[SkillService] Failed to import skills', e);
-      throw new Error('Failed to import skills', { cause: e as Error });
+      LOGGER.error('SkillService', 'Failed to import skills', { error: e });
+      throw new Error('Failed to import skills', { cause: e });
     }
   }
 }

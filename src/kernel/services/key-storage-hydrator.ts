@@ -19,6 +19,9 @@ import { logDexieIdentityWithCount, verifyDexieInstance } from './dexie-identity
 import { EVENTS } from '../events/event-names';
 import type { IEventBus } from '../types/interfaces';
 import type { KeyService } from './key-management/key-service';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('KeyStorageHydrator');
 
 interface HydrationDeps {
   eventBus: IEventBus;
@@ -40,7 +43,7 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
 
     // Mirror only — single source. No merge, no fallback, no SQLite blob.
     const dexieKeys = await dexieDb.apiKeys.toArray();
-    console.log('[DEXIE_IDENTITY_HYDRATION] dexieKeys.length =', dexieKeys.length, 'from instance', verifiedInstance);
+    LOGGER.info('KeyStorageHydrator', `dexieKeys.length = ${dexieKeys.length} from instance ${verifiedInstance}`);
 
     // Reload the registry (reads dexieDb.apiKeys via loadKeys()).
     await deps.keyService.reload();
@@ -61,7 +64,7 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
 
     return finalCount;
   })().catch(err => {
-    console.error('[KEY_HYDRATION] failed:', err);
+    LOGGER.error('KeyStorageHydrator', 'Hydration failed', { error: err });
     return 0;
   }).finally(() => {
     // Allow re-hydration after reset or failure

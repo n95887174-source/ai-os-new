@@ -1,4 +1,6 @@
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('MCPService');
 
 export interface MCPServerConfig {
   id: string;
@@ -77,7 +79,7 @@ export class MCPService {
         this.save();
       }
     } catch (e) {
-      console.warn('[MCPService] Failed to load servers, using defaults', e);
+      LOGGER.warn('MCPService', 'Failed to load servers, using defaults', { error: e });
       this.servers = [
         { id: 'mcp-local-files', name: 'Local File System', url: 'http://localhost:3001', status: 'disconnected' },
       ];
@@ -88,7 +90,7 @@ export class MCPService {
     try {
       await this.deps.database.setKv(SERVERS_KEY, this.servers);
     } catch (e) {
-      console.warn('[MCPService] Failed to persist servers', e);
+      LOGGER.warn('MCPService', 'Failed to persist servers', { error: e });
     }
   }
 
@@ -179,7 +181,7 @@ export class MCPService {
         try {
           await this.connect(server.id);
           successCount++;
-        } catch (e) { console.warn('[MCPService] Reconnect failed for', server.name, e); }
+        } catch (e) { LOGGER.warn('MCPService', 'Reconnect failed', { server: server.name, error: e }); }
       }
     }
     return successCount;
@@ -193,12 +195,12 @@ export class MCPService {
       const result = await this.rpc(server, 'resources/list') as { resources: MCPResource[] };
       return result.resources || [];
     } catch (e) {
-      console.warn('[MCPService] RPC listResources failed, trying HTTP fallback', e);
+      LOGGER.warn('MCPService', 'RPC listResources failed, trying HTTP fallback', { error: e });
       try {
         const response = await this.safeFetch(`${server.url.replace(/\/+$/, '')}/resources`);
         return await response.json();
       } catch (e2) {
-        console.warn('[MCPService] HTTP listResources also failed', e2);
+        LOGGER.warn('MCPService', 'HTTP listResources also failed', { error: e2 });
         return [];
       }
     }
@@ -212,7 +214,7 @@ export class MCPService {
       try {
         const result = await this.rpc(server, 'resources/read', { uri }) as { contents: { text: string }[] };
         if (result.contents?.[0]?.text) return result.contents[0].text;
-      } catch (e) { console.warn('[MCPService] RPC readResource failed on', server.name, e); }
+      } catch (e) { LOGGER.warn('MCPService', 'RPC readResource failed', { server: server.name, error: e }); }
     }
 
     const connected = this.servers.find(s => s.status === 'connected');
@@ -222,7 +224,7 @@ export class MCPService {
       const response = await this.safeFetch(`${connected.url.replace(/\/+$/, '')}/resource?uri=${encodeURIComponent(uri)}`);
       return await response.text();
     } catch (e) {
-      console.warn('[MCPService] HTTP readResource failed', e);
+      LOGGER.warn('MCPService', 'HTTP readResource failed', { error: e });
       return `Failed to read resource: ${uri}`;
     }
   }
@@ -233,7 +235,7 @@ export class MCPService {
     try {
       const result = await this.rpc(server, 'tools/list') as { tools: MCPTool[] };
       return result.tools || [];
-    } catch (e) { console.warn('[MCPService] listTools failed for', server.name, e); return []; }
+    } catch (e) { LOGGER.warn('MCPService', 'listTools failed', { server: server.name, error: e }); return []; }
   }
 
   async callTool(serverId: string, toolName: string, args?: Record<string, unknown>): Promise<unknown> {

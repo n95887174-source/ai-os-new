@@ -1,3 +1,4 @@
+import { rootLogger } from './logger-service';
 import { genId } from '../../utils/gen-id';
 import type {
   IRoutingExperimentsService,
@@ -142,7 +143,8 @@ export class RoutingExperimentsService implements IRoutingExperimentsService {
                 );
                 latencies.push(Date.now() - start);
                 if (!resp.content) errorCount++;
-              } catch {
+              } catch (e) {
+                rootLogger.warn('RoutingExperiments', 'Experiment cell failed', { error: e });
                 errorCount++;
                 latencies.push(Date.now() - start);
               }

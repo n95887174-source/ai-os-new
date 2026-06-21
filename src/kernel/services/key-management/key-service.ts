@@ -21,6 +21,7 @@ import type { IGroupManager } from '../../contracts/group-manager';
 import { clearSeedCache } from '../key-reset';
 import type { KeyStore } from '../../contracts/storage/key-store';
 import { CONFIG } from '../config-registry';
+import { rootLogger } from '../logger-service';
 
 export interface FreeTierLimit {
   requestsPerDay: number;
@@ -206,7 +207,7 @@ export class KeyService {
     await this.loadConfig();
     await this.registry.loadKeys();
     const keysAfterLoad = this.registry.getKeys();
-    if (import.meta.env.DEV) console.log('[KEY_FLOW] KeyService final keys count:', {
+    if (import.meta.env.DEV) rootLogger.info('KeyService', '[KEY_FLOW] KeyService final keys count:', {
       count: keysAfterLoad.length,
       providers: [...new Set(keysAfterLoad.map(k => k.provider))],
       activeCount: keysAfterLoad.filter(k => k.status === 'active').length,
@@ -337,7 +338,7 @@ export class KeyService {
       // KM-17: Recreate poolSelector with fresh freeTierLimits reference
       this.poolSelector = this.createPoolSelector();
     } catch (e) {
-      console.warn('[KeyService] Failed to load global limits', e);
+      rootLogger.warn('KeyService', '[KeyService] Failed to load global limits', { error: e });
     }
   }
 
@@ -348,7 +349,7 @@ export class KeyService {
       await this.deps.database.setKv('global_sla_mode', this._globalSLAMode);
       await this.deps.database.setKv('latency_threshold', this._latencyThreshold);
     } catch (e) {
-      console.error('[KeyService] Failed to save global limits', e);
+      rootLogger.error('KeyService', '[KeyService] Failed to save global limits', { error: e });
     }
   }
 
@@ -458,7 +459,7 @@ export class KeyService {
         if (key) key.notes = (saved as { notes: KeyNote[] }).notes;
       }
     } catch (e) {
-      console.warn(`[KeyService] Failed to load notes for key ${keyId}:`, e);
+      rootLogger.warn('KeyService', `[KeyService] Failed to load notes for key ${keyId}`, { error: e });
     }
     this.notify();
   }
@@ -622,7 +623,7 @@ export class KeyService {
     try {
       await this.poolSelector.setPoolStrategy(provider, strategy);
     } catch (e) {
-      console.error('[KeyService] Failed to set pool strategy:', e);
+      rootLogger.error('KeyService', '[KeyService] Failed to set pool strategy', { error: e });
     }
   }
 

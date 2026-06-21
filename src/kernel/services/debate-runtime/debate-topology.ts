@@ -1,4 +1,7 @@
 import type { DebateTopology, TopologyNode, TopologyType, ITopologyService } from '../../contracts/debate-runtime';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('DebateTopology');
 
 const VALID_EDGE_COUNTS: Record<TopologyType, { min: number; max: number }> = {
   linear: { min: 1, max: 1 },
@@ -117,7 +120,7 @@ export class DebateTopologyService implements ITopologyService {
       }
     }
     if (result.length !== topology.nodes.length) {
-      console.warn(`[DebateTopology] Cycle detected: sorted ${result.length}/${topology.nodes.length} nodes`);
+      LOGGER.warn('DebateTopology', `Cycle detected: sorted ${result.length}/${topology.nodes.length} nodes`);
     }
     return result;
   }

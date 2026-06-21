@@ -8,6 +8,9 @@ import { estimateTokens } from '../utils/tokenEstimate';
 import type { RaceExecutor } from './race-executor';
 import type { ProviderMetrics, DowngradeCandidate } from './downgrade-strategy';
 import type { ApiKey } from '../types/metrics-types';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('ChatService');
 
 export interface ChatServiceDeps {
   eventBus: {
@@ -92,7 +95,7 @@ export class ChatService {
   private setupListeners() {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-        this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() }).catch(e => console.error('[ChatService] executeRequest failed:', e));
+        this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() }).catch(e => LOGGER.error('ChatService', 'executeRequest failed', { error: e }));
       }),
       this.deps.eventBus.onSafe<{ requestId?: string }>(EVENTS.CANCEL_MESSAGE, (d) => {
         if (d && typeof d.requestId === 'string') this.cancelRequest(d.requestId);
@@ -158,7 +161,7 @@ export class ChatService {
         }
       }
       const keyObj = resolvedKeyId
-        ? this.deps.keyService.getKeys().find(k => k.id === resolvedKeyId)
+        ? this.deps.keyService.getKey?.(resolvedKeyId)
         : (this.deps.keyService.selectWithBurst?.(resolvedProvider) ?? this.deps.keyService.selectFromPool(resolvedProvider));
 
       if (!keyObj) {
@@ -423,7 +426,7 @@ export class ChatService {
       }
     }
 
-    this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES} retries`);
+    this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES - 1} retries`);
   }
 
   private async executeRaceRequest(

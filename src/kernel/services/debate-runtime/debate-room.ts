@@ -1,6 +1,9 @@
 import { genId } from '../../../utils/gen-id';
 import { EVENTS } from '../../events/event-names';
 import type { DebateSessionSnapshot, DebatePhase, TimelineEntry } from '../../contracts/debate-runtime';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('DebateRoom');
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -111,7 +114,7 @@ export class DebateRoom {
     if (!snap) throw new Error(`Session not found: ${sessionId}`);
 
     if (snap.phase === 'paused') {
-      void this.resume(sessionId).catch(e => console.warn('[DebateRoom] Resume failed:', e));
+      void this.resume(sessionId).catch(e => LOGGER.warn('DebateRoom', 'Resume failed', { error: e }));
     }
   }
 

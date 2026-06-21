@@ -74,12 +74,15 @@ export class NotificationWebhookService {
   private webhooks: WebhookConfig[] = [];
   private unsubs: Array<() => void> = [];
   private deps: NotificationWebhookServiceDeps;
+  private _initialized = false;
 
   constructor(deps: NotificationWebhookServiceDeps) {
     this.deps = deps;
   }
 
   async init() {
+    if (this._initialized) return;
+    this._initialized = true;
     await this.load();
     this.unsubs.forEach(u => u());
     this.unsubs = [];
@@ -193,6 +196,7 @@ export class NotificationWebhookService {
   }
 
   updateWebhook(id: string, updates: Partial<WebhookConfig>) {
+    if (updates.webhookUrl && !isValidWebhookUrl(updates.webhookUrl)) throw new Error(`Invalid webhook URL (blocked SSRF): ${updates.webhookUrl}`);
     this.webhooks = this.webhooks.map(w =>
       w.id === id ? { ...w, ...updates } : w
     );

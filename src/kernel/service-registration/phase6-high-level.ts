@@ -9,7 +9,9 @@ import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { IContainer } from '../container';
 import type { DataAccessLayer } from '../dal';
+import { rootLogger } from '../services/logger-service';
 import type { LoggerService } from '../services/logger-service';
+const LOGGER = rootLogger.child('Phase6');
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import type { KeyStateStore } from '../services/key-state-store';
@@ -97,7 +99,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
       try {
         const kernel = get<SystemKernel>('kernel');
         return kernel.getState?.() ?? {};
-      } catch { return {}; }
+      } catch (e) { LOGGER.warn('getStateSnapshot', 'Snapshot failed', { error: e }); return {}; }
     },
     onReplayEvent: (event) => {
       const logger = get<LoggerService>('logger');

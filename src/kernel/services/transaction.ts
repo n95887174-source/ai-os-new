@@ -1,5 +1,8 @@
 import { EVENTS } from '../events/event-names';
 import type { ITransaction } from '../contracts/transaction';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('Transaction');
 
 export class TransactionContext implements ITransaction {
   private pendingEmits: Array<{ event: string; data: unknown }> = [];
@@ -46,11 +49,11 @@ export class TransactionContext implements ITransaction {
         completed.push(i);
       }
     } catch (e) {
-      console.error(`[Transaction] commit failed for "${this.source}", rolling back ${completed.length} completed persists`, e);
+      LOGGER.error('Transaction', `commit failed for "${this.source}", rolling back ${completed.length} completed persists`, { error: e });
       for (let i = completed.length - 1; i >= 0; i--) {
         const compensate = this.pendingPersists[completed[i]]?.compensate;
         if (compensate) {
-          try { await compensate(); } catch (ce) { console.error(`[Transaction] Compensating action failed for persist #${completed[i]}`, ce); }
+          try { await compensate(); } catch (ce) { LOGGER.error('Transaction', `Compensating action failed for persist #${completed[i]}`, { error: ce }); }
         }
       }
       await this.rollback(eventBus);
@@ -73,7 +76,7 @@ export class TransactionContext implements ITransaction {
     const persistCount = this.pendingPersists.length;
 
     if (emitCount > 0 || persistCount > 0) {
-      console.warn(`[Transaction] rollback from "${this.source}": dropped ${emitCount} deferred emits, ${persistCount} deferred persists`);
+      LOGGER.warn('Transaction', `rollback from "${this.source}": dropped ${emitCount} deferred emits, ${persistCount} deferred persists`);
       if (eventBus) {
         eventBus.emit(EVENTS.NOTIFICATION, {
           message: `Transaction rollback [${this.source}]: ${emitCount} events, ${persistCount} persists discarded`,

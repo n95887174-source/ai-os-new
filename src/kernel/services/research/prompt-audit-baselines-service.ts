@@ -85,7 +85,7 @@ class PromptAuditBaselinesService {
   setCurrentAudit(promptRisks: PromptRisk[]): void {
     this.currentAudit = promptRisks;
     this.currentAuditId = `audit-${Date.now()}`;
-    this.save();
+    void this.save();
   }
 
   /**

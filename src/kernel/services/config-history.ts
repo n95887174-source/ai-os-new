@@ -2,6 +2,9 @@ import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { CONFIG, replaceConfig } from './config-registry';
 import { storageAdapter } from '../storage-adapter-instance';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('ConfigHistory');
 
 export interface ConfigVersion {
   id: string;
@@ -42,7 +45,7 @@ export class ConfigHistoryService {
         this.currentVersionSeq = parsed.seq ?? this.history.length + 1;
       }
     } catch (e) {
-      console.warn('[ConfigHistory] Failed to load persisted history, starting fresh', e);
+      LOGGER.warn('ConfigHistory', 'Failed to load persisted history, starting fresh', { error: e });
     }
     // Commit initial seed if no history loaded
     if (this.history.length === 0) {
@@ -58,7 +61,7 @@ export class ConfigHistoryService {
         seq: this.currentVersionSeq,
       }));
     } catch (e) {
-      console.error('[ConfigHistory] Failed to persist history', e);
+      LOGGER.error('ConfigHistory', 'Failed to persist history', { error: e });
     }
   }
 
@@ -101,7 +104,7 @@ export class ConfigHistoryService {
     try {
       await this.commit(nextConfig, author, `Rollback to version ${target.version} (${target.comment})`);
     } catch (e) {
-      console.error('[ConfigHistory] Failed to record rollback in history', e);
+      LOGGER.error('ConfigHistory', 'Failed to record rollback in history', { error: e });
       throw e;
     }
 

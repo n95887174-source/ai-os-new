@@ -6,6 +6,10 @@ import type { IKeyStateStore } from '../contracts/key-state';
 import type { IEventBus } from '../types/interfaces';
 import { LLMError } from '../../llm/core/errors';
 
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('ProbeService');
+
 const PROBE_TIMEOUT = 5000;
 const PROBE_MESSAGES = [
   { role: 'user' as const, content: 'Reply only: OK' },
@@ -83,7 +87,7 @@ export class ProbeService implements IProbeService, ILifecycle {
     this._started = true;
     // OBS-38: periodic probe scheduling — re-probe every 5 minutes
     this.probeIntervalId = setInterval(() => {
-      this.probeAll().catch(e => console.warn('[ProbeService] Periodic probe failed:', e));
+      this.probeAll().catch(e => LOGGER.warn('ProbeService', 'Periodic probe failed', { error: e }));
     }, 300_000);
   }
   destroy(): void {

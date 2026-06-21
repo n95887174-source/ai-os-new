@@ -9,6 +9,9 @@
  */
 import type { IContainer } from '../container';
 import type { IEventBus } from '../types/interfaces';
+import { rootLogger } from '../services/logger-service';
+
+const LOGGER = rootLogger.child('ServiceRegistration');
 
 export interface PhaseContext {
   container: IContainer;
@@ -32,7 +35,7 @@ export function makeHelpers(ctx: PhaseContext) {
   const asDeps = <T>(value: unknown): T => {
     // SR-2: In dev mode, warn if value is missing expected properties
     if (typeof value !== 'object' || value === null) {
-      console.warn('[ServiceRegistration] asDeps() received non-object:', value);
+      LOGGER.warn('ServiceRegistration', 'asDeps() received non-object', { value });
     }
     return value as T;
   };

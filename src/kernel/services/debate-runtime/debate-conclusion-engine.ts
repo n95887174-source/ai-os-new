@@ -1,5 +1,8 @@
 import type { DebateSessionSnapshot, TimelineEntry, AgentStateEntry } from '../../contracts/debate-runtime';
 import type { DebateVerdict, ConclusionType, StanceResult, VerdictKeyArgument, VerdictFeedback, VerdictFeedbackVote } from '../../contracts/debate-types';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('DebateConclusionEngine');
 
 export type LlmCallFn = (prompt: string) => Promise<string>;
 
@@ -159,7 +162,7 @@ export class DebateConclusionEngine {
       const enhanced = this.parseLLMResponse(response, base);
       return enhanced;
     } catch (e) {
-      console.warn('[DebateConclusionEngine] LLM verdict enhancement failed, using heuristic base', e);
+      LOGGER.warn('DebateConclusionEngine', 'LLM verdict enhancement failed, using heuristic base', { error: e });
       return base;
     }
   }

@@ -5,6 +5,10 @@ import { EVENTS } from '../events/event-names';
 import { ExecutionQueue } from './execution-queue';
 import type { QueuePriority } from './execution-queue';
 
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('Orchestrator');
+
 function estimateTokens(text: string): number {
   let tokens = 0;
   for (const ch of text) {
@@ -103,7 +107,7 @@ export class OrchestrationService {
         node.lifecycle = lifecycle;
       }
     }
-    console.log(`[Orchestrator] Mounted topology: ${topology.name} (v${topology.version})`, new Error().stack?.split('\n').slice(2, 5).join(' | '));
+    LOGGER.info('Orchestrator', `Mounted topology: ${topology.name} (v${topology.version})`);
     this.deps.eventBus.emit(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, topology);
   }
 
@@ -132,7 +136,7 @@ export class OrchestrationService {
     const traceId = request.requestId || `trace-${crypto.randomUUID()}`;
     this.executionStats.totalExecutions++;
 
-    console.log(`[Orchestrator] Starting ${mode} execution chain at node: ${startNode.label}`);
+    LOGGER.info('Orchestrator', `Starting ${mode} execution chain at node: ${startNode.label}`, { traceId });
     await this.processNode(startNode, {
       ...request,
       traceId,
@@ -143,7 +147,7 @@ export class OrchestrationService {
   }
 
   private async executeNodeLogic(node: ISNode, data: NodeContext, mode: 'production' | 'simulation'): Promise<string> {
-    console.log(`[Orchestrator] [${data.traceId}] Executing node: ${node.label} (${node.type})${mode === 'simulation' ? ' [SIM]' : ''}`);
+    LOGGER.debug('Orchestrator', `Executing node: ${node.label} (${node.type})`, { traceId: data.traceId, mode });
 
     switch (node.type) {
       case 'agent':
@@ -165,7 +169,7 @@ export class OrchestrationService {
           ? `[SIM] Tool ${node.config.toolId || 'unknown'} executed`
           : await this.executeToolNode(node, data);
       default:
-        console.warn(`[Orchestrator] Unknown node type: ${node.type} (${node.label})`);
+        LOGGER.warn('Orchestrator', `Unknown node type: ${node.type} (${node.label})`);
         return data.output || `[Unhandled node: ${node.label}]`;
     }
   }
@@ -179,7 +183,7 @@ export class OrchestrationService {
     }
 
     if (visited.has(node.id)) {
-      console.warn(`[Orchestrator] Cycle detected at node: ${node.label} (${node.id}), skipping`);
+      LOGGER.warn('Orchestrator', `Cycle detected at node: ${node.label} (${node.id}), skipping`);
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Cycle detected at node: ${node.label} — execution stopped`, type: 'warning' });
       return;
     }
@@ -224,7 +228,7 @@ export class OrchestrationService {
           updatedBlackboard = { ...updatedBlackboard, ...parsed._blackboard };
         }
       }
-    } catch (e) { console.warn('[Orchestrator] Failed to parse node output as JSON for blackboard', e); }
+    } catch (e) { LOGGER.warn('Orchestrator', 'Failed to parse node output as JSON for blackboard', { error: e }); }
 
     this.deps.eventBus.emit(EVENTS.COGNITIVE_STEP_COMPLETED, {
       nodeId: node.id, traceId: data.traceId, status, duration, output,
@@ -300,7 +304,7 @@ export class OrchestrationService {
           return JSON.stringify({ traceId: data.traceId, output: `${input}\n[Routed to: ${destinations[idx].label}]` });
         }
       } catch (e) {
-        console.warn('[Orchestrator] LLM route parsing failed:', e);
+        LOGGER.warn('Orchestrator', 'LLM route parsing failed', { error: e });
       }
     }
 
@@ -337,12 +341,12 @@ export class OrchestrationService {
       for (const pattern of blockedPatterns) {
         try {
           if (this.isReDosPattern(pattern)) {
-            console.warn(`[Orchestrator] Rejected potentially dangerous regex pattern: "${pattern.slice(0, 50)}..."`);
+            LOGGER.warn('Orchestrator', `Rejected potentially dangerous regex pattern: "${pattern.slice(0, 50)}..."`);
             continue;
           }
           if (new RegExp(pattern, 'i').test(contentToCheck)) return { approved: false, error: `Matched pattern "${pattern}"` };
         } catch {
-          console.warn(`[Orchestrator] Invalid regex pattern: "${pattern.slice(0, 50)}..."`);
+          LOGGER.warn('Orchestrator', `Invalid regex pattern: "${pattern.slice(0, 50)}..."`);
         }
       }
     }

@@ -1,5 +1,8 @@
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IEventBus } from '../types/interfaces';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('AgentMarketplace');
 
 export interface MarketplaceItem {
   id: string;
@@ -24,13 +27,13 @@ export class AgentMarketplace implements ILifecycle {
   }
 
   async init() {
-    console.info('[AgentMarketplace] init: no persistence — ephemeral mock data');
+    LOGGER.info('AgentMarketplace', 'init: no persistence — ephemeral mock data');
   }
   async start() {
-    console.info('[AgentMarketplace] start: ready');
+    LOGGER.info('AgentMarketplace', 'start: ready');
   }
   destroy() {
-    console.info('[AgentMarketplace] destroy: clearing items');
+    LOGGER.info('AgentMarketplace', 'destroy: clearing items');
     this.items = [];
   }
 

@@ -1,4 +1,7 @@
 import { CONFIG } from './config-registry';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('SandboxService');
 
 export interface SandboxServiceDeps {
   toolService: {
@@ -15,7 +18,7 @@ export class SandboxService {
     // BLD-12: Fail explicitly in production instead of silently wrong fallback.
     // The /proxy/fetch fallback only works via Vite dev proxy, not in Docker.
     if (import.meta.env.PROD) {
-      console.error('[SandboxService] VITE_PROXY_URL is not set in production Docker. Sandbox fetch will fail.');
+      LOGGER.error('SandboxService', 'VITE_PROXY_URL is not set in production Docker. Sandbox fetch will fail.');
     }
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const base = `${origin}/proxy/fetch`;
@@ -66,20 +69,20 @@ export class SandboxService {
     } catch (e) {
       clearTimeout(timer);
       // B10-75: Proxy fallback also needs timeout protection
-      console.warn('[SandboxService] Direct fetch failed, trying proxy:', e);
+      LOGGER.warn('SandboxService', 'Direct fetch failed, trying proxy', { error: e });
       const proxyController = new AbortController();
       const proxyTimer = setTimeout(() => proxyController.abort(), timeoutMs);
       try {
         const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`, { signal: proxyController.signal });
         clearTimeout(proxyTimer);
-        if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e as Error });
+        if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
         const text = await proxyRes.text();
         try {
           const err = JSON.parse(text);
-          if (err.error) throw new Error(err.error, { cause: e as Error });
+          if (err.error) throw new Error(err.error, { cause: e });
         } catch {
           if (import.meta.env.DEV) {
-            console.debug('[SandboxService] Proxy response not JSON, returning raw text');
+            LOGGER.debug('SandboxService', 'Proxy response not JSON, returning raw text');
           }
         }
         return text;

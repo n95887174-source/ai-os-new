@@ -402,7 +402,7 @@ export class PersonaService {
 export const personaService = new PersonaService();
 
 // Initialize on module load
-personaService.init().catch(console.error);
+personaService.init().catch(e => LOGGER.error('PersonaService', 'Init failed', { error: e }));
 
 // Add new events for personas
 if (!EVENTS.PERSONA_CHANGED) {

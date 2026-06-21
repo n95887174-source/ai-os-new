@@ -69,6 +69,10 @@ export interface ContentSafetyResult {
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('PolicyService');
+
 const POLICIES_KEY = 'super_agents_policies';
 const PATTERNS_KEY = 'super_agents_policy_patterns';
 const AGENT_POLICIES_KEY = 'super_agents_agent_policies';
@@ -98,6 +102,7 @@ export class PolicyService {
   }
 
   destroy() {
+    if (this.persistTimer) clearTimeout(this.persistTimer);
     this.unsubs.forEach(u => u());
   }
 
@@ -137,7 +142,7 @@ export class PolicyService {
       else this.securityPatterns = [...this.defaultSecurityPatterns];
       const savedAgentPolicies = await this.deps.database.getKv<Record<string, AgentPolicy>>(AGENT_POLICIES_KEY);
       if (savedAgentPolicies) this.agentPolicies = savedAgentPolicies;
-    } catch (e) { console.error('[PolicyService] Failed to load policies', e); }
+    } catch (e) { LOGGER.error('PolicyService', 'Failed to load policies', { error: e }); }
   }
 
   private persistTimer: ReturnType<typeof setTimeout> | undefined;
@@ -152,7 +157,7 @@ export class PolicyService {
           await this.deps.database.setKv(POLICIES_KEY, this.activePolicies);
           await this.deps.database.setKv(PATTERNS_KEY, this.securityPatterns);
           await this.deps.database.setKv(AGENT_POLICIES_KEY, this.agentPolicies);
-        } catch (e) { console.error('[PolicyService] Failed to persist', e); }
+        } catch (e) { LOGGER.error('PolicyService', 'Failed to persist', { error: e }); }
         finally { this.persistPromise = undefined; }
       })();
     }, 50);

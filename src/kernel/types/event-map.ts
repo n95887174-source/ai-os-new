@@ -1,5 +1,5 @@
 import type { ApiKey, SystemState } from '../types/metrics-types';
-import type { CognitiveSkill } from '../types/domain-types';
+import type { CognitiveSkill, CognitiveTrace, CognitiveStep } from '../types/domain-types';
 import type { EventPayloads } from '../types/domain-types';
 import type { AgentLifecycleState } from '../contracts/topology';
 import type { AgentHealth } from '../contracts/agent-health';
@@ -40,7 +40,7 @@ export type EventMap = {
   'provider:rate-limit:synced': { provider: string; keyId: string; remaining: number; resetAt: number };
   'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
   'provider:state:desync': { localHash: string; remoteHash: string; mismatches: number };
-  'cognitive:trace:updated': Array<{ id: string; startTime: number; endTime?: number; input: string; output?: string; status: string; steps: unknown[]; provider?: string; model?: string; totalTokens?: number; latency?: number; error?: string }>;
+  'cognitive:trace:updated': Array<{ id: string; startTime: number; endTime?: number; input: string; output?: string; status: string; steps: CognitiveStep[]; provider?: string; model?: string; totalTokens?: number; latency?: number; error?: string }>;
   'debate:updated': unknown;
   'debate:started': unknown;
   'debate:argument': unknown;
@@ -130,7 +130,7 @@ export type EventMap = {
   'key:health:check:completed': { id?: string; provider?: string; status?: string } | void;
 
   // Control & Trace
-  'trace:updated': unknown[];
+  'trace:updated': CognitiveTrace[];
   'agent:config:updated': { id: string; config: unknown };
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
@@ -140,7 +140,7 @@ export type EventMap = {
   'cognitive:step:active': EventPayloads['cognitive:step:active'];
   'cognitive:step:completed': { nodeId: string; traceId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string; model?: string };
   'cognitive:decision:made': unknown;
-  'request:incoming': { requestId: string; messages: unknown[] };
+  'request:incoming': { requestId: string; messages: ChatMessage[] };
   'request:completed': { final_data: { traceId: string; output: string } };
 
   // Tool Execution
@@ -348,7 +348,7 @@ export type EventMap = {
 
   // STT
   'stt:error': { error: string };
-  'stt:state:changed': { state: string };
+  'stt:state:changed': { state: string; error?: string };
 
   // System
   'system:node:removed': { id: string };

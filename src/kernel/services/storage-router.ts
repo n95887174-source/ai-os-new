@@ -43,6 +43,7 @@ import { dexieDb } from './database-service';
 import { StorageAdapter } from './storage-adapter';
 import { getSqliteDb } from './storage/sqlite-storage';
 import { CONFIG } from './config-registry';
+import { rootLogger } from './logger-service';
 import type { ApiKey } from '../types/metrics-types';
 
 export type StorageMode = 'auto' | 'merged' | 'localStorage' | 'dexie' | 'sql';
@@ -206,7 +207,7 @@ export async function routeStorage(mode: StorageMode = 'auto'): Promise<StorageR
     const forced = (globalThis as unknown as ForcedMode).__FORCE_STORAGE_MODE__;
     if (forced && typeof forced === 'string' && ['auto', 'merged', 'localStorage', 'dexie', 'sql'].includes(forced)) {
       effectiveMode = forced;
-      console.warn(`[STORAGE_ROUTER] mode override via globalThis: ${forced}`);
+      rootLogger.warn('StorageRouter', '[STORAGE_ROUTER] mode override via globalThis', { forced });
     }
   } catch { /* non-critical */ }
 
@@ -221,7 +222,7 @@ export async function routeStorage(mode: StorageMode = 'auto'): Promise<StorageR
     sqlEnabled ? readSqliteBlob() : Promise.resolve([] as ApiKey[]),
   ]);
   if (!sqlEnabled) {
-    console.log('[STORAGE_ROUTER] SQLite source skipped (CONFIG.storage.useSqlite=false)');
+  rootLogger.info('StorageRouter', '[STORAGE_ROUTER] SQLite source skipped (CONFIG.storage.useSqlite=false)');
   }
 
   const sources: Record<StorageSource, ApiKey[]> = { localStorage, dexie, sql };
@@ -231,12 +232,16 @@ export async function routeStorage(mode: StorageMode = 'auto'): Promise<StorageR
     sql: scoreKeys(sql),
   };
 
-  console.log(
-    `[STORAGE_ROUTER] localStorage=${localStorage.length} dexie=${dexie.length} sql=${sql.length}`
-  );
-  console.log(
-    `[STORAGE_SCORE] localStorage=${scores.localStorage} dexie=${scores.dexie} sql=${scores.sql}`
-  );
+  rootLogger.info('StorageRouter', '[STORAGE_ROUTER] Source lengths', {
+    localStorage: localStorage.length,
+    dexie: dexie.length,
+    sql: sql.length
+  });
+  rootLogger.info('StorageRouter', '[STORAGE_ROUTER] Source scores', {
+    localStorage: scores.localStorage,
+    dexie: scores.dexie,
+    sql: scores.sql
+  });
 
   let winner: StorageSource | null = null;
   let keys: ApiKey[] = [];
@@ -252,7 +257,7 @@ export async function routeStorage(mode: StorageMode = 'auto'): Promise<StorageR
       } else {
         reason = 'no sources available';
       }
-      console.log(`[STORAGE_WINNER] ${winner ?? 'none'} (mode=auto, ${reason})`);
+      rootLogger.info('StorageRouter', '[STORAGE_WINNER]', { winner: winner ?? 'none', mode: 'auto', reason });
       break;
     }
     case 'merged': {
@@ -262,28 +267,28 @@ export async function routeStorage(mode: StorageMode = 'auto'): Promise<StorageR
       dropped = d;
       winner = null;
       reason = `merged ${union.length} → ${unique.length} (deduped by id, no source mutation)`;
-      console.log(`[STORAGE_WINNER] merged (mode=merged, ${reason})`);
+      rootLogger.info('StorageRouter', '[STORAGE_WINNER]', { winner: 'merged', mode: 'merged', reason });
       break;
     }
     case 'localStorage': {
       winner = 'localStorage';
       keys = sources.localStorage;
       reason = `mode=localStorage forced ${keys.length} keys`;
-      console.log(`[STORAGE_WINNER] localStorage (mode=localStorage, ${reason})`);
+      rootLogger.info('StorageRouter', '[STORAGE_WINNER]', { winner: 'localStorage', mode: 'localStorage', reason });
       break;
     }
     case 'dexie': {
       winner = 'dexie';
       keys = sources.dexie;
       reason = `mode=dexie forced ${keys.length} keys`;
-      console.log(`[STORAGE_WINNER] dexie (mode=dexie, ${reason})`);
+      rootLogger.info('StorageRouter', '[STORAGE_WINNER]', { winner: 'dexie', mode: 'dexie', reason });
       break;
     }
     case 'sql': {
       winner = 'sql';
       keys = sources.sql;
       reason = `mode=sql forced ${keys.length} keys`;
-      console.log(`[STORAGE_WINNER] sql (mode=sql, ${reason})`);
+      rootLogger.info('StorageRouter', '[STORAGE_WINNER]', { winner: 'sql', mode: 'sql', reason });
       break;
     }
   }

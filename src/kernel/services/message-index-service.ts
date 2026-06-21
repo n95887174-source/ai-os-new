@@ -91,6 +91,7 @@ export class MessageIndexService {
   }
 
   destroy(): void {
+    if (this.persistTimeout) { clearTimeout(this.persistTimeout); this.persistTimeout = null; }
     if (this.unsubStreamEnd) { this.unsubStreamEnd(); this.unsubStreamEnd = null; }
     if (this.unsubSend) { this.unsubSend(); this.unsubSend = null; }
     if (this.unsubChatRewound) { this.unsubChatRewound(); this.unsubChatRewound = null; }

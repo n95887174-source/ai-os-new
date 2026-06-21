@@ -130,6 +130,7 @@ const KeyNotesPanel: React.FC = () => {
 
   const handleDeleteNote = useCallback(async (noteId: string) => {
     if (!selectedKeyId) return;
+    if (!window.confirm('Delete this note?')) return;
     try {
       const k = keyService.getKeys().find(x => x.id === selectedKeyId);
       if (!k) return;

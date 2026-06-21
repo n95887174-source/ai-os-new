@@ -60,6 +60,10 @@ export class RaceExecutor {
 
     let timeoutId: ReturnType<typeof setTimeout> = null as unknown as ReturnType<typeof setTimeout>;
     const timeoutPromise = new Promise<never>((_, reject) => {
+      if (options?.signal?.aborted) {
+        reject(new Error('Aborted'));
+        return;
+      }
       timeoutId = setTimeout(() => {
         controllers.forEach(c => c.abort());
         clearTimeout(timeoutId);

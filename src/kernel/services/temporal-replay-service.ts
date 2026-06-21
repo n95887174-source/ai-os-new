@@ -3,6 +3,9 @@ import type { CausalTraceEntry, EventRef, ICausalScopeManager } from '../contrac
 import type { ITemporalReplayService, TemporalTrace, TemporalFrame, ScoreSnapshot } from '../contracts/temporal-replay';
 import type { RouterService, RoutingStrategy } from './provider-router';
 import type { SystemState } from '../types/metrics-types';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('TemporalReplayService');
 
 type EventName = string;
 
@@ -273,7 +276,7 @@ export class TemporalReplayService implements ITemporalReplayService {
           scoreState = rescore(this.routerService, providerMetrics, trace);
           rescored = true;
         } catch (e) {
-          console.warn('[TemporalReplay] Rescore failed at frame', frames.length, e);
+          LOGGER.warn('TemporalReplayService', 'Rescore failed at frame', { frame: frames.length, error: e });
         }
       }
 

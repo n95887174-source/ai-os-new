@@ -1,5 +1,8 @@
 import { EVENTS } from '../../events/event-names';
 import type { DebateBudgetLimits, PressureLevel, PressureAction, BudgetSnapshot, IDebateBudget } from '../../contracts/debate-runtime';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('DebateBudget');
 
 const DEFAULT_LIMITS: DebateBudgetLimits = {
   maxTokensPerDebate: 100_000,
@@ -40,7 +43,7 @@ export class DebateBudget implements IDebateBudget {
 
   canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean {
     if (sessionId !== this._sessionId) {
-      console.warn(`[DebateBudget] sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
+      LOGGER.warn('DebateBudget', `sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
       return false;
     }
     if (this._tokensUsed + estimatedTokens > this.limits.maxTokensPerDebate) {
@@ -64,7 +67,7 @@ export class DebateBudget implements IDebateBudget {
 
   recordUsage(sessionId: string, tokens: number, cost: number): void {
     if (sessionId !== this._sessionId) {
-      console.warn(`[DebateBudget] recordUsage sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
+      LOGGER.warn('DebateBudget', `recordUsage sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
       return;
     }
     this._tokensUsed += tokens;

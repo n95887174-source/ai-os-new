@@ -1,4 +1,7 @@
 import type { KernelEvent, KernelEventLog } from '../../contracts/event-log';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('RingEventLog');
 
 export class RingEventLog implements KernelEventLog {
   private buffer: KernelEvent[] = [];
@@ -19,7 +22,7 @@ export class RingEventLog implements KernelEventLog {
       if (!this.hasWrapped) {
         this.hasWrapped = true;
         this.firstAvailableSeq = this.buffer[this.cursor]?.seq ?? -1;
-        console.info('[RingEventLog] Buffer wrapped — oldest events evicted', { maxSize: this.maxSize, firstAvailableSeq: this.firstAvailableSeq });
+        LOGGER.info('RingEventLog', 'Buffer wrapped — oldest events evicted', { maxSize: this.maxSize, firstAvailableSeq: this.firstAvailableSeq });
       }
       this.buffer[this.cursor] = entry;
       this.cursor = (this.cursor + 1) % this.maxSize;

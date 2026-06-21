@@ -2,7 +2,9 @@ import type { IBootstrap, IEventBus } from './types/interfaces';
 import { type IContainer } from './container';
 import type { ILifecycle } from './contracts/lifecycle';
 import { LifecycleManager } from './services/lifecycle-manager';
-import { LoggerService } from './services/logger-service';
+import { LoggerService, rootLogger } from './services/logger-service';
+
+const LOGGER = rootLogger.child('Bootstrap');
 import { EVENTS } from './events/event-names';
 import { dexieDb } from './services/database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie-identity';
@@ -181,9 +183,7 @@ export class SystemBootstrap implements IBootstrap {
         // Inform the rest of bootstrap about the selected source. We do NOT
         // mutate storage here — resetKeyStorageToCanonical() already did that.
         // This log makes the source-of-truth explicit for debugging.
-        if (import.meta.env.DEV) console.log(
-          `[BOOTSTRAP] StorageRouter winner: ${result.winner} (${result.diagnostics.reason})`
-        );
+        if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'StorageRouter winner', { winner: result.winner, reason: result.diagnostics.reason });
       }
       // Reference setForcedStorageMode to prevent tree-shaking of the export
       // (callers can set the override via DevTools: setForcedStorageMode('dexie')).
@@ -245,7 +245,7 @@ export class SystemBootstrap implements IBootstrap {
     await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
 
     const dexieRaw = await dexieDb.apiKeys.toArray();
-    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);
+    if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot raw dexie count', { count: dexieRaw.length });
 
     let snapshotKeys: ApiKey[] = [];
     let snapshotSource: 'dexie' | 'sqlite' | 'localStorage' | 'unknown' = 'unknown';
@@ -306,7 +306,7 @@ export class SystemBootstrap implements IBootstrap {
     // re-read from dexie. This catches any edge case where the assignment
     // was dropped silently.
     if (snapshotKeys.length === 0 && dexieRaw.length > 0) {
-      console.warn('[BOOTSTRAP_SNAPSHOT] GUARD: snapshot is 0 but dexie has', dexieRaw.length, '— force re-read from dexie');
+      LOGGER.warn('Bootstrap', 'Snapshot guard: snapshot is 0 but dexie has data — force re-read', { dexieCount: dexieRaw.length });
       snapshotKeys = [...dexieRaw];
       snapshotSource = 'dexie';
     }
@@ -316,8 +316,7 @@ export class SystemBootstrap implements IBootstrap {
     // Always clean up stale prefixed localStorage keys AFTER services initialized.
     // If initServices() fails and snapshot is cleared, keys still exist in localStorage
     // as a recovery source.
-    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
-    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
+    if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot final', { count: snapshotKeys.length, source: snapshotSource });
 
     // Diagnostic-only globals (counts + flags, NO actual key material).
     interface BootstrapGlobals {
@@ -605,10 +604,10 @@ export class SystemBootstrap implements IBootstrap {
     try {
       const gm = this.container.get<GroupManagerService>('groupManagerService');
       const keysBeforeSync = this.container.get<KeyService>('keyService').getKeys();
-      if (import.meta.env.DEV) console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys before sync:', { count: keysBeforeSync.length });
+      if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'GroupManager.syncExistingKeys — keys before sync', { count: keysBeforeSync.length });
       await gm.syncExistingKeys();
       const keysAfterSync = gm.getAllKeys();
-      if (import.meta.env.DEV) console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys after sync:', { count: keysAfterSync.length });
+      if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'GroupManager.syncExistingKeys — keys after sync', { count: keysAfterSync.length });
       this.container.get<KeyService>('keyService').attachGroupManager(gm);
       this.logger.info('Bootstrap', 'Group Manager synced existing keys');
     } catch (e) {
@@ -620,7 +619,7 @@ export class SystemBootstrap implements IBootstrap {
       const ks = this.container.get<KeyService>('keyService');
       const kss = this.container.get<KeyStateStore>('keyStateStore');
       const existingKeys: ApiKey[] = ks.getKeys?.() ?? [];
-      if (import.meta.env.DEV) console.log('[KEY_FLOW] KeyStateStore seed:', { keyCount: existingKeys.length });
+      if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'KeyStateStore seed', { keyCount: existingKeys.length });
       if (kss && existingKeys.length > 0) {
         kss.seedFromKeys(existingKeys);
         this.logger.info('Bootstrap', `KeyStateStore seeded with ${existingKeys.length} key(s)`);

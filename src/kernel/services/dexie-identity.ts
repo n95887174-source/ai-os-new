@@ -25,6 +25,7 @@
  */
 
 import type Dexie from 'dexie';
+import { rootLogger } from './logger-service';
 
 interface DexieWithApiKeys extends Dexie {
   apiKeys: { count(): Promise<number>; toArray(): Promise<unknown[]> };
@@ -47,7 +48,7 @@ export function logDexieIdentity(source: string, instance: DexieWithApiKeys): vo
   const globalInstance = g.__DEXIE_INSTANCE__;
   const sameAsGlobal = globalInstance === instance;
   // Synchronous log only; count() is async and would require awaited log
-  console.log('[DEXIE_IDENTITY]', {
+  rootLogger.info('DexieIdentity', '[DEXIE_IDENTITY]', {
     source,
     instanceRef: instanceName(instance),
     sameAsGlobalThis: sameAsGlobal,
@@ -73,9 +74,9 @@ export async function logDexieIdentityWithCount(
   try {
     count = await instance.apiKeys.count();
   } catch (e) {
-    console.warn('[DEXIE_IDENTITY] count() failed for', source, e);
+    rootLogger.warn('DexieIdentity', '[DEXIE_IDENTITY] count() failed', { source, error: e });
   }
-  console.log('[DEXIE_IDENTITY_WITH_COUNT]', {
+  rootLogger.info('DexieIdentity', '[DEXIE_IDENTITY_WITH_COUNT]', {
     source,
     instanceRef: instanceName(instance),
     sameAsGlobalThis: sameAsGlobal,
@@ -111,7 +112,7 @@ export async function anchorDexieInstance(
     } catch {
       g.__DEXIE_INSTANCE_COUNT__ = 0;
     }
-    console.log('[DEXIE_ANCHOR] first anchor set', {
+    rootLogger.info('DexieIdentity', '[DEXIE_ANCHOR] first anchor set', {
       source,
       instanceRef: instanceName(instance),
       apiKeysCount: g.__DEXIE_INSTANCE_COUNT__,
@@ -130,10 +131,11 @@ export async function anchorDexieInstance(
   const currentCount = g.__DEXIE_INSTANCE_COUNT__ ?? 0;
 
   if (newCount >= currentCount) {
-    console.warn(
-      '[DEXIE_ANCHOR] swapping to new instance (HMR re-eval?) — was',
-      currentCount, 'rows, now', newCount, 'rows. Source:', source
-    );
+    rootLogger.warn('DexieIdentity', '[DEXIE_ANCHOR] swapping to new instance', {
+      currentCount,
+      newCount,
+      source
+    });
     g.__DEXIE_INSTANCE__ = instance;
     g.__DEXIE_INSTANCE_COUNT__ = newCount;
   } else {
@@ -170,7 +172,7 @@ export function verifyDexieInstance(
     const anchoredTables = Object.keys((anchored as unknown as { _tables?: Record<string, unknown> })._tables ?? {}).length;
     const passedTables = Object.keys((instance as unknown as { _tables?: Record<string, unknown> })._tables ?? {}).length;
     if (anchoredTables === 0 && passedTables === 0) {
-      console.warn('[DEXIE_ANCHOR] HMR created fresh instance with 0 tables — accepting (no data loss risk)');
+      rootLogger.warn('DexieIdentity', '[DEXIE_ANCHOR] HMR created fresh instance with 0 tables — accepting (no data loss risk)');
       g.__DEXIE_INSTANCE__ = instance;
       return instance;
     }

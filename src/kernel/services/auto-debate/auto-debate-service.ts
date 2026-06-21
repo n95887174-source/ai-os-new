@@ -2,6 +2,9 @@
   IAutoDebateService, AutoDebateOptions, AutoDebateResult,
   ProviderWinRate, BatchTestResult, AutoDebateRole, TournamentResult, TournamentMatch,
 } from '../../contracts/auto-debate';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('AutoDebateService');
 import type { DebateParticipant, DebateSession } from '../debate-service';
 import type { ApiKey } from '../../types/metrics-types';
 
@@ -143,12 +146,12 @@ export class AutoDebateService implements IAutoDebateService {
       };
     });
 
-    console.debug('[DEBATE_MODELS]', participants.map(p => ({
+    LOGGER.debug('AutoDebateService', 'Debate models resolved', { participants: participants.map(p => ({
       id: p.id.slice(0, 8),
       name: p.name,
       provider: p.provider,
       model: p.modelId,
-    })));
+    })) });
 
     return participants;
   }

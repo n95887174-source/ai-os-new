@@ -7,6 +7,9 @@
 
 import type { DatabaseService } from '../services/database-service';
 import type { MemoryEntry } from '../types/memory-types'
+import { rootLogger } from '../services/logger-service';
+
+const LOGGER = rootLogger.child('MemoryRepository');
 
 const MAX_ENTRIES = 1000;
 
@@ -130,7 +133,7 @@ export class MemoryRepository {
       .primaryKeys();
     
     if (oldEntries.length > 0) {
-      await this.db.memories.bulkDelete(oldEntries).catch(e => console.warn('[MemoryRepository] Evict failed:', e));
+      await this.db.memories.bulkDelete(oldEntries).catch(e => LOGGER.warn('MemoryRepository', 'Evict failed', { error: e }));
     }
     
     // Also remove from cache

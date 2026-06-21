@@ -2,7 +2,10 @@ import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/
 import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
 import { CONFIG } from '../../kernel/services/config-registry';
+import { rootLogger } from '../../kernel/services/logger-service';
 import { crossTabStateSync } from '../../kernel/services/cross-tab-state';
+
+const LOGGER = rootLogger.child('RateLimitDecorator');
 
 interface TokenBucket {
   tokens: number;
@@ -121,7 +124,7 @@ export class RateLimitDecorator extends BaseDecorator {
         remaining: 0,
         resetAt: Date.now()
       });
-      console.debug(`[RateLimit] ${this.inner.id}: rate limit hit for ${providerId}`);
+      LOGGER.debug('RateLimitDecorator', 'Rate limit hit', { provider: providerId, adapter: this.inner.id });
       throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
     }
     if (!this.consume(this.#global)) {
@@ -131,7 +134,7 @@ export class RateLimitDecorator extends BaseDecorator {
         remaining: 0,
         resetAt: Date.now()
       });
-      console.debug(`[RateLimit] ${this.inner.id}: global rate limit exceeded`);
+      LOGGER.debug('RateLimitDecorator', 'Global rate limit exceeded', { adapter: this.inner.id });
       throw new RetryableError('Global rate limit exceeded', this.inner.id, 429);
     }
     this.consume(pb);

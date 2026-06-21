@@ -35,6 +35,7 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
   }, [module, runService]);
 
   const handleDelete = (id: string) => {
+    if (!window.confirm('Delete this research run?')) return;
     runService.deleteRun(id);
     setRuns(runService.getRunsByModule(module));
   };

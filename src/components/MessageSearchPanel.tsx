@@ -50,7 +50,7 @@ export const MessageSearchPanel: React.FC = () => {
   const runSearch = useCallback(() => {
     try {
       const fromTs = fromDate ? new Date(fromDate).getTime() : undefined;
-      const toTs = toDate ? new Date(toDate).getTime() + 86400000 : undefined;
+      const toTs = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : undefined;
       const out = messageIndex.search({
         query,
         caseSensitive,

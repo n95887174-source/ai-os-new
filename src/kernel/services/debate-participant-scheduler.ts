@@ -1,4 +1,7 @@
 import type { DebateParticipant, DebateSession } from '../contracts/debate-types';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('DebateParticipantScheduler');
 
 export interface ParticipantSchedulerState {
   lastParticipantId: string | null;
@@ -53,7 +56,7 @@ export async function selectNextParticipant(
     const chosen = await selectModeratorParticipant(session, callLLM);
     if (chosen) return chosen;
   } catch (e) {
-    console.warn('[DebateService] Moderator decision failed, falling through:', e);
+    LOGGER.warn('DebateParticipantScheduler', 'Moderator decision failed, falling through', { error: e });
   }
 
   const proArgs = session.arguments.filter((a) => a.position === 'pro').length;

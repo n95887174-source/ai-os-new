@@ -125,6 +125,7 @@ const AgentJournalPanel: React.FC = () => {
   }, [newEntry, t]);
 
   const handleDelete = useCallback(async (id: string) => {
+    if (!window.confirm('Delete this journal entry?')) return;
     await service.remove(id);
   }, []);
 
@@ -337,7 +338,7 @@ const AgentJournalPanel: React.FC = () => {
                 <button onClick={() => setActiveAgent(e.agentId)} style={{ padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#93c5fd', cursor: 'pointer', fontSize: '0.7rem' }} title={t('agent_journal.filter_by_agent')}>
                   {stats2.totalTasks} {t('agent_journal.total_tasks')}
                 </button>
-                <button onClick={() => handleDelete(e.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4 }}>
+                <button onClick={() => handleDelete(e.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4 }} aria-label="Delete journal entry">
                   <X size={14} />
                 </button>
               </div>

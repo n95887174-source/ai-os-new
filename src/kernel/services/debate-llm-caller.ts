@@ -3,6 +3,9 @@ import type { DebateConfig, DebateParticipant, DebateServiceDeps, DebateSession 
 import type { ISessionAffinityStore } from '../contracts/session-affinity';
 import { ARGUMENT_STRATEGY_INSTRUCTIONS, getDefaultSystemPrompt } from './debate-prompt-builder';
 import { estimateTokens } from '../utils/tokenEstimate';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('DebateLLMCaller');
 
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
   gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
@@ -184,7 +187,7 @@ export class DebateLLMCaller {
           task: `debate-${participant.id}`,
           round: activeSession?.currentRound,
         });
-        console.debug('[DEBATE_MODEL]', {
+        LOGGER.debug('DebateLLMCaller', 'Debate model resolved', {
           agent: participant.name,
           provider: attemptKey.provider,
           model: modelId,

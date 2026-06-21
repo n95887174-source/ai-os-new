@@ -239,7 +239,7 @@ class CrossResearchPatternLearningService {
       }
     }
 
-    this.save();
+    void this.save();
   }
 
   private matchesPattern(finding: string, pattern: Pattern): boolean {

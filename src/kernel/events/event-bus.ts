@@ -2,9 +2,12 @@ import type { ILogger } from '../contracts/logger';
 import type { IEventBus } from '../types/interfaces';
 import type { EventMap } from '../types/event-map';
 import { EventValidators } from '../types/schema-types';
+import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
 import { sanitizeObject } from '../../llm/http/llm-http-client';
 export { EVENTS } from './event-names';
+
+const LOGGER = rootLogger.child('EventBus');
 export type { EventMap };
 
 type Callback<T = unknown> = (data: T) => void;
@@ -62,7 +65,7 @@ private registerAllValidators(): void {
   reset(): void {
     // H-06: Call all tracked unsubscribe callbacks so consumers know they're unsubscribed
     for (const unsub of this.unsubCallbacks) {
-      try { unsub(); } catch (e) { console.warn('[EventBus] unsubscribe callback failed', e); }
+      try { unsub(); } catch (e) { LOGGER.warn('EventBus', 'unsubscribe callback failed', { error: e }); }
     }
     this.unsubCallbacks.clear();
     this.listenerMap.clear();
@@ -145,7 +148,7 @@ private registerAllValidators(): void {
 
     const trace = TraceContext.current;
     if (import.meta.env.DEV) {
-      console.debug(`[EventBus] EMIT: ${eventStr}`, sanitizeObject(payload), trace);
+      LOGGER.debug('EventBus', `EMIT: ${eventStr}`, { payload: sanitizeObject(payload) as Record<string, unknown>, trace: (trace ?? {}) as Record<string, unknown> });
     }
     this.rawEmit(eventStr, payload);
   }

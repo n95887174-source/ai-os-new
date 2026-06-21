@@ -30,6 +30,9 @@ import {
   persistHistoryList,
   migrateFromLegacyStorage,
 } from './debate-session-persistence';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('DebateService');
 
 // ── Socratic Quality Gate ──────────────────────────────────────────────
 const TRIVIAL_QUESTION_PATTERNS = [
@@ -320,7 +323,7 @@ export class DebateService {
         this.feedGovernor(arg);
         anySucceeded = true;
       } catch (e) {
-        console.warn('[DebateService] Opening statement failed:', e);
+        LOGGER.warn('DebateService', 'Opening statement failed', { error: e });
       }
     }
 
@@ -511,7 +514,7 @@ export class DebateService {
       this.feedGovernor(arg);
 
       // Fact-check claims asynchronously (non-blocking)
-      void this.factCheckService.checkArgument(arg).catch(e => console.warn('[DebateService] Fact-check failed:', e));
+      void this.factCheckService.checkArgument(arg).catch(e => LOGGER.warn('DebateService', 'Fact-check failed', { error: e }));
 
       if (this.checkGovernorStopConditions()) {
         this.stopDebate();

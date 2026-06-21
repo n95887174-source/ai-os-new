@@ -48,7 +48,7 @@ class MessageFeedbackService {
     // SI-50: Subscribe to CLEAR_DATA to clear all feedback on data reset
     this.unsub = EventBus.on(EVENTS.CLEAR_DATA, () => {
       this.feedback.clear();
-      this.save();
+      void this.save();
     });
     LOGGER.info('MessageFeedback', `Initialized with ${this.feedback.size} feedback entries`);
   }

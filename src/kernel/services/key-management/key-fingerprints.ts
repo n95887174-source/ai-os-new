@@ -1,4 +1,7 @@
 ﻿import type { ApiKey } from '../../types/metrics-types';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('KeyFingerprints');
 
 export class KeyFingerprints {
   async fingerprintKey(apiKey: string): Promise<string> {
@@ -30,7 +33,7 @@ export class KeyFingerprints {
       }
     }
     if (duplicates.size > 0) {
-      console.warn('[KeyFingerprints] Duplicate keys detected', { duplicateCount: duplicates.size });
+      LOGGER.warn('KeyFingerprints', 'Duplicate keys detected', { duplicateCount: duplicates.size });
     }
     return duplicates;
   }

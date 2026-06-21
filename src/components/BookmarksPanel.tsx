@@ -95,6 +95,7 @@ const BookmarksPanel: React.FC = () => {
   useEffect(() => { refresh(); }, [search, activeTag, refresh]);
 
   const handleRemove = useCallback(async (id: string) => {
+    if (!window.confirm('Remove this bookmark?')) return;
     await bookmarksService.removeBookmark(id);
   }, []);
 

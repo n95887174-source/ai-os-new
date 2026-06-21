@@ -21,6 +21,9 @@ import {
   computeActivityMetrics,
   computeQualityMetrics,
 } from './debate-metrics';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('DebateRuntimeAdapter');
 
 export interface DebateRuntimeAdapterHooks {
   getActiveSession: () => DebateSession | null;
@@ -148,7 +151,7 @@ export class DebateRuntimeAdapter {
     void engine.startSession(runtimeId)
       .then(() => this.finalize())
       .catch((e) => {
-        console.warn('[DebateService] Runtime debate failed:', e);
+        LOGGER.warn('DebateRuntimeAdapter', 'Runtime debate failed', { error: e });
         this.syncSession();
         this.finalize();
       });

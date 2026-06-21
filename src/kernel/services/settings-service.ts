@@ -221,7 +221,8 @@ export class SettingsService implements ISettingsService {
     return () => this.listeners.delete(listener);
   }
 
-  destroy() {
+  async destroy() {
+    await this.savePromise;
     this.listeners.clear();
   }
 

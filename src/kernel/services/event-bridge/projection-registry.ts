@@ -1,5 +1,8 @@
 import type { KernelEvent, KernelEventLog } from '../../contracts/event-log';
 import type { Projection } from '../../contracts/projection';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('ProjectionRegistry');
 
 export class ProjectionRegistry {
   private projections: Projection[] = [];
@@ -13,7 +16,7 @@ export class ProjectionRegistry {
       try {
         p.reduce(event);
       } catch (e) {
-        console.warn('[Projection] error dispatching event', event.type, e);
+        LOGGER.warn('ProjectionRegistry', 'Error dispatching event', { type: event.type, error: e });
       }
     }
   }

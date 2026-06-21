@@ -3,6 +3,9 @@ import type { IRotationService } from '../../contracts/key-rotation';
 import type { IKeyStateStore } from '../../contracts/key-state';
 import { CONFIG } from '../config-registry';
 import { EVENTS } from '../../events/event-names';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('KeyLifecycle');
 
 export type LifecycleState = 'active' | 'probation' | 'degraded' | 'quarantined' | 'recovering';
 
@@ -204,7 +207,7 @@ export class KeyLifecycle {
     if (from === to) return;
     const allowed = LIFECYCLE_TRANSITIONS[from];
     if (!allowed.includes(to)) {
-      console.warn(`[KeyLifecycle] Invalid transition: ${from} -> ${to} for key ${id}. Skipping.`);
+      LOGGER.warn('KeyLifecycle', `Invalid transition: ${from} -> ${to} for key ${id}. Skipping.`);
       return;
     }
 

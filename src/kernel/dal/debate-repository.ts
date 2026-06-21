@@ -6,6 +6,9 @@
 
 import type { DatabaseService } from '../services/database-service';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
+import { rootLogger } from '../services/logger-service';
+
+const LOGGER = rootLogger.child('DebateRepository');
 
 export class DebateRepository {
   private db: DatabaseService;
@@ -48,7 +51,7 @@ export class DebateRepository {
       this.db.debateVerdicts.clear(),
     ]);
     for (const r of results) {
-      if (r.status === 'rejected') console.warn('[DebateRepository] clearAll partial failure:', r.reason);
+      if (r.status === 'rejected') LOGGER.warn('DebateRepository', 'clearAll partial failure', { reason: r.reason });
     }
   }
 }

@@ -62,7 +62,8 @@ export class SnapshotService {
     await this.load();
   }
 
-  destroy() {
+  async destroy() {
+    await this.save();
     this.unsubs.forEach(u => u());
     if (this.autoCaptureInterval) {
       clearInterval(this.autoCaptureInterval);

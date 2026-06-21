@@ -1,5 +1,8 @@
 import type { RecordedEvent } from './event-recorder';
 import type { Checkpoint } from './checkpoint-store';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('ReplayEngine');
 
 export type ReplayStatus = 'idle' | 'playing' | 'paused' | 'completed';
 
@@ -30,7 +33,7 @@ export class ReplayEngine {
   private _onEvent: ((event: RecordedEvent, index: number) => void) | null = null;
   private _onRewind: ((oldIndex: number, newIndex: number) => void) | null = null;
   private statusListeners: Array<(status: ReplayStatus) => void> = [];
-  private readonly LOG = (...args: unknown[]) => console.debug('[ReplayEngine]', ...args);
+  private readonly LOG = (msg: string, meta?: Record<string, unknown>) => LOGGER.debug('ReplayEngine', msg, meta);
 
   constructor(config?: Partial<ReplayConfig>) {
     this.config = {

@@ -4,6 +4,8 @@ import type { ISTopology } from '../contracts/topology';
 import type { RolesStore } from '../contracts/storage/roles-store';
 import { EVENTS } from '../events/event-names';
 import { storageAdapter } from '../storage-adapter-instance';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('RoleService');
 
 export interface RoleUsageStats {
   invocations: number;
@@ -285,6 +287,7 @@ export class RoleService {
   }
 
   destroy() {
+    if (this.statsDebounceTimer) clearTimeout(this.statsDebounceTimer);
     this.unsubs.forEach(u => u());
   }
 
@@ -309,7 +312,7 @@ export class RoleService {
             await this.deps.rolesStore.bulkAdd(this.roles);
             storageAdapter.removeItem('super_agents_roles');
           } catch (e) {
-            console.error('[RoleService] Failed to migrate roles from localStorage', e);
+            LOGGER.error('RoleService', 'Failed to migrate roles from localStorage', { error: e });
             this.roles = DEFAULT_ROLES;
             await this.deps.rolesStore.bulkAdd(this.roles);
           }
@@ -319,7 +322,7 @@ export class RoleService {
         }
       }
     } catch (e) {
-      console.error('[RoleService] Failed to load roles from Dexie', e);
+      LOGGER.error('RoleService', 'Failed to load roles from Dexie', { error: e });
       this.roles = DEFAULT_ROLES;
     }
 
@@ -328,7 +331,7 @@ export class RoleService {
       try {
         this.usageStats = new Map(statsStored.value as Array<[string, RoleUsageStats]>);
       } catch (e) {
-        console.warn('[RoleService] Failed to parse stored role stats:', e);
+        LOGGER.warn('RoleService', 'Failed to parse stored role stats', { error: e });
       }
     }
     storageAdapter.removeItem('super_agents_role_stats');
@@ -338,7 +341,7 @@ export class RoleService {
     try {
       await this.deps.rolesStore.bulkPut(this.roles);
     } catch (e) {
-      console.error('[RoleService] Failed to persist roles', e);
+      LOGGER.error('RoleService', 'Failed to persist roles', { error: e });
     }
   }
 
@@ -348,7 +351,7 @@ export class RoleService {
     if (this.statsDebounceTimer) clearTimeout(this.statsDebounceTimer);
     this.statsDebounceTimer = setTimeout(() => {
       this.deps.keyValue.put({ id: 'role_usage_stats', value: [...this.usageStats] }).catch(e =>
-        console.warn('[RoleService] Failed to persist role stats:', e)
+        LOGGER.warn('RoleService', 'Failed to persist role stats', { error: e })
       );
       this.statsDebounceTimer = null;
     }, 2000);

@@ -25,6 +25,7 @@ build
 *.crt
 *.p12
 secrets/
+certs/
 
 # Editor / OS junk
 .DS_Store

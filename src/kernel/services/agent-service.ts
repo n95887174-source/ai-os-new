@@ -2,6 +2,9 @@ import type { ISTopology, AgentLifecycleState, ISNode } from '../contracts/topol
 import type { NodeContext } from '../types/domain-types';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('AgentService');
 
 export interface AgentStats {
   calls: number;
@@ -72,11 +75,10 @@ export class AgentService {
 
   async init() {
     if (this._initialized) return;
+    this._initialized = true;
     this.setupListeners();
     await this.load();
     await this.loadGroups();
-    // B10-12: Set _initialized AFTER async work completes, not before
-    this._initialized = true;
   }
 
   destroy() {
@@ -92,7 +94,7 @@ export class AgentService {
         }
       }
     } catch (e) {
-      console.error('[AgentService] Failed to load stats', e);
+      LOGGER.error('AgentService', 'Failed to load stats', { error: e });
     }
   }
 
@@ -101,7 +103,7 @@ export class AgentService {
       const parsed = await this.deps.database.getKv<AgentGroup[]>(GROUPS_KEY);
       if (parsed) this.groups = parsed;
     } catch (e) {
-      console.error('[AgentService] Failed to load groups', e);
+      LOGGER.error('AgentService', 'Failed to load groups', { error: e });
     }
   }
 
@@ -110,8 +112,8 @@ export class AgentService {
   private persist() {
     if (this.persistDebounceTimer) clearTimeout(this.persistDebounceTimer);
     this.persistDebounceTimer = setTimeout(() => {
-      this.deps.database.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => console.error('[AgentService] Failed to persist stats:', e));
-      this.deps.database.setKv(GROUPS_KEY, this.groups).catch(e => console.error('[AgentService] Failed to persist groups:', e));
+      this.deps.database.setKv(STATS_KEY, Object.fromEntries(this.stats)).catch(e => LOGGER.error('AgentService', 'Failed to persist stats:', { error: e }));
+      this.deps.database.setKv(GROUPS_KEY, this.groups).catch(e => LOGGER.error('AgentService', 'Failed to persist groups:', { error: e }));
       this.persistDebounceTimer = null;
     }, 2000);
   }
@@ -195,7 +197,7 @@ export class AgentService {
   spawnAgent(name: string, roleId?: string, config?: Record<string, unknown>) {
     const top = this.deps.orchestrator.getActiveTopology();
     if (!top) {
-      console.warn('[AgentService] spawnAgent failed: no active topology. Try mounting a topology first.');
+      LOGGER.warn('AgentService', 'spawnAgent failed: no active topology. Try mounting a topology first.');
       return null;
     }
     const newId = `agent-${crypto.randomUUID()}`;
@@ -314,8 +316,8 @@ export class AgentService {
       this.deps.orchestrator.mount({ ...top });
       return count;
     } catch (e) {
-      console.error('[AgentService] Failed to import agents', e);
-      throw new Error('Failed to import agents', { cause: e as Error });
+      LOGGER.error('AgentService', 'Failed to import agents', { error: e });
+      throw new Error('Failed to import agents', { cause: e });
     }
   }
 
@@ -429,7 +431,10 @@ export class AgentService {
           // Use blackboard output if available, otherwise keep previous
           pipelineOutput = (ctx.blackboard?.lastOutput as string) || pipelineOutput;
           results.push(`[${node.label}] completed`);
-        } catch (e) { console.warn(`[AgentService] Node ${node.label} failed`, e); results.push(`[${node.label}] error`); }
+        } catch (e) {
+          LOGGER.warn('AgentService', `Node ${node.label} failed`, { error: e });
+          results.push(`[${node.label}] error`);
+        }
       }
       return results;
     }

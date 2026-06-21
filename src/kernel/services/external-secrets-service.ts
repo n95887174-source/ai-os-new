@@ -1,5 +1,8 @@
 import { EVENTS } from '../events/event-names';
 import type { SecretStore, SecretRef, SecretStoreConfig } from '../contracts/secret-store';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('ExternalSecretsService');
 
 export type BackendType = 'local' | 'vault' | 'aws' | 'gcp';
 
@@ -47,7 +50,7 @@ export class ExternalSecretsService {
         await this.activateBackend(saved.type, saved.config);
       }
     } catch (e) {
-      console.warn('[ExternalSecrets] Failed to load saved config', e);
+      LOGGER.warn('ExternalSecretsService', 'Failed to load saved config', { error: e });
       this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
         message: 'Secret store config load failed, using defaults',
         type: 'error',
@@ -72,7 +75,7 @@ export class ExternalSecretsService {
     try {
       await this.deps.database.setKv(CONFIG_KEY, { type, config });
     } catch (e) {
-      console.warn('[ExternalSecrets] Failed to persist config', e);
+      LOGGER.warn('ExternalSecretsService', 'Failed to persist config', { error: e });
     }
 
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
@@ -88,7 +91,7 @@ export class ExternalSecretsService {
     if (!store) return null;
 
     let value = await store.get(ref).catch(e => {
-      console.warn('[ExternalSecrets] Active backend get failed:', e);
+      LOGGER.warn('ExternalSecretsService', 'Active backend get failed:', { error: e });
       this.deps.eventBus.emit('secrets:lookup:failed', { backend: this.activeBackend, path: ref.path, error: String(e) });
       return null;
     });
@@ -96,11 +99,11 @@ export class ExternalSecretsService {
       const local = this.backends.get('local');
       if (local) {
         value = await local.get(ref).catch(e => {
-          console.warn('[ExternalSecrets] Local fallback get failed:', e);
+          LOGGER.warn('ExternalSecretsService', 'Local fallback get failed:', { error: e });
           return null;
         });
         if (value != null) {
-          store.set(ref, value).catch(e => console.warn('[ExternalSecrets] Replication to store failed:', e));
+          store.set(ref, value).catch(e => LOGGER.warn('ExternalSecretsService', 'Replication to store failed:', { error: e }));
         }
       }
     }
@@ -116,7 +119,7 @@ export class ExternalSecretsService {
     // Replicate to local store for resilience
     if (ok && this.activeBackend !== 'local') {
       const local = this.backends.get('local');
-      if (local) local.set(ref, value).catch(e => console.warn('[ExternalSecrets] Local replication failed:', e));
+      if (local) local.set(ref, value).catch(e => LOGGER.warn('ExternalSecretsService', 'Local replication failed:', { error: e }));
     }
     return ok;
   }
@@ -125,7 +128,7 @@ export class ExternalSecretsService {
     let ok = false;
     for (const store of this.backends.values()) {
       if (await store.delete(ref).catch(e => {
-        console.warn('[ExternalSecrets] Delete failed:', e);
+        LOGGER.warn('ExternalSecretsService', 'Delete failed:', { error: e });
         return false;
       })) {
         ok = true;

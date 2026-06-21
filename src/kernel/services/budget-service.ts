@@ -1,6 +1,9 @@
 import type { ICostCalculator } from '../contracts/pricing';
 import { EVENTS } from '../events/event-names';
 import type { SpendSummary, BudgetAlert, IBudgetService } from '../contracts/budget'
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('BudgetService');
 
 export type { AgentBudget, SpendSummary, BudgetAlert } from '../contracts/budget';
 
@@ -38,7 +41,7 @@ export class BudgetService implements IBudgetService {
       const spend = await this.deps.database.getKv<Record<string, number>>('super_agents_agent_spend');
       if (spend) this.agentSpend = spend;
     } catch (e) {
-      console.warn('[BudgetService] Failed to load agent config', e);
+      LOGGER.warn('BudgetService', 'Failed to load agent config', { error: e });
     }
   }
 
@@ -47,7 +50,7 @@ export class BudgetService implements IBudgetService {
       await this.deps.database.setKv('super_agents_agent_budgets', this.agentBudgets);
       await this.deps.database.setKv('super_agents_agent_spend', this.agentSpend);
     } catch (e) {
-      console.warn('[BudgetService] Failed to persist agent config', e);
+      LOGGER.warn('BudgetService', 'Failed to persist agent config', { error: e });
     }
   }
 

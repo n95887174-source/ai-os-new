@@ -4,6 +4,8 @@ import type { IKeyStateStore, KeyState } from '../contracts/key-state';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('ProviderTracker');
 
 const ALPHA = 0.15;
 
@@ -87,12 +89,12 @@ export class ProviderTracker implements IProviderTracker {
           }
         }
       }
-    } catch (e) { console.warn('[ProviderTracker] Failed to restore persisted state', e); }
+    } catch (e) { LOGGER.warn('ProviderTracker', 'Failed to restore persisted state', { error: e }); }
   }
 
   persistProviderMetrics(state: SystemState): void {
     if (!this.database) return;
-    void this.database.setKv(ProviderTracker.METRICS_KEY, state.providers).catch(e => console.warn('[ProviderTracker] Persist metrics failed:', e));
+    void this.database.setKv(ProviderTracker.METRICS_KEY, state.providers).catch(e => LOGGER.warn('ProviderTracker', 'Persist metrics failed', { error: e }));
   }
 
   getHealthEvents(provider?: string, limit = 100): HealthEvent[] {

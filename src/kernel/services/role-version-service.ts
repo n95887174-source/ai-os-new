@@ -1,6 +1,9 @@
 import { genId } from '../../utils/gen-id';
 import type { Role } from '../types/role-types';
 import type { IStorageAdapter } from '../contracts/storage-adapter';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('RoleVersionService');
 
 export interface RoleVersion {
   id: string;
@@ -33,12 +36,13 @@ export class RoleVersionService {
         }
       }
     } catch (e) {
-      console.warn('[RoleVersionService] Failed to load versions from storage, starting fresh:', e);
+      LOGGER.warn('RoleVersionService', 'Failed to load versions from storage, starting fresh', { error: e });
     }
   }
 
   recordChange(role: Role, changeNote: string): RoleVersion {
     const { id: _roleId, ...configWithoutId } = role;
+    void _roleId;
     const version: RoleVersion = {
       id: genId('rv'),
       roleId: role.id,

@@ -142,7 +142,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
   }));
 
   register('debateWorkspace', new DebateWorkspace({
-    getRoom: () => _container.get<DebateRoom>('debateRoom') as unknown as DebateRoom,
+    getRoom: () => _container.get<DebateRoom>('debateRoom'),
     getEngine: () => _container.get<DebateEngine>('debateEngine'),
     storage: storageLayer ?? { debates: EMPTY_DEBATE_STORE } as StorageLayer,
   }));

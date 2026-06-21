@@ -1,6 +1,9 @@
 import { genId } from '../../utils/gen-id';
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IStorageAdapter } from '../contracts/storage-adapter';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('ResearchScheduler');
 
 export interface ScheduledResearch {
   id: string;
@@ -98,7 +101,7 @@ export class ResearchScheduler implements ILifecycle {
       if (!s.enabled || !s.nextRunAt || s.nextRunAt > now) continue;
       s.lastRunAt = now;
       s.nextRunAt = parseCronNext(s.cronExpression, now + 60000) ?? undefined;
-      this.onRun?.(s.module, s.params).catch(e => console.warn('[ResearchScheduler] Run failed:', e));
+      this.onRun?.(s.module, s.params).catch(e => LOGGER.warn('ResearchScheduler', 'Run failed', { error: e }));
     }
     this.persist();
   }

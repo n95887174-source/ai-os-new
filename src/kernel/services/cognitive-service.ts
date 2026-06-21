@@ -5,6 +5,9 @@ import type { TraceStore } from '../contracts/storage/trace-store';
 import type { BlackboardService } from './blackboard-service';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('CognitiveService');
 
 export type { CognitiveTrace, CognitiveDecision, CognitiveStep };
 
@@ -109,7 +112,7 @@ export class CognitiveService {
       await this.deps.traceStore.bulkPut(trimmed);
       this.persistErrorCount = 0;
     } catch (e) {
-      console.error('[CognitiveService] Flush error:', e);
+      LOGGER.error('CognitiveService', 'Flush error', { error: e });
     }
   }
 
@@ -137,7 +140,7 @@ export class CognitiveService {
       // HARD TRIM (OOM FIX)
       this.traces = this.traces.slice(0, this.MAX_TRACES);
     } catch (e) {
-      console.error('[CognitiveService] Failed to load traces', e);
+      LOGGER.error('CognitiveService', 'Failed to load traces', { error: e });
     }
   }
 
@@ -155,7 +158,7 @@ export class CognitiveService {
         this.persistErrorCount = 0;
       } catch (e) {
         this.persistErrorCount++;
-        console.error('[CognitiveService] Persist error:', e);
+        LOGGER.error('CognitiveService', 'Persist error', { error: e });
       } finally {
         this.persistQueued = false;
         this.persistTimer = null;
@@ -336,14 +339,14 @@ export class CognitiveService {
   deleteTrace(id: string) {
     this.traces = this.traces.filter(t => t.id !== id);
     this.activeTraces.delete(id);
-    this.deps.traceStore.deleteTrace(id).catch(console.error);
+    this.deps.traceStore.deleteTrace(id).catch(e => LOGGER.error('CognitiveService', 'Delete trace failed', { error: e }));
     this.throttledEmit();
   }
 
   clearTraces() {
     this.traces = [];
     this.activeTraces.clear();
-    this.deps.traceStore.clear().catch(console.error);
+    this.deps.traceStore.clear().catch(e => LOGGER.error('CognitiveService', 'Clear traces failed', { error: e }));
     this.throttledEmit();
   }
 

@@ -21,6 +21,9 @@ import { KeyService } from '../services/key-management/key-service';
 import { GroupManagerService } from '../services/group-manager';
 import type { AdvisorService } from '../services/advisor-service';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from '../services/logger-service';
+
+const LOGGER = rootLogger.child('Phase1Foundation');
 
 export const registerPhase1: Phase = (helpers, ctx) => {
   const { register, get, asDeps } = helpers;
@@ -71,7 +74,8 @@ export const registerPhase1: Phase = (helpers, ctx) => {
     registryForSync.syncRateLimitState(payload.provider, payload.remaining);
   });
   // Store unsubs on the registry for cleanup
-  (registryForSync as unknown as { _unsubs?: Array<() => void> })._unsubs = [unsubCb, unsubRl];
+  const registryForSyncCast = registryForSync as { _unsubs?: Array<() => void> };
+  registryForSyncCast._unsubs = [unsubCb, unsubRl];
 
   // Pull storageLayer and keyStore/configStore once for use here and
   // for later phases.  Kept on the closure for visibility.
@@ -79,8 +83,8 @@ export const registerPhase1: Phase = (helpers, ctx) => {
   const keyStore = storageLayer?.keys;
   const configStore = storageLayer?.config;
 
-  if (typeof console !== 'undefined' && import.meta.env.DEV) {
-    console.log('[KEY_FLOW] keyStore implementation type:', {
+  if (import.meta.env.DEV) {
+    LOGGER.info('Phase1Foundation', 'keyStore implementation type', {
       storageLayerExists: !!storageLayer,
       keyStoreExists: !!keyStore,
       isStub: !storageLayer,
@@ -95,7 +99,7 @@ export const registerPhase1: Phase = (helpers, ctx) => {
   const safeKeyStore: KeyStore = keyStore && typeof keyStore.listKeys === 'function'
     ? keyStore
     : (() => {
-        console.warn('[ServiceRegistration] keyStore missing or incomplete — using safe stub');
+        LOGGER.warn('Phase1Foundation', 'keyStore missing or incomplete — using safe stub');
         return {
           saveKey: async () => {},
           getKey: async () => null,
@@ -107,7 +111,7 @@ export const registerPhase1: Phase = (helpers, ctx) => {
           exportAll: async () => '[]',
           importAll: async () => {},
           clear: async () => {},
-        } as unknown as KeyStore;
+        } satisfies KeyStore;
       })();
 
   register('keyService', new KeyService(asDeps<ConstructorParameters<typeof KeyService>[0]>({

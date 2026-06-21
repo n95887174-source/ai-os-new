@@ -2,6 +2,8 @@ import { Container, type IContainer } from './container';
 import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus, EVENTS } from './events/event-bus';
 import { rootLogger } from './services/logger-service';
+
+const LOGGER = rootLogger.child('Runtime');
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
 import { createSqliteStorage } from './services/storage/sqlite-storage';
@@ -51,7 +53,7 @@ export class RuntimeManager {
       try {
         this.registerCoreServices();
         const storage = await createSqliteStorage();
-        console.log('[KEY_FLOW] storage init state:', {
+        LOGGER.info('Runtime', 'storage init state', {
           hasStorageLayer: !!storage,
           hasKeys: !!storage?.keys,
           keysType: typeof storage?.keys,
@@ -70,7 +72,7 @@ export class RuntimeManager {
       } catch (e) {
         this.phase = 'error';
         this.lastError = e instanceof Error ? e.message : String(e);
-        console.error('[Runtime] Failed to start:', e);
+        LOGGER.error('Runtime', 'Failed to start', { error: e });
         await this.shutdown();
         return false;
       }

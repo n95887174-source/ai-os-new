@@ -25,4 +25,15 @@ if [ -f /etc/nginx/conf.d/default.conf.template ]; then
     > /etc/nginx/conf.d/default.conf
 fi
 
+# BLD-C5: Verify TLS certs exist if SSL config is in use
+if echo "$NGINX_CONFIG" | grep -qi "ssl"; then
+  if [ ! -f /etc/nginx/ssl/cert.pem ] || [ ! -f /etc/nginx/ssl/key.pem ]; then
+    echo "ERROR: SSL config ($NGINX_CONFIG) requires certs at /etc/nginx/ssl/cert.pem and /etc/nginx/ssl/key.pem"
+    echo "  Generate self-signed: openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\"
+    echo "    -keyout /etc/nginx/ssl/key.pem -out /etc/nginx/ssl/cert.pem \\"
+    echo "    -subj \"/CN=localhost\""
+    exit 1
+  fi
+fi
+
 exec nginx -g "daemon off;"

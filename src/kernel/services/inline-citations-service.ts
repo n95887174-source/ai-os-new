@@ -92,7 +92,7 @@ class InlineCitationsService {
 
     this.messageCitations.set(messageId, messageCitation);
     this.nextIndex.set(messageId, idx + citations.length);
-    this.save();
+    void this.save();
 
     EventBus.emit(EVENTS.CITATIONS_ADDED, { messageId, count: citations.length });
     LOGGER.info('CitationsService', 'Citations added', { messageId, count: citations.length });

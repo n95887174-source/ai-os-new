@@ -1,4 +1,5 @@
 import { CONFIG } from './config-registry';
+import { rootLogger } from './logger-service';
 import { ok, fail } from '../contracts/results';
 import type { IUsageTracker } from '../contracts/pricing';
 import type { QuotaError } from '../contracts/errors';
@@ -45,7 +46,7 @@ export class UsageTracker implements IUsageTracker {
       const saved = await this.deps.database.getKv<UsageRecord[]>(STORAGE_KEY);
       if (saved) this.records = saved;
     } catch (e) {
-      console.warn('[UsageTracker] Failed to load records', e);
+      rootLogger.warn('UsageTracker', '[UsageTracker] Failed to load records', { error: e });
     }
   }
 
@@ -54,7 +55,7 @@ export class UsageTracker implements IUsageTracker {
       await this.deps.database.setKv(STORAGE_KEY, this.records);
       this.dirty = false;
     } catch (e) {
-      console.warn('[UsageTracker] Failed to persist records', e);
+      rootLogger.warn('UsageTracker', '[UsageTracker] Failed to persist records', { error: e });
     }
   }
 

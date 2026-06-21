@@ -35,7 +35,7 @@ const CachePanel: React.FC = () => {
         setCacheConfig(cacheService.getConfig());
         setError(null);
       }
-    } catch (e) {
+    } catch {
       if (isMountedRef.current) {
         setError(t('cache.error_load'));
         clearError();
@@ -61,7 +61,7 @@ const CachePanel: React.FC = () => {
       }
       loadStats();
       eventBus.emit('system:notification', { message: t('cache.cleared'), type: 'success' });
-    } catch (e) {
+    } catch {
       if (isMountedRef.current) {
         setError(t('cache.error_clear'));
         clearError();

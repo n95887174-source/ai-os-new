@@ -4,6 +4,9 @@ import type { IAdapterRegistry } from '../contracts/provider-adapter';
 import { EVENTS } from '../events/event-names';
 import type { ILogger } from '../contracts/logger';
 import type { IGroupManager } from '../contracts/group-manager';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('RotationService');
 
 interface RotationTimer {
   keyId: string;
@@ -221,7 +224,7 @@ export class RotationService implements IRotationService {
     // B10-119: Cap setTimeout to max safe integer to prevent overflow
     const delayMs = Math.min(ttlHours * 3600000, Number.MAX_SAFE_INTEGER);
     const timer = setTimeout(() => {
-      this.handleExpiry(keyId).catch(e => console.warn('[Rotation] handleExpiry failed:', e));
+      this.handleExpiry(keyId).catch(e => LOGGER.warn('RotationService', `handleExpiry failed for ${keyId}`, { error: e }));
     }, delayMs);
 
     this.timers.set(keyId, { keyId, expiresAt, timer, notifiedAt: new Set() });
@@ -310,13 +313,13 @@ export class RotationService implements IRotationService {
       const msLeft = expiresAt - Date.now();
 
       if (msLeft <= 0) {
-        this.handleExpiry(key.id).catch(e => console.warn('[Rotation] immediate expiry failed:', e));
+        this.handleExpiry(key.id).catch(e => LOGGER.warn('RotationService', `immediate expiry failed for ${key.id}`, { error: e }));
         continue;
       }
 
       this.cancelRotation(key.id);
       const timer = setTimeout(() => {
-        this.handleExpiry(key.id).catch(e => console.warn('[Rotation] scheduled expiry failed:', e));
+        this.handleExpiry(key.id).catch(e => LOGGER.warn('RotationService', `scheduled expiry failed for ${key.id}`, { error: e }));
       }, msLeft);
 
       this.timers.set(key.id, { keyId: key.id, expiresAt, timer, notifiedAt: new Set() });

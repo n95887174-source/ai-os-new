@@ -56,7 +56,7 @@ export const AgentSchedulerPanel: React.FC = () => {
               <option key={a.id} value={a.id}>{a.name || a.id}</option>
             ))}
           </select>
-          <button onClick={handleCreate} style={{ padding: '0.5rem', background: '#3b82f6', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }}>
+          <button onClick={handleCreate} style={{ padding: '0.5rem', background: '#3b82f6', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }} aria-label="Create schedule">
             <Plus size={16} />
           </button>
         </div>
@@ -81,10 +81,11 @@ export const AgentSchedulerPanel: React.FC = () => {
                 }}
                 disabled={triggeringId === s.id}
                 style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #3b82f6', borderRadius: 6, color: '#3b82f6', cursor: 'pointer', opacity: triggeringId === s.id ? 0.5 : 1 }}
+                aria-label="Trigger schedule"
               >
                 {triggeringId === s.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
               </button>
-              <button onClick={() => handleDelete(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #ef4444', borderRadius: 6, color: '#ef4444', cursor: 'pointer' }}>
+              <button onClick={() => handleDelete(s.id)} style={{ padding: '0.4rem', background: 'transparent', border: '1px solid #ef4444', borderRadius: 6, color: '#ef4444', cursor: 'pointer' }} aria-label="Delete schedule">
                 <Trash2 size={14} />
               </button>
             </div>

@@ -1,4 +1,7 @@
 import { CONFIG } from './config-registry';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('AdvisorService');
 import type { CognitiveTrace } from '../types/domain-types';
 import type { SystemState } from '../types/metrics-types';
 import type { AdvisorServiceDeps } from '../types/advisor-deps';
@@ -131,7 +134,7 @@ export class AdvisorService {
         if (data.config) this.config = { ...this.config, ...data.config as Partial<AdvisorConfig> };
         if (data.lastAnalysis) this.lastAnalysis = data.lastAnalysis as number;
       }
-    } catch (e) { console.error('[Advisor] Failed to load state:', e); }
+    } catch (e) { LOGGER.error('AdvisorService', 'Failed to load state', { error: e }); }
   }
 
   private startPeriodicAnalysis() {

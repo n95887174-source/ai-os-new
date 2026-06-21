@@ -8,6 +8,9 @@ import type {
   IDebateSession,
 } from '../../contracts/debate-runtime';
 import type { ITransaction } from '../../contracts/transaction';
+import { rootLogger } from '../logger-service';
+
+const LOGGER = rootLogger.child('DebateSession');
 
 const VALID_TRANSITIONS: Record<DebatePhase, DebatePhase[]> = {
   created: ['queued', 'failed', 'cancelled'],
@@ -72,8 +75,8 @@ export class DebateSession implements IDebateSession {
   transition(to: DebatePhase, tx?: ITransaction): boolean {
     const allowed = VALID_TRANSITIONS[this._phase];
     if (!allowed.includes(to)) {
-      const msg = `[DebateSession] Invalid transition: ${this._phase} -> ${to}`;
-      console.warn(msg);
+      const msg = `Invalid transition: ${this._phase} -> ${to}`;
+      LOGGER.warn('DebateSession', msg);
       if (tx && 'deferEmit' in tx) {
         (tx as unknown as { deferEmit: (e: string, d: unknown) => void }).deferEmit('debate:transition:invalid', { from: this._phase, to, sessionId: this.id });
       }

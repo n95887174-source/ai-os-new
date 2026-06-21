@@ -53,7 +53,11 @@ class AgentAutoTriggerService {
     this.eventBus = eventBus || defaultEventBus as typeof this.eventBus;
   }
 
+  private _initialized = false;
+
   async init(): Promise<void> {
+    if (this._initialized) return;
+    this._initialized = true;
     const saved = await this.storage.get<{
       rules: [string, TriggerRule][];
       history: TriggerHistory[];
@@ -297,6 +301,15 @@ class AgentAutoTriggerService {
       rules: Array.from(this.rules.entries()),
       history: this.history.slice(-1000),
     });
+  }
+
+  destroy(): void {
+    for (const [, unsub] of this.listeners) unsub();
+    this.listeners.clear();
+    this.rules.clear();
+    this.history = [];
+    this.triggerLocks.clear();
+    this._initialized = false;
   }
 }
 

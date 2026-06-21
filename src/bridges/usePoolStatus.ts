@@ -31,7 +31,11 @@ export function usePoolStatus(): UsePoolStatusResult {
       const newKeys = [...keyService.getKeys()];
       const newQuotas = keyService.getFreeTierLimits?.() || {};
       setState(prev => {
-        if (prev.keys.length === newKeys.length && JSON.stringify(prev.quotas) === JSON.stringify(newQuotas)) return prev;
+        const prevQ = prev.quotas;
+        const newQ = newQuotas;
+        const qKeys = Object.keys(prevQ);
+        const quotasEqual = qKeys.length === Object.keys(newQ).length && qKeys.every(k => k in newQ && newQ[k].requestsPerDay === prevQ[k].requestsPerDay && newQ[k].tokensPerDay === prevQ[k].tokensPerDay);
+        if (prev.keys.length === newKeys.length && quotasEqual) return prev;
         return { keys: newKeys, quotas: newQuotas };
       });
     };

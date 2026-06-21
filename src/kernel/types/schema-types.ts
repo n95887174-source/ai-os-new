@@ -518,7 +518,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'policy:violation': PolicyViolationSchema,
 
   // ── Roles ──────────────────────────────────────────────────────────
-  'roles:updated': z.array(z.unknown()),
+  'roles:updated': z.array(RoleSchema),
   'role:assigned': z.object({ roleId: z.string(), agentId: z.string() }),
   'role:unassigned': z.object({ roleId: z.string(), agentId: z.string() }),
 
@@ -723,6 +723,6 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'schedule:triggered': z.unknown(),
   'schedule:updated': z.unknown(),
   'queue:task:failed': z.object({ taskId: z.string(), priority: z.string(), error: z.string(), timestamp: z.number() }),
-  'stt:state:changed': z.object({ state: z.string() }),
+  'stt:state:changed': z.object({ state: z.string(), error: z.string().optional() }),
   'stt:error': z.object({ error: z.string() }),
 };

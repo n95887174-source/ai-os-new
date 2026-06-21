@@ -9,7 +9,6 @@ const LOGGER = rootLogger.child('RetryDecorator');
 export class RetryDecorator extends BaseDecorator {
   readonly #maxRetries: number;
   readonly #baseDelayMs: number;
-  #currentSignal?: AbortSignal;
 
   constructor(
     inner: import('../core/types').LLMProviderAdapter,
@@ -28,12 +27,12 @@ export class RetryDecorator extends BaseDecorator {
     return Math.min(this.#baseDelayMs * Math.pow(2, attempt - 1), 30_000);
   }
 
-  private shouldRetry(e: unknown): boolean {
+  private shouldRetry(e: unknown, currentSignal?: AbortSignal): boolean {
     if (e instanceof RetryableError) return true;
     if (e instanceof TypeError) return true;
 
     if (e instanceof DOMException && e.name === 'AbortError') {
-      return !this.#currentSignal?.aborted;
+      return !currentSignal?.aborted;
     }
 
     if (e && typeof e === 'object' && 'statusCode' in e) {
@@ -60,7 +59,6 @@ export class RetryDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
-    this.#currentSignal = signal;
     let lastError: Error | undefined;
     for (let attempt = 0; attempt <= this.#maxRetries; attempt++) {
       try {
@@ -78,7 +76,7 @@ export class RetryDecorator extends BaseDecorator {
         }
         return await this.inner.sendMessage(messages, model, apiKey, signal, options);
       } catch (e) {
-        if (!this.shouldRetry(e)) throw e;
+        if (!this.shouldRetry(e, signal)) throw e;
         if (signal?.aborted) throw e;
         lastError = this.toRetryable(e);
       }
@@ -94,7 +92,6 @@ export class RetryDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
-    this.#currentSignal = signal;
     if (!this.inner.streamMessage) throw new Error('RetryDecorator: inner adapter does not support streaming');
     let lastError: Error | undefined;
     let hasEmittedChunks = false;
@@ -122,7 +119,7 @@ export class RetryDecorator extends BaseDecorator {
         await this.inner.streamMessage(messages, model, apiKey, guardedChunk, signal, options);
         return;
       } catch (e) {
-        if (!this.shouldRetry(e)) throw e;
+        if (!this.shouldRetry(e, signal)) throw e;
         if (signal?.aborted) throw e;
         if (hasEmittedChunks) return;
         lastError = this.toRetryable(e);

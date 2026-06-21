@@ -1,4 +1,6 @@
+import { rootLogger } from './logger-service';
 import { genId } from '../../utils/gen-id';
+const LOGGER = rootLogger.child('ResearchRunService');
 
 export interface ResearchRun {
   id: string;
@@ -35,7 +37,7 @@ export class ResearchRunService {
       const stored = await this.deps.database.getKv<ResearchRun[]>(STORAGE_KEY);
       if (stored) this.runs = stored;
     } catch (e) {
-      console.error('[ResearchRunService] Failed to load:', e);
+      LOGGER.error('ResearchRunService', 'Failed to load', { error: e });
     }
   }
 
@@ -98,7 +100,7 @@ export class ResearchRunService {
   private persist() {
     if (this.persistTimer) clearTimeout(this.persistTimer);
     this.persistTimer = setTimeout(() => {
-      this.deps.database.setKv(STORAGE_KEY, this.runs).catch(e => console.error('[ResearchRunService] Persist failed:', e));
+      this.deps.database.setKv(STORAGE_KEY, this.runs).catch(e => LOGGER.error('ResearchRunService', 'Persist failed', { error: e }));
     }, 1000);
   }
 }

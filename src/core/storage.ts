@@ -63,11 +63,12 @@ export class LocalStorageDriver implements StorageDriver {
       const data = storageAdapter.getItem(this.prefixed(key));
       if (!data) return null;
       return JSON.parse(data) as T;
-    } catch {
+    } catch (e) {
+      console.warn('[Storage] Read failed for key', e);
       return null;
     }
   }
-
+ 
   async set<T>(key: string, value: T): Promise<void> {
     try {
       storageAdapter.setItem(this.prefixed(key), JSON.stringify(value));

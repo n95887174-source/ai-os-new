@@ -1,4 +1,5 @@
-﻿import { EVENTS } from '../events/event-names';
+﻿import { rootLogger } from './logger-service';
+import { EVENTS } from '../events/event-names';
 import type { DebateArgument } from '../contracts/debate-types';
 
 export type FactVerdict = 'verified' | 'disputed' | 'false' | 'no_evidence' | 'pending' | 'error';
@@ -134,7 +135,8 @@ export class FactCheckService {
       );
 
       return this.parseVerdict(claim, response.content);
-    } catch {
+    } catch (e) {
+      rootLogger.warn('FactCheck', 'Verification failed', { error: e, claim: claim.slice(0, 80) });
       return { claim, verdict: 'error', confidence: 0, reasoning: 'Verification failed', checkedAt: Date.now() };
     }
   }

@@ -143,6 +143,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
   const hasWorkingModel = modelTestResults && Object.values(modelTestResults).some(r => r.status === 'ok');
 
   const stats = apiKey.stats?.extended;
+  const [now] = useState(Date.now);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -548,9 +549,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ apiKey }) => {
           <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_tags')}</div><div style={{ fontWeight: 600 }}>{(apiKey.tags || []).join(', ') || t('overview.meta_none')}</div>
           <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_history')}</div><div style={{ fontWeight: 600 }}>{t('overview.meta_history_count', { count: (apiKey.history || []).length })}</div>
           <div style={{ color: 'var(--text-muted)' }}>{t('overview.meta_expires')}</div>
-          <div style={{ fontWeight: 600, color: apiKey.expiresAt && apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : 'inherit' }}>
+          <div style={{ fontWeight: 600, color: apiKey.expiresAt && apiKey.expiresAt < now ? '#ef4444' : apiKey.expiresAt && apiKey.expiresAt < now + 7 * 86400000 ? '#f59e0b' : 'inherit' }}>
             {apiKey.expiresAt ? new Date(apiKey.expiresAt).toLocaleDateString() : '\u2014'}
-            {apiKey.expiresAt && apiKey.expiresAt < Date.now() ? t('overview.expired') : apiKey.expiresAt && apiKey.expiresAt < Date.now() + 7 * 86400000 ? t('overview.expiring_soon') : ''}
+            {apiKey.expiresAt && apiKey.expiresAt < now ? t('overview.expired') : apiKey.expiresAt && apiKey.expiresAt < now + 7 * 86400000 ? t('overview.expiring_soon') : ''}
           </div>
         </div>
       </div>

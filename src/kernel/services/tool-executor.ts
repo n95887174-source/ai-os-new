@@ -2,7 +2,10 @@ import { EVENTS } from '../events/event-names';
 import { isPrivateIP } from '../utils/network';
 import { parseScript } from 'meriyah';
 import type { ToolDefinition, ToolCategory } from '../contracts/tool-types';
+import { rootLogger } from './logger-service';
 export type { ToolDefinition, ToolCategory };
+
+const LOGGER = rootLogger.child('ToolService');
 
 const FORBIDDEN_IDS: ReadonlySet<string> = new Set([
   'eval',
@@ -174,12 +177,12 @@ export class ToolService {
         if (parsed.history) this.executionHistory = parsed.history;
       }
     } catch (e) {
-      console.error('[ToolService] Failed to load tools', e);
+      LOGGER.error('ToolService', 'Failed to load tools', { error: e });
     }
   }
 
   private persist() {
-    this.deps.database.setKv(TOOLS_KEY, { tools: this.tools, history: this.executionHistory.slice(-MAX_EXECUTION_HISTORY) }).catch(e => console.error('[ToolService] Failed to persist tools:', e));
+    this.deps.database.setKv(TOOLS_KEY, { tools: this.tools, history: this.executionHistory.slice(-MAX_EXECUTION_HISTORY) }).catch(e => LOGGER.error('ToolService', 'Failed to persist tools', { error: e }));
   }
 
   getTools() { return this.tools; }
@@ -332,10 +335,7 @@ export class ToolService {
         throw toolError(toolId, `Web fetch returned ${response.status} for ${url}`, 'HTTP_ERROR');
       }
       return await response.text();
-    } catch (directErr) {
-      // B10-136: Validate SSRF again before proxy fallback (defense in depth)
-      // Even though url was validated above, re-check ensures no bypass
-      // through error-type confusion or URL mutation between catch and proxy call
+    } catch {
       let parsedForProxy: URL;
       try {
         parsedForProxy = new URL(url);
@@ -352,7 +352,7 @@ export class ToolService {
       // The /proxy/fetch fallback only works via Vite dev proxy, not in Docker.
       const envProxy = import.meta.env.VITE_PROXY_URL;
       if (!envProxy && import.meta.env.PROD) {
-        console.error('[ToolExecutor] VITE_PROXY_URL is not set in production Docker. Proxy fetch will fail.');
+        LOGGER.error('ToolService', 'VITE_PROXY_URL is not set in production Docker. Proxy fetch will fail.');
       }
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const proxyBase = envProxy || `${origin}/proxy/fetch`;
@@ -429,7 +429,7 @@ export class ToolService {
       this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
       return count;
     } catch (e) {
-      console.error('[ToolService] Failed to import tools', e);
+      LOGGER.error('ToolService', 'Failed to import tools', { error: e });
       throw toolError('tools', 'Failed to import tools', 'IMPORT_FAILED');
     }
   }

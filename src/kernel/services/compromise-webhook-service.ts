@@ -89,6 +89,7 @@ export class CompromiseWebhookService {
         false, ['verify']
       );
       const sigHex = signature.replace(/^sha256=/, '');
+      if (!/^[0-9a-f]+$/i.test(sigHex)) throw new Error('Invalid HMAC signature format');
       const sigBytes = new Uint8Array(sigHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
       return await crypto.subtle.verify('HMAC', key, sigBytes, enc.encode(payload));
     } catch (e) {
