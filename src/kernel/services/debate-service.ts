@@ -309,7 +309,7 @@ export class DebateService {
           agentId: participant.id,
           agentName: participant.name,
           content,
-          confidence: this.calculateConfidence(content),
+          confidence: calculateConfidence(content),
           timestamp: Date.now(),
           round: 0,
           position: participant.role,
@@ -431,7 +431,7 @@ export class DebateService {
 
       const executionId = crypto.randomUUID().slice(0, 12);
       let { content, provider, model } = await this.callLLM(participant, prompt);
-      const confidence = this.calculateConfidence(content);
+      const confidence = calculateConfidence(content);
 
       // ── Socratic Quality Gate ────────────────────────────────────────
       let socraticQualityScore = 0;
@@ -592,10 +592,6 @@ export class DebateService {
     prompt: string,
   ): Promise<{ content: string; provider: string; model: string }> {
     return this.llmCaller.callLLM(participant, prompt);
-  }
-
-  private calculateConfidence(content: string): number {
-    return calculateConfidence(content);
   }
 
   private hasNovelClaims(session: DebateSession): boolean {
