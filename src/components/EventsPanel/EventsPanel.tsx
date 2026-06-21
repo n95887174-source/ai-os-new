@@ -138,19 +138,15 @@ const EventsPanel: React.FC = () => {
   const errorCount = events.filter(e => e.severity === 'error').length;
   const errorRate = events.length > 0 ? ((errorCount / events.length) * 100).toFixed(1) : '0.0';
 
-  const serializedPayloads = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const e of events) m.set(e.id, JSON.stringify(e.payload).toLowerCase());
-    return m;
-  }, [events]);
-
+  const lowerSearch = searchQuery.toLowerCase();
   const filteredEvents = useMemo(() => events.filter(e => {
-    const matchesSearch = e.type.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         e.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (serializedPayloads.get(e.id) || '').includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || e.severity === filterType;
-    return matchesSearch && matchesType;
-  }), [events, searchQuery, filterType, serializedPayloads]);
+    if (!matchesType) return false;
+    if (!searchQuery) return true;
+    if (e.type.toLowerCase().includes(lowerSearch) ||
+        e.source.toLowerCase().includes(lowerSearch)) return true;
+    return JSON.stringify(e.payload).toLowerCase().includes(lowerSearch);
+  }), [events, searchQuery, filterType, lowerSearch]);
 
   const clearEvents = () => {
     try {

@@ -1,4 +1,5 @@
-import { storageAdapter } from '../kernel/instances';
+import { storageAdapter, rootLogger } from '../kernel/instances';
+const LOGGER = rootLogger.child('Storage');
 
 export interface StorageDriver {
   get<T>(key: string): Promise<T | null>;
@@ -64,7 +65,7 @@ export class LocalStorageDriver implements StorageDriver {
       if (!data) return null;
       return JSON.parse(data) as T;
     } catch (e) {
-      console.warn('[Storage] Read failed for key', e);
+      LOGGER.warn('Storage', 'Read failed', { error: e });
       return null;
     }
   }
@@ -74,12 +75,12 @@ export class LocalStorageDriver implements StorageDriver {
       storageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        console.warn('[Storage] localStorage quota exceeded, clearing oldest entries');
+        LOGGER.warn('Storage', 'localStorage quota exceeded, clearing oldest entries');
         this.evictOldest();
         try {
           storageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
         } catch {
-          console.warn('[Storage] Failed to set item even after eviction');
+          LOGGER.warn('Storage', 'Failed to set item even after eviction');
         }
       }
     }

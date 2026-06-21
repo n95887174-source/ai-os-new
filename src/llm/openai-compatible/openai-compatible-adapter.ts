@@ -233,8 +233,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
       if (!res.ok) throw new LLMError(`HTTP ${res.status}`, this.id, res.status);
       const data = await res.json();
       return data.data?.map((m: { id: string }) => m.id) || [];
-    } catch (e) {
-      console.warn(`[${this.id}] Failed to fetch models`, e);
+    } catch {
       return [];
     }
   }

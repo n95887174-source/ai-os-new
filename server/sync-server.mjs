@@ -132,11 +132,10 @@ const server = http.createServer((req, res) => {
   writeJson(res, 404, { error: 'Not found' });
 });
 
-// SYNC_SECRET is already validated at startup (above) — no fallback to ''.
+// SYNC_SECRET is already validated at startup (above) — guard is unreachable.
 const wss = new WebSocketServer({
   server,
   verifyClient: (info, callback) => {
-    if (!SYNC_SECRET) { callback(false, 4001, 'Authentication required'); return; }
     // SECURITY FIX: Check Sec-WebSocket-Protocol header first (preferred), then Authorization, then query param (deprecated fallback)
     // Sec-WebSocket-Protocol: first value is subprotocol name, second (if any) is the token
     const protocols = info.req.headers['sec-websocket-protocol'];

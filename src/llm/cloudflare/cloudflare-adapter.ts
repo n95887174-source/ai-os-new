@@ -206,8 +206,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         return data.result.map((m: { id: string; name?: string }) => m.id || m.name).filter(Boolean);
       }
       return [];
-    } catch (e) {
-      console.warn(`[${this.id}] Failed to fetch models`, e);
+    } catch {
       return [];
     }
   }
