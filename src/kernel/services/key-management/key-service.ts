@@ -92,6 +92,117 @@ export class KeyService {
   private freeTierLimits: Record<string, FreeTierLimit> = { ...DEFAULT_FREE_TIER_LIMITS };
   private unsubs: Array<() => void> = [];
   private _initialized = false;
+  private deps: KeyServiceDeps;
+  private _globalSLAMode: string = 'BALANCED';
+  private _latencyThreshold: number = 1500;
+
+  get globalSLAMode(): string { return this._globalSLAMode; }
+  get latencyThreshold(): number { return this._latencyThreshold; }
+
+  getRoutingPolicy(): { globalSLAMode: string; latencyThreshold: number } {
+    return { globalSLAMode: this._globalSLAMode, latencyThreshold: this._latencyThreshold };
+  }
+
+  constructor(deps: KeyServiceDeps) {
+    this.deps = deps;
+
+    this.vault = new KeyVault({ securityService: deps.securityService });
+
+    this.registry = new KeyRegistry({
+      eventBus: deps.eventBus,
+      keyStore: deps.keyStore,
+      database: deps.database,
+      vault: this.vault,
+      freeTierLimits: this.freeTierLimits,
+    });
+
+    this.alerts = new KeyAlerts({ eventBus: deps.eventBus });
+
+    this.quotas = new KeyQuotas(
+      {
+        eventBus: deps.eventBus,
+        onQuotaExceeded: (id, provider, quotaType) => {
+          deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id, provider, quotaType });
+          this.registry.pushHistory(id, 'quota_exceeded', `${quotaType} quota exceeded`);
+        },
+        onStateTransition: (id, newState) => {
+          const key = this.registry.getKey(id);
+          if (key) this.health.transitionState(key, newState);
+        },
+        addAlert: (keyId, alert) => {
+          const key = this.registry.getKey(keyId);
+          if (key) this.alerts.addAlert(key, alert);
+        },
+      },
+      this.freeTierLimits
+    );
+
+    this.health = new KeyHealth({
+      eventBus: deps.eventBus,
+      onStateChanged: (id, provider, newState, previousState) => {
+        deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, provider, state: newState, previousState });
+      },
+      addAlert: (keyId, alert) => {
+        const key = this.registry.getKey(keyId);
+        if (key) this.alerts.addAlert(key, alert);
+      },
+      saveKeys: () => this.registry.saveKeys(),
+      notify: () => this.notify(),
+      getKey: (id) => this.registry.getKey(id),
+      getActiveKeys: () => this.registry.getActiveKeys(),
+    });
+
+    this.analytics = new KeyAnalytics({
+      pricingService: deps.pricingService,
+      eventBus: deps.eventBus,
+      onLatencyBurst: (id, provider, latency) => {
+        deps.eventBus.emit(EVENTS.KEY_LATENCY_BURST, { id, provider, latency });
+      },
+      onStateChanged: (id, provider, newState, previousState) => {
+        deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, provider, state: newState, previousState });
+      },
+      onReputationThresholdCrossed: (id, provider, score) => {
+        deps.eventBus.emit(EVENTS.KEY_REPUTATION_DOWN, { id, provider, score });
+      },
+      ensureExtendedStats: (key) => this.ensureExtendedStats(key),
+    });
+
+    this.fingerprints = new KeyFingerprints();
+    this.lifecycle = new KeyLifecycle({
+      getKey: (id) => this.registry.getKey(id),
+      saveKeys: () => this.registry.saveKeys(),
+      notify: () => this.notify(),
+      eventBus: this.deps.eventBus,
+      keyHealth: this.health,
+    });
+
+    this.poolSelector = this.createPoolSelector();
+
+    this.diagnostics = new KeyDiagnostics({
+      eventBus: deps.eventBus,
+      providerAdapterRegistry: deps.providerAdapterRegistry,
+      get advisorService() { return deps.advisorService; },
+      recordUsage: (id, latency, tokens, model, extra) => this.recordUsage(id, latency, tokens, model, extra),
+      getKey: (id) => this.registry.getKey(id),
+      getKeys: () => this.registry.getKeys(),
+    });
+
+    this.vaultService = this.vault;
+    this.healthCheckService = this.health;
+    this.analyticsService = this.analytics;
+  }
+
+  private ensureExtendedStats(key: ApiKey): void {
+    if (!key.stats) key.stats = this.registry.initStats();
+    if (!key.stats.extended) key.stats.extended = this.registry.initExtendedStats();
+    const ext = key.stats.extended;
+    if (!ext.usageToday) ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
+    if (!ext.usageMonthly) ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
+    if (!ext.latencyBreakdown) ext.latencyBreakdown = { ttft: 0, total: 0, tokensPerSec: 0 };
+    if (!ext.errorBreakdown) ext.errorBreakdown = { rateLimit: 0, timeout: 0, serverError: 0, validationError: 0, other: 0, provider: 0 };
+    if (!ext.fourSignals) ext.fourSignals = { latency: 0, throughput: 0, errorRate: 0, saturation: 0 };
+    if (!ext.rules) ext.rules = structuredClone(CONFIG.keys.defaultRules);
+  }
 
   async init() {
     if (this._initialized) return;

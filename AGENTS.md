@@ -839,3 +839,39 @@ Pre-existing: LG-32 (no decrement), LG-34 (exact match already), LG-46 (already 
 | **UX-93** | PatternsPanel — disabled buttons show alert | `PatternsPanel.tsx` |
 | **UX-94** | PatternsPanel — static data labeled `(example)` | `PatternsPanel.tsx` |
 | **UX-100** | CognitiveBuilder — `useMediaQuery` instead of `window.innerWidth` | `CognitiveBuilder.tsx` |
+
+---
+
+## Current Session (2026-06-21) — Live Debate View
+
+### Goal
+Create Live Debate View per `audit/roadmap.md` — circular visual layout for runtime debate tracking.
+
+### Changes
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **CircularLayout** — sin/cos circle geometry, SVG edges, Framer Motion agent positioning | Done |
+| 2 | **SpeakerNode** — emoji avatar via `AgentAvatarService`, active speaker glow/scale, streaming/thinking indicators | Done |
+| 3 | **JudgeCenter** — center circle with evaluation glow during consensus/summarizing phases | Done |
+| 4 | **DebateLivePanel** — subscribes to `useDebateLiveStore`, session selector dropdown, phase/round badge | Done |
+| 5 | **Route registration** — `/debate-live` route, `Radio` icon nav item under DEBATES section, i18n keys | Done |
+| 6 | **ESLint cleanup** — removed setState-in-effect, missing deps, unstable render references | Done |
+| 7 | **Commit + push** — `6015113` pushed to `origin/main` | Done |
+
+### Key Decisions
+- `debateEngine.getAllSessions()` called directly in render (synchronous getter, no side effects)
+- Auto-select latest session via render-phase `setState` (React 18 allowed pattern for derived state)
+- `activeSpeakerId` computed imperatively (not useMemo) since `participants` reference changes each render
+- `useActiveSpeaker` hook kept for external reuse despite not being imported yet
+- `void agentEvents` expression keeps the Zustand store subscription alive without unused-vars warnings
+
+### Relevant Files
+- `src/components/DebateLive/DebateLivePanel.tsx` — main entry, session selector, active speaker detection
+- `src/components/DebateLive/CircularLayout.tsx` — circle geometry, SVG edges, Framer Motion
+- `src/components/DebateLive/SpeakerNode.tsx` — agent emoji avatar, streaming/thinking indicators
+- `src/components/DebateLive/JudgeCenter.tsx` — center judge with evaluation glow
+- `src/components/DebateLive/useActiveSpeaker.ts` — reusable active speaker detection hook
+- `src/stores/debateLiveStore.ts` — Zustand store with agent/round events, streaming content
+- `src/kernel/services/agent-avatar-service.ts` — generates deterministic emoji/color avatars
+- `src/route-registry.tsx` — `debate-live` nav entry with `Radio` icon
+- `src/routes.tsx` — lazy import for `DebateLivePanel`
