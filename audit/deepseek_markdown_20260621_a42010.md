@@ -8,7 +8,7 @@
 | HIGH | 41 | 31 ✅ / 3 ❌ / 7 ⏳ |
 | MEDIUM | 54 | 26 ✅ / 2 ❌ / 26 ⏳ |
 | LOW | 31 | 4 ✅ / 3 ❌ / 24 ⏳ |
-| **ИТОГО** | **175** | **73 ✅ / 9 ❌ / 93 ⏳** |
+| **ИТОГО** | **175** | **83 ✅ / 9 ❌ / 83 ⏳** |
 
 > ✅ = Действительно исправлено (проверено по коду)
 > ❌ = **ЛОЖНЫЙ СТАТУС** — помечено как DONE, но НЕ ИСПРАВЛЕНО (код не изменён)
@@ -265,3 +265,13 @@
 | S7-1 | `DebateModeManagerPersistent` — убран краш при `storageLayer === null` | ✅ |
 | S7-8 | `CausalScopeManager.destroy()` вызывается при shutdown | ✅ |
 | S7-10 | Ложная тревога — `EventRecorder` хранит unsub, `EventBus.reset()` чистит | ✅ |
+| S5-5 | `debate-api.ts:57,67` — `getSession()` → `getSessionById()` с sessionId из payload. Schema/types/emitters обновлены (6 файлов) | ✅ |
+| S5-8 | `debate-metrics.ts:133` — character bigrams → word bigrams | ✅ |
+| S5-10 | `debate-service.ts:587` — fallback arg с проверкой на дубликат | ✅ |
+| S6-5 | `DebateSidebar.tsx:234` — спиннер создания на кнопке удаления (удалён) | ✅ |
+| S6-6 | `DebateRuntimePanel.tsx:223` — useEffect deps (eslint-disable) | ✅ |
+| S6-7 | `DebateRuntimePanel.tsx:379-380` — setActionLoading в finally | ✅ |
+| S6-11 | `DebatePanel.tsx:197` — `t` из dependency array (eslint-disable) | ✅ |
+| S6-14 | `AgentControlPanel.tsx:26-27` — cleanup setTimeout на unmount | ✅ |
+| S6-17 | `DebateChat.tsx:18-22` — автопрокрутка к новым аргументам | ✅ |
+| S6-18 | `ArgumentGraphPanel.tsx:197-203` — цвета по ролям, а не по именам | ✅ |

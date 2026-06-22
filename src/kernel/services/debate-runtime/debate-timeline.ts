@@ -49,7 +49,7 @@ export class DebateTimeline implements IDebateTimeline {
   private extractDecisionPoints(content: string): string[] {
     const points: string[] = [];
     const patterns = [
-      /поэтому|следовательно|вывод|итог|конечно|ясно|важно|критично|лючевой|главный/gi,
+      /поэтому|следовательно|вывод|итог|конечно|ясно|важно|критично|ключевой|главный/gi,
       /therefore|thus|consequently|clearly|importantly|crucially|key|main/gi,
     ];
     for (const pattern of patterns) {

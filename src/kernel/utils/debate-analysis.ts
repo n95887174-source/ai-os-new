@@ -230,7 +230,7 @@ export function computePersuasion(args: ArgumentLite[]): PersuasionResult {
 }
 
 const POSITIVE_LEXICON = new Set([
-  'good', 'great', 'excellent', 'wonderful', 'amazing', 'fantastic', 'love', 'best', 'happy', 'joy', 'success', 'win', 'beautiful', 'positive', 'wonderful', 'agree', 'yes', 'definitely', 'absolutely', 'clear', 'clearly', 'strong', 'support', 'helpful',
+  'good', 'great', 'excellent', 'wonderful', 'amazing', 'fantastic', 'love', 'best', 'happy', 'joy', 'success', 'win', 'beautiful', 'positive', 'agree', 'yes', 'definitely', 'absolutely', 'clear', 'clearly', 'strong', 'support', 'helpful',
   'хорошо', 'отлично', 'прекрасно', 'замечательно', 'люблю', 'согласен', 'да', 'безусловно', 'успех', 'победа', 'красивый', 'позитивный', 'поддерживаю', 'ясно', 'сильный',
 ]);
 

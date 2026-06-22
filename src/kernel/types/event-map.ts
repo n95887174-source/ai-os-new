@@ -43,8 +43,8 @@ export type EventMap = {
   'cognitive:trace:updated': Array<{ id: string; startTime: number; endTime?: number; input: string; output?: string; status: string; steps: CognitiveStep[]; provider?: string; model?: string; totalTokens?: number; latency?: number; error?: string }>;
   'debate:updated': unknown;
   'debate:started': unknown;
-  'debate:argument': unknown;
-  'debate:consensus': { topic: string; consensus: string; convergenceScore: number; synthesis?: { consensus: string; coreDisagreement: string; resolvedPoints: string[]; unresolvedPoints: string[]; phase: string } };
+  'debate:argument': { sessionId: string; argument: unknown };
+  'debate:consensus': { sessionId: string; topic: string; consensus: string; convergenceScore: number; synthesis?: { consensus: string; coreDisagreement: string; resolvedPoints: string[]; unresolvedPoints: string[]; phase: string } };
   
   // Debate Runtime
   'debate-runtime:session:created': { sessionId: string; topic: string; topologyType: string };

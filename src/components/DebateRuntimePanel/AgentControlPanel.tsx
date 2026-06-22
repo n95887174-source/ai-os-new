@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Power, PowerOff, RotateCw, Send, Sliders, Thermometer, Brain, FileText, Loader2, Check } from 'lucide-react';
 import { agentService } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
@@ -23,6 +23,8 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
   const [restarting, setRestarting] = useState<string | null>(null);
   const [localTemps, setLocalTemps] = useState<Record<string, number>>({});
   const [localMaxTokens, setLocalMaxTokens] = useState<Record<string, number>>({});
+  const presetTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => { return () => { if (presetTimeoutRef.current) clearTimeout(presetTimeoutRef.current); }; }, []);
 
   const agents = useMemo(() => {
     const topAgents = agentService.getAgents();
@@ -80,7 +82,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
         }
       }
     }
-    setTimeout(() => setPresetApplied(null), 1500);
+    presetTimeoutRef.current = setTimeout(() => setPresetApplied(null), 1500);
   }, [agents]);
 
   if (agents.length === 0) {

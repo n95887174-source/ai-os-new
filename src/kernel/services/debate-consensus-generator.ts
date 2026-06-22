@@ -40,6 +40,7 @@ Based on all arguments presented, provide a balanced synthesis that:
   try {
     session.consensus = (await callLLM(consensusModerator, summaryPrompt)).content;
     emit(EVENTS.DEBATE_CONSENSUS, {
+      sessionId: session.id,
       topic: session.topic,
       consensus: session.consensus,
       convergenceScore: session.convergenceScore,

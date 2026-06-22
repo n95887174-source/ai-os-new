@@ -82,7 +82,7 @@ export class DebateRuntimeAdapter {
     this.hooks.setActiveSession(bridged);
     const newArgs = bridged.arguments.slice(prevArgCount);
     for (const arg of newArgs) {
-      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, arg);
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: this.sessionId!, argument: arg });
     }
     this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, bridged);
     this.hooks.persistSession();

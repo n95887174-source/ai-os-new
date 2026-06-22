@@ -194,6 +194,15 @@ const ArgumentGraphPanel: React.FC = () => {
     return computeInfluence(filteredState);
   }, [filteredState]);
 
+  const speakerRoleMap = useMemo(() => {
+    if (!filteredState) return new Map<string, string>();
+    const map = new Map<string, string>();
+    for (const c of Object.values(filteredState.graph.claims)) {
+      if (!map.has(c.speaker)) map.set(c.speaker, c.role);
+    }
+    return map;
+  }, [filteredState]);
+
   const roundLayout = useMemo(() => {
     if (!filteredState) return new Map();
     return buildRoundLayout(Object.values(filteredState.graph.claims));
@@ -310,7 +319,7 @@ const ArgumentGraphPanel: React.FC = () => {
           <div style={{ display: 'flex', gap: 8, fontSize: 10, color: '#64748b', alignItems: 'center' }}>
             {Array.from(influence.entries()).map(([speaker, inf]) => (
               <span key={speaker} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: SPEAKER_COLORS[speaker] ?? DEFAULT_COLOR }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: SPEAKER_COLORS[speakerRoleMap.get(speaker) ?? ''] ?? DEFAULT_COLOR }} />
                 {speaker}
                 <span style={{ color: '#10b981' }}>↑{inf.outgoing}</span>
                 <span style={{ color: '#ef4444' }}>↓{inf.incoming}</span>

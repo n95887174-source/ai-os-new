@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, MessageCircle, Trash2, Search, X, Loader2 } from 'lucide-react';
+import { Plus, MessageCircle, Trash2, Search, X } from 'lucide-react';
 import { debateWorkspace } from '../../kernel/instances';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { WorkspaceRoomEntry } from '../../kernel/services/debate-runtime/debate-workspace';
@@ -231,7 +231,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                       onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; }}
                       onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; }}
                     >
-                      {isCreating ? <Loader2 size={12} className="spinning" /> : <Trash2 size={12} />}
+                      <Trash2 size={12} />
                     </button>
                   )}
                 </div>

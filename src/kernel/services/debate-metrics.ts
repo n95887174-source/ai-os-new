@@ -130,9 +130,7 @@ export function computeQualityMetrics(args: DebateArgument[], topic: string): Qu
   const lexicalDiversity = totalWords > 0 ? uniqueWords / totalWords : 0;
 
   const allBigrams = new Set<string>();
-  for (const w of allWords) {
-    for (let i = 1; i < w.length; i++) allBigrams.add(w.slice(i - 1, i + 1));
-  }
+  for (let i = 1; i < allWords.length; i++) allBigrams.add(`${allWords[i - 1]} ${allWords[i]}`);
   const uniqueBigrams = allBigrams.size;
 
   const wordFreq = new Map<string, number>();

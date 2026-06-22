@@ -194,7 +194,8 @@ const DebatePanel: React.FC = () => {
     }
 
     return () => { unsub(); clearTimeout(timer); };
-  }, [syncHumanVotesFromSession, refreshHistory, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncHumanVotesFromSession, refreshHistory]);
 
   useEffect(() => {
     const unsubVerdict = eventBus.on('debate:verdict:generated', (data) => {

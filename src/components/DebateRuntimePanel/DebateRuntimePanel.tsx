@@ -220,6 +220,7 @@ const DebateRuntimePanel: React.FC = () => {
         setSelectedAgentIds(nodes.map(n => n.id));
       }
     } catch { /* container not ready */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -375,8 +376,9 @@ const DebateRuntimePanel: React.FC = () => {
       await debateEngine.startSession(id);
     } catch (e) {
       setError(String(e));
+    } finally {
+      setActionLoading(null);
     }
-    setActionLoading(null);
   };
 
   const selected = sessions.find(s => s.id === selectedId) || null;

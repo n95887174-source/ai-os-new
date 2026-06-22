@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Target, Brain, AlertTriangle, Check, X } from 'lucide-react';
 import type { DebateArgument } from '../../kernel/instances';
@@ -16,12 +16,18 @@ interface DebateChatProps {
 }
 
 const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel, streamingArgIds }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [args]);
   const getAgentLabel = (agentId: string): string => {
     if (agentLabel) return agentLabel(agentId);
     return agentId;
   };
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <AnimatePresence>
         {args.map((arg, _i) => {
           const isStreaming = streamingArgIds?.has(arg.id);

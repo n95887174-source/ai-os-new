@@ -557,7 +557,7 @@ export class DebateService {
         }
       }
 
-      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, arg);
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: session.id, argument: arg });
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
 
     } catch (error) {
@@ -582,8 +582,11 @@ export class DebateService {
         source: 'fallback' as const,
         fallbackReason: reason,
       };
-      session.arguments.push(arg);
-      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, arg);
+      const { isDuplicate: isDup, match: dupMatch } = isDuplicateArgument(arg.content, session.arguments);
+      if (!isDup || !dupMatch) {
+        session.arguments.push(arg);
+      }
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: session.id, argument: arg });
     }
   }
 
@@ -724,8 +727,10 @@ export class DebateService {
 
     this.activeSession.arguments.push(arg);
     this.updateConvergenceScore();
-    this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, arg);
-    this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
+    if (this.activeSession) {
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: this.activeSession.id, argument: arg });
+      this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
+    }
   }
 
   getSession(): DebateSession | null {
@@ -878,6 +883,7 @@ export class DebateService {
       const unresolvedCount = synthesis.unresolvedPoints.length;
       this.activeSession.consensus = `## Synthesis\n\n${synthesis.consensus}\n\n### Core Disagreement\n${coreDisagreement}\n\n### Resolved\n${resolvedCount} point(s)\n\n### Unresolved\n${unresolvedCount} point(s)`;
       this.deps.eventBus.emit(EVENTS.DEBATE_CONSENSUS, {
+        sessionId: this.activeSession.id,
         topic: this.activeSession.topic,
         consensus: this.activeSession.consensus,
         convergenceScore: this.activeSession.convergenceScore,

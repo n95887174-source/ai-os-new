@@ -511,8 +511,8 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── Debate (legacy) ────────────────────────────────────────────────
   'debate:updated': z.unknown(),
   'debate:started': z.unknown(),
-  'debate:argument': z.unknown(),
-  'debate:consensus': z.object({ topic: z.string(), consensus: z.string(), convergenceScore: z.number(), synthesis: z.object({ consensus: z.string(), coreDisagreement: z.string(), resolvedPoints: z.array(z.string()), unresolvedPoints: z.array(z.string()), phase: z.string() }).optional() }),
+  'debate:argument': z.object({ sessionId: z.string(), argument: z.unknown() }),
+  'debate:consensus': z.object({ sessionId: z.string(), topic: z.string(), consensus: z.string(), convergenceScore: z.number(), synthesis: z.object({ consensus: z.string(), coreDisagreement: z.string(), resolvedPoints: z.array(z.string()), unresolvedPoints: z.array(z.string()), phase: z.string() }).optional() }),
 
   // ── Policy ─────────────────────────────────────────────────────────
   'policy:violation': PolicyViolationSchema,

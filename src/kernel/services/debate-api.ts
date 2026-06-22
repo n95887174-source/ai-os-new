@@ -54,22 +54,22 @@ export class DebateApiService {
         this.broadcast(s.id, { type, sessionId: s.id, payload: s, timestamp: Date.now() });
         if (s.status === 'completed') this.closeStream(s.id);
       }),
-      this.deps.eventBus.onSafe<unknown>(EVENTS.DEBATE_ARGUMENT, (arg) => {
-        const session = this.deps.debateService.getSession();
+      this.deps.eventBus.onSafe<{ sessionId: string; argument: unknown }>(EVENTS.DEBATE_ARGUMENT, ({ sessionId, argument }) => {
+        const session = this.deps.debateService.getSessionById(sessionId);
         if (!session) return;
-        this.broadcast(session.id, {
+        this.broadcast(sessionId, {
           type: 'argument',
-          sessionId: session.id,
-          payload: arg,
+          sessionId,
+          payload: argument,
           timestamp: Date.now(),
         });
       }),
-      this.deps.eventBus.onSafe<unknown>(EVENTS.DEBATE_CONSENSUS, (payload) => {
-        const session = this.deps.debateService.getSession();
+      this.deps.eventBus.onSafe<{ sessionId: string; topic: string; consensus: string; convergenceScore: number }>(EVENTS.DEBATE_CONSENSUS, (payload) => {
+        const session = this.deps.debateService.getSessionById(payload.sessionId);
         if (!session) return;
-        this.broadcast(session.id, {
+        this.broadcast(payload.sessionId, {
           type: 'consensus',
-          sessionId: session.id,
+          sessionId: payload.sessionId,
           payload,
           timestamp: Date.now(),
         });
