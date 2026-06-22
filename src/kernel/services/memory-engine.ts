@@ -223,7 +223,7 @@ export class MemoryService implements IMemoryEngine {
       this.memories = [newEntry, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
       this.ensureWorker().then(() => {
         if (this.worker) {
-          this.sendToWorker('insert', { entry: newEntry, generateEmbedding: this.semanticReady })
+          this.sendToWorker('upsert', { entry: newEntry, generateEmbedding: this.semanticReady })
             .catch((e) => { LOGGER.warn('MemoryEngine', 'Worker insert failed', { error: e }); this.semanticReady = false; });
         }
       }).catch((e) => { LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e }); this.semanticReady = false; });
@@ -282,7 +282,7 @@ export class MemoryService implements IMemoryEngine {
       this.ensureWorker().then(() => {
         if (this.worker) {
           Promise.all(newEntries.map(e =>
-            this.sendToWorker('insert', { entry: e, generateEmbedding: false })
+            this.sendToWorker('upsert', { entry: e, generateEmbedding: false })
           )).catch((err) => LOGGER.warn('MemoryEngine', 'Batch insert to worker failed', { error: err }));
         }
       }).catch((e) => { LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e }); this.semanticReady = false; });
