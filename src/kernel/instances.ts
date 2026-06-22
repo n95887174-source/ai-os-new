@@ -1,8 +1,8 @@
 import { lazyService } from './service-helper';
 import { rootLogger } from './services/logger-service'
 export { rootLogger };
-import { storageAdapter } from './storage-adapter-instance';
-export { storageAdapter };
+import { BucketStorageAdapter } from './storage-adapter-instance';
+export { BucketStorageAdapter };
 import type { SettingsService } from './services/settings-service'
 import type { KeyService } from './services/key-vault';
 import type { MemoryService } from './services/memory-engine';

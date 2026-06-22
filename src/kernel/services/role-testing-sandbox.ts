@@ -8,7 +8,7 @@ import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const MAX_RESULTS = 500; // B10-143: Cap results to prevent unbounded growth
 
@@ -49,7 +49,7 @@ const DEFAULT_CONFIG: SandboxConfig = {
 
 export class RoleTestingSandboxService {
   private config: SandboxConfig;
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private testCases: Map<string, TestCase[]> = new Map();
   private results: TestResult[] = [];
   private llmClient: ILLMClientService;
@@ -57,7 +57,7 @@ export class RoleTestingSandboxService {
   constructor(llmClient: ILLMClientService, config: Partial<SandboxConfig> = {}) {
     this.llmClient = llmClient;
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.storage = StorageAdapter.ROLES;
+    this.storage = BucketStorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

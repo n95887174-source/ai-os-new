@@ -44,7 +44,7 @@ export interface MemoryEntry {
     childrenIds?: string[];
   };
   score?: number;
-  embedding?: Float32Array;
+  embedding?: number[];
 }
 
 export interface MemorySearchQuery {

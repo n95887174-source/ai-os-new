@@ -1,6 +1,6 @@
-import type { IStorageAdapter } from '../../contracts/storage-adapter';
+import type { ILocalStorageAdapter } from '../../contracts/storage-adapter';
 
-export class LocalStorageAdapter implements IStorageAdapter {
+export class LocalStorageAdapter implements ILocalStorageAdapter {
   getItem(key: string): string | null {
     try { return localStorage.getItem(key); } catch { return null; }
   }

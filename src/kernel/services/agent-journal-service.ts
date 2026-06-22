@@ -1,6 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import type { ILogger } from '../contracts/logger';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 export interface JournalEntry {
   id: string;
@@ -35,7 +35,7 @@ const MAX_ENTRIES = 1000;
 
 const defaultStorage = {
   async list(): Promise<JournalEntry[]> {
-    const raw = await StorageAdapter.AGENTS.get<JournalEntry[]>(STORAGE_KEY);
+    const raw = await BucketStorageAdapter.AGENTS.get<JournalEntry[]>(STORAGE_KEY);
     if (!raw) return [];
     return Array.isArray(raw) ? raw : [];
   },
@@ -43,14 +43,14 @@ const defaultStorage = {
     const list = await defaultStorage.list();
     const filtered = list.filter(e => e.id !== entry.id);
     filtered.unshift(entry);
-    await StorageAdapter.AGENTS.set(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES));
+    await BucketStorageAdapter.AGENTS.set(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES));
   },
   async delete(id: string): Promise<void> {
     const list = await defaultStorage.list();
-    await StorageAdapter.AGENTS.set(STORAGE_KEY, list.filter(e => e.id !== id));
+    await BucketStorageAdapter.AGENTS.set(STORAGE_KEY, list.filter(e => e.id !== id));
   },
   async clear(): Promise<void> {
-    await StorageAdapter.AGENTS.remove(STORAGE_KEY);
+    await BucketStorageAdapter.AGENTS.remove(STORAGE_KEY);
   },
 };
 

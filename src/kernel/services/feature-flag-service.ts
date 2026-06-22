@@ -1,7 +1,7 @@
 import type { IFeatureFlagService, FeatureFlag } from '../contracts/feature-flags';
 import { DEFAULT_FEATURE_FLAGS } from '../contracts/feature-flags';
 import type { ILifecycle } from '../contracts/lifecycle';
-import type { IStorageAdapter } from '../contracts/storage-adapter';
+import type { ILocalStorageAdapter } from '../contracts/storage-adapter';
 import { EVENTS } from '../events/event-names';
 import { eventBus } from '../events/event-bus';
 import { rootLogger } from './logger-service';
@@ -13,9 +13,9 @@ const STORAGE_KEY = 'feature_flags';
 export class FeatureFlagService implements IFeatureFlagService, ILifecycle {
   private flags: Record<FeatureFlag, boolean> = { ...DEFAULT_FEATURE_FLAGS };
   private listeners = new Set<(flag: FeatureFlag, enabled: boolean) => void>();
-  private storage: IStorageAdapter;
+  private storage: ILocalStorageAdapter;
 
-  constructor(storage: IStorageAdapter) {
+  constructor(storage: ILocalStorageAdapter) {
     this.storage = storage;
   }
 

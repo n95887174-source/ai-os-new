@@ -6,7 +6,7 @@
 import { rootLogger } from '../logger-service';
 import { eventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
-import type { IStorageAdapter } from '../../contracts/storage-adapter';
+import type { ILocalStorageAdapter } from '../../contracts/storage-adapter';
 import { LocalStorageAdapter } from '../storage/local-storage-adapter';
 
 const LOGGER = rootLogger.child('EloRating');
@@ -65,7 +65,7 @@ export type DebateResult = 'win' | 'loss' | 'draw';
 
 export class EloRatingService {
   private profiles: Map<string, AgentEloProfile> = new Map();
-  private storage: IStorageAdapter;
+  private storage: ILocalStorageAdapter;
   private config: EloConfig;
 
   constructor(config: Partial<EloConfig> = {}) {

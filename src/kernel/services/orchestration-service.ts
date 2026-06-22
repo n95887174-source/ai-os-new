@@ -113,7 +113,7 @@ export class OrchestrationService {
       }
     }
     LOGGER.info('Orchestrator', `Mounted topology: ${topology.name} (v${topology.version})`);
-    this.deps.eventBus.emit(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, topology);
+    this.deps.eventBus.emit(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, { topologyId: topology.id });
   }
 
   getActiveTopology() { return this.activeTopology; }

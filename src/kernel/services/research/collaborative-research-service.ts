@@ -7,7 +7,7 @@ import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('CollaborativeResearch');
 
@@ -33,12 +33,12 @@ export interface ResearchContribution {
 }
 
 class CollaborativeResearchService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private sessions: Map<string, ResearchSession> = new Map();
   private contributions: Map<string, ResearchContribution[]> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.RESEARCH;
+    this.storage = BucketStorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

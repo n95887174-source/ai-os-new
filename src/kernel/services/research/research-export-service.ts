@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../logger-service';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('ResearchExport');
 
@@ -78,11 +78,11 @@ const DEFAULT_OPTIONS: ExportOptions = {
 };
 
 class ResearchExportService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private exportHistory: { projectId: string; format: ExportFormat; timestamp: number; size: number }[] = [];
 
   constructor() {
-    this.storage = StorageAdapter.RESEARCH;
+    this.storage = BucketStorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

@@ -7,7 +7,7 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('ForkService');
 
@@ -26,11 +26,11 @@ export interface ForkedSession {
 }
 
 class ForkConversationService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private forks: Map<string, ForkedSession> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.UI;
+    this.storage = BucketStorageAdapter.UI;
   }
 
   async init(): Promise<void> {

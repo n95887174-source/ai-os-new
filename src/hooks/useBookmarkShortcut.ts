@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { eventBus, type EventMap } from '../kernel/events/event-bus';
-import { storageAdapter } from '../kernel/instances';
+import { BucketStorageAdapter } from '../kernel/instances';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
 
@@ -11,7 +11,7 @@ const service = new ChatBookmarksService({
   },
   storage: {
     list: async () => {
-      const raw = storageAdapter.getItem('chat_bookmarks_v1');
+      const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
       if (!raw) return [];
       try {
         const parsed: unknown = JSON.parse(raw);
@@ -19,19 +19,17 @@ const service = new ChatBookmarksService({
       } catch { return []; }
     },
     save: async (b) => {
-      const raw = storageAdapter.getItem('chat_bookmarks_v1');
-      let list: ChatBookmark[] = [];
-      try { list = JSON.parse(raw ?? '[]') as ChatBookmark[]; } catch { list = []; }
-      list = [b, ...list.filter(x => x.id !== b.id)].slice(0, 500);
-      storageAdapter.setItem('chat_bookmarks_v1', JSON.stringify(list));
+      const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
+      const list: ChatBookmark[] = JSON.parse(raw ?? '[]') as ChatBookmark[];
+      const updated = [b, ...list.filter(x => x.id !== b.id)].slice(0, 500);
+      BucketStorageAdapter.setItem('chat_bookmarks_v1', JSON.stringify(updated));
     },
     delete: async (id) => {
-      const raw = storageAdapter.getItem('chat_bookmarks_v1');
-      let list: ChatBookmark[] = [];
-      try { list = JSON.parse(raw ?? '[]') as ChatBookmark[]; } catch { list = []; }
-      storageAdapter.setItem('chat_bookmarks_v1', JSON.stringify(list.filter(x => x.id !== id)));
+      const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
+      const list: ChatBookmark[] = JSON.parse(raw ?? '[]') as ChatBookmark[];
+      BucketStorageAdapter.setItem('chat_bookmarks_v1', JSON.stringify(list.filter(x => x.id !== id)));
     },
-    clear: async () => storageAdapter.removeItem('chat_bookmarks_v1'),
+    clear: async () => BucketStorageAdapter.removeItem('chat_bookmarks_v1'),
   },
 });
 

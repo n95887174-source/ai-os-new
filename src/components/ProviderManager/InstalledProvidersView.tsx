@@ -103,6 +103,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
   }, [confirmRemove]);
 
   const isMountedRef = useRef(true);
+  const testInitiatedRef = useRef(false);
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
 
@@ -116,6 +117,8 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 
   React.useEffect(() => {
     if (testStatus !== 'loading') return;
+    if (testInitiatedRef.current) return;
+    testInitiatedRef.current = true;
     isMountedRef.current = true;
 
     const prompt = testPromptRef.current;
@@ -187,6 +190,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
 
     return () => {
       isMountedRef.current = false;
+      testInitiatedRef.current = false;
       subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
     };
   }, [testStatus, apiKey.id, testModel, testTemperature, testMaxTokens]);
@@ -464,6 +468,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
   }, [confirmRemove]);
 
   const cardIsMountedRef = useRef(true);
+  const cardTestInitiatedRef = useRef(false);
   const testPromptRef = React.useRef(testPrompt);
   testPromptRef.current = testPrompt;
 
@@ -477,6 +482,8 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
 
   React.useEffect(() => {
     if (testStatus !== 'loading') return;
+    if (cardTestInitiatedRef.current) return;
+    cardTestInitiatedRef.current = true;
     cardIsMountedRef.current = true;
 
     const prompt = testPromptRef.current;
@@ -539,6 +546,7 @@ const ProviderCard: React.FC<ProviderRowProps> = ({ apiKey, onSelect, onCheckHea
 
     return () => {
       cardIsMountedRef.current = false;
+      cardTestInitiatedRef.current = false;
       subResp(); subStreamEnd(); clearTimeout(timeout);
     };
   }, [testStatus, apiKey.id, apiKey.availableModels, testModel]);

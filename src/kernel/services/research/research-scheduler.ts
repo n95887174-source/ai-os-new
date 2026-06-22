@@ -7,7 +7,7 @@ import { genId } from '../../../utils/gen-id';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('ResearchScheduler');
 
@@ -47,7 +47,7 @@ export interface ResearchRunResult {
 class ResearchSchedulerService {
   private schedules: Map<string, ResearchSchedule> = new Map();
   private runResults: Map<string, ResearchRunResult[]> = new Map();
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private checkIntervalMs = 60000; // Check every minute
   private isRunning = false;
@@ -55,7 +55,7 @@ class ResearchSchedulerService {
   private maxResultsPerSchedule = 100;
 
   constructor() {
-    this.storage = StorageAdapter.RESEARCH;
+    this.storage = BucketStorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

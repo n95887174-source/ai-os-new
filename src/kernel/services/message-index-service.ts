@@ -1,5 +1,5 @@
 import { eventBus, EVENTS } from '../events/event-bus';
-import { storageAdapter } from '../storage-adapter-instance';
+import { BucketStorageAdapter } from '../storage-adapter-instance';
 import type { ILogger } from '../contracts/logger';
 
 export interface IndexedMessage {
@@ -38,7 +38,7 @@ const MAX_MESSAGES = 1000;
 
 function loadFromStorage(): IndexedMessage[] {
   try {
-    const raw = storageAdapter.getItem(STORAGE_KEY);
+    const raw = BucketStorageAdapter.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as IndexedMessage[]) : [];
@@ -48,7 +48,7 @@ function loadFromStorage(): IndexedMessage[] {
 function saveToStorage(messages: IndexedMessage[]): void {
   try {
     const trimmed = messages.length > MAX_MESSAGES ? messages.slice(-MAX_MESSAGES) : messages;
-    storageAdapter.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    BucketStorageAdapter.setItem(STORAGE_KEY, JSON.stringify(trimmed));
   } catch { /* noop */ }
 }
 
@@ -227,7 +227,7 @@ export class MessageIndexService {
   clear(): void {
     this.messages = [];
     this.byRequestId.clear();
-    storageAdapter.removeItem(STORAGE_KEY);
+    BucketStorageAdapter.removeItem(STORAGE_KEY);
     this.notify();
   }
 

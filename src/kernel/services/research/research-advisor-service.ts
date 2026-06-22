@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../logger-service';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('ResearchAdvisor');
 
@@ -27,12 +27,12 @@ export interface ResearchHistory {
 }
 
 class ResearchAdvisorService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private history: Map<string, ResearchHistory> = new Map();
   private suggestions: ResearchSuggestion[] = [];
 
   constructor() {
-    this.storage = StorageAdapter.RESEARCH;
+    this.storage = BucketStorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

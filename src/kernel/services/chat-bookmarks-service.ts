@@ -1,7 +1,7 @@
 import { genId } from '../../utils/gen-id';
 import type { ILogger } from '../contracts/logger';
 import type { ChatMessage } from '../../llm/core/types';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 export interface ChatBookmark {
   id: string;
@@ -32,7 +32,7 @@ const STORAGE_KEY = 'chat_bookmarks_v1';
 
 const defaultStorage = {
   async list(): Promise<ChatBookmark[]> {
-    const raw = await StorageAdapter.UI.get<ChatBookmark[]>(STORAGE_KEY);
+    const raw = await BucketStorageAdapter.UI.get<ChatBookmark[]>(STORAGE_KEY);
     if (!raw) return [];
     return Array.isArray(raw) ? raw : [];
   },
@@ -40,14 +40,14 @@ const defaultStorage = {
     const all = await defaultStorage.list();
     const filtered = all.filter(b => b.id !== bookmark.id);
     filtered.unshift(bookmark);
-    await StorageAdapter.UI.set(STORAGE_KEY, filtered.slice(0, 500));
+    await BucketStorageAdapter.UI.set(STORAGE_KEY, filtered.slice(0, 500));
   },
   async delete(id: string): Promise<void> {
     const all = await defaultStorage.list();
-    await StorageAdapter.UI.set(STORAGE_KEY, all.filter(b => b.id !== id));
+    await BucketStorageAdapter.UI.set(STORAGE_KEY, all.filter(b => b.id !== id));
   },
   async clear(): Promise<void> {
-    await StorageAdapter.UI.remove(STORAGE_KEY);
+    await BucketStorageAdapter.UI.remove(STORAGE_KEY);
   },
 };
 

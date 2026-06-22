@@ -1,6 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import type { ILifecycle } from '../contracts/lifecycle';
-import type { IStorageAdapter } from '../contracts/storage-adapter';
+import type { ILocalStorageAdapter } from '../contracts/storage-adapter';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ResearchScheduler');
@@ -38,10 +38,10 @@ function parseCronNext(cron: string, after: number): number | null {
 export class ResearchScheduler implements ILifecycle {
   private schedules: ScheduledResearch[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
-  private storage?: IStorageAdapter;
+  private storage?: ILocalStorageAdapter;
   private onRun?: (module: string, params: Record<string, unknown>) => Promise<void>;
 
-  constructor(storage?: IStorageAdapter) {
+  constructor(storage?: ILocalStorageAdapter) {
     this.storage = storage;
   }
 

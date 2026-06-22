@@ -33,6 +33,7 @@ export class RotationService implements IRotationService {
   private deps: RotationServiceDeps;
   private _initialized = false;
   private _schedulingKeys = new Set<string>();
+  private rotationGeneration = 0;
 
   constructor(deps: RotationServiceDeps) {
     this.deps = deps;
@@ -102,13 +103,16 @@ export class RotationService implements IRotationService {
   }
 
   private async handleExpiry(keyId: string) {
+    const gen = this.rotationGeneration;
     const key = this.deps.keyManager.getKey(keyId);
     if (!key || !key.rotationConfig) return;
 
     this.cancelRotation(keyId);
+    if (gen !== this.rotationGeneration) return;
 
     if (key.rotationConfig.autoRotate) {
       const ok = await this.autoRotateKey(keyId);
+      if (gen !== this.rotationGeneration) return;
       if (ok) return;
     }
 
@@ -132,7 +136,7 @@ export class RotationService implements IRotationService {
     this.deps.eventBus.emit(EVENTS.KEY_ROTATION_TRIGGERED, {
       keyId,
       provider: key.provider,
-      reason: 'ttl_expired',
+      trigger: 'ttl_expired',
       autoRotate: key.rotationConfig.autoRotate,
     });
   }
@@ -274,6 +278,7 @@ export class RotationService implements IRotationService {
     config.autoRotate = autoRotate;
 
     this.deps.keyManager.updateKey(keyId, { rotationConfig: config });
+    this.rotationGeneration++;
     this.scheduleRotation(keyId, ttlHours);
   }
 

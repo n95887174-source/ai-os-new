@@ -10,7 +10,7 @@ import { genId } from '../../utils/gen-id';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 import type { Role, RolePermission } from '../types/role-types';
 
 const LOGGER = rootLogger.child('RoleInheritance');
@@ -30,11 +30,11 @@ export interface InheritanceRoleVersion {
 class RoleInheritanceService {
   private roles: Map<string, Role> = new Map();
   private versions: Map<string, InheritanceRoleVersion[]> = new Map();
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private maxVersionsPerRole = 50;
 
   constructor() {
-    this.storage = StorageAdapter.ROLES;
+    this.storage = BucketStorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('AgentSimilarity');
 
@@ -25,11 +25,11 @@ export interface SimilarityResult {
 }
 
 class AgentSimilarityService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private profiles: Map<string, AgentProfile> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.AGENTS;
+    this.storage = BucketStorageAdapter.AGENTS;
   }
 
   async init(): Promise<void> {
@@ -165,12 +165,10 @@ class AgentSimilarityService {
 
   private calculateSimilarity(a: AgentProfile, b: AgentProfile): number {
     let score = 0;
-    let count = 0;
 
     // Role similarity
     if (a.role === b.role) {
       score += 0.4;
-      count++;
     }
 
     // Capability overlap
@@ -180,7 +178,6 @@ class AgentSimilarityService {
     const union = new Set([...aCaps, ...bCaps]);
     if (union.size > 0) {
       score += intersection.length / union.size * 0.3;
-      count++;
     }
 
     // Tool overlap
@@ -190,7 +187,6 @@ class AgentSimilarityService {
     const toolUnion = new Set([...aTools, ...bTools]);
     if (toolUnion.size > 0) {
       score += toolIntersection.length / toolUnion.size * 0.3;
-      count++;
     }
 
     return score;

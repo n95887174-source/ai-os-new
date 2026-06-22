@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('RoleAutoSuggest');
 
@@ -60,12 +60,12 @@ const TASK_KEYWORDS: Record<string, { keywords: string[]; roleId: string; reason
 };
 
 class RoleAutoSuggestionService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private suggestions: Map<string, SuggestionResult[]> = new Map();
   private timestamps: Map<string, number> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.ROLES;
+    this.storage = BucketStorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {
@@ -119,7 +119,7 @@ class RoleAutoSuggestionService {
     return scored
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-      .map(({ score, ...rest }) => rest as SuggestionResult);
+      .map(({ ...rest }) => rest as SuggestionResult);
   }
 
   /**

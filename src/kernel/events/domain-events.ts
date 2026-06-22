@@ -86,9 +86,9 @@ export type DomainEventMap = {
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
   'agent:restarted': { id: string };
-  'agent:rate:limited': { agentId: string; provider: string; retryAfterMs: number };
+  'agent:rate:limited': { nodeId: string; label: string; reason: string; provider?: string; retryAfterMs?: number };
   'agent:blackboard:updated': { agentId: string; key: string; value: unknown };
-  'agent:handoff:initiated': { fromAgentId: string; toAgentId: string; context: string };
+  'agent:handoff:initiated': { id: string; fromAgent: string; toAgent: string; description?: string; priority?: string };
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'advisor:suggestion': { id: string; type: string; description: string };
   'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };

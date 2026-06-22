@@ -6,7 +6,7 @@
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('ProviderPersonality');
 
@@ -37,11 +37,11 @@ const DEFAULT_PERSONALITIES: Record<string, Partial<ProviderPersonality>> = {
 };
 
 class ProviderPersonalityService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private personalities: Map<string, ProviderPersonality> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.PROVIDERS;
+    this.storage = BucketStorageAdapter.PROVIDERS;
   }
 
   async init(): Promise<void> {

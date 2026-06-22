@@ -1,6 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import type { Role } from '../types/role-types';
-import type { IStorageAdapter } from '../contracts/storage-adapter';
+import type { ILocalStorageAdapter } from '../contracts/storage-adapter';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('RoleVersionService');
@@ -18,9 +18,9 @@ const MAX_VERSIONS_PER_ROLE = 50;
 
 export class RoleVersionService {
   private versions: Map<string, RoleVersion[]> = new Map();
-  private storage?: IStorageAdapter;
+  private storage?: ILocalStorageAdapter;
 
-  constructor(storage?: IStorageAdapter) {
+  constructor(storage?: ILocalStorageAdapter) {
     this.storage = storage;
   }
 

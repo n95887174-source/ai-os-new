@@ -6,7 +6,7 @@
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('RoleLibrary');
 
@@ -383,10 +383,10 @@ const CATEGORIES: RoleCategory[] = [
 class RoleLibraryService {
   private library: Map<string, LibraryRole> = new Map();
   private installed: Set<string> = new Set();
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
 
   constructor() {
-    this.storage = StorageAdapter.ROLES;
+    this.storage = BucketStorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

@@ -6,7 +6,7 @@
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('RoleModelPreferences');
 
@@ -26,11 +26,11 @@ export interface RoleModelPreferences {
 }
 
 class RoleModelPreferencesService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private preferences: Map<string, RoleModelPreferences> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.ROLES;
+    this.storage = BucketStorageAdapter.ROLES;
   }
 
   async init(): Promise<void> {

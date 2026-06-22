@@ -47,6 +47,38 @@ export const KeyNoteSchema = z.object({
   author: z.string().optional(),
 });
 
+export const KeyExtendedStatsSchema = z.object({
+  coldStartLatency: z.number(),
+  warmStartLatency: z.number(),
+  stabilityIndex: z.number(),
+  retryImpactScore: z.number(),
+  rateLimitPressure: z.number(),
+  keyAgeScore: z.number(),
+  estimatedCost: z.number(),
+  tokenEfficiency: z.number(),
+  contextUtilization: z.number(),
+  reputationScore: z.number(),
+  stabilityForecast: z.enum(['improving', 'stable', 'degrading']),
+  currentConcurrentRequests: z.number(),
+  usageToday: z.object({
+    tokens: z.number(),
+    weightedTokens: z.number(),
+    requests: z.number(),
+    estimatedCost: z.number(),
+  }),
+  usageMonthly: z.object({
+    tokens: z.number(),
+    requests: z.number(),
+    estimatedCost: z.number(),
+  }),
+  throughputHistory: z.array(z.object({
+    timestamp: z.number(),
+    latency: z.number(),
+    tokens: z.number(),
+    tps: z.number().optional(),
+  })),
+}).partial().passthrough();
+
 export const ApiKeyStatsSchema = z.object({
   successCount: z.number(),
   errorCount: z.number(),
@@ -56,7 +88,7 @@ export const ApiKeyStatsSchema = z.object({
   maxLatency: z.number(),
   lastModel: z.string().optional(),
   lastError: z.object({ message: z.string(), timestamp: z.string() }).optional(),
-  extended: z.record(z.string(), z.unknown()).optional(),
+  extended: KeyExtendedStatsSchema.optional(),
 });
 
 export const ApiKeySchema = z.object({
@@ -70,7 +102,7 @@ export const ApiKeySchema = z.object({
   model: z.string().optional(),
   status: z.enum(['active', 'checking', 'error', 'inactive', 'pending', 'quota_exhausted', 'invalid', 'duplicate', 'quarantined', 'probation', 'compromised']),
   availableModels: z.array(z.string()).optional(),
-  stats: ApiKeyStatsSchema.optional(),
+  stats: ApiKeyStatsSchema,
   latency: z.number().optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   isEncrypted: z.boolean().optional(),
@@ -121,6 +153,23 @@ export const ChatSessionSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
+export const ToolCallSchema = z.object({
+  id: z.string(),
+  type: z.literal('function'),
+  function: z.object({
+    name: z.string(),
+    arguments: z.string(),
+  }),
+});
+
+export const AdapterMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system', 'tool']),
+  content: z.string(),
+  name: z.string().optional(),
+  toolCallId: z.string().optional(),
+  toolCalls: z.array(ToolCallSchema).optional(),
+});
+
 export const ChatMessageSchema = z.object({
   id: z.string(),
   sessionId: z.string(),
@@ -167,7 +216,7 @@ export const MemoryEntrySchema = z.object({
     sessionId: z.string().optional(),
     parentId: z.string().optional(),
     childrenIds: z.array(z.string()).optional(),
-  }).optional().default({ source: 'unknown', type: 'generic', timestamp: 0, importance: 0 }),
+  }),
   embedding: z.array(z.number()).optional(),
   vector: z.array(z.number()).optional(),
   score: z.number().optional()
@@ -266,6 +315,7 @@ export const ToolDefinitionSchema = z.object({
   rateLimit: z.number().optional(),
   timeout: z.number().optional(),
   allowedDomains: z.array(z.string()).optional(),
+  parameters: z.unknown().optional(),
 });
 
 export const MCPServerConfigSchema = z.object({
@@ -392,7 +442,7 @@ export const OptimizationSuggestionSchema = z.object({
 export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── Provider / Key Events ──────────────────────────────────────────
   'key:loaded': z.array(ApiKeySchema),
-  'key:added': ApiKeySchema.omit({ id: true, stats: true }),
+  'key:added': ApiKeySchema,
   'key:removed': z.string(),
   'key:updated': z.array(ApiKeySchema),
   'key:state:changed': z.object({ id: z.string(), provider: z.string(), state: z.string(), previousState: z.string() }),
@@ -413,7 +463,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'chat:response': ChatResponseSchema,
   'chat:stream:start': z.object({ requestId: z.string(), provider: z.string(), model: z.string(), keyId: z.string().optional() }),
   'chat:stream:chunk': z.object({ requestId: z.string(), provider: z.string(), chunk: z.string(), keyId: z.string().optional() }),
-  'chat:stream:end': z.object({ requestId: z.string(), fullContent: z.string(), latency: z.number(), tokens: z.number().optional(), provider: z.string().optional(), model: z.string().optional(), keyId: z.string().optional(), ttft: z.number().optional(), tps: z.number().optional() }),
+  'chat:stream:end': z.object({ requestId: z.string(), fullContent: z.string(), latency: z.number(), tokens: z.number().optional(), provider: z.string().optional(), model: z.string().optional(), keyId: z.string().optional(), ttft: z.number().optional(), tps: z.number().optional(), status: z.enum(['timeout', 'done', 'cancelled']).optional() }),
   'chat:stream:error': z.object({ requestId: z.string(), provider: z.string(), error: z.string(), keyId: z.string().optional() }),
   'chat:model:select': z.object({ provider: z.string(), model: z.string() }),
   'chat:target:start': z.object({ provider: z.string(), model: z.string(), keyId: z.string() }),
@@ -474,7 +524,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'observability:health:changed': z.object({ status: z.string(), score: z.number(), timestamp: z.number() }),
 
   // ── Domain / Cognitive Events ──────────────────────────────────────
-  'request:incoming': z.object({ requestId: z.string(), messages: z.array(ChatMessageSchema) }),
+  'request:incoming': z.object({ requestId: z.string(), messages: z.array(AdapterMessageSchema) }),
   'request:completed': z.object({ final_data: z.object({ traceId: z.string(), output: z.string() }) }),
   'cognitive:step:active': z.object({ nodeId: z.string(), traceId: z.string(), metadata: z.record(z.string(), z.unknown()).optional() }),
   'cognitive:step:completed': z.object({ nodeId: z.string(), traceId: z.string(), status: z.enum(['done', 'error']), duration: z.number(), output: z.string(), fullContent: z.string().optional(), provider: z.string().optional(), model: z.string().optional() }),
@@ -523,11 +573,11 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'role:unassigned': z.object({ roleId: z.string(), agentId: z.string() }),
 
   // ── Snapshot ──────────────────────────────────────────────────────
-  'snapshot:captured': z.unknown(),
+  'snapshot:captured': z.object({ id: z.string(), traceId: z.string(), stepId: z.string(), timestamp: z.number(), label: z.string().optional(), tags: z.array(z.string()).optional(), runtime: z.unknown(), metadata: z.record(z.string(), z.unknown()).optional() }),
 
   // ── Orchestration ──────────────────────────────────────────────────
-  'system:topology:mounted': z.unknown(),
-  'system:node:spawn': z.unknown(),
+  'system:topology:mounted': z.object({ topologyId: z.string() }),
+  'system:node:spawn': z.object({ nodeId: z.string(), type: z.string() }),
   'system:node:removed': z.object({ id: z.string() }),
 
   // ── Advisor ────────────────────────────────────────────────────────
@@ -626,9 +676,9 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'pressure:map:updated': z.object({ global: z.object({ level: z.string(), score: z.number() }), providers: z.array(z.unknown()), sessions: z.array(z.unknown()), alertCount: z.number(), timestamp: z.number() }),
   'pressure:alert:raised': z.object({ scope: z.string(), id: z.string(), level: z.string(), message: z.string(), timestamp: z.number(), acknowledged: z.boolean() }),
   'whatif:simulation:completed': z.object({ type: z.string(), sessionId: z.string().optional(), proposedType: z.string().optional(), additionalAgents: z.number().optional(), proposedBudget: z.number().optional(), currentBudget: z.number().optional(), ratio: z.number().optional(), currentProvider: z.string().optional(), proposedProvider: z.string().optional(), latencyImpact: z.number().optional(), costImpact: z.number().optional(), reliabilityImpact: z.number().optional(), currentStrategy: z.string().optional(), proposedStrategy: z.string().optional(), estimatedQualityChange: z.number().optional(), estimatedLatencyChange: z.number().optional(), estimatedCostChange: z.number().optional(), policyType: z.string().optional(), violationsCount: z.number().optional(), severityLevel: z.string().optional(), hasResult: z.boolean().optional() }),
-  'agent:rate:limited': z.object({ id: z.string(), provider: z.string().optional(), resetAt: z.number().optional() }),
-  'agent:blackboard:updated': z.object({ id: z.string(), blackboard: z.unknown() }),
-  'agent:handoff:initiated': z.object({ fromId: z.string(), toId: z.string(), context: z.unknown() }),
+  'agent:rate:limited': z.object({ nodeId: z.string(), label: z.string(), reason: z.string(), provider: z.string().optional(), retryAfterMs: z.number().optional() }),
+  'agent:blackboard:updated': z.object({ agentId: z.string(), key: z.string(), value: z.unknown() }),
+  'agent:handoff:initiated': z.object({ id: z.string(), fromAgent: z.string(), toAgent: z.string(), description: z.string().optional(), priority: z.string().optional() }),
 
   // ── Research / Collaboration ──────────────────────────────────────
   'arch-review:snapshot:created': z.unknown(),

@@ -1,15 +1,15 @@
 import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
-import type { IStorageAdapter } from './contracts/storage-adapter';
+import type { ILocalStorageAdapter } from './contracts/storage-adapter';
 
 // SR-4: Browser-only singleton — lazy init via try/catch for SSR compatibility
-let _instance: IStorageAdapter | null = null;
-function ensureInstance(): IStorageAdapter {
+let _instance: ILocalStorageAdapter | null = null;
+function ensureInstance(): ILocalStorageAdapter {
   if (!_instance) {
-    try { _instance = new LocalStorageAdapter(); } catch { _instance = {} as IStorageAdapter; }
+    try { _instance = new LocalStorageAdapter(); } catch { _instance = {} as ILocalStorageAdapter; }
   }
   return _instance;
 }
-export const storageAdapter: IStorageAdapter = new Proxy({} as IStorageAdapter, {
+export const BucketStorageAdapter: ILocalStorageAdapter = new Proxy({} as ILocalStorageAdapter, {
   get(_, prop) {
     const inst = ensureInstance();
     if (typeof prop === 'string' && prop in inst) {

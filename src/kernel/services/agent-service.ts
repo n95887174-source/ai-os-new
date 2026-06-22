@@ -212,7 +212,7 @@ export class AgentService {
     if (entry) top.edges.push({ id: `edge-${crypto.randomUUID()}`, from: entry.id, to: newId, trigger: 'on_success' });
     this.deps.orchestrator.mount({ ...top });
     this.transitionLifecycle(newId, 'initializing', 'ready');
-    this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_SPAWN, { id: newId, name });
+    this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_SPAWN, { nodeId: newId, type: name });
     return newId;
   }
 

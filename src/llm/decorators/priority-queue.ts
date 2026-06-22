@@ -89,6 +89,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
       if (this.inner.batchSendMessage && availableItems.length > 1) {
         // Dynamic Batching
         const batchSize = Math.min(availableItems.length, this.config.maxConcurrency - this.activeSends);
+        if (batchSize === 0) return;
         const queue = this.sendQueue;
         const batch: QueueItem[] = [];
         for (let i = queue.length - 1; i >= 0 && batch.length < batchSize; i--) {

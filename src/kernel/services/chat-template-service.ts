@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Chat Templates Service
  * Predefined chat session templates for quick setup
  */
@@ -7,7 +7,7 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('ChatTemplates');
 
@@ -29,7 +29,7 @@ const BUILT_IN_TEMPLATES: ChatTemplate[] = [
   {
     id: 'code-review',
     name: 'Code Review',
-    icon: '🔍',
+    icon: '??',
     description: 'Review code for quality, security, and best practices.',
     systemPrompt: `You are an expert code reviewer. Focus on:
 1. Bug detection and edge cases
@@ -49,7 +49,7 @@ Provide specific, actionable feedback with code examples.`,
   {
     id: 'brainstorm',
     name: 'Brainstorm',
-    icon: '💡',
+    icon: '??',
     description: 'Generate creative ideas and explore possibilities.',
     systemPrompt: `You are a creative brainstormer. Your role is to:
 1. Generate diverse ideas without judgment
@@ -58,7 +58,7 @@ Provide specific, actionable feedback with code examples.`,
 4. Consider multiple perspectives
 5. Organize ideas into actionable categories
 
-Encourage wild ideas — they often lead to innovative solutions.`,
+Encourage wild ideas � they often lead to innovative solutions.`,
     defaultModel: 'gemini-3.1-flash-lite',
     suggestedProviders: ['gemini', 'openrouter'],
     tags: ['creative', 'ideation', 'planning'],
@@ -69,7 +69,7 @@ Encourage wild ideas — they often lead to innovative solutions.`,
   {
     id: 'translate',
     name: 'Translator',
-    icon: '🌐',
+    icon: '??',
     description: 'Translate text between languages with nuance.',
     systemPrompt: `You are a professional translator. You:
 1. Preserve meaning, tone, and cultural context
@@ -88,7 +88,7 @@ Be faithful to the original while making the text natural in the target language
   {
     id: 'summarize',
     name: 'Summarizer',
-    icon: '📋',
+    icon: '??',
     description: 'Condense long texts into key points.',
     systemPrompt: `You are an expert summarizer. Your summaries:
 1. Capture the main points and key takeaways
@@ -97,7 +97,7 @@ Be faithful to the original while making the text natural in the target language
 4. Highlight actionable insights
 5. Include relevant context
 
-Keep summaries focused — aim for 10-20% of original length.`,
+Keep summaries focused � aim for 10-20% of original length.`,
     suggestedProviders: ['groq', 'gemini'],
     tags: ['writing', 'productivity', 'information'],
     isBuiltIn: true,
@@ -107,7 +107,7 @@ Keep summaries focused — aim for 10-20% of original length.`,
   {
     id: 'research',
     name: 'Research Assistant',
-    icon: '🔬',
+    icon: '??',
     description: 'Research topics and synthesize information.',
     systemPrompt: `You are a thorough research assistant. Your process:
 1. Define scope and key questions
@@ -128,7 +128,7 @@ Be objective and cite sources. Distinguish facts from interpretations.`,
   {
     id: 'debug',
     name: 'Debugger',
-    icon: '🐛',
+    icon: '??',
     description: 'Diagnose bugs and propose solutions.',
     systemPrompt: `You are a systematic debugger. Your approach:
 1. Reproduce and understand the issue
@@ -148,7 +148,7 @@ Be methodical. Question assumptions. The first solution is rarely right.`,
   {
     id: 'teaching',
     name: 'Teacher',
-    icon: '🎓',
+    icon: '??',
     description: 'Explain concepts with examples and guided practice.',
     systemPrompt: `You are a patient teacher. Your approach:
 1. Start with what the learner knows
@@ -168,7 +168,7 @@ Be encouraging but honest. Mastery comes with practice.`,
   {
     id: 'writing',
     name: 'Writing Assistant',
-    icon: '✍️',
+    icon: '??',
     description: 'Help with writing tasks from emails to articles.',
     systemPrompt: `You are a writing assistant. You help with:
 1. Clear, structured communication
@@ -177,7 +177,7 @@ Be encouraging but honest. Mastery comes with practice.`,
 4. Flow and readability
 5. Call-to-action clarity
 
-Adapt your style to the task — formal for business, casual for friends.`,
+Adapt your style to the task � formal for business, casual for friends.`,
     suggestedProviders: ['groq', 'gemini'],
     tags: ['writing', 'communication', 'productivity'],
     isBuiltIn: true,
@@ -187,12 +187,12 @@ Adapt your style to the task — formal for business, casual for friends.`,
 ];
 
 class ChatTemplateService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private templates: Map<string, ChatTemplate> = new Map();
   private recent: string[] = [];
 
   constructor() {
-    this.storage = StorageAdapter.UI;
+    this.storage = BucketStorageAdapter.UI;
   }
 
   async init(): Promise<void> {

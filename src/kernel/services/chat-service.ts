@@ -25,7 +25,7 @@ export interface ChatServiceDeps {
     getKey?: (id: string) => ApiKey | null | undefined;
     recordUsage: (keyIdOrProvider: string, latency: number, tokens?: number, model?: string, extra?: Record<string, unknown>) => void;
     handleProviderError: (keyId: string, error: string) => void;
-    updateKeyStatus: (id: string, status: string, latency?: number) => void;
+    updateKeyStatus: (id: string, status: ApiKey['status'], latency?: number) => void;
   };
   virtualKeyService: {
     resolve: (id: string) => { realKeyId: string } | undefined;

@@ -40,7 +40,7 @@
  */
 
 import { dexieDb } from './database-service';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 import { getSqliteDb } from './storage/sqlite-storage';
 import { CONFIG } from './config-registry';
 import { rootLogger } from './logger-service';
@@ -66,18 +66,18 @@ export interface StorageRouterResult {
 }
 
 const STORAGE_KEY = 'super_agents_api_keys';
-const storageAdapter = StorageAdapter.PROVIDERS;
+const BucketStorageAdapter = BucketStorageAdapter.PROVIDERS;
 
 interface ForcedMode {
   __FORCE_STORAGE_MODE__?: StorageMode;
 }
 
 /**
- * Read keys from localStorage via StorageAdapter (PROVIDERS bucket).
+ * Read keys from localStorage via BucketStorageAdapter (PROVIDERS bucket).
  */
 function readLocalStorage(): ApiKey[] {
   try {
-    const raw = storageAdapter.getSync<string>(STORAGE_KEY);
+    const raw = BucketStorageAdapter.getSync<string>(STORAGE_KEY);
     if (!raw) return [];
     // B10-38: getSync already returns parsed object — no double JSON.parse needed
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;

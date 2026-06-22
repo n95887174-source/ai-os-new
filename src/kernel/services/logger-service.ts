@@ -54,7 +54,7 @@ export class LoggerService implements ILogger {
       seq: this.state.seq++,
       traceId: this.state.currentTrace?.traceId ?? meta?.traceId as string | undefined,
       correlationId: this.state.currentTrace?.correlationId ?? meta?.correlationId as string | undefined,
-      ...meta,
+      meta,
     };
 
     this.state.buffer.push(entry);

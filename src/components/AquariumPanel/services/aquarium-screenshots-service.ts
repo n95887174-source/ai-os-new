@@ -7,7 +7,7 @@ import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../../../kernel/services/logger-service';
 import { eventBus } from '../../../kernel/events/event-bus';
 import { EVENTS } from '../../../kernel/events/event-names';
-import { StorageAdapter } from '../../../kernel/services/storage-adapter';
+import { BucketStorageAdapter } from '../../../kernel/services/storage-adapter';
 
 const LOGGER = rootLogger.child('AquariumScreenshots');
 
@@ -21,11 +21,11 @@ export interface Screenshot {
 }
 
 class AquariumScreenshotsService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private screenshots: Map<string, Screenshot> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.UI;
+    this.storage = BucketStorageAdapter.UI;
   }
 
   async init(): Promise<void> {

@@ -6,7 +6,7 @@
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 import { genId } from '../../utils/gen-id';
 
 const LOGGER = rootLogger.child('SchedulerService');
@@ -45,14 +45,14 @@ export type ScheduleFrequency = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'cus
 
 class SchedulerService {
   private schedules: Map<string, Schedule> = new Map();
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private checkIntervalMs = 60000; // Check every minute
   private isRunning = false;
   lastCheckTime = 0; // OBS-96: public for external watchdog
 
   constructor() {
-    this.storage = StorageAdapter.AGENTS;
+    this.storage = BucketStorageAdapter.AGENTS;
   }
 
   async init(): Promise<void> {

@@ -44,7 +44,7 @@ const DB_BLOB_KEY = 'sqlite_db_blob';
 
 // NOTE: We intentionally read from unprefixed localStorage, matching
 // bootstrap.ts which uses localStorage.getItem('super_agents_api_keys').
-// StorageAdapter.PROVIDERS adds 'superagents:providers:' prefix which
+// BucketStorageAdapter.PROVIDERS adds 'superagents:providers:' prefix which
 // is a stale artifact. Dexie is the single source of truth.
 function readRawFromLocalStorage(key: string): string | null {
   try { return localStorage.getItem(key); } catch { return null; }

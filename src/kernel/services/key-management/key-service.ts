@@ -1,4 +1,4 @@
-﻿import type { ApiKey, KeyHistoryEntry, ProviderAlert, KeyNote } from '../../types/metrics-types';
+import type { ApiKey, KeyHistoryEntry, ProviderAlert, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import { KeyVault } from './key-vault';
 import { KeyRegistry } from './key-registry';
@@ -8,7 +8,7 @@ import { KeyAnalytics } from './key-analytics';
 import { KeyFingerprints } from './key-fingerprints';
 import { KeyAlerts } from './key-alerts';
 import { KeyLifecycle } from './key-lifecycle';
-import { storageAdapter } from '../../storage-adapter-instance';
+import { BucketStorageAdapter } from '../../storage-adapter-instance';
 import { KeyPoolSelector } from './key-pool-selector';
 import { KeyDiagnostics } from './key-diagnostics';
 import { debounce } from '../../../utils/debounce';
@@ -162,7 +162,7 @@ export class KeyService {
         deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, provider, state: newState, previousState });
       },
       onReputationThresholdCrossed: (id, provider, score) => {
-        deps.eventBus.emit(EVENTS.KEY_REPUTATION_DOWN, { id, provider, score });
+        deps.eventBus.emit(EVENTS.KEY_REPUTATION_THRESHOLD_CROSSED, { id, provider, score });
       },
       ensureExtendedStats: (key) => this.ensureExtendedStats(key),
     });
@@ -258,7 +258,7 @@ export class KeyService {
             this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: key.id, provider: key.provider, quotaType: 'requests' });
             const backoffMs = this.health.getBackoffMs(key.id);
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-              message: `${key.provider} hit 429 — retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
+              message: `${key.provider} hit 429 � retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
               type: 'warning',
             });
             setTimeout(() => {
@@ -326,7 +326,7 @@ export class KeyService {
     return beforeCount;
   }
 
-  // ── Config Persistence ─────────────────────────────────────────────
+  // -- Config Persistence ---------------------------------------------
 
   private async loadConfig() {
     try {
@@ -357,7 +357,7 @@ export class KeyService {
     }
   }
 
-  // ── Notification ───────────────────────────────────────────────────
+  // -- Notification ---------------------------------------------------
 
   private emitKeyUpdate = () => {
     const keys = [...this.registry.getKeys()];
@@ -367,7 +367,7 @@ export class KeyService {
 
   private notify = debounce(this.emitKeyUpdate, 100);
 
-  // ── Vault ──────────────────────────────────────────────────────────
+  // -- Vault ----------------------------------------------------------
 
   async unlock(password: string): Promise<boolean> {
     const ok = await this.vault.unlock(password);
@@ -387,7 +387,7 @@ export class KeyService {
     this.notify();
   }
 
-  // ── Registry ───────────────────────────────────────────────────────
+  // -- Registry -------------------------------------------------------
 
   getKeys() { return this.registry.getKeys(); }
   getKey(id: string) { return this.registry.getKey(id); }
@@ -417,7 +417,7 @@ export class KeyService {
   async removeKey(id: string) {
     await this.registry.removeKey(id);
     // NOTE: registry.removeKey() already calls saveKeys() internally.
-    // A second call is redundant — the snapshot hasn't changed.
+    // A second call is redundant � the snapshot hasn't changed.
     this.health.cleanupKey(id);
     this.lifecycle.cleanupKey(id);
     clearSeedCache();
@@ -507,14 +507,14 @@ export class KeyService {
     }
   }
 
-  // ── Health ─────────────────────────────────────────────────────────
+  // -- Health ---------------------------------------------------------
 
   updateKeyStatus(id: string, status: ApiKey['status'], latency?: number) {
     const key = this.registry.getKey(id);
     if (key) {
       const prev = key.status;
       this.health.updateKeyStatus(key, status, latency);
-      this.registry.pushHistory(id, 'status_changed', `${prev} → ${status}`);
+      this.registry.pushHistory(id, 'status_changed', `${prev} > ${status}`);
       this.registry.saveKeys();
       this.notify();
       this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, { id, provider: key.provider, state: status, previousState: prev });
@@ -546,7 +546,7 @@ export class KeyService {
     if (key) {
       const prev = key.status;
       this.health.toggleKeyStatus(key);
-      this.registry.pushHistory(id, 'status_changed', `${prev} → ${key.status}`);
+      this.registry.pushHistory(id, 'status_changed', `${prev} > ${key.status}`);
       await this.registry.saveKeys();
       this.notify();
     }
@@ -587,7 +587,7 @@ export class KeyService {
     return true;
   }
 
-  // ── Quotas ─────────────────────────────────────────────────────────
+  // -- Quotas ---------------------------------------------------------
 
   getFreeTierLimits() { return this.quotas.getFreeTierLimits(); }
 
@@ -617,7 +617,7 @@ export class KeyService {
     return this.deps.providerAdapterRegistry?.getProviderRuntimeStatus(provider).rateLimited ?? false;
   }
 
-  // ── Pool Selection ─────────────────────────────────────────────────
+  // -- Pool Selection -------------------------------------------------
 
   getPoolStrategy(provider: string): PoolStrategy {
     return this.poolSelector.getPoolStrategy(provider);
@@ -686,7 +686,7 @@ export class KeyService {
     return this.poolSelector.getPoolKeyDistribution(provider);
   }
 
-  // ── Analytics ──────────────────────────────────────────────────────
+  // -- Analytics ------------------------------------------------------
 
   recordUsage(keyIdOrProvider: string, latency: number, tokens: number = 0, model?: string, extra?: Record<string, unknown>) {
     const key = this.registry
@@ -742,7 +742,7 @@ export class KeyService {
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Statistics reset for ${key.label}`, type: 'info' });
   }
 
-  // ── Alerts ─────────────────────────────────────────────────────────
+  // -- Alerts ---------------------------------------------------------
 
   getAlerts(): ProviderAlert[] {
     return this.alerts.getAlerts(this.registry.getKeys());
@@ -757,7 +757,7 @@ export class KeyService {
     return this.alerts.getAlertSummary(this.registry.getKeys());
   }
 
-  // ── Fingerprints ───────────────────────────────────────────────────
+  // -- Fingerprints ---------------------------------------------------
 
   async fingerprintKey(apiKey: string): Promise<string> {
     return this.fingerprints.fingerprintKey(apiKey);
@@ -787,7 +787,7 @@ export class KeyService {
     return this.fingerprints.suggestModel(provider);
   }
 
-  // ── Lifecycle / SLA / Rotation ─────────────────────────────────────
+  // -- Lifecycle / SLA / Rotation -------------------------------------
 
   setKeyTTL(id: string, ttlHours: number, autoRotate = false) {
     this.lifecycle.setKeyTTL(id, ttlHours, autoRotate);
@@ -821,7 +821,7 @@ export class KeyService {
     }
   }
 
-  // ── Misc ───────────────────────────────────────────────────────────
+  // -- Misc -----------------------------------------------------------
 
   transitionState(id: string, newState: string) {
     const key = this.registry.getKey(id);
@@ -847,7 +847,7 @@ export class KeyService {
   }
 
   clearAllData() {
-    storageAdapter.removeItem(STORAGE_KEY);
+    BucketStorageAdapter.removeItem(STORAGE_KEY);
     this.deps.eventBus.emit(EVENTS.CLEAR_DATA, undefined);
   }
 
@@ -859,7 +859,7 @@ export class KeyService {
     }
   }
 
-  // ── Diagnostics ─────────────────────────────────────────────────────
+  // -- Diagnostics -----------------------------------------------------
 
   async getProviderIntrospection(provider: string, apiKey: string): Promise<Record<string, unknown>> {
     return this.diagnostics.getProviderIntrospection(provider, apiKey);

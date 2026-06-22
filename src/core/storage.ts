@@ -1,4 +1,4 @@
-import { storageAdapter, rootLogger } from '../kernel/instances';
+import { BucketStorageAdapter, rootLogger } from '../kernel/instances';
 const LOGGER = rootLogger.child('Storage');
 
 export interface StorageDriver {
@@ -61,7 +61,7 @@ export class LocalStorageDriver implements StorageDriver {
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      const data = storageAdapter.getItem(this.prefixed(key));
+      const data = BucketStorageAdapter.getItem(this.prefixed(key));
       if (!data) return null;
       return JSON.parse(data) as T;
     } catch (e) {
@@ -72,25 +72,25 @@ export class LocalStorageDriver implements StorageDriver {
  
   async set<T>(key: string, value: T): Promise<void> {
     try {
-      storageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
+      BucketStorageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         LOGGER.warn('Storage', 'localStorage quota exceeded, clearing oldest entries');
         this.evictOldest();
         try {
-          storageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
+          BucketStorageAdapter.setItem(this.prefixed(key), JSON.stringify(value));
         } catch {
           LOGGER.warn('Storage', 'Failed to set item even after eviction');
         }
       }
     }
     try {
-      storageAdapter.setItem(this.prefixed(`__ts_${key}`), String(Date.now()));
+      BucketStorageAdapter.setItem(this.prefixed(`__ts_${key}`), String(Date.now()));
     } catch { /* timestamp metadata best-effort */ }
   }
 
   async remove(key: string): Promise<void> {
-    storageAdapter.removeItem(this.prefixed(key));
+    BucketStorageAdapter.removeItem(this.prefixed(key));
   }
 
   async clear(): Promise<void> {
@@ -103,24 +103,24 @@ export class LocalStorageDriver implements StorageDriver {
           if (k?.startsWith(this.prefix)) keysToRemove.push(k);
         }
       } else {
-        for (let i = 0; i < storageAdapter.length; i++) {
-          const k = storageAdapter.key(i);
+        for (let i = 0; i < BucketStorageAdapter.length; i++) {
+          const k = BucketStorageAdapter.key(i);
           if (k?.startsWith(this.prefix)) keysToRemove.push(k);
         }
       }
     } catch {
-      for (let i = 0; i < storageAdapter.length; i++) {
-        const k = storageAdapter.key(i);
+      for (let i = 0; i < BucketStorageAdapter.length; i++) {
+        const k = BucketStorageAdapter.key(i);
         if (k?.startsWith(this.prefix)) keysToRemove.push(k);
       }
     }
-    keysToRemove.forEach(k => storageAdapter.removeItem(k));
+    keysToRemove.forEach(k => BucketStorageAdapter.removeItem(k));
   }
 
   async keys(): Promise<string[]> {
     const result: string[] = [];
-    for (let i = 0; i < storageAdapter.length; i++) {
-      const k = storageAdapter.key(i);
+    for (let i = 0; i < BucketStorageAdapter.length; i++) {
+      const k = BucketStorageAdapter.key(i);
       if (k?.startsWith(this.prefix)) {
         result.push(k.slice(this.prefix.length));
       }
@@ -129,7 +129,7 @@ export class LocalStorageDriver implements StorageDriver {
   }
 
   async has(key: string): Promise<boolean> {
-    return storageAdapter.getItem(this.prefixed(key)) !== null;
+    return BucketStorageAdapter.getItem(this.prefixed(key)) !== null;
   }
 
   async size(): Promise<number> {
@@ -140,10 +140,10 @@ export class LocalStorageDriver implements StorageDriver {
   private evictOldest() {
     const entries: { key: string; time: number }[] = [];
     const tsPrefix = `${this.prefix}__ts_`;
-    for (let i = 0; i < storageAdapter.length; i++) {
-      const k = storageAdapter.key(i);
+    for (let i = 0; i < BucketStorageAdapter.length; i++) {
+      const k = BucketStorageAdapter.key(i);
       if (k?.startsWith(tsPrefix)) {
-        const raw = storageAdapter.getItem(k);
+        const raw = BucketStorageAdapter.getItem(k);
         if (raw) {
           // B10-70: Correctly reconstruct original key from timestamp key format
           entries.push({ key: k.slice(tsPrefix.length), time: parseInt(raw, 10) || 0 });
@@ -151,8 +151,8 @@ export class LocalStorageDriver implements StorageDriver {
       }
     }
     if (entries.length === 0) {
-      for (let i = 0; i < storageAdapter.length; i++) {
-        const k = storageAdapter.key(i);
+      for (let i = 0; i < BucketStorageAdapter.length; i++) {
+        const k = BucketStorageAdapter.key(i);
         if (k?.startsWith(this.prefix) && !k.includes('__ts_')) {
           entries.push({ key: k.slice(this.prefix.length), time: 0 });
         }
@@ -161,8 +161,8 @@ export class LocalStorageDriver implements StorageDriver {
     entries.sort((a, b) => a.time - b.time);
     const toRemove = entries.slice(0, Math.max(1, Math.floor(entries.length * 0.2)));
     for (const e of toRemove) {
-      storageAdapter.removeItem(this.prefixed(e.key));
-      storageAdapter.removeItem(this.prefixed(`__ts_${e.key}`));
+      BucketStorageAdapter.removeItem(this.prefixed(e.key));
+      BucketStorageAdapter.removeItem(this.prefixed(`__ts_${e.key}`));
     }
   }
 }

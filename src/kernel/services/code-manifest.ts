@@ -193,7 +193,7 @@ const INTERFACE_ENTRIES: CodeManifestEntry[] = [
   { name: 'ILifecycle', type: 'interface_name', location: 'contracts/lifecycle.ts' },
   { name: 'ITransaction', type: 'interface_name', location: 'contracts/transaction.ts' },
   { name: 'ILogger', type: 'interface_name', location: 'contracts/logger.ts' },
-  { name: 'IStorageAdapter', type: 'interface_name', location: 'contracts/storage-adapter.ts' },
+  { name: 'ILocalStorageAdapter', type: 'interface_name', location: 'contracts/storage-adapter.ts' },
   { name: 'IProviderAdapter', type: 'interface_name', location: 'contracts/provider-adapter.ts' },
   { name: 'IKeyService', type: 'interface_name', location: 'contracts/key-vault.ts' },
   { name: 'IKeyStateStore', type: 'interface_name', location: 'contracts/key-state.ts' },

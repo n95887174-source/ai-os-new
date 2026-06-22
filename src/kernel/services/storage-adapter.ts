@@ -1,10 +1,10 @@
 /**
- * StorageAdapter — singleton-per-bucket wrapper around localStorage.
+ * BucketStorageAdapter — singleton-per-bucket wrapper around localStorage.
  *
  * Architecture: exactly 5 instances for 5 physical buckets (agents, research,
- * roles, providers, ui). Use the static singletons: StorageAdapter.AGENTS,
- * StorageAdapter.RESEARCH, StorageAdapter.ROLES, StorageAdapter.PROVIDERS,
- * StorageAdapter.UI. No new instances should be created.
+ * roles, providers, ui). Use the static singletons: BucketStorageAdapter.AGENTS,
+ * BucketStorageAdapter.RESEARCH, BucketStorageAdapter.ROLES, BucketStorageAdapter.PROVIDERS,
+ * BucketStorageAdapter.UI. No new instances should be created.
  *
  * Prefix format: `superagents:${bucket}:${key}` — no namespace sub-prefix.
  */
@@ -13,12 +13,12 @@ import { eventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 
-const LOGGER = rootLogger.child('StorageAdapter');
+const LOGGER = rootLogger.child('BucketStorageAdapter');
 
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
 export type StorageBucket = typeof KNOWN_BUCKETS[number];
 
-export class StorageAdapter {
+export class BucketStorageAdapter {
   private readonly bucket: StorageBucket;
   private readonly prefix: string;
 
@@ -27,19 +27,19 @@ export class StorageAdapter {
     this.prefix = `superagents:${bucket}:`;
   }
 
-  static readonly AGENTS = new StorageAdapter('agents');
-  static readonly RESEARCH = new StorageAdapter('research');
-  static readonly ROLES = new StorageAdapter('roles');
-  static readonly PROVIDERS = new StorageAdapter('providers');
-  static readonly UI = new StorageAdapter('ui');
+  static readonly AGENTS = new BucketStorageAdapter('agents');
+  static readonly RESEARCH = new BucketStorageAdapter('research');
+  static readonly ROLES = new BucketStorageAdapter('roles');
+  static readonly PROVIDERS = new BucketStorageAdapter('providers');
+  static readonly UI = new BucketStorageAdapter('ui');
 
-  static forBucket(bucket: StorageBucket): StorageAdapter {
+  static forBucket(bucket: StorageBucket): BucketStorageAdapter {
     switch (bucket) {
-      case 'agents': return StorageAdapter.AGENTS;
-      case 'research': return StorageAdapter.RESEARCH;
-      case 'roles': return StorageAdapter.ROLES;
-      case 'providers': return StorageAdapter.PROVIDERS;
-      case 'ui': return StorageAdapter.UI;
+      case 'agents': return BucketStorageAdapter.AGENTS;
+      case 'research': return BucketStorageAdapter.RESEARCH;
+      case 'roles': return BucketStorageAdapter.ROLES;
+      case 'providers': return BucketStorageAdapter.PROVIDERS;
+      case 'ui': return BucketStorageAdapter.UI;
     }
   }
 
@@ -52,7 +52,7 @@ export class StorageAdapter {
       const raw = localStorage.getItem(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
     } catch (e) {
-      LOGGER.warn('StorageAdapter', 'get failed', { bucket: this.bucket, key, error: e });
+      LOGGER.warn('BucketStorageAdapter', 'get failed', { bucket: this.bucket, key, error: e });
       return undefined;
     }
   }
@@ -67,7 +67,7 @@ export class StorageAdapter {
           type: 'error',
         });
       } else {
-        LOGGER.warn('StorageAdapter', 'set failed', { bucket: this.bucket, key, error: e });
+        LOGGER.warn('BucketStorageAdapter', 'set failed', { bucket: this.bucket, key, error: e });
       }
     }
   }
@@ -76,7 +76,7 @@ export class StorageAdapter {
     try {
       localStorage.removeItem(this.prefix + key);
     } catch (e) {
-      LOGGER.warn('StorageAdapter', 'remove failed', { bucket: this.bucket, key, error: e });
+      LOGGER.warn('BucketStorageAdapter', 'remove failed', { bucket: this.bucket, key, error: e });
     }
   }
 
@@ -89,7 +89,7 @@ export class StorageAdapter {
       }
       toRemove.forEach(key => localStorage.removeItem(key));
     } catch (e) {
-      LOGGER.warn('StorageAdapter', 'clear failed', { bucket: this.bucket, error: e });
+      LOGGER.warn('BucketStorageAdapter', 'clear failed', { bucket: this.bucket, error: e });
     }
   }
 
@@ -98,7 +98,7 @@ export class StorageAdapter {
       const raw = localStorage.getItem(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
     } catch (e) {
-      LOGGER.warn('StorageAdapter', 'getSync failed', { bucket: this.bucket, key, error: e });
+      LOGGER.warn('BucketStorageAdapter', 'getSync failed', { bucket: this.bucket, key, error: e });
       return undefined;
     }
   }
@@ -107,7 +107,7 @@ export class StorageAdapter {
     try {
       localStorage.setItem(this.prefix + key, JSON.stringify(value));
     } catch (e) {
-      LOGGER.warn('StorageAdapter', 'setSync failed', { bucket: this.bucket, key, error: e });
+      LOGGER.warn('BucketStorageAdapter', 'setSync failed', { bucket: this.bucket, key, error: e });
     }
   }
 }

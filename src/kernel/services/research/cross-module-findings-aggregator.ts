@@ -7,7 +7,7 @@ import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('FindingsAggregator');
 
@@ -74,12 +74,12 @@ const DEFAULT_CONFIG: AggregationConfig = {
 
 class CrossModuleFindingsAggregator {
   private config: AggregationConfig;
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private analyses: Map<string, CrossModuleAnalysis> = new Map();
 
   constructor(config: Partial<AggregationConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.storage = StorageAdapter.RESEARCH;
+    this.storage = BucketStorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

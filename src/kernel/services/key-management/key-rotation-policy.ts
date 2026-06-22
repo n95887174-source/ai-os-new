@@ -6,7 +6,7 @@
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('KeyRotationPolicy');
 
@@ -42,13 +42,13 @@ const INTERVAL_MS: Record<RotationInterval, number> = {
 
 class KeyRotationPolicyService {
   private policies: Map<string, RotationPolicy> = new Map();
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private checkIntervalMs = 3600000; // Check every hour
   private isRunning = false;
 
   constructor() {
-    this.storage = StorageAdapter.PROVIDERS;
+    this.storage = BucketStorageAdapter.PROVIDERS;
   }
 
   private initialized = false;

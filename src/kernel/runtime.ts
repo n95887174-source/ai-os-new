@@ -173,7 +173,7 @@ export class RuntimeManager {
     this.container.register('eventBus', coreEventBus);
     coreEventBus.setLogger(rootLogger);
     this.container.register('securityService', coreSecurity);
-    this.container.register('storageAdapter', localStorageAdapter);
+    this.container.register('BucketStorageAdapter', localStorageAdapter);
   }
 }
 

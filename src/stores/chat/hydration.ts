@@ -4,7 +4,7 @@ import type { ChatSession } from './types';
 import { DEFAULT_SESSION, SESSION_BATCH_SIZE } from './types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
 import { runtime } from '../../kernel/runtime';
-import { storageAdapter } from '../../kernel/instances';
+import { BucketStorageAdapter } from '../../kernel/instances';
 import { waitForStorage } from '../../kernel/services/storage/sqlite-storage';
 
 let _sessionStore: SessionStore | null = null;
@@ -47,7 +47,7 @@ export function useChatStoreHydration(): void {
         _sessionStore = sStore;
         const total = await sStore.count();
 
-        const legacyData = storageAdapter.getItem('super_agents_chat_sessions');
+        const legacyData = BucketStorageAdapter.getItem('super_agents_chat_sessions');
         if (legacyData) {
           try {
             const parsed = JSON.parse(legacyData) as ChatSession[];
@@ -61,8 +61,8 @@ export function useChatStoreHydration(): void {
               });
             }
           } catch { /* ignore corrupt localStorage data */ }
-          storageAdapter.removeItem('super_agents_chat_sessions');
-          storageAdapter.removeItem('super_agents_chat_sessions_ts');
+          BucketStorageAdapter.removeItem('super_agents_chat_sessions');
+          BucketStorageAdapter.removeItem('super_agents_chat_sessions_ts');
         } else if (total > 0) {
           const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
           useChatStore.setState({

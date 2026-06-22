@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Provider Marketplace Auto-Discovery Service
  * Dynamic provider catalog with auto-detection
  */
@@ -6,7 +6,7 @@
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('ProviderCatalog');
 
@@ -149,12 +149,12 @@ const DEFAULT_CATALOG: ProviderCatalogEntry[] = [
 ];
 
 class ProviderCatalogService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private catalog: Map<string, ProviderCatalogEntry> = new Map();
   private autoDetectedProviders: DiscoveredProvider[] = [];
 
   constructor() {
-    this.storage = StorageAdapter.PROVIDERS;
+    this.storage = BucketStorageAdapter.PROVIDERS;
   }
 
   private unsubs: Array<() => void> = [];

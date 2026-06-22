@@ -7,7 +7,7 @@ import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
 import { EventBus } from '../../event-bus';
 import { EVENTS } from '../../events/event-names';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('PromptAuditBaselines');
 
@@ -53,13 +53,13 @@ export interface PromptAuditComparison {
 }
 
 class PromptAuditBaselinesService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private baselines: Map<string, PromptAuditBaseline> = new Map();
   private currentAudit: PromptRisk[] = [];
   private currentAuditId: string = '';
 
   constructor() {
-    this.storage = StorageAdapter.RESEARCH;
+    this.storage = BucketStorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

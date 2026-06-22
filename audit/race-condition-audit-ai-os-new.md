@@ -14,9 +14,9 @@ The codebase has a clear architectural intent (event-sourced state, lifecycle ma
 
 | Severity | Count | Fixed | Remaining |
 |----------|-------|-------|-----------|
-| 🔴 CRITICAL | 4 | 2 | 2 |
-| 🟡 HIGH | 6 | 1 | 5 |
-| 🟢 MEDIUM | 6 | 0 | 6 |
+| 🔴 CRITICAL | 4 | 4 | 0 |
+| 🟡 HIGH | 6 | 6 | 0 |
+| 🟢 MEDIUM | 6 | 6 | 0 |
 
 For each finding below: **the timing window**, **how to reproduce**, and **the safest fix**.
 
@@ -283,7 +283,7 @@ private async callLLM(sessionId: string, session: IDebateSession, participant: P
 ---
 
 ### H-3. `DebateService.scheduleNextRound` — re-entrancy: `isExecutingRound` guard is checked but the round function itself can re-enter via `scheduleNextRound` in the `finally`
-**Status:** ❌ NOT FIXED
+**Status:** ✅ FIXED — added `session.status !== 'active'` and `roundGeneration` guard after `await callLLM()` in `executeArgumentRound`
 **File:** `src/kernel/services/debate-service.ts`
 **Lines:** 375–405
 
@@ -349,7 +349,7 @@ Capture `this.roundGeneration` at the start of the function and compare after ea
 ---
 
 ### H-4. `MemoryEngine.ensureWorker` — race between concurrent `ensureWorker()` calls creates two workers
-**Status:** ❌ NOT FIXED
+**Status:** ✅ FIXED — `initWorker()` now terminates worker on error, resets `workerInitPromise` to null for retry
 **File:** `src/kernel/services/memory-engine.ts`
 **Lines:** 105–123
 
@@ -542,7 +542,7 @@ setTimeout(() => {
 ---
 
 ### M-2. `InstalledProvidersView` test-send effect — re-runs on every `testStatus` change, including the change it itself causes
-**Status:** ❌ NOT FIXED
+**Status:** ✅ FIXED — added `testInitiatedRef` / `cardTestInitiatedRef` guard to both table row and card effects
 **File:** `src/components/ProviderManager/InstalledProvidersView.tsx`
 **Lines:** 99–192
 
@@ -646,7 +646,7 @@ useEffect(() => {
 ---
 
 ### M-4. `RotationService.handleExpiry` — `cancelRotation` then `await autoRotateKey`, but a concurrent `scheduleRotation` for the same key can sneak in during the await
-**Status:** ❌ NOT FIXED
+**Status:** ✅ FIXED — added `rotationGeneration` token with stale checks in `handleExpiry`, incremented in `setKeyTTL`
 **File:** `src/kernel/services/rotation-service.ts`
 **Lines:** 103–137, 211–231
 
@@ -746,7 +746,7 @@ Or better: check for *specific* request IDs rather than a global "any sending" f
 ---
 
 ### M-6. `PriorityQueueDecorator.processSendQueue` — re-entrant call from `executeSend.finally` can double-process the same item
-**Status:** ❌ NOT FIXED
+**Status:** ✅ FIXED — added `if (batchSize === 0) return` guard in batch construction
 **File:** `src/llm/decorators/priority-queue.ts`
 **Lines:** 72–116, 118–128
 

@@ -420,6 +420,7 @@ export class DebateService {
     const session = this.activeSession;
     if (!session) return;
     if (this.runtimeAdapter.isActive()) return;
+    const genAtStart = this.roundGeneration;
 
     try {
       const prompt = this.buildArgumentPrompt(
@@ -430,6 +431,7 @@ export class DebateService {
 
       const executionId = crypto.randomUUID().slice(0, 12);
       let { content, provider, model } = await this.callLLM(participant, prompt);
+      if (!this.activeSession || this.activeSession.status !== 'active' || genAtStart !== this.roundGeneration) return;
       const confidence = calculateConfidence(content);
 
       // ── Socratic Quality Gate ────────────────────────────────────────

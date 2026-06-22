@@ -7,7 +7,7 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('CitationsService');
 
@@ -35,13 +35,13 @@ export interface CitationDisplay {
 }
 
 class InlineCitationsService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private citations: Map<string, Citation> = new Map();
   private messageCitations: Map<string, MessageCitation> = new Map();
   private nextIndex: Map<string, number> = new Map();
 
   constructor() {
-    this.storage = StorageAdapter.UI;
+    this.storage = BucketStorageAdapter.UI;
   }
 
   async init(): Promise<void> {

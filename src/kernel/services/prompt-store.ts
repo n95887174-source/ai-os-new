@@ -1,4 +1,4 @@
-import { storageAdapter } from '../storage-adapter-instance';
+import { BucketStorageAdapter } from '../storage-adapter-instance';
 
 const STORAGE_KEY = 'superagents_prompt_overrides';
 
@@ -15,7 +15,7 @@ const DEFAULT_PROMPTS: Record<PromptRole, string> = {
 
 function loadOverrides(): Partial<Record<PromptRole, string>> {
   try {
-    const raw = storageAdapter.getItem(STORAGE_KEY);
+    const raw = BucketStorageAdapter.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch { /* ignore */ }
   return {};
@@ -23,7 +23,7 @@ function loadOverrides(): Partial<Record<PromptRole, string>> {
 
 function saveOverrides(overrides: Partial<Record<PromptRole, string>>): void {
   try {
-    storageAdapter.setItem(STORAGE_KEY, JSON.stringify(overrides));
+    BucketStorageAdapter.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch { /* ignore */ }
 }
 
@@ -50,6 +50,6 @@ export function getAllPrompts(): Record<PromptRole, string> {
 
 export function resetAllPrompts(): void {
   try {
-    storageAdapter.removeItem(STORAGE_KEY);
+    BucketStorageAdapter.removeItem(STORAGE_KEY);
   } catch { /* ignore */ }
 }

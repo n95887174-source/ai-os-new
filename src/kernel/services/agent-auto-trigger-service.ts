@@ -7,7 +7,7 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { eventBus as defaultEventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('AgentAutoTrigger');
 
@@ -41,7 +41,7 @@ export interface TriggerHistory {
 }
 
 class AgentAutoTriggerService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private rules: Map<string, TriggerRule> = new Map();
   private history: TriggerHistory[] = [];
   private listeners: Map<string, () => void> = new Map();
@@ -49,7 +49,7 @@ class AgentAutoTriggerService {
   private eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void };
 
   constructor(eventBus?: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void }) {
-    this.storage = StorageAdapter.AGENTS;
+    this.storage = BucketStorageAdapter.AGENTS;
     this.eventBus = eventBus || defaultEventBus as typeof this.eventBus;
   }
 

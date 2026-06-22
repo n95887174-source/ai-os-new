@@ -9,6 +9,7 @@ import type { MemoryEntry } from '../types/memory-types';
 import type { Role } from '../types/role-types';
 import type { KeyState } from '../contracts/key-state';
 import type { VirtualKey } from '../contracts/virtual-key';
+import type { OptimizationSuggestion } from '../contracts/advisor';
 import type { ChatMessage } from '../../llm/core/types';
 import type { ChatResponse } from './chat-types';
 
@@ -110,7 +111,7 @@ export type EventMap = {
   // Chat Lifecycle (Streaming)
   'chat:stream:start': { requestId: string; provider: string; model: string; keyId?: string };
   'chat:stream:chunk': { requestId: string; provider: string; chunk: string; keyId?: string };
-  'chat:stream:end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number };
+  'chat:stream:end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number; status?: 'timeout' | 'done' | 'cancelled' };
   'chat:stream:error': { requestId: string; provider: string; error: string; keyId?: string };
   
   // System Internal Events
@@ -135,9 +136,9 @@ export type EventMap = {
   'trace:updated': CognitiveTrace[];
   'agent:config:updated': { id: string; config: unknown };
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
-  'agent:rate:limited': { agentId: string; provider: string; retryAfterMs: number };
+  'agent:rate:limited': { nodeId: string; label: string; reason: string; provider?: string; retryAfterMs?: number };
   'agent:blackboard:updated': { agentId: string; key: string; value: unknown };
-  'agent:handoff:initiated': { fromAgentId: string; toAgentId: string; context: string };
+  'agent:handoff:initiated': { id: string; fromAgent: string; toAgent: string; description?: string; priority?: string };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
   'agent:restarted': { id: string };
 
@@ -168,7 +169,7 @@ export type EventMap = {
   'diagnostic:complete': { id: string; scope: string; health: string; score: number; issueCount: number; timestamp: number };
 
   // Advisor
-  'advisor:suggestion': { id: string; type: string; description: string };
+  'advisor:suggestion': OptimizationSuggestion;
   'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
   'advisor:suggestion:dismissed': { id: string };
 
@@ -351,7 +352,7 @@ export type EventMap = {
   'shadow:drift': unknown;
 
   // Snapshot
-  'snapshot:captured': { snapshotId: string; label: string };
+  'snapshot:captured': { id: string; traceId: string; stepId: string; timestamp: number; label?: string; tags?: string[]; runtime: unknown; metadata?: Record<string, unknown> };
   'snapshot:restored': { snapshotId: string; timestamp: number };
 
   // STT

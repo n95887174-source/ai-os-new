@@ -8,7 +8,7 @@
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces'
 import type { IContainer } from '../container';
-import type { IStorageAdapter } from '../contracts/storage-adapter';
+import type { ILocalStorageAdapter } from '../contracts/storage-adapter';
 import type { StorageLayer, RolesStore, SkillsStore } from '../contracts/storage/storage-layer';
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
@@ -81,7 +81,7 @@ export const registerPhase4: Phase = (helpers, ctx) => {
   register('agentVersionService', avs);
   avs.start();
 
-  const roleVersionService = new RoleVersionService(get<IStorageAdapter>('storageAdapter'));
+  const roleVersionService = new RoleVersionService(get<ILocalStorageAdapter>('BucketStorageAdapter'));
   register('roleVersionService', roleVersionService);
   roleVersionService.init();
 

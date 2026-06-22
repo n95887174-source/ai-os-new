@@ -1,5 +1,5 @@
 import type { ISecurityService } from './types/interfaces';
-import { storageAdapter } from './storage-adapter-instance';
+import { BucketStorageAdapter } from './storage-adapter-instance';
 import { rootLogger } from './services/logger-service';
 const LOGGER = rootLogger.child('Security');
 
@@ -46,7 +46,7 @@ export class SecurityService implements ISecurityService {
     try {
       this.checkRateLimit(userId);
       const encoder = new TextEncoder();
-      storageAdapter.setItem('active_user_id', userId);
+      BucketStorageAdapter.setItem('active_user_id', userId);
       const salt = await this.getSalt(userId, true);
       const baseKey = await crypto.subtle.importKey(
         'raw',
@@ -119,7 +119,7 @@ export class SecurityService implements ISecurityService {
 
     const saltKey = `vault_salt_${userId}`;
     const hex = Array.from(newSalt).map(b => b.toString(16).padStart(2, '0')).join('');
-    const previousSalt = storageAdapter.getItem(saltKey);
+    const previousSalt = BucketStorageAdapter.getItem(saltKey);
 
     if (reEncrypt) {
       const encryptWithNew = (plain: string) => this.encryptWithKey(plain, newMasterKey);
@@ -127,13 +127,13 @@ export class SecurityService implements ISecurityService {
       const reEncrypted = await reEncrypt(encryptWithNew);
       if (!reEncrypted) return false;
       try {
-        storageAdapter.setItem(saltKey, hex);
+        BucketStorageAdapter.setItem(saltKey, hex);
       } catch (e) {
         LOGGER.error('Security', 'Failed to persist salt after re-encryption, attempting rollback', { error: e });
         try {
           await reEncrypt(encryptWithOld);
-          if (previousSalt) storageAdapter.setItem(saltKey, previousSalt);
-          else storageAdapter.removeItem(saltKey);
+          if (previousSalt) BucketStorageAdapter.setItem(saltKey, previousSalt);
+          else BucketStorageAdapter.removeItem(saltKey);
         } catch (rollbackError) {
           LOGGER.error('Security', 'Password change rollback failed', { error: rollbackError });
         }
@@ -141,7 +141,7 @@ export class SecurityService implements ISecurityService {
       }
     } else {
       LOGGER.warn('Security', 'changePassword called without reEncrypt — previously encrypted data will become unrecoverable after this operation');
-      storageAdapter.setItem(saltKey, hex);
+      BucketStorageAdapter.setItem(saltKey, hex);
     }
 
     this.masterKey = newMasterKey;
@@ -243,7 +243,7 @@ export class SecurityService implements ISecurityService {
     if (cached) return cached;
 
     const saltKey = `vault_salt_${userId}`;
-    const stored = storageAdapter.getItem(saltKey);
+    const stored = BucketStorageAdapter.getItem(saltKey);
     if (stored) {
       const hex = stored.match(/.{1,2}/g) || [];
       const bytes = new Uint8Array(hex.map(h => parseInt(h, 16)));
@@ -255,7 +255,7 @@ export class SecurityService implements ISecurityService {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     this.saltCache.set(userId, salt);
     const hex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-    if (persist) storageAdapter.setItem(saltKey, hex);
+    if (persist) BucketStorageAdapter.setItem(saltKey, hex);
     return salt;
   }
 

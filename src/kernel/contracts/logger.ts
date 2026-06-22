@@ -5,12 +5,13 @@ export interface LogEntry {
   message: string;
   service: string;
   timestamp: number;
+  seq?: number;
   traceId?: string;
   correlationId?: string;
   latency?: number;
   action?: string;
   error?: unknown;
-  [key: string]: unknown;
+  meta?: Record<string, unknown>;
 }
 
 export interface ILogger {

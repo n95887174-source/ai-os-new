@@ -3,7 +3,7 @@ import { DEFAULT_ROLE_PERMISSIONS } from '../types/role-types';
 import type { ISTopology } from '../contracts/topology';
 import type { RolesStore } from '../contracts/storage/roles-store';
 import { EVENTS } from '../events/event-names';
-import { storageAdapter } from '../storage-adapter-instance';
+import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('RoleService');
 
@@ -305,12 +305,12 @@ export class RoleService {
       if (count > 0) {
         this.roles = await this.deps.rolesStore.toArray();
       } else {
-        const stored = storageAdapter.getItem('super_agents_roles');
+        const stored = BucketStorageAdapter.getItem('super_agents_roles');
         if (stored) {
           try {
             this.roles = JSON.parse(stored);
             await this.deps.rolesStore.bulkAdd(this.roles);
-            storageAdapter.removeItem('super_agents_roles');
+            BucketStorageAdapter.removeItem('super_agents_roles');
           } catch (e) {
             LOGGER.error('RoleService', 'Failed to migrate roles from localStorage', { error: e });
             this.roles = DEFAULT_ROLES;
@@ -334,7 +334,7 @@ export class RoleService {
         LOGGER.warn('RoleService', 'Failed to parse stored role stats', { error: e });
       }
     }
-    storageAdapter.removeItem('super_agents_role_stats');
+    BucketStorageAdapter.removeItem('super_agents_role_stats');
   }
 
   private async persist() {

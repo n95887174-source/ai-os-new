@@ -7,7 +7,7 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('RewindService');
 
@@ -29,7 +29,7 @@ export interface RewindSnapshot {
 }
 
 export class RewindService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private rewinds: Map<string, RewindEntry> = new Map();
   private snapshots: Map<string, RewindSnapshot> = new Map();
   private undoWindows: Map<string, { messages: Array<{ id: string; role: string; content: string; timestamp: number }>; expiresAt: number }> = new Map();
@@ -38,7 +38,7 @@ export class RewindService {
   private readonly UNDO_WINDOW_MS = 5000; // 5 seconds to undo
 
   constructor() {
-    this.storage = StorageAdapter.UI;
+    this.storage = BucketStorageAdapter.UI;
   }
 
   async init(): Promise<void> {

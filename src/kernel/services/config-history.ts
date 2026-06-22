@@ -1,7 +1,7 @@
 import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { CONFIG, replaceConfig } from './config-registry';
-import { storageAdapter } from '../storage-adapter-instance';
+import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ConfigHistory');
@@ -38,7 +38,7 @@ export class ConfigHistoryService {
   constructor() {
     // D-24: Load persisted history from storage on startup
     try {
-      const stored = storageAdapter.getItem(CONFIG_HISTORY_KEY);
+      const stored = BucketStorageAdapter.getItem(CONFIG_HISTORY_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as { history: ConfigVersion[]; seq: number };
         this.history = parsed.history ?? [];
@@ -56,7 +56,7 @@ export class ConfigHistoryService {
   private persist(): void {
     // D-24: Save history to storage after every mutation
     try {
-      storageAdapter.setItem(CONFIG_HISTORY_KEY, JSON.stringify({
+      BucketStorageAdapter.setItem(CONFIG_HISTORY_KEY, JSON.stringify({
         history: this.history,
         seq: this.currentVersionSeq,
       }));

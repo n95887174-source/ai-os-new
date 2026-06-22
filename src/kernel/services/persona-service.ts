@@ -4,7 +4,7 @@
  */
 
 import { genId } from '../../utils/gen-id';
-import { StorageAdapter } from './storage-adapter';
+import { BucketStorageAdapter } from './storage-adapter';
 import { EventBus } from '../event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
@@ -135,11 +135,11 @@ export class PersonaService {
   private personas: Map<string, Persona> = new Map();
   private activePersonaId: string | null = null;
   private activeTone: TonePreset = 'friendly';
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private isInitialized = false;
 
   constructor() {
-    this.storage = StorageAdapter.UI;
+    this.storage = BucketStorageAdapter.UI;
   }
 
   async init(): Promise<void> {

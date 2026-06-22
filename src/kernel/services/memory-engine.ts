@@ -1,4 +1,4 @@
-import { storageAdapter } from '../storage-adapter-instance';
+import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
@@ -115,13 +115,17 @@ export class MemoryService implements IMemoryEngine {
 
   private async initWorker() {
     try {
-      this.worker = new Worker(WORKER_URL, { type: 'module' });
-      this.worker.onmessage = this.handleWorkerMessage.bind(this);
-      this.worker.onerror = (e) => LOGGER.error('MemoryEngine', 'Worker error', { error: e });
+      const worker = new Worker(WORKER_URL, { type: 'module' });
+      worker.onmessage = this.handleWorkerMessage.bind(this);
+      worker.onerror = (e) => LOGGER.error('MemoryEngine', 'Worker error', { error: e });
+      this.worker = worker;
       await this.sendToWorker('init', { memories: this.memories });
       this.isDbReady = true;
     } catch (e) {
       LOGGER.warn('MemoryEngine', 'Worker not available, using local search', { error: e });
+      this.worker?.terminate();
+      this.worker = null;
+      this.workerInitPromise = null;
       this.isDbReady = false;
     }
   }
@@ -182,11 +186,11 @@ export class MemoryService implements IMemoryEngine {
         this.memories = (await this.deps.database.db.memories.orderBy('[metadata.timestamp]').reverse().toArray()).slice(0, MAX_MEMORY_ENTRIES);
         return;
       }
-      const stored = storageAdapter.getItem('super_agents_os_memory');
+      const stored = BucketStorageAdapter.getItem('super_agents_os_memory');
       if (stored) {
         this.memories = JSON.parse(stored).slice(0, MAX_MEMORY_ENTRIES);
         await this.deps.database.db.memories.bulkAdd(this.memories);
-        storageAdapter.removeItem('super_agents_os_memory');
+        BucketStorageAdapter.removeItem('super_agents_os_memory');
       }
     } catch (e) { LOGGER.error('MemoryEngine', 'Failed to load memory mesh', { error: e }); }
   }

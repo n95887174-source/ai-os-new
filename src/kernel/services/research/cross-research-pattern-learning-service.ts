@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { StorageAdapter } from '../storage-adapter';
+import { BucketStorageAdapter } from '../storage-adapter';
 
 const LOGGER = rootLogger.child('PatternLearning');
 
@@ -30,12 +30,12 @@ export interface PatternFinding {
 }
 
 class CrossResearchPatternLearningService {
-  private storage: StorageAdapter;
+  private storage: BucketStorageAdapter;
   private patterns: Map<string, Pattern> = new Map();
   private recentFindings: PatternFinding[] = [];
 
   constructor() {
-    this.storage = StorageAdapter.RESEARCH;
+    this.storage = BucketStorageAdapter.RESEARCH;
   }
 
   async init(): Promise<void> {

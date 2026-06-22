@@ -43,7 +43,7 @@ const STORAGE_KEY = 'super_agents_api_keys';
 const KERNEL_STATE_KEY = 'super_agents_kernel_state';
 // NOTE: We intentionally read from unprefixed localStorage, matching
 // bootstrap.ts which uses localStorage.getItem('super_agents_api_keys').
-// StorageAdapter.PROVIDERS adds 'superagents:providers:' prefix which
+// BucketStorageAdapter.PROVIDERS adds 'superagents:providers:' prefix which
 // is a stale artifact. Dexie is the single source of truth.
 function readRawFromLocalStorage(key: string): string | null {
   try { return localStorage.getItem(key); } catch { return null; }
