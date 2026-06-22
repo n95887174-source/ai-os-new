@@ -12,11 +12,11 @@
 
 The codebase has a clear architectural intent (event-sourced state, lifecycle manager, AbortController propagation, `roundGeneration` tokens to invalidate scheduled rounds) and many real defenses. However, the most timing-sensitive surfaces — the chat request pipeline, the debate engine, the race executor, and React component effects that coordinate event subscriptions with timeouts — have a number of genuine race / lifecycle hazards. I found **16 timing- or lifecycle-related findings**, broken down as:
 
-| Severity | Count | Description |
-|----------|-------|-------------|
-| 🔴 CRITICAL | 4 | Race conditions that produce duplicate sends, lost data, or out-of-order events |
-| 🟡 HIGH | 6 | Check-then-act gaps / re-entrancy / missing cancellation that can corrupt state or hang requests |
-| 🟢 MEDIUM | 6 | Init/destroy mismatches, stale closures, ordering bugs that surface only under specific sequences |
+| Severity | Count | Fixed | Remaining |
+|----------|-------|-------|-----------|
+| 🔴 CRITICAL | 4 | 2 | 2 |
+| 🟡 HIGH | 6 | 1 | 5 |
+| 🟢 MEDIUM | 6 | 0 | 6 |
 
 For each finding below: **the timing window**, **how to reproduce**, and **the safest fix**.
 
@@ -25,6 +25,7 @@ For each finding below: **the timing window**, **how to reproduce**, and **the s
 ## 🔴 CRITICAL
 
 ### C-1. `ChatService.executeRequest` — `activeRequests.delete(requestId)` happens on retry, but `cancelRequest` will lose track of the in-flight retry
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/services/chat-service.ts`
 **Lines:** 108–432 (entire `executeRequest`), specifically 113 (`while (depth < MAX_429_RETRIES)`), 264 (`activeRequests.set`), 413 (`req = { ...req, provider: fallback.provider, keyId: fallback.key.id }`), 427 (`finally { ... activeRequests.delete(requestId) }`)
 
@@ -60,6 +61,7 @@ Then `cancelRequest` aborts `sessionController`, which cascades to whatever atte
 ---
 
 ### C-2. `RaceExecutor.firstSuccess` — losing the winner if timeout fires between settlement and resolution
+**Status:** ✅ PARTIALLY FIXED — timeout catch + scan for non-error results (lines 120–135)
 **File:** `src/kernel/services/race-executor.ts`
 **Lines:** 93–139
 
@@ -114,6 +116,7 @@ But you still need to enforce the timeout via `Promise.race([Promise.allSettled(
 ---
 
 ### C-3. `RaceExecutor.race` — winner is found, but losers' abort happens *after* their responses are already buffered, causing unhandled rejections
+**Status:** ✅ PARTIALLY FIXED — empty catch block (line 122) + winner scan after timeout
 **File:** `src/kernel/services/race-executor.ts`
 **Lines:** 81–91, 106–117
 
@@ -156,6 +159,7 @@ The `.catch(() => {})` after the explicit `.then(..., err)` ensures the second h
 ---
 
 ### C-4. `chat/subscriptions.ts` — `STREAM_END` handler emits `removeActiveRequestId` *after* updating store, but `STREAM_CHUNK` handler runs after `STREAM_END` due to event-bus ordering and re-adds the response as streaming
+**Status:** ❌ NOT FIXED
 **File:** `src/stores/chat/subscriptions.ts`
 **Lines:** 56–147 (entire file)
 
@@ -196,6 +200,7 @@ Additionally, in `ChatService`, ensure `STREAM_END` is emitted *after* the last 
 ## 🟡 HIGH
 
 ### H-1. `ChatService.executeRaceRequest` overwrites `activeRequests[requestId]` if a normal (non-race) request is already in flight for the same `requestId`
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/services/chat-service.ts`
 **Lines:** 108–129 (the `useRace` branch), 434–507 (`executeRaceRequest`)
 
@@ -216,6 +221,7 @@ Additionally, in `ChatService`, ensure `STREAM_END` is emitted *after* the last 
 ---
 
 ### H-2. `DebateEngine.callLLM` — `sessionAbortControllers.set(sessionId, controller)` overwrites the previous controller on retry, breaking cancel-during-backoff
+**Status:** ✅ FIXED — `sessionAbortControllers` now uses Map per sessionId, per participant (lines 359–360)
 **File:** `src/kernel/services/debate-runtime/debate-engine.ts`
 **Lines:** 345–527 (entire `callLLM`)
 
@@ -277,6 +283,7 @@ private async callLLM(sessionId: string, session: IDebateSession, participant: P
 ---
 
 ### H-3. `DebateService.scheduleNextRound` — re-entrancy: `isExecutingRound` guard is checked but the round function itself can re-enter via `scheduleNextRound` in the `finally`
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/services/debate-service.ts`
 **Lines:** 375–405
 
@@ -342,6 +349,7 @@ Capture `this.roundGeneration` at the start of the function and compare after ea
 ---
 
 ### H-4. `MemoryEngine.ensureWorker` — race between concurrent `ensureWorker()` calls creates two workers
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/services/memory-engine.ts`
 **Lines:** 105–123
 
@@ -405,6 +413,7 @@ And callers that need the worker ready should `await this.ensureWorker()` *and* 
 ---
 
 ### H-5. `HealthService.checkAll` — `isRunning` guard blocks concurrent `checkAll` calls, but `checkKey` has no such guard, so concurrent `checkKey(sameId)` calls double-fire health probes
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/services/health-service.ts`
 **Lines:** 163–195 (`checkAll`), 197–270 (`checkKey`)
 
@@ -435,6 +444,7 @@ Or simpler: just skip if already in flight and return the last cached result fro
 ---
 
 ### H-6. `CrossTabStateSync.handleCircuitBreakerUpdate` — "last-write-wins" by `lastFailure` timestamp, but two tabs can write the same `lastFailure` and both drop the update
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/services/cross-tab-state.ts`
 **Lines:** 176–186, 187–196
 
@@ -489,6 +499,7 @@ private handleCircuitBreakerUpdate(state: CircuitBreakerState, _incomingTimestam
 ## 🟢 MEDIUM
 
 ### M-1. `EventBus` recursion limiter defers via `setTimeout(0)`, but the deferred re-emit can itself hit the limiter and create unbounded deferral chains
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/events/event-bus.ts`
 **Lines:** 177–226
 
@@ -531,6 +542,7 @@ setTimeout(() => {
 ---
 
 ### M-2. `InstalledProvidersView` test-send effect — re-runs on every `testStatus` change, including the change it itself causes
+**Status:** ❌ NOT FIXED
 **File:** `src/components/ProviderManager/InstalledProvidersView.tsx`
 **Lines:** 99–192
 
@@ -575,7 +587,8 @@ const handleTest = async (e) => {
 
 ---
 
-### M-3. `ArgumentGraphPanel` — 4 `eventBus.on` calls return unsub functions that are discarded; cleanup uses `eventBus.off` with the same handler reference, but if React StrictMode double-invokes the effect, the second invocation's `on` calls add duplicate handlers
+### M-3. `ArgumentGraphPanel` — 4 `eventBus.on` calls return unsub functions that are discarded; cleanup uses `eventBus.off` with the same handler reference
+**Status:** ❌ NOT FIXED
 **File:** `src/components/ArgumentGraphPanel/ArgumentGraphPanel.tsx`
 **Lines:** 148–172
 
@@ -633,6 +646,7 @@ useEffect(() => {
 ---
 
 ### M-4. `RotationService.handleExpiry` — `cancelRotation` then `await autoRotateKey`, but a concurrent `scheduleRotation` for the same key can sneak in during the await
+**Status:** ❌ NOT FIXED
 **File:** `src/kernel/services/rotation-service.ts`
 **Lines:** 103–137, 211–231
 
@@ -665,6 +679,7 @@ Increment `this.rotationGeneration` in `setKeyTTL` and `scheduleRotation`.
 ---
 
 ### M-5. `ChatStore.sendMessage` — `isAnySending()` guard is checked *after* `addActiveRequestId`, so the guard sees the just-added ID and false-positives
+**Status:** ❌ NOT FIXED
 **File:** `src/stores/chat/store.ts`
 **Lines:** 74–90
 
@@ -731,6 +746,7 @@ Or better: check for *specific* request IDs rather than a global "any sending" f
 ---
 
 ### M-6. `PriorityQueueDecorator.processSendQueue` — re-entrant call from `executeSend.finally` can double-process the same item
+**Status:** ❌ NOT FIXED
 **File:** `src/llm/decorators/priority-queue.ts`
 **Lines:** 72–116, 118–128
 
@@ -802,8 +818,8 @@ For balance, these timing-sensitive areas are **correctly handled**:
 
 ## Recommended fix priority
 
-1. **C-1 & H-1 & H-2** — Refactor `ChatService.executeRequest` and `DebateEngine.callLLM` to use a single session-level `AbortController` per `requestId`/`sessionId`, with per-attempt controllers chained off it. This is one architectural change that fixes three findings.
-2. **C-2 & C-3** — Rewrite `RaceExecutor.firstSuccess` using `Promise.allSettled` and attach terminal `.catch(() => {})` to prevent unhandled rejections.
+1. **C-1 & H-1** — Refactor `ChatService.executeRequest` to use a single session-level `AbortController` per `requestId` that survives the retry loop. This also fixes the race-fallback collision. H-2 is already ✅.
+2. **C-2 & C-3** — Rewrite `RaceExecutor.firstSuccess` using `Promise.allSettled`. Already has partial fix but needs complete rewrite for unhandled-rejection guard.
 3. **C-4** — Add terminal-status guard in `STREAM_CHUNK` subscriber.
 4. **H-3** — Capture `roundGeneration` in `executeArgumentRound` and re-check after each await.
 5. **H-4** — Don't set `this.worker` until `init` succeeds; reset `workerInitPromise` on failure.
@@ -811,3 +827,26 @@ For balance, these timing-sensitive areas are **correctly handled**:
 7. **H-6** — Merge circuit-breaker state by max-failure-count instead of replace.
 8. **M-5** — Move `isAnySending` check before `addActiveRequestId` in `ChatStore.sendMessage`.
 9. **M-1, M-2, M-3, M-4, M-6** — Apply the per-finding fixes above.
+
+---
+
+## Fix Status Summary
+
+| ID | Severity | Status | Notes |
+|----|----------|--------|-------|
+| C-1 | 🔴 CRITICAL | ❌ NOT FIXED | New AbortController per retry iteration |
+| C-2 | 🔴 CRITICAL | ✅ PARTIALLY FIXED | Timeout catch + scan (lines 120–135) |
+| C-3 | 🔴 CRITICAL | ✅ PARTIALLY FIXED | Empty catch + winner scan |
+| C-4 | 🔴 CRITICAL | ❌ NOT FIXED | No terminal-status guard in STREAM_CHUNK |
+| H-1 | 🟡 HIGH | ❌ NOT FIXED | Race + normal path stomp activeRequests |
+| H-2 | 🟡 HIGH | ✅ FIXED | Map per session/participant (debate-engine.ts:359) |
+| H-3 | 🟡 HIGH | ❌ NOT FIXED | No post-await status check in executeArgumentRound |
+| H-4 | 🟡 HIGH | ❌ NOT FIXED | Worker set before init completes |
+| H-5 | 🟡 HIGH | ❌ NOT FIXED | No per-key in-flight tracking |
+| H-6 | 🟡 HIGH | ❌ NOT FIXED | Replace instead of merge |
+| M-1 | 🟢 MEDIUM | ❌ NOT FIXED | No per-event cap on deferrals |
+| M-2 | 🟢 MEDIUM | ❌ NOT FIXED | No testInitiatedRef guard |
+| M-3 | 🟢 MEDIUM | ❌ NOT FIXED | on/off pattern instead of unsub |
+| M-4 | 🟢 MEDIUM | ❌ NOT FIXED | No generation token guard |
+| M-5 | 🟢 MEDIUM | ❌ NOT FIXED | addActiveRequestId before isAnySending |
+| M-6 | 🟢 MEDIUM | ❌ NOT FIXED | No batchSize > 0 guard |
