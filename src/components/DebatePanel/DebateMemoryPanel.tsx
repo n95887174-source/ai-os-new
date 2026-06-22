@@ -92,7 +92,7 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
 
   useEffect(() => {
     loadSessions();
-    const unsub = eventBus.on('debate:updated', () => {
+    const unsub = eventBus.onSafe<DebateSession>('debate:updated', () => {
       loadSessions();
     });
     return () => { unsub(); };
@@ -117,10 +117,14 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
   const stats = useMemo(() => computeStats(sessions), [sessions]);
 
   const relatedDebates = useMemo(() => {
-    const idx = filteredSessions.length > 0 ? sessions.indexOf(filteredSessions[0]) : -1;
+    const targetSession = expandedId
+      ? sessions.find(s => s.id === expandedId)
+      : filteredSessions[0];
+    if (!targetSession) return [];
+    const idx = sessions.indexOf(targetSession);
     if (idx === -1) return [];
     return findRelated(idx, sessions);
-  }, [filteredSessions, sessions]);
+  }, [filteredSessions, sessions, expandedId]);
 
   const handleInjectMemory = useCallback(async () => {
     if (!filteredSessions[0] || injecting) return;
@@ -215,7 +219,7 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
       {relatedDebates.length > 0 && filteredSessions.length > 0 && (
         <div style={{ marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>
-            <Link2 size={12} /> Related to "{filteredSessions[0]?.topic?.slice(0, 40)}"
+            <Link2 size={12} /> Related to "{(expandedId ? sessions.find(s => s.id === expandedId) : filteredSessions[0])?.topic?.slice(0, 40)}"
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {relatedDebates.map(r => (

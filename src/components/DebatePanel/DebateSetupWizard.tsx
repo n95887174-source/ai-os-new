@@ -43,8 +43,8 @@ interface DebateSetupWizardProps {
   onStart: () => void;
   showAuto: boolean;
   onToggleAuto: () => void;
-  autoResults: AutoDebateResult[] | unknown;
-  autoWinRates: Record<string, number> | unknown;
+  autoResults: AutoDebateResult[];
+  autoWinRates: ProviderWinRate[];
   onAutoDebate: (options?: { topic?: string; category?: string; maxParticipants?: number; maxRounds?: number }) => Promise<AutoDebateResult>;
   onStressTest: (count?: number) => Promise<AutoDebateResult[]>;
   onBatchTest: (topic: string, runs?: number) => Promise<BatchTestResult>;
@@ -436,8 +436,8 @@ const DebateSetupWizard: React.FC<DebateSetupWizardProps> = ({
                       onAutoDebate={onAutoDebate}
                       onStressTest={onStressTest}
                       onBatchTest={onBatchTest}
-                      results={autoResults as AutoDebateResult[]}
-                      winRates={autoWinRates as ProviderWinRate[]}
+                      results={autoResults}
+                       winRates={autoWinRates}
                       onClear={onClearAuto}
                     />
                   </div>

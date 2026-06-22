@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { CheckCircle, AlertTriangle, Minus, Scale, TrendingUp, ThumbsUp, ThumbsDown } from 'lucide-react'
-import type { DebateVerdict, ConclusionType, StanceResult, VerdictFeedbackVote } from '../../kernel/contracts/debate-types';
+import { useTranslation } from '../../i18n/useTranslation';
+import type { DebateVerdict, ConclusionType, VerdictFeedbackVote } from '../../kernel/contracts/debate-types';
 
 const CONCLUSION_ICONS: Record<ConclusionType, React.ReactNode> = {
   consensus: <CheckCircle size={20} color="#10b981" />,
@@ -8,21 +9,6 @@ const CONCLUSION_ICONS: Record<ConclusionType, React.ReactNode> = {
   stalemate: <AlertTriangle size={20} color="#ef4444" />,
   partial_agreement: <Scale size={20} color="#8b5cf6" />,
   inconclusive: <Minus size={20} color="#6b7280" />,
-};
-
-const CONCLUSION_LABELS: Record<ConclusionType, string> = {
-  consensus: 'Консенсус',
-  dominance: 'Доминирование',
-  stalemate: 'Тупик',
-  partial_agreement: 'Частичное согласие',
-  inconclusive: 'Неопределённо',
-};
-
-const STANCE_LABELS: Record<StanceResult, string> = {
-  pro_wins: 'Аргументы "за" убедительнее',
-  con_wins: 'Аргументы "против" убедительнее',
-  balanced: 'Аргументы сбалансированы',
-  'no_clear_winner': 'Ясного победителя нет',
 };
 
 const STANCE_COLORS: Record<string, string> = {
@@ -38,6 +24,7 @@ interface DebateVerdictPanelProps {
 }
 
 export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict, sessionId, onFeedback }) => {
+  const { t } = useTranslation();
   const [userVote, setUserVote] = useState<VerdictFeedbackVote | null>(null);
 
   const handleVote = useCallback((vote: VerdictFeedbackVote) => {
@@ -45,9 +32,9 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
     onFeedback?.(sessionId, vote);
   }, [sessionId, onFeedback]);
   const stanceEntries = [
-    { label: 'За', count: verdict.keyArguments.filter(a => a.stance === 'pro').length, color: '#10b981' },
-    { label: 'Против', count: verdict.keyArguments.filter(a => a.stance === 'con').length, color: '#ef4444' },
-    { label: 'Нейтрально', count: verdict.keyArguments.filter(a => a.stance === 'neutral').length, color: '#6b7280' },
+    { label: t('debate.verdict.for'), count: verdict.keyArguments.filter(a => a.stance === 'pro').length, color: '#10b981' },
+    { label: t('debate.verdict.against'), count: verdict.keyArguments.filter(a => a.stance === 'con').length, color: '#ef4444' },
+    { label: t('debate.verdict.neutral'), count: verdict.keyArguments.filter(a => a.stance === 'neutral').length, color: '#6b7280' },
   ];
   const maxCount = Math.max(1, ...stanceEntries.map(e => e.count));
 
@@ -70,11 +57,11 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
         <div style={{ textAlign: 'center', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)' }}>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Тип</div>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{CONCLUSION_LABELS[verdict.conclusionType]}</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{t('debate.verdict.' + verdict.conclusionType)}</div>
         </div>
         <div style={{ textAlign: 'center', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)' }}>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Баланс</div>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{STANCE_LABELS[verdict.stanceResult]}</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{t('debate.verdict.' + verdict.stanceResult)}</div>
         </div>
         <div style={{ textAlign: 'center', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)' }}>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Уверенность</div>

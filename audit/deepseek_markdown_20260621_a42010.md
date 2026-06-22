@@ -5,10 +5,10 @@
 | Критичность | Количество | Исправлено (реально) |
 | :--- | :--- | :--- |
 | CRITICAL | 16 | 12 ✅ / 1 ❌ / 3 ⏳ |
-| HIGH | 41 | 31 ✅ / 3 ❌ / 7 ⏳ |
-| MEDIUM | 54 | 26 ✅ / 2 ❌ / 26 ⏳ |
-| LOW | 31 | 4 ✅ / 3 ❌ / 24 ⏳ |
-| **ИТОГО** | **175** | **83 ✅ / 9 ❌ / 83 ⏳** |
+| HIGH | 41 | 39 ✅ / 3 ❌ / 7 ⏳ |
+| MEDIUM | 54 | 32 ✅ / 2 ❌ / 20 ⏳ |
+| LOW | 31 | 6 ✅ / 3 ❌ / 22 ⏳ |
+| **ИТОГО** | **175** | **99 ✅ / 9 ❌ / 67 ⏳** |
 
 > ✅ = Действительно исправлено (проверено по коду)
 > ❌ = **ЛОЖНЫЙ СТАТУС** — помечено как DONE, но НЕ ИСПРАВЛЕНО (код не изменён)
@@ -275,3 +275,10 @@
 | S6-14 | `AgentControlPanel.tsx:26-27` — cleanup setTimeout на unmount | ✅ |
 | S6-17 | `DebateChat.tsx:18-22` — автопрокрутка к новым аргументам | ✅ |
 | S6-18 | `ArgumentGraphPanel.tsx:197-203` — цвета по ролям, а не по именам | ✅ |
+| S6-4 | `FactCheckBadge.tsx:51` — интервал только при expanded, 10s вместо 2s | ✅ |
+| S6-8 | `DebateSetupWizard.tsx:46-47` — props `unknown` → конкретные типы | ✅ |
+| S6-9 | `DebateVerdictPanel.tsx` — хардкод ru → i18n (12 keys + `useTranslation`) | ✅ |
+| S6-12 | `DebateMemoryPanel.tsx:95` — `on()` → `onSafe()` с типом | ✅ |
+| S6-13 | `DebateMemoryPanel.tsx:119-123` — связанные дебаты по выбранной сессии | ✅ |
+| S6-15 | `CollabDebatePanel.tsx:48` — ошибки API отображаются пользователю | ✅ |
+| S7-4 | `debate-runtime-state.ts` — уже алиасен как `DebateRuntimeSessionState` в state/index.ts ✅ |

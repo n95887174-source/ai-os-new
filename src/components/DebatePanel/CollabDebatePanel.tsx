@@ -30,6 +30,7 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
   const [participants, setParticipants] = useState<HumanParticipant[]>([]);
   const [message, setMessage] = useState('');
   const [joined, setJoined] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -47,12 +48,14 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
 
   const handleJoin = async () => {
     if (!userName.trim()) return;
+    setError(null);
     try {
       await collaborativeService.joinDebate(session.id, userName.trim(), role);
       setJoined(true);
       setParticipants(collaborativeService.getParticipants(session.id));
     } catch (err) {
       console.warn('[CollabDebate] Failed to join:', err);
+      setError(err instanceof Error ? err.message : 'Failed to join debate');
     }
   };
 
@@ -116,6 +119,11 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
           >
             <UserPlus size={16} /> Join
           </button>
+          {error && (
+            <div style={{ width: '100%', padding: '0.4rem 0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '0.75rem' }}>
+              {error}
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>

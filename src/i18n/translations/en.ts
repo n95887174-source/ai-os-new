@@ -1476,6 +1476,20 @@ const en = {
   'debate.wizard_back': 'Back',
   'debate.wizard_launch': 'Start Debate',
 
+  // ── Debate Verdict ─────────────────────────────────────────
+  'debate.verdict.consensus': 'Consensus',
+  'debate.verdict.dominance': 'Dominance',
+  'debate.verdict.stalemate': 'Stalemate',
+  'debate.verdict.partial_agreement': 'Partial Agreement',
+  'debate.verdict.inconclusive': 'Inconclusive',
+  'debate.verdict.pro_wins': 'Arguments "for" are more convincing',
+  'debate.verdict.con_wins': 'Arguments "against" are more convincing',
+  'debate.verdict.balanced': 'Arguments are balanced',
+  'debate.verdict.no_clear_winner': 'No clear winner',
+  'debate.verdict.for': 'For',
+  'debate.verdict.against': 'Against',
+  'debate.verdict.neutral': 'Neutral',
+
   'health.status_aria': 'Status: {status}',
   'health.bee_title': '{provider} - {latency}',
   'health.auto_routing': 'Auto-routing enabled',

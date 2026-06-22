@@ -49,14 +49,15 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
   }, [expanded]);
 
   useEffect(() => {
+    if (!expanded) return;
     const check = () => {
       const fc = debateService.getFactCheckForArgument(argumentId);
       if (fc) setResults(fc.results);
     };
     check();
-    const interval = setInterval(check, 2000);
+    const interval = setInterval(check, 10000);
     return () => clearInterval(interval);
-  }, [argumentId]);
+  }, [argumentId, expanded]);
 
   if (!results) return null;
 
