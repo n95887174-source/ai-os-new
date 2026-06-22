@@ -7,6 +7,8 @@ import { runtime } from '../../kernel/runtime';
 import { BucketStorageAdapter } from '../../kernel/instances';
 import { waitForStorage } from '../../kernel/services/storage/sqlite-storage';
 
+const CHECKPOINT_KEY = 'chat_checkpoint';
+
 let _sessionStore: SessionStore | null = null;
 function resolveSessionStore(): SessionStore | null {
   if (_sessionStore) return _sessionStore;
@@ -47,17 +49,49 @@ export function useChatStoreHydration(): void {
         _sessionStore = sStore;
         const total = await sStore.count();
 
+        // Check for recovery checkpoint (set by beforeunload) before legacy data
+        const checkpoint = BucketStorageAdapter.getItem(CHECKPOINT_KEY);
+        if (checkpoint) {
+          try {
+            const parsed = JSON.parse(checkpoint) as ChatSession[];
+            if (parsed.length > 0) {
+              // H6: Merge instead of overwrite — only put sessions not already in Dexie
+              for (const session of parsed) {
+                const existing = await sStore.getSession(session.id);
+                if (!existing) {
+                  await sStore.put(session);
+                }
+              }
+              const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
+              useChatStore.setState({
+                sessions: batch,
+                activeSessionId: batch[0]?.id ?? 'default',
+                hasMoreSessions: batch.length < (await sStore.count()),
+              });
+            }
+          } catch { /* ignore corrupt checkpoint */ }
+          BucketStorageAdapter.removeItem(CHECKPOINT_KEY);
+          return;
+        }
+
         const legacyData = BucketStorageAdapter.getItem('super_agents_chat_sessions');
         if (legacyData) {
           try {
             const parsed = JSON.parse(legacyData) as ChatSession[];
             if (parsed.length > 0) {
-              await sStore.bulkPut(parsed);
+              // H6: Merge — don't overwrite newer Dexie data
+              for (const session of parsed) {
+                const existing = await sStore.getSession(session.id);
+                if (!existing) {
+                  await sStore.put(session);
+                }
+              }
               const migratedTotal = await sStore.count();
+              const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
               useChatStore.setState({
-                sessions: parsed,
-                activeSessionId: parsed[0].id,
-                hasMoreSessions: parsed.length < migratedTotal,
+                sessions: batch,
+                activeSessionId: batch[0]?.id ?? 'default',
+                hasMoreSessions: batch.length < migratedTotal,
               });
             }
           } catch { /* ignore corrupt localStorage data */ }
@@ -99,11 +133,23 @@ export function useChatStoreHydration(): void {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
+    // C2: beforeunload — sync localStorage checkpoint in case flush() hasn't completed
+    const handleBeforeUnload = () => {
+      try {
+        const state = useChatStore.getState();
+        if (state.sessions.length > 0) {
+          BucketStorageAdapter.setItem(CHECKPOINT_KEY, JSON.stringify(state.sessions));
+        }
+      } catch { /* best-effort checkpoint */ }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       cancelled = true;
       if (syncTimer) clearTimeout(syncTimer);
       unsubPersist();
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 }

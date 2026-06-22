@@ -4,11 +4,8 @@
  * Provides typed access to structured multi-agent discussions.
  */
 
-import type { DatabaseService } from '../services/database-service';
+import { dexieDb, type DatabaseService } from '../services/database-service';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
-import { rootLogger } from '../services/logger-service';
-
-const LOGGER = rootLogger.child('DebateRepository');
 
 export class DebateRepository {
   private db: DatabaseService;
@@ -45,13 +42,10 @@ export class DebateRepository {
   }
 
   async clearAll(): Promise<void> {
-    // DAL-6: Ensure both tables are cleared even if one fails
-    const results = await Promise.allSettled([
-      this.db.debateSessions.clear(),
-      this.db.debateVerdicts.clear(),
-    ]);
-    for (const r of results) {
-      if (r.status === 'rejected') LOGGER.warn('DebateRepository', 'clearAll partial failure', { reason: r.reason });
-    }
+    // C5: Atomic Dexie transaction — both clear or neither
+    await dexieDb.transaction('rw', [dexieDb.debateSessions, dexieDb.debateVerdicts], async () => {
+      await dexieDb.debateSessions.clear();
+      await dexieDb.debateVerdicts.clear();
+    });
   }
 }

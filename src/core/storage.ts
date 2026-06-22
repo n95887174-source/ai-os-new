@@ -353,7 +353,7 @@ export class StorageManager {
       const sourceVal = await source.get(key);
       const targetVal = await target.get(key);
       if (JSON.stringify(sourceVal) !== JSON.stringify(targetVal)) {
-        console.warn(`[StorageManager] Migration verification failed for key "${key}" — target value differs from source`);
+        LOGGER.error('StorageManager', 'Migration verification failed — divergent data', { key, action: 'migrate' });
         continue;
       }
       await source.remove(key);

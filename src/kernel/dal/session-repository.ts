@@ -80,6 +80,13 @@ export class SessionRepository {
       .map(s => ({ ...s }));
   }
 
+  /** Clear the in-memory cache so next read goes to Dexie (cross-tab sync) */
+  clearCache(): void {
+    this.cache.clear();
+    this.cacheLoaded = false;
+    this.cachePromise = null;
+  }
+
   private async enforceLimit(): Promise<void> {
     if (this.cache.size <= MAX_SESSIONS) return;
     

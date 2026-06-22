@@ -212,35 +212,6 @@ function setSeedCache(keys: ApiKey[] | null): void {
   __KEY_SEED_CACHE__ = keys;
 }
 
-async function wipeAllSources(deps: ResetDeps): Promise<number> {
-  // 1) dexieDb.apiKeys (the mirror)
-  const wipedDexie = await dexieDb.apiKeys.count();
-  await dexieDb.apiKeys.clear();
-
-  // 2) sqlite_db_blob (forbidden for keys)
-  const blobRecord = await dexieDb.keyValue.get(DB_BLOB_KEY);
-  if (blobRecord) {
-    await dexieDb.keyValue.delete(DB_BLOB_KEY);
-  }
-
-  // 3) storageLayer.keys (in-memory Map stub)
-  try { await deps.storageLayer?.keys?.clear?.(); } catch { /* non-critical */ }
-
-  // 4) KeyRegistry in-memory cache
-  try { deps.keyService.clearKeys(); } catch { /* non-critical */ }
-
-  // 5) KeyRepository cache: lazy-loaded from dexieDb.apiKeys, so wiping dexie
-  //    invalidates it on next access.
-
-  return wipedDexie;
-}
-
-async function persistCanonical(keys: ApiKey[]): Promise<void> {
-  if (keys.length > 0) {
-    await dexieDb.apiKeys.bulkPut(keys);
-  }
-}
-
 export async function resetKeyStorageToCanonical(deps: ResetDeps): Promise<ResetResult> {
   // ════════════════════════════════════════════════════════════════════
   //   PHASE A — SNAPSHOT (no wipes)
@@ -289,10 +260,18 @@ export async function resetKeyStorageToCanonical(deps: ResetDeps): Promise<Reset
   // 4) Persist only if we have something to write. If everything is empty,
   //    do NOT overwrite the existing localStorage (avoid data loss).
   if (final.length > 0) {
-    const wipedDexie = await wipeAllSources(deps);
-    LOGGER.info('KeyReset', 'wiped dexie entries', { wipedDexie });
+    // C1: Wrap wipe + persist in a single Dexie transaction for atomicity
+    await dexieDb.transaction('rw', [dexieDb.apiKeys, dexieDb.keyValue], async () => {
+      await dexieDb.apiKeys.clear();
+      const blobRecord = await dexieDb.keyValue.get(DB_BLOB_KEY);
+      if (blobRecord) await dexieDb.keyValue.delete(DB_BLOB_KEY);
+      if (final.length > 0) await dexieDb.apiKeys.bulkPut(final);
+    });
 
-    await persistCanonical(final);
+    // Non-Dexie cleanup (in-memory only — safe to retry if failed)
+    try { await deps.storageLayer?.keys?.clear?.(); } catch { /* non-critical */ }
+    try { deps.keyService.clearKeys(); } catch { /* non-critical */ }
+
     LOGGER.info('KeyReset', 'persisted count', { count: final.length });
     LOGGER.info('KeyReset', 'rebuild complete');
 

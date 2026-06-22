@@ -35,7 +35,7 @@ export interface ChatSession {
 }
 
 export const DEFAULT_SESSION: ChatSession = {
-  id: 'default',
+  id: `default-${crypto.randomUUID().slice(0, 8)}`,
   title: 'New Chat',
   history: [],
   createdAt: Date.now(),

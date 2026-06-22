@@ -5,7 +5,7 @@
  * Uses Dexie as the backing store with read-through caching.
  */
 
-import type { DatabaseService } from '../services/database-service';
+import { dexieDb, type DatabaseService } from '../services/database-service';
 import type { MemoryEntry } from '../types/memory-types'
 import { rootLogger } from '../services/logger-service';
 
@@ -89,13 +89,18 @@ export class MemoryRepository {
   /** Update or insert a memory entry with deterministic ID */
   async upsert(entry: Omit<MemoryEntry, 'id'>): Promise<MemoryEntry> {
     const id = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
-    const existing = await this.db.memories.get(id);
-    const merged: MemoryEntry = existing
-      ? { ...existing, ...entry, id, vector: entry.vector ?? existing.vector }
-      : { ...entry, id } as MemoryEntry;
-    await this.db.memories.put(merged);
+    const existed = this.cache.has(id);
+    // H4: Wrap in Dexie transaction to prevent TOCTOU race
+    await dexieDb.transaction('rw', dexieDb.memories, async () => {
+      const existing = await dexieDb.memories.get(id);
+      const m: MemoryEntry = existing
+        ? { ...existing, ...entry, id, vector: entry.vector ?? existing.vector }
+        : { ...entry, id } as MemoryEntry;
+      await dexieDb.memories.put(m);
+    });
+    const merged = (await dexieDb.memories.get(id))!;
     this.cache.set(merged.id, merged);
-    if (!existing) await this.enforceLimit();
+    if (!existed) await this.enforceLimit();
 
     return merged;
   }
@@ -133,12 +138,15 @@ export class MemoryRepository {
       .primaryKeys();
     
     if (oldEntries.length > 0) {
-      await this.db.memories.bulkDelete(oldEntries).catch(e => LOGGER.warn('MemoryRepository', 'Evict failed', { error: e }));
-    }
-    
-    // Also remove from cache
-    for (const id of oldEntries) {
-      this.cache.delete(id);
+      // H5: Only delete from cache if DB delete succeeds
+      try {
+        await this.db.memories.bulkDelete(oldEntries);
+        for (const id of oldEntries) {
+          this.cache.delete(id);
+        }
+      } catch (e) {
+        LOGGER.warn('MemoryRepository', 'Evict failed', { error: e });
+      }
     }
     
     return oldEntries.length;

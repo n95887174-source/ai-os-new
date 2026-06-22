@@ -114,7 +114,7 @@ export class CacheService implements ICacheService {
       this.persistTimer = null;
       if (!this.dirty) return;
       this.dirty = false;
-      const entries = Array.from(this.cache.values()).slice(0, 500);
+      const entries = Array.from(this.cache.values()).slice(0, 500).map(e => ({ ...e }));
       this.deps.database.setKv('super_agents_llm_cache', entries).catch((e: unknown) => {
         LOGGER.warn('CacheService', 'Persist failed', { error: e instanceof Error ? e.message : String(e) });
         this.dirty = true;

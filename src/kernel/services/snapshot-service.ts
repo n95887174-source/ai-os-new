@@ -111,14 +111,18 @@ export class SnapshotService {
     }
   }
 
-  private async save() {
+  private async save(retries = 2): Promise<void> {
     try {
       await this.deps.database.setKv(STORAGE_KEY, {
         snapshots: this.snapshots,
         diffs: this.diffs,
       });
     } catch (e) {
-      LOGGER.warn('SnapshotService', 'Failed to save', { error: e });
+      LOGGER.warn('SnapshotService', 'Failed to save', { error: e, retries });
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 500));
+        return this.save(retries - 1);
+      }
     }
   }
 

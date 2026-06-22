@@ -307,28 +307,28 @@ Multiple callers use `void this.save()` — if save fails, the snapshot is only 
 
 ## Summary Table
 
-| # | Severity | Category | File | Risk |
-|---|----------|----------|------|------|
-| C1 | 🔴 CRITICAL | Partial write | `key-reset.ts:291` | Total API key loss |
-| C2 | 🔴 CRITICAL | Lost on close | `hydration.ts:97` | Chat history loss |
-| C3 | 🔴 CRITICAL | Stale persist | `event-recorder.ts:133` | Events resurrect |
-| C4 | 🔴 CRITICAL | Fake transaction | `transaction.ts:42` | Partial corrupt state |
-| C5 | 🔴 CRITICAL | Non-atomic clear | `debate-repository.ts:47` | Inconsistent debate data |
-| H1 | 🟠 HIGH | Stale cache | `session-repository.ts` | Stale session reads |
-| H2 | 🟠 HIGH | Silent failure | `storage-adapter.ts:106` | Silent data drop |
-| H3 | 🟠 HIGH | Silent failure | `storage-adapter.ts:60` | Phantom writes |
-| H4 | 🟠 HIGH | Race condition | `memory-repository.ts:90` | Lost memory updates |
-| H5 | 🟠 HIGH | Error swallowed | `memory-repository.ts:136` | Cache-DB divergence |
-| H6 | 🟠 HIGH | Data overwrite | `hydration.ts:50` | Session data loss |
-| H7 | 🟠 HIGH | Wrong API | `dexie-storage.ts:369` | Config import failure |
-| H8 | 🟠 HIGH | Divergent data | `storage.ts:338` | Duplicate data |
-| M1 | 🟡 MEDIUM | Hash collision | `memory-repository.ts:176` | Silent merge |
-| M2 | 🟡 MEDIUM | Wrong query order | `dexie-storage.ts:77` | Wrong results |
-| M3 | 🟡 MEDIUM | Mutable snapshot | `cache-service.ts:117` | Inconsistent persist |
-| M4 | 🟡 MEDIUM | Hardcoded ID | `types.ts:37` | ID collision |
-| M5 | 🟡 MEDIUM | Schema mismatch | `database-service.ts:412` | Import corruption |
-| M6 | 🟡 MEDIUM | Unbounded writes | `cross-tab-state.ts:331` | localStorage bloat |
-| M7 | 🟡 MEDIUM | Fire-and-forget | `snapshot-service.ts:114` | Snapshot loss |
+| # | Severity | Category | File | Risk | Status |
+|   |----------|----------|------|------|--------|
+| C1 | 🔴 CRITICAL | Partial write | `key-reset.ts:291` | Total API key loss | ✅ FIXED |
+| C2 | 🔴 CRITICAL | Lost on close | `hydration.ts:97` | Chat history loss | ✅ FIXED |
+| C3 | 🔴 CRITICAL | Stale persist | `event-recorder.ts:133` | Events resurrect | ✅ FIXED |
+| C4 | 🔴 CRITICAL | Fake transaction | `transaction.ts:42` | Partial corrupt state | ⏸️ ARCHITECTURAL |
+| C5 | 🔴 CRITICAL | Non-atomic clear | `debate-repository.ts:47` | Inconsistent debate data | ✅ FIXED |
+| H1 | 🟠 HIGH | Stale cache | `session-repository.ts` | Stale session reads | ✅ FIXED |
+| H2 | 🟠 HIGH | Silent failure | `storage-adapter.ts:106` | Silent data drop | ✅ FIXED |
+| H3 | 🟠 HIGH | Silent failure | `storage-adapter.ts:60` | Phantom writes | ✅ FIXED |
+| H4 | 🟠 HIGH | Race condition | `memory-repository.ts:90` | Lost memory updates | ✅ FIXED |
+| H5 | 🟠 HIGH | Error swallowed | `memory-repository.ts:136` | Cache-DB divergence | ✅ FIXED |
+| H6 | 🟠 HIGH | Data overwrite | `hydration.ts:50` | Session data loss | ✅ FIXED |
+| H7 | 🟠 HIGH | Wrong API | `dexie-storage.ts:369` | Config import failure | ✅ FIXED |
+| H8 | 🟠 HIGH | Divergent data | `storage.ts:338` | Duplicate data | ✅ FIXED |
+| M1 | 🟡 MEDIUM | Hash collision | `memory-repository.ts:176` | Silent merge | ⏸️ DEFERRED |
+| M2 | 🟡 MEDIUM | Wrong query order | `dexie-storage.ts:77` | Wrong results | ✅ FIXED |
+| M3 | 🟡 MEDIUM | Mutable snapshot | `cache-service.ts:117` | Inconsistent persist | ✅ FIXED |
+| M4 | 🟡 MEDIUM | Hardcoded ID | `types.ts:37` | ID collision | ✅ FIXED |
+| M5 | 🟡 MEDIUM | Schema mismatch | `database-service.ts:412` | Import corruption | ⏸️ DEFERRED |
+| M6 | 🟡 MEDIUM | Unbounded writes | `cross-tab-state.ts:331` | localStorage bloat | ✅ FIXED |
+| M7 | 🟡 MEDIUM | Fire-and-forget | `snapshot-service.ts:114` | Snapshot loss | ✅ FIXED |
 
 **Priority fix order:** C1 → C2 → C5 → C3 → H6 → H4 → H5 → H1 → H2/H3 → rest.
 

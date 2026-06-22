@@ -74,6 +74,12 @@ class DexieEventRecorderStore {
       LOGGER.warn('DexieEventRecorderStore', 'Save failed', { error: e });
     }
   }
+
+  async clearAll(): Promise<void> {
+    // C3: Delete all event rows from DB so cleared events don't resurrect on reload
+    await dexieDb.eventLog.clear();
+    this.lastPersistedSeq = -1;
+  }
 }
 
 export interface EventSourcingDeps {

@@ -100,6 +100,7 @@ class CrossTabStateSync {
         payload: { hash: this.computeStateHash() },
       });
       this.pruneStaleTabs();
+      this.pruneLocalStorage();
     }, HEARTBEAT_MS);
 
     this.syncTimer = setInterval(() => {

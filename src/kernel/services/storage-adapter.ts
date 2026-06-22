@@ -66,6 +66,7 @@ export class BucketStorageAdapter {
           message: `localStorage quota exceeded for bucket "${this.bucket}" - data may be lost`,
           type: 'error',
         });
+        throw e;
       } else {
         LOGGER.warn('BucketStorageAdapter', 'set failed', { bucket: this.bucket, key, error: e });
       }
@@ -107,6 +108,9 @@ export class BucketStorageAdapter {
     try {
       localStorage.setItem(this.prefix + key, JSON.stringify(value));
     } catch (e) {
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        throw e;
+      }
       LOGGER.warn('BucketStorageAdapter', 'setSync failed', { bucket: this.bucket, key, error: e });
     }
   }

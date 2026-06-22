@@ -76,10 +76,8 @@ class DexieMemoryStore implements MemoryStore {
   }): Promise<MemoryEntry[]> {
     let collection = dexieDb.memories.orderBy('id');
     if (options.order === 'desc') collection = collection.reverse();
-    let result = collection;
-    if (options.limit) result = result.limit(options.limit);
-    let arr = await result.toArray();
-    // B10-44: Apply type/before/after filters that were previously ignored
+    let arr = await collection.toArray();
+    // M2: Apply filters BEFORE limit to avoid wrong result count
     if (options.type) {
       arr = arr.filter(e => e.metadata?.type === options.type);
     }
@@ -89,6 +87,10 @@ class DexieMemoryStore implements MemoryStore {
     if (options.after) {
       arr = arr.filter(e => (e.metadata?.timestamp ?? 0) > options.after!);
     }
+    if (options.limit && arr.length > options.limit) {
+      arr = arr.slice(0, options.limit);
+    }
+    if (options.order === 'desc') arr.reverse();
     return arr;
   }
 
@@ -366,7 +368,7 @@ class DexieConfigStore implements ConfigStore {
     const data = safeParse<{ id: string; value: unknown; createdAt?: number }[]>(payload);
     await dexieDb.transaction('rw', dexieDb.keyValue, async () => {
       await dexieDb.keyValue.clear();
-      if (data.length > 0) await dexieDb.keyValue.bulkAdd(data);
+      if (data.length > 0) await dexieDb.keyValue.bulkPut(data);
     });
   }
 }

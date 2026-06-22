@@ -17,6 +17,7 @@ export interface RecorderConfig {
 export interface EventRecorderStore {
   load(): Promise<{ events: RecordedEvent[]; sequence: number } | null>;
   save(snapshot: { events: RecordedEvent[]; sequence: number }): Promise<void>;
+  clearAll?(): Promise<void>;
 }
 
 import { CONFIG } from '../config-registry';
@@ -134,6 +135,8 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
     this.events = [];
     this.sequence = 0;
     this.schedulePersist();
+    // C3: Also clear persisted rows so old events don't resurrect on reload
+    this.store?.clearAll?.().catch((e: unknown) => LOGGER.warn('EventRecorder', 'clearAll failed', { error: e }));
   }
 
   updateConfig(partial: Partial<RecorderConfig>): void {
