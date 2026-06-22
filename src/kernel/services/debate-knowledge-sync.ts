@@ -2,7 +2,9 @@ import { EVENTS } from '../events/event-names';
 import type { DebateArgument, DebateSession } from '../contracts/debate-types';
 import type { MemoryService } from './memory-engine';
 
-const NEGATION = /\b(not|never|no|cannot|can't|won't|doesn't|shouldn't)\b/i;
+const NEGATION = /\b(not|never|no|cannot|can't|won't|doesn't|shouldn't|don't|isn't|aren't|wasn't|weren't|hasn't|haven't|didn't|nothing|nobody|nowhere|neither|nor|without|lack|lacks|lacking|disagree|oppose|opposes|opposed|reject|rejects|rejected|against|contrary|contradict|contradicts|contradictory|refute|refutes|refuted|counter|counterargument)\b/i;
+
+const CONTRAST = /\b(however|but|although|though|whereas|while|yet|nevertheless|nonetheless|on the other hand|in contrast|conversely|instead|alternatively|despite|in spite of)\b/i;
 
 export interface DebateKnowledgeSyncDeps {
   eventBus: {
@@ -172,6 +174,15 @@ export class DebateKnowledgeSyncService {
       if (wb.has(w)) overlap++;
     }
     if (overlap < 2) return false;
-    return NEGATION.test(a) !== NEGATION.test(b);
+
+    const aHasNegation = NEGATION.test(a);
+    const bHasNegation = NEGATION.test(b);
+    if (aHasNegation !== bHasNegation) return true;
+
+    const aHasContrast = CONTRAST.test(a);
+    const bHasContrast = CONTRAST.test(b);
+    if (aHasContrast !== bHasContrast) return true;
+
+    return false;
   }
 }

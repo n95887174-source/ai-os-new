@@ -19,6 +19,15 @@ import type { ILifecycle } from '../../contracts/lifecycle';
 import { rootLogger } from '../logger-service';
 const LOGGER = rootLogger.child('DebateEngine');
 
+function estimateConfidence(content: string): number {
+  const certaintyMarkers = /\b(definitely|certainly|undoubtedly|absolutely|clearly|obviously|always|never|must|without doubt|unquestionably|undeniably|in fact|indeed)\b/gi;
+  const hedgingMarkers = /\b(maybe|perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i assume|i suppose|it seems|it appears|maybe)\b/gi;
+  const certainty = (content.match(certaintyMarkers) || []).length;
+  const hedging = (content.match(hedgingMarkers) || []).length;
+  const score = 0.5 + (certainty - hedging) * 0.05;
+  return Math.max(0.3, Math.min(0.95, score));
+}
+
 interface KeyServiceLike {
   getKeys(): Array<{ id: string; key: string; provider: string; status: string; model?: string; availableModels?: string[] }>;
   recordUsage(keyId: string, latency: number, tokens: number, modelId: string, metadata?: Record<string, unknown>): void;
@@ -234,7 +243,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   const estimatedCost = estimatedTokens * 0.000002;
                   if (!budget.canProceed(sessionId, estimatedTokens, estimatedCost)) {
                     const action = budget.getPressureAction();
-                    this.deps.eventBus.emit(DebateRuntimeEvents.PRESSURE_CHANGED, {
+                    this.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_PRESSURE_CHANGED, {
                       sessionId, level: budget.getPressure(), action,
                     });
                     continue;
@@ -256,11 +265,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   });
                 }
 
+                const stepConfidence = estimateConfidence(content);
                 this.getMemory(sessionId).recordStep({
                   agentId: participant.agentId,
                   content,
                   type: 'claim',
-                  confidence: 0.7,
+                  confidence: stepConfidence,
                   timestamp: Date.now(),
                   round: session.round,
                 });

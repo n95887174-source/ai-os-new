@@ -32,7 +32,7 @@ export const DebateRuntimeEvents = {
   // Budget / pressure
   BUDGET_UPDATED: 'debate-runtime:budget:updated',
   BUDGET_EXCEEDED: 'debate-runtime:budget:exceeded',
-  PRESSURE_CHANGED: 'debate-runtime:budget:pressure',
+  BUDGET_PRESSURE_CHANGED: 'debate-runtime:budget:pressure',
 
   // Consensus
   CONSENSUS_REACHED: 'debate-runtime:consensus:reached',

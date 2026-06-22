@@ -38,7 +38,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
     if (this._initialized) return;
     this._initialized = true;
     this.unsubs.push(
-      this.deps.eventBus.onSafe<{ sessionId: string; level: string; action: unknown }>(DebateRuntimeEvents.PRESSURE_CHANGED, (d) => {
+      this.deps.eventBus.onSafe<{ sessionId: string; level: string; action: unknown }>(DebateRuntimeEvents.BUDGET_PRESSURE_CHANGED, (d) => {
         const existing = this.sessionPressures.get(d.sessionId);
         if (existing) {
           this.sessionPressures.set(d.sessionId, {

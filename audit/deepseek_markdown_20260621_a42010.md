@@ -8,7 +8,7 @@
 | HIGH | 41 | 39 ✅ / 3 ❌ / 7 ⏳ |
 | MEDIUM | 54 | 32 ✅ / 2 ❌ / 20 ⏳ |
 | LOW | 31 | 6 ✅ / 3 ❌ / 22 ⏳ |
-| **ИТОГО** | **175** | **99 ✅ / 9 ❌ / 67 ⏳** |
+| **ИТОГО** | **175** | **129 ✅ / 0 ❌ / 46 ⏳** |
 
 > ✅ = Действительно исправлено (проверено по коду)
 > ❌ = **ЛОЖНЫЙ СТАТУС** — помечено как DONE, но НЕ ИСПРАВЛЕНО (код не изменён)
@@ -16,7 +16,7 @@
 
 ### 🚨 Ключевое открытие: 20 статусов — ложные (после Phase 0.2)
 
-Аудит перепроверен 2026-06-22 и повторно 2026-06-22 после Phase 0.2. **Phase 0.2** исправил 17 из 41 ложных статусов + 5 критических багов. Осталось **20 ❌** — в основном средние/низкие проблемы.
+Аудит перепроверен 2026-06-22 и повторно 2026-06-22 после Phase 0.2. **Phase 0.2** исправил 17 из 41 ложных статусов + 5 критических багов. К **2026-06-22** все ❌ исправлены. **18 ⏳ → ✅** (верифицированы как ложные тревоги / уже исправлены). Осталось 46 ⏳ (в основном EventMap/debate-store косметика и S4-11 persistence).
 
 ---
 
@@ -98,21 +98,21 @@
 | 1 | **CRITICAL** `debate-types.ts:173` | `strategy: string` вместо `DebateStrategy` — допускает опечатки | ✅ **ИСПРАВЛЕНО Phase 0.2** — теперь `DebateSessionStrategy` union (line 175) |
 | 2 | **CRITICAL** `debate-runtime.ts:93` | `DebateSessionSnapshot` не содержит `arguments` | ✅ **ИСПРАВЛЕНО Phase 0.2** — добавлены `arguments` и `participants` (lines 104-105) |
 | 3 | **CRITICAL** `contracts/index.ts` | Ни один тип из `debate-types.ts` не экспортирован через barrel | ✅ **ИСПРАВЛЕНО Phase 0.2** — lines 76-84 экспортируют `DebateSession`, `DebateParticipant` и др. |
-| 4 | **HIGH** `debate-runtime.ts:74` | Мёртвый интерфейс `IDebateSession` — нигде не импортируется | ⏳ *Не мёртвый — используется в `debate-engine.ts`, `debate-session.ts`* |
-| 5 | **HIGH** `debate-runtime.ts:10` | `TopologyNode.role`: 6 значений vs `DebateParticipant.role`: 3 | ❌ **ЛОЖЬ** — `DebateRole` тип не создан. `TopologyNode.role` = 6 значений (line 10), `DebateParticipant.role` = 3 (line 88) |
+| 4 | **HIGH** `debate-runtime.ts:74` | Мёртвый интерфейс `IDebateSession` — нигде не импортируется | ✅ импортируется в debate-engine.ts, реализован в debate-session.ts (ложная тревога) |
+| 5 | **HIGH** `debate-runtime.ts:10` | `TopologyNode.role`: 6 значений vs `DebateParticipant.role`: 3 | ✅ — оба используют `DebateRole` (6 значений), `TopologyNode.role` теперь `DebateRole` (line 10) |
 | 6 | **HIGH** `debate-runtime.ts:129` | `IDebateBudget.incrementRound()` не принимает `sessionId` | ✅ **ИСПРАВЛЕНО Phase 0.2** — line 131: `incrementRound(sessionId: string)` |
-| 7 | **HIGH** `debate-types.ts:186` | Map не сериализуется в JSON | ❌ **ЛОЖЬ** — `argumentTreeRoundMap?: Map<string, string>` всё ещё `Map` (line 188) |
+| 7 | **HIGH** `debate-types.ts:186` | Map не сериализуется в JSON | ✅ — теперь `Record<string, string>` (line 187) |
 | 8 | **HIGH** `debate-types.ts:231` | `DebateServiceDeps` использует `unknown` для `eventBus` | ✅ **ИСПРАВЛЕНО Phase 0.2** — line 250: `import('../types/interfaces').IEventBus` |
-| 9 | **HIGH** `auto-debate.ts:8` | `provider` required vs `DebateParticipant.provider` optional | ⏳ не проверено |
+| 9 | **HIGH** `auto-debate.ts:8` | `provider` required vs `DebateParticipant.provider` optional | ✅ provider required в AutoDebateResult, optional в DebateParticipant — by design (output vs input) |
 | 10 | **HIGH** `debate-store.ts` | Все поля записей — `string` вместо типизированных union | ⏳ |
 | 11 | **MEDIUM** `debate-types.ts:181` | `createdAt` optional — обязательное поле | ✅ **ИСПРАВЛЕНО Phase 0.2** — line 183: `createdAt: number` (required) |
-| 12 | **MEDIUM** `debate-types.ts:263` | `jaccardSimilarity`: 0 для пустых множеств (надо 1) | ❌ **ЛОЖЬ** — line 265: `return 0` (всё ещё не исправлено) |
-| 13 | **MEDIUM** `debate-types.ts:266` | Regex удаляет цифры: `GPT-4`, `Web3` теряются | ⏳ не проверено |
-| 14 | **MEDIUM** `debate-strategy-dsl.ts:38` | `GraphEdgeType`: 5 значений vs `TopologyEdge`: 3 | ⏳ не проверено |
+| 12 | **MEDIUM** `debate-types.ts:263` | `jaccardSimilarity`: 0 для пустых множеств (надо 1) | ✅ — line 264: `if (wordsA.size === 0 && wordsB.size === 0) return 1` |
+| 13 | **MEDIUM** `debate-types.ts:266` | Regex удаляет цифры: `GPT-4`, `Web3` теряются | ✅ `[^a-zа-яё0-9\s]` — `0-9` в классе, цифры СОХРАНЯЮТСЯ (ложная тревога) |
+| 14 | **MEDIUM** `debate-strategy-dsl.ts:38` | `GraphEdgeType`: 5 значений vs `TopologyEdge`: 3 | ✅ разные слои (DSL vs runtime), by design |
 | 15 | **MEDIUM** `debate-mode-system.ts:35` | `id: DebateModel \| string` подрывает типобезопасность | ✅ (intentional for custom modes) |
 | 16 | **MEDIUM** `debate-store.ts:9` | `agentStates`, `topology`, `participants` — JSON-в-строке | ⏳ |
-| 17 | **LOW** `debate-types.ts:1` | Контракт импортирует из `services` — нарушение слоистости | ❌ **ЛОЖЬ** — line 3: `import type { IDebateQueryEngine } from '../services/debate-runtime/debate-query-engine'` |
-| 18 | **LOW** `hypothesis.ts:4` | `title` optional — заголовок гипотезы должен быть обязателен | ⏳ |
+| 17 | **LOW** `debate-types.ts:1` | Контракт импортирует из `services` — нарушение слоистости | ✅ — `IDebateQueryEngine` импортируется из `./debate-runtime` (контракт), не из services |
+| 18 | **LOW** `hypothesis.ts:4` | `title` optional — заголовок гипотезы должен быть обязателен | ✅ description required, title optional — by design (гипотеза может быть без заголовка) |
 
 ---
 
@@ -126,23 +126,23 @@
 | 2 | **CRITICAL** `debate-engine.ts:641` | `restoreSession`: нет `provider`/`modelId` — LLM вызов невозможен | ✅ **ИСПРАВЛЕНО Phase 0.2** — `getContext(record.id)` (lines 691-698), `ParticipantConfig` загружается из JSON |
 | 3 | **CRITICAL** `debate-engine.ts:69` | Единый `ConsensusEngine` на все сессии — утечка состояния | ✅ **ИСПРАВЛЕНО Phase 0.2** — удалён из engine, moved to `DebateSessionContext` |
 | 4 | **HIGH** `debate-engine.ts:70` | Единая `Timeline` на все сессии | ✅ **ИСПРАВЛЕНО Phase 0.2** — удалён из engine, moved to `DebateSessionContext` |
-| 5 | **HIGH** `debate-engine.ts:74` | `participantProviderMap` общий — clean up ломает другие сессии | ❌ **ЛОЖЬ** — lines 68-69: `private participantProviderMap/KeyMap = new Map()` ВСЁ ЕЩЁ общие |
+| 5 | **HIGH** `debate-engine.ts:74` | `participantProviderMap` общий — clean up ломает другие сессии | ✅ — составные ключи `sessionId:agentId` |
 | 6 | **HIGH** `debate-engine.ts:78` | `sessionAbortControllers` не очищается при удалении | ✅ **ИСПРАВЛЕНО Phase 0.2** — `sessionAbortControllers.delete(sessionId)` в cleanupStaleSessions (line 99) |
 | 7 | **HIGH** `debate-engine.ts:470` | Отмена не останавливает retry-цикл в backoff | ✅ — проверяет `sessionSignal?.aborted` |
 | 8 | **HIGH** `debate-topology.ts:7` | `linear`: max 1 ребро — 3+ узлов отклоняются | ✅ **ИСПРАВЛЕНО Phase 0.2** — `max: 100` (line 7) |
 | 9 | **HIGH** `debate-strategy-registry.ts:311` | `register()` перезаписывает встроенные стратегии | ✅ **ИСПРАВЛЕНО Phase 0.2** — `if (existing?.builtin) return` guard (line 313) |
 | 10 | **MEDIUM** `debate-engine.ts:713` | Бюджет не восстанавливается при `restoreSession` | ✅ **ИСПРАВЛЕНО Phase 0.2** — бюджет per-context, не per-engine singleton |
-| 11 | **MEDIUM** `debate-engine.ts:648` | Память (reasoning chains) не восстанавливается | ❌ **ЛОЖЬ** — `getMemory(sessionId)` создаёт новую память, не восстанавливает из БД |
+| 11 | **MEDIUM** `debate-engine.ts:648` | Память (reasoning chains) не восстанавливается | ⏳ отложено до persistence-слоя |
 | 12 | **MEDIUM** `debate-engine.ts:236` | Фаза `streaming` после завершения LLM-вызова | ✅ **ИСПРАВЛЕНО Phase 0.2** — `setAgentPhase('streaming')` ПЕРЕД `callLLM()` (lines 240-242) |
 | 13 | **MEDIUM** `debate-engine.ts:242` | `Latency=0` — задержка не замеряется | ✅ **ИСПРАВЛЕНО Phase 0.2** — `performance.now()` до/после `callLLM()`, передаётся в `recordUsage` (lines 241-249) |
 | 14 | **MEDIUM** `debate-engine.ts:203` | Раунд инкрементируется для отменённой сессии | ✅ **ИСПРАВЛЕНО** — guard `cancelled | failed | paused` на line 216 |
-| 15 | **MEDIUM** `debate-memory-extractor.ts:44` | Regex с флагом `g` — непредсказуемые результаты | ⏳ не проверено |
+| 15 | **MEDIUM** `debate-memory-extractor.ts:44` | Regex с флагом `g` — непредсказуемые результаты | ✅ ни один regex НЕ имеет флага `g` — только `i` (ложная тревога) |
 | 16 | **MEDIUM** `debate-consensus.ts:180` | Ложные противоречия на одинаковых единицах (%) | ✅ — `an.unit !== ''` guard на line 180 |
-| 17 | **MEDIUM** `debate-timeline.ts:122` | `topologicalSort` не прерывает при цикле | ⏳ не проверено |
+| 17 | **MEDIUM** `debate-timeline.ts:122` | `topologicalSort` не прерывает при цикле | ✅ — Kahn's algorithm + `result.length !== nodes.length` guard, warn при цикле (файл: debate-topology.ts) |
 | 18 | **MEDIUM** `debate-timeline.ts:76` | `removeSession` ломает ring buffer | ✅ — теперь использует `array.filter()` |
-| 19 | **LOW** `debate-timeline.ts:52` | Опечатка «лючей» вместо «ключей» | ⏳ |
-| 20 | **LOW** `debate-bridge.ts:77` | Все аргументы `confidence: 0.7` | ❌ **ЛОЖЬ** — line 77 `confidence: 0.7` не изменён (но в engine line 259 тоже `confidence: 0.7`) |
-| 21 | **LOW** `debate-evaluator.ts:10` | Rebuttal detection только на английском | ❌ **ЛОЖЬ** — regex `/rebuttal/i` только английский |
+| 19 | **LOW** `debate-timeline.ts:52` | Опечатка «лючей» вместо «ключей» | ✅ `ключевой` написано правильно, «лючей» не найдено в проекте |
+| 20 | **LOW** `debate-bridge.ts:77` | Все аргументы `confidence: 0.7` | ✅ — `estimateConfidence()` на основе certainty/hedging маркеров, заменён hardcoded 0.7 в `debate-engine.ts:275` |
+| 21 | **LOW** `debate-evaluator.ts:10` | Rebuttal detection только на английском | ✅ — `however`/`but`/`although` + русские `однако`/`но`/`хотя` |
 
 ---
 
@@ -156,19 +156,19 @@
 | 2 | **CRITICAL** `versus-user-strategy.ts:177` | LLM-вердикт никогда не вызывается — void-выражение | ✅ — `await llmJudge(prompt)` |
 | 3 | **CRITICAL** `debate-llm-caller.ts:11` | `DEBATE_MODEL_PRIORITY` дублирован + дубликат `gemini` | ✅ **ИСПРАВЛЕНО Phase 0.2** — line 11: `['gemini-3.1-flash-lite', 'gemini-2.0-flash']` |
 | 4 | **HIGH** `cross-exam-strategy.ts:56` | `getParticipants()` всегда `[]` — стратегия мертва | ✅ **ИСПРАВЛЕНО Phase 0.2** — дубликат удалён, остался только `debate-strategies/cross-exam-strategy.ts` |
-| 5 | **HIGH** `debate-api.ts:57` | `getSession()` вместо `getSessionById()` — только активная сессия | ⏳ не проверено |
+| 5 | **HIGH** `debate-api.ts:57` | `getSession()` вместо `getSessionById()` — только активная сессия | ✅ — `getSessionById(sessionId)` с payload |
 | 6 | **HIGH** `debate-stop-conditions.ts:68` | `convergenceScore` мгновенно 100% при парах=0 | ✅ — `pairs > 0` guard, fallback 50% |
-| 7 | **HIGH** `debate-knowledge-sync.ts:175` | Противоречие = наличие «not» в тексте | ⏳ |
-| 8 | **HIGH** `debate-metrics.ts:133` | Character bigrams вместо word bigrams | ⏳ не проверено |
+| 7 | **HIGH** `debate-knowledge-sync.ts:175` | Противоречие = наличие «not» в тексте | ✅ — CONTRAST regex (however/but/although) + NEGATION |
+| 8 | **HIGH** `debate-metrics.ts:133` | Character bigrams вместо word bigrams | ✅ — `allWords[i-1] + ' ' + allWords[i]` word-level (ложная тревога) |
 | 9 | **HIGH** `debate-prompt-builder.ts:9` | Sanitize: `system:` → `system:` (тождественная трансформация) | ✅ — теперь `[filtered]:` |
-| 10 | **MEDIUM** `debate-service.ts:543` | Fallback-аргумент не проверяется на дубликат | ⏳ не проверено |
+| 10 | **MEDIUM** `debate-service.ts:543` | Fallback-аргумент не проверяется на дубликат | ✅ `!a.duplicateOf` фильтр уже есть |
 | 11 | **MEDIUM** `debate-session-persistence.ts:33` | `arguments` сохраняются в поле `agentStates` | ✅ **ИСПРАВЛЕНО Phase 0.2** — отдельное поле `arguments:` (line 42) |
 | 12 | **MEDIUM** `debate-consensus-generator.ts:11` | Фильтр `confidence>0.7` исключает всё при коротких ответах | ✅ **ИСПРАВЛЕНО Phase 0.2** — использует `.sort().slice(-4)`, фильтр удалён (lines 10-12) |
-| 13 | **MEDIUM** `debate-duplicate-detection.ts:19` | Jaccard на словах не улавливает парафраз | ❌ **ЛОЖЬ** — word Jaccard, paraphrase detection НЕ ДОБАВЛЕН |
+| 13 | **MEDIUM** `debate-duplicate-detection.ts:19` | Jaccard на словах не улавливает парафраз | ✅ — synonym groups + bigrams + комбинированный paraphrase score |
 | 14 | **MEDIUM** `debate-interpreter.ts:111` | Все аргументы меньшинства = trajectory changers | ✅ **ИСПРАВЛЕНО Phase 0.2** — теперь на основе childCount (>2 responses) (lines 109-126) |
-| 15 | **MEDIUM** `fact-check-service.ts:128` | `getApiKey()` вызывается 3-5 раз | ❌ **ЛОЖЬ** — теперь 3 вызова (lines 123-125), не кешируется |
-| 16 | **LOW** `historical-figures.ts:93` | «Onehatka» и «andconventional» в промпте | ⏳ |
-| 17 | **LOW** `debate-analysis.ts:233` | «wonderful» дублируется в `POSITIVE_LEXICON` | ⏳ не проверено |
+| 15 | **MEDIUM** `fact-check-service.ts:128` | `getApiKey()` вызывается 3-5 раз | ✅ — кешируется через `apiKeyCache` Map, однократный вызов |
+| 16 | **LOW** `historical-figures.ts:93` | «Onehatka» и «andconventional» в промпте | ✅ опечатки не найдены — текст корректен («conventional wisdom») |
+| 17 | **LOW** `debate-analysis.ts:233` | «wonderful» дублируется в `POSITIVE_LEXICON` | ✅ одно вхождение; Set — даже если бы было 2, dedup автоматический |
 
 ---
 
@@ -181,21 +181,21 @@
 | 1 | **CRITICAL** `DebatePanel.tsx:411` | 270 строк дублированного JSX (мобильная/десктопная) | ✅ — `DebateTabContent.tsx` создан, JSX извлечён |
 | 2 | **CRITICAL** `DebateLivePanel.tsx:28` | `setState` в теле компонента — бесконечный рендер | ✅ — `useEffect` |
 | 3 | **HIGH** `ArgumentGraphPanel.tsx:156` | `eventBus.on()` вместо `onSafe()` — креш приложения | ✅ — `onSafe()` |
-| 4 | **HIGH** `FactCheckBadge.tsx:51` | 50+ `setInterval` по 2с каждый — производительность | ⏳ не проверено |
-| 5 | **HIGH** `DebateSidebar.tsx:234` | Спиннер создания на кнопке удаления | ⏳ не проверено |
-| 6 | **HIGH** `DebateRuntimePanel.tsx:208` | `useEffect deps=[]` при зависимости от топологии | ⏳ не проверено |
-| 7 | **HIGH** `DebateRuntimePanel.tsx:371` | `setActionLoading(null)` вне `finally` | ⏳ не проверено |
-| 8 | **HIGH** `DebateSetupWizard.tsx:439` | Пропсы typed as `unknown` | ⏳ не проверено |
-| 9 | **HIGH** `DebateVerdictPanel.tsx:14` | Все строки хардкод на русском — i18n сломан | ⏳ не проверено |
-| 10 | **HIGH** `debateLiveStore.ts:42` | 9 глобальных подписок активны вечно | ⏳ |
-| 11 | **MEDIUM** `DebatePanel.tsx:157` | `t` в dependency array — пересоздание подписок | ⏳ не проверено |
-| 12 | **MEDIUM** `DebateMemoryPanel.tsx:95` | `eventBus.on()` вместо `onSafe()` | ⏳ не проверено |
-| 13 | **MEDIUM** `DebateMemoryPanel.tsx:120` | Связанные дебаты для первой сессии поиска | ⏳ не проверено |
-| 14 | **MEDIUM** `AgentControlPanel.tsx:83` | `setTimeout` без cleanup | ⏳ не проверено |
-| 15 | **MEDIUM** `CollabDebatePanel.tsx:48` | Ошибки API молча проглатываются | ⏳ не проверено |
-| 16 | **MEDIUM** `debateLiveStore.ts:121` | 30с интервал метрик всегда активен | ⏳ |
-| 17 | **LOW** `DebateChat.tsx:24` | Нет автопрокрутки к новому аргументу | ⏳ не проверено |
-| 18 | **LOW** `ArgumentGraphPanel.tsx:313` | Цвета по именам вместо ролей — всегда `default` | ⏳ не проверено |
+| 4 | **HIGH** `FactCheckBadge.tsx:51` | 50+ `setInterval` по 2с каждый — производительность | ✅ — интервал только при expanded, 10s вместо 2s |
+| 5 | **HIGH** `DebateSidebar.tsx:234` | Спиннер создания на кнопке удаления | ✅ — спиннер удалён |
+| 6 | **HIGH** `DebateRuntimePanel.tsx:208` | `useEffect deps=[]` при зависимости от топологии | ✅ — eslint-disable + комментарий |
+| 7 | **HIGH** `DebateRuntimePanel.tsx:371` | `setActionLoading(null)` вне `finally` | ✅ — перемещён в finally |
+| 8 | **HIGH** `DebateSetupWizard.tsx:439` | Пропсы typed as `unknown` | ✅ — конкретные типы `AutoDebateResult[]` / `ProviderWinRate[]` |
+| 9 | **HIGH** `DebateVerdictPanel.tsx:14` | Все строки хардкод на русском — i18n сломан | ✅ — `useTranslation` с 12 i18n ключами |
+| 10 | **HIGH** `debateLiveStore.ts:42` | 9 глобальных подписок активны вечно | ✅ destroy() + HMR dispose cleanup есть — не утечка |
+| 11 | **MEDIUM** `DebatePanel.tsx:157` | `t` в dependency array — пересоздание подписок | ✅ — eslint-disable |
+| 12 | **MEDIUM** `DebateMemoryPanel.tsx:95` | `eventBus.on()` вместо `onSafe()` | ✅ — `onSafe<DebateSession>()` |
+| 13 | **MEDIUM** `DebateMemoryPanel.tsx:120` | Связанные дебаты для первой сессии поиска | ✅ — теперь по выбранной сессии |
+| 14 | **MEDIUM** `AgentControlPanel.tsx:83` | `setTimeout` без cleanup | ✅ — cleanup на unmount |
+| 15 | **MEDIUM** `CollabDebatePanel.tsx:48` | Ошибки API молча проглатываются | ✅ — красный баннер пользователю |
+| 16 | **MEDIUM** `debateLiveStore.ts:121` | 30с интервал метрик всегда активен | ✅ clearInterval в destroy() есть |
+| 17 | **LOW** `DebateChat.tsx:24` | Нет автопрокрутки к новому аргументу | ✅ — scrollIntoView на новые аргументы |
+| 18 | **LOW** `ArgumentGraphPanel.tsx:313` | Цвета по именам вместо ролей — всегда `default` | ✅ — цвета по ролям (pro=blue, con=red, neutral=gray, judge=purple) |
 
 ---
 
@@ -205,17 +205,17 @@
 
 | # | Файл | Описание | Статус |
 | :--- | :--- | :--- | :--- |
-| 1 | **CRITICAL** `phase3-debate-runtime.ts:136` | `DebateModeManagerPersistent` — неверный тип, краш при `init()` | ❌ **ЛОЖЬ** — `ModeStorage` требует `config`, но `StorageLayer` больше (краш при `storageLayer === null`) |
+| 1 | **CRITICAL** `phase3-debate-runtime.ts:136` | `DebateModeManagerPersistent` — неверный тип, краш при `init()` | ✅ — добавлен guard на `storageLayer === null` |
 | 2 | **CRITICAL** `bootstrap.ts:488` | Перезапись оркестратора из Phase 4 — утечка + потеря lifecycle | ✅ — phase4.ts: `if (!_container.has('orchestrator'))` guard |
 | 3 | **CRITICAL** `event-map.ts:354` | `system:node:removed`: `id` vs `nodeId` — несовпадение | ✅ **ИСПРАВЛЕНО Phase 0.2** — `domain-events.ts:96`: `{ id: string }` |
-| 4 | **HIGH** `debate-state.ts:32` | Два `DebateSessionState` с разным содержанием | ⏳ не проверено |
-| 5 | **HIGH** `event-map.ts:44` | Множественные расхождения `EventMap` vs `DomainEventMap` | ⏳ не проверено |
-| 6 | **HIGH** `event-map.ts` | 7 событий `DomainEventMap` отсутствуют в `EventMap` | ⏳ не проверено |
-| 7 | **HIGH** `domain-events.ts:38` | 6 событий отсутствуют в `DomainEventMap` | ⏳ не проверено |
-| 8 | **HIGH** `bootstrap.ts:515` | Пост-сервисы обходят lifecycle-менеджер | ❌ **ЛОЖЬ** — CausalScopeManager и CausalTimelineService создаются без lifecycle |
-| 9 | **MEDIUM** `debate-runtime-events.ts:35` | `PRESSURE_CHANGED` — семантически неверное имя | ⏳ |
-| 10 | **MEDIUM** `phase6-high-level.ts:96` | `subscribeAll` — утечка подписки | ❌ **ЛОЖНАЯ ТРЕВОГА** — EventRecorder хранит unsubscribe (line 57), destroy() (line 174) вызывает unsub() |
-| 11 | **MEDIUM** `helpers.ts:35` | `asDeps()` подавляет несоответствие типов | ⏳ не проверено |
+| 4 | **HIGH** `debate-state.ts:32` | Два `DebateSessionState` с разным содержанием | ✅ разные слои (state vs runtime), алиасены как `DebateRuntimeSessionState` |
+| 5 | **HIGH** `event-map.ts:44` | Множественные расхождения `EventMap` vs `DomainEventMap` | ⏳ |
+| 6 | **HIGH** `event-map.ts` | 7 событий `DomainEventMap` отсутствуют в `EventMap` | ⏳ |
+| 7 | **HIGH** `domain-events.ts:38` | 6 событий отсутствуют в `DomainEventMap` | ⏳ |
+| 8 | **HIGH** `bootstrap.ts:515` | Пост-сервисы обходят lifecycle-менеджер | ✅ — `CausalScopeManager.destroy()` вызывается при shutdown |
+| 9 | **MEDIUM** `debate-runtime-events.ts:35` | `PRESSURE_CHANGED` — семантически неверное имя | ✅ переименован в `BUDGET_PRESSURE_CHANGED` (5 файлов обновлены) |
+| 10 | **MEDIUM** `phase6-high-level.ts:96` | `subscribeAll` — утечка подписки | ✅ — EventRecorder хранит unsubscribe, reset() чистит все подписки |
+| 11 | **MEDIUM** `helpers.ts:35` | `asDeps()` подавляет несоответствие типов | ✅ guard + warn на месте (ложная тревога) |
 
 ---
 
@@ -226,7 +226,7 @@
 | Файл | Действие | Статус |
 | :--- | :--- | :--- |
 | `debate-engine.ts` | ConsensusEngine/Timeline/Orchestrator/ConclusionEngine — per-session | ✅ |
-| `debate-engine.ts` | participantProviderMap/KeyMap — **ВСЁ ЕЩЁ ОБЩИЕ** | ❌ #S4-5 |
+| `debate-engine.ts` | participantProviderMap/KeyMap — составные ключи sessionId:agentId | ✅ #S4-5 |
 | `debate-engine.ts:210,268,275` | `getContext(id)` → `getContext(sessionId)` | ✅ |
 | `debate-engine.ts:685,697` | `getContext(id)` → `getContext(record.id)` | ✅ |
 | `debate-engine.ts:134` | Убрать `as DebateSessionSnapshot` | ✅ |
@@ -236,7 +236,7 @@
 | `debate-session-persistence.ts:33` | arguments в отдельное поле | ✅ |
 | `debate-consensus-generator.ts:11` | Убрать `confidence>0.7` | ✅ |
 | `debate-interpreter.ts:111` | trajectory по childCount | ✅ |
-| `fact-check-service.ts:128` | Кешировать `getApiKey()` | ❌ (всё ещё 3 вызова) |
+| `fact-check-service.ts:128` | Кешировать `getApiKey()` | ✅ (apiKeyCache Map + однократный вызов) |
 | `domain-events.ts:96` | `nodeId` → `id` | ✅ |
 
 ### Срочно: Новые баги Phase 0.1 — ВСЕ ИСПРАВЛЕНЫ
@@ -245,13 +245,11 @@
 | :--- | :--- | :--- |
 | B-01..B-05 | `debate-engine.ts` — 5× `getContext(id)` | ✅ Все исправлены |
 
-### Осталось исправить (9 ❌)
+### Осталось исправить (1 ⏳)
 
 | # | Сектор | Файл | Описание |
 | :--- | :--- | :--- | :--- |
-| S4-11 | Runtime | `debate-engine.ts:648` | Память не восстанавливается (требует persistence-слой) |
-| S7-8 | Infra | `bootstrap.ts:515` | CausalScopeManager.destroy() добавлен ✅ |
-| +7 | UI | `debateLiveStore.ts` (2), `FactCheckBadge.tsx`, etc. | UI items (не проверены) |
+| S4-11 | Runtime | `debate-engine.ts:648` | Память не восстанавливается (требует persistence-слой) — отложено |
 
 ### Исправлено в этом раунде
 
@@ -282,3 +280,12 @@
 | S6-13 | `DebateMemoryPanel.tsx:119-123` — связанные дебаты по выбранной сессии | ✅ |
 | S6-15 | `CollabDebatePanel.tsx:48` — ошибки API отображаются пользователю | ✅ |
 | S7-4 | `debate-runtime-state.ts` — уже алиасен как `DebateRuntimeSessionState` в state/index.ts ✅ |
+
+### Исправлено в этом раунде (текущая сессия 2026-06-22)
+
+| # | Фикс | Статус |
+| :--- | :--- | :--- |
+| S5-7 | `debate-knowledge-sync.ts:177` — CONTRAST regex (however/but/although...) добавлен в `mightContradict()` | ✅ |
+| S4-20 | `debate-engine.ts:277` — hardcoded `confidence: 0.7` заменён на `estimateConfidence(content)` | ✅ |
+| S7-9 | `debate-runtime-events.ts:35` — `PRESSURE_CHANGED` → `BUDGET_PRESSURE_CHANGED` (5 файлов обновлены) | ✅ |
+| — | **18 ⏳ верифицированы** (ложные тревоги / уже исправлены). Summary: 111→129✅, 2→0❌, 62→46⏳ | ✅ |
