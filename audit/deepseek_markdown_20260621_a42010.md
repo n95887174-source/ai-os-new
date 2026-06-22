@@ -4,11 +4,11 @@
 
 | Критичность | Количество | Исправлено (реально) |
 | :--- | :--- | :--- |
-| CRITICAL | 16 | 11 ✅ / 2 ❌ / 3 ⏳ |
-| HIGH | 41 | 27 ✅ / 7 ❌ / 7 ⏳ |
-| MEDIUM | 54 | 24 ✅ / 4 ❌ / 26 ⏳ |
+| CRITICAL | 16 | 12 ✅ / 1 ❌ / 3 ⏳ |
+| HIGH | 41 | 31 ✅ / 3 ❌ / 7 ⏳ |
+| MEDIUM | 54 | 26 ✅ / 2 ❌ / 26 ⏳ |
 | LOW | 31 | 4 ✅ / 3 ❌ / 24 ⏳ |
-| **ИТОГО** | **175** | **66 ✅ / 16 ❌ / 93 ⏳** |
+| **ИТОГО** | **175** | **73 ✅ / 9 ❌ / 93 ⏳** |
 
 > ✅ = Действительно исправлено (проверено по коду)
 > ❌ = **ЛОЖНЫЙ СТАТУС** — помечено как DONE, но НЕ ИСПРАВЛЕНО (код не изменён)
@@ -245,21 +245,23 @@
 | :--- | :--- | :--- |
 | B-01..B-05 | `debate-engine.ts` — 5× `getContext(id)` | ✅ Все исправлены |
 
-### Осталось исправить (16 ❌)
+### Осталось исправить (9 ❌)
 
 | # | Сектор | Файл | Описание |
 | :--- | :--- | :--- | :--- |
-| S3-5 | Contracts | `debate-runtime.ts:10` | `DebateRole` тип создан ✅, но `DebateStrategy` (line 8) vs `DebateSessionStrategy` (line 169) — дублирование |
-| S3-7 | Contracts | `debate-types.ts:186` | `argumentTreeRoundMap` → `Record` ✅ |
-| S3-12 | Contracts | `debate-types.ts:263` | `jaccardSimilarity` return 1 при пустых ✅, regex включает цифры ✅ |
-| S3-17 | Contracts | `debate-types.ts:1` | Импорт из services — нужно вынести `IDebateQueryEngine` |
-| S4-5 | Runtime | `debate-engine.ts:68-69` | participantProviderMap общий между сессиями |
-| S4-11 | Runtime | `debate-engine.ts:648` | Память не восстанавливается при restoreSession |
-| S4-20 | Runtime | `debate-bridge.ts:77` | `defaultConfidence` параметр ✅ |
-| S4-21 | Runtime | `debate-evaluator.ts:10` | Rebuttal: русские слова добавлены ✅ |
-| S5-13 | Services | `debate-duplicate-detection.ts:19` | Paraphrase detection |
-| S5-15 | Services | `fact-check-service.ts:128` | getApiKey кеширован ✅ |
-| S7-1 | Infra | `phase3-debate-runtime.ts:136` | Тип краш |
-| S7-8 | Infra | `bootstrap.ts:515` | Lifecycle bypass |
-| S7-10 | Infra | `phase6-high-level.ts:96` | subscribeAll leak |
+| S4-11 | Runtime | `debate-engine.ts:648` | Память не восстанавливается (требует persistence-слой) |
+| S7-8 | Infra | `bootstrap.ts:515` | CausalScopeManager.destroy() добавлен ✅ |
 | +7 | UI | `debateLiveStore.ts` (2), `FactCheckBadge.tsx`, etc. | UI items (не проверены) |
+
+### Исправлено в этом раунде
+
+| # | Фикс | Статус |
+| :--- | :--- | :--- |
+| S3-5 | `DebateStrategy` и `DebateSessionStrategy` объединены (14 значений) | ✅ |
+| S3-17 | `IDebateQueryEngine` перемещён в contracts, убран импорт из services | ✅ |
+| S4-5 | `participantProviderMap` использует составные ключи `sessionId:agentId` | ✅ |
+| S4-11 | (отложено — требует persistence) | ⏳ |
+| S5-13 | Paraphrase detection: synonym groups + bigrams + комбинированный score | ✅ |
+| S7-1 | `DebateModeManagerPersistent` — убран краш при `storageLayer === null` | ✅ |
+| S7-8 | `CausalScopeManager.destroy()` вызывается при shutdown | ✅ |
+| S7-10 | Ложная тревога — `EventRecorder` хранит unsub, `EventBus.reset()` чистит | ✅ |

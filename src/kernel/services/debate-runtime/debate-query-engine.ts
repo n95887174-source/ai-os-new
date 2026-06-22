@@ -1,17 +1,5 @@
-import type { TimelineEntry } from '../../contracts/debate-runtime';
+import type { TimelineEntry, IDebateQueryEngine } from '../../contracts/debate-runtime';
 import type { DebateSession } from '../../contracts/debate-types';
-
-export interface IDebateQueryEngine {
-  query(
-    session: DebateSession,
-    criteria: {
-      agentId?: string;
-      round?: number;
-      type?: string;
-      confidenceMin?: number;
-    }
-  ): TimelineEntry[];
-}
 
 export class DebateQueryEngine implements IDebateQueryEngine {
   query(

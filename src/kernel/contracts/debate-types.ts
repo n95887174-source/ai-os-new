@@ -1,12 +1,12 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { FeatureFlag } from './feature-flags';
-import type { IDebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
-
+import type { IDebateQueryEngine } from './debate-runtime';
 import type { DebateStore } from './storage/debate-store';
 import type { DebatePhase } from './debate-runtime';
 
 export type DebateRole = 'pro' | 'con' | 'neutral' | 'judge' | 'attacker' | 'defender';
-export type DebateStrategy = 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained' | 'jury_trial' | 'cross_examination';
+export type DebateSessionStrategy = 'round_robin' | 'sequential' | 'judge' | 'tree-of-thought' | 'red-blue' | 'cross-examination' | 'socratic' | 'tournament' | 'argument_tree' | 'constrained' | 'moderated' | 'free_for_all' | 'jury_trial' | 'cross_examination';
+export type DebateStrategy = DebateSessionStrategy;
 export type DebateConstraint = 'none' | 'facts_only' | 'emotional_only' | 'data_driven' | 'ethical_framework' | 'first_principles' | 'pragmatic';
 export type ParentResolution = 'explicit' | 'fallback_latest' | 'orphan' | 'invalid_reference';
 
@@ -166,8 +166,6 @@ export interface VerdictFeedback {
   comment?: string;
   timestamp: number;
 }
-
-export type DebateSessionStrategy = 'round_robin' | 'sequential' | 'judge' | 'tree-of-thought' | 'red-blue' | 'cross-examination' | 'socratic' | 'tournament' | 'argument_tree' | 'constrained';
 
 export interface DebateSession {
   id: string;

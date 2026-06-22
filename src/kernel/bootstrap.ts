@@ -377,6 +377,7 @@ export class SystemBootstrap implements IBootstrap {
     if (!this.isStarted) return;
     this.logger.info('Bootstrap', 'Shutting down Super-Agents OS Runtime...');
 
+    try { (this.container.get('causalScopeManager') as { destroy?: () => void })?.destroy?.(); } catch { /* ignore */ }
     if (this.causalTimeline) {
       try { this.causalTimeline.destroy(); } catch (e) { this.logger.warn('Bootstrap', 'CausalTimeline destroy failed during shutdown', { error: e }); }
       this.causalTimeline = null;

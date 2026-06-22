@@ -285,6 +285,18 @@ export interface ParticipantConfig {
   readonly systemPrompt?: string;
 }
 
+export interface IDebateQueryEngine {
+  query(
+    session: { id: string; topic: string; arguments: ReadonlyArray<{ agentId: string; agentName: string; content: string; round: number }> },
+    criteria: {
+      agentId?: string;
+      round?: number;
+      type?: string;
+      confidenceMin?: number;
+    }
+  ): TimelineEntry[];
+}
+
 export interface IDebateEngine {
   createSession(topology: DebateTopology, topic: string, participants: ParticipantConfig[]): string;
   startSession(sessionId: string): Promise<void>;

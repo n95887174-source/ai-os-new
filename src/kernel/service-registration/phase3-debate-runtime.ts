@@ -133,9 +133,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
   _container.get<DebateService>('debateService').setEngine(_container.get<DebateEngine>('debateEngine'));
 
   register('strategyRegistry', new StrategyRegistry());
-  register('debateModeManager', new DebateModeManagerPersistent(
-    storageLayer ?? { debates: EMPTY_DEBATE_STORE } as StorageLayer
-  ));
+  register('debateModeManager', new DebateModeManagerPersistent(storageLayer));
 
   register('debateRoom', new DebateRoom({
     getEngine: () => _container.get<DebateEngine>('debateEngine'),
@@ -144,7 +142,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
   register('debateWorkspace', new DebateWorkspace({
     getRoom: () => _container.get<DebateRoom>('debateRoom'),
     getEngine: () => _container.get<DebateEngine>('debateEngine'),
-    storage: storageLayer ?? { debates: EMPTY_DEBATE_STORE } as StorageLayer,
+    storage: storageLayer,
   }));
 
   register('debatePolicyEngine', new DebatePolicyEngine());

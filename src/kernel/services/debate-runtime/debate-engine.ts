@@ -71,6 +71,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   private sessionAbortControllers = new Map<string, AbortController>();
 
+  private providerKey(sessionId: string, agentId: string): string {
+    return `${sessionId}:${agentId}`;
+  }
+
   constructor(deps: DebateEngineDeps) {
     this.deps = deps;
   }
@@ -97,8 +101,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           this.sessionContexts.delete(sessionId);
           this.llmFailureCount.delete(sessionId);
           for (const p of session.participants) {
-            this.participantProviderMap.delete(p.agentId);
-            this.participantKeyMap.delete(p.agentId);
+            this.participantProviderMap.delete(this.providerKey(sessionId, p.agentId));
+            this.participantKeyMap.delete(this.providerKey(sessionId, p.agentId));
           }
         }
       }
@@ -207,7 +211,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           case 'round:start': {
             session.transition('deliberating');
             session.incrementRound();
-            this.budgets.get(sessionId)?.incrementRound();
+            this.budgets.get(sessionId)?.incrementRound(sessionId);
             this.deps.eventBus.emit(DebateRuntimeEvents.ROUND_STARTED, {
               sessionId, round: event.round, nodes: event.nodes,
             });
@@ -356,8 +360,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           resolvedKey = keys.find(k => k.provider === participant.provider && k.status === 'active');
         }
 
-        if (!resolvedKey && this.participantProviderMap.has(participant.agentId)) {
-          const cachedProvider = this.participantProviderMap.get(participant.agentId)!;
+        const pKey = this.providerKey(sessionId, participant.agentId);
+        if (!resolvedKey && this.participantProviderMap.has(pKey)) {
+          const cachedProvider = this.participantProviderMap.get(pKey)!;
           if (!failedProviders.has(cachedProvider)) {
             const keys = keyService.getKeys();
             resolvedKey = keys.find(k => k.provider === cachedProvider && k.status === 'active');
@@ -368,8 +373,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           const providerKeys = routerService.getDebateProviders(session.participants.length);
           const available = providerKeys.find((pk: { key: { provider: string; status?: string } }) => !failedProviders.has(pk.key.provider) && pk.key.status === 'active');
           if (available) {
-            this.participantProviderMap.set(participant.agentId, available.key.provider);
-            this.participantKeyMap.set(participant.agentId, available.key.key);
+            this.participantProviderMap.set(this.providerKey(sessionId, participant.agentId), available.key.provider);
+            this.participantKeyMap.set(this.providerKey(sessionId, participant.agentId), available.key.key);
             resolvedKey = available.key;
           }
         }
@@ -650,6 +655,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       startedAt: snap.startedAt,
       updatedAt: snap.updatedAt,
       createdAt: Date.now(),
+      arguments: snap.arguments ? JSON.stringify(snap.arguments) : '[]',
     });
   }
 
