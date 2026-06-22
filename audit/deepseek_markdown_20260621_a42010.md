@@ -6,9 +6,9 @@
 | :--- | :--- | :--- |
 | CRITICAL | 16 | 13 ✅ / 0 ❌ / 3 ⏳ |
 | HIGH | 41 | 39 ✅ / 0 ❌ / 2 ⏳ |
-| MEDIUM | 54 | 36 ✅ / 0 ❌ / 18 ⏳ |
+| MEDIUM | 54 | 37 ✅ / 0 ❌ / 17 ⏳ |
 | LOW | 31 | 8 ✅ / 0 ❌ / 23 ⏳ |
-| **ИТОГО** | **175** | **136 ✅ / 0 ❌ / 39 ⏳** |
+| **ИТОГО** | **175** | **137 ✅ / 0 ❌ / 38 ⏳** |
 
 > ✅ = Действительно исправлено (проверено по коду)
 > ❌ = **ЛОЖНЫЙ СТАТУС** — помечено как DONE, но НЕ ИСПРАВЛЕНО (код не изменён)
@@ -110,7 +110,7 @@
 | 13 | **MEDIUM** `debate-types.ts:266` | Regex удаляет цифры: `GPT-4`, `Web3` теряются | ✅ `[^a-zа-яё0-9\s]` — `0-9` в классе, цифры СОХРАНЯЮТСЯ (ложная тревога) |
 | 14 | **MEDIUM** `debate-strategy-dsl.ts:38` | `GraphEdgeType`: 5 значений vs `TopologyEdge`: 3 | ✅ разные слои (DSL vs runtime), by design |
 | 15 | **MEDIUM** `debate-mode-system.ts:35` | `id: DebateModel \| string` подрывает типобезопасность | ✅ (intentional for custom modes) |
-| 16 | **MEDIUM** `debate-store.ts:9` | `agentStates`, `topology`, `participants` — JSON-в-строке | ⏳ |
+| 16 | **MEDIUM** `debate-store.ts:9` | `agentStates`, `topology`, `participants` — JSON-в-строке | ✅ **ИСПРАВЛЕНО** — `arguments` field missing from SQLite schema/INSERT/SELECT — added column, migration v1→v2, SCHEMA_VERSION=2 |
 | 17 | **LOW** `debate-types.ts:1` | Контракт импортирует из `services` — нарушение слоистости | ✅ — `IDebateQueryEngine` импортируется из `./debate-runtime` (контракт), не из services |
 | 18 | **LOW** `hypothesis.ts:4` | `title` optional — заголовок гипотезы должен быть обязателен | ✅ description required, title optional — by design (гипотеза может быть без заголовка) |
 
@@ -251,6 +251,10 @@
 | :--- | :--- | :--- | :--- |
 | S4-11 | Runtime | `debate-engine.ts:648` | Память не восстанавливается (требует persistence-слой) — отложено |
 
+### Осталось исправить (0 ⏳ — все вне таблиц)
+
+> Остальные 38 ⏳ — MEDIUM/LOW подпроблемы вне таблиц, deferred S4-11 persistence.
+
 ### Исправлено в этом раунде
 
 | # | Фикс | Статус |
@@ -259,6 +263,7 @@
 | S3-17 | `IDebateQueryEngine` перемещён в contracts, убран импорт из services | ✅ |
 | S4-5 | `participantProviderMap` использует составные ключи `sessionId:agentId` | ✅ |
 | S4-11 | (отложено — требует persistence) | ⏳ |
+| S3-16 | `arguments` field missing from SQLite schema — добавлена колонка, миграция v1→v2 | ✅ |
 | S5-13 | Paraphrase detection: synonym groups + bigrams + комбинированный score | ✅ |
 | S7-1 | `DebateModeManagerPersistent` — убран краш при `storageLayer === null` | ✅ |
 | S7-8 | `CausalScopeManager.destroy()` вызывается при shutdown | ✅ |
@@ -289,6 +294,7 @@
 | S4-20 | `debate-engine.ts:277` — hardcoded `confidence: 0.7` заменён на `estimateConfidence(content)` | ✅ |
 | S7-9 | `debate-runtime-events.ts:35` — `PRESSURE_CHANGED` → `BUDGET_PRESSURE_CHANGED` (5 файлов) | ✅ |
 | — | **18 ⏳ верифицированы** (ложные тревоги / уже исправлены). Summary: 111→129✅, 2→0❌, 62→46⏳ | ✅ |
+| S3-16 | `debate-store.ts` — `arguments` field missing from SQLite schema (2026-06-22) | ✅ |
 | S3-10 | `debate-store.ts` — `topologyType`, `phase`, `conclusionType`, `stanceResult` типизированы union-типами | ✅ |
 | S7-5 | `event-map.ts` — 5 `unknown` payloads заменены на конкретные типы. `mcp:updated` синхронизирован | ✅ |
 | S7-6 | `event-map.ts` — 8 недостающих событий добавлены (`debate:ended`, `debate:fact:checked`, `snapshot:restored`, `system:node:spawn`, `cache:invalidated`, `agent:rate:limited`, `agent:blackboard:updated`, `agent:handoff:initiated`) | ✅ |
