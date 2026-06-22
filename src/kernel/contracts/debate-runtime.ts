@@ -7,7 +7,7 @@ export type TopologyType = 'linear' | 'roundtable' | 'judge' | 'tree-of-thought'
 export interface TopologyNode {
   readonly id: string;
   readonly label: string;
-  readonly role: 'pro' | 'con' | 'neutral' | 'judge' | 'attacker' | 'defender';
+  readonly role: import('./debate-types').DebateRole;
   readonly modelId?: string;
   readonly provider?: string;
   readonly config?: Record<string, unknown>;
@@ -101,6 +101,8 @@ export interface DebateSessionSnapshot {
   readonly totalCost: number;
   readonly startedAt: number;
   readonly updatedAt: number;
+  readonly arguments?: ReadonlyArray<{ agentId: string; content: string; round: number; timestamp: number; confidence: number; position?: string }>;
+  readonly participants?: ReadonlyArray<ParticipantConfig>;
 }
 
 // ── Budget ──────────────────────────────────────────────────────────────
@@ -126,7 +128,7 @@ export interface PressureAction {
 export interface IDebateBudget {
   canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean;
   recordUsage(sessionId: string, tokens: number, cost: number): void;
-  incrementRound(): void;
+  incrementRound(sessionId: string): void;
   getPressure(): PressureLevel;
   getPressureAction(): PressureAction;
   snapshot(): BudgetSnapshot;
@@ -242,7 +244,7 @@ export type OrchestratorEvent =
   | { type: 'budget:pressure'; level: PressureLevel; action: PressureAction };
 
 export interface IDebateOrchestrator {
-  generateRoundEvents(topology: DebateTopology, sessionId: string): AsyncGenerator<OrchestratorEvent, void, unknown>;
+  generateRoundEvents(topology: DebateTopology, sessionId: string, startRound?: number): AsyncGenerator<OrchestratorEvent, void, unknown>;
   destroy(): void;
 }
 

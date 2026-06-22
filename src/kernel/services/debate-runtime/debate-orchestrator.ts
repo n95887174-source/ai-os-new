@@ -20,10 +20,11 @@ export class DebateOrchestrator implements IDebateOrchestrator {
   async *generateRoundEvents(
     topology: DebateTopology,
     sessionId: string,
+    startRound = 0
   ): AsyncGenerator<OrchestratorEvent, void, unknown> {
     const rounds = this.topologyService.buildRounds(topology);
 
-    for (let r = 0; r < rounds.length; r++) {
+    for (let r = startRound; r < rounds.length; r++) {
       if (this.aborted.has(sessionId)) return;
 
       const nodeGroup = rounds[r];

@@ -7,6 +7,7 @@ export interface DebateSessionRecord {
   totalTokens: number;
   totalCost: number;
   agentStates: string;
+  arguments: string;
   topology: string;
   participants: string;
   startedAt: number;

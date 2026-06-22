@@ -113,7 +113,7 @@ export class CrossExaminationStrategy {
       });
       // B Closing
       this.phases.push({
-        id: phaseId++,
+        id: phaseId,
         name: 'Closing',
         questioner: participants[1].id,
         answerer: participants[1].id,

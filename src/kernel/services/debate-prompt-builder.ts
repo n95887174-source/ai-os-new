@@ -6,7 +6,7 @@ import { buildDebateState, buildDebateStatePrompt } from './debate-state-builder
 function sanitizeForPrompt(input: string, maxLength = 500): string {
   return input
     .replace(/```[\s\S]*?```/g, '[code removed]')  // strip fenced code blocks
-    .replace(/\b(system|SYSTEM|System)\s*:/g, '$1:')  // preserve colon, context will wrap
+    .replace(/\b(system|SYSTEM|System)\s*:/g, '[filtered]:')  // mask system instructions
     .replace(/^.*?(IMPORTANT|IGNORE|INSTRUCTION|SYSTEM PROMPT|You are now)/gmi, '[filtered]')
     .slice(0, maxLength);
 }

@@ -8,7 +8,7 @@ export async function generateDebateConsensus(
   emit: (event: string, payload?: unknown) => void,
 ): Promise<void> {
   const keyDivergences = session.arguments
-    .filter((a) => a.confidence > 0.7)
+    .sort((a, b) => b.timestamp - a.timestamp)
     .slice(-4)
     .map((a) => `[${a.agentName}]: ${a.content.slice(0, 200)}`)
     .join('\n\n');

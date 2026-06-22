@@ -11,7 +11,10 @@ export class DebateEvaluator implements IDebateEvaluator {
       c.agentId === agentId && (
         c.text.toLowerCase().includes('however') ||
         c.text.toLowerCase().includes('but') ||
-        c.text.toLowerCase().includes('although')
+        c.text.toLowerCase().includes('although') ||
+        c.text.toLowerCase().includes('однако') ||
+        c.text.toLowerCase().includes('но ') ||
+        c.text.toLowerCase().includes('хотя')
       )
     ).length;
 

@@ -105,18 +105,22 @@ export class DebateInterpreter {
       }
     }
 
-    // 3. Arguments that contradicted the prevailing position
-    const proCount = session.arguments.filter(a => a.position === 'pro').length;
-    const conCount = session.arguments.filter(a => a.position === 'con').length;
-    const minoritySide = proCount <= conCount ? 'pro' : 'con';
+    // 3. Arguments that triggered significant responses (trajectory changers)
+    const childCountMap = new Map<string, number>();
     for (const a of session.arguments) {
-      if (a.position === minoritySide && a.source !== 'fallback') {
+      if (a.parentId) {
+        childCountMap.set(a.parentId, (childCountMap.get(a.parentId) || 0) + 1);
+      }
+    }
+    for (const a of session.arguments) {
+      const children = childCountMap.get(a.id) || 0;
+      if (children >= 2 && a.round <= Math.max(1, Math.floor((session.currentRound || 1) * 0.6))) {
         changers.push({
           argumentId: a.id,
           agentName: a.agentName,
           round: a.round,
-          impact: 'contradicted',
-          description: `${a.agentName} argued for the minority position (${minoritySide}) against prevailing consensus`,
+          impact: children >= 3 ? 'shifted_focus' : 'deepened',
+          description: `${a.agentName}'s argument in round ${a.round} triggered ${children} direct responses`,
         });
       }
     }
@@ -127,7 +131,7 @@ export class DebateInterpreter {
       if (seen.has(c.argumentId)) return false;
       seen.add(c.argumentId);
       return true;
-    });
+    }).slice(0, 5);
   }
 
   private analyzeConstraintCorrelation(session: DebateSession): ConstraintCorrelation {

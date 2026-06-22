@@ -93,7 +93,7 @@ export type DomainEventMap = {
   'diagnostic:complete': { id: string; scope: string; health: string; score: number; issueCount: number; timestamp: number };
   'system:topology:mounted': { topologyId: string };
   'system:node:spawn': { nodeId: string; type: string };
-  'system:node:removed': { nodeId: string };
+  'system:node:removed': { id: string };
   'settings:latency-threshold': { keyId?: string; threshold?: number };
   'virtual:key:created': { virtualKey: VirtualKey };
   'virtual:key:resolved': { virtualKeyId: string };

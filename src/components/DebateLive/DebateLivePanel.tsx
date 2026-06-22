@@ -25,9 +25,11 @@ export const DebateLivePanel: React.FC = () => {
     () => sessions.length > 0 ? sessions[sessions.length - 1].id : null,
   );
 
-  if (activeSessionId === null && sessions.length > 0) {
-    setActiveSessionId(sessions[sessions.length - 1].id);
-  }
+  React.useEffect(() => {
+    if (activeSessionId === null && sessions.length > 0) {
+      setActiveSessionId(sessions[sessions.length - 1].id);
+    }
+  }, [activeSessionId, sessions]);
 
   const sessionIndex = useMemo(
     () => sessions.findIndex(s => s.id === activeSessionId),

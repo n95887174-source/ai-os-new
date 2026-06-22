@@ -309,6 +309,8 @@ export class StrategyRegistry implements IStrategyRegistry {
   }
 
   register(definition: StrategyDefinition, builtin = false): void {
+    const existing = this.entries.get(definition.id);
+    if (existing?.builtin) return;
     this.entries.set(definition.id, {
       definition,
       builtin,

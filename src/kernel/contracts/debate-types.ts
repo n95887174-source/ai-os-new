@@ -5,6 +5,7 @@ import type { IDebateQueryEngine } from '../services/debate-runtime/debate-query
 import type { DebateStore } from './storage/debate-store';
 import type { DebatePhase } from './debate-runtime';
 
+export type DebateRole = 'pro' | 'con' | 'neutral' | 'judge' | 'attacker' | 'defender';
 export type DebateStrategy = 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained' | 'jury_trial' | 'cross_examination';
 export type DebateConstraint = 'none' | 'facts_only' | 'emotional_only' | 'data_driven' | 'ethical_framework' | 'first_principles' | 'pragmatic';
 export type ParentResolution = 'explicit' | 'fallback_latest' | 'orphan' | 'invalid_reference';
@@ -85,7 +86,7 @@ export type ArgumentStrategy =
 export interface DebateParticipant {
   id: string;
   name: string;
-  role: 'pro' | 'con' | 'neutral';
+  role: DebateRole;
   systemPrompt?: string;
   provider?: string;
   modelId?: string;
@@ -166,11 +167,13 @@ export interface VerdictFeedback {
   timestamp: number;
 }
 
+export type DebateSessionStrategy = 'round_robin' | 'sequential' | 'judge' | 'tree-of-thought' | 'red-blue' | 'cross-examination' | 'socratic' | 'tournament' | 'argument_tree' | 'constrained';
+
 export interface DebateSession {
   id: string;
   topic: string;
   status: DebatePhase;
-  strategy: string;
+  strategy: DebateSessionStrategy;
   maxRounds: number;
   currentRound: number;
   participants: DebateParticipant[];
@@ -178,12 +181,12 @@ export interface DebateSession {
   convergenceScore: number;
   totalTokens?: number;
   totalCost?: number;
-  createdAt?: number;
+  createdAt: number;
   openingStatements?: DebateArgument[];
   config: DebateConfig;
   consensus?: string;
   socraticQuestioner?: number;
-  argumentTreeRoundMap?: Map<string, string>;
+  argumentTreeRoundMap?: Record<string, string>;
   graphMetrics?: DebateGraphMetrics;
   interpretation?: DebateInterpretation;
   activityMetrics?: ActivityMetrics;
@@ -245,10 +248,7 @@ export interface DebateServiceDeps {
     getDebateProviders: (participantCount: number) => Array<{ provider: string; key: ApiKey }>;
     getRankedProviders: (mode: string, prompt: string, priority: string, provider?: string, modelId?: string, minBudget?: number, maxCost?: number, excludedKeys?: string[], sessionId?: string) => ApiKey[];
   };
-  eventBus: {
-    emit: (event: string, payload: unknown) => void;
-    on: (event: string, callback: (data: unknown) => void) => () => void;
-  };
+  eventBus: import('../types/interfaces').IEventBus;
   workspaceService: {
     isAttached: () => boolean;
     getFileTreeSnapshot: () => Promise<string | null>;
@@ -261,9 +261,9 @@ export interface DebateServiceDeps {
 }
 
 export function jaccardSimilarity(a: string, b: string): number {
-  const wordsA = new Set(a.toLowerCase().replace(/[^a-zа-яё\s]/g, '').split(/\s+/).filter(Boolean));
-  const wordsB = new Set(b.toLowerCase().replace(/[^a-zа-яё\s]/g, '').split(/\s+/).filter(Boolean));
-  if (wordsA.size === 0 && wordsB.size === 0) return 0;
+  const wordsA = new Set(a.toLowerCase().replace(/[^a-zа-яё0-9\s]/g, '').split(/\s+/).filter(Boolean));
+  const wordsB = new Set(b.toLowerCase().replace(/[^a-zа-яё0-9\s]/g, '').split(/\s+/).filter(Boolean));
+  if (wordsA.size === 0 && wordsB.size === 0) return 1;
   const intersection = new Set([...wordsA].filter(w => wordsB.has(w)));
   const union = new Set([...wordsA, ...wordsB]);
   return intersection.size / union.size;

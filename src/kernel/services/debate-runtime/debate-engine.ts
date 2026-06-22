@@ -4,6 +4,7 @@ import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
 import type {
   DebateTopology,
+  DebatePhase,
   ParticipantConfig,
   DebateSessionSnapshot,
   IDebateEngine,
@@ -11,7 +12,6 @@ import type {
   IDebateBudget,
   Claim,
   TimelineEntry,
-  DebatePhase,
   AgentStateEntry,
 } from '../../contracts/debate-runtime';
 import type { IEventBus } from '../../types/interfaces';
@@ -36,10 +36,7 @@ interface AdapterLike {
 }
 import { DebateBudget } from './debate-budget';
 import { DebateMemory } from './debate-memory';
-import { DebateConsensusEngine } from './debate-consensus';
-import { DebateTimeline } from './debate-timeline';
-import { DebateOrchestrator } from './debate-orchestrator';
-import { DebateConclusionEngine } from './debate-conclusion-engine';
+import { DebateSessionContext } from './debate-session-context';
 import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
 import {
   snapshotToSession,
@@ -63,13 +60,10 @@ const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
 const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 
 export class DebateEngine implements IDebateEngine, ILifecycle {
+  private sessionContexts = new Map<string, DebateSessionContext>();
   private sessions = new Map<string, IDebateSession>();
   private budgets = new Map<string, IDebateBudget>();
   private memories = new Map<string, DebateMemory>();
-  private consensus = new DebateConsensusEngine();
-  private timeline = new DebateTimeline();
-  private orchestrator = new DebateOrchestrator();
-  private conclusionEngine = new DebateConclusionEngine(this.buildConclusionLlmCall());
   private deps: DebateEngineDeps;
   private participantProviderMap = new Map<string, string>();
   private participantKeyMap = new Map<string, string>();
@@ -100,7 +94,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           this.budgets.delete(sessionId);
           const mem = this.memories.get(sessionId);
           if (mem) { mem.destroy(); this.memories.delete(sessionId); }
-          this.timeline.removeSession(sessionId);
+          this.sessionContexts.delete(sessionId);
           this.llmFailureCount.delete(sessionId);
           for (const p of session.participants) {
             this.participantProviderMap.delete(p.agentId);
@@ -117,7 +111,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     const budget = new DebateBudget(id);
 
     session.onPhaseChange((from: string, to: string) => {
-      this.timeline.record({ sessionId: id, type: `session:${to}`, payload: { from, to } });
+      this.getContext(id).timeline.record({ sessionId: id, type: `session:${to}`, payload: { from, to } });
       this.deps.eventBus.emit(DebateRuntimeEvents.PHASE_CHANGED, {
         sessionId: id, from, to,
       });
@@ -132,7 +126,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (to === 'completed') {
           const snap = session.snapshot() as DebateSessionSnapshot;
           const tl = this.getTimeline(id);
-          this.conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
+          this.getContext(id).conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
             const store = this.deps.debateStore;
             if (store) {
               store.saveVerdict({
@@ -168,6 +162,17 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     return id;
   }
 
+  
+  private getContext(sessionId: string): DebateSessionContext {
+    let ctx = this.sessionContexts.get(sessionId);
+    if (!ctx) {
+      const llmCall = this.buildConclusionLlmCall();
+      ctx = new DebateSessionContext(llmCall ?? (async () => ''));
+      this.sessionContexts.set(sessionId, ctx);
+    }
+    return ctx;
+  }
+
   private getMemory(sessionId: string): DebateMemory {
     let mem = this.memories.get(sessionId);
     if (!mem) {
@@ -195,8 +200,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     let earlyExit = false;
     try {
-      for await (const event of this.orchestrator.generateRoundEvents(session.topology, sessionId)) {
-        this.timeline.record({ sessionId, type: event.type, payload: event });
+      for await (const event of this.getContext(sessionId).orchestrator.generateRoundEvents(session.topology, sessionId, session.round)) {
+        this.getContext(sessionId).timeline.record({ sessionId, type: event.type, payload: event });
 
         switch (event.type) {
           case 'round:start': {
@@ -232,14 +237,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   }
                 }
 
-                const content = await this.callLLM(sessionId, session, participant);
                 session.setAgentPhase(participant.agentId, 'streaming');
+                const startTime = performance.now();
+                const content = await this.callLLM(sessionId, session, participant);
+                const latency = performance.now() - startTime;
 
                 if (budget) {
                   const actualTokens = estimateTokenCount(content);
                   const actualCost = actualTokens * 0.000002;
                   budget.recordUsage(sessionId, actualTokens, actualCost);
-                  session.recordUsage(participant.agentId, actualTokens, actualCost, 0);
+                  session.recordUsage(participant.agentId, actualTokens, actualCost, Math.round(latency));
                   this.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_UPDATED, {
                     sessionId, pressure: budget.getPressure(), used: budget.snapshot().tokensUsed, limit: 100_000,
                   });
@@ -254,14 +261,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   round: session.round,
                 });
 
-                this.timeline.record({ sessionId, type: 'agent:responded', payload: { agentId: participant.agentId, content, round: session.round } });
+                this.getContext(sessionId).timeline.record({ sessionId, type: 'agent:responded', payload: { agentId: participant.agentId, content, round: session.round } });
 
                 this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_RESPONDED, {
                   sessionId, agentId: participant.agentId, content,
                 });
               } catch (e) {
                 const error = String(e);
-                this.timeline.record({ sessionId, type: 'agent:error', payload: { agentId: participant.agentId, error } });
+                this.getContext(sessionId).timeline.record({ sessionId, type: 'agent:error', payload: { agentId: participant.agentId, error } });
                 session.setAgentPhase(participant.agentId, 'errored');
                 session.setAgentError(participant.agentId, error);
                 this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_ERROR, {
@@ -279,7 +286,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             {
               const interimClaims = this.gatherClaims(sessionId, session);
               if (interimClaims.length > 1) {
-                const interim = this.consensus.evaluate(interimClaims);
+                const interim = this.getContext(sessionId).consensus.evaluate(interimClaims);
                 if (interim.confidence >= 0.85) {
                   this.deps.eventBus.emit(DebateRuntimeEvents.EARLY_EXIT, {
                     sessionId, confidence: interim.confidence, round: event.round,
@@ -295,12 +302,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
       // DR-12: Clean up abort flag on normal completion (preserve for resume)
       if (session.phase === 'completed' || session.phase === 'failed' || session.phase === 'cancelled' || session.phase === 'paused') {
-        if (session.phase !== 'paused') this.orchestrator.clearAbort(sessionId);
+        if (session.phase !== 'paused') this.getContext(sessionId).orchestrator.clearAbort(sessionId);
         return;
       }
       session.transition('consensus');
       const claims = this.gatherClaims(sessionId, session);
-      const result = this.consensus.evaluate(claims);
+      const result = this.getContext(sessionId).consensus.evaluate(claims);
       this.deps.eventBus.emit(DebateRuntimeEvents.CONSENSUS_REACHED, {
         sessionId,
         confidence: result.confidence,
@@ -569,7 +576,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     const session = this.sessions.get(sessionId);
     if (!session) return;
     if (session.phase === 'paused' || session.phase === 'completed' || session.phase === 'cancelled') return;
-    this.orchestrator.abort(sessionId);
+    this.getContext(sessionId).orchestrator.abort(sessionId);
     session.transition('paused');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_PAUSED, { sessionId });
     this.saveSnapshot(sessionId).catch(e => LOGGER.warn('DebateEngine', 'pause checkpoint failed', { error: e }));
@@ -580,7 +587,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (!session) return;
     const phase = session.phase;
     if (phase !== 'paused') return;
-    this.orchestrator.clearAbort(sessionId);
+    this.getContext(sessionId).orchestrator.clearAbort(sessionId);
     // DR-2: Don't set phase here — startSession handles transitions
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
     this.startSession(sessionId, true).catch(e => {
@@ -594,7 +601,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (!session) return;
     this.sessionAbortControllers.get(sessionId)?.abort();
     this.sessionAbortControllers.delete(sessionId);
-    this.orchestrator.abort(sessionId);
+    this.getContext(sessionId).orchestrator.abort(sessionId);
     session.transition('cancelled');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CANCELLED, { sessionId });
   }
@@ -627,7 +634,8 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (!store) return;
     const snap = this.getSession(sessionId);
     if (!snap) return;
-    const timeline = this.getTimeline(sessionId);
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
     await store.saveSnapshot({
       id: snap.id,
       topic: snap.topic,
@@ -638,7 +646,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       totalCost: snap.totalCost,
       agentStates: JSON.stringify(snap.agentStates),
       topology: JSON.stringify(snap.topology),
-      participants: JSON.stringify(timeline.filter(e => e.type === 'agent:responded').map(e => e.payload)),
+      participants: JSON.stringify(session.participants),
       startedAt: snap.startedAt,
       updatedAt: snap.updatedAt,
       createdAt: Date.now(),
@@ -664,22 +672,23 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       const session = new DebateSessionInstance(record.id, record.topic, topology, participants);
 
       // Restore internal state from snapshot
-      (session as unknown as { _phase: DebatePhase })._phase = record.phase as DebatePhase;
-      (session as unknown as { _round: number })._round = record.round;
-      (session as unknown as { _totalTokens: number })._totalTokens = record.totalTokens;
-      (session as unknown as { _totalCost: number })._totalCost = record.totalCost;
-      (session as unknown as { _startedAt: number })._startedAt = record.startedAt;
-
-      // Restore agent states
-      const agentMap = new Map<string, AgentStateEntry>();
-      for (const as of agentStates) {
-        agentMap.set(as.agentId, as);
-      }
-      (session as unknown as { _agentStates: Map<string, AgentStateEntry> })._agentStates = agentMap;
+      const restoredSnapshot: DebateSessionSnapshot = {
+        id: record.id,
+        topic: record.topic,
+        topology,
+        phase: record.phase as DebatePhase,
+        round: record.round,
+        agentStates,
+        totalTokens: record.totalTokens,
+        totalCost: record.totalCost,
+        startedAt: record.startedAt,
+        updatedAt: record.updatedAt,
+      };
+      session.restoreInternalState(restoredSnapshot);
 
       // Register phase listeners (same as createSession)
       session.onPhaseChange((from: string, to: string) => {
-        this.timeline.record({ sessionId: record.id, type: `session:${to}`, payload: { from, to } });
+        this.getContext(record.id).timeline.record({ sessionId: record.id, type: `session:${to}`, payload: { from, to } });
         this.deps.eventBus.emit(DebateRuntimeEvents.PHASE_CHANGED, { sessionId: record.id, from, to });
         if (to === 'completed' || to === 'failed' || to === 'cancelled') {
           this.deps.eventBus.emit(
@@ -689,9 +698,9 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
             { sessionId: record.id, error: to === 'failed' ? session.snapshot().agentStates.find((s) => s.error)?.error : undefined },
           );
           if (to === 'completed') {
-            const snap = session.snapshot() as DebateSessionSnapshot;
+            const snap = session.snapshot();
             const tl = this.getTimeline(record.id);
-            this.conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
+            this.getContext(record.id).conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
               if (store) {
                 store.saveVerdict({
                   sessionId: verdict.sessionId, topic: verdict.topic,
@@ -725,7 +734,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
   }
 
   getTimeline(sessionId: string): TimelineEntry[] {
-    return this.timeline.getEntries(sessionId);
+    return this.getContext(sessionId).timeline.getEntries(sessionId);
   }
 
   exportLegacySession(
@@ -782,13 +791,11 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     for (const session of this.sessions.values()) session.destroy();
     this.sessions.clear();
     this.budgets.clear();
-    this.participantProviderMap.clear();
-    this.participantKeyMap.clear();
     this.llmFailureCount.clear();
     for (const mem of this.memories.values()) mem.destroy();
     this.memories.clear();
-    this.timeline.destroy();
-    this.orchestrator.destroy();
+    for (const ctx of this.sessionContexts.values()) ctx.timeline.destroy();
+    this.sessionContexts.clear();
     if (this.cleanupInterval) { clearInterval(this.cleanupInterval); this.cleanupInterval = null; }
     this._started = false;
   }

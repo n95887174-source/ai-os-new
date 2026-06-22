@@ -147,7 +147,7 @@ class VersusUserStrategy {
   /**
    * Generate verdict
    */
-  generateVerdict(llmJudge?: (prompt: string) => Promise<VersusVerdict>): VersusVerdict {
+  async generateVerdict(llmJudge?: (prompt: string) => Promise<VersusVerdict>): Promise<VersusVerdict> {
     if (!this.state) {
       throw new Error('No active versus session');
     }
@@ -162,7 +162,7 @@ class VersusUserStrategy {
       return `Round ${i + 1}:\nUser: ${userResp}\nAI: ${opponentsResponses}`;
     }).join('\n\n---\n\n');
 
-    const verdict: VersusVerdict = {
+    let verdict: VersusVerdict = {
       userPositionStrength: 0.5,
       aiCounterStrength: 0.5,
       keyPointsAgainst: [],
@@ -174,11 +174,11 @@ class VersusUserStrategy {
     // Use LLM judge if provided
     if (llmJudge) {
       try {
-        void `${VERSUS_USER_VERDICT_PROMPT}\n\nTopic: ${this.state.config.topic}\n\nUser Position: ${this.state.userPosition}\n\nExchange:\n${exchange}`;
-        // Note: This would be async in real implementation
+        const prompt = `${VERSUS_USER_VERDICT_PROMPT}\n\nTopic: ${this.state.config.topic}\n\nUser Position: ${this.state.userPosition}\n\nExchange:\n${exchange}`;
+        verdict = await llmJudge(prompt);
         LOGGER.info('VersusUserStrategy', 'Verdict generated via LLM');
       } catch (e) {
-        LOGGER.warn('VersusUserStrategy', 'LLM verdict failed, using fallback');
+        LOGGER.warn('VersusUserStrategy', 'LLM verdict failed, using fallback', { error: e });
       }
     }
 

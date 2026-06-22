@@ -8,7 +8,7 @@ import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('DebateLLMCaller');
 
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-  gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
+  gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
 openrouter: ['openrouter/auto', 'openrouter/free'],
 nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],

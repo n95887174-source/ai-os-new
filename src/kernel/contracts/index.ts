@@ -74,6 +74,16 @@ export type {
 } from './debate-runtime';
 
 export type {
+  DebateRole, DebateSession, DebateSessionStrategy, DebateParticipant, DebateArgument, DebateConfig,
+  DebateConstraint, ArgumentStrategy,
+  DebateVerdict, VerdictKeyArgument, ConclusionType, StanceResult,
+  DisagreementPoint, TrajectoryChanger, ConstraintCorrelation,
+  DebateGraphMetrics, ActivityMetrics, QualityMetrics, DebateInterpretation,
+  ParentResolution, HumanVote,
+  DebateServiceDeps,
+} from './debate-types';
+
+export type {
   CognitiveMetricsSnapshot, CognitiveZone,
   CognitivePressure, CognitiveSessionSummary, ICognitivePressureEngine,
   SessionDiagnostic, CognitiveIssue, ICognitiveDiagnosticsEngine,

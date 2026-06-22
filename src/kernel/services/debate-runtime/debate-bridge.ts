@@ -10,11 +10,12 @@ import type {
   DebateArgument,
   DebateConfig,
   DebateSession,
+  DebateSessionStrategy,
 } from '../../contracts/debate-types';
 
 export interface SnapshotBridgeContext {
   participants: DebateParticipant[];
-  strategy: string;
+  strategy: DebateSessionStrategy;
   maxRounds: number;
   config: DebateConfig;
   timeline?: TimelineEntry[];
@@ -61,6 +62,7 @@ export function buildRoundtableTopology(participants: DebateParticipant[]): Deba
 export function timelineToArguments(
   timeline: TimelineEntry[],
   participants: DebateParticipant[],
+  defaultConfidence = 0.7,
 ): DebateArgument[] {
   const nameById = new Map(participants.map((p) => [p.id, p.name]));
   const roleById = new Map(participants.map((p) => [p.id, p.role]));
@@ -74,10 +76,10 @@ export function timelineToArguments(
         agentId,
         agentName: nameById.get(agentId) || agentId,
         content: payload.content ?? '',
-        confidence: 0.7,
+        confidence: defaultConfidence,
         timestamp: e.timestamp,
         round: payload.round ?? 1,
-        position: roleById.get(agentId) ?? 'neutral',
+        position: (roleById.get(agentId) ?? 'neutral') as 'pro' | 'con' | 'neutral',
         source: 'llm' as const,
       };
     });
@@ -102,6 +104,7 @@ export function snapshotToSession(
     openingStatements: args.filter((a) => a.round === 0),
     config: ctx.config,
     socraticQuestioner: 0,
-    argumentTreeRoundMap: new Map(),
+    argumentTreeRoundMap: {},
+    createdAt: snapshot.startedAt,
   };
 }

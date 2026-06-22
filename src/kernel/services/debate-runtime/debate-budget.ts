@@ -74,7 +74,11 @@ export class DebateBudget implements IDebateBudget {
     this._costUsed += cost;
   }
 
-  incrementRound(): void {
+  incrementRound(sessionId: string): void {
+    if (sessionId !== this._sessionId) {
+      LOGGER.warn('DebateBudget', `incrementRound sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
+      return;
+    }
     this._roundsUsed++;
   }
 

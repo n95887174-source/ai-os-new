@@ -4,7 +4,7 @@ import { rootLogger } from '../logger-service';
 const LOGGER = rootLogger.child('DebateTopology');
 
 const VALID_EDGE_COUNTS: Record<TopologyType, { min: number; max: number }> = {
-  linear: { min: 1, max: 1 },
+  linear: { min: 1, max: 100 },
   roundtable: { min: 2, max: 100 },
   judge: { min: 1, max: 100 },
   'tree-of-thought': { min: 2, max: 100 },

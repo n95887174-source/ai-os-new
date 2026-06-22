@@ -12,7 +12,7 @@ const LS_HISTORY_KEY = 'super_agents_debate_history';
 
 function sessionToRecord(session: DebateSession): {
   id: string; topic: string; topologyType: string; phase: string; round: number;
-  totalTokens: number; totalCost: number; agentStates: string; topology: string;
+  totalTokens: number; totalCost: number; agentStates: string; arguments: string; topology: string;
   participants: string; startedAt: number; updatedAt: number; createdAt: number;
 } {
   const extra = JSON.stringify({
@@ -30,7 +30,16 @@ function sessionToRecord(session: DebateSession): {
     round: session.currentRound || 0,
     totalTokens: session.totalTokens ?? 0,
     totalCost: session.totalCost ?? 0,
-    agentStates: JSON.stringify(session.arguments || []),
+    agentStates: JSON.stringify(session.arguments?.map(a => ({
+      agentId: a.agentId,
+      nodeId: a.agentName,
+      phase: 'idle' as const,
+      round: a.round,
+      tokensUsed: 0,
+      latency: 0,
+      lastActiveAt: a.timestamp,
+    })) || []),
+    arguments: JSON.stringify(session.arguments || []),
     topology: extra,
     participants: JSON.stringify(session.participants || []),
     startedAt: session.createdAt ?? Date.now(),
@@ -56,7 +65,12 @@ function recordToSession(record: DebateSessionRecord): DebateSession {
   let parsedParticipants: unknown;
   let parsedArgs: unknown;
   try { parsedParticipants = JSON.parse(record.participants); } catch { parsedParticipants = null; }
-  try { parsedArgs = JSON.parse(record.agentStates || '[]'); } catch { parsedArgs = null; }
+  if (record.arguments) {
+    try { parsedArgs = JSON.parse(record.arguments); } catch { parsedArgs = null; }
+  }
+  if (!parsedArgs) {
+    try { parsedArgs = JSON.parse(record.agentStates || '[]'); } catch { parsedArgs = null; }
+  }
   return {
     id: record.id,
     topic: record.topic || '(untitled)',
@@ -144,7 +158,8 @@ export async function persistHistoryList(
       round: 0,
       totalTokens: 0,
       totalCost: 0,
-      agentStates: JSON.stringify(sessions),
+      agentStates: '[]',
+      arguments: JSON.stringify(sessions),
       topology: '{}',
       participants: '[]',
       startedAt: Date.now(),
@@ -154,6 +169,7 @@ export async function persistHistoryList(
   } catch (e) {
     LOGGER.warn('DebateSessionPersistence', 'Failed to persist debate history', { error: e instanceof Error ? e.message : String(e) });
   }
+  return [];
 }
 
 export async function migrateFromLegacyStorage(
@@ -200,7 +216,8 @@ export async function migrateFromLegacyStorage(
           round: 0,
           totalTokens: 0,
           totalCost: 0,
-          agentStates: lsHistory,
+          agentStates: '[]',
+          arguments: lsHistory,
           topology: '{}',
           participants: '[]',
           startedAt: Date.now(),

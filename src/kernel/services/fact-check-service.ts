@@ -118,14 +118,30 @@ export class FactCheckService {
     return factCheck;
   }
 
+  private apiKeyCache = new Map<string, { key: string; provider: string }>();
+
+  private getCachedApiKey(): { key: string; provider: string } | null {
+    const cached = this.apiKeyCache.get('default');
+    if (cached && cached.key) return cached;
+
+    for (const provider of ['groq', 'gemini', 'openrouter'] as const) {
+      const key = this.deps.getApiKey(provider);
+      if (key) {
+        const entry = { key, provider };
+        this.apiKeyCache.set('default', entry);
+        return entry;
+      }
+    }
+    return null;
+  }
+
   private async verifyClaim(claim: string): Promise<FactCheckResult> {
     try {
-      const apiKey = this.deps.getApiKey('groq') || this.deps.getApiKey('gemini') || this.deps.getApiKey('openrouter') || '';
-      if (!apiKey) {
+      const cached = this.getCachedApiKey();
+      if (!cached) {
         return { claim, verdict: 'no_evidence', confidence: 0, reasoning: 'No API key available', checkedAt: Date.now() };
       }
-
-      const provider = this.deps.getApiKey('groq') ? 'groq' : this.deps.getApiKey('gemini') ? 'gemini' : 'openrouter';
+      const { key: apiKey, provider } = cached;
       const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-3.1-flash-lite' : 'meta-llama/llama-3.1-8b-instruct';
 
       const response = await this.deps.sendMessage(

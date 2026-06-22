@@ -141,4 +141,17 @@ export class DebateSession implements IDebateSession {
     this._agentStates.clear();
     this._phaseListeners = [];
   }
+
+  restoreInternalState(snapshot: DebateSessionSnapshot): void {
+    this._phase = snapshot.phase;
+    this._round = snapshot.round;
+    this._totalTokens = snapshot.totalTokens;
+    this._totalCost = snapshot.totalCost;
+    this._startedAt = snapshot.startedAt;
+    
+    this._agentStates.clear();
+    for (const as of snapshot.agentStates) {
+      this._agentStates.set(as.agentId, as);
+    }
+  }
 }
