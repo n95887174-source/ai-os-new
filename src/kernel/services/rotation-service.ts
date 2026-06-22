@@ -32,6 +32,7 @@ export class RotationService implements IRotationService {
   private unsubs: Array<() => void> = [];
   private deps: RotationServiceDeps;
   private _initialized = false;
+  private _schedulingKeys = new Set<string>();
 
   constructor(deps: RotationServiceDeps) {
     this.deps = deps;
@@ -209,25 +210,31 @@ export class RotationService implements IRotationService {
   }
 
   scheduleRotation(keyId: string, ttlHours: number) {
-    this.cancelRotation(keyId);
-    if (ttlHours <= 0) return;
+    if (this._schedulingKeys.has(keyId)) return;
+    this._schedulingKeys.add(keyId);
+    try {
+      this.cancelRotation(keyId);
+      if (ttlHours <= 0) return;
 
-    const key = this.deps.keyManager.getKey(keyId);
-    if (!key) return;
+      const key = this.deps.keyManager.getKey(keyId);
+      if (!key) return;
 
-    const expiresAt = Date.now() + ttlHours * 3600000;
+      const expiresAt = Date.now() + ttlHours * 3600000;
 
-    const config = { ...(key.rotationConfig || { ttlHours, autoRotate: false, notifyBefore: '24,1' }), ttlHours, expiresAt: new Date(expiresAt).toISOString() };
+      const config = { ...(key.rotationConfig || { ttlHours, autoRotate: false, notifyBefore: '24,1' }), ttlHours, expiresAt: new Date(expiresAt).toISOString() };
 
-    this.deps.keyManager.updateKey(keyId, { rotationConfig: config });
+      this.deps.keyManager.updateKey(keyId, { rotationConfig: config });
 
-    // B10-119: Cap setTimeout to max safe integer to prevent overflow
-    const delayMs = Math.min(ttlHours * 3600000, Number.MAX_SAFE_INTEGER);
-    const timer = setTimeout(() => {
-      this.handleExpiry(keyId).catch(e => LOGGER.warn('RotationService', `handleExpiry failed for ${keyId}`, { error: e }));
-    }, delayMs);
+      // B10-119: Cap setTimeout to max safe integer to prevent overflow
+      const delayMs = Math.min(ttlHours * 3600000, Number.MAX_SAFE_INTEGER);
+      const timer = setTimeout(() => {
+        this.handleExpiry(keyId).catch(e => LOGGER.warn('RotationService', `handleExpiry failed for ${keyId}`, { error: e }));
+      }, delayMs);
 
-    this.timers.set(keyId, { keyId, expiresAt, timer, notifiedAt: new Set() });
+      this.timers.set(keyId, { keyId, expiresAt, timer, notifiedAt: new Set() });
+    } finally {
+      this._schedulingKeys.delete(keyId);
+    }
   }
 
   cancelRotation(keyId: string) {

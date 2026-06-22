@@ -110,6 +110,11 @@ export class ChatService {
     let depth = 0;
     const excludedProviders = new Set<string>();
 
+    // C-1: single session-level AbortController per requestId — survives retry loop
+    // so cancelRequest always aborts the current in-flight attempt
+    const sessionController = new AbortController();
+    this.activeRequests.set(req.requestId, sessionController);
+
     while (depth < this.MAX_429_RETRIES) {
       const { requestId, model, messages, keyId } = req;
       const settings = this.deps.settingsService.getSettings();
@@ -123,7 +128,7 @@ export class ChatService {
       if (useRace && this.deps.raceExecutor) {
         const raceCandidates = this.deps.routerService.getRaceCandidateDetails(promptText);
         if (raceCandidates.length >= 2) {
-          const raced = await this.executeRaceRequest(req, messages, raceCandidates, agentId);
+          const raced = await this.executeRaceRequest(req, messages, raceCandidates, agentId, sessionController.signal);
           if (raced) return;
         }
       }
@@ -244,13 +249,20 @@ export class ChatService {
         return;
       }
 
-      const controller = new AbortController();
+      // Derived per-attempt controller chained to session-level controller
+      const attemptController = new AbortController();
+      const onSessionAbort = () => attemptController.abort();
+      if (sessionController.signal.aborted) {
+        attemptController.abort();
+      } else {
+        sessionController.signal.addEventListener('abort', onSessionAbort, { once: true });
+      }
 
       let timedOut = false;
       const timeoutMs = CONFIG?.keys?.defaultRules?.timeoutMs ?? 30000;
       const timeoutId = setTimeout(() => {
         timedOut = true;
-        controller.abort();
+        attemptController.abort();
       }, timeoutMs);
       const pr = this.deps.providerRuntime;
       const instance = pr?.getOrCreateInstance(keyObj);
@@ -261,7 +273,6 @@ export class ChatService {
       let hasStarted = false;
 
       try {
-        this.activeRequests.set(requestId, controller);
         const startTime = Date.now();
 
         const promptText = messages.map(m => m.content).join(' ');
@@ -274,7 +285,7 @@ export class ChatService {
           await this.llmClient.chat(messages, {
             provider,
             model: resolvedModel,
-            signal: controller.signal,
+            signal: attemptController.signal,
             priority: req.priority,
             apiKeyOverride: keyObj.key,
             temperature: req.options?.temperature,
@@ -321,7 +332,7 @@ export class ChatService {
           const response = await this.llmClient.chat(messages, {
             provider,
             model: resolvedModel,
-            signal: controller.signal,
+            signal: attemptController.signal,
             priority: req.priority,
             apiKeyOverride: keyObj.key,
             temperature: req.options?.temperature,
@@ -424,7 +435,8 @@ export class ChatService {
         }
       } finally {
         clearTimeout(timeoutId);
-        this.activeRequests.delete(requestId);
+        sessionController.signal.removeEventListener('abort', onSessionAbort);
+        attemptController.abort(); // abort any lingering downstream
       }
     }
 
@@ -436,11 +448,23 @@ export class ChatService {
     messages: AdapterMessage[],
     candidates: Array<{ provider: string; model: string; keyId: string }>,
     agentId?: string,
+    parentSignal?: AbortSignal,
   ): Promise<boolean> {
     const { requestId } = req;
     const controller = new AbortController();
 
+    if (parentSignal) {
+      if (parentSignal.aborted) {
+        controller.abort();
+      } else {
+        const onParentAbort = () => controller.abort();
+        parentSignal.addEventListener('abort', onParentAbort, { once: true });
+      }
+    }
+
     try {
+      const existing = this.activeRequests.get(requestId);
+      if (existing) existing.abort();
       this.activeRequests.set(requestId, controller);
       // LLM-6: Filter out policy-blocked candidates instead of aborting entire race
       let allowedCandidates = candidates;

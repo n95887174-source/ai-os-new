@@ -173,11 +173,17 @@ private registerAllValidators(): void {
   }
 
   private deferCounts = new Map<string, number>();
+  private readonly MAX_DEFER_CHAIN = 100;
 
   private rawEmit(event: string, data?: unknown): void {
     // N-24: prevent infinite recursion when handler emits synchronously
     if (this.emitDepth > 16) {
       const count = (this.deferCounts.get(event) || 0) + 1;
+      if (count > this.MAX_DEFER_CHAIN) {
+        this.logger?.error('EventBus', `Defer chain limit (${this.MAX_DEFER_CHAIN}) reached for ${event} — dropping event`);
+        this.deferCounts.delete(event);
+        return;
+      }
       this.deferCounts.set(event, count);
       if (count === 1 || count % 10 === 0) {
         this.logger?.warn('EventBus', `Recursion limit reached at ${event} — deferring (#${count})`);

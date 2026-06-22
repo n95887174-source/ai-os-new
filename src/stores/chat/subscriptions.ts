@@ -107,7 +107,9 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk
         ...entry,
         responses: entry.responses.map(r =>
           matchesResponse(r, provider, requestId)
-            ? { ...r, content: r.content + chunk, status: 'streaming' as const }
+            ? (r.status === 'done' || r.status === 'error' || r.status === 'cancelled')
+              ? r
+              : { ...r, content: r.content + chunk, status: 'streaming' as const }
             : r
         ),
       };

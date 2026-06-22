@@ -385,14 +385,13 @@ export class DebateService {
       if (!this.activeSession || this.activeSession.status !== 'active') return;
       if (this.isExecutingRound) return;
 
+      this.isExecutingRound = true;
       const currentParticipant = await this.getNextParticipant();
       if (gen !== this.roundGeneration) return;
       if (!currentParticipant) {
         this.stopDebate();
         return;
       }
-
-      this.isExecutingRound = true;
       try {
         await this.executeArgumentRound(currentParticipant);
       } finally {

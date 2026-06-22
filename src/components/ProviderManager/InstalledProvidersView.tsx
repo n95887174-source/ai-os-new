@@ -189,7 +189,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       isMountedRef.current = false;
       subResp(); subStreamEnd(); subStreamErr(); clearTimeout(timeout);
     };
-  }, [testStatus, apiKey.id, apiKey.availableModels, testModel, testTemperature, testMaxTokens]);
+  }, [testStatus, apiKey.id, testModel, testTemperature, testMaxTokens]);
 
   return (
     <>

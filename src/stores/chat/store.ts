@@ -80,13 +80,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       const requestIdsToTrack: string[] = targets.length > 1
         ? targets.map((t, i) => `${requestId}-${t.provider}-${t.keyId ?? i}`)
         : [requestId];
-      requestIdsToTrack.forEach(rid => get().addActiveRequestId(rid));
 
       if (get().isAnySending()) {
-        requestIdsToTrack.forEach(rid => get().removeActiveRequestId(rid));
         console.warn('[ChatStore] sendMessage already in progress, ignored');
         return;
       }
+      requestIdsToTrack.forEach(rid => get().addActiveRequestId(rid));
 
       let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
       if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_RAG_ON_CHAT)) {

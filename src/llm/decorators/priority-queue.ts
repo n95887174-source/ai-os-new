@@ -128,6 +128,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
   }
 
   private async executeSendBatch(batch: QueueItem[]): Promise<void> {
+    if (batch.length === 0) { this.processSendQueue(); return; }
     try {
       const results = await this.inner.batchSendMessage!(batch);
       batch.forEach((item, index) => item.resolve(results[index]));
@@ -190,6 +191,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
   }
 
   private async executeStreamBatch(batch: StreamQueueItem[]): Promise<void> {
+    if (batch.length === 0) { this.processStreamQueue(); return; }
     try {
       await this.inner.batchStreamMessage!(batch);
       batch.forEach(item => item.resolve());

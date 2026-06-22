@@ -106,7 +106,11 @@ export class MemoryService implements IMemoryEngine {
     if (this.worker) return;
     if (this.workerInitPromise) return this.workerInitPromise;
     this.workerInitPromise = this.initWorker();
-    return this.workerInitPromise;
+    try {
+      return await this.workerInitPromise;
+    } finally {
+      if (!this.worker) this.workerInitPromise = null;
+    }
   }
 
   private async initWorker() {

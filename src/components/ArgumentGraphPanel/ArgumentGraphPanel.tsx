@@ -153,20 +153,19 @@ const ArgumentGraphPanel: React.FC = () => {
       setGovState(debateService.getGovernorState());
     };
 
-    eventBus.on('debate:updated', handler);
-    eventBus.on('debate:argument', handler);
-    eventBus.on('debate:consensus', handler);
-    eventBus.on('debate:started', handler);
+    const unsubs = [
+      eventBus.on('debate:updated', handler),
+      eventBus.on('debate:argument', handler),
+      eventBus.on('debate:consensus', handler),
+      eventBus.on('debate:started', handler),
+    ];
 
     // Poll every 2s as safety net
     const interval = setInterval(handler, 2000);
 
     return () => {
       isMountedRef.current = false;
-      eventBus.off('debate:updated', handler);
-      eventBus.off('debate:argument', handler);
-      eventBus.off('debate:consensus', handler);
-      eventBus.off('debate:started', handler);
+      unsubs.forEach(u => u());
       clearInterval(interval);
     };
   }, []);

@@ -176,7 +176,7 @@ class CrossTabStateSync {
   private handleCircuitBreakerUpdate(state: CircuitBreakerState, _incomingTimestamp: number): void {
     const key = `${state.provider}:${state.keyId}`;
     const existing = this.localCircuitBreakers.get(key);
-    if (existing && existing.lastFailure >= state.lastFailure) {
+    if (existing && existing.lastFailure >= state.lastFailure && existing.status === state.status) {
       return;
     }
     this.localCircuitBreakers.set(key, state);

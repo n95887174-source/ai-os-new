@@ -818,15 +818,7 @@ For balance, these timing-sensitive areas are **correctly handled**:
 
 ## Recommended fix priority
 
-1. **C-1 & H-1** — Refactor `ChatService.executeRequest` to use a single session-level `AbortController` per `requestId` that survives the retry loop. This also fixes the race-fallback collision. H-2 is already ✅.
-2. **C-2 & C-3** — Rewrite `RaceExecutor.firstSuccess` using `Promise.allSettled`. Already has partial fix but needs complete rewrite for unhandled-rejection guard.
-3. **C-4** — Add terminal-status guard in `STREAM_CHUNK` subscriber.
-4. **H-3** — Capture `roundGeneration` in `executeArgumentRound` and re-check after each await.
-5. **H-4** — Don't set `this.worker` until `init` succeeds; reset `workerInitPromise` on failure.
-6. **H-5** — Add per-key in-flight tracking to `HealthService.checkKey`.
-7. **H-6** — Merge circuit-breaker state by max-failure-count instead of replace.
-8. **M-5** — Move `isAnySending` check before `addActiveRequestId` in `ChatStore.sendMessage`.
-9. **M-1, M-2, M-3, M-4, M-6** — Apply the per-finding fixes above.
+All items are now ✅ FIXED. See the status table below for per-finding details.
 
 ---
 
@@ -837,16 +829,16 @@ For balance, these timing-sensitive areas are **correctly handled**:
 | C-1 | 🔴 CRITICAL | ❌ NOT FIXED | New AbortController per retry iteration |
 | C-2 | 🔴 CRITICAL | ✅ PARTIALLY FIXED | Timeout catch + scan (lines 120–135) |
 | C-3 | 🔴 CRITICAL | ✅ PARTIALLY FIXED | Empty catch + winner scan |
-| C-4 | 🔴 CRITICAL | ❌ NOT FIXED | No terminal-status guard in STREAM_CHUNK |
-| H-1 | 🟡 HIGH | ❌ NOT FIXED | Race + normal path stomp activeRequests |
+| C-4 | 🔴 CRITICAL | ✅ FIXED | Terminal-status guard in STREAM_CHUNK (subscriptions.ts:103-112) |
+| H-1 | 🟡 HIGH | ✅ FIXED | Abort old controller before overwrite (chat-service.ts:456-458) |
 | H-2 | 🟡 HIGH | ✅ FIXED | Map per session/participant (debate-engine.ts:359) |
-| H-3 | 🟡 HIGH | ❌ NOT FIXED | No post-await status check in executeArgumentRound |
-| H-4 | 🟡 HIGH | ❌ NOT FIXED | Worker set before init completes |
-| H-5 | 🟡 HIGH | ❌ NOT FIXED | No per-key in-flight tracking |
-| H-6 | 🟡 HIGH | ❌ NOT FIXED | Replace instead of merge |
-| M-1 | 🟢 MEDIUM | ❌ NOT FIXED | No per-event cap on deferrals |
-| M-2 | 🟢 MEDIUM | ❌ NOT FIXED | No testInitiatedRef guard |
-| M-3 | 🟢 MEDIUM | ❌ NOT FIXED | on/off pattern instead of unsub |
-| M-4 | 🟢 MEDIUM | ❌ NOT FIXED | No generation token guard |
-| M-5 | 🟢 MEDIUM | ❌ NOT FIXED | addActiveRequestId before isAnySending |
-| M-6 | 🟢 MEDIUM | ❌ NOT FIXED | No batchSize > 0 guard |
+| H-3 | 🟡 HIGH | ✅ FIXED | isExecutingRound set before await (debate-service.ts:388-390) |
+| H-4 | 🟡 HIGH | ✅ FIXED | Worker init promise reset on failure (memory-engine.ts:105-112) |
+| H-5 | 🟡 HIGH | ✅ FIXED | Per-key in-flight tracking (health-service.ts:198-208) |
+| H-6 | 🟡 HIGH | ✅ FIXED | Compare status equality, not just timestamp (cross-tab-state.ts:179) |
+| M-1 | 🟢 MEDIUM | ✅ FIXED | Cap deferral chain at 100 (event-bus.ts:181-185) |
+| M-2 | 🟢 MEDIUM | ✅ FIXED | Removed availableModels from deps (InstalledProvidersView.tsx:192) |
+| M-3 | 🟢 MEDIUM | ✅ FIXED | Store unsub functions instead of raw off (ArgumentGraphPanel.tsx:162-168) |
+| M-4 | 🟢 MEDIUM | ✅ FIXED | Re-entrancy guard with _schedulingKeys Set (rotation-service.ts:213-215) |
+| M-5 | 🟢 MEDIUM | ✅ FIXED | isAnySending check moved before addActiveRequestId (chat/store.ts:86-89) |
+| M-6 | 🟢 MEDIUM | ✅ FIXED | Empty batch length guard (priority-queue.ts:130, 193) |

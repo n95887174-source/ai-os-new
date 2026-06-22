@@ -26,6 +26,7 @@ export class HealthService implements IHealthService {
   private unsubs: Array<() => void> = [];
   private lastRun = 0;
   private isRunning = false;
+  private checkingKeys = new Set<string>();
   private scheduleInterval: ReturnType<typeof setInterval> | null = null;
   private checkIntervalMs: number;
   private deps: HealthServiceDeps;
@@ -195,6 +196,16 @@ export class HealthService implements IHealthService {
   }
 
   async checkKey(id: string): Promise<KeyHealthCheckResult | null> {
+    if (this.checkingKeys.has(id)) return null;
+    this.checkingKeys.add(id);
+    try {
+      return await this.checkKeyImpl(id);
+    } finally {
+      this.checkingKeys.delete(id);
+    }
+  }
+
+  private async checkKeyImpl(id: string): Promise<KeyHealthCheckResult | null> {
     const key = this.deps.keyService.getKey(id);
     if (!key) return null;
 
@@ -273,6 +284,6 @@ export class HealthService implements IHealthService {
     const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
     return Promise.all(
       keys.map(key => this.checkKey(key.id).catch((e) => { LOGGER.error('HealthService', 'checkProvider key failed', { keyId: key.id, error: (e as Error).message }); return undefined; }))
-    ).then(r => r.filter((x): x is KeyHealthCheckResult => x !== undefined));
+    ).then(r => r.filter((x): x is KeyHealthCheckResult => x != null));
   }
 }
