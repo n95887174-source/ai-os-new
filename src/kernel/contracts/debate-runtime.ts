@@ -205,7 +205,15 @@ export interface IDebateMemory {
   getClaimsForTopic(topic: string): Claim[];
   getWinningStrategies(): ReasoningChain[];
   snapshot(): MemorySnapshot;
+  toJSON(): MemoryRecord;
+  restoreFrom(data: MemoryRecord): void;
   destroy(): void;
+}
+
+export interface MemoryRecord {
+  claims: Claim[];
+  steps: ReasoningStep[];
+  chains: ReasoningChain[];
 }
 
 export interface MemorySnapshot {

@@ -8,7 +8,7 @@
 | HIGH | 41 | 39 ✅ / 0 ❌ / 2 ⏳ |
 | MEDIUM | 54 | 37 ✅ / 0 ❌ / 17 ⏳ |
 | LOW | 31 | 8 ✅ / 0 ❌ / 23 ⏳ |
-| **ИТОГО** | **175** | **137 ✅ / 0 ❌ / 38 ⏳** |
+| **ИТОГО** | **175** | **138 ✅ / 0 ❌ / 37 ⏳** (S4-11 исправлен 2026-06-22) |
 
 > ✅ = Действительно исправлено (проверено по коду)
 > ❌ = **ЛОЖНЫЙ СТАТУС** — помечено как DONE, но НЕ ИСПРАВЛЕНО (код не изменён)
@@ -16,7 +16,7 @@
 
 ### 🚨 Ключевое открытие: 20 статусов — ложные (после Phase 0.2)
 
-Аудит перепроверен 2026-06-22 и повторно 2026-06-22 после Phase 0.2. **Phase 0.2** исправил 17 из 41 ложных статусов + 5 критических багов. К **2026-06-22** все ❌ исправлены. **18 ⏳ → ✅** (верифицированы), **7 ⏳ → ✅** (S3-10, S7-5/6/7). Осталось 39 ⏳ (в основном S4-11 persistence и подпроблемы вне таблиц).
+Аудит перепроверен 2026-06-22 и повторно 2026-06-22 после Phase 0.2. **Phase 0.2** исправил 17 из 41 ложных статусов + 5 критических багов. К **2026-06-22** все ❌ исправлены. **18 ⏳ → ✅** (верифицированы), **7 ⏳ → ✅** (S3-10, S7-5/6/7). **S4-11 → ✅** (reasoning chains persistence, 2026-06-22). Осталось 37 ⏳ (MEDIUM/LOW подпроблемы вне таблиц).
 
 ---
 
@@ -245,11 +245,11 @@
 | :--- | :--- | :--- |
 | B-01..B-05 | `debate-engine.ts` — 5× `getContext(id)` | ✅ Все исправлены |
 
-### Осталось исправить (1 ⏳)
+### Осталось исправить (0 ⏳)
 
 | # | Сектор | Файл | Описание |
 | :--- | :--- | :--- | :--- |
-| S4-11 | Runtime | `debate-engine.ts:648` | Память не восстанавливается (требует persistence-слой) — отложено |
+| S4-11 | Runtime | `debate-engine.ts:648` | Память не восстанавливается (reasoning chains в `DebateMemory`) — ✅ ИСПРАВЛЕНО 2026-06-22: колонка `memory` добавлена в INSERT SQL (`sqlite-storage.ts`), `rowToRecord` читает её, `saveSnapshot` сохраняет `this.getMemory(sessionId).toJSON()`, `restoreSession` вызывает `this.getMemory(record.id).restoreFrom(...)` |
 
 ### Осталось исправить (0 ⏳ — все вне таблиц)
 
@@ -262,7 +262,7 @@
 | S3-5 | `DebateStrategy` и `DebateSessionStrategy` объединены (14 значений) | ✅ |
 | S3-17 | `IDebateQueryEngine` перемещён в contracts, убран импорт из services | ✅ |
 | S4-5 | `participantProviderMap` использует составные ключи `sessionId:agentId` | ✅ |
-| S4-11 | (отложено — требует persistence) | ⏳ |
+| S4-11 | Reasoning chains persistence — `memory` колонка в SQLite INSERT + `restoreFrom()` в `restoreSession` | ✅ 2026-06-22 |
 | S3-16 | `arguments` field missing from SQLite schema — добавлена колонка, миграция v1→v2 | ✅ |
 | S5-13 | Paraphrase detection: synonym groups + bigrams + комбинированный score | ✅ |
 | S7-1 | `DebateModeManagerPersistent` — убран краш при `storageLayer === null` | ✅ |

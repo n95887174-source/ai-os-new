@@ -1,4 +1,4 @@
-import type { Claim, ReasoningStep, ReasoningChain, MemorySnapshot, IDebateMemory } from '../../contracts/debate-runtime';
+import type { Claim, ReasoningStep, ReasoningChain, MemorySnapshot, MemoryRecord, IDebateMemory } from '../../contracts/debate-runtime';
 
 export class DebateMemory implements IDebateMemory {
   private claims: Claim[] = [];
@@ -69,6 +69,23 @@ export class DebateMemory implements IDebateMemory {
       totalChains: Array.from(this.chains.values()).reduce((s, c) => s + c.length, 0),
       topStrategies: this.getWinningStrategies().map(c => c.agentId),
     };
+  }
+
+  toJSON(): MemoryRecord {
+    const chains: ReasoningChain[] = [];
+    for (const c of this.chains.values()) chains.push(...c);
+    return { claims: this.claims, steps: this.steps, chains };
+  }
+
+  restoreFrom(data: MemoryRecord): void {
+    this.claims = data.claims ?? [];
+    this.steps = data.steps ?? [];
+    this.chains.clear();
+    for (const c of data.chains ?? []) {
+      const existing = this.chains.get(c.agentId) ?? [];
+      existing.push(c);
+      this.chains.set(c.agentId, existing);
+    }
   }
 
   destroy(): void {

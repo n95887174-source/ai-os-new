@@ -13,6 +13,7 @@ export interface DebateSessionRecord {
   arguments: string;
   topology: string;
   participants: string;
+  memory: string;
   startedAt: number;
   updatedAt: number;
   createdAt: number;

@@ -666,6 +666,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       updatedAt: snap.updatedAt,
       createdAt: Date.now(),
       arguments: snap.arguments ? JSON.stringify(snap.arguments) : '[]',
+      memory: JSON.stringify(this.getMemory(sessionId).toJSON()),
     });
   }
 
@@ -701,6 +702,13 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
         updatedAt: record.updatedAt,
       };
       session.restoreInternalState(restoredSnapshot);
+
+      // S4-11: Restore reasoning chains / memory
+      try {
+        const mem = this.getMemory(record.id);
+        const memData = JSON.parse(record.memory || '{}');
+        mem.restoreFrom(memData);
+      } catch { /* memory is optional — fresh start if parse fails */ }
 
       // Register phase listeners (same as createSession)
       session.onPhaseChange((from: string, to: string) => {
