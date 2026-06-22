@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { debateService, probeService, hypothesisService, debateWorkspace } from '../../kernel/instances';
 import type { DebateSession, DebateParticipant, DebateConstraint, ArgumentStrategy, HumanVote } from '../../kernel/instances';
-import type { DebateVerdict } from '../../kernel/contracts/debate-types';
+import type { DebateVerdict, DebateSessionStrategy } from '../../kernel/contracts/debate-types';
 import type { ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
@@ -71,7 +71,7 @@ const DebatePanel: React.FC = () => {
   });
   const [topic, setTopic] = useState('');
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
-  const [strategy, setStrategy] = useState<'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained' | 'jury_trial'>('round_robin');
+  const [strategy, setStrategy] = useState<DebateSessionStrategy>('round_robin');
   const [maxRounds, setMaxRounds] = useState(10);
   const [userInjection, setUserInjection] = useState('');
   const [isLoading, setIsLoading] = useState(() => {
@@ -185,8 +185,8 @@ const DebatePanel: React.FC = () => {
       if (isMountedRef.current) setIsLoading(false);
     }, 3000);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshHistory();
-
     const top = orchestrator.getActiveTopology();
     if (top && selectedAgentsRef.current.length === 0) {
       const agents = top.nodes.filter(n => n.type === 'agent').map(n => n.id);
@@ -205,6 +205,7 @@ const DebatePanel: React.FC = () => {
     // Try to load verdict from service on mount (for page reloads)
     if (session?.id && session.status === 'completed') {
       const cached = debateService.getVerdict(session.id);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (cached) setVerdict(cached);
     }
     return () => { unsubVerdict(); };
@@ -215,6 +216,7 @@ const DebatePanel: React.FC = () => {
     const thesis = searchParams.get('thesis');
     const hypothesisId = searchParams.get('hypothesisId');
     const roomId = searchParams.get('roomId');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (thesis) setTopic(decodeURIComponent(thesis));
     if (hypothesisId) pendingHypothesisId.current = hypothesisId;
     if (roomId) {
@@ -522,9 +524,7 @@ const DebatePanel: React.FC = () => {
                   topic={topic}
                   onTopicChange={setTopic}
                   strategy={strategy}
-                    onStrategyChange={(v) => {
-                      setStrategy(v as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
-                    }}
+                    onStrategyChange={(v) => setStrategy(v)}
                   maxRounds={maxRounds}
                   onMaxRoundsChange={setMaxRounds}
                   debateTemperature={debateTemperature}
@@ -799,9 +799,7 @@ const DebatePanel: React.FC = () => {
                     topic={topic}
                     onTopicChange={setTopic}
                     strategy={strategy}
-                      onStrategyChange={(v) => {
-                        setStrategy(v as 'round_robin' | 'moderated' | 'free_for_all' | 'socratic' | 'argument_tree' | 'constrained');
-                      }}
+                      onStrategyChange={(v) => setStrategy(v)}
                     maxRounds={maxRounds}
                     onMaxRoundsChange={setMaxRounds}
                     debateTemperature={debateTemperature}

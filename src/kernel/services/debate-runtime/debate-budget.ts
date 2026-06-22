@@ -33,12 +33,61 @@ export class DebateBudget implements IDebateBudget {
   private _startedAt: number;
   private _sessionId: string;
   private emit?: (event: string, data?: unknown) => void;
+  // CRIT-5 fix: Promise-based mutex to prevent TOCTOU race between canProceed() and recordUsage().
+  // Two concurrent calls could both pass canProceed() before either records usage, exceeding budget.
+  private _lock = Promise.resolve();
+  private _lockRelease: (() => void) | null = null;
 
   constructor(sessionId: string, limits?: Partial<DebateBudgetLimits>, eventBus?: { emit: (event: string, data?: unknown) => void }) {
     this._sessionId = sessionId;
     this.limits = { ...DEFAULT_LIMITS, ...limits };
     this._startedAt = Date.now();
     this.emit = eventBus?.emit;
+  }
+
+  private async acquireLock(): Promise<() => void> {
+    while (this._lockRelease !== null) await this._lock;
+    let release: (() => void) | null = null;
+    this._lock = new Promise<void>(res => { release = res; });
+    this._lockRelease = release!;
+    return () => {
+      this._lockRelease = null;
+      release!();
+    };
+  }
+
+  // Atomically checks budget and records usage in one locked operation.
+  // Returns true if the operation fits within budget (and records it).
+  // Returns false if the budget would be exceeded (no recording).
+  async reserveAndRecord(sessionId: string, estimatedTokens: number, estimatedCost: number): Promise<boolean> {
+    if (sessionId !== this._sessionId) {
+      LOGGER.warn('DebateBudget', `sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`);
+      return false;
+    }
+    const release = await this.acquireLock();
+    try {
+      if (this._tokensUsed + estimatedTokens > this.limits.maxTokensPerDebate) {
+        this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, { sessionId, reason: 'tokens', limit: this.limits.maxTokensPerDebate, used: this._tokensUsed });
+        return false;
+      }
+      if (this._costUsed + estimatedCost > this.limits.maxCostPerDebate) {
+        this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, { sessionId, reason: 'cost', limit: this.limits.maxCostPerDebate, used: this._costUsed });
+        return false;
+      }
+      if (this._roundsUsed >= this.limits.maxRounds) {
+        this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, { sessionId, reason: 'rounds', limit: this.limits.maxRounds, used: this._roundsUsed });
+        return false;
+      }
+      if (Date.now() - this._startedAt >= this.limits.maxDurationMs) {
+        this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, { sessionId, reason: 'duration', limit: this.limits.maxDurationMs, used: Date.now() - this._startedAt });
+        return false;
+      }
+      this._tokensUsed += estimatedTokens;
+      this._costUsed += estimatedCost;
+      return true;
+    } finally {
+      release();
+    }
   }
 
   canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean {

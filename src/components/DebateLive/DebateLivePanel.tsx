@@ -18,18 +18,22 @@ export const DebateLivePanel: React.FC = () => {
   const agentEvents = useDebateLiveStore(s => s.agentEvents);
   const streamingContent = useDebateLiveStore(s => s.streamingContent);
   const currentThinking = useDebateLiveStore(s => s.currentThinking);
-  void agentEvents;
+  void agentEvents; // keep subscription alive
 
-  const sessions = debateEngine.getAllSessions();
+  // CRIT-8 fix: useMemo prevents creating a new array on every render,
+  // which previously triggered the useEffect and could cause an infinite loop.
+  const sessions = React.useMemo(() => debateEngine.getAllSessions(), []);
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(
     () => sessions.length > 0 ? sessions[sessions.length - 1].id : null,
   );
 
   React.useEffect(() => {
     if (activeSessionId === null && sessions.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveSessionId(sessions[sessions.length - 1].id);
     }
-  }, [activeSessionId, sessions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSessionId, sessions.length]);
 
   const sessionIndex = useMemo(
     () => sessions.findIndex(s => s.id === activeSessionId),

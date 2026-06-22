@@ -19,8 +19,11 @@ import {
 interface DebateSetupWizardProps {
   topic: string;
   onTopicChange: (value: string) => void;
-  strategy: string;
-  onStrategyChange: (value: string) => void;
+  // CRIT-9 fix: use DebateSessionStrategy instead of string — the parent already
+  // casts to DebateSessionStrategy, so the prop must match to avoid dropping
+  // jury_trial and cross_examination values.
+  strategy: import('../../kernel/contracts/debate-types').DebateSessionStrategy;
+  onStrategyChange: (value: import('../../kernel/contracts/debate-types').DebateSessionStrategy) => void;
   maxRounds: number;
   onMaxRoundsChange: (value: number) => void;
   debateTemperature: number;

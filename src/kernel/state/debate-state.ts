@@ -1,5 +1,12 @@
-import type { DebatePhase } from '../contracts/debate-runtime';
+import type { DebatePhase, DebateSessionState as RuntimeSessionState } from '../contracts/debate-runtime';
 export type { DebatePhase };
+// CRIT-6 fix: debate-state.ts now re-exports DebateSessionState from the canonical
+// debate-runtime.ts contract instead of defining its own incompatible shape.
+// Previously there were three different DebateSessionState definitions across
+// debate-state.ts, debate-runtime-state.ts, and debate-runtime.ts (contract).
+// All code should import from '../contracts/debate-runtime' going forward.
+// These remaining types are kept for legacy compatibility only.
+export type DebateSessionState = RuntimeSessionState;
 export type DebateParticipantRole = 'proponent' | 'opponent' | 'mediator' | 'observer';
 
 export interface DebateParticipantState {
@@ -27,20 +34,6 @@ export interface DebateRoundState {
   readonly endedAt?: number;
   readonly argumentsCount: number;
   readonly status: 'in_progress' | 'completed' | 'skipped';
-}
-
-export interface DebateSessionState {
-  readonly id: string;
-  readonly topic: string;
-  readonly phase: DebatePhase;
-  readonly round: number;
-  readonly participants: DebateParticipantState[];
-  readonly rounds: DebateRoundState[];
-  readonly consensus?: string;
-  readonly convergenceScore?: number;
-  readonly startedAt: number;
-  readonly endedAt?: number;
-  readonly isPaused: boolean;
 }
 
 export interface DebateStateSnapshot {

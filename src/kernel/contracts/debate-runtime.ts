@@ -127,6 +127,8 @@ export interface PressureAction {
 
 export interface IDebateBudget {
   canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean;
+  /** Atomically checks budget + records usage — use instead of canProceed+recordUsage to avoid TOCTOU race. */
+  reserveAndRecord(sessionId: string, estimatedTokens: number, estimatedCost: number): Promise<boolean>;
   recordUsage(sessionId: string, tokens: number, cost: number): void;
   incrementRound(sessionId: string): void;
   getPressure(): PressureLevel;
@@ -146,15 +148,30 @@ export interface BudgetSnapshot {
 }
 
 // ── Consensus ───────────────────────────────────────────────────────────
-
+// NOTE: Claim is the canonical type shared by the runtime engine and the
+// governor layer. Both modules use this same shape. The governor layer
+// populates the governor-specific fields (speaker, role, status, etc.);
+// the runtime layer populates the runtime-specific fields (confidence,
+// evidence, citations). Both must be present in all calls to
+// DebateEvaluator.scoreArguments() and ConsensusEngine.evaluate().
 export interface Claim {
   readonly id: string;
   readonly text: string;
+  // Runtime fields
   readonly agentId: string;
   readonly round: number;
   readonly confidence: number;
   readonly evidence?: string;
   readonly citations?: string[];
+  // Governor fields
+  readonly speaker?: string;
+  readonly role?: string;
+  readonly status?: 'active' | 'challenged' | 'resolved' | 'disputed';
+  readonly supportCount?: number;
+  readonly challengeCount?: number;
+  readonly sourceArgumentId?: string;
+  readonly embedding?: number[];
+  readonly createdAt?: number;
 }
 
 export interface Conflict {

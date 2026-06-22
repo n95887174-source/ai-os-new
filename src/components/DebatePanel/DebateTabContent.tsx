@@ -12,7 +12,7 @@ import DebateChat from './DebateChat';
 import type { DebateSession, DebateVerdict, HumanVote, DebateArchetypeId } from '../../kernel/contracts';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AutoDebateResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
-import { probeService, autoDebateService as autoDebate } from '../../kernel/instances';
+import { probeService, autoDebateService as autoDebate, debateService } from '../../kernel/instances';
 import {
   debateArenaPanel,
   debateHistoryCountBadge,
@@ -61,7 +61,9 @@ export function DebateTabContent({
   toggleAgent: (id: string) => void;
   onSelectAll: () => void; onDeselectAll: () => void;
   topic: string; onTopicChange: (t: string) => void;
-  strategy: string; onStrategyChange: (v: string) => void;
+  // CRIT-9 fix: use DebateSessionStrategy instead of string to preserve all valid values
+  strategy: import('../../kernel/contracts/debate-types').DebateSessionStrategy;
+  onStrategyChange: (v: import('../../kernel/contracts/debate-types').DebateSessionStrategy) => void;
   maxRounds: number; onMaxRoundsChange: (r: number) => void;
   debateTemperature: number; onTemperatureChange: (t: number) => void;
   agentArchetypes: Record<string, DebateArchetypeId>; onArchetypeChange: (key: string) => void;
@@ -155,7 +157,7 @@ export function DebateTabContent({
                 <DebateSetupWizard
                   topic={topic} onTopicChange={onTopicChange}
                   strategy={strategy}
-                  onStrategyChange={onStrategyChange as (v: unknown) => void}
+                  onStrategyChange={onStrategyChange}
                   maxRounds={maxRounds} onMaxRoundsChange={onMaxRoundsChange}
                   debateTemperature={debateTemperature} onTemperatureChange={onTemperatureChange}
                   agentArchetypes={agentArchetypes} onArchetypeChange={onArchetypeChange}
@@ -220,9 +222,8 @@ export function DebateTabContent({
                             <button key={agentId}
                               onClick={() => {
                                 const wasBest = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                (globalThis as any).__debateService?.recordHumanVote({ round: showVotePanel, voter: 'human', votedAgentId: agentId, score: wasBest ? 0 : 5, timestamp: Date.now() });
-                                // We pass setHumanVotes through closure since it's not a prop
+                                // CRIT-7 fix: use typed debateService instead of globalThis bypass
+                                debateService.recordHumanVote({ round: showVotePanel, voter: 'human', votedAgentId: agentId, score: wasBest ? 0 : 5, timestamp: Date.now() });
                               }}
                               style={{ padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
                                 background: isBest ? 'rgba(250,204,21,0.15)' : 'rgba(255,255,255,0.03)', color: isBest ? '#facc15' : '#cbd5e1' }}>

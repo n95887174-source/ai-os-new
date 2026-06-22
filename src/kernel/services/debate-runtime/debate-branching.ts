@@ -71,6 +71,13 @@ export class DebateBranching {
       }
     }
 
+    // CRIT-4 fix: return success:false when there are unresolved conflicts.
+    // Previously the method detected conflicts but always returned success:true,
+    // silently corrupting the merged state.
+    if (conflicts.length > 0) {
+      return { success: false, mergedArguments: [], conflicts };
+    }
+
     const merged = [...source.arguments, ...newArgs];
     merged.sort((a, b) => a.round - b.round || a.timestamp - b.timestamp);
 
@@ -79,7 +86,7 @@ export class DebateBranching {
     source.merged = true;
     target.merged = true;
 
-    return { success: true, mergedArguments: merged, conflicts };
+    return { success: true, mergedArguments: merged, conflicts: [] };
   }
 
   rollback(

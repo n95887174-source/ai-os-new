@@ -1,18 +1,10 @@
-import type { DebatePhase, AgentPhase, DebateTopology } from '../contracts/debate-runtime';
+import type { DebateSessionState as ContractSessionState } from '../contracts/debate-runtime';
 
-export interface DebateSessionState {
-  readonly id: string;
-  readonly topic: string;
-  readonly topology: DebateTopology;
-  readonly phase: DebatePhase;
-  readonly round: number;
-  readonly totalTokens: number;
-  readonly totalCost: number;
-  readonly startedAt: number;
-  readonly updatedAt: number;
-  readonly endedAt?: number;
-  readonly error?: string;
-}
+// CRIT-6 fix: debate-runtime-state.ts now re-exports DebateSessionState from the canonical
+// debate-runtime.ts contract. Previously this file defined its own shape that was
+// incompatible with the contract version and the debate-state.ts version.
+// All three definitions are now unified — import from '../contracts/debate-runtime'.
+export type DebateSessionState = ContractSessionState;
 
 export interface DebateAgentState {
   readonly agentId: string;

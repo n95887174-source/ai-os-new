@@ -78,7 +78,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private participantKeyMap = new Map<string, string>();
   private llmFailureCount = new Map<string, number>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
-  private sessionAbortControllers = new Map<string, AbortController>();
+  // CRIT-3 fix: Map<sessionId, Map<agentId, AbortController>> — one controller per agent, not one per session.
+  // On cancel/pause, abort ALL agents' controllers, not just the last one.
+  private sessionAbortControllers = new Map<string, Map<string, AbortController>>();
 
   private providerKey(sessionId: string, agentId: string): string {
     return `${sessionId}:${agentId}`;
@@ -241,7 +243,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 if (budget) {
                   const estimatedTokens = 250;
                   const estimatedCost = estimatedTokens * 0.000002;
-                  if (!budget.canProceed(sessionId, estimatedTokens, estimatedCost)) {
+                  // CRIT-5 fix: use atomic reserveAndRecord instead of canProceed+recordUsage TOCTOU pattern.
+                  const allowed = await budget.reserveAndRecord(sessionId, estimatedTokens, estimatedCost);
+                  if (!allowed) {
                     const action = budget.getPressureAction();
                     this.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_PRESSURE_CHANGED, {
                       sessionId, level: budget.getPressure(), action,
@@ -256,10 +260,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 const latency = performance.now() - startTime;
 
                 if (budget) {
-                  const actualTokens = estimateTokenCount(content);
-                  const actualCost = actualTokens * 0.000002;
-                  budget.recordUsage(sessionId, actualTokens, actualCost);
-                  session.recordUsage(participant.agentId, actualTokens, actualCost, Math.round(latency));
+                  session.recordUsage(participant.agentId, 0, 0, Math.round(latency));
                   this.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_UPDATED, {
                     sessionId, pressure: budget.getPressure(), used: budget.snapshot().tokensUsed, limit: 100_000,
                   });
@@ -355,7 +356,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     while (retries <= MAX_RETRIES) {
       const controller = new AbortController();
-      this.sessionAbortControllers.set(sessionId, controller);
+      if (!this.sessionAbortControllers.has(sessionId)) this.sessionAbortControllers.set(sessionId, new Map());
+      this.sessionAbortControllers.get(sessionId)!.set(participant.agentId, controller);
       const onExternalAbort = () => controller.abort();
       if (externalSignal) {
         externalSignal.addEventListener('abort', onExternalAbort, { once: true });
@@ -465,7 +467,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         } catch { LOGGER.warn('DebateEngine', 'Failed to record reasoning trace'); }
 
         clearTimeout(timeout);
-        this.sessionAbortControllers.delete(sessionId);
+        this.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
         if (externalSignal) {
           externalSignal.removeEventListener('abort', onExternalAbort);
         }
@@ -485,11 +487,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (isTimeout) {
           retries++;
           if (retries > MAX_RETRIES) {
-            this.sessionAbortControllers.delete(sessionId);
+            this.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
             if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error: 'LLM call timed out', task: 'debate', round: session.round });
             throw new Error('LLM call timed out', { cause: e });
           }
-          const sessionSignal = this.sessionAbortControllers.get(sessionId)?.signal;
+          const sessionSignal = this.sessionAbortControllers.get(sessionId)?.get(participant.agentId)?.signal;
           if (sessionSignal?.aborted) throw new Error('Debate cancelled during backoff', { cause: e });
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, retries - 1), MAX_BACKOFF_MS);
           await new Promise<void>((resolve, reject) => {
@@ -505,7 +507,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         this.llmFailureCount.set(participant.agentId, count);
 
         if (count <= MAX_RETRIES) {
-          const sessionSignal = this.sessionAbortControllers.get(sessionId)?.signal;
+          const sessionSignal = this.sessionAbortControllers.get(sessionId)?.get(participant.agentId)?.signal;
           if (sessionSignal?.aborted) throw new Error('Debate cancelled during backoff', { cause: e });
           const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, count - 1), MAX_BACKOFF_MS);
           await new Promise<void>((resolve, reject) => {
@@ -517,7 +519,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           continue;
         }
 
-        this.sessionAbortControllers.delete(sessionId);
+        this.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
         if (resolvedKey) keyService.recordUsage(resolvedKey.id, 0, 0, modelId, { failed: true, error, task: 'debate', round: session.round });
         throw new Error(error, { cause: e });
       }
@@ -614,7 +616,12 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
   cancelSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
-    this.sessionAbortControllers.get(sessionId)?.abort();
+    // CRIT-3 fix: abort ALL agents' controllers for this session, not just the last one
+    const agentControllers = this.sessionAbortControllers.get(sessionId);
+    if (agentControllers) {
+      for (const [, controller] of agentControllers) controller.abort();
+      agentControllers.clear();
+    }
     this.sessionAbortControllers.delete(sessionId);
     this.getContext(sessionId).orchestrator.abort(sessionId);
     session.transition('cancelled');
