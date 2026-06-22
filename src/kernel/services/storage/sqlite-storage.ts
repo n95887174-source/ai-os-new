@@ -29,7 +29,7 @@ import type { Skill } from '../../contracts/storage/skills-store';
 import { dexieDb } from '../database-service';
 import { rootLogger } from '../logger-service';
 const LOGGER = rootLogger.child('SqliteStorage');
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS debate_sessions (
   agent_states TEXT DEFAULT '[]',
   topology TEXT DEFAULT '{}',
   participants TEXT DEFAULT '[]',
+  arguments TEXT DEFAULT '[]',
   started_at INTEGER,
   updated_at INTEGER,
   created_at INTEGER
@@ -722,11 +723,11 @@ class SqliteDebateStore implements DebateStore {
     const d = this.db();
     // B10-42: Serialize complex objects to JSON strings for TEXT columns
     d.run(
-      `INSERT OR REPLACE INTO debate_sessions (id, topic, topology_type, phase, round, total_tokens, total_cost, agent_states, topology, participants, started_at, updated_at, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT OR REPLACE INTO debate_sessions (id, topic, topology_type, phase, round, total_tokens, total_cost, agent_states, topology, participants, arguments, started_at, updated_at, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [record.id, record.topic, record.topologyType, record.phase, record.round,
        record.totalTokens, record.totalCost, JSON.stringify(record.agentStates), JSON.stringify(record.topology),
-       JSON.stringify(record.participants), record.startedAt, record.updatedAt, record.createdAt]
+       JSON.stringify(record.participants), JSON.stringify(record.arguments), record.startedAt, record.updatedAt, record.createdAt]
     );
     await persistSqliteDb();
   }
@@ -803,6 +804,7 @@ class SqliteDebateStore implements DebateStore {
       agentStates: asString(m('agent_states'), '[]'),
       topology: asString(m('topology'), '{}'),
       participants: asString(m('participants'), '[]'),
+      arguments: asString(m('arguments'), '[]'),
       startedAt: asNumber(m('started_at'), 0),
       updatedAt: asNumber(m('updated_at'), 0),
       createdAt: asNumber(m('created_at'), 0),
@@ -1207,6 +1209,10 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
       const prevVersion = _dbInstance.exec('PRAGMA user_version')[0]?.values?.[0]?.[0] ?? 0;
       _dbInstance.exec(SCHEMA);
       if (Number(prevVersion) < SCHEMA_VERSION) {
+        // v2: add arguments column to debate_sessions
+        if (prevVersion < 2) {
+          try { _dbInstance.exec("ALTER TABLE debate_sessions ADD COLUMN arguments TEXT DEFAULT '[]'"); } catch { /* already exists */ }
+        }
         _dbInstance.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
         if (Number(prevVersion) > 0) {
           LOGGER.info('SqliteStorage', `sql.js schema migrated: v${prevVersion} → v${SCHEMA_VERSION}`);
