@@ -101,6 +101,8 @@
 `debate-state.ts` / `debate-runtime-state.ts` / `debate-runtime.ts`  
 Тип определён в трёх файлах с разными формами. Компоненты импортируют любой вариант -- несоответствие вызывает runtime crashes (missing fields, undefined access) при перестройке.
 
+**Status: ✅ ГОТОВО** -- `debate-runtime-state.ts` теперь реэкспортирует `DebateSessionState` из каноничного `debate-runtime.ts`.
+
 ### 3.7 Voting через globalThis
 **[CRITICAL] Voting uses globalThis instead of service**  
 `DebateTabContent.tsx:222-224`  
@@ -110,6 +112,8 @@
 **[CRITICAL] getAllSessions() called on every render**  
 `DebateLivePanel.tsx:23-32`  
 `engine.getAllSessions()` в теле компонента создаёт новый массив при каждом рендере. `useEffect` с зависимостью от `sessions` запускает рендер заново -- потенциальный бесконечный цикл.
+
+**Status: ✅ ГОТОВО** -- `getAllSessions()` обёрнут в `useMemo()` для стабильной ссылки; лишние зависимости (`debateEngine`, `agentEvents` и т.д.) удалены из deps.
 
 ### 3.9 Strategy type casting
 **[CRITICAL] Strategy cast omits jury_trial and cross_examination**  
