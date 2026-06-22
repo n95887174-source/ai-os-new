@@ -41,10 +41,12 @@ export type EventMap = {
   'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
   'provider:state:desync': { localHash: string; remoteHash: string; mismatches: number };
   'cognitive:trace:updated': Array<{ id: string; startTime: number; endTime?: number; input: string; output?: string; status: string; steps: CognitiveStep[]; provider?: string; model?: string; totalTokens?: number; latency?: number; error?: string }>;
-  'debate:updated': unknown;
-  'debate:started': unknown;
+  'debate:updated': { sessionId: string; type: string; override?: unknown; event?: unknown };
+  'debate:started': { sessionId: string; topic: string };
   'debate:argument': { sessionId: string; argument: unknown };
   'debate:consensus': { sessionId: string; topic: string; consensus: string; convergenceScore: number; synthesis?: { consensus: string; coreDisagreement: string; resolvedPoints: string[]; unresolvedPoints: string[]; phase: string } };
+  'debate:ended': { sessionId: string; topic: string; rounds: number; durationMs: number; consensus?: string };
+  'debate:fact:checked': { argumentId: string; factCheck: unknown };
   
   // Debate Runtime
   'debate-runtime:session:created': { sessionId: string; topic: string; topologyType: string };
@@ -133,6 +135,9 @@ export type EventMap = {
   'trace:updated': CognitiveTrace[];
   'agent:config:updated': { id: string; config: unknown };
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
+  'agent:rate:limited': { agentId: string; provider: string; retryAfterMs: number };
+  'agent:blackboard:updated': { agentId: string; key: string; value: unknown };
+  'agent:handoff:initiated': { fromAgentId: string; toAgentId: string; context: string };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
   'agent:restarted': { id: string };
 
@@ -163,7 +168,7 @@ export type EventMap = {
   'diagnostic:complete': { id: string; scope: string; health: string; score: number; issueCount: number; timestamp: number };
 
   // Advisor
-  'advisor:suggestion': unknown;
+  'advisor:suggestion': { id: string; type: string; description: string };
   'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
   'advisor:suggestion:dismissed': { id: string };
 
@@ -222,6 +227,9 @@ export type EventMap = {
   'arch-review:snapshot:created': unknown;
   'arch-review:diff:created': unknown;
 
+  // Cache
+  'cache:invalidated': { reason: string; section?: string };
+
   // Chat Bookmarks
   'chat:bookmark:added': unknown;
   'chat:bookmark:removed': unknown;
@@ -256,7 +264,6 @@ export type EventMap = {
   'consistency:drift-detected': unknown;
 
   // Debate
-  'debate:fact:checked': unknown;
   'debate:verdict:generated': { sessionId: string; verdict: unknown };
   'debate-runtime:agent:chunk': { sessionId: string; agentId: string; chunk: string };
 
@@ -344,16 +351,18 @@ export type EventMap = {
   'shadow:drift': unknown;
 
   // Snapshot
-  'snapshot:captured': unknown;
+  'snapshot:captured': { snapshotId: string; label: string };
+  'snapshot:restored': { snapshotId: string; timestamp: number };
 
   // STT
   'stt:error': { error: string };
   'stt:state:changed': { state: string; error?: string };
 
   // System
+  'system:node:spawn': { nodeId: string; type: string };
   'system:node:removed': { id: string };
   'system:runtime:metrics': Record<string, unknown>;
-  'system:topology:mounted': unknown;
+  'system:topology:mounted': { topologyId: string };
 
   // Topology
   'topology:evaluated': unknown;

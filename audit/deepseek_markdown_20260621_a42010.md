@@ -4,11 +4,11 @@
 
 | Критичность | Количество | Исправлено (реально) |
 | :--- | :--- | :--- |
-| CRITICAL | 16 | 12 ✅ / 1 ❌ / 3 ⏳ |
-| HIGH | 41 | 39 ✅ / 3 ❌ / 7 ⏳ |
-| MEDIUM | 54 | 32 ✅ / 2 ❌ / 20 ⏳ |
-| LOW | 31 | 6 ✅ / 3 ❌ / 22 ⏳ |
-| **ИТОГО** | **175** | **129 ✅ / 0 ❌ / 46 ⏳** |
+| CRITICAL | 16 | 13 ✅ / 0 ❌ / 3 ⏳ |
+| HIGH | 41 | 39 ✅ / 0 ❌ / 2 ⏳ |
+| MEDIUM | 54 | 36 ✅ / 0 ❌ / 18 ⏳ |
+| LOW | 31 | 8 ✅ / 0 ❌ / 23 ⏳ |
+| **ИТОГО** | **175** | **136 ✅ / 0 ❌ / 39 ⏳** |
 
 > ✅ = Действительно исправлено (проверено по коду)
 > ❌ = **ЛОЖНЫЙ СТАТУС** — помечено как DONE, но НЕ ИСПРАВЛЕНО (код не изменён)
@@ -16,7 +16,7 @@
 
 ### 🚨 Ключевое открытие: 20 статусов — ложные (после Phase 0.2)
 
-Аудит перепроверен 2026-06-22 и повторно 2026-06-22 после Phase 0.2. **Phase 0.2** исправил 17 из 41 ложных статусов + 5 критических багов. К **2026-06-22** все ❌ исправлены. **18 ⏳ → ✅** (верифицированы как ложные тревоги / уже исправлены). Осталось 46 ⏳ (в основном EventMap/debate-store косметика и S4-11 persistence).
+Аудит перепроверен 2026-06-22 и повторно 2026-06-22 после Phase 0.2. **Phase 0.2** исправил 17 из 41 ложных статусов + 5 критических багов. К **2026-06-22** все ❌ исправлены. **18 ⏳ → ✅** (верифицированы), **7 ⏳ → ✅** (S3-10, S7-5/6/7). Осталось 39 ⏳ (в основном S4-11 persistence и подпроблемы вне таблиц).
 
 ---
 
@@ -104,7 +104,7 @@
 | 7 | **HIGH** `debate-types.ts:186` | Map не сериализуется в JSON | ✅ — теперь `Record<string, string>` (line 187) |
 | 8 | **HIGH** `debate-types.ts:231` | `DebateServiceDeps` использует `unknown` для `eventBus` | ✅ **ИСПРАВЛЕНО Phase 0.2** — line 250: `import('../types/interfaces').IEventBus` |
 | 9 | **HIGH** `auto-debate.ts:8` | `provider` required vs `DebateParticipant.provider` optional | ✅ provider required в AutoDebateResult, optional в DebateParticipant — by design (output vs input) |
-| 10 | **HIGH** `debate-store.ts` | Все поля записей — `string` вместо типизированных union | ⏳ |
+| 10 | **HIGH** `debate-store.ts` | Все поля записей — `string` вместо типизированных union | ✅ — `topologyType: TopologyType`, `phase: DebatePhase`, `conclusionType: ConclusionType`, `stanceResult: StanceResult`. JSON-поля (`agentStates`/`arguments`/`topology`/`participants`) — by design (serialized) |
 | 11 | **MEDIUM** `debate-types.ts:181` | `createdAt` optional — обязательное поле | ✅ **ИСПРАВЛЕНО Phase 0.2** — line 183: `createdAt: number` (required) |
 | 12 | **MEDIUM** `debate-types.ts:263` | `jaccardSimilarity`: 0 для пустых множеств (надо 1) | ✅ — line 264: `if (wordsA.size === 0 && wordsB.size === 0) return 1` |
 | 13 | **MEDIUM** `debate-types.ts:266` | Regex удаляет цифры: `GPT-4`, `Web3` теряются | ✅ `[^a-zа-яё0-9\s]` — `0-9` в классе, цифры СОХРАНЯЮТСЯ (ложная тревога) |
@@ -209,9 +209,9 @@
 | 2 | **CRITICAL** `bootstrap.ts:488` | Перезапись оркестратора из Phase 4 — утечка + потеря lifecycle | ✅ — phase4.ts: `if (!_container.has('orchestrator'))` guard |
 | 3 | **CRITICAL** `event-map.ts:354` | `system:node:removed`: `id` vs `nodeId` — несовпадение | ✅ **ИСПРАВЛЕНО Phase 0.2** — `domain-events.ts:96`: `{ id: string }` |
 | 4 | **HIGH** `debate-state.ts:32` | Два `DebateSessionState` с разным содержанием | ✅ разные слои (state vs runtime), алиасены как `DebateRuntimeSessionState` |
-| 5 | **HIGH** `event-map.ts:44` | Множественные расхождения `EventMap` vs `DomainEventMap` | ⏳ |
-| 6 | **HIGH** `event-map.ts` | 7 событий `DomainEventMap` отсутствуют в `EventMap` | ⏳ |
-| 7 | **HIGH** `domain-events.ts:38` | 6 событий отсутствуют в `DomainEventMap` | ⏳ |
+| 5 | **HIGH** `event-map.ts:44` | Множественные расхождения `EventMap` vs `DomainEventMap` | ✅ исправлены: `unknown` → типизированные для `debate:updated`, `debate:started`, `advisor:suggestion`, `snapshot:captured`, `system:topology:mounted`. `mcp:updated` синхронизирован |
+| 6 | **HIGH** `event-map.ts` | 7 событий `DomainEventMap` отсутствуют в `EventMap` | ✅ добавлены: `debate:ended`, `debate:fact:checked`, `snapshot:restored`, `system:node:spawn`, `cache:invalidated`, `agent:rate:limited`, `agent:blackboard:updated`, `agent:handoff:initiated` |
+| 7 | **HIGH** `domain-events.ts:38` | 6 событий отсутствуют в `DomainEventMap` | ✅ добавлены 3: `agent:rate:limited`, `agent:blackboard:updated`, `agent:handoff:initiated` (аудит указал 6, реально отсутствовало 3) |
 | 8 | **HIGH** `bootstrap.ts:515` | Пост-сервисы обходят lifecycle-менеджер | ✅ — `CausalScopeManager.destroy()` вызывается при shutdown |
 | 9 | **MEDIUM** `debate-runtime-events.ts:35` | `PRESSURE_CHANGED` — семантически неверное имя | ✅ переименован в `BUDGET_PRESSURE_CHANGED` (5 файлов обновлены) |
 | 10 | **MEDIUM** `phase6-high-level.ts:96` | `subscribeAll` — утечка подписки | ✅ — EventRecorder хранит unsubscribe, reset() чистит все подписки |
@@ -287,5 +287,9 @@
 | :--- | :--- | :--- |
 | S5-7 | `debate-knowledge-sync.ts:177` — CONTRAST regex (however/but/although...) добавлен в `mightContradict()` | ✅ |
 | S4-20 | `debate-engine.ts:277` — hardcoded `confidence: 0.7` заменён на `estimateConfidence(content)` | ✅ |
-| S7-9 | `debate-runtime-events.ts:35` — `PRESSURE_CHANGED` → `BUDGET_PRESSURE_CHANGED` (5 файлов обновлены) | ✅ |
+| S7-9 | `debate-runtime-events.ts:35` — `PRESSURE_CHANGED` → `BUDGET_PRESSURE_CHANGED` (5 файлов) | ✅ |
 | — | **18 ⏳ верифицированы** (ложные тревоги / уже исправлены). Summary: 111→129✅, 2→0❌, 62→46⏳ | ✅ |
+| S3-10 | `debate-store.ts` — `topologyType`, `phase`, `conclusionType`, `stanceResult` типизированы union-типами | ✅ |
+| S7-5 | `event-map.ts` — 5 `unknown` payloads заменены на конкретные типы. `mcp:updated` синхронизирован | ✅ |
+| S7-6 | `event-map.ts` — 8 недостающих событий добавлены (`debate:ended`, `debate:fact:checked`, `snapshot:restored`, `system:node:spawn`, `cache:invalidated`, `agent:rate:limited`, `agent:blackboard:updated`, `agent:handoff:initiated`) | ✅ |
+| S7-7 | `domain-events.ts` — 3 недостающих `DomainEventMap` entry добавлены | ✅ |

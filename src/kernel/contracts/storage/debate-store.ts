@@ -1,8 +1,11 @@
+import type { TopologyType, DebatePhase } from '../debate-runtime';
+import type { ConclusionType, StanceResult } from '../debate-types';
+
 export interface DebateSessionRecord {
   id: string;
   topic: string;
-  topologyType: string;
-  phase: string;
+  topologyType: TopologyType;
+  phase: DebatePhase;
   round: number;
   totalTokens: number;
   totalCost: number;
@@ -19,8 +22,8 @@ export interface DebateVerdictRecord {
   sessionId: string;
   topic: string;
   summary: string;
-  conclusionType: string;
-  stanceResult: string;
+  conclusionType: ConclusionType;
+  stanceResult: StanceResult;
   keyArguments: string;
   reasoning: string;
   confidence: number;

@@ -72,7 +72,7 @@ export type DomainEventMap = {
   'roles:updated': Role[];
   'role:assigned': { roleId: string; agentId: string };
   'role:unassigned': { roleId: string; agentId: string };
-  'mcp:updated': unknown[];
+  'mcp:updated': Record<string, unknown>[];
   'settings:updated': { settings: Record<string, unknown>; changes: Record<string, unknown> };
   'policy:violation': { policyId: string; provider: string; reason: string };
   'skills:updated': CognitiveSkill[];
@@ -86,6 +86,9 @@ export type DomainEventMap = {
   'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
   'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
   'agent:restarted': { id: string };
+  'agent:rate:limited': { agentId: string; provider: string; retryAfterMs: number };
+  'agent:blackboard:updated': { agentId: string; key: string; value: unknown };
+  'agent:handoff:initiated': { fromAgentId: string; toAgentId: string; context: string };
   'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
   'advisor:suggestion': { id: string; type: string; description: string };
   'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
