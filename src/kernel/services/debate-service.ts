@@ -8,6 +8,11 @@ import type {
   ActivityMetrics, QualityMetrics, HumanVote, DebateVerdict,
 } from '../contracts/debate-types';
 import type { IDebateEngine } from '../contracts/debate-runtime';
+import type { SnapshotBridgeContext } from './debate-runtime/debate-bridge';
+import { DebateRuntimeEvents } from '../events/debate-runtime-events';
+import {
+  buildRoundtableTopology, participantsToConfig, snapshotToSession,
+} from './debate-runtime/debate-bridge';
 import { jaccardSimilarity } from '../contracts/debate-types';
 import {
   computeGraphMetrics, computeActivityMetrics, computeQualityMetrics,
@@ -21,7 +26,6 @@ import { DebateLLMCaller } from './debate-llm-caller';
 import { selectNextParticipant, type ParticipantSchedulerState } from './debate-participant-scheduler';
 import { isDuplicateArgument } from './debate-duplicate-detection';
 import { generateDebateConsensus } from './debate-consensus-generator';
-import { DebateRuntimeAdapter } from './debate-runtime-adapter';
 import { FactCheckService, type FactCheckLevel } from './fact-check-service';
 import {
   loadActiveSession,
@@ -164,7 +168,10 @@ export class DebateService {
   private participantProviderMap = new Map<string, { provider: string; keyId: string }>();
   private failedProviders = new Map<string, { provider: string; keyId: string; reason: string }>();
   private llmCaller: DebateLLMCaller;
-  private runtimeAdapter: DebateRuntimeAdapter;
+  private engine: IDebateEngine | null = null;
+  private runtimeSessionId: string | null = null;
+  private bridgeCtx: SnapshotBridgeContext | null = null;
+  private unsubs: Array<() => void> = [];
   private defaultConfig: DebateConfig = {
     roundDelayMs: 3000,
     maxTokens: 500,
@@ -190,16 +197,6 @@ export class DebateService {
       getDefaultConfig: () => this.defaultConfig,
       buildHistoryMessages: (id) => this.buildHistoryMessages(id),
     });
-    this.runtimeAdapter = new DebateRuntimeAdapter(
-      { eventBus: deps.eventBus },
-      {
-        getActiveSession: () => this.activeSession,
-        setActiveSession: (s) => { this.activeSession = s; },
-        persistSession: () => { void this.persistSession(); },
-        saveToHistory: () => this.saveToHistory(),
-      },
-      this.interpreter,
-    );
 
     this.factCheckService = new FactCheckService({
       eventBus: deps.eventBus,
@@ -219,7 +216,7 @@ export class DebateService {
   }
 
   setEngine(engine: IDebateEngine): void {
-    this.runtimeAdapter.setEngine(engine);
+    this.engine = engine;
   }
 
   async init() {
@@ -257,26 +254,48 @@ export class DebateService {
     this.clearTimeout();
     this.isExecutingRound = false;
     this.roundGeneration++;
-    this.runtimeAdapter.clearListeners();
+    this.clearListeners();
     this.schedulerState.lastParticipantId = null;
     this.participantProviderMap.clear();
     this.failedProviders.clear();
     if (this.defaultConfig.useGovernor !== false) this.governor = new DebateGovernor();
-    // Reset circuit breakers so probe failures don't block debate
     for (const p of ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare']) {
       try { this.deps.adapterRegistry.resetCircuitBreaker(p); } catch { /* provider not registered */ }
     }
 
     const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
 
-    if (this.runtimeAdapter.isEnabled()) {
-      return this.runtimeAdapter.startDebate(topic, participants, strategy, maxRounds, sessionConfig);
+    // ── Engine path (primary) ──────────────────────────────────────────
+    if (this.engine) {
+      const runtimeId = this.engine.createSession(
+        buildRoundtableTopology(participants),
+        topic,
+        participantsToConfig(participants),
+      );
+      this.runtimeSessionId = runtimeId;
+      this.bridgeCtx = { participants, strategy, maxRounds, config: sessionConfig };
+      this.setupListeners(runtimeId);
+      this.syncSession();
+      const session = this.activeSession!;
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+        message: `Debate started (runtime): ${topic} with ${participants.length} agents`,
+        type: 'info',
+      });
+      this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, session);
+      this.persistSession();
+      void this.engine.startSession(runtimeId)
+        .then(() => this.finalize())
+        .catch((e) => {
+          LOGGER.warn('DebateService', 'Runtime debate failed', { error: e });
+          this.syncSession();
+          this.finalize();
+        });
+      return session;
     }
 
-    // HIGH-4.4b: Clone participants before mutating to avoid side effects on the input array
+    // ── Legacy path (fallback, no engine) ──────────────────────────────
     participants = participants.map(p => ({ ...p }));
 
-    // Auto-assign constraints for constrained mode
     if (strategy === 'constrained') {
       const constraintCycle: DebateConstraint[] = ['facts_only', 'emotional_only', 'data_driven', 'ethical_framework', 'first_principles', 'pragmatic'];
       participants.forEach((p, i) => p.constraint = constraintCycle[i % constraintCycle.length]);
@@ -387,7 +406,7 @@ export class DebateService {
 
   private scheduleNextRound(): void {
     if (this.destroyed) return;
-    if (this.runtimeAdapter.isActive()) return;
+    if (this.isEngineActive()) return;
     const session = this.activeSession;
     if (!session) return;
     const cfg = session.config;
@@ -395,7 +414,7 @@ export class DebateService {
 
     this.simulationTimeout = setTimeout(async () => {
       if (this.destroyed) return;
-      if (this.runtimeAdapter.isActive()) return;
+      if (this.isEngineActive()) return;
       if (gen !== this.roundGeneration) return;
       if (!this.activeSession || this.activeSession.status !== 'active') return;
       if (this.isExecutingRound) return;
@@ -411,7 +430,7 @@ export class DebateService {
         await this.executeArgumentRound(currentParticipant);
       } finally {
         this.isExecutingRound = false;
-        if (gen === this.roundGeneration && !this.destroyed && this.activeSession?.status === 'active' && !this.runtimeAdapter.isActive()) {
+        if (gen === this.roundGeneration && !this.destroyed && this.activeSession?.status === 'active' && !this.isEngineActive()) {
           this.scheduleNextRound();
         }
       }
@@ -434,7 +453,7 @@ export class DebateService {
   private async executeArgumentRound(participant: DebateParticipant): Promise<void> {
     const session = this.activeSession;
     if (!session) return;
-    if (this.runtimeAdapter.isActive()) return;
+    if (this.isEngineActive()) return;
     const genAtStart = this.roundGeneration;
 
     try {
@@ -636,8 +655,9 @@ export class DebateService {
   }
 
   pauseDebate(): void {
-    if (this.runtimeAdapter.isActive()) {
-      this.runtimeAdapter.pause();
+    if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
+      this.engine.pauseSession(this.runtimeSessionId);
+      this.syncSession();
       return;
     }
     if (this.activeSession && this.activeSession.status === 'active') {
@@ -649,8 +669,9 @@ export class DebateService {
   }
 
   resumeDebate(): void {
-    if (this.runtimeAdapter.isActive()) {
-      this.runtimeAdapter.resume();
+    if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
+      this.engine.resumeSession(this.runtimeSessionId);
+      this.syncSession();
       return;
     }
     if (this.activeSession && this.activeSession.status === 'paused') {
@@ -661,8 +682,13 @@ export class DebateService {
   }
 
   stopDebate(): void {
-    if (this.runtimeAdapter.isActive()) {
-      this.runtimeAdapter.stop();
+    if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
+      const snap = this.engine.getSession(this.runtimeSessionId);
+      if (snap && snap.phase !== 'completed' && snap.phase !== 'failed' && snap.phase !== 'cancelled') {
+        this.engine.cancelSession(this.runtimeSessionId);
+      }
+      this.syncSession();
+      this.finalize();
       return;
     }
     if (this.activeSession) {
@@ -680,7 +706,6 @@ export class DebateService {
       }));
       let verdict: import('../contracts/debate-types').DebateVerdict | undefined;
       try {
-        // HIGH-4.4a: Build snapshot from session fields instead of unsafe as unknown as
         const snap: import('../contracts/debate-runtime').DebateSessionSnapshot = {
           id: this.activeSession.id,
           topic: this.activeSession.topic,
@@ -704,7 +729,6 @@ export class DebateService {
       
       this.clearTimeout();
       this.saveToHistory();
-      // N-15: clear participant map on normal stop
       this.participantProviderMap.clear();
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
       this.persistSession();
@@ -714,12 +738,18 @@ export class DebateService {
   destroy(): void {
     this.destroyed = true;
     this.clearTimeout();
-    if (this.runtimeAdapter.isActive()) {
-      this.runtimeAdapter.stop();
+    if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
+      const snap = this.engine.getSession(this.runtimeSessionId);
+      if (snap && snap.phase !== 'completed' && snap.phase !== 'failed' && snap.phase !== 'cancelled') {
+        this.engine.cancelSession(this.runtimeSessionId);
+      }
     }
-    this.runtimeAdapter.clearListeners();
+    this.clearListeners();
     this.saveToHistory();
     this.activeSession = null;
+    this.engine = null;
+    this.runtimeSessionId = null;
+    this.bridgeCtx = null;
     this.schedulerState.lastParticipantId = null;
     this.participantProviderMap.clear();
     this.failedProviders.clear();
@@ -736,6 +766,76 @@ export class DebateService {
     }
   }
 
+  // ── Engine bridge methods ──────────────────────────────────────────────
+
+  private isEngineActive(): boolean {
+    return this.runtimeSessionId !== null && this.engine !== null;
+  }
+
+  clearListeners(): void {
+    for (const unsub of this.unsubs) unsub();
+    this.unsubs = [];
+  }
+
+  private syncSession(): void {
+    if (!this.engine || !this.runtimeSessionId || !this.bridgeCtx) return;
+    const prev = this.activeSession;
+    const prevArgCount = prev?.arguments.length ?? 0;
+    const snapshot = this.engine.getSession(this.runtimeSessionId);
+    if (!snapshot) return;
+    const timeline = this.engine.getTimeline(this.runtimeSessionId);
+    const bridged = snapshotToSession(snapshot, { ...this.bridgeCtx, timeline });
+    this.activeSession = bridged;
+    const newArgs = bridged.arguments.slice(prevArgCount);
+    for (const arg of newArgs) {
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: this.runtimeSessionId, argument: arg });
+    }
+    this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, bridged);
+    this.persistSession();
+  }
+
+  private setupListeners(runtimeId: string): void {
+    this.clearListeners();
+    const syncIfOurs = (payload: unknown) => {
+      const p = payload as { sessionId?: string };
+      if (p.sessionId !== runtimeId) return;
+      this.syncSession();
+    };
+    const events = [
+      DebateRuntimeEvents.SESSION_STARTED,
+      DebateRuntimeEvents.SESSION_PAUSED,
+      DebateRuntimeEvents.SESSION_RESUMED,
+      DebateRuntimeEvents.AGENT_RESPONDED,
+      DebateRuntimeEvents.PHASE_CHANGED,
+      DebateRuntimeEvents.ROUND_STARTED,
+      DebateRuntimeEvents.ROUND_ENDED,
+      DebateRuntimeEvents.SESSION_COMPLETED,
+      DebateRuntimeEvents.SESSION_FAILED,
+      DebateRuntimeEvents.SESSION_CANCELLED,
+    ];
+    for (const event of events) {
+      this.unsubs.push(this.deps.eventBus.on(event as string, syncIfOurs));
+    }
+  }
+
+  private finalize(): void {
+    const session = this.activeSession;
+    if (!session) return;
+    const metrics = computeGraphMetrics(session.arguments, session.strategy);
+    if (metrics) session.graphMetrics = metrics;
+    const activity = computeActivityMetrics(session.arguments, session.participants);
+    if (activity) session.activityMetrics = activity;
+    const quality = computeQualityMetrics(session.arguments, session.topic);
+    if (quality) session.qualityMetrics = quality;
+    session.interpretation = this.interpreter.interpret(session);
+    this.saveToHistory();
+    this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+    this.persistSession();
+    this.clearListeners();
+    this.runtimeSessionId = null;
+    this.bridgeCtx = null;
+  }
+
   async addArgument(
     agentName: string,
     content: string,
@@ -743,7 +843,6 @@ export class DebateService {
     opts?: { position?: 'pro' | 'con' | 'neutral' },
   ): Promise<void> {
     if (!this.activeSession || this.activeSession.status === 'completed') return;
-    if (this.runtimeAdapter.isActive()) return;
 
     const arg = {
       id: crypto.randomUUID(),
@@ -766,7 +865,7 @@ export class DebateService {
   }
 
   getSession(): DebateSession | null {
-    this.runtimeAdapter.syncIfActive();
+    if (this.isEngineActive()) this.syncSession();
     return this.activeSession;
   }
 
