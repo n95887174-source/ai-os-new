@@ -54,6 +54,8 @@ const DebatePanel: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
   const [actionLoading, setActionLoading] = useState<'start' | 'inject' | null>(null);
   const [autoResults, setAutoResults] = useState(() => {
     try { return autoDebate.getResults(); } catch { return null; }
@@ -152,7 +154,7 @@ const DebatePanel: React.FC = () => {
           }
         }, 100);
       } catch {
-        if (isMountedRef.current) setError(t('debate.error_process_update'));
+        if (isMountedRef.current) setError(tRef.current('debate.error_process_update'));
       }
     });
     const timer = setTimeout(() => {
@@ -168,8 +170,6 @@ const DebatePanel: React.FC = () => {
     }
 
     return () => { unsub(); clearTimeout(timer); };
-    // deps: syncHumanVotesFromSession, refreshHistory only — setState fns and refs are stable, t is unstable under useTranslation
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncHumanVotesFromSession, refreshHistory]);
 
   useEffect(() => {
@@ -177,15 +177,13 @@ const DebatePanel: React.FC = () => {
       const payload = data as { sessionId: string; verdict: DebateVerdict };
       setVerdict(payload.verdict);
     });
-    // Try to load verdict from service on mount (for page reloads)
     if (session?.id && session.status === 'completed') {
       const cached = debateService.getVerdict(session.id);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (cached) setVerdict(cached);
     }
     return () => { unsubVerdict(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id]);
+  }, [session?.id, session?.status]);
 
   useEffect(() => {
     const thesis = searchParams.get('thesis');
