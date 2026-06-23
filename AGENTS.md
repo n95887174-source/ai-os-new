@@ -903,15 +903,41 @@ Complete Phase 3 remaining items from audit: eslint cleanup, JSX dedup, Russian 
 - Build errors (`storageAdapter`, `StorageAdapter`) were pre-existing — exports were renamed but aliases were missing
 
 ### Remaining (not started)
-- `debate-engine.ts:443` — hardcoded `Respond in Russian.` in engine inline prompt (needs `language` field on `IDebateSession` — interface-level change)
-- `prompt-store.ts` — 6 hardcoded `Respond in Russian.` strings (used by engine's `getDefaultPrompt`)
-- `auto-debate-service.ts` — 5 hardcoded `Respond in Russian.` strings
 - Keyword-based contradiction detection → embedding-distance or LLM-assisted (major refactor)
 
+---
+
+## Current Session (2026-06-23, continued) — Remove hardcoded "Respond in Russian"
+
+### Goal
+Eliminate all remaining hardcoded `Respond in Russian.` strings by wiring `language` through the engine session path.
+
+### Changes
+
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **`IDebateSession.language`** — added `language: string` to `IDebateSession` and `DebateSessionSnapshot` interfaces | Done |
+| 2 | **`DebateSession` class** — added `language` field, constructor param (default `'Russian'`), snapshot serialization, restore support | Done |
+| 3 | **`IDebateEngine.createSession()`** — added optional `language` parameter, passed to `DebateSession` | Done |
+| 4 | **`debate-engine.ts` callLLM** — user message now uses `session.language` instead of hardcoded `'Russian'` | Done |
+| 5 | **`debate-engine.ts` getDefaultPrompt** — appends `\nRespond in ${language}.` after `getPrompt()` output | Done |
+| 6 | **`saveSnapshot`/`restoreSession`** — `language` persisted in DB record and restored with fallback to `'Russian'` | Done |
+| 7 | **`DebateSessionRecordSchema`** — added optional `language` field (default `'Russian'`) | Done |
+| 8 | **`prompt-store.ts`** — removed `Respond in Russian.` from all 6 default prompts (engine appends it dynamically) | Done |
+| 9 | **`debate-service.ts`** — converts `DebateConfig.language` (`'ru'/'en'`) to `'Russian'/'English'` when passing to engine | Done |
+| 10 | **`auto-debate-service.ts`** — removed `Respond in Russian.` from 5 system prompts, added `language: 'ru'` to DebateConfig | Done |
+
+### Key Decisions
+- Language stored as full name (`'Russian'`/`'English'`) on `IDebateSession` for direct interpolation into prompts
+- `DebateConfig.language` uses ISO codes (`'ru'`/`'en'`); conversion happens in `debate-service.ts` bridge
+- `getDefaultPrompt()` appends language to `getPrompt()` output rather than modifying `prompt-store.ts` API
+- `prompt-store.ts` defaults are now language-agnostic role descriptions
+
 ### Relevant Files
-- `src/components/DebatePanel/DebatePanel.tsx` — eslint deps fix + duplicate JSX extraction
-- `src/kernel/services/debate-state-builder.ts` — language parameter for `buildDebateStatePrompt`
-- `src/kernel/services/debate-prompt-builder.ts` — passes language to state builder
-- `src/kernel/services/debate-metrics.ts` — Russian speculation words
-- `src/kernel/instances.ts` — added `storageAdapter` alias
-- `src/kernel/services/storage-adapter.ts` — added `StorageAdapter` alias
+- `src/kernel/contracts/debate-runtime.ts` — `IDebateSession.language`, `DebateSessionSnapshot.language`, `createSession()` signature
+- `src/kernel/services/debate-runtime/debate-session.ts` — `language` field, constructor, snapshot, restore
+- `src/kernel/services/debate-runtime/debate-engine.ts` — `createSession()`, `callLLM()` line 443, `getDefaultPrompt()`, `saveSnapshot()`, `restoreSession()`
+- `src/kernel/services/debate-service.ts` — language conversion in `startDebate()`
+- `src/kernel/services/prompt-store.ts` — all 6 defaults cleaned
+- `src/kernel/types/schema-types.ts` — `language` field on `DebateSessionRecordSchema`
+- `src/kernel/services/auto-debate/auto-debate-service.ts` — 5 prompts cleaned, `language: 'ru'` in config
