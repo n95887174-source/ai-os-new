@@ -3,6 +3,7 @@ import { rootLogger } from './services/logger-service'
 export { rootLogger };
 import { BucketStorageAdapter } from './storage-adapter-instance';
 export { BucketStorageAdapter };
+export const storageAdapter = BucketStorageAdapter;
 import type { SettingsService } from './services/settings-service'
 import type { KeyService } from './services/key-vault';
 import type { MemoryService } from './services/memory-engine';

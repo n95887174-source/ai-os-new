@@ -115,3 +115,4 @@ export class BucketStorageAdapter {
     }
   }
 }
+export const StorageAdapter = BucketStorageAdapter;
