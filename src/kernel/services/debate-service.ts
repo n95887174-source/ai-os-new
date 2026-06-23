@@ -187,6 +187,7 @@ export class DebateService {
   private factCheckService: FactCheckService;
   private verdictMap = new Map<string, DebateVerdict>();
   private unsubVerdict: (() => void) | null = null;
+  private processedArgIds = new Set<string>();
 
   constructor(deps: DebateServiceDeps) {
     this.deps = deps;
@@ -785,13 +786,107 @@ export class DebateService {
     if (!snapshot) return;
     const timeline = this.engine.getTimeline(this.runtimeSessionId);
     const bridged = snapshotToSession(snapshot, { ...this.bridgeCtx, timeline });
+
+    // ── Post-processing pipeline (core debate behavior) ────────────────
+    this.processArgumentTree(bridged);
+    this.processDuplicates(bridged);
+    this.processSocraticQuality(bridged);
+
+    const newArgs = prevArgCount > 0
+      ? bridged.arguments.slice(prevArgCount)
+      : bridged.arguments;
+
+    this.processGovernorFeeding(newArgs);
+    this.processFactCheck(newArgs);
+    updateConvergenceScore(bridged, jaccardSimilarity);
+    // ────────────────────────────────────────────────────────────────────
+
     this.activeSession = bridged;
-    const newArgs = bridged.arguments.slice(prevArgCount);
     for (const arg of newArgs) {
       this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: this.runtimeSessionId, argument: arg });
     }
     this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, bridged);
     this.persistSession();
+
+    // Check governor stop conditions (may cancel engine session)
+    if (this.governor && this.checkGovernorStopConditions()) {
+      if (this.engine && this.runtimeSessionId) {
+        this.engine.cancelSession(this.runtimeSessionId);
+      }
+      this.stopDebate();
+    }
+  }
+
+  private processArgumentTree(session: DebateSession): void {
+    if (session.strategy !== 'argument_tree') return;
+    for (const arg of session.arguments) {
+      if (arg.parentId !== undefined) continue;
+      const parentMatch = arg.content.match(/\[parent:([^\]]+)\]/);
+      if (parentMatch) {
+        arg.rawParentRef = parentMatch[1];
+        arg.content = arg.content.replace(/\[parent:[^\]]+\]/, '').trim();
+        const refExists = session.arguments.some(a => a.id === arg.rawParentRef);
+        if (refExists) {
+          arg.parentId = arg.rawParentRef;
+          arg.parentResolution = 'explicit';
+        } else {
+          const latest = [...session.arguments].reverse().find(a => a.round < arg.round);
+          arg.parentId = latest?.id;
+          arg.parentResolution = 'invalid_reference';
+        }
+      } else {
+        const latest = [...session.arguments].reverse().find(a => a.round < arg.round);
+        arg.parentId = latest?.id;
+        arg.parentResolution = latest ? 'fallback_latest' : 'orphan';
+      }
+    }
+  }
+
+  private processDuplicates(session: DebateSession): void {
+    for (const arg of session.arguments) {
+      if (arg.duplicateOf) continue;
+      const { isDuplicate, match } = isDuplicateArgument(arg.content, session.arguments);
+      if (isDuplicate && match && match.id !== arg.id) {
+        arg.duplicateOf = match.id;
+      }
+    }
+  }
+
+  private processSocraticQuality(session: DebateSession): void {
+    if (session.strategy !== 'socratic') return;
+    const questionerIndex = session.socraticQuestioner ?? 0;
+    for (const arg of session.arguments) {
+      if (arg.duplicateOf) continue;
+      if (session.participants[questionerIndex]?.id === arg.agentId) {
+        const result = scoreSocraticQuestion(arg.content, session.arguments);
+        (arg as unknown as { socraticQuality?: number; socraticQualityReasons?: string[] }).socraticQuality = result.score || undefined;
+        (arg as unknown as { socraticQuality?: number; socraticQualityReasons?: string[] }).socraticQualityReasons = result.reasons.length > 0 ? result.reasons : undefined;
+      }
+    }
+  }
+
+  private processGovernorFeeding(newArgs: DebateArgument[]): void {
+    if (!this.governor) return;
+    for (const arg of newArgs) {
+      if (this.processedArgIds.has(arg.id)) continue;
+      if (arg.duplicateOf) continue;
+      this.processedArgIds.add(arg.id);
+      this.governor.ingestArgument(arg.content, arg.id, arg.agentName, arg.position, arg.round, arg.agentId, arg.confidence);
+      this.governor.updateContradictions();
+      this.governor.computeConvergence();
+      this.governor.computeNovelty();
+      this.governor.updateDiversity();
+    }
+  }
+
+  private processFactCheck(newArgs: DebateArgument[]): void {
+    for (const arg of newArgs) {
+      if (this.processedArgIds.has(arg.id)) continue;
+      this.processedArgIds.add(arg.id);
+      void this.factCheckService.checkArgument(arg).catch(e =>
+        LOGGER.warn('DebateService', 'Fact-check failed', { error: e }),
+      );
+    }
   }
 
   private setupListeners(runtimeId: string): void {
