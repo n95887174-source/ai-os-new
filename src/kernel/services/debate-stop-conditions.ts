@@ -42,9 +42,9 @@ export function hasNovelClaims(session: DebateSession): boolean {
   const previousRoundClaims = state.previousClaims;
   if (currentRoundClaims.length === 0) return false;
   const novel = currentRoundClaims.filter(c => {
-    const norm = c.text.toLowerCase().replace(/[^a-zа-я0-9\s]/g, '').trim();
+    const norm = c.text.toLowerCase().replace(/[^a-zа-яё0-9\s]/g, '').trim();
     return !previousRoundClaims.some(p =>
-      p.text.toLowerCase().replace(/[^a-zа-я0-9\s]/g, '').trim().includes(norm.slice(0, 40))
+      p.text.toLowerCase().replace(/[^a-zа-яё0-9\s]/g, '').trim().includes(norm.slice(0, 40))
     );
   });
   return novel.length > 0;

@@ -30,7 +30,7 @@ function extractClaims(arg: DebateArgument): string[] {
 }
 
 function normalizeClaim(text: string): string {
-  return text.toLowerCase().replace(/[^a-zа-я0-9\s]/g, '').trim();
+  return text.toLowerCase().replace(/[^a-zа-яё0-9\s]/g, '').trim();
 }
 
 export function buildDebateState(
