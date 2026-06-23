@@ -154,7 +154,7 @@ export function buildArgumentPrompt(
   }
 
   const state = buildDebateState(previousArguments, participant.id);
-  const statePrompt = buildDebateStatePrompt(state, participant.name, round);
+  const statePrompt = buildDebateStatePrompt(state, participant.name, round, language);
 
   const constraintBlock = isConstrained && constraint && constraint !== 'none'
     ? `\n\n### Constraint (ABSOLUTE — YOU MUST FOLLOW THIS)\n${CONSTRAINT_PROMPTS[constraint]}`

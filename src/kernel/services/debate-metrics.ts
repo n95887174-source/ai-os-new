@@ -224,7 +224,7 @@ export function scoreConstraintCompliance(text: string, constraint: DebateConstr
   const lower = text.toLowerCase();
   const words = lower.split(/\W+/);
 
-  const speculationWords = ['maybe', 'perhaps', 'likely', 'probably', 'possibly', 'might', 'could be', 'i believe', 'i think', 'it seems', 'it appears', 'sort of', 'kind of'];
+  const speculationWords = ['maybe', 'perhaps', 'likely', 'probably', 'possibly', 'might', 'could be', 'i believe', 'i think', 'it seems', 'it appears', 'sort of', 'kind of', 'возможно', 'вероятно', 'наверное', 'кажется', 'может быть', 'похоже', 'предположительно', 'пожалуй', 'вроде', 'как будто', 'скорее всего', 'не уверен', 'сомневаюсь', 'едва ли', 'вряд ли'];
   const speculationScore = Math.max(0, 1 - speculationWords.filter(w => lower.includes(w)).length * 0.15);
 
   switch (constraint) {

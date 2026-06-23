@@ -119,7 +119,7 @@ const ROUND_STRATEGIES: Record<string, string> = {
   '5': 'Deliver your closing argument: summarize your strongest points and explain why your position prevails.',
 };
 
-export function buildDebateStatePrompt(state: DebateState, participantName: string, round: number): string {
+export function buildDebateStatePrompt(state: DebateState, participantName: string, round: number, language = 'Russian'): string {
   const parts: string[] = [];
   const strategy = ROUND_STRATEGIES[String(Math.min(round, 5))] || ROUND_STRATEGIES['5'];
 
@@ -206,7 +206,7 @@ export function buildDebateStatePrompt(state: DebateState, participantName: stri
   parts.push(strategy);
 
   parts.push(`\n### Your Task (Round ${round})`);
-  parts.push('You are responding as ' + participantName + '. DO NOT speak for your opponents. Address their unresolved arguments directly. If all their points are answered, introduce a new angle. Respond in Russian.');
+  parts.push('You are responding as ' + participantName + '. DO NOT speak for your opponents. Address their unresolved arguments directly. If all their points are answered, introduce a new angle. Respond in ' + language + '.');
 
   return parts.join('\n');
 }
