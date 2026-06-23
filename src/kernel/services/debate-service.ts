@@ -781,20 +781,26 @@ export class DebateService {
   private syncSession(): void {
     if (!this.engine || !this.runtimeSessionId || !this.bridgeCtx) return;
     const prev = this.activeSession;
-    const prevArgCount = prev?.arguments.length ?? 0;
+    const prevIds = new Set(prev?.arguments.map(a => a.id) ?? []);
+    const prevHumanArgs = prev?.arguments.filter(a => a.source === 'human') ?? [];
     const snapshot = this.engine.getSession(this.runtimeSessionId);
     if (!snapshot) return;
     const timeline = this.engine.getTimeline(this.runtimeSessionId);
     const bridged = snapshotToSession(snapshot, { ...this.bridgeCtx, timeline });
+
+    // Preserve human-injected arguments across bridge syncs
+    for (const humanArg of prevHumanArgs) {
+      if (!bridged.arguments.some(a => a.id === humanArg.id)) {
+        bridged.arguments.push(humanArg);
+      }
+    }
 
     // ── Post-processing pipeline (core debate behavior) ────────────────
     this.processArgumentTree(bridged);
     this.processDuplicates(bridged);
     this.processSocraticQuality(bridged);
 
-    const newArgs = prevArgCount > 0
-      ? bridged.arguments.slice(prevArgCount)
-      : bridged.arguments;
+    const newArgs = bridged.arguments.filter(a => !prevIds.has(a.id));
 
     this.processGovernorFeeding(newArgs);
     this.processFactCheck(newArgs);
