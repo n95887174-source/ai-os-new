@@ -33,8 +33,10 @@ export class DebateGovernor {
     speaker: string,
     role: string,
     round: number,
+    agentId?: string,
+    confidence?: number,
   ): Claim[] {
-    const claims = extractClaims(content, argumentId, speaker, role, round);
+    const claims = extractClaims(content, argumentId, speaker, role, round, agentId, confidence);
     addClaimsToGraph(this.state.graph, claims);
 
     this.state.round = round;

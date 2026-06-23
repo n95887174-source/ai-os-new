@@ -593,6 +593,13 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     const session = this.sessions.get(sessionId);
     if (!session) return;
     if (session.phase === 'paused' || session.phase === 'completed' || session.phase === 'cancelled') return;
+    // HIGH-4.1 fix: abort all in-flight LLM calls for this session on pause.
+    // Previously only the orchestrator signal was aborted, leaving agent calls
+    // to run until timeout, wasting tokens.
+    const agentControllers = this.sessionAbortControllers.get(sessionId);
+    if (agentControllers) {
+      for (const [, controller] of agentControllers) controller.abort();
+    }
     this.getContext(sessionId).orchestrator.abort(sessionId);
     session.transition('paused');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_PAUSED, { sessionId });

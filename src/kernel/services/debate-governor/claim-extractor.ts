@@ -7,12 +7,23 @@ function nextClaimId(): string {
   return `c${_claimCounter}-${Date.now().toString(36)}`;
 }
 
+function estimateConfidence(text: string): number {
+  const certaintyMarkers = /\b(definitely|certainly|undoubtedly|absolutely|clearly|obviously|always|never|must|without doubt|unquestionably|undeniably|in fact|indeed)\b/gi;
+  const hedgingMarkers = /\b(maybe|perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i assume|i suppose|it seems|it appears)\b/gi;
+  const certainty = (text.match(certaintyMarkers) || []).length;
+  const hedging = (text.match(hedgingMarkers) || []).length;
+  const score = 0.5 + (certainty - hedging) * 0.05;
+  return Math.max(0.3, Math.min(0.95, score));
+}
+
 export function extractClaims(
   text: string,
   sourceArgumentId: string,
   speaker: string,
   role: string,
   round: number,
+  agentId?: string,
+  confidence?: number,
 ): Claim[] {
   const sentences = text
     .split(/(?<=[.!?])\s+/)
@@ -37,10 +48,12 @@ export function extractClaims(
     claims.push({
       id: nextClaimId(),
       text: raw,
+      agentId: agentId ?? speaker,
+      round,
+      confidence: confidence ?? estimateConfidence(raw),
       sourceArgumentId,
       speaker,
       role,
-      round,
       status: 'active',
       supportCount: 0,
       challengeCount: 0,

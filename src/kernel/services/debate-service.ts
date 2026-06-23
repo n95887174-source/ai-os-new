@@ -865,7 +865,7 @@ export class DebateService {
   /** Feed a completed argument into the debate governor for claim extraction + graph update. Called after each successful LLM call in executeArgumentRound(). */
   private feedGovernor(arg: DebateArgument): void {
     if (!this.governor) return;
-    this.governor.ingestArgument(arg.content, arg.id, arg.agentName, arg.position, arg.round);
+    this.governor.ingestArgument(arg.content, arg.id, arg.agentName, arg.position, arg.round, arg.agentId, arg.confidence);
     this.governor.updateContradictions();
     this.governor.computeConvergence();
     this.governor.computeNovelty();
