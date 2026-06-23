@@ -53,7 +53,8 @@ import {
 } from './debate-bridge';
 import type { DebateSession } from '../../contracts/debate-types';
 import { DebateSession as DebateSessionInstance } from './debate-session';
-import type { DebateStore } from '../../contracts/storage/debate-store';
+import type { DebateStore, DebateVerdictRecord } from '../../contracts/storage/debate-store';
+import { DebateSessionRecordSchema, DebateVerdictRecordSchema } from '../../types/schema-types';
 
 interface DebateEngineDeps {
   eventBus: IEventBus;
@@ -104,10 +105,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       const snap = session.snapshot();
       if (snap.phase === 'completed' || snap.phase === 'failed' || snap.phase === 'cancelled') {
         if (now - snap.updatedAt > staleTimeout) {
+          session.destroy();
           this.sessions.delete(sessionId);
+          const budget = this.budgets.get(sessionId);
+          if (budget) (budget as DebateBudget).destroy();
           this.budgets.delete(sessionId);
           const mem = this.memories.get(sessionId);
-          if (mem) { mem.destroy(); this.memories.delete(sessionId); }
+          if (mem) mem.destroy();
+          this.memories.delete(sessionId);
+          const ctx = this.sessionContexts.get(sessionId);
+          if (ctx) ctx.destroy();
           this.sessionContexts.delete(sessionId);
           this.llmFailureCount.delete(sessionId);
           for (const p of session.participants) {
@@ -142,7 +149,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           this.getContext(id).conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
             const store = this.deps.debateStore;
             if (store) {
-              store.saveVerdict({
+              this.validateAndSaveVerdict(store, {
                 sessionId: verdict.sessionId,
                 topic: verdict.topic,
                 summary: verdict.summary,
@@ -153,8 +160,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 confidence: verdict.confidence,
                 generatedAt: verdict.generatedAt,
                 roundsTotal: verdict.roundsTotal,
-                 totalTokens: verdict.totalTokens,
-               }).catch(e => LOGGER.warn('DebateEngine', 'verdict persist failed', { error: e }));
+                totalTokens: verdict.totalTokens,
+              }).catch(e => LOGGER.warn('DebateEngine', 'verdict persist failed', { error: e }));
             }
             this.deps.eventBus.emit('debate:verdict:generated', { sessionId: id, verdict });
           }).catch(e => LOGGER.warn('DebateEngine', 'LLM-enhanced verdict failed, using heuristic', { error: e }));
@@ -241,7 +248,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 if (budget) {
                   const estimatedTokens = 250;
                   const estimatedCost = estimatedTokens * 0.000002;
-                  // CRIT-5 fix: use atomic reserveAndRecord instead of canProceed+recordUsage TOCTOU pattern.
+                  // Queue-based mutex prevents TOCTOU: check-and-set is atomic.
                   const allowed = await budget.reserveAndRecord(sessionId, estimatedTokens, estimatedCost);
                   if (!allowed) {
                     const action = budget.getPressureAction();
@@ -631,14 +638,32 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
   cancelSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
-    // CRIT-3 fix: abort ALL agents' controllers for this session, not just the last one
+    // Abort ALL agents' controllers for this session
     const agentControllers = this.sessionAbortControllers.get(sessionId);
     if (agentControllers) {
       for (const [, controller] of agentControllers) controller.abort();
       agentControllers.clear();
     }
     this.sessionAbortControllers.delete(sessionId);
-    this.getContext(sessionId).orchestrator.abort(sessionId);
+    // Destroy budget — releases any queued lock promises
+    const budget = this.budgets.get(sessionId);
+    (budget as DebateBudget).destroy();
+    this.budgets.delete(sessionId);
+    // Destroy memory
+    const mem = this.memories.get(sessionId);
+    if (mem) mem.destroy();
+    this.memories.delete(sessionId);
+    // Destroy context — cascades to consensus, timeline, orchestrator, conclusionEngine
+    const ctx = this.sessionContexts.get(sessionId);
+    if (ctx) ctx.destroy();
+    this.sessionContexts.delete(sessionId);
+    // Clean per-session tracking
+    this.llmFailureCount.delete(sessionId);
+    for (const p of session.participants) {
+      this.participantProviderMap.delete(this.providerKey(sessionId, p.agentId));
+    }
+    // Remove from running set
+    this.runningSessions.delete(sessionId);
     session.transition('cancelled');
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CANCELLED, { sessionId });
   }
@@ -673,7 +698,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (!snap) return;
     const session = this.sessions.get(sessionId);
     if (!session) return;
-    await store.saveSnapshot({
+    const record = {
       id: snap.id,
       topic: snap.topic,
       topologyType: snap.topology.type,
@@ -689,7 +714,22 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       createdAt: snap.startedAt,
       arguments: snap.arguments ? JSON.stringify(snap.arguments) : '[]',
       memory: JSON.stringify(this.getMemory(sessionId).toJSON()),
-    });
+    } as const;
+    const parsed = DebateSessionRecordSchema.safeParse(record);
+    if (!parsed.success) {
+      LOGGER.warn('DebateEngine', `saveSnapshot validation failed for ${sessionId}`, { errors: parsed.error.issues });
+      return;
+    }
+    await store.saveSnapshot(record);
+  }
+
+  private async validateAndSaveVerdict(store: DebateStore, verdict: DebateVerdictRecord): Promise<void> {
+    const vp = DebateVerdictRecordSchema.safeParse(verdict);
+    if (!vp.success) {
+      LOGGER.warn('DebateEngine', 'verdict validation failed', { errors: vp.error.issues });
+      return;
+    }
+    await store.saveVerdict(verdict);
   }
 
   async restoreSession(sessionId: string): Promise<DebateSessionSnapshot | null> {
@@ -697,6 +737,11 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (!store) return null;
     const record = await store.getSnapshot(sessionId);
     if (!record) return null;
+    const rp = DebateSessionRecordSchema.safeParse(record);
+    if (!rp.success) {
+      LOGGER.warn('DebateEngine', `restoreSession: corrupted record ${sessionId}`, { errors: rp.error.issues });
+      return null;
+    }
     const existing = this.sessions.get(sessionId);
     if (existing) return existing.snapshot();
 
@@ -748,7 +793,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
             const tl = this.getTimeline(record.id);
             this.getContext(record.id).conclusionEngine.generateVerdictWithLLM(snap, tl).then(verdict => {
               if (store) {
-                store.saveVerdict({
+                this.validateAndSaveVerdict(store, {
                   sessionId: verdict.sessionId, topic: verdict.topic,
                   summary: verdict.summary, conclusionType: verdict.conclusionType,
                   stanceResult: verdict.stanceResult, keyArguments: JSON.stringify(verdict.keyArguments),
@@ -834,14 +879,19 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
   }
 
   destroy(): void {
-    for (const session of this.sessions.values()) session.destroy();
+    // Cancel all active sessions — cascades to budget/memory/context cleanup
+    for (const sessionId of this.sessions.keys()) {
+      this.cancelSession(sessionId);
+    }
+    // Safe-clear any remaining maps
     this.sessions.clear();
     this.budgets.clear();
-    this.llmFailureCount.clear();
-    for (const mem of this.memories.values()) mem.destroy();
     this.memories.clear();
-    for (const ctx of this.sessionContexts.values()) ctx.timeline.destroy();
     this.sessionContexts.clear();
+    this.llmFailureCount.clear();
+    this.participantProviderMap.clear();
+    this.sessionAbortControllers.clear();
+    this.runningSessions.clear();
     if (this.cleanupInterval) { clearInterval(this.cleanupInterval); this.cleanupInterval = null; }
     this._started = false;
   }

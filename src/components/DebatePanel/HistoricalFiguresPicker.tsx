@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { X, Check, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HISTORICAL_FIGURES } from '../../kernel/services/debate-historical-figures'
@@ -12,11 +12,37 @@ interface HistoricalFiguresPickerProps {
 }
 
 export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = ({ isOpen, onClose, selectedIds, onToggle, max = 5 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    // Move focus into the modal and trap it
+    const prevFocus = document.activeElement as HTMLElement | null;
+    const focusable = containerRef.current?.querySelector<HTMLElement>('button, [tabindex]:not([tabindex="-1"]), input, select, textarea');
+    focusable?.focus();
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      // Trap Tab cycling within the modal
+      if (e.key === 'Tab' && containerRef.current) {
+        const all = containerRef.current.querySelectorAll<HTMLElement>('button, [tabindex]:not([tabindex="-1"])');
+        if (all.length === 0) return;
+        const first = all[0];
+        const last = all[all.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
     document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    return () => {
+      document.removeEventListener('keydown', handler);
+      prevFocus?.focus();
+    };
   }, [isOpen, onClose]);
 
   return (
@@ -30,6 +56,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
           onClick={onClose}
         >
           <motion.div
+            ref={containerRef}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}

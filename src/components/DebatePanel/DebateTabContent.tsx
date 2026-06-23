@@ -9,6 +9,7 @@ import { DebateVerdictPanel } from './DebateVerdictPanel';
 import { DebateMemoryPanel } from './DebateMemoryPanel';
 import DebateSidebar from './DebateSidebar';
 import DebateChat from './DebateChat';
+import ErrorBoundary from '../Common/ErrorBoundary';
 import type { DebateSession, DebateVerdict, HumanVote } from '../../kernel/contracts';
 import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
@@ -204,13 +205,15 @@ export function DebateTabContent({
                   </div>
 
                   <div role="log" aria-live="polite" aria-label="Debate arguments" style={debateLogArea}>
-                    <DebateChat
-                      arguments={session.arguments ?? []}
-                      isActive={session.status === 'active'}
-                      t={t}
-                      agentLabel={getAgentLabel}
-                      streamingArgIds={streamingArgIds}
-                    />
+                    <ErrorBoundary name="DebateChat" variant="panel">
+                      <DebateChat
+                        arguments={session.arguments ?? []}
+                        isActive={session.status === 'active'}
+                        t={t}
+                        agentLabel={getAgentLabel}
+                        streamingArgIds={streamingArgIds}
+                      />
+                    </ErrorBoundary>
                   </div>
 
                   {/* Voting Panel */}
@@ -248,7 +251,11 @@ export function DebateTabContent({
                     </div>
                   )}
 
-                  {session.status !== 'completed' && <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />}
+                  {session.status !== 'completed' && (
+                    <ErrorBoundary name="CollabDebatePanel" variant="panel">
+                      <CollabDebatePanel session={session} getAgentLabel={getAgentLabel} />
+                    </ErrorBoundary>
+                  )}
 
                   {session.status !== 'completed' && (
                     <div className="debate-inject-bar">
@@ -264,7 +271,11 @@ export function DebateTabContent({
                 </>
               )}
             </div>
-            {session && <DebateAnalytics session={session} getAgentLabel={getAgentLabel} t={t} />}
+            {session && (
+              <ErrorBoundary name="DebateAnalytics" variant="panel">
+                <DebateAnalytics session={session} getAgentLabel={getAgentLabel} t={t} />
+              </ErrorBoundary>
+            )}
           </div>
         )}
       </div>

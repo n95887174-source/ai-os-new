@@ -67,6 +67,8 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
 
   useEffect(() => {
     loadRooms();
+    const interval = setInterval(loadRooms, 10000);
+    return () => clearInterval(interval);
   }, [loadRooms]);
 
   useEffect(() => {

@@ -15,4 +15,11 @@ export class DebateSessionContext {
   constructor(llmCall: (prompt: string) => Promise<string>) {
     this.conclusionEngine = new DebateConclusionEngine(llmCall);
   }
+
+  destroy(): void {
+    this.consensus.destroy();
+    this.timeline.destroy();
+    this.orchestrator.destroy();
+    this.conclusionEngine.destroy();
+  }
 }

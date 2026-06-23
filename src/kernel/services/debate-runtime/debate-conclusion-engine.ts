@@ -203,6 +203,11 @@ Respond ONLY with valid JSON, no markdown.`;
     };
   }
 
+  destroy(): void {
+    this.feedbackLog = [];
+    this.llmCall = undefined;
+  }
+
   recordFeedback(sessionId: string, vote: VerdictFeedbackVote, comment?: string): void {
     this.feedbackLog.push({ sessionId, vote, comment, timestamp: Date.now() });
     if (this.feedbackLog.length > 500) this.feedbackLog.shift();

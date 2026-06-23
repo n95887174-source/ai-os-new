@@ -126,10 +126,8 @@ export interface PressureAction {
 }
 
 export interface IDebateBudget {
-  canProceed(sessionId: string, estimatedTokens: number, estimatedCost: number): boolean;
-  /** Atomically checks budget + records usage — use instead of canProceed+recordUsage to avoid TOCTOU race. */
+  /** Atomically checks budget + records usage. Queue-based mutex prevents TOCTOU race. */
   reserveAndRecord(sessionId: string, estimatedTokens: number, estimatedCost: number): Promise<boolean>;
-  recordUsage(sessionId: string, tokens: number, cost: number): void;
   incrementRound(sessionId: string): void;
   getPressure(): PressureLevel;
   getPressureAction(): PressureAction;

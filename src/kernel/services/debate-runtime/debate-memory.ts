@@ -28,7 +28,7 @@ export class DebateMemory implements IDebateMemory {
   }
 
   getAllSteps(): ReasoningStep[] {
-    return this.steps;
+    return [...this.steps];
   }
 
   recordClaim(claim: Claim): void {
@@ -43,7 +43,7 @@ export class DebateMemory implements IDebateMemory {
   }
 
   getChain(agentId: string): ReasoningChain[] {
-    return this.chains.get(agentId) || [];
+    return [...(this.chains.get(agentId) || [])];
   }
 
   getClaimsForTopic(topic: string): Claim[] {

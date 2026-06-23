@@ -50,6 +50,16 @@ const TRIVIAL_QUESTION_PATTERNS = [
   /\bwould you like to\b/i,
   /\bany other\s+(points|thoughts|ideas)\b/i,
   /\bis there anything else\b/i,
+  // Russian trivial question patterns
+  /\bможете уточнить\b/i,
+  /\bможете пояснить\b/i,
+  /\bрасскажите подробнее\b/i,
+  /\bчто вы имеете в виду\b/i,
+  /\bчто вы думаете\b/i,
+  /\bкак вы относитесь\b/i,
+  /\bесть ли ещё\b/i,
+  /\bчто ещё\b/i,
+  /\bпоясните\b/i,
 ];
 
 const DEEP_QUESTION_PATTERNS = [
@@ -377,6 +387,7 @@ export class DebateService {
 
   private scheduleNextRound(): void {
     if (this.destroyed) return;
+    if (this.runtimeAdapter.isActive()) return;
     const session = this.activeSession;
     if (!session) return;
     const cfg = session.config;
@@ -384,6 +395,7 @@ export class DebateService {
 
     this.simulationTimeout = setTimeout(async () => {
       if (this.destroyed) return;
+      if (this.runtimeAdapter.isActive()) return;
       if (gen !== this.roundGeneration) return;
       if (!this.activeSession || this.activeSession.status !== 'active') return;
       if (this.isExecutingRound) return;
@@ -399,7 +411,7 @@ export class DebateService {
         await this.executeArgumentRound(currentParticipant);
       } finally {
         this.isExecutingRound = false;
-        if (gen === this.roundGeneration && !this.destroyed && this.activeSession?.status === 'active') {
+        if (gen === this.roundGeneration && !this.destroyed && this.activeSession?.status === 'active' && !this.runtimeAdapter.isActive()) {
           this.scheduleNextRound();
         }
       }
@@ -820,7 +832,7 @@ export class DebateService {
   }
 
   getArguments(): DebateArgument[] {
-    return this.activeSession?.arguments || [];
+    return [...(this.activeSession?.arguments || [])];
   }
 
   private persistHistory(): void {
@@ -839,7 +851,7 @@ export class DebateService {
   }
 
   getHistory(): DebateSession[] {
-    return this.completedSessions;
+    return [...this.completedSessions];
   }
 
   restoreSession(id: string): DebateSession | null {

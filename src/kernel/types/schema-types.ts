@@ -439,6 +439,38 @@ export const OptimizationSuggestionSchema = z.object({
   }).optional(),
 });
 
+export const DebateSessionRecordSchema = z.object({
+  id: z.string().min(1),
+  topic: z.string().min(1),
+  topologyType: z.string().min(1),
+  phase: z.string().min(1),
+  round: z.number().int().min(0),
+  totalTokens: z.number().min(0),
+  totalCost: z.number().min(0),
+  agentStates: z.string().min(1),
+  arguments: z.string(),
+  topology: z.string().min(1),
+  participants: z.string(),
+  memory: z.string(),
+  startedAt: z.number().positive(),
+  updatedAt: z.number().positive(),
+  createdAt: z.number().positive(),
+});
+
+export const DebateVerdictRecordSchema = z.object({
+  sessionId: z.string().min(1),
+  topic: z.string().min(1),
+  summary: z.string(),
+  conclusionType: z.string().min(1),
+  stanceResult: z.string().min(1),
+  keyArguments: z.string(),
+  reasoning: z.string(),
+  confidence: z.number().min(0).max(1),
+  generatedAt: z.number().positive(),
+  roundsTotal: z.number().int().min(0),
+  totalTokens: z.number().min(0),
+});
+
 export const EventValidators: Record<string, z.ZodType<unknown>> = {
   // ── Provider / Key Events ──────────────────────────────────────────
   'key:loaded': z.array(ApiKeySchema),
