@@ -66,7 +66,7 @@ export interface StorageRouterResult {
 }
 
 const STORAGE_KEY = 'super_agents_api_keys';
-const BucketStorageAdapter = BucketStorageAdapter.PROVIDERS;
+const PROVIDER_BUCKET = BucketStorageAdapter.PROVIDERS;
 
 interface ForcedMode {
   __FORCE_STORAGE_MODE__?: StorageMode;
@@ -77,7 +77,7 @@ interface ForcedMode {
  */
 function readLocalStorage(): ApiKey[] {
   try {
-    const raw = BucketStorageAdapter.getSync<string>(STORAGE_KEY);
+    const raw = PROVIDER_BUCKET.getSync<string>(STORAGE_KEY);
     if (!raw) return [];
     // B10-38: getSync already returns parsed object — no double JSON.parse needed
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;

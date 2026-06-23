@@ -73,6 +73,8 @@ class BrowserSTTService {
   private listeners: Map<string, Set<(result: STTResult) => void>> = new Map();
   private errorListeners: Set<(error: string) => void> = new Set();
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
+  private restartAttempts = 0;
+  private readonly MAX_RESTART_ATTEMPTS = 10;
   private options: STTOptions = {
     lang: 'en-US',
     continuous: true,
@@ -106,6 +108,7 @@ class BrowserSTTService {
 
       // Set up event handlers
       this.recognition.onstart = () => {
+        this.restartAttempts = 0;
         this.state = 'listening';
         LOGGER.info('BrowserSTTService', 'Recognition started');
         EventBus.emit(EVENTS.STT_STATE_CHANGED, { state: this.state });
@@ -168,9 +171,16 @@ class BrowserSTTService {
 
       this.recognition.onend = () => {
         if (this.state === 'listening') {
-          // Unexpected end - try to restart
-          LOGGER.warn('BrowserSTTService', 'Recognition ended unexpectedly, restarting...');
-          this.restart();
+          if (this.restartAttempts < this.MAX_RESTART_ATTEMPTS) {
+            this.restartAttempts++;
+            LOGGER.warn('BrowserSTTService', 'Recognition ended unexpectedly, restarting...', { attempt: this.restartAttempts });
+            this.restart();
+          } else {
+            LOGGER.error('BrowserSTTService', 'Max restart attempts reached, stopping');
+            this.state = 'error';
+            EventBus.emit(EVENTS.STT_STATE_CHANGED, { state: this.state, error: 'Max restart attempts reached' });
+            EventBus.emit(EVENTS.STT_ERROR, { error: 'Max restart attempts reached' });
+          }
         } else {
           this.state = 'idle';
           EventBus.emit(EVENTS.STT_STATE_CHANGED, { state: this.state });
@@ -239,6 +249,7 @@ class BrowserSTTService {
         clearTimeout(this.restartTimer);
         this.restartTimer = null;
       }
+      this.restartAttempts = 0;
       this.recognition.stop();
       this.state = 'idle';
       LOGGER.info('BrowserSTTService', 'Recognition stopped');
@@ -263,6 +274,7 @@ class BrowserSTTService {
         clearTimeout(this.restartTimer);
         this.restartTimer = null;
       }
+      this.restartAttempts = 0;
       this.recognition.abort();
       this.state = 'idle';
       this.currentTranscript = '';
@@ -275,13 +287,14 @@ class BrowserSTTService {
 
   private restart(): void {
     if (this.state !== 'listening' || !this.recognition) return;
+    const backoffMs = Math.min(100 * Math.pow(2, this.restartAttempts), 5000);
 
     try {
       this.restartTimer = setTimeout(() => {
         if (this.state === 'listening' && this.recognition) {
           this.recognition.start();
         }
-      }, 100);
+      }, backoffMs);
     } catch (e) {
       LOGGER.error('BrowserSTTService', 'Failed to restart recognition', { error: e });
     }
@@ -374,6 +387,7 @@ class BrowserSTTService {
       clearTimeout(this.restartTimer);
       this.restartTimer = null;
     }
+    this.restartAttempts = 0;
     if (this.recognition) {
       try { this.recognition.abort(); } catch { LOGGER.warn('BrowserSTTService', 'Recognition abort failed'); }
       this.recognition = null;

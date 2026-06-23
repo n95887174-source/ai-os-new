@@ -105,6 +105,7 @@ private registerAllValidators(): void {
       for (let i = 0; i < 1000; i++) {
         const next = iter.next();
         if (next.done) break;
+        next.value();
         this.unsubCallbacks.delete(next.value);
       }
     }

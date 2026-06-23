@@ -240,12 +240,16 @@ class ProviderCatalogService {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(`${entry.baseURL}/models`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(entry),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      let response: Response;
+      try {
+        response = await fetch(`${entry.baseURL}/models`, {
+          method: 'GET',
+          headers: this.getAuthHeaders(entry),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       entry.status = response.ok ? 'available' : 'unavailable';
       entry.lastChecked = Date.now();

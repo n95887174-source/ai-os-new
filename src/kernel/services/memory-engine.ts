@@ -78,9 +78,14 @@ export class MemoryService implements IMemoryEngine {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
     if (this.pruneInterval) { clearInterval(this.pruneInterval); this.pruneInterval = null; }
+    // M-4: Reject pending requests before terminating worker
+    for (const [, req] of this.pendingRequests) {
+      if (req.timerId) clearTimeout(req.timerId);
+      req.reject(new Error('MemoryEngine destroyed'));
+    }
+    this.pendingRequests.clear();
     if (this.worker) { this.worker.terminate(); this.worker = null; }
     this.memories = [];
-    this.pendingRequests.clear();
     this._listenersSetup = false;
     this.isDbReady = false;
     this.semanticReady = false;

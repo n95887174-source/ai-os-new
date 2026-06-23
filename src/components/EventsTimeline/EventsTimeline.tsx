@@ -105,7 +105,11 @@ const EventsTimeline: React.FC = () => {
         return next;
       });
     });
-    return () => { timelineIsMountedRef.current = false; unsub(); };
+    return () => {
+      timelineIsMountedRef.current = false;
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+      unsub();
+    };
   }, [isPaused, debouncedSave]);
 
   useEffect(() => {

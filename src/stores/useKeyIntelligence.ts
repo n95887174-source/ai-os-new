@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { KeyIntelligencePipeline } from '../kernel/services/key-intelligence-pipeline';
 import { KeyFingerprints } from '../kernel/services/key-management/key-fingerprints';
 import { keyService, adapterRegistry } from '../kernel/instances';
@@ -43,6 +43,14 @@ export function useKeyIntelligence(): UseKeyIntelligenceReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const runPipeline = useCallback(async (input: KeyIntelligenceInput) => {
     if (abortRef.current) {
@@ -55,12 +63,11 @@ export function useKeyIntelligence(): UseKeyIntelligenceReturn {
     setError('');
     setReport(null);
     try {
-      // NOTE: pipeline.run() doesn't accept AbortSignal yet — interface change needed
       const result = await pipeline.run(input);
-      if (ac.signal.aborted) return;
+      if (!mountedRef.current || ac.signal.aborted) return;
       setReport(result);
     } catch (err: unknown) {
-      if (ac.signal.aborted) return;
+      if (!mountedRef.current || ac.signal.aborted) return;
       const msg = err instanceof Error ? err.message : 'Pipeline execution failed';
       setError(msg);
       // OBS-82: emit pipeline error to monitoring

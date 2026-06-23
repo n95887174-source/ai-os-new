@@ -384,6 +384,7 @@ const ChatPanel: React.FC = () => {
   const lastEditedEntryIdRef = useRef<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [undoText, setUndoText] = useState<string | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -443,6 +444,7 @@ const ChatPanel: React.FC = () => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (undoTimerRef.current) { clearTimeout(undoTimerRef.current); undoTimerRef.current = null; }
     };
   }, []);
 
@@ -700,7 +702,8 @@ const ChatPanel: React.FC = () => {
     editEntry(id, editingText.trim());
     cancelEditing();
     setUndoText(prevText);
-    setTimeout(() => setUndoText(null), 5000);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => { setUndoText(null); undoTimerRef.current = null; }, 5000);
   }, [editingText, editEntry, cancelEditing, history]);
 
   const handleUndoEdit = useCallback(() => {

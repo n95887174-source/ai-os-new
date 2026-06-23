@@ -84,6 +84,10 @@ export class AgentService {
   destroy() {
     this._initialized = false;
     this.unsubs.forEach(u => u());
+    if (this.persistDebounceTimer) {
+      clearTimeout(this.persistDebounceTimer);
+      this.persistDebounceTimer = null;
+    }
   }
 
   private async load() {

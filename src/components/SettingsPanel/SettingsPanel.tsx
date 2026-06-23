@@ -111,16 +111,18 @@ const SettingsPanel: React.FC = () => {
           intervalRef.current = null;
         }
       }, 500);
-      setTimeout(() => {
+      const safetyTimeout = setTimeout(() => {
         if (intervalRef.current) clearInterval(intervalRef.current);
         intervalRef.current = null;
       }, 10000);
+      safetyTimeoutRef.current = safetyTimeout;
     }
 
     return () => {
       isMountedRef.current = false;
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = null;
+      if (safetyTimeoutRef.current) { clearTimeout(safetyTimeoutRef.current); safetyTimeoutRef.current = null; }
       unsubSettings();
       unsubFlags();
       setVaultPassword('');
