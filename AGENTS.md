@@ -902,8 +902,8 @@ Complete Phase 3 remaining items from audit: eslint cleanup, JSX dedup, Russian 
 - `buildDebateStatePrompt` uses `'Russian'` default to match existing `DEFAULT_LANGUAGE` in `debate-prompt-builder.ts`
 - Build errors (`storageAdapter`, `StorageAdapter`) were pre-existing — exports were renamed but aliases were missing
 
-### Remaining (not started)
-- Keyword-based contradiction detection → embedding-distance or LLM-assisted (major refactor)
+### Deferred (not urgent)
+- **Keyword-based contradiction detection** → embedding-distance or LLM-assisted (quality improvement, not stability — defer until UI/lifecycle is fully stable)
 
 ---
 
