@@ -203,6 +203,7 @@ function validatePrimitive(primitive: StrategyPrimitive, path: string): Validati
         errors.push({ path: `${path}.edges`, message: 'Debate graph must have at least 1 edge', code: 'EMPTY_GRAPH' });
       } else {
         const agentIds = new Set(graph.agents?.map(a => a.nodeId) ?? []);
+        const edgeKeys = new Set<string>();
         graph.edges.forEach((edge, i) => {
           if (!agentIds.has(edge.from)) {
             errors.push({ path: `${path}.edges[${i}].from`, message: `Unknown agent: ${edge.from}`, code: 'UNKNOWN_AGENT' });
@@ -210,6 +211,14 @@ function validatePrimitive(primitive: StrategyPrimitive, path: string): Validati
           if (!agentIds.has(edge.to)) {
             errors.push({ path: `${path}.edges[${i}].to`, message: `Unknown agent: ${edge.to}`, code: 'UNKNOWN_AGENT' });
           }
+          if (edge.from === edge.to) {
+            errors.push({ path: `${path}.edges[${i}]`, message: 'Self-loop edge', code: 'SELF_LOOP' });
+          }
+          const key = `${edge.from}->${edge.to}`;
+          if (edgeKeys.has(key)) {
+            errors.push({ path: `${path}.edges[${i}]`, message: `Duplicate edge: ${key}`, code: 'DUPLICATE_EDGE' });
+          }
+          edgeKeys.add(key);
         });
       }
       if (graph.maxRounds !== undefined && graph.maxRounds < 1) {

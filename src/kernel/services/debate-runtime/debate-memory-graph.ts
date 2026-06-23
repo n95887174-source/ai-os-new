@@ -28,6 +28,7 @@ export interface KnowledgeGraph {
 export class DebateMemoryGraph {
   private graph: KnowledgeGraph = { nodes: [], edges: [] };
   private argToNodeId = new Map<string, string>();
+  private edgeKeys = new Set<string>();
 
   /** SI-48: Incremental add — single argument without full rebuild */
   addArgument(arg: DebateArgument): void {
@@ -59,6 +60,9 @@ export class DebateMemoryGraph {
       if (overlap < 0.3) continue;
       const relation = this.inferRelation(arg, { id: node.id, content: node.idea, agentId: node.agentId, round: node.round, confidence: node.strength, timestamp: node.lastSeen } as DebateArgument, overlap);
       if (relation) {
+        const key = `${fromNodeId}->${node.id}:${relation}`;
+        if (this.edgeKeys.has(key)) continue;
+        this.edgeKeys.add(key);
         this.graph.edges.push({ from: fromNodeId, to: node.id, relation, weight: overlap });
       }
     }
@@ -67,6 +71,7 @@ export class DebateMemoryGraph {
   build(arguments_: DebateArgument[]): KnowledgeGraph {
     this.graph = { nodes: [], edges: [] };
     this.argToNodeId.clear();
+    this.edgeKeys.clear();
 
     for (const arg of arguments_) {
       const idea = this.extractIdea(arg.content);
@@ -137,6 +142,7 @@ export class DebateMemoryGraph {
   }
 
   private buildEdges(arguments_: DebateArgument[]): void {
+    const edgeKeys = new Set<string>();
     for (let i = 0; i < arguments_.length; i++) {
       for (let j = i + 1; j < arguments_.length; j++) {
         const a = arguments_[i];
@@ -146,12 +152,12 @@ export class DebateMemoryGraph {
 
         const relation = this.inferRelation(a, b, overlap);
         if (relation) {
-          this.graph.edges.push({
-            from: this.resolveNodeId(a.id),
-            to: this.resolveNodeId(b.id),
-            relation,
-            weight: overlap,
-          });
+          const from = this.resolveNodeId(a.id);
+          const to = this.resolveNodeId(b.id);
+          const key = `${from}->${to}:${relation}`;
+          if (edgeKeys.has(key)) continue;
+          edgeKeys.add(key);
+          this.graph.edges.push({ from, to, relation, weight: overlap });
         }
       }
     }

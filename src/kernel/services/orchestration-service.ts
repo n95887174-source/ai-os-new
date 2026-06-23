@@ -126,9 +126,14 @@ export class OrchestrationService {
     if (!topology.edges) errors.push('Topology has no edges');
     const entryNodes = topology.nodes.filter(n => n.type === 'router' || n.id === 'entry');
     if (entryNodes.length === 0) errors.push('No entry node found (router or id="entry")');
+    const edgeKeys = new Set<string>();
     for (const edge of topology.edges || []) {
       if (!topology.nodes.some(n => n.id === edge.from)) errors.push(`Edge from "${edge.from}" references non-existent node`);
       if (!topology.nodes.some(n => n.id === edge.to)) errors.push(`Edge to "${edge.to}" references non-existent node`);
+      if (edge.from === edge.to) errors.push(`Self-loop edge: ${edge.from} -> ${edge.to}`);
+      const key = `${edge.from}->${edge.to}`;
+      if (edgeKeys.has(key)) errors.push(`Duplicate edge: ${key}`);
+      edgeKeys.add(key);
     }
     return { valid: errors.length === 0, errors };
   }

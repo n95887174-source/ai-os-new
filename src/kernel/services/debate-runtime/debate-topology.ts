@@ -18,8 +18,13 @@ export class DebateTopologyService implements ITopologyService {
     if (topology.edges.length < bounds.min || topology.edges.length > bounds.max) return false;
 
     const nodeIds = new Set(topology.nodes.map(n => n.id));
+    const edgeKeys = new Set<string>();
     for (const edge of topology.edges) {
       if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) return false;
+      if (edge.from === edge.to) return false;
+      const key = `${edge.from}->${edge.to}`;
+      if (edgeKeys.has(key)) return false;
+      edgeKeys.add(key);
     }
 
     return true;
