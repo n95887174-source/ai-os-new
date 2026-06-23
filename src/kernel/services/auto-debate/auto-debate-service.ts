@@ -129,9 +129,9 @@ export class AutoDebateService implements IAutoDebateService {
     const participants: DebateParticipant[] = selected.map((key, i) => {
       const role = ROLES[i % ROLES.length];
       const systemPrompts: Record<AutoDebateRole, string> = {
-        pro: `You are "Pro-${key.label ?? key.provider}". Argue in favour of the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough. Respond in Russian.`,
-        con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough. Respond in Russian.`,
-        neutral: `You are "Neutral-${key.label ?? key.provider}". Analyse both sides objectively. Identify strengths and weaknesses. Do not take a side. Be concise and balanced. Respond in Russian.`,
+        pro: `You are "Pro-${key.label ?? key.provider}". Argue in favour of the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
+        con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
+        neutral: `You are "Neutral-${key.label ?? key.provider}". Analyse both sides objectively. Identify strengths and weaknesses. Do not take a side. Be concise and balanced.`,
       };
       const offset = providerOffsets[key.provider] ?? 0;
       providerOffsets[key.provider] = offset + 1;
@@ -182,7 +182,7 @@ export class AutoDebateService implements IAutoDebateService {
         participants,
         options.strategy ?? 'round_robin',
         options.maxRounds ?? 3,
-        { temperature: 0.7, maxTokens: 1024, roundDelayMs: 100, useModerator: true, timeoutMs: 30000 },
+        { temperature: 0.7, maxTokens: 1024, roundDelayMs: 100, useModerator: true, timeoutMs: 30000, language: 'ru' },
       );
 
       const result: AutoDebateResult = {
@@ -255,13 +255,13 @@ export class AutoDebateService implements IAutoDebateService {
       const pB = allParticipants[b];
       const pairStart = Date.now();
 
-      const pro = { ...pA, role: 'pro' as const, systemPrompt: `You are "Pro-${pA.name}". Argue FOR the topic. Use evidence and logic. Respond in Russian.` };
-      const con = { ...pB, role: 'con' as const, systemPrompt: `You are "Con-${pB.name}". Argue AGAINST the topic. Use evidence and logic. Respond in Russian.` };
+      const pro = { ...pA, role: 'pro' as const, systemPrompt: `You are "Pro-${pA.name}". Argue FOR the topic. Use evidence and logic.` };
+      const con = { ...pB, role: 'con' as const, systemPrompt: `You are "Con-${pB.name}". Argue AGAINST the topic. Use evidence and logic.` };
 
       try {
         const session = await this.deps.debateService.startDebate(
           topic, [pro, con], 'round_robin', 2,
-          { temperature: 0.7, maxTokens: 512, roundDelayMs: 50, useModerator: true, timeoutMs: 20000 },
+          { temperature: 0.7, maxTokens: 512, roundDelayMs: 50, useModerator: true, timeoutMs: 20000, language: 'ru' },
         );
 
         const consensusText = (session.consensus ?? '').toLowerCase();

@@ -80,6 +80,7 @@ export interface IDebateSession {
   readonly round: number;
   readonly agentStates: Map<string, AgentStateEntry>;
   readonly createdAt: number;
+  readonly language: string;
 
   transition(to: DebatePhase, tx?: ITransaction): boolean;
   incrementRound(): void;
@@ -101,6 +102,7 @@ export interface DebateSessionSnapshot {
   readonly totalCost: number;
   readonly startedAt: number;
   readonly updatedAt: number;
+  readonly language: string;
   readonly arguments?: ReadonlyArray<{ agentId: string; content: string; round: number; timestamp: number; confidence: number; position?: string }>;
   readonly participants?: ReadonlyArray<ParticipantConfig>;
 }
@@ -321,7 +323,7 @@ export interface IDebateQueryEngine {
 }
 
 export interface IDebateEngine {
-  createSession(topology: DebateTopology, topic: string, participants: ParticipantConfig[]): string;
+  createSession(topology: DebateTopology, topic: string, participants: ParticipantConfig[], language?: string): string;
   startSession(sessionId: string): Promise<void>;
   pauseSession(sessionId: string): void;
   resumeSession(sessionId: string): void;

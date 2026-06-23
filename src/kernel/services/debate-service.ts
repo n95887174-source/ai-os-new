@@ -273,6 +273,7 @@ export class DebateService {
         buildRoundtableTopology(participants),
         topic,
         participantsToConfig(participants),
+        sessionConfig.language === 'en' ? 'English' : 'Russian',
       );
       this.runtimeSessionId = runtimeId;
       this.bridgeCtx = { participants, strategy, maxRounds, config: sessionConfig };
@@ -723,6 +724,7 @@ export class DebateService {
           totalCost: this.activeSession.totalCost ?? 0,
           startedAt: this.activeSession.createdAt,
           updatedAt: Date.now(),
+          language: this.defaultConfig.language === 'en' ? 'English' : 'Russian',
         };
         verdict = this.conclusionEngine.generateVerdict(snap, timeline);
       } catch (e) {

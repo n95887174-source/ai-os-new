@@ -41,11 +41,14 @@ export class DebateSession implements IDebateSession {
   private _startedAt = 0;
   private _phaseListeners: Array<(from: DebatePhase, to: DebatePhase) => void> = [];
 
-  constructor(id: string, topic: string, topology: DebateTopology, participants: ParticipantConfig[]) {
+  readonly language: string;
+
+  constructor(id: string, topic: string, topology: DebateTopology, participants: ParticipantConfig[], language = 'Russian') {
     this.id = id;
     this.topic = topic;
     this.topology = topology;
     this.participants = participants;
+    this.language = language;
     this.createdAt = Date.now();
 
     for (const p of participants) {
@@ -134,6 +137,7 @@ export class DebateSession implements IDebateSession {
       totalCost: this._totalCost,
       startedAt: this._startedAt || this.createdAt,
       updatedAt: Date.now(),
+      language: this.language,
     };
   }
 
@@ -148,6 +152,7 @@ export class DebateSession implements IDebateSession {
     this._totalTokens = snapshot.totalTokens;
     this._totalCost = snapshot.totalCost;
     this._startedAt = snapshot.startedAt;
+    (this as { language: string }).language = snapshot.language;
     
     this._agentStates.clear();
     for (const as of snapshot.agentStates) {

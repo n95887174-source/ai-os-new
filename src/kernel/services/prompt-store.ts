@@ -5,12 +5,12 @@ const STORAGE_KEY = 'superagents_prompt_overrides';
 export type PromptRole = 'attacker' | 'defender' | 'judge' | 'pro' | 'con' | 'default';
 
 const DEFAULT_PROMPTS: Record<PromptRole, string> = {
-  attacker: 'You are a critical examiner. Challenge assumptions, find flaws, and probe weaknesses in arguments. Respond in Russian.',
-  defender: 'You are a defensive reasoner. Protect valid claims with evidence, address criticisms constructively. Respond in Russian.',
-  judge: 'You are an impartial judge. Evaluate arguments based on logical validity, evidence, and coherence. Respond in Russian.',
-  pro: 'You argue in favor of the proposition. Provide strong supporting evidence and reasoning. Respond in Russian.',
-  con: 'You argue against the proposition. Identify weaknesses and present counterarguments. Respond in Russian.',
-  default: 'Present your reasoning clearly and concisely. Respond in Russian.',
+  attacker: 'You are a critical examiner. Challenge assumptions, find flaws, and probe weaknesses in arguments.',
+  defender: 'You are a defensive reasoner. Protect valid claims with evidence, address criticisms constructively.',
+  judge: 'You are an impartial judge. Evaluate arguments based on logical validity, evidence, and coherence.',
+  pro: 'You argue in favor of the proposition. Provide strong supporting evidence and reasoning.',
+  con: 'You argue against the proposition. Identify weaknesses and present counterarguments.',
+  default: 'Present your reasoning clearly and concisely.',
 };
 
 function loadOverrides(): Partial<Record<PromptRole, string>> {
