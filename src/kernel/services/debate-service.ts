@@ -173,12 +173,13 @@ export class DebateService {
   private bridgeCtx: SnapshotBridgeContext | null = null;
   private unsubs: Array<() => void> = [];
   private defaultConfig: DebateConfig = {
-    roundDelayMs: 3000,
-    maxTokens: 500,
+    roundDelayMs: 2000,
+    maxTokens: 1024,
     temperature: 0.7,
     debateTemperature: 0.5,
-    useModerator: false,
-    timeoutMs: 30000
+    useModerator: true,
+    timeoutMs: 30000,
+    language: 'ru',
   };
   private completedSessions: DebateSession[] = [];
   private readonly MAX_HISTORY = 20;
@@ -373,7 +374,8 @@ export class DebateService {
     const participantConstraint = participant.constraint;
     return buildOpeningPrompt(
       participant, session.topic, session.strategy, session.socraticQuestioner,
-      session.participants, session.config?.debateTemperature, participantConstraint
+      session.participants, session.config?.debateTemperature, participantConstraint,
+      session.config?.language ?? 'ru',
     );
   }
 
@@ -388,7 +390,7 @@ export class DebateService {
     return buildArgumentPrompt(
       participant, round, previousArguments, session.topic, session.strategy,
       session.socraticQuestioner, session.participants, session.config?.debateTemperature,
-      participantConstraint
+      participantConstraint, session.config?.language ?? 'ru',
     );
   }
 

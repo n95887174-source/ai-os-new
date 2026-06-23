@@ -123,6 +123,7 @@ export interface DebateConfig {
   useModerator: boolean;
   timeoutMs: number;
   useGovernor?: boolean;
+  language?: 'ru' | 'en';
 }
 
 export interface HumanVote {
