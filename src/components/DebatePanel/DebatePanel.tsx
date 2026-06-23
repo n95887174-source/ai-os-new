@@ -384,32 +384,31 @@ const DebatePanel: React.FC = () => {
           </button>
         </div>
       )}
-      {isMobile ? (
-        <DebateTabContent
-          containerStyle={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
-          session={session}
-          viewTab={viewTab}
-          setViewTab={(tab) => setViewTab(tab as 'active' | 'history' | 'tournament' | 'verdict' | 'memory')}
-          history={history}
-          expandedHistory={expandedHistory}
-          setExpandedHistory={setExpandedHistory}
-          refreshHistory={refreshHistory}
-          getAgentLabel={getAgentLabel}
-          availableAgents={availableAgents}
-          selectedAgents={selectedAgents}
-          toggleAgent={toggleAgent}
-          onSelectAll={() => setSelectedAgents(availableAgents.map(a => a.id))}
-          onDeselectAll={() => setSelectedAgents([])}
-          topic={topic}
-          onTopicChange={setTopic}
-          strategy={strategy}
-          onStrategyChange={(v) => setStrategy(v)}
-          maxRounds={maxRounds}
-          onMaxRoundsChange={setMaxRounds}
-          debateTemperature={debateTemperature}
-          onTemperatureChange={setDebateTemperature}
-          agentArchetypes={agentArchetypes}
-          onArchetypeChange={(key: string) => {
+      {(() => {
+        const baseProps = {
+          session,
+          viewTab,
+          setViewTab: (tab: string) => setViewTab(tab as 'active' | 'history' | 'tournament' | 'verdict' | 'memory'),
+          history,
+          expandedHistory,
+          setExpandedHistory,
+          refreshHistory,
+          getAgentLabel,
+          availableAgents,
+          selectedAgents,
+          toggleAgent,
+          onSelectAll: () => setSelectedAgents(availableAgents.map(a => a.id)),
+          onDeselectAll: () => setSelectedAgents([]),
+          topic,
+          onTopicChange: setTopic,
+          strategy,
+          onStrategyChange: (v: DebateSessionStrategy) => setStrategy(v),
+          maxRounds,
+          onMaxRoundsChange: setMaxRounds,
+          debateTemperature,
+          onTemperatureChange: setDebateTemperature,
+          agentArchetypes,
+          onArchetypeChange: (key: string) => {
             if (key === 'auto') {
               setAgentArchetypes({});
             } else {
@@ -417,99 +416,48 @@ const DebatePanel: React.FC = () => {
               for (const id of selectedAgents) next[id] = key as DebateArchetypeId;
               setAgentArchetypes(next);
             }
-          }}
-          agentConstraints={agentConstraints}
-          onConstraintChange={(id, constraint) => setAgentConstraints(prev => ({ ...prev, [id]: constraint }))}
-          selectedHistoricalIds={selectedHistoricalIds}
-          setShowHistoricalPicker={setShowHistoricalPicker}
-          humanVotes={humanVotes}
-          showVotePanel={showVotePanel}
-          setShowVotePanel={setShowVotePanel}
-          setHumanVotes={setHumanVotes}
-          getRoundParticipants={getRoundParticipants}
-          streamingArgIds={streamingArgIds}
-          verdict={verdict}
-          userInjection={userInjection}
-          setUserInjection={setUserInjection}
-          actionLoading={actionLoading}
-          handleInject={handleInject}
-          isLoading={isLoading}
-          t={t}
-          probeResults={probeResults}
-          expandedProbe={expandedProbe}
-          setExpandedProbe={setExpandedProbe}
-          setProbeResults={setProbeResults}
-          showAuto={showAuto}
-          setShowAuto={setShowAuto}
-          autoResults={autoResults ?? []}
-          autoWinRates={autoWinRates}
-          refreshAuto={refreshAuto}
-          onStart={handleStart}
-        />
-      ) : (
-        <DebateTabContent
-          containerStyle={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}
-          showSidebar
-          session={session}
-          viewTab={viewTab}
-          setViewTab={(tab) => setViewTab(tab as 'active' | 'history' | 'tournament' | 'verdict' | 'memory')}
-          history={history}
-          expandedHistory={expandedHistory}
-          setExpandedHistory={setExpandedHistory}
-          refreshHistory={refreshHistory}
-          getAgentLabel={getAgentLabel}
-          availableAgents={availableAgents}
-          selectedAgents={selectedAgents}
-          toggleAgent={toggleAgent}
-          onSelectAll={() => setSelectedAgents(availableAgents.map(a => a.id))}
-          onDeselectAll={() => setSelectedAgents([])}
-          topic={topic}
-          onTopicChange={setTopic}
-          strategy={strategy}
-          onStrategyChange={(v) => setStrategy(v)}
-          maxRounds={maxRounds}
-          onMaxRoundsChange={setMaxRounds}
-          debateTemperature={debateTemperature}
-          onTemperatureChange={setDebateTemperature}
-          agentArchetypes={agentArchetypes}
-          onArchetypeChange={(key: string) => {
-            if (key === 'auto') {
-              setAgentArchetypes({});
-            } else {
-              const next: Record<string, DebateArchetypeId> = {};
-              for (const id of selectedAgents) next[id] = key as DebateArchetypeId;
-              setAgentArchetypes(next);
-            }
-          }}
-          agentConstraints={agentConstraints}
-          onConstraintChange={(id, constraint) => setAgentConstraints(prev => ({ ...prev, [id]: constraint }))}
-          selectedHistoricalIds={selectedHistoricalIds}
-          setShowHistoricalPicker={setShowHistoricalPicker}
-          humanVotes={humanVotes}
-          showVotePanel={showVotePanel}
-          setShowVotePanel={setShowVotePanel}
-          setHumanVotes={setHumanVotes}
-          getRoundParticipants={getRoundParticipants}
-          streamingArgIds={streamingArgIds}
-          verdict={verdict}
-          userInjection={userInjection}
-          setUserInjection={setUserInjection}
-          actionLoading={actionLoading}
-          handleInject={handleInject}
-          isLoading={isLoading}
-          t={t}
-          probeResults={probeResults}
-          expandedProbe={expandedProbe}
-          setExpandedProbe={setExpandedProbe}
-          setProbeResults={setProbeResults}
-          showAuto={showAuto}
-          setShowAuto={setShowAuto}
-          autoResults={autoResults ?? []}
-          autoWinRates={autoWinRates}
-          refreshAuto={refreshAuto}
-          onStart={handleStart}
-        />
-      )}
+          },
+          agentConstraints,
+          onConstraintChange: (id: string, constraint: string) => setAgentConstraints(prev => ({ ...prev, [id]: constraint })),
+          selectedHistoricalIds,
+          setShowHistoricalPicker,
+          humanVotes,
+          showVotePanel,
+          setShowVotePanel,
+          setHumanVotes,
+          getRoundParticipants,
+          streamingArgIds,
+          verdict,
+          userInjection,
+          setUserInjection,
+          actionLoading,
+          handleInject,
+          isLoading,
+          t,
+          probeResults,
+          expandedProbe,
+          setExpandedProbe,
+          setProbeResults,
+          showAuto,
+          setShowAuto,
+          autoResults: autoResults ?? [],
+          autoWinRates,
+          refreshAuto,
+          onStart: handleStart,
+        } as const;
+        return isMobile ? (
+          <DebateTabContent
+            containerStyle={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
+            {...baseProps}
+          />
+        ) : (
+          <DebateTabContent
+            containerStyle={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}
+            showSidebar
+            {...baseProps}
+          />
+        );
+      })()}
       <HistoricalFiguresPicker
         isOpen={showHistoricalPicker}
         onClose={() => setShowHistoricalPicker(false)}
