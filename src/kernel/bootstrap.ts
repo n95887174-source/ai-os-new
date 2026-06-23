@@ -404,8 +404,8 @@ export class SystemBootstrap implements IBootstrap {
       ['configService', 'settingsService', 'keyService', 'cacheService', 'pricingService'],
       ['keyStateStore', 'routerService', 'sessionAffinityStore', 'llmClientService', 'providerRuntimeService', 'virtualKeyService', 'raceExecutor', 'groupManagerService'],
       ['toolService', 'sandboxService', 'memoryService', 'featureFlagService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService', 'agentService', 'agentHealthMonitor'],
-      ['chatService', 'debateService', 'debateApiService', 'debateKnowledgeSync', 'hypothesisService', 'metricsService', 'advisorService', 'budgetService', 'usageTracker', 'timelineService', 'adminService'],
-      ['healthCheckService', 'monitoringService', 'traceService', 'diagnosticService', 'whatIfService', 'pressureMapService', 'cognitiveIntelligenceService', 'blackboardService', 'topologyManager', 'workforceFederation', 'routingPolicyService', 'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService', 'workspaceService', 'probeService', 'consistencyChecker', 'consistencyHealingPipeline', 'systemStatusService', 'rewindService'],
+      ['chatService', 'debateService', 'debateApiService', 'debateKnowledgeSync', 'debateEngine', 'debateModeManager', 'debateWorkspace', 'hypothesisService', 'metricsService', 'advisorService', 'budgetService', 'usageTracker', 'timelineService', 'adminService'],
+      ['healthCheckService', 'monitoringService', 'traceService', 'diagnosticService', 'whatIfService', 'pressureMapService', 'cognitiveIntelligenceService', 'blackboardService', 'topologyManager', 'workforceFederation', 'routingPolicyService', 'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService', 'workspaceService', 'skillService', 'mcpService', 'agentMarketplace', 'probeService', 'consistencyChecker', 'consistencyHealingPipeline', 'systemStatusService', 'rewindService'],
     ];
 
     let criticalFailed = false;
@@ -450,7 +450,7 @@ export class SystemBootstrap implements IBootstrap {
     const memPreEventSourcing = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
     this.logger.info('Bootstrap', `Before eventSourcing init, memMB: ${memPreEventSourcing ? Math.round(memPreEventSourcing / 1024 / 1024) : 'n/a'}`);
 
-    await this.lifecycle.tryInit('eventSourcing', () => {
+    await this.lifecycle.tryInit('eventSourcingService', () => {
       return this.container.get<EventSourcingService>('eventSourcingService').init();
     });
 
@@ -470,7 +470,7 @@ export class SystemBootstrap implements IBootstrap {
     const memPreRotation = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
     this.logger.info('Bootstrap', `After providerRuntime, before rotation, memMB: ${memPreRotation ? Math.round(memPreRotation / 1024 / 1024) : 'n/a'}`);
 
-    await this.lifecycle.tryInit('rotation', async () => {
+    await this.lifecycle.tryInit('rotationService', async () => {
       const svc = this.container.get<RotationService>('rotationService');
       return svc.init();
     });
@@ -498,6 +498,7 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.info('Bootstrap', `After orchestrator created, memMB: ${memAfterOrch ? Math.round(memAfterOrch / 1024 / 1024) : 'n/a'}`);
 
       orch.mount(AuditorTopology);
+      await orch.init();
 
       const memAfterMount = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
       this.logger.info('Bootstrap', `After topology mount, memMB: ${memAfterMount ? Math.round(memAfterMount / 1024 / 1024) : 'n/a'}`);
