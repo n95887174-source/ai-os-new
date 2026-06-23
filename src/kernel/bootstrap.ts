@@ -499,6 +499,7 @@ export class SystemBootstrap implements IBootstrap {
 
       orch.mount(AuditorTopology);
       await orch.init();
+      await this.lifecycle.tryInit('orchestrator', () => Promise.resolve());
 
       const memAfterMount = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
       this.logger.info('Bootstrap', `After topology mount, memMB: ${memAfterMount ? Math.round(memAfterMount / 1024 / 1024) : 'n/a'}`);
