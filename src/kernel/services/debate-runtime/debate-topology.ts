@@ -53,7 +53,8 @@ export class DebateTopologyService implements ITopologyService {
         const byEdge = this.groupByIncoming(topology);
         let current = topology.nodes.filter(n => !byEdge.has(n.id) || byEdge.get(n.id)!.length === 0);
         const visited = new Set<string>();
-        while (current.length > 0) {
+        const totalNodes = topology.nodes.length;
+        while (current.length > 0 && visited.size < totalNodes) {
           rounds.push(current);
           current.forEach(n => visited.add(n.id));
           const next: TopologyNode[] = [];
@@ -65,14 +66,23 @@ export class DebateTopologyService implements ITopologyService {
           }
           current = next;
         }
+        if (visited.size < totalNodes) {
+          const skipped = topology.nodes.filter(n => !visited.has(n.id)).map(n => n.id);
+          console.warn(`[DebateTopology] tree-of-thought BFS skipped ${skipped.length} cycled node(s): ${skipped.join(', ')}`);
+        }
         break;
       }
       case 'red-blue': {
         const attackers = topology.nodes.filter(n => n.role === 'attacker');
         const defenders = topology.nodes.filter(n => n.role === 'defender');
         const judges = topology.nodes.filter(n => n.role === 'judge');
-        rounds.push(attackers);
-        rounds.push(defenders);
+        // HIGH-4.2a: Cycle attack→defend for N rounds instead of single 3-round pass.
+        // Previously max 3 rounds (attack→defend→judge) with no cycle.
+        const totalRounds = Math.max(attackers.length, defenders.length);
+        for (let i = 0; i < totalRounds; i++) {
+          rounds.push(attackers);
+          rounds.push(defenders);
+        }
         if (judges.length) rounds.push(judges);
         break;
       }

@@ -263,6 +263,9 @@ export class DebateService {
       return this.runtimeAdapter.startDebate(topic, participants, strategy, maxRounds, sessionConfig);
     }
 
+    // HIGH-4.4b: Clone participants before mutating to avoid side effects on the input array
+    participants = participants.map(p => ({ ...p }));
+
     // Auto-assign constraints for constrained mode
     if (strategy === 'constrained') {
       const constraintCycle: DebateConstraint[] = ['facts_only', 'emotional_only', 'data_driven', 'ethical_framework', 'first_principles', 'pragmatic'];
@@ -665,7 +668,23 @@ export class DebateService {
       }));
       let verdict: import('../contracts/debate-types').DebateVerdict | undefined;
       try {
-        verdict = this.conclusionEngine.generateVerdict(this.activeSession as unknown as import('../contracts/debate-runtime').DebateSessionSnapshot, timeline);
+        // HIGH-4.4a: Build snapshot from session fields instead of unsafe as unknown as
+        const snap: import('../contracts/debate-runtime').DebateSessionSnapshot = {
+          id: this.activeSession.id,
+          topic: this.activeSession.topic,
+          topology: { id: '', nodes: [], edges: [], type: 'roundtable' },
+          phase: this.activeSession.status,
+          round: this.activeSession.currentRound,
+          agentStates: (this.activeSession.participants || []).map(p => ({
+            agentId: p.id, nodeId: p.id, phase: 'idle' as const,
+            round: this.activeSession!.currentRound, tokensUsed: 0, latency: 0, lastActiveAt: Date.now(),
+          })),
+          totalTokens: this.activeSession.totalTokens ?? 0,
+          totalCost: this.activeSession.totalCost ?? 0,
+          startedAt: this.activeSession.createdAt,
+          updatedAt: Date.now(),
+        };
+        verdict = this.conclusionEngine.generateVerdict(snap, timeline);
       } catch (e) {
         LOGGER.warn('DebateService', 'Verdict generation failed (legacy stop path)', { error: e });
       }

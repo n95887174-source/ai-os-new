@@ -43,7 +43,7 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
         {CONCLUSION_ICONS[verdict.conclusionType]}
         <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-          Вердикт дебатов
+          {t('debate.verdict.title')}
         </h3>
         <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
           {new Date(verdict.generatedAt).toLocaleString()}
@@ -56,21 +56,21 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
         <div style={{ textAlign: 'center', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Тип</div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{t('debate.verdict.type_label')}</div>
           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{t('debate.verdict.' + verdict.conclusionType)}</div>
         </div>
         <div style={{ textAlign: 'center', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Баланс</div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{t('debate.verdict.balance_label')}</div>
           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{t('debate.verdict.' + verdict.stanceResult)}</div>
         </div>
         <div style={{ textAlign: 'center', padding: '0.75rem', borderRadius: 10, background: 'rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Уверенность</div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{t('debate.verdict.confidence_label')}</div>
           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{Math.round(verdict.confidence * 100)}%</div>
         </div>
       </div>
 
       <div style={{ marginBottom: '1rem' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>Соотношение аргументов</div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>{t('debate.verdict.argument_ratio')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {stanceEntries.map(entry => (
             <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -86,7 +86,7 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
 
       {verdict.keyArguments.length > 0 && (
         <div style={{ marginBottom: '1rem' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>Ключевые аргументы</div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>{t('debate.verdict.key_arguments')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
             {verdict.keyArguments.slice(0, 5).map((arg, i) => (
               <div key={i} style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.03)', borderLeft: `3px solid ${STANCE_COLORS[arg.stance]}` }}>
@@ -99,12 +99,12 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
       )}
 
       <div>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>Обоснование</div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>{t('debate.verdict.reasoning')}</div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-main)', lineHeight: 1.6, margin: 0 }}>{verdict.reasoning}</p>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Ваша оценка:</span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{t('debate.verdict.your_rating')}</span>
         <button
           onClick={() => handleVote('agree')}
           style={{
@@ -115,7 +115,7 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
             cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s',
           }}
         >
-          <ThumbsUp size={14} /> Согласен
+          <ThumbsUp size={14} /> {t('debate.verdict.agree')}
         </button>
         <button
           onClick={() => handleVote('disagree')}
@@ -127,11 +127,11 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({ verdict,
             cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s',
           }}
         >
-          <ThumbsDown size={14} /> Не согласен
+          <ThumbsDown size={14} /> {t('debate.verdict.disagree')}
         </button>
         {userVote && (
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 4 }}>
-            {userVote === 'agree' ? '✓ Спасибо за оценку' : '✓ Учтено'}
+            {userVote === 'agree' ? t('debate.verdict.thanks') : t('debate.verdict.acknowledged')}
           </span>
         )}
       </div>

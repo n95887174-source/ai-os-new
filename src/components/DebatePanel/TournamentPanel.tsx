@@ -52,16 +52,22 @@ const generateBracket = (topics: string[], participantPool: string[]): Tournamen
 
   const shuffledParticipants = [...participantPool].sort(() => Math.random() - 0.5);
 
-  // First round matches
+  // First round matches — ensure no participant debates themselves
   const firstRoundMatches: TournamentMatch[] = [];
-  for (let i = 0; i < totalSlots; i += 2) {
-    const topicIdx = Math.floor(i / 2);
-    const isBye = paddedTopics[i + 1] === '(bye)';
+  const paired = new Set<string>();
+  for (let i = 0; i < shuffledParticipants.length && firstRoundMatches.length < totalSlots / 2; i += 2) {
+    const a = shuffledParticipants[i];
+    const b = shuffledParticipants[i + 1];
+    if (a === b) continue;
+    if (paired.has(a) || paired.has(b)) continue;
+    paired.add(a); paired.add(b);
+    const topicIdx = firstRoundMatches.length;
+    const isBye = topicIdx >= paddedTopics.length || paddedTopics[topicIdx] === '(bye)';
     firstRoundMatches.push({
-      id: `r0-m${i / 2}`,
-      topic: paddedTopics[topicIdx],
-      participantA: { name: shuffledParticipants[i % shuffledParticipants.length] || `Agent ${i}`, role: 'pro' },
-      participantB: { name: shuffledParticipants[(i + 1) % shuffledParticipants.length] !== shuffledParticipants[i % shuffledParticipants.length] ? shuffledParticipants[(i + 1) % shuffledParticipants.length] : (shuffledParticipants[(i + 2) % shuffledParticipants.length] || '(bye)'), role: 'con' },
+      id: `r0-m${firstRoundMatches.length}`,
+      topic: paddedTopics[topicIdx % paddedTopics.length],
+      participantA: { name: a, role: 'pro' },
+      participantB: { name: b, role: 'con' },
       status: isBye ? 'completed' : 'pending',
       winner: isBye ? 'A' : undefined,
     });

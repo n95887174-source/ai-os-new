@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, Clock, Brain, Eye, ThumbsUp, Loader2, Send, BarChart3, Swords } from 'lucide-react';
 import DebateSetupWizard from './DebateSetupWizard';
 import DebateHistoryPanel from './DebateHistoryPanel';
@@ -9,7 +9,8 @@ import { DebateVerdictPanel } from './DebateVerdictPanel';
 import { DebateMemoryPanel } from './DebateMemoryPanel';
 import DebateSidebar from './DebateSidebar';
 import DebateChat from './DebateChat';
-import type { DebateSession, DebateVerdict, HumanVote, DebateArchetypeId } from '../../kernel/contracts';
+import type { DebateSession, DebateVerdict, HumanVote } from '../../kernel/contracts';
+import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AutoDebateResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import { probeService, autoDebateService as autoDebate, debateService } from '../../kernel/instances';
@@ -43,10 +44,10 @@ export function DebateTabContent({
   maxRounds, onMaxRoundsChange, debateTemperature, onTemperatureChange,
   agentArchetypes, onArchetypeChange, agentConstraints,
   selectedHistoricalIds, setShowHistoricalPicker,
-  humanVotes, showVotePanel, setShowVotePanel, getRoundParticipants,
+  humanVotes, showVotePanel, setShowVotePanel, setHumanVotes, getRoundParticipants,
   streamingArgIds, verdict, userInjection, setUserInjection, actionLoading,
   handleInject, isLoading, t,
-  probeResults, probeLoading, expandedProbe, setExpandedProbe, setProbeResults,
+  probeResults, expandedProbe, setExpandedProbe, setProbeResults,
   showAuto, setShowAuto, autoResults, autoWinRates, refreshAuto,
   onConstraintChange, onStart,
 }: {
@@ -77,7 +78,7 @@ export function DebateTabContent({
   userInjection: string; setUserInjection: (s: string) => void;
   actionLoading: 'start' | 'inject' | null; handleInject: () => void;
   isLoading: boolean; t: (k: string) => string;
-  probeResults: Map<string, ProbeResult> | null; probeLoading: boolean;
+  probeResults: Map<string, ProbeResult> | null;
   expandedProbe: string | null; setExpandedProbe: (id: string | null) => void;
   setProbeResults: (r: Map<string, ProbeResult> | null) => void;
   showAuto: boolean; setShowAuto: (v: boolean) => void;
@@ -88,6 +89,8 @@ export function DebateTabContent({
   onStart: () => void;
 }) {
   const flexColumn: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' };
+  const [internalProbeLoading, setInternalProbeLoading] = useState(false);
+  const combinedProbeLoading = internalProbeLoading;
 
   return (
     <div style={containerStyle}>
@@ -166,9 +169,10 @@ export function DebateTabContent({
                   availableAgents={availableAgents}
                   agentConstraints={agentConstraints}
                   onConstraintChange={onConstraintChange}
-                  probeResults={probeResults} probeLoading={probeLoading}
+                  probeResults={probeResults} probeLoading={combinedProbeLoading}
                   onProbe={async () => {
                     setExpandedProbe(null);
+                    setInternalProbeLoading(true);
                     setProbeResults(null);
                     try {
                       const targets = selectedAgents.length >= 2 ? selectedAgents : availableAgents.map(a => a.id);
@@ -179,6 +183,7 @@ export function DebateTabContent({
                       const results = await probeService.probeForDebate(participants);
                       setProbeResults(results);
                     } catch { /* silently fail */ }
+                    finally { setInternalProbeLoading(false); }
                   }}
                   expandedProbe={expandedProbe} onToggleProbe={setExpandedProbe}
                   actionLoading={actionLoading} onStart={onStart} showAuto={showAuto} onToggleAuto={() => setShowAuto(!showAuto)}
@@ -224,6 +229,7 @@ export function DebateTabContent({
                                 const wasBest = humanVotes.some(v => v.round === showVotePanel && v.votedAgentId === agentId && v.score === 5);
                                 // CRIT-7 fix: use typed debateService instead of globalThis bypass
                                 debateService.recordHumanVote({ round: showVotePanel, voter: 'human', votedAgentId: agentId, score: wasBest ? 0 : 5, timestamp: Date.now() });
+                                setHumanVotes(debateService.getHumanVotes());
                               }}
                               style={{ padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
                                 background: isBest ? 'rgba(250,204,21,0.15)' : 'rgba(255,255,255,0.03)', color: isBest ? '#facc15' : '#cbd5e1' }}>

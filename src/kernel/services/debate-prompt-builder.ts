@@ -1,6 +1,16 @@
 import type { DebateParticipant, DebateArgument, DebateConstraint, ArgumentStrategy } from '../contracts/debate-types';
 import { buildDebateState, buildDebateStatePrompt } from './debate-state-builder';
 
+export const DEFAULT_LANGUAGE = 'Russian';
+
+function stableSelectIndex(seed: string, size: number): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  }
+  return (Math.abs(hash) >>> 0) % size;
+}
+
 /** Sanitize user-supplied strings to prevent prompt injection.
  *  Strips common injection markers and wraps user content in delimiters. */
 function sanitizeForPrompt(input: string, maxLength = 500): string {
@@ -50,6 +60,7 @@ export function buildOpeningPrompt(
   participants: DebateParticipant[],
   debateTemperature: number | undefined,
   constraint: DebateConstraint | undefined,
+  language = DEFAULT_LANGUAGE,
 ): string {
   const isSocratic = strategy === 'socratic';
   const isSocrates = isSocratic && socraticQuestioner === participants.indexOf(participant);
@@ -102,7 +113,7 @@ Provide a concise opening statement (100-150 words) that:
 
 CRITICAL: Do NOT repeat or paraphrase arguments that other agents have already made. Contribute a UNIQUE perspective from your specific expertise.
 
-Be direct and persuasive. This is the opening round - make it count. Respond in Russian.`;
+Be direct and persuasive. This is the opening round - make it count. Respond in ${language}.`;
 }
 
 export function buildArgumentPrompt(
@@ -115,6 +126,7 @@ export function buildArgumentPrompt(
   participants: DebateParticipant[],
   debateTemperature: number | undefined,
   constraint: DebateConstraint | undefined,
+  language = DEFAULT_LANGUAGE,
 ): string {
   const isSocratic = strategy === 'socratic';
   const isArgumentTree = strategy === 'argument_tree';
@@ -134,7 +146,7 @@ export function buildArgumentPrompt(
   if (isArgumentTree && round > 1) {
     const prevRoots = previousArguments.filter(a => a.round === round - 1);
     if (prevRoots.length > 0) {
-      const target = prevRoots[Math.floor(Math.random() * prevRoots.length)];
+      const target = prevRoots[stableSelectIndex(`${participant.id}-round-${round}`, prevRoots.length)];
       treePrompt = `\n\n### Argument Tree Context\nYou are responding to this argument from the previous round:\n"${target.content.slice(0, 300)}"\n\nYou can SUPPORT it (add evidence, strengthen), CHALLENGE it (find flaws, counter-argue), or REFINE it (clarify, qualify). End your response with "[parent:${target.id}]" to link to the argument you are building on.`;
     } else {
       treePrompt = '\n\n### Argument Tree Context\nThis is the first round. State your main argument — this will be a root node in the argument tree.';
@@ -170,17 +182,19 @@ ${statePrompt}
 
 ${participant.systemPrompt ? `\n### Your Character:\n${sanitizeForPrompt(participant.systemPrompt, 800)}` : ''}
 
-CRITICAL RULE: Do NOT repeat or paraphrase arguments that other agents have already made. You must contribute a UNIQUE perspective from your specific area of expertise. If a point has already been covered, acknowledge it and ADD new reasoning or evidence that has not been mentioned before.`;
+CRITICAL RULE: Do NOT repeat or paraphrase arguments that other agents have already made. You must contribute a UNIQUE perspective from your specific area of expertise. If a point has already been covered, acknowledge it and ADD new reasoning or evidence that has not been mentioned before.
+
+Respond in ${language}.`;
 }
 
-export function getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral'): string {
+export function getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral', language = DEFAULT_LANGUAGE): string {
   if (role === 'pro') {
     return `You are a skilled debater arguing in favor of the given position.
 - Present clear, logical arguments
 - Use evidence and examples where possible
 - Acknowledge valid counter-points briefly, then rebut them
 - Stay focused on winning your case
-- Respond in Russian.`;
+- Respond in ${language}.`;
   }
 
   if (role === 'con') {
@@ -189,7 +203,7 @@ export function getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral'): string 
 - Present alternative perspectives
 - Highlight potential risks or downsides
 - Stay focused on undermining the opposing case
-- Respond in Russian.`;
+- Respond in ${language}.`;
   }
 
   return `You are a neutral moderator and analyst.
@@ -197,5 +211,5 @@ export function getDefaultSystemPrompt(role: 'pro' | 'con' | 'neutral'): string 
 - Identify strongest points from all sides
 - Highlight areas of consensus
 - Suggest potential resolutions
-- Respond in Russian.`;
+- Respond in ${language}.`;
 }

@@ -103,7 +103,6 @@ export class DebateRoom {
     if (!engine) throw new Error('DebateRoom not initialized with engine');
 
     engine.cancelSession(sessionId);
-    this.deps?.eventBus?.emit(EVENTS.DEBATE_SESSION_CANCELLED, { sessionId });
   }
 
   async step(sessionId: string): Promise<void> {

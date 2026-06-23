@@ -3,16 +3,36 @@ import { jaccardSimilarity } from '../contracts/debate-types';
 import { buildDebateState } from './debate-state-builder';
 
 export function calculateConfidence(content: string): number {
-  let score = 0.5;
-
   const wordCount = content.split(/\s+/).length;
-  if (wordCount >= 50 && wordCount <= 300) score += 0.2;
-  else if (wordCount < 30 || wordCount > 500) score -= 0.2;
 
-  if (content.includes('.') && content.includes('\n')) score += 0.1;
+  // Structural score: well-structured arguments are more confident
+  const hasParagraphs = content.includes('\n\n');
+  const hasStructuredList = /^\s*[-*\d]+\s/m.test(content);
+  const sentences = content.split(/[.!?]+\s/).length;
+  const structureScore = hasParagraphs ? 0.15 : hasStructuredList ? 0.1 : 0;
+  const sentenceVariety = Math.min(0.1, sentences / 20);
 
-  if (/\d+%|https?:\/\/|www\./.test(content)) score += 0.1;
+  // Evidential support: citations, data, examples
+  const hasData = /\d+%|[\d,]+\.?\d*\s*(million|billion|percent|%|\$|€|£)/i.test(content);
+  const hasCitation = /https?:\/\/|www\.|according to|source|study|research|survey|report|data/i.test(content);
+  const evidenceScore = (hasData ? 0.15 : 0) + (hasCitation ? 0.1 : 0);
 
+  // Reasoning depth: logical connectors indicate structured reasoning
+  const reasoningMarkers = /\b(therefore|because|thus|hence|consequently|however|nevertheless|furthermore|moreover|in contrast|on the other hand|this implies|as a result)\b/gi;
+  const reasoningCount = (content.match(reasoningMarkers) || []).length;
+  const reasoningScore = Math.min(0.15, reasoningCount * 0.03);
+
+  // Certainty vs hedging ratio
+  const certaintyMarkers = /\b(definitely|certainly|undoubtedly|absolutely|clearly|obviously|always|never|must|without doubt|unquestionably|undeniable)\b/gi;
+  const hedgingMarkers = /\b(maybe|perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i suppose)\b/gi;
+  const certainty = (content.match(certaintyMarkers) || []).length;
+  const hedging = (content.match(hedgingMarkers) || []).length;
+  const certaintyDelta = Math.min(0.15, Math.max(-0.1, (certainty - hedging) * 0.02));
+
+  // Word count baseline (too short = low confidence)
+  const lengthScore = wordCount < 30 ? -0.2 : wordCount > 500 ? 0 : Math.min(0.1, wordCount / 500);
+
+  const score = 0.4 + structureScore + sentenceVariety + evidenceScore + reasoningScore + certaintyDelta + lengthScore;
   return Math.max(0.1, Math.min(1.0, score));
 }
 

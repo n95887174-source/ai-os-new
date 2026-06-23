@@ -4,8 +4,8 @@ import { getUnresolvedClaims, detectChallenges } from './claim-graph';
 let _contradictionCounter = 0;
 
 function nextContradictionId(): string {
-  _contradictionCounter++;
-  return `x${_contradictionCounter}-${Date.now().toString(36)}`;
+  _contradictionCounter = (_contradictionCounter + 1) >>> 0;
+  return `x${Date.now().toString(36)}-${_contradictionCounter}-${crypto.randomUUID().slice(0, 6)}`;
 }
 
 export function detectContradictions(graph: ClaimGraph): Contradiction[] {
@@ -43,9 +43,9 @@ export function detectContradictions(graph: ClaimGraph): Contradiction[] {
       edgePairs.add(key);
 
       const aWords = a.text.toLowerCase().split(/\W+/).filter(Boolean);
-      const bWords = b.text.toLowerCase().split(/\W+/).filter(Boolean);
-      const shared = aWords.filter(w => bWords.includes(w)).length;
-      const union = new Set([...aWords, ...bWords]).size;
+      const bWordSet = new Set(b.text.toLowerCase().split(/\W+/).filter(Boolean));
+      const shared = aWords.filter(w => bWordSet.has(w)).length;
+      const union = new Set([...aWords, ...bWordSet]).size;
       const overlap = union > 0
         ? shared / union
         : 0;

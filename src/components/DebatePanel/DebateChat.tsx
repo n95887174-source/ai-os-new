@@ -17,11 +17,12 @@ interface DebateChatProps {
 
 const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel, streamingArgIds }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastArgId = args.length > 0 ? args[args.length - 1].id : undefined;
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [args]);
+  }, [lastArgId]);
   const getAgentLabel = (agentId: string): string => {
     if (agentLabel) return agentLabel(agentId);
     return agentId;

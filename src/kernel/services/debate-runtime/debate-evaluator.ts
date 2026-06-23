@@ -9,12 +9,10 @@ export class DebateEvaluator implements IDebateEvaluator {
 
     const rebuttals = claims.filter(c =>
       c.agentId === agentId && (
-        c.text.toLowerCase().includes('however') ||
-        c.text.toLowerCase().includes('but') ||
-        c.text.toLowerCase().includes('although') ||
-        c.text.toLowerCase().includes('однако') ||
-        c.text.toLowerCase().includes('но ') ||
-        c.text.toLowerCase().includes('хотя')
+        /\b(however|nevertheless|on the contrary|on the other hand|that said)\b/i.test(c.text) ||
+        /\b(but|although|though)\b.*\b(argue|claim|point|argument|reason|evidence|wrong|incorrect|flaw|mistake|disagree|agree|oppose|rebut|refute|counter)\b/i.test(c.text) ||
+        /\b(однако|тем не менее|напротив|с другой стороны)\b/i.test(c.text) ||
+        /\b(но |хотя)\b.*\b(утвержд|аргумент|довод|доказательств|ошибк|неправ|неверн|опроверг|соглас|возража)\b/i.test(c.text)
       )
     ).length;
 
@@ -24,21 +22,21 @@ export class DebateEvaluator implements IDebateEvaluator {
 
     const persuasiveness = Math.min(1, (avgConfidence + coherence) / 2 + rebuttals * 0.05);
     const factuality = Math.min(1, avgConfidence + (chain.length > 0 ? 0.1 : 0));
+    const rebuttalStrength = Math.min(1, rebuttals * 0.15);
 
     const normalizedArgCount = Math.min(1, argumentCount / 10);
     const overall = Math.min(1, (
-      normalizedArgCount * 0.05 +
-      avgConfidence * 0.25 +
-      coherence * 0.25 +
-      persuasiveness * 0.25 +
-      factuality * 0.2
+      normalizedArgCount * 0.1 +
+      persuasiveness * 0.5 +
+      factuality * 0.2 +
+      rebuttalStrength * 0.2
     ));
 
     return {
       agentId,
       overall: Math.round(overall * 100) / 100,
-      argumentQuality: Math.min(1, argumentCount * 0.1),
-      rebuttalStrength: Math.min(1, rebuttals * 0.15),
+      argumentQuality: Math.min(1, argumentCount / 10 * avgConfidence),
+      rebuttalStrength,
       coherence,
       persuasiveness,
       factuality,

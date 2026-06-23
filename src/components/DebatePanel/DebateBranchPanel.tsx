@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { GitBranch, GitMerge, RotateCcw, Trash2, Plus } from 'lucide-react';
 import { DebateBranching, type DebateBranch } from '../../kernel/services/debate-runtime/debate-branching';
 import { useConfirm } from '../../hooks/useConfirm';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface DebateBranchPanelProps {
   branching: DebateBranching;
@@ -18,16 +19,16 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
   const [forkName, setForkName] = useState('');
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
+  const { t } = useTranslation();
 
   const refresh = useCallback(() => {
     setBranches(branching.getBranches());
   }, [branching]);
 
   useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 5000);
-    return () => clearInterval(interval);
-  }, [refresh]);
+    const unsub = branching.onChange(() => refresh());
+    return () => { unsub(); };
+  }, [refresh, branching]);
 
   const handleFork = useCallback(() => {
     const active = branching.getActiveBranch();
@@ -75,10 +76,10 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
         <GitBranch size={18} color="#8b5cf6" />
         <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-          Ветки дебатов
+          {t('debate.branch.title')}
         </h3>
         <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-          {branches.length} веток
+          {t('debate.branch.count', { count: branches.length })}
         </span>
       </div>
 
@@ -86,7 +87,7 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
         <input
           value={forkName}
           onChange={e => setForkName(e.target.value)}
-          placeholder="Имя ветки (опционально)"
+          placeholder={t('debate.branch.name_placeholder')}
           style={{
             flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)',
             background: 'rgba(255,255,255,0.04)', color: 'var(--text-main)', fontSize: '0.8rem',
@@ -119,7 +120,7 @@ export const DebateBranchPanel: React.FC<DebateBranchPanelProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
         {branches.length === 0 && (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            Нет веток. Создайте форк текущей сессии.
+            {t('debate.branch.empty')}
           </div>
         )}
         {branches.map(branch => (

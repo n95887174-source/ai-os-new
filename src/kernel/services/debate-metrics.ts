@@ -199,7 +199,7 @@ export function computeQualityMetrics(args: DebateArgument[], topic: string): Qu
   }
   const relevanceScore = args.length > 0 ? relevanceTotal / args.length : 0;
 
-  const evidencePattern = /\d+[.,]?\d*|%|citation|according to|study|research|data|statistics?/i;
+  const evidencePattern = /\d+[.,]?\d*|%|citation|according to|study|research|data|statistics?|исследован|данные|статистик|по данным|согласно|источник|эксперимент/i;
   let evidenceTotal = 0;
   for (const a of args) {
     evidenceTotal += evidencePattern.test(a.content) ? 1 : 0;

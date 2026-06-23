@@ -2,7 +2,7 @@ import type { Claim, Conflict, ConsensusResult, IConsensusEngine } from '../../c
 import { getFNVEmbedding, cosineSimilarity } from '../../utils/embedding';
 
 export class DebateConsensusEngine implements IConsensusEngine {
-  private confidenceGraph = new Map<string, number>();
+  private confidenceGraph = new Map<string, { value: number; lastAccess: number }>();
   private embeddingCache = new Map<string, number[]>();
   private static readonly MAX_CACHE = 500;
   private static readonly MAX_GRAPH = 500;
@@ -19,7 +19,8 @@ export class DebateConsensusEngine implements IConsensusEngine {
       return c;
     });
     const unresolved = this.findUnresolved(claims, conflicts);
-    const contradictionDensity = claims.length > 0 ? conflicts.length / claims.length : 0;
+    const unresolvedConflicts = conflicts.filter(c => !c.resolved);
+    const contradictionDensity = claims.length > 0 ? unresolvedConflicts.length / claims.length : 0;
     const confidence = this.calculateConfidence(agreements, conflicts, claims);
 
     return {
@@ -33,12 +34,19 @@ export class DebateConsensusEngine implements IConsensusEngine {
 
   resolveConflict(conflict: Conflict, resolution: string): Conflict {
     if (this.confidenceGraph.size >= DebateConsensusEngine.MAX_GRAPH) {
-      const firstKey = this.confidenceGraph.keys().next().value;
-      if (firstKey) this.confidenceGraph.delete(firstKey);
+      let oldestKey: string | undefined;
+      let oldestTime = Infinity;
+      for (const [key, entry] of this.confidenceGraph) {
+        if (entry.lastAccess < oldestTime) {
+          oldestTime = entry.lastAccess;
+          oldestKey = key;
+        }
+      }
+      if (oldestKey) this.confidenceGraph.delete(oldestKey);
     }
     this.confidenceGraph.set(
       `${conflict.claimA.id}-${conflict.claimB.id}`,
-      (conflict.claimA.confidence + conflict.claimB.confidence) / 2,
+      { value: (conflict.claimA.confidence + conflict.claimB.confidence) / 2, lastAccess: Date.now() },
     );
     return { ...conflict, resolved: true, resolution };
   }
@@ -49,7 +57,11 @@ export class DebateConsensusEngine implements IConsensusEngine {
   }
 
   getConfidenceGraph(): Map<string, number> {
-    return this.confidenceGraph;
+    const result = new Map<string, number>();
+    for (const [key, entry] of this.confidenceGraph) {
+      result.set(key, entry.value);
+    }
+    return result;
   }
 
   private findAgreements(claims: Claim[]): Claim[] {
@@ -60,7 +72,8 @@ export class DebateConsensusEngine implements IConsensusEngine {
     if (claims.length < 2) return agreements;
 
     const embeddings = claims.map(c => {
-      let emb = this.embeddingCache.get(c.text);
+      const cacheKey = c.text.slice(0, 100) + ':' + c.text.length;
+      let emb = this.embeddingCache.get(cacheKey);
       if (!emb) {
         emb = getFNVEmbedding(c.text);
         // DR-11: Enforce cache limit
@@ -68,7 +81,7 @@ export class DebateConsensusEngine implements IConsensusEngine {
           const firstKey = this.embeddingCache.keys().next().value;
           if (firstKey) this.embeddingCache.delete(firstKey);
         }
-        this.embeddingCache.set(c.text, emb);
+        this.embeddingCache.set(cacheKey, emb);
       }
       return emb;
     });
@@ -148,9 +161,8 @@ export class DebateConsensusEngine implements IConsensusEngine {
       'not', 'never', 'cannot', 'disagree', 'incorrect', 'false', 'wrong',
       'не', 'нет', 'никогда', 'нельзя', 'невозможно', 'неправильно', 'ложно',
     ];
-    for (const neg of negationWords) {
-      if (tokensA.has(neg) !== tokensB.has(neg)) return true;
-    }
+    const hasNegationMismatch = negationWords.some(n => tokensA.has(n) !== tokensB.has(n));
+    if (hasNegationMismatch) return true;
 
     const antonymPairs = [
       ['high', 'low'], ['hot', 'cold'], ['true', 'false'], ['yes', 'no'],
@@ -168,9 +180,12 @@ export class DebateConsensusEngine implements IConsensusEngine {
       ['преимущество', 'недостаток'], ['согласен', 'возражаю'],
       ['поддерживаю', 'отвергаю'], ['верно', 'неверно'],
     ];
+    let antonymCount = 0;
     for (const [aWord, bWord] of antonymPairs) {
-      if (tokensA.has(aWord) && tokensB.has(bWord)) return true;
+      if (tokensA.has(aWord) && tokensB.has(bWord)) antonymCount++;
+      if (tokensB.has(aWord) && tokensA.has(bWord)) antonymCount++;
     }
+    if (antonymCount >= 2) return true;
 
     const numRegex = /(\d+(?:\.\d+)?)\s*(dollars|percent|degrees|ms|mb|gb|s|h|kg|miles|km|руб|доллар|процент)?\b/g;
     const aNums = [...a.text.toLowerCase().matchAll(numRegex)].map(m => ({ val: parseFloat(m[1]), unit: m[2] || '' }));
@@ -181,6 +196,6 @@ export class DebateConsensusEngine implements IConsensusEngine {
       }
     }
 
-    return false;
+    return antonymCount >= 1 && hasNegationMismatch;
   }
 }

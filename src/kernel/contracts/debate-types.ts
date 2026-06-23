@@ -5,7 +5,7 @@ import type { DebateStore } from './storage/debate-store';
 import type { DebatePhase } from './debate-runtime';
 
 export type DebateRole = 'pro' | 'con' | 'neutral' | 'judge' | 'attacker' | 'defender';
-export type DebateSessionStrategy = 'round_robin' | 'sequential' | 'judge' | 'tree-of-thought' | 'red-blue' | 'cross-examination' | 'socratic' | 'tournament' | 'argument_tree' | 'constrained' | 'moderated' | 'free_for_all' | 'jury_trial' | 'cross_examination';
+export type DebateSessionStrategy = 'round_robin' | 'sequential' | 'judge' | 'tree-of-thought' | 'red-blue' | 'cross-examination' | 'socratic' | 'tournament' | 'argument_tree' | 'constrained' | 'moderated' | 'free_for_all' | 'jury_trial';
 export type DebateStrategy = DebateSessionStrategy;
 export type DebateConstraint = 'none' | 'facts_only' | 'emotional_only' | 'data_driven' | 'ethical_framework' | 'first_principles' | 'pragmatic';
 export type ParentResolution = 'explicit' | 'fallback_latest' | 'orphan' | 'invalid_reference';

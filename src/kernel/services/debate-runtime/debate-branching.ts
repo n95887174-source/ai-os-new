@@ -21,9 +21,22 @@ export interface BranchMergeResult {
   conflicts: string[];
 }
 
+export type BranchChangeListener = (action: 'fork' | 'merge' | 'rollback' | 'delete' | 'activate', branchId: string) => void;
+
 export class DebateBranching {
+  private static readonly MAX_BRANCHES = 100;
   private branches = new Map<string, DebateBranch>();
   private activeBranchId: string | null = null;
+  private listeners = new Set<BranchChangeListener>();
+
+  onChange(listener: BranchChangeListener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notify(action: 'fork' | 'merge' | 'rollback' | 'delete' | 'activate', branchId: string): void {
+    for (const fn of this.listeners) fn(action, branchId);
+  }
 
   fork(
     sourceId: string,
@@ -49,7 +62,12 @@ export class DebateBranching {
       createdAt: Date.now(),
       merged: false,
     };
+    if (this.branches.size >= DebateBranching.MAX_BRANCHES) {
+      const oldest = this.branches.keys().next().value;
+      if (oldest) this.branches.delete(oldest);
+    }
     this.branches.set(branchId, branch);
+    this.notify('fork', branchId);
     return branch;
   }
 
@@ -80,12 +98,14 @@ export class DebateBranching {
 
     const merged = [...source.arguments, ...newArgs];
     merged.sort((a, b) => a.round - b.round || a.timestamp - b.timestamp);
+    const cloned = structuredClone(merged);
 
-    source.arguments = merged;
-    target.arguments = [...merged];
+    source.arguments = cloned;
+    target.arguments = structuredClone(cloned);
     source.merged = true;
     target.merged = true;
 
+    this.notify('merge', targetId);
     return { success: true, mergedArguments: merged, conflicts: [] };
   }
 
@@ -101,7 +121,7 @@ export class DebateBranching {
 
     // Recalculate snapshot state from remaining arguments
     const totalTokens = rolledBack.reduce((s, a) => s + (a.content?.length || 0) * 2, 0);
-    const totalCost = rolledBack.reduce((s, a) => s + (a.confidence || 0) * 0.001, 0);
+    const totalCost = rolledBack.reduce((s, a) => s + (a.content?.length || 0) * 0.0001, 0);
     branch.snapshot = {
       ...branch.snapshot,
       round: targetRound,
@@ -109,6 +129,7 @@ export class DebateBranching {
       totalCost,
       updatedAt: Date.now(),
     };
+    this.notify('rollback', branchId);
     return { arguments: rolledBack, round: targetRound };
   }
 
@@ -123,6 +144,7 @@ export class DebateBranching {
 
   setActiveBranch(id: string): void {
     this.activeBranchId = id;
+    this.notify('activate', id);
   }
 
   getActiveBranch(): DebateBranch | undefined {
@@ -130,7 +152,9 @@ export class DebateBranching {
   }
 
   deleteBranch(id: string): boolean {
-    return this.branches.delete(id);
+    const result = this.branches.delete(id);
+    if (result) this.notify('delete', id);
+    return result;
   }
 
   getBranchTree(): Array<{ id: string; name: string; parentId: string | null; round: number; merged: boolean }> {

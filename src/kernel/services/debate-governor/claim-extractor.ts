@@ -3,8 +3,8 @@ import type { Claim } from './types';
 let _claimCounter = 0;
 
 function nextClaimId(): string {
-  _claimCounter++;
-  return `c${_claimCounter}-${Date.now().toString(36)}`;
+  _claimCounter = (_claimCounter + 1) >>> 0;
+  return `c${Date.now().toString(36)}-${_claimCounter}-${crypto.randomUUID().slice(0, 6)}`;
 }
 
 function estimateConfidence(text: string): number {
@@ -38,7 +38,7 @@ export function extractClaims(
 
   for (const raw of sentences) {
     const normal = raw.toLowerCase()
-      .replace(/[^a-zа-я0-9\s]/g, '')
+      .replace(/[^a-zа-яё0-9\s]/g, '')
       .trim();
     if (normal.length < 30) continue;
     const fingerprint = normal.split(/\s+/).slice(0, 8).join(' ');

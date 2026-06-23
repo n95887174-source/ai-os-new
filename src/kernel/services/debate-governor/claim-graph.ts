@@ -1,4 +1,5 @@
 import type { Claim, ClaimEdge, ClaimGraph } from './types';
+import { jaccardSimilarity } from '../../contracts/debate-types';
 
 export function createClaimGraph(): ClaimGraph {
   return { claims: {}, edges: [] };
@@ -19,6 +20,9 @@ export function addEdge(
   type: 'supports' | 'challenges' | 'refines',
   weight: number,
 ): void {
+  if (from === to) return;
+  const exists = graph.edges.some(e => e.from === from && e.to === to && e.type === type);
+  if (exists) return;
   graph.edges.push({ from, to, type, weight, createdAt: Date.now() });
 }
 
@@ -54,10 +58,4 @@ export function getClaimsBySpeaker(graph: ClaimGraph, speaker: string): Claim[] 
   return Object.values(graph.claims).filter(c => c.speaker === speaker);
 }
 
-function jaccardSimilarity(a: string, b: string): number {
-  const wordsA = new Set(a.toLowerCase().split(/\W+/));
-  const wordsB = new Set(b.toLowerCase().split(/\W+/));
-  const intersection = [...wordsA].filter(w => wordsB.has(w)).length;
-  const union = new Set([...wordsA, ...wordsB]).size;
-  return union > 0 ? intersection / union : 0;
-}
+

@@ -10,22 +10,25 @@ interface Props {
   sessionId: string;
 }
 
-const RADIUS = 200;
 const CENTER_X = 0;
 const CENTER_Y = 0;
 
 export const CircularLayout: React.FC<Props> = ({ participants, activeSpeakerId, sessionId }) => {
   const positions = useMemo(() => {
     const count = participants.length;
+    const radius = Math.max(120, Math.min(300, count * 60));
     return participants.map((_p, i) => {
       void _p;
       const angle = (2 * Math.PI * i) / count - Math.PI / 2;
       return {
-        x: CENTER_X + RADIUS * Math.cos(angle),
-        y: CENTER_Y + RADIUS * Math.sin(angle),
+        x: CENTER_X + radius * Math.cos(angle),
+        y: CENTER_Y + radius * Math.sin(angle),
+        radius,
       };
     });
   }, [participants]);
+
+  const svgRadius = positions[0]?.radius ?? 120;
 
   return (
     <div style={{
@@ -33,9 +36,9 @@ export const CircularLayout: React.FC<Props> = ({ participants, activeSpeakerId,
       left: '50%', top: '50%',
     }}>
       <svg
-        width={RADIUS * 2 + 120}
-        height={RADIUS * 2 + 120}
-        style={{ position: 'absolute', left: -(RADIUS + 60), top: -(RADIUS + 60), pointerEvents: 'none' }}
+        width={svgRadius * 2 + 120}
+        height={svgRadius * 2 + 120}
+        style={{ position: 'absolute', left: -(svgRadius + 60), top: -(svgRadius + 60), pointerEvents: 'none' }}
       >
         {participants.map((_p, i) => {
           void _p;
@@ -52,7 +55,7 @@ export const CircularLayout: React.FC<Props> = ({ participants, activeSpeakerId,
             />
           );
         })}
-        <circle cx={RADIUS + 60} cy={RADIUS + 60} r={RADIUS} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={1} strokeDasharray="4 4" />
+        <circle cx={svgRadius + 60} cy={svgRadius + 60} r={svgRadius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={1} strokeDasharray="4 4" />
       </svg>
       {participants.map((p, i) => {
         const avatar = agentAvatarService.generate(p.id);

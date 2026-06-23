@@ -21,7 +21,7 @@ const LOGGER = rootLogger.child('DebateEngine');
 
 function estimateConfidence(content: string): number {
   const certaintyMarkers = /\b(definitely|certainly|undoubtedly|absolutely|clearly|obviously|always|never|must|without doubt|unquestionably|undeniably|in fact|indeed)\b/gi;
-  const hedgingMarkers = /\b(maybe|perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i assume|i suppose|it seems|it appears|maybe)\b/gi;
+  const hedgingMarkers = /\b(perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i assume|i suppose|it seems|it appears|maybe)\b/gi;
   const certainty = (content.match(certaintyMarkers) || []).length;
   const hedging = (content.match(hedgingMarkers) || []).length;
   const score = 0.5 + (certainty - hedging) * 0.05;
@@ -75,7 +75,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private memories = new Map<string, DebateMemory>();
   private deps: DebateEngineDeps;
   private participantProviderMap = new Map<string, string>();
-  private participantKeyMap = new Map<string, string>();
   private llmFailureCount = new Map<string, number>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   // CRIT-3 fix: Map<sessionId, Map<agentId, AbortController>> — one controller per agent, not one per session.
@@ -113,7 +112,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           this.llmFailureCount.delete(sessionId);
           for (const p of session.participants) {
             this.participantProviderMap.delete(this.providerKey(sessionId, p.agentId));
-            this.participantKeyMap.delete(this.providerKey(sessionId, p.agentId));
           }
         }
       }
@@ -352,9 +350,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     let resolvedKey: { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
     let modelId = 'auto';
     // DR-4: Reset per-call failure count so previous callLLM failures don't accumulate
-    this.llmFailureCount.delete(participant.agentId);
+    const failKey = this.providerKey(sessionId, participant.agentId);
+    this.llmFailureCount.delete(failKey);
 
-    while (retries <= MAX_RETRIES) {
+    while (retries < MAX_RETRIES) {
       const controller = new AbortController();
       if (!this.sessionAbortControllers.has(sessionId)) this.sessionAbortControllers.set(sessionId, new Map());
       this.sessionAbortControllers.get(sessionId)!.set(participant.agentId, controller);
@@ -386,14 +385,18 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           const available = providerKeys.find((pk: { key: { provider: string; status?: string } }) => !failedProviders.has(pk.key.provider) && pk.key.status === 'active');
           if (available) {
             this.participantProviderMap.set(this.providerKey(sessionId, participant.agentId), available.key.provider);
-            this.participantKeyMap.set(this.providerKey(sessionId, participant.agentId), available.key.key);
             resolvedKey = available.key;
           }
         }
 
         if (!resolvedKey) {
           const ranked = routerService.getRankedProviders('performance', session.topic);
-          const available = ranked.find((k: { provider: string; status?: string }) => !failedProviders.has(k.provider) && k.status === 'active');
+          const allKeys = keyService.getKeys();
+          const available = ranked.find((k: { provider: string; id: string }) => {
+            if (failedProviders.has(k.provider)) return false;
+            const key = allKeys.find((key: { id: string }) => key.id === k.id);
+            return key?.status === 'active';
+          });
           if (available) resolvedKey = available;
         }
 
@@ -416,9 +419,13 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
         const allSteps = this.getMemory(sessionId).getAllSteps();
         const recentSteps = allSteps.slice(-8);
-        const historyMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = recentSteps.map(s => ({
-          role: s.agentId === participant.agentId ? 'assistant' as const : 'user' as const,
-          content: `[${s.agentId}]: ${s.content.slice(0, 2000)}`,
+        const historyMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = recentSteps.map((s, i) => ({
+          // HIGH-4.1e: Alternate user/assistant roles to prevent 4-agent debate
+          // collapsing to 2-party format. Each agent gets its own label in the
+          // content prefix, and roles alternate to help the LLM distinguish speakers.
+          role: s.agentId === participant.agentId ? 'assistant' as const
+            : (i % 2 === 0 ? 'user' as const : 'assistant' as const),
+          content: `[${s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${s.content.slice(0, 2000)}`,
         }));
 
         const personaBlock = this.buildPersonaMemory(sessionId, participant.agentId);
@@ -450,7 +457,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           content = response.content;
         }
 
-        this.llmFailureCount.delete(participant.agentId);
+        this.llmFailureCount.delete(failKey);
 
         LOGGER.debug('DebateEngine', 'ENGINE_MODEL', {
           agent: participant.agentId,
@@ -503,8 +510,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           continue;
         }
 
-        const count = (this.llmFailureCount.get(participant.agentId) || 0) + 1;
-        this.llmFailureCount.set(participant.agentId, count);
+        const count = (this.llmFailureCount.get(failKey) || 0) + 1;
+        this.llmFailureCount.set(failKey, count);
 
         if (count <= MAX_RETRIES) {
           const sessionSignal = this.sessionAbortControllers.get(sessionId)?.get(participant.agentId)?.signal;
@@ -613,8 +620,9 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
     if (phase !== 'paused') return;
     this.getContext(sessionId).orchestrator.clearAbort(sessionId);
     // DR-2: Don't set phase here — startSession handles transitions
-    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
-    this.startSession(sessionId, true).catch(e => {
+    this.startSession(sessionId, true).then(() => {
+      this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
+    }).catch(e => {
       LOGGER.error('DebateEngine', 'resumeSession failed', { sessionId, error: e });
       this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, { sessionId, error: String(e) });
     });
@@ -678,7 +686,7 @@ nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
       participants: JSON.stringify(session.participants),
       startedAt: snap.startedAt,
       updatedAt: snap.updatedAt,
-      createdAt: Date.now(),
+      createdAt: snap.startedAt,
       arguments: snap.arguments ? JSON.stringify(snap.arguments) : '[]',
       memory: JSON.stringify(this.getMemory(sessionId).toJSON()),
     });

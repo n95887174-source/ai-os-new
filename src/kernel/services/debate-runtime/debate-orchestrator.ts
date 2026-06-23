@@ -61,7 +61,11 @@ export class DebateOrchestrator implements IDebateOrchestrator {
     yield { type: 'topology:complete' };
   }
 
-  destroy(): void {
-    this.aborted.clear();
+  destroy(sessionId?: string): void {
+    if (sessionId) {
+      this.aborted.delete(sessionId);
+    } else {
+      this.aborted.clear();
+    }
   }
 }
