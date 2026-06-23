@@ -60,6 +60,7 @@ const SettingsPanel: React.FC = () => {
 
   const isMountedRef = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearError = useAutoClearError(setError);
 
   useEffect(() => {
