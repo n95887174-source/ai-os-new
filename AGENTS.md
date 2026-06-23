@@ -875,3 +875,43 @@ Create Live Debate View per `audit/roadmap.md` — circular visual layout for ru
 - `src/kernel/services/agent-avatar-service.ts` — generates deterministic emoji/color avatars
 - `src/route-registry.tsx` — `debate-live` nav entry with `Radio` icon
 - `src/routes.tsx` — lazy import for `DebateLivePanel`
+
+---
+
+## Current Session (2026-06-23) — Phase 3 Debate Polish + Build Fixes
+
+### Goal
+Complete Phase 3 remaining items from audit: eslint cleanup, JSX dedup, Russian language support.
+
+### Changes
+
+| # | Task | Status |
+|:--|------|--------|
+| 1 | **eslint fix in DebatePanel.tsx** — `useRef(t)` pattern for `t`, removed `eventBus`/`orchestrator`/`debateService` from useEffect deps (module-level singletons), added `session?.status` dep, added `// eslint-disable-next-line` comments for 3 legitimate set-state-in-effect patterns | Done |
+| 2 | **Duplicate JSX extraction** — extracted 60+ shared `DebateTabContent` props into an IIFE object; 119 lines removed (67 in, 186 out) | Done |
+| 3 | **`buildDebateStatePrompt` language parameter** — added `language` param defaulting to `'Russian'`, wired `Respond in ${language}.` instead of hardcoded `'Respond in Russian.'`, caller updated in `debate-prompt-builder.ts` | Done |
+| 4 | **Russian speculation words** — added 15 Russian hedging words (`возможно`, `вероятно`, `наверное`, etc.) to `scoreConstraintCompliance()` in `debate-metrics.ts` | Done |
+| 5 | **Build fix: missing `storageAdapter` export** — added `export const storageAdapter = BucketStorageAdapter` in `instances.ts` (5 components imported it but it was missing) | Done |
+| 6 | **Build fix: missing `StorageAdapter` export** — added `export const StorageAdapter = BucketStorageAdapter` in `storage-adapter.ts` (ProjectOsExplorer + HypothesisMarketplace imported the old name) | Done |
+| 7 | **`npx tsc --noEmit`** — zero errors throughout | Done |
+| 8 | **`npx vite build`** — passes in 8.21s, all 3471 modules built | Done |
+
+### Key Decisions
+- Used `useRef(t)` + `useEffect(() => { tRef.current = t }, [t])` pattern instead of adding `t` to deps (avoids re-running effects on language switch)
+- Extracted duplicate props into an IIFE to minimize scope pollution while eliminating 119 lines of repetition
+- `buildDebateStatePrompt` uses `'Russian'` default to match existing `DEFAULT_LANGUAGE` in `debate-prompt-builder.ts`
+- Build errors (`storageAdapter`, `StorageAdapter`) were pre-existing — exports were renamed but aliases were missing
+
+### Remaining (not started)
+- `debate-engine.ts:443` — hardcoded `Respond in Russian.` in engine inline prompt (needs `language` field on `IDebateSession` — interface-level change)
+- `prompt-store.ts` — 6 hardcoded `Respond in Russian.` strings (used by engine's `getDefaultPrompt`)
+- `auto-debate-service.ts` — 5 hardcoded `Respond in Russian.` strings
+- Keyword-based contradiction detection → embedding-distance or LLM-assisted (major refactor)
+
+### Relevant Files
+- `src/components/DebatePanel/DebatePanel.tsx` — eslint deps fix + duplicate JSX extraction
+- `src/kernel/services/debate-state-builder.ts` — language parameter for `buildDebateStatePrompt`
+- `src/kernel/services/debate-prompt-builder.ts` — passes language to state builder
+- `src/kernel/services/debate-metrics.ts` — Russian speculation words
+- `src/kernel/instances.ts` — added `storageAdapter` alias
+- `src/kernel/services/storage-adapter.ts` — added `StorageAdapter` alias
