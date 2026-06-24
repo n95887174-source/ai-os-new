@@ -150,9 +150,14 @@ export async function parseSSEStream(
         controller.error(e);
       }
     },
-    cancel() {
+    async cancel() {
       // M10-04 (SSE): cancel() expected to throw during abort — swallow it
-      bodyReader.cancel().catch(() => {});
+      try {
+        await Promise.race([
+          bodyReader.cancel(),
+          new Promise<void>(resolve => setTimeout(resolve, 5000)),
+        ]);
+      } catch { /* cancel timeout — body reader may leak but won't block */ }
       abortSignal?.removeEventListener('abort', onAbort);
     }
   });
