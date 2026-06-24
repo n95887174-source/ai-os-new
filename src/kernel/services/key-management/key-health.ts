@@ -101,6 +101,10 @@ export class KeyHealth implements IHealthCheckService {
         headers: keyRef.provider === 'gemini' ? { 'x-goog-api-key': keyRef.key } : undefined,
       });
       const latency = performance.now() - start;
+      if (!response.ok) {
+        response.body?.cancel();
+        this._healthCache.set(keyId, Date.now());
+      }
       const protectedStatuses = new Set(['compromised', 'quarantined']);
       const newStatus = protectedStatuses.has(keyRef.status) ? keyRef.status : (response.ok ? 'active' : 'error');
       Object.assign(keyRef, { latency, status: newStatus });
@@ -113,17 +117,33 @@ export class KeyHealth implements IHealthCheckService {
       this.deps.notify();
       return { id: keyRef.id, provider: keyRef.provider, status: keyRef.status, latency };
     } catch {
-      Object.assign(keyRef, { status: 'error' as const, latency: performance.now() - start });
+      const latency = performance.now() - start;
+      this._healthCache.set(keyId, Date.now());
+      Object.assign(keyRef, { status: 'error' as const, latency });
       await this.deps.saveKeys();
       this.deps.notify();
       return { id: keyRef.id, provider: keyRef.provider, status: 'error', latency: -1 };
     }
   }
 
+  private _healthCache = new Map<string, number>(); // keyId → timestamp of last failure
+  private static HEALTH_RETRY_MS = 300_000; // 5min retry after failure
+
   async checkAllHealth(): Promise<{ id: string; provider: string; status: string; latency: number }[]> {
     const activeKeys = this.deps.getActiveKeys();
     for (const k of activeKeys) this.deps.eventBus.emit(EVENTS.KEY_HEALTH_STARTED, k.id);
-    const results = await Promise.all(activeKeys.map(k => this.checkHealth(k.id)));
+    // Sequential (not parallel) to avoid memory burst
+    const results: Array<{ id: string; provider: string; status: string; latency: number }> = [];
+    for (const k of activeKeys) {
+      const lastFail = this._healthCache.get(k.id);
+      if (lastFail && Date.now() - lastFail < KeyHealth.HEALTH_RETRY_MS) {
+        results.push({ id: k.id, provider: k.provider, status: 'error', latency: -1 });
+        continue;
+      }
+      results.push(await this.checkHealth(k.id));
+      // 50ms delay between checks to let GC breathe
+      await new Promise(r => setTimeout(r, 50));
+    }
     this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED);
     return results;
   }

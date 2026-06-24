@@ -123,7 +123,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
           const status: KeyStatus =
             payload.key.status === 'active' ? 'ready' :
             payload.key.status === 'error' ? 'broken' : 'unknown';
-          const flags = status === 'ready' ? { ...s.flags, authFailed: false } : s.flags;
+          const flags = status === 'ready' ? { circuitOpen: false, rateLimited: false, authFailed: false } : s.flags;
           this.update(payload.key.id, { status, provider: payload.key.provider, label: payload.key.label ?? payload.key.provider, flags });
           this.recomputeRouting(payload.key.id);
         }
@@ -159,9 +159,10 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
           err.includes('Authentication failed') || err.includes('Invalid API Key') ||
           err.includes('Unauthorized') || err.includes('Forbidden') ||
           err.includes('Payment Required') || err.includes('User not found');
+        const isRateLimited = err.includes('429') || err.includes('Too Many Requests') || err.includes('Rate limit');
         this.update(payload.id, {
           health: { ...prev?.health ?? DEFAULT_HEALTH, consecutiveErrors: ce, errorRate: Math.min(1, ce / 10) },
-          flags: { ...prev?.flags ?? { circuitOpen: false, rateLimited: false, authFailed: false }, authFailed: prev?.flags.authFailed || isAuthError },
+          flags: { ...prev?.flags ?? { circuitOpen: false, rateLimited: false, authFailed: false }, authFailed: prev?.flags.authFailed || isAuthError, rateLimited: prev?.flags.rateLimited || isRateLimited },
         });
         this.recomputeRouting(payload.id);
       }),
@@ -243,9 +244,15 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     let weight = hs >= 75 ? 1 : hs >= 50 ? 0.5 : hs >= 25 ? 0.25 : hs >= 10 ? 0.1 : 0;
     if (state.health.consecutiveErrors > 3) weight *= 0.5;
     if (state.flags.authFailed) weight = 0;
+    // Clear rateLimited flag after 30min (must outlast probe interval 300s to avoid
+    // probing rate-limited keys every cycle). Rate limits typically reset in seconds; 
+    // after 30min a fresh probe will correctly re-evaluate status.
+    const flags = state.flags.rateLimited && elapsedMin >= 30
+      ? { ...state.flags, rateLimited: false }
+      : state.flags;
     const hasWorkingModel = state.modelHealth && Object.values(state.modelHealth).some(v => v === 'ok');
     if (hs < 25 && hasWorkingModel) weight = Math.max(weight, 0.25);
-    return { ...state, healthScore: recovered, routing: { weight, blocked: weight === 0 } };
+    return { ...state, healthScore: recovered, flags, routing: { weight, blocked: weight === 0 } };
   }
 
   getAll(): KeyState[] {
@@ -359,9 +366,11 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       err.includes('Payment Required') || err.includes('Insufficient credits') ||
       err.includes('User not found');
 
+    const isRateLimited = sc === 429 || result.rateLimited ||
+      err.includes('429') || err.includes('Too Many Requests') || err.includes('Rate limit');
     const flags = {
       circuitOpen: result.circuitOpen,
-      rateLimited: result.rateLimited,
+      rateLimited: isRateLimited,
       authFailed: isAuthError,
     };
 

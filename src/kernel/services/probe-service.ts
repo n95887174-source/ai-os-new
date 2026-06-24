@@ -109,10 +109,11 @@ export class ProbeService implements IProbeService, ILifecycle {
     }
 
     const kss = this.deps.keyStateStore?.get(keyId);
-    if (kss?.flags.authFailed) {
+    if (kss?.flags.authFailed || kss?.flags.rateLimited || kss?.flags.circuitOpen) {
+      const reason = kss.flags.authFailed ? 'auth failed' : kss.flags.rateLimited ? 'rate limited' : 'circuit open';
       return {
         status: 'broken', provider: key.provider, keyId, keyLabel: key.label || key.provider, model: model || 'auto',
-        latency: 0, rateLimited: false, circuitOpen: false, error: 'Skipped — auth failed on previous probe', timestamp: Date.now(),
+        latency: 0, rateLimited: kss.flags.rateLimited, circuitOpen: kss.flags.circuitOpen, error: `Skipped — ${reason} on previous probe`, timestamp: Date.now(),
       };
     }
 
@@ -198,6 +199,13 @@ export class ProbeService implements IProbeService, ILifecycle {
           continue;
         }
 
+        const isRateLimit = errorCode === 429 || msg.includes('429') || msg.includes('Too Many Requests');
+        if (isRateLimit) {
+          const r = this.makeResult(key, currentModel, 'limited', latency, msg, true, wasCircuitOpen, quotaInfo, undefined, errorCode, modelHealth);
+          lastResult = r;
+          continue;
+        }
+
         // Model-specific error — try next model if available
         const r = this.makeResult(key, currentModel, 'broken', latency, msg, rateLimited, wasCircuitOpen, quotaInfo, undefined, errorCode, modelHealth);
         lastResult = r;
@@ -232,8 +240,9 @@ export class ProbeService implements IProbeService, ILifecycle {
         continue;
       }
       const kss = this.deps.keyStateStore?.get(key.id);
-      if (kss?.flags.authFailed) {
-        results.push({ status: 'broken', provider: key.provider, keyId: key.id, keyLabel: key.label || key.provider, model: 'auto', latency: 0, rateLimited: false, circuitOpen: false, error: 'Skipped — auth failed on previous probe', timestamp: Date.now() });
+      if (kss?.flags.authFailed || kss?.flags.rateLimited || kss?.flags.circuitOpen) {
+        const reason = kss.flags.authFailed ? 'auth failed' : kss.flags.rateLimited ? 'rate limited' : 'circuit open';
+        results.push({ status: 'broken', provider: key.provider, keyId: key.id, keyLabel: key.label || key.provider, model: 'auto', latency: 0, rateLimited: kss.flags.rateLimited, circuitOpen: kss.flags.circuitOpen, error: `Skipped — ${reason} on previous probe`, timestamp: Date.now() });
         continue;
       }
       const result = await this.probeKey(key.id);

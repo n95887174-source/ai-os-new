@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: CircuitConfig = {
   halfOpenMaxRequests: CONFIG?.llm?.circuitBreaker?.halfOpenMaxRequests ?? 1,
 };
 
-const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 403, 404, 405, 422]);
+const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 403, 405, 422]);
 
 interface CircuitStateData {
   state: CircuitState;

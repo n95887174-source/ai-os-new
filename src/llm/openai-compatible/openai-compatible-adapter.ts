@@ -224,16 +224,28 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     }
   }
 
+  private _lastModelFetchFail = 0;
+  private static MODEL_FETCH_RETRY_MS = 300_000;
+
   async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
+    if (this._lastModelFetchFail && Date.now() - this._lastModelFetchFail < OpenAiCompatibleAdapter.MODEL_FETCH_RETRY_MS) {
+      return [];
+    }
     try {
       const res = await fetch(this.getUrl('/models'), {
         headers: { 'Authorization': `Bearer ${apiKey}` },
         signal,
       });
-      if (!res.ok) throw new LLMError(`HTTP ${res.status}`, this.id, res.status);
+      if (!res.ok) {
+        res.body?.cancel();
+        this._lastModelFetchFail = Date.now();
+        return [];
+      }
       const data = await res.json();
+      this._lastModelFetchFail = 0;
       return data.data?.map((m: { id: string }) => m.id) || [];
     } catch {
+      this._lastModelFetchFail = Date.now();
       return [];
     }
   }

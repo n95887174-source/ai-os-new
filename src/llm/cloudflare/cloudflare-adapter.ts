@@ -189,7 +189,13 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     }
   }
 
+  private _lastModelFetchFail = 0;
+  private static MODEL_FETCH_RETRY_MS = 300_000;
+
   async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
+    if (this._lastModelFetchFail && Date.now() - this._lastModelFetchFail < CloudflareAdapter.MODEL_FETCH_RETRY_MS) {
+      return [];
+    }
     const { token, accountId } = this.parseAuth(apiKey);
     try {
       const base = this.useProxy ? `/proxy/cloudflare` : this.baseUrl;
@@ -200,13 +206,20 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         headers: { 'Authorization': `Bearer ${token}` },
         signal,
       });
-      if (!res.ok) return [];
+      if (!res.ok) {
+        res.body?.cancel();
+        this._lastModelFetchFail = Date.now();
+        return [];
+      }
       const data = await res.json();
       if (data.success && Array.isArray(data.result)) {
+        this._lastModelFetchFail = 0;
         return data.result.map((m: { id: string; name?: string }) => m.id || m.name).filter(Boolean);
       }
+      this._lastModelFetchFail = 0;
       return [];
     } catch {
+      this._lastModelFetchFail = Date.now();
       return [];
     }
   }

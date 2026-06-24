@@ -150,14 +150,26 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     }
   }
 
+  private _lastModelFetchFail = 0;
+  private static MODEL_FETCH_RETRY_MS = 300_000;
+
   async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
+    if (this._lastModelFetchFail && Date.now() - this._lastModelFetchFail < NvidiaNIMAdapter.MODEL_FETCH_RETRY_MS) {
+      return [];
+    }
     try {
       const headers = this.buildHeaders(apiKey);
       const res = await fetch(`${this.baseURL}/v1/models`, { headers, signal });
-      if (!res.ok) return [];
+      if (!res.ok) {
+        res.body?.cancel();
+        this._lastModelFetchFail = Date.now();
+        return [];
+      }
       const data = await res.json() as { data?: Array<{ id: string }> };
+      this._lastModelFetchFail = 0;
       return data.data?.map(m => m.id) || [];
     } catch {
+      this._lastModelFetchFail = Date.now();
       return [];
     }
   }
