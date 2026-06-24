@@ -14,6 +14,9 @@ export interface InsightEngineDeps {
   orchestrator: {
     getActiveTopology: () => { nodes: Array<{ id: string; label: string; type: string; config: Record<string, unknown>; model?: string; provider?: string }> } | null;
   };
+  keyStateStore?: {
+    get: (id: string) => { flags: { authFailed: boolean } } | undefined;
+  };
 }
 
 export class InsightEngine implements IInsightEngine {
@@ -75,6 +78,9 @@ export class InsightEngine implements IInsightEngine {
     for (const candidate of candidates) {
       if (triedProviders.has(candidate.provider)) continue;
       triedProviders.add(candidate.provider);
+
+      const kss = this.deps.keyStateStore?.get(candidate.id);
+      if (kss?.flags.authFailed) continue;
 
       const adapter = this.deps.adapterRegistry.getAdapter(candidate.provider);
       if (!adapter) continue;

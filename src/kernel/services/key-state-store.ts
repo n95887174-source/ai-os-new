@@ -75,6 +75,10 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
    * Call this from bootstrap / after keyService is ready.
    */
   seedFromKeys(keys: ApiKey[]): void {
+    const currentIds = new Set(keys.map(k => k.id));
+    for (const id of this.states.keys()) {
+      if (!currentIds.has(id)) this.states.delete(id);
+    }
     for (const key of keys) {
       if (!this.states.has(key.id)) {
         const status: KeyStatus =
@@ -119,7 +123,8 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
           const status: KeyStatus =
             payload.key.status === 'active' ? 'ready' :
             payload.key.status === 'error' ? 'broken' : 'unknown';
-          this.update(payload.key.id, { status, provider: payload.key.provider, label: payload.key.label ?? payload.key.provider });
+          const flags = status === 'ready' ? { ...s.flags, authFailed: false } : s.flags;
+          this.update(payload.key.id, { status, provider: payload.key.provider, label: payload.key.label ?? payload.key.provider, flags });
           this.recomputeRouting(payload.key.id);
         }
       }),

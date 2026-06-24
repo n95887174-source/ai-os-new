@@ -21,8 +21,11 @@ class DexieEventRecorderStore {
 
   async load(): Promise<{ events: RecordedEvent[]; sequence: number } | null> {
     try {
-      const rows = await dexieDb.eventLog.orderBy('sequence').toArray();
-      if (rows.length === 0) return null;
+      const total = await dexieDb.eventLog.count();
+      if (total === 0) return null;
+      const keep = Math.min(total, 1000);
+      const rows = await dexieDb.eventLog.orderBy('sequence').reverse().limit(keep).toArray();
+      rows.reverse();
 
       const seq = rows[rows.length - 1].sequence;
       this.lastPersistedSeq = seq;
@@ -62,7 +65,7 @@ class DexieEventRecorderStore {
         }
 
         const totalCount = await dexieDb.eventLog.count();
-        const maxEvents = 10000;
+        const maxEvents = 1000;
         if (totalCount > maxEvents) {
           const excess = totalCount - maxEvents;
           const oldest = await dexieDb.eventLog.orderBy('id').limit(excess).toArray();

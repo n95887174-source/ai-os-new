@@ -88,6 +88,7 @@ export class AdvisorService {
       routerService: deps.routerService satisfies InsightEngineDeps['routerService'],
       adapterRegistry: deps.adapterRegistry satisfies InsightEngineDeps['adapterRegistry'],
       orchestrator: deps.orchestrator satisfies InsightEngineDeps['orchestrator'],
+      keyStateStore: deps.keyStateStore satisfies InsightEngineDeps['keyStateStore'] | undefined,
     });
 
     this.optimizer = new OptimizationEngine({

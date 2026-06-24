@@ -97,6 +97,10 @@ export class LLMHttpClient {
       res.body?.cancel()?.catch(() => {});
       throw new AuthError(this.#provider);
     }
+    if (res.status === 402) {
+      res.body?.cancel()?.catch(() => {});
+      throw new LLMError('Payment Required', this.#provider, 402);
+    }
     if (res.status === 429) {
       res.body?.cancel()?.catch(() => {});
       const retryAfter = parseRetryAfter(res);
@@ -108,8 +112,8 @@ export class LLMHttpClient {
       throw new RetryableError(`Server error ${res.status}`, this.#provider, res.status, undefined, retryAfter);
     }
     if (!res.ok) {
-      const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, this.#provider, res.status);
+      res.body?.cancel()?.catch(() => {});
+      throw new LLMError(`HTTP ${res.status}`, this.#provider, res.status);
     }
 
     const data = await res.json();
@@ -133,14 +137,18 @@ export class LLMHttpClient {
       res.body?.cancel()?.catch(() => {});
       throw new AuthError(this.#provider);
     }
+    if (res.status === 402) {
+      res.body?.cancel()?.catch(() => {});
+      throw new LLMError('Payment Required', this.#provider, 402);
+    }
     if (res.status === 429) {
       res.body?.cancel()?.catch(() => {});
       const retryAfter = parseRetryAfter(res);
       throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
     if (!res.ok) {
-      const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, this.#provider, res.status);
+      res.body?.cancel()?.catch(() => {});
+      throw new LLMError(`HTTP ${res.status}`, this.#provider, res.status);
     }
 
     const data = await res.json();
@@ -170,14 +178,18 @@ export class LLMHttpClient {
       res.body?.cancel()?.catch(() => {});
       throw new AuthError(this.#provider);
     }
+    if (res.status === 402) {
+      res.body?.cancel()?.catch(() => {});
+      throw new LLMError('Payment Required', this.#provider, 402);
+    }
     if (res.status === 429) {
       res.body?.cancel()?.catch(() => {});
       const retryAfter = parseRetryAfter(res);
       throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
     if (!res.ok) {
-      const text = await res.text();
-      throw new LLMError(`HTTP ${res.status}: ${sanitizeError(text.slice(0, 200))}`, this.#provider, res.status);
+      res.body?.cancel()?.catch(() => {});
+      throw new LLMError(`HTTP ${res.status}`, this.#provider, res.status);
     }
 
     return res;

@@ -27,7 +27,7 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
   groq: ['llama-3.1-8b-instant'],
-  gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
+  gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash-exp'],
   openrouter: ['openrouter/free', 'anthropic/claude-3-haiku-20240307'],
   nvidia: ['meta/llama-3.3-70b-instruct'],
 };
@@ -219,8 +219,19 @@ export class ProbeService implements IProbeService, ILifecycle {
     const keys = this.deps.keyService.getKeys();
     const results: ProbeResult[] = [];
     for (const key of keys) {
+      if (key.status === 'error') {
+        results.push({ status: 'broken', provider: key.provider, keyId: key.id, keyLabel: key.label || key.provider, model: 'auto', latency: 0, rateLimited: false, circuitOpen: false, error: 'Skipped — key has hard failure', timestamp: Date.now() });
+        continue;
+      }
+      const kss = this.deps.keyStateStore?.get(key.id);
+      if (kss?.flags.authFailed) {
+        results.push({ status: 'broken', provider: key.provider, keyId: key.id, keyLabel: key.label || key.provider, model: 'auto', latency: 0, rateLimited: false, circuitOpen: false, error: 'Skipped — auth failed on previous probe', timestamp: Date.now() });
+        continue;
+      }
       const result = await this.probeKey(key.id);
       results.push(result);
+      // 100ms delay between probes to let GC process pending allocations
+      await new Promise(r => setTimeout(r, 100));
     }
     return results;
   }

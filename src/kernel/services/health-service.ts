@@ -7,7 +7,7 @@ export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health
 const LOGGER = rootLogger.child('HealthService');
 
 export interface HealthServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
+  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   keyService: {
     getKeys: () => { id: string; provider: string; key: string; status: string }[];
     getKey: (id: string) => { id: string; provider: string; key: string; status: string } | undefined;
@@ -75,16 +75,17 @@ export class HealthService implements IHealthService {
   private setupListeners() {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.CHECK_HEALTH, (id: unknown) => { if (typeof id === 'string') this.checkKey(id); }),
-      this.deps.eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.checkAll())
+      this.deps.eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.checkAll()),
+      this.deps.eventBus.onSafe<{ key: { id: string; status: string } }>(EVENTS.KEY_UPDATED, (payload) => {
+        if (payload?.key?.status === 'active') this.checkKey(payload.key.id);
+      }),
     );
   }
 
   startScheduledChecks() {
     if (this.scheduleInterval) return;
     this.scheduleInterval = setInterval(() => {
-      const keys = this.deps.keyService.getKeys();
-      const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error' || k.status === 'checking');
-      if (activeKeys.length > 0) { this.checkAll(); }
+      this.checkAll();
     }, this.checkIntervalMs);
   }
 
@@ -167,7 +168,12 @@ export class HealthService implements IHealthService {
 
     try {
       const keys = this.deps.keyService.getKeys();
-      const activeKeys = keys.filter(k => k.status === 'active' || k.status === 'error' || k.status === 'checking');
+      const activeKeys = keys.filter(k => {
+        if (k.status !== 'active' && k.status !== 'checking') return false;
+        const state = this.deps.keyStateStore.get(k.id);
+        if (state?.flags.authFailed) return false;
+        return true;
+      });
 
       const concurrency = 4;
       const results: (KeyHealthCheckResult | null)[] = [];
@@ -208,6 +214,14 @@ export class HealthService implements IHealthService {
   private async checkKeyImpl(id: string): Promise<KeyHealthCheckResult | null> {
     const key = this.deps.keyService.getKey(id);
     if (!key) return null;
+
+    const state = this.deps.keyStateStore.get(id);
+    if (state?.flags.authFailed) {
+      return {
+        keyId: id, provider: key.provider, status: 'error',
+        latency: 0, timestamp: Date.now(), error: 'Skipped — auth failed on previous check',
+      };
+    }
 
     this.deps.keyService.updateKeyStatus(id, 'checking');
     this.deps.eventBus.emit(EVENTS.KEY_HEALTH_STARTED, id);

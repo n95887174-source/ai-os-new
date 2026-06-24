@@ -26,7 +26,7 @@ import { rootLogger } from '../logger-service';
 const LOGGER = rootLogger.child('EventRecorder');
 
 const DEFAULT_CONFIG: RecorderConfig = {
-  maxEvents: CONFIG?.services?.eventRecorder?.maxEvents ?? 10000,
+  maxEvents: CONFIG?.services?.eventRecorder?.maxEvents ?? 1000,
   enabled: true,
 };
 

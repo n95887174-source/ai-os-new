@@ -1,8 +1,9 @@
 ﻿import type {
   IAutoDebateService, AutoDebateOptions, AutoDebateResult,
-  ProviderWinRate, BatchTestResult, AutoDebateRole, TournamentResult, TournamentMatch,
+  ProviderWinRate, BatchTestResult, TournamentResult, TournamentMatch,
 } from '../../contracts/auto-debate';
 import { rootLogger } from '../logger-service';
+import type { DebateRole } from '../../contracts/debate-types';
 
 const LOGGER = rootLogger.child('AutoDebateService');
 import type { DebateParticipant, DebateSession } from '../debate-service';
@@ -13,7 +14,7 @@ import type { ApiKey } from '../../types/metrics-types';
  * First match in availableModels wins.
  */
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-  gemini: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
+  gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash-exp'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
 openrouter: ['openrouter/auto', 'openrouter/free'],
 nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
@@ -91,7 +92,7 @@ function makeParticipantId(): string {
   return genId('auto');
 }
 
-const ROLES: AutoDebateRole[] = ['pro', 'con', 'neutral'];
+const ROLES: DebateRole[] = ['pro', 'con', 'neutral'];
 
 export interface AutoDebateServiceDeps {
   keyService: {
@@ -106,7 +107,7 @@ export interface AutoDebateServiceDeps {
       participants: DebateParticipant[],
       strategy?: string,
       maxRounds?: number,
-      config?: Partial<{ roundDelayMs: number; maxTokens: number; temperature: number; useModerator: boolean; timeoutMs: number }>
+      config?: Partial<{ roundDelayMs: number; maxTokens: number; temperature: number; useModerator: boolean; timeoutMs: number; language: string }>
     ) => Promise<DebateSession>;
   };
 }
@@ -130,7 +131,7 @@ export class AutoDebateService implements IAutoDebateService {
     const providerOffsets: Record<string, number> = {};
     const participants: DebateParticipant[] = selected.map((key, i) => {
       const role = ROLES[i % ROLES.length];
-      const systemPrompts: Record<AutoDebateRole, string> = {
+      const systemPrompts: Partial<Record<DebateRole, string>> = {
         pro: `You are "Pro-${key.label ?? key.provider}". Argue in favour of the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
         con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
         neutral: `You are "Neutral-${key.label ?? key.provider}". Analyse both sides objectively. Identify strengths and weaknesses. Do not take a side. Be concise and balanced.`,
@@ -142,7 +143,7 @@ export class AutoDebateService implements IAutoDebateService {
         id: makeParticipantId(),
         name: `${key.label ?? key.provider}-${role}`,
         role,
-        systemPrompt: systemPrompts[role],
+        systemPrompt: systemPrompts[role] ?? '',
         provider: key.provider,
         modelId,
       };

@@ -1,8 +1,6 @@
-import type { DebateParticipant, DebateSession } from './debate-types';
+import type { DebateParticipant, DebateSession, DebateRole } from './debate-types';
 
 export type AutoDebateTopic = string;
-
-export type AutoDebateRole = 'pro' | 'con' | 'neutral';
 
 export interface AutoDebateOptions {
   topic?: string;
@@ -23,7 +21,7 @@ export interface AutoDebateResult {
     id: string;
     name: string;
     provider: string;
-    role: AutoDebateRole;
+    role: DebateRole;
   }>;
   session: DebateSession | null;
   durationMs: number;
