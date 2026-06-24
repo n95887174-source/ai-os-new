@@ -73,6 +73,7 @@ export class ChatService {
   private llmClient: ILLMClientService;
   private activeRequests = new Map<string, AbortController>();
   private unsubs: Array<() => void> = [];
+  private executingMessages = new Set<string>();
 
   constructor(deps: ChatServiceDeps) {
     this.deps = deps;
@@ -88,6 +89,7 @@ export class ChatService {
       try { ac.abort(); } catch { /* ignore */ }
     }
     this.activeRequests.clear();
+    this.executingMessages.clear();
     this.unsubs.forEach(u => u());
     this.unsubs = [];
   }
@@ -95,7 +97,13 @@ export class ChatService {
   private setupListeners() {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
-        this.executeRequest({ ...(req as QueuedRequest), requestId: (req as QueuedRequest).requestId || crypto.randomUUID() }).catch(e => LOGGER.error('ChatService', 'executeRequest failed', { error: e }));
+        const r = req as QueuedRequest;
+        const fp = `${r.provider}:${r.model}:${r.messages.map(m => m.content).join('').slice(0, 200)}`;
+        if (this.executingMessages.has(fp)) return;
+        this.executingMessages.add(fp);
+        this.executeRequest({ ...r, requestId: r.requestId || crypto.randomUUID() })
+          .catch(e => LOGGER.error('ChatService', 'executeRequest failed', { error: e }))
+          .finally(() => this.executingMessages.delete(fp));
       }),
       this.deps.eventBus.onSafe<{ requestId?: string }>(EVENTS.CANCEL_MESSAGE, (d) => {
         if (d && typeof d.requestId === 'string') this.cancelRequest(d.requestId);
@@ -438,6 +446,7 @@ export class ChatService {
         sessionController.signal.removeEventListener('abort', onSessionAbort);
         attemptController.abort(); // abort any lingering downstream
       }
+      return; // success — don't retry through the loop
     }
 
     this.emitError(req, `Rate limited after ${this.MAX_429_RETRIES - 1} retries`);
