@@ -4,7 +4,9 @@ import { FEATURE_FLAGS } from '../../kernel/contracts/feature-flags';
 import { useChatStore } from './store';
 import type { ChatEntry, ChatSession } from './types';
 import type { ChatResponse } from '../../types/chat';
-import { requestEntryMap, genId } from './types';
+import { requestEntryMap, genId, rebuildRequestEntryMap } from './types';
+
+const CHUNK_FLUSH_INTERVAL = 100;
 
 function matchesResponse(r: ChatResponse, provider: string | undefined, requestId: string): boolean {
   if (r.provider !== provider) return false;
@@ -39,15 +41,13 @@ function updateSessionsForRequest(
   const nextEntry = updater(currentEntry);
   if (nextEntry === currentEntry) return sessions;
 
-  const nextHistory = [...session.history];
-  nextHistory[entryIndex] = nextEntry;
+  const nextHistory = session.history.with(entryIndex, nextEntry);
 
-  const nextSessions = [...sessions];
-  nextSessions[sessionIndex] = {
+  const nextSessions = sessions.with(sessionIndex, {
     ...session,
     history: nextHistory,
     updatedAt: Date.now(),
-  };
+  });
   return nextSessions;
 }
 
@@ -69,6 +69,7 @@ moduleUnsubs.push(eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
     }),
   }));
   if (res.requestId) useChatStore.getState().removeActiveRequestId(res.requestId);
+  rebuildRequestEntryMap(useChatStore.getState().sessions);
 }));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model }) => {
@@ -97,9 +98,20 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_START, ({ requestId, provider, model
       };
     }),
   }));
+  rebuildRequestEntryMap(useChatStore.getState().sessions);
 }));
 
-moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
+const chunkAccumulators = new Map<string, { content: string; timer: ReturnType<typeof setTimeout> | null }>();
+
+function flushChunkAccumulator(requestId: string, provider: string): void {
+  const key = `${requestId}::${provider}`;
+  const acc = chunkAccumulators.get(key);
+  if (!acc) return;
+  acc.timer = null;
+  const accumulated = acc.content;
+  acc.content = '';
+  if (!accumulated) return;
+
   useChatStore.setState(s => ({
     sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => {
       if (entry.responses.length === 0) return entry;
@@ -109,15 +121,53 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk
           matchesResponse(r, provider, requestId)
             ? (r.status === 'done' || r.status === 'error' || r.status === 'cancelled')
               ? r
-              : { ...r, content: r.content + chunk, status: 'streaming' as const }
+              : { ...r, content: r.content + accumulated, status: 'streaming' as const }
             : r
         ),
       };
     }),
   }));
+}
+
+function flushAllForRequest(requestId: string): void {
+  for (const [key, acc] of chunkAccumulators) {
+    if (!key.startsWith(`${requestId}::`)) continue;
+    if (acc.timer !== null) {
+      clearTimeout(acc.timer);
+      acc.timer = null;
+    }
+    if (acc.content) {
+      const provider = key.slice(requestId.length + 2);
+      flushChunkAccumulator(requestId, provider);
+    }
+    chunkAccumulators.delete(key);
+  }
+}
+
+function cleanupAccumulator(requestId: string, provider: string): void {
+  const key = `${requestId}::${provider}`;
+  const acc = chunkAccumulators.get(key);
+  if (acc) {
+    if (acc.timer !== null) clearTimeout(acc.timer);
+    chunkAccumulators.delete(key);
+  }
+}
+
+moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk }) => {
+  const key = `${requestId}::${provider}`;
+  let acc = chunkAccumulators.get(key);
+  if (!acc) {
+    acc = { content: '', timer: null };
+    chunkAccumulators.set(key, acc);
+  }
+  acc.content += chunk;
+  if (!acc.timer) {
+    acc.timer = setTimeout(() => flushChunkAccumulator(requestId, provider), CHUNK_FLUSH_INTERVAL);
+  }
 }));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
+  flushAllForRequest(requestId);
   useChatStore.setState(s => ({
     sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => {
       if (entry.responses.length === 0) return entry;
@@ -149,6 +199,7 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullCon
 }));
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, provider, error }) => {
+  cleanupAccumulator(requestId, provider);
   useChatStore.setState(s => ({
     sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => ({
       ...entry,
@@ -174,14 +225,7 @@ moduleUnsubs.push(eventBus.on(EVENTS.CANCEL_MESSAGE, ({ requestId }) => {
   useChatStore.getState().removeActiveRequestId(requestId);
 }));
 
-// Initialize requestEntryMap with current state
-import { rebuildRequestEntryMap } from './types';
 rebuildRequestEntryMap(useChatStore.getState().sessions);
-useChatStore.subscribe((state, prevState) => {
-  if (state.sessions !== prevState.sessions) {
-    rebuildRequestEntryMap(state.sessions);
-  }
-});
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
