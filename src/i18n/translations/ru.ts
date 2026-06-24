@@ -1523,6 +1523,11 @@ const ru = {
   'debate.branch.count': '{count} веток',
   'debate.branch.name_placeholder': 'Имя ветки (опционально)',
   'debate.branch.empty': 'Нет веток. Создайте форк текущей сессии.',
+  'debate.all_agents_failed': 'Все агенты не смогли ответить. Аргументы не сгенерированы.',
+  'debate.agent_errors': '{count} агент(ов) столкнулись с ошибками',
+  'debate.agent_error_label': 'Ошибка',
+  'debate.agent_timeout_label': 'Таймаут',
+  'debate.errors_tab': 'Ошибки ({count})',
 
   'health.status_aria': 'Статус: {status}',
   'health.bee_title': '{provider} - {latency}',

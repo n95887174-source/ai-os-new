@@ -525,7 +525,7 @@ export const EventValidators: Record<string, z.ZodType<unknown>> = {
   'debate-runtime:session:paused': z.object({ sessionId: z.string() }),
   'debate-runtime:session:resumed': z.object({ sessionId: z.string() }),
   'debate-runtime:session:cancelled': z.object({ sessionId: z.string() }),
-  'debate-runtime:session:completed': z.object({ sessionId: z.string(), consensus: z.unknown() }),
+  'debate-runtime:session:completed': z.object({ sessionId: z.string(), error: z.string().optional() }),
   'debate-runtime:session:failed': z.object({ sessionId: z.string(), error: z.string() }),
   'debate-runtime:phase:changed': z.object({ sessionId: z.string(), from: z.string(), to: z.string() }),
   'debate-runtime:agent:phase:changed': z.object({ sessionId: z.string(), agentId: z.string(), from: z.string(), to: z.string() }),

@@ -51,11 +51,12 @@ export class AdvisorService {
     latencyThreshold: CONFIG?.services?.advisor?.latencyThreshold ?? 4000,
     costThreshold: CONFIG?.services?.advisor?.costThreshold ?? 10,
     minConfidence: CONFIG?.services?.advisor?.minConfidence ?? 0.7,
-    analysisIntervalMs: CONFIG?.services?.advisor?.analysisIntervalMs ?? 60000,
+    analysisIntervalMs: CONFIG?.services?.advisor?.analysisIntervalMs ?? 300000,
   };
   private lastAnalysis: number = 0;
   private unsubs: Array<() => void> = [];
   private periodicInterval: ReturnType<typeof setInterval> | null = null;
+  private staggerTimeout: ReturnType<typeof setTimeout> | null = null;
   private deps: AdvisorServiceDeps;
 
   constructor(deps: AdvisorServiceDeps) {
@@ -125,6 +126,7 @@ export class AdvisorService {
     this.unsubs.forEach(u => u());
     this.unsubs = [];
     if (this.periodicInterval) { clearInterval(this.periodicInterval); this.periodicInterval = null; }
+    if (this.staggerTimeout) { clearTimeout(this.staggerTimeout); this.staggerTimeout = null; }
     this.optimizer.destroy();
   }
 
@@ -139,7 +141,10 @@ export class AdvisorService {
   }
 
   private startPeriodicAnalysis() {
-    this.periodicInterval = setInterval(() => this.performDeepAnalysis(), this.config.analysisIntervalMs);
+    const stagger = Math.random() * 60000;
+    this.staggerTimeout = setTimeout(() => {
+      this.periodicInterval = setInterval(() => this.performDeepAnalysis(), this.config.analysisIntervalMs);
+    }, stagger);
   }
 
   private analyzeTraces(traces: CognitiveTrace[]) {

@@ -1505,6 +1505,11 @@ const en = {
   'debate.branch.count': '{count} branches',
   'debate.branch.name_placeholder': 'Branch name (optional)',
   'debate.branch.empty': 'No branches. Fork the current session.',
+  'debate.all_agents_failed': 'All agents failed to respond. No arguments were generated.',
+  'debate.agent_errors': '{count} agent(s) encountered errors',
+  'debate.agent_error_label': 'Failed',
+  'debate.agent_timeout_label': 'Timed Out',
+  'debate.errors_tab': 'Errors ({count})',
 
   'health.status_aria': 'Status: {status}',
   'health.bee_title': '{provider} - {latency}',

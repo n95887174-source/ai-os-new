@@ -27,7 +27,7 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
   groq: ['llama-3.1-8b-instant'],
-  gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash-exp'],
+  gemini: ['gemini-2.0-flash'],
   openrouter: ['openrouter/free', 'anthropic/claude-3-haiku-20240307'],
   nvidia: ['meta/llama-3.3-70b-instruct'],
 };
@@ -46,8 +46,8 @@ function isCreditError(e: unknown): boolean {
 function isKeyLevelError(e: unknown): boolean {
   const errMsg = e instanceof Error ? e.message : '';
   const errorCode = e instanceof LLMError ? e.statusCode : undefined;
-  if (errorCode === 401) return true;
-  if (errMsg.includes('401') || errMsg.includes('Unauthorized')) return true;
+  if (errorCode === 401 || errorCode === 403) return true;
+  if (errMsg.includes('401') || errMsg.includes('403') || errMsg.includes('Unauthorized') || errMsg.includes('Forbidden')) return true;
   if (errMsg.includes('Invalid API Key') || errMsg.includes('Authentication failed')) return true;
   if (errMsg.includes('No adapter') || errMsg.includes('Key not found')) return true;
   return false;
@@ -108,6 +108,14 @@ export class ProbeService implements IProbeService, ILifecycle {
       };
     }
 
+    const kss = this.deps.keyStateStore?.get(keyId);
+    if (kss?.flags.authFailed) {
+      return {
+        status: 'broken', provider: key.provider, keyId, keyLabel: key.label || key.provider, model: model || 'auto',
+        latency: 0, rateLimited: false, circuitOpen: false, error: 'Skipped — auth failed on previous probe', timestamp: Date.now(),
+      };
+    }
+
     const provider = key.provider;
     const primaryModel = model || PROVDER_DEFAULTS[provider.toLowerCase()] || key.availableModels?.[0] || 'auto';
     const fallbacks = PROBE_FALLBACKS[provider.toLowerCase()] ?? [];
@@ -152,7 +160,7 @@ export class ProbeService implements IProbeService, ILifecycle {
 
         if (res.content && res.content.length > 0) {
           let status: ProbeStatus;
-          if (latency > 5000 || quotaInfo.remaining <= 0) {
+          if (latency > 5000 || (quotaInfo.limit > 0 && quotaInfo.remaining <= 0)) {
             status = 'degraded';
           } else if (rateLimited || (quotaInfo.limit > 0 && quotaInfo.remaining / quotaInfo.limit < 0.1)) {
             status = 'limited';
@@ -251,6 +259,11 @@ export class ProbeService implements IProbeService, ILifecycle {
         map.set(p.id, { status: 'broken', provider, keyId: '', keyLabel: '', model: p.modelId || 'auto', latency: 0, rateLimited: false, circuitOpen: false, error: 'No active keys', timestamp: Date.now() });
         continue;
       }
+      const kss = this.deps.keyStateStore?.get(keys[0].id);
+      if (kss?.flags.authFailed) {
+        map.set(p.id, { status: 'broken', provider: keys[0].provider, keyId: keys[0].id, keyLabel: keys[0].label || keys[0].provider, model: p.modelId || 'auto', latency: 0, rateLimited: false, circuitOpen: false, error: 'Skipped — auth failed on previous probe', timestamp: Date.now() });
+        continue;
+      }
       const result = await this.probeKey(keys[0].id, p.modelId);
       map.set(p.id, result);
     }
@@ -273,10 +286,10 @@ export class ProbeService implements IProbeService, ILifecycle {
 
   private getQuotaInfo(key: ApiKey): { remaining: number; limit: number } {
     const usage = key.stats?.extended?.usageToday as ({ requests: number; tokens: number; weightedTokens: number; estimatedCost: number; limit?: number } | undefined);
-    const limit = usage?.limit ?? 0;
+    if (!usage || !usage.limit) return { remaining: -1, limit: 0 };
     return {
-      remaining: usage ? Math.max(0, limit - usage.requests) : -1,
-      limit,
+      remaining: Math.max(0, usage.limit - (usage.requests ?? 0)),
+      limit: usage.limit,
     };
   }
 }

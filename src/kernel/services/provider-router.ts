@@ -739,6 +739,10 @@ export class RouterService {
     let activeKeys = allKeys.filter(k => {
       const ks = this.deps.keyStateStore?.get(k.id);
       if (ks) {
+        if (ks.flags.authFailed) {
+          this.logDebateSkip(k, `Auth failed — key unauthorized`, 'status');
+          return false;
+        }
         if (ks.healthScore < 75) {
           this.logDebateSkip(k, `Health score: ${ks.healthScore}/100`, 'status');
           return false;
@@ -760,10 +764,14 @@ export class RouterService {
       return true;
     });
     if (activeKeys.length === 0) {
-      // Grace fallback: allow degraded/limited keys
+      // Grace fallback: allow degraded/limited keys but skip auth-failed
       activeKeys = allKeys.filter(k => {
         const ks = this.deps.keyStateStore?.get(k.id);
         if (ks) {
+          if (ks.flags.authFailed) {
+            this.logDebateSkip(k, `Fallback skipped — auth failed`, 'status');
+            return false;
+          }
           if (ks.healthScore < 25) {
             this.logDebateSkip(k, `Fallback skipped — health score ${ks.healthScore}/100`, 'status');
             return false;

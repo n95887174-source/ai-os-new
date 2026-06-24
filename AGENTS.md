@@ -978,5 +978,59 @@ Fix two runtime bugs: React "Cannot update component during render" violation an
 | 5 | **RetryDecorator skips 429** — `shouldRetry()` returns false for `RetryableError` with `statusCode === 429`. CircuitBreaker handles rate limit backoff by opening the circuit. Memory: 240→60 HTTP calls per probe cycle. | `retry-decorator.ts:31-33` |
 | 6 | **CircuitBreaker preserves retryAfter** — passes `retryAfter` from `RetryableError` to outgoing `LLMError` for upstream consumers | `circuit-breaker.ts:153-159` |
 
-### TypeScript
-- `npx tsc --noEmit` — zero errors after all edits
+---
+
+## Current Session (2026-06-24) — InsightEngine Cache + Model Validator Fix
+
+### Goal
+Eliminate remaining memory leak sources: InsightEngine running every 60s, ProbeService probing deprecated models, Gemini model validator hammering auth-failed keys.
+
+### Changes
+
+| # | Fix | File |
+|:---|:----|:-----|
+| 1 | **InsightEngine: failure cache** — Added `providerFailureCache` (5min TTL) + `providerCbOpenCache` (2min). After a provider fails, skipped for 5min across subsequent analysis cycles. | `insight-engine.ts` |
+| 2 | **InsightEngine: broader flag checks** — Checks `circuitOpen`, `rateLimited`, `broken`, + cached-as-dead, not just `authFailed`. | `insight-engine.ts` |
+| 3 | **AdvisorService: 60s→300s interval** — Default `analysisIntervalMs` 60000→300000. Random 0-60s stagger to prevent simultaneous firing with ProbeService/HealthService. | `advisor-service.ts` |
+| 4 | **KeyStateStore: improved auth detection** — `ingestProbe()` checks `statusCode` (401/402/403). `KEY_HEALTH_FAILED` handler sets `authFailed` for auth errors. | `key-state-store.ts` |
+| 5 | **ProbeService: fix `isKeyLevelError`** — Added 403 detection. Geminis with auth failures break after first model instead of trying all fallbacks. | `probe-service.ts` |
+| 6 | **ProbeService: remove dead models** — Removed `gemini-2.0-flash-exp` (404) from `PROBE_FALLBACKS`. Removed duplicate fallback. | `probe-service.ts` |
+| 7 | **Gemini model validator: failure tracking** — Added `failedKeys: Map` with 10min retry. `get()`/`refresh()` skip known-failed keys. `markFailed()` public API. | `gemini-model-validator.ts` |
+| 8 | **Gemini adapter: markFailed on auth** — `doSendMessage`/`doStreamMessage` catch `AuthError` and call `modelCache.markFailed(apiKey)`. | `gemini-adapter.ts` |
+
+### Result
+- Heap stable at **60-130MB** (was 60-430MB sawtooth)
+- InsightEngine: first cycle tries 4 providers → cached for 5min → **zero calls** subsequently
+- After first probe cycle, `authFailed` flags set → **zero probe calls** for broken keys
+- `gemini-2.0-flash-exp` no longer probed (removed from fallbacks)
+- Gemini model validator: 403 → `markFailed` → **zero model-list fetches** for 10 minutes
+- `npx tsc --noEmit` ✅ | `npx vite build` ✅
+
+---
+
+## Current Session (2026-06-24) — Session-Level failedProviders
+
+### Problem
+`callLLM()` created a per-call `Set<string>()` for `failedProviders`. Each agent in each round started fresh — Agent A (OpenRouter) fails, Agent B retries OpenRouter again. With 20+ agents × 3-4 providers, this caused 60+ failed HTTP calls per round, flooding logs and wasting time on auth-failed providers.
+
+### Changes
+| # | Fix | File |
+|:---|:----|:-----|
+| 1 | **`IDebateSession` interface** — added `hasProviderFailed()` and `markProviderFailed()` methods | `contracts/debate-runtime.ts:83-84` |
+| 2 | **`DebateSession` class** — added `_failedProviders: Set<string>` field, getter `hasProviderFailed()`, mutator `markProviderFailed()`, cleanup in `destroy()` | `debate-session.ts:43,45-52,148` |
+| 3 | **`callLLM()`** — removed local `const failedProviders = new Set<string>()`, replaced all 7 references with `session.hasProviderFailed()` / `session.markProviderFailed()` | `debate-engine.ts:371,393,401,409,420,429,512` |
+
+### Result
+- `npx tsc --noEmit` ✅ zero errors
+- `failedProviders` persists across all `callLLM()` calls for the same session — once OpenRouter fails for Agent A, all subsequent agents skip it immediately
+- `destroy()` clears `_failedProviders` when session is torn down
+
+### Follow-up: Circuit breaker pre-check
+**Problem discovered**: Session-level `failedProviders` prevented cross-agent retries across rounds, but within a single round all 22 agents start roughly simultaneously. The first agent's OpenRouter call takes ~150ms to fail — by then, 17+ agents have already passed the `hasProviderFailed()` check. The circuit breaker opens after 5 failures, but each agent still takes ~150ms to fail.
+
+**Fix**: Added `providerCanBeUsed()` helper that checks BOTH `session.hasProviderFailed()` AND circuit breaker state (`adapterRegistry.getProviderRuntimeStatus().circuitOpen`). Replaced all 5 provider checks in `callLLM()`.
+
+**Result**: After 5 actual HTTP failures (circuit breaker threshold), ALL subsequent agents skip the provider instantly (0ms, no HTTP call). Round 2+ sees zero errors for circuit-open providers since `hasProviderFailed()` catches them immediately.
+
+**Files changed**:
+- `src/kernel/services/debate-runtime/debate-engine.ts` — added `providerCanBeUsed()` method, imported `IAdapterRegistry`, replaced 5 `hasProviderFailed` calls

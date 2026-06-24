@@ -82,6 +82,8 @@ export interface IDebateSession {
   readonly createdAt: number;
   readonly language: string;
 
+  hasProviderFailed(provider: string): boolean;
+  markProviderFailed(provider: string): void;
   transition(to: DebatePhase, tx?: ITransaction): boolean;
   incrementRound(): void;
   setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void;

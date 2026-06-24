@@ -15,6 +15,7 @@ import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes'
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AutoDebateResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import { probeService, autoDebateService as autoDebate, debateService } from '../../kernel/instances';
+import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import {
   debateArenaPanel,
   debateHistoryCountBadge,
@@ -92,6 +93,18 @@ export function DebateTabContent({
   const flexColumn: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' };
   const [internalProbeLoading, setInternalProbeLoading] = useState(false);
   const combinedProbeLoading = internalProbeLoading;
+  const debateLiveAgentEvents = useDebateLiveStore(s => s.agentEvents);
+  const sessionErrors = React.useMemo(() => {
+    if (!session?.id) return [];
+    return debateLiveAgentEvents
+      .filter(e => e.sessionId === session.id && (e.status === 'error' || e.status === 'timeout') && e.error)
+      .map(e => ({
+        agentId: e.agentId,
+        error: e.error ?? '',
+        timestamp: e.timestamp,
+        isTimeout: e.status === 'timeout',
+      }));
+  }, [debateLiveAgentEvents, session]);
 
   return (
     <div style={containerStyle}>
@@ -212,6 +225,7 @@ export function DebateTabContent({
                         t={t}
                         agentLabel={getAgentLabel}
                         streamingArgIds={streamingArgIds}
+                        agentErrors={sessionErrors}
                       />
                     </ErrorBoundary>
                   </div>

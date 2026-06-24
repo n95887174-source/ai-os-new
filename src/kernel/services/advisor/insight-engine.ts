@@ -1,4 +1,5 @@
 ﻿import type { IInsightEngine, LLMAnalysisResult, AdvisorMetrics } from '../../contracts/advisor';
+import type { KeyState } from '../../contracts/key-state';
 
 export interface InsightEngineDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -15,9 +16,12 @@ export interface InsightEngineDeps {
     getActiveTopology: () => { nodes: Array<{ id: string; label: string; type: string; config: Record<string, unknown>; model?: string; provider?: string }> } | null;
   };
   keyStateStore?: {
-    get: (id: string) => { flags: { authFailed: boolean } } | undefined;
+    get: (id: string) => KeyState | undefined;
   };
 }
+
+const FAILURE_CACHE_TTL_MS = 300_000;
+const CIRCUIT_BREAKER_CACHE_TTL_MS = 120_000;
 
 export class InsightEngine implements IInsightEngine {
   private deps: InsightEngineDeps;
@@ -25,6 +29,9 @@ export class InsightEngine implements IInsightEngine {
     avgLatency: 0, errorRate: 0, costPerRequest: 0,
     providerReliability: {}, bottleneckNodes: [],
   };
+
+  private providerFailureCache = new Map<string, number>();
+  private providerCbOpenCache = new Map<string, number>();
 
 
   constructor(deps: InsightEngineDeps) {
@@ -67,6 +74,19 @@ export class InsightEngine implements IInsightEngine {
   }
 
 
+  private isProviderCachedAsDead(provider: string): { dead: boolean; reason: string } {
+    const now = Date.now();
+    const lastFail = this.providerFailureCache.get(provider);
+    if (lastFail && (now - lastFail) < FAILURE_CACHE_TTL_MS) {
+      return { dead: true, reason: `failed at ${new Date(lastFail).toISOString()}` };
+    }
+    const lastCbOpen = this.providerCbOpenCache.get(provider);
+    if (lastCbOpen && (now - lastCbOpen) < CIRCUIT_BREAKER_CACHE_TTL_MS) {
+      return { dead: true, reason: `circuit open at ${new Date(lastCbOpen).toISOString()}` };
+    }
+    return { dead: false, reason: '' };
+  }
+
   async generateLLMAnalysis(): Promise<LLMAnalysisResult | null> {
     const keys = this.deps.keyService.getKeys().filter(k => k.status === 'active');
     if (keys.length === 0) return null;
@@ -81,6 +101,12 @@ export class InsightEngine implements IInsightEngine {
 
       const kss = this.deps.keyStateStore?.get(candidate.id);
       if (kss?.flags.authFailed) continue;
+      if (kss?.flags.circuitOpen) continue;
+      if (kss?.flags.rateLimited && !kss?.lastProbe?.error) continue;
+      if (kss?.status === 'broken') continue;
+
+      const cached = this.isProviderCachedAsDead(candidate.provider);
+      if (cached.dead) continue;
 
       const adapter = this.deps.adapterRegistry.getAdapter(candidate.provider);
       if (!adapter) continue;
@@ -145,7 +171,9 @@ Focus on actionable, specific improvements.`;
             recommendations: parsed.recommendations || [],
           };
         }
-      } catch { /* try next provider */ }
+      } catch {
+        this.providerFailureCache.set(candidate.provider, Date.now());
+      }
     }
 
     return null;

@@ -3,16 +3,37 @@ import { ModelValidationError } from '../core/errors';
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.-]+$/;
 const MODEL_CACHE_TTL = 5 * 60 * 1000;
 
+const FAILED_KEY_RETRY_MS = 10 * 60 * 1000;
+
 class ModelCache {
   private cache = new Map<string, { models: Set<string>; timestamp: number }>();
   private fetchPromises = new Map<string, Promise<Set<string>>>();
   private refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private fetcher: ((apiKey: string) => Promise<Set<string>>) | null = null;
+  /** Tracks API keys that failed to fetch (e.g., 403 auth) — skip HTTP fetches for them */
+  private failedKeys = new Map<string, number>();
   private static readonly MAX_CACHE_SIZE = 100;
   private static readonly MAX_FETCH_PROMISES = 50;
 
   setFetcher(fn: (apiKey: string) => Promise<Set<string>>): void {
     this.fetcher = fn;
+  }
+
+  markFailed(apiKey: string): void {
+    this.failedKeys.set(apiKey, Date.now() + FAILED_KEY_RETRY_MS);
+    this.clearTimer(apiKey);
+    this.fetchPromises.delete(apiKey);
+    this.cache.delete(apiKey);
+  }
+
+  private isKeyFailed(apiKey: string): boolean {
+    const retryAt = this.failedKeys.get(apiKey);
+    if (!retryAt) return false;
+    if (Date.now() >= retryAt) {
+      this.failedKeys.delete(apiKey);
+      return false;
+    }
+    return true;
   }
 
   private cleanupCache(): void {
@@ -39,6 +60,7 @@ class ModelCache {
   destroy(): void {
     this.cache.clear();
     this.fetchPromises.clear();
+    this.failedKeys.clear();
     for (const timer of this.refreshTimers.values()) {
       clearTimeout(timer);
     }
@@ -55,6 +77,7 @@ class ModelCache {
 
   private async refresh(apiKey: string): Promise<void> {
     if (!this.fetcher) return;
+    if (this.isKeyFailed(apiKey)) return;
     const existing = this.fetchPromises.get(apiKey);
     if (existing) return;
     if (this.fetchPromises.size >= ModelCache.MAX_FETCH_PROMISES) {
@@ -68,13 +91,15 @@ class ModelCache {
       this.cleanupCache();
       this.scheduleRefresh(apiKey);
     } catch {
-      // keep stale data, retry on next access
+      this.markFailed(apiKey);
     } finally {
       this.fetchPromises.delete(apiKey);
     }
   }
 
   async get(apiKey: string): Promise<Set<string>> {
+    if (this.isKeyFailed(apiKey)) return new Set();
+
     const cached = this.cache.get(apiKey);
     if (cached) {
       const age = Date.now() - cached.timestamp;
@@ -103,6 +128,7 @@ class ModelCache {
       this.cleanupCache();
       return models;
     } catch {
+      this.markFailed(apiKey);
       return cached?.models ?? new Set();
     } finally {
       this.fetchPromises.delete(apiKey);

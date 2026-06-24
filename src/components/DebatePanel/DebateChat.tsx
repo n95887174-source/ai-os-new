@@ -1,10 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Target, Brain, AlertTriangle, Check, X } from 'lucide-react';
+import { Bot, Target, Brain, AlertTriangle, Check, X, Clock } from 'lucide-react';
 import type { DebateArgument } from '../../kernel/instances';
 import { flexCenterGap6px, textMutedSm } from '../../styles/common';
 import { FactCheckBadge } from './FactCheckBadge';
 import { MarkdownRenderer } from '../ChatPanel/MarkdownRenderer';
+
+interface AgentErrorEntry {
+  agentId: string;
+  error: string;
+  timestamp: number;
+  isTimeout?: boolean;
+}
 
 interface DebateChatProps {
   arguments: DebateArgument[];
@@ -13,9 +20,10 @@ interface DebateChatProps {
   t: (key: string, params?: Record<string, string | number>) => string;
   agentLabel?: (agentId: string) => string;
   streamingArgIds?: Set<string>;
+  agentErrors?: AgentErrorEntry[];
 }
 
-const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel, streamingArgIds }) => {
+const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel, streamingArgIds, agentErrors }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastArgId = args.length > 0 ? args[args.length - 1].id : undefined;
   useEffect(() => {
@@ -27,9 +35,35 @@ const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel,
     if (agentLabel) return agentLabel(agentId);
     return agentId;
   };
+  const errors = agentErrors ?? [];
+  const hasErrors = errors.length > 0;
+  const allFailed = hasErrors && args.length === 0;
   return (
     <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <AnimatePresence>
+        {allFailed && (
+          <motion.div
+            key="all-failed-banner"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            style={{
+              padding: '1.5rem 2rem',
+              borderRadius: 16,
+              background: 'linear-gradient(145deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.05) 100%)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              textAlign: 'center',
+            }}
+          >
+            <AlertTriangle size={32} color="#ef4444" style={{ marginBottom: '0.75rem' }} />
+            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#ef4444', marginBottom: '0.5rem' }}>
+              {t('debate.all_agents_failed')}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+              {t('debate.agent_errors', { count: errors.length })}
+            </div>
+          </motion.div>
+        )}
         {args.map((arg, _i) => {
           const isStreaming = streamingArgIds?.has(arg.id);
           const isUser = arg.source === 'human' || arg.agentId === 'User (Human-in-loop)';
@@ -150,6 +184,88 @@ const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel,
               style={{ width: 8, height: 8, borderRadius: '50%', background: '#a78bfa' }}
             />
             {t('synthesizing')}
+          </motion.div>
+        )}
+        {hasErrors && !allFailed && (
+          <motion.div
+            key="errors-section"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              background: 'rgba(239,68,68,0.05)',
+              borderRadius: 16,
+              border: '1px solid rgba(239,68,68,0.2)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              padding: '0.75rem 1.25rem',
+              background: 'rgba(239,68,68,0.1)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>
+              <AlertTriangle size={14} />
+              {t('debate.errors_tab', { count: errors.length })}
+            </div>
+            <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {errors.map((err, i) => (
+                <motion.div
+                  key={`err-${err.agentId}-${i}`}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 10,
+                    background: 'rgba(239,68,68,0.08)',
+                    border: '1px solid rgba(239,68,68,0.15)',
+                  }}
+                >
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                    background: err.isTimeout ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
+                  }}>
+                    {err.isTimeout
+                      ? <Clock size={16} color="#f59e0b" />
+                      : <AlertTriangle size={16} color="#ef4444" />
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e2e8f0', marginBottom: '0.25rem' }}>
+                      {getAgentLabel(err.agentId)}
+                      <span style={{
+                        marginLeft: '0.5rem',
+                        fontSize: '0.65rem',
+                        fontWeight: 800,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        textTransform: 'uppercase',
+                        background: err.isTimeout ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
+                        color: err.isTimeout ? '#f59e0b' : '#ef4444',
+                        verticalAlign: 'middle',
+                      }}>
+                        {err.isTimeout ? t('debate.agent_timeout_label') : t('debate.agent_error_label')}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                      {err.error}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

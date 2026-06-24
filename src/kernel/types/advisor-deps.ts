@@ -1,4 +1,5 @@
 import type { SystemState } from './metrics-types';
+import type { KeyState } from '../contracts/key-state';
 
 export interface AdvisorServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -36,7 +37,7 @@ export interface AdvisorServiceDeps {
     getAllAdapters: () => Record<string, { sendMessage: (messages: { role: string; content: string }[], model: string, apiKey: string) => Promise<{ content: string }>; checkHealth?: (key: string) => Promise<{ status: string; error?: string; models?: string[] }> }>;
   };
   orchestrator: { getActiveTopology: () => { nodes: Array<{ id: string; label: string; type: string; config: Record<string, unknown>; model?: string; provider?: string }> } | null };
-  keyStateStore?: { get: (id: string) => { flags: { authFailed: boolean } } | undefined };
+  keyStateStore?: { get: (id: string) => KeyState | undefined };
   pricingService: { getBudgetInfo: () => { monthlyBudget: number; spentThisMonth: number; remainingBudget: number; dailyAverage: number; projectedMonthly: number; providerBudgets: Array<{ provider: string; monthlyBudget: number; spentThisMonth: number; remainingBudget: number }> } };
   budgetService: { getSpendSummary: () => { global: { pct: number; remaining: number }; providers: Array<{ provider: string; pct: number }> } };
   healthCheckService: { getSummary: () => { total: number; healthy: number; degraded: number; offline: number } };

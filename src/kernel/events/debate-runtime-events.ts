@@ -52,7 +52,7 @@ export interface DebateRuntimeEventMap {
   'debate-runtime:session:paused': { sessionId: string };
   'debate-runtime:session:resumed': { sessionId: string };
   'debate-runtime:session:cancelled': { sessionId: string };
-  'debate-runtime:session:completed': { sessionId: string; consensus: unknown };
+  'debate-runtime:session:completed': { sessionId: string; error?: string };
   'debate-runtime:session:failed': { sessionId: string; error: string };
   'debate-runtime:phase:changed': { sessionId: string; from: string; to: string };
   'debate-runtime:agent:phase:changed': { sessionId: string; agentId: string; from: string; to: string };

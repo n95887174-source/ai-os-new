@@ -127,6 +127,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     get getRouterService() { return () => _container.get<import('../services/provider-router').RouterService>('routerService'); },
     get getKeyService() { return () => _container.get<KeyService>('keyService'); },
     get getAdapterRegistry() { return () => _container.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
+    get getKeyStateStore() { return () => { try { return _container.get<import('../services/key-state-store').KeyStateStore>('keyStateStore'); } catch { return undefined; } }; },
     debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
   }));
 

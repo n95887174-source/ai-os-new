@@ -154,8 +154,14 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
       this.eventBus.onSafe<{ id: string; provider: string; error: string }>(EVENTS.KEY_HEALTH_FAILED, (payload) => {
         const prev = this.states.get(payload.id);
         const ce = (prev?.health.consecutiveErrors ?? 0) + 1;
+        const err = payload.error || '';
+        const isAuthError = err.includes('401') || err.includes('403') || err.includes('402') ||
+          err.includes('Authentication failed') || err.includes('Invalid API Key') ||
+          err.includes('Unauthorized') || err.includes('Forbidden') ||
+          err.includes('Payment Required') || err.includes('User not found');
         this.update(payload.id, {
           health: { ...prev?.health ?? DEFAULT_HEALTH, consecutiveErrors: ce, errorRate: Math.min(1, ce / 10) },
+          flags: { ...prev?.flags ?? { circuitOpen: false, rateLimited: false, authFailed: false }, authFailed: prev?.flags.authFailed || isAuthError },
         });
         this.recomputeRouting(payload.id);
       }),
@@ -344,15 +350,20 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     const lastHealthyAt = healthScore >= 75 ? now : prev?.lastHealthyAt;
     const degradedSince = healthScore < 75 ? (prev?.degradedSince ?? now) : undefined;
 
+    const sc = result.statusCode;
+    const err = result.error || '';
+    const isAuthError = sc === 401 || sc === 403 || sc === 402 ||
+      err.includes('401') || err.includes('403') || err.includes('402') ||
+      err.includes('Authentication failed') || err.includes('Invalid API Key') ||
+      err.includes('Unauthorized') || err.includes('Forbidden') ||
+      err.includes('Payment Required') || err.includes('Insufficient credits') ||
+      err.includes('User not found');
+
     const flags = {
       circuitOpen: result.circuitOpen,
       rateLimited: result.rateLimited,
-      authFailed: false,
+      authFailed: isAuthError,
     };
-
-    if (result.error?.includes('401') || result.error?.includes('Authentication failed') || result.error?.includes('Invalid API Key')) {
-      flags.authFailed = true;
-    }
 
     this.update(id, {
       provider: result.provider,

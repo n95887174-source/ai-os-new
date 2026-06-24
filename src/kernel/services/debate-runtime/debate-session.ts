@@ -42,6 +42,15 @@ export class DebateSession implements IDebateSession {
   private _phaseListeners: Array<(from: DebatePhase, to: DebatePhase) => void> = [];
 
   readonly language: string;
+  private _failedProviders = new Set<string>();
+
+  hasProviderFailed(provider: string): boolean {
+    return this._failedProviders.has(provider);
+  }
+
+  markProviderFailed(provider: string): void {
+    this._failedProviders.add(provider);
+  }
 
   constructor(id: string, topic: string, topology: DebateTopology, participants: ParticipantConfig[], language = 'Russian') {
     this.id = id;
@@ -144,6 +153,7 @@ export class DebateSession implements IDebateSession {
   destroy(): void {
     this._agentStates.clear();
     this._phaseListeners = [];
+    this._failedProviders.clear();
   }
 
   restoreInternalState(snapshot: DebateSessionSnapshot): void {
