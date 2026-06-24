@@ -28,6 +28,9 @@ export class RetryDecorator extends BaseDecorator {
   }
 
   private shouldRetry(e: unknown, currentSignal?: AbortSignal): boolean {
+    // Don't retry 429 — CircuitBreaker handles rate limit backoff by opening the circuit.
+    // Retrying 429 inflates memory: 4× HTTP calls per rate-limited provider per request.
+    if (e instanceof RetryableError && e.statusCode === 429) return false;
     if (e instanceof RetryableError) return true;
     if (e instanceof TypeError) return true;
 
@@ -37,7 +40,7 @@ export class RetryDecorator extends BaseDecorator {
 
     if (e && typeof e === 'object' && 'statusCode' in e) {
       const sc = (e as { statusCode?: number }).statusCode;
-      if (typeof sc === 'number' && (sc === 429 || (sc >= 500 && sc < 600))) return true;
+      if (typeof sc === 'number' && sc >= 500 && sc < 600) return true;
     }
 
     return false;

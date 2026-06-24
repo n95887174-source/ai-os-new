@@ -150,12 +150,15 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       }
       this.onFailure(e, circuitState);
       if (e instanceof RetryableError) {
-        throw new LLMError(
+        const error = new LLMError(
           e instanceof Error ? e.message : String(e),
           this.inner.id,
-          (e as unknown as { statusCode?: number }).statusCode,
+          (e as { statusCode?: number }).statusCode,
           { cause: e },
         );
+        // Preserve retryAfter for upstream consumers (chat-service fallback backoff)
+        if (e.retryAfter !== undefined) (error as { retryAfter?: number }).retryAfter = e.retryAfter;
+        throw error;
       }
       throw e;
     } finally {

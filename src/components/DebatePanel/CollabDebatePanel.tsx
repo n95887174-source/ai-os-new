@@ -41,7 +41,11 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
   useEffect(() => {
     const unsub = eventBus.onSafe<DebateSession>('debate:updated', () => {
       if (!isMounted.current) return;
-      setParticipants(collaborativeService.getParticipants(session.id));
+      queueMicrotask(() => {
+        if (isMounted.current) {
+          setParticipants(collaborativeService.getParticipants(session.id));
+        }
+      });
     });
     return unsub;
   }, [session.id]);

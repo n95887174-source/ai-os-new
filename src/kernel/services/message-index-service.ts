@@ -52,6 +52,8 @@ function saveToStorage(messages: IndexedMessage[]): void {
   } catch { /* noop */ }
 }
 
+const QUEUE_MAX = 500;
+
 export class MessageIndexService {
   private messages: IndexedMessage[] = [];
   private byRequestId = new Map<string, IndexedMessage>();
@@ -111,6 +113,10 @@ export class MessageIndexService {
       content: lastUserMsg.content,
       timestamp: Date.now(),
     });
+    if (this.sessionUserBuffer.size > QUEUE_MAX) {
+      const oldest = this.sessionUserBuffer.entries().next().value;
+      if (oldest) this.sessionUserBuffer.delete(oldest[0]);
+    }
   }
 
   private handleStreamEnd(data: { requestId: string; fullContent: string; provider?: string; model?: string; latency?: number; tokens?: number }): void {

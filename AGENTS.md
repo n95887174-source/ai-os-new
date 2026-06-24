@@ -941,3 +941,42 @@ Eliminate all remaining hardcoded `Respond in Russian.` strings by wiring `langu
 - `src/kernel/services/prompt-store.ts` — all 6 defaults cleaned
 - `src/kernel/types/schema-types.ts` — `language` field on `DebateSessionRecordSchema`
 - `src/kernel/services/auto-debate/auto-debate-service.ts` — 5 prompts cleaned, `language: 'ru'` in config
+
+---
+
+## Current Session (2026-06-24) — Debate Render Fix + Memory Leak Fix
+
+### Goal
+Fix two runtime bugs: React "Cannot update component during render" violation and heap memory leak (117MB → 3GB+).
+
+### Changes
+| # | Fix | File |
+|:---|:----|:-----|
+| 1 | **React render-phase setState** — Wrapped EventBus/Zustand subscribe callbacks in `queueMicrotask()` to defer setState out of render phase | `CollabDebatePanel.tsx:42-51`, `DebatePanel.tsx:74-84`, `DebatePanel.tsx:134-162` |
+| 2 | **HTTP response body leak** — Added `res.body?.cancel()` before throwing AuthError/RetryableError on 401/403/429/500+ responses. Unread fetch response bodies accumulated in memory when probes hammered failing providers. | `llm-http-client.ts:96-104,127-135,160-168` |
+| 3 | **AutoDebateService.results unbounded** — Capped at 100 entries via `slice(-MAX_AUTO_DEBATE_RESULTS)` after each push | `auto-debate-service.ts:194,204` |
+| 4 | **DebateMemory unbounded arrays** — Capped `steps` at 5000, `claims` at 1000, `chains` per agent at 100 | `debate-memory.ts:9-10,35-36,20-24` |
+
+### Key Decisions
+- `queueMicrotask` over `setTimeout(0)` for render-phase setState deferral — less latency, same safety
+- `res.body?.cancel()` over `res.text()` for HTTP error paths — avoids buffering the error body in memory before discarding it
+- Caps set high enough for realistic use (5000 steps per debate = ~250 agent-rounds) but prevent runaway leaks
+- Pre-existing AutoDebateService type errors (`language`, `DebateRole`/`AutoDebateRole` mismatch) left unfixed — not related to memory or stability
+
+### Memory Investigation (2026-06-24 continued)
+| # | Finding | Result |
+|:---|:--------|:-------|
+| 1 | **Double decorator chain** — circuit-breaker.ts appearing twice in stack traces | **Already fixed** in commit `56ad7ef` (decorator order: Retry inside CB, correct) |
+| 2 | **429 retry loop** — RetryDecorator retries 429 3× per provider per request | **Root cause**: 12 keys × 5 models × 4 attempts = 240 HTTP calls per probe cycle vs expected 60 |
+| 3 | **Probe every 45s** — observed rapid probe re-triggering | **False alarm**: probe interval = 300s, observed traffic is cumulative from probe + health check + Gemini model validator |
+| 4 | **res.body?.cancel()** — fetch response bodies not cancelled before throw | **Fixed** in llm-http-client.ts (this session) |
+| 5 | **MemoryWatchdog** — already wired in bootstrap.ts | **Already done**: `.start()` at line 351, `.stop()` at line 390 |
+
+### Fix Applied
+| # | Fix | File |
+|:---|:----|:-----|
+| 5 | **RetryDecorator skips 429** — `shouldRetry()` returns false for `RetryableError` with `statusCode === 429`. CircuitBreaker handles rate limit backoff by opening the circuit. Memory: 240→60 HTTP calls per probe cycle. | `retry-decorator.ts:31-33` |
+| 6 | **CircuitBreaker preserves retryAfter** — passes `retryAfter` from `RetryableError` to outgoing `LLMError` for upstream consumers | `circuit-breaker.ts:153-159` |
+
+### TypeScript
+- `npx tsc --noEmit` — zero errors after all edits

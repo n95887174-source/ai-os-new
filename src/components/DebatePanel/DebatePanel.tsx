@@ -72,7 +72,9 @@ const DebatePanel: React.FC = () => {
 
   useEffect(() => {
     const unsub = useDebateLiveStore.subscribe((state) => {
-      setStreamingArgIds(new Set(state.streamingContent.keys()));
+      queueMicrotask(() => {
+        setStreamingArgIds(new Set(state.streamingContent.keys()));
+      });
     });
     return () => {
       unsub();
@@ -133,29 +135,32 @@ const DebatePanel: React.FC = () => {
   useEffect(() => {
     const unsub = eventBus.onSafe<DebateSession>('debate:updated', (data) => {
       if (!isMountedRef.current) return;
-      try {
-        const prevRound = prevRoundRef.current;
-        if (data.currentRound > prevRound && prevRound > 0 && data.status === 'active') {
-          setShowVotePanel(data.currentRound - 1);
-        }
-        prevRoundRef.current = data.currentRound;
-        syncHumanVotesFromSession(data);
-        setSession({ ...data });
-        // Reset viewTab when debate becomes active (e.g. restore from history)
-        if (data.status === 'active') {
-          setViewTab((prev) => prev === 'verdict' ? 'active' : prev);
-        }
-        setIsLoading(false);
-        setError(null);
-        setActionLoading(null);
-        setTimeout(() => {
-          if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      queueMicrotask(() => {
+        if (!isMountedRef.current) return;
+        try {
+          const prevRound = prevRoundRef.current;
+          if (data.currentRound > prevRound && prevRound > 0 && data.status === 'active') {
+            setShowVotePanel(data.currentRound - 1);
           }
-        }, 100);
-      } catch {
-        if (isMountedRef.current) setError(tRef.current('debate.error_process_update'));
-      }
+          prevRoundRef.current = data.currentRound;
+          syncHumanVotesFromSession(data);
+          setSession({ ...data });
+          // Reset viewTab when debate becomes active (e.g. restore from history)
+          if (data.status === 'active') {
+            setViewTab((prev) => prev === 'verdict' ? 'active' : prev);
+          }
+          setIsLoading(false);
+          setError(null);
+          setActionLoading(null);
+          setTimeout(() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }
+          }, 100);
+        } catch {
+          if (isMountedRef.current) setError(tRef.current('debate.error_process_update'));
+        }
+      });
     });
     const timer = setTimeout(() => {
       if (isMountedRef.current) setIsLoading(false);

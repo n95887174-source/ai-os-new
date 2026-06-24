@@ -111,6 +111,8 @@ export interface AutoDebateServiceDeps {
   };
 }
 
+const MAX_AUTO_DEBATE_RESULTS = 100;
+
 export class AutoDebateService implements IAutoDebateService {
   private deps: AutoDebateServiceDeps;
   private results: AutoDebateResult[] = [];
@@ -192,6 +194,7 @@ export class AutoDebateService implements IAutoDebateService {
         session, durationMs: Date.now() - start, completed: session.status === 'completed',
       };
       this.results.push(result);
+      if (this.results.length > MAX_AUTO_DEBATE_RESULTS) this.results = this.results.slice(-MAX_AUTO_DEBATE_RESULTS);
       return result;
     } catch (e) {
       const result: AutoDebateResult = {
@@ -202,6 +205,7 @@ export class AutoDebateService implements IAutoDebateService {
         error: e instanceof Error ? e.message : String(e),
       };
       this.results.push(result);
+      if (this.results.length > MAX_AUTO_DEBATE_RESULTS) this.results = this.results.slice(-MAX_AUTO_DEBATE_RESULTS);
       return result;
     }
   }

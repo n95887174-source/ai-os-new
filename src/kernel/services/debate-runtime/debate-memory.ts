@@ -1,5 +1,9 @@
 import type { Claim, ReasoningStep, ReasoningChain, MemorySnapshot, MemoryRecord, IDebateMemory } from '../../contracts/debate-runtime';
 
+const MAX_STEPS = 5000;
+const MAX_CLAIMS = 1000;
+const MAX_CHAINS_PER_AGENT = 100;
+
 export class DebateMemory implements IDebateMemory {
   private claims: Claim[] = [];
   private steps: ReasoningStep[] = [];
@@ -7,6 +11,7 @@ export class DebateMemory implements IDebateMemory {
 
   recordStep(step: ReasoningStep): void {
     this.steps.push(step);
+    if (this.steps.length > MAX_STEPS) this.steps = this.steps.slice(-MAX_STEPS);
 
     const existing = this.chains.get(step.agentId) || [];
     const lastChain = existing[existing.length - 1];
@@ -23,6 +28,10 @@ export class DebateMemory implements IDebateMemory {
         steps: [step],
         coherence: 1.0,
       });
+      if (existing.length > MAX_CHAINS_PER_AGENT) {
+        this.chains.set(step.agentId, existing.slice(-MAX_CHAINS_PER_AGENT));
+        return;
+      }
     }
     this.chains.set(step.agentId, existing);
   }
@@ -33,6 +42,7 @@ export class DebateMemory implements IDebateMemory {
 
   recordClaim(claim: Claim): void {
     this.claims.push(claim);
+    if (this.claims.length > MAX_CLAIMS) this.claims = this.claims.slice(-MAX_CLAIMS);
   }
 
   finalizeChain(agentId: string, conclusion: string): void {

@@ -93,12 +93,17 @@ export class LLMHttpClient {
       // Remove it for regular API calls. Use only for beacon/analytics where response doesn't matter.
     });
 
-    if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
+    if (res.status === 401 || res.status === 403) {
+      res.body?.cancel()?.catch(() => {});
+      throw new AuthError(this.#provider);
+    }
     if (res.status === 429) {
+      res.body?.cancel()?.catch(() => {});
       const retryAfter = parseRetryAfter(res);
       throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
     if (res.status >= 500) {
+      res.body?.cancel()?.catch(() => {});
       const retryAfter = parseRetryAfter(res);
       throw new RetryableError(`Server error ${res.status}`, this.#provider, res.status, undefined, retryAfter);
     }
@@ -124,8 +129,12 @@ export class LLMHttpClient {
       // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
     });
 
-    if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
+    if (res.status === 401 || res.status === 403) {
+      res.body?.cancel()?.catch(() => {});
+      throw new AuthError(this.#provider);
+    }
     if (res.status === 429) {
+      res.body?.cancel()?.catch(() => {});
       const retryAfter = parseRetryAfter(res);
       throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
@@ -157,8 +166,12 @@ export class LLMHttpClient {
       // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
     });
 
-    if (res.status === 401 || res.status === 403) throw new AuthError(this.#provider);
+    if (res.status === 401 || res.status === 403) {
+      res.body?.cancel()?.catch(() => {});
+      throw new AuthError(this.#provider);
+    }
     if (res.status === 429) {
+      res.body?.cancel()?.catch(() => {});
       const retryAfter = parseRetryAfter(res);
       throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
     }
