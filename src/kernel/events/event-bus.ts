@@ -34,6 +34,8 @@ export class EventBus implements IEventBus {
   private readonly hotEvents = new Set<string>([
     'chat:stream:chunk',    // 50-200/sec during streaming
     'chat:stream:provider-switch', // on provider fallback
+    'cognitive:trace:updated', // 20-50/sec during agent workforce — skip deep Zod validation on full traces array
+    'cognitive:decision:made', // emitted per agent node but has no subscribers — skip Zod validation entirely
   ]);
 
   constructor(strictMode = true, logger?: ILogger) {
@@ -131,6 +133,10 @@ private registerAllValidators(): void {
     const validator = this.validatorMap.get(eventStr);
     let payload: unknown = data;
 
+    const isTraceEvent = eventStr === 'cognitive:trace:updated';
+    const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } })?.memory;
+    const heapBefore = (isTraceEvent && mem) ? mem.usedJSHeapSize : 0;
+
     // PERF-C2: Skip validation for hot (high-frequency) events to avoid main-thread blocking
     if (validator && !this.hotEvents.has(eventStr)) {
       const result = validator.safeParse(payload);
@@ -144,6 +150,15 @@ private registerAllValidators(): void {
         }
       } else if (result.data !== undefined) {
         payload = result.data;
+      }
+    }
+
+    if (isTraceEvent && mem) {
+      const heapAfter = mem.usedJSHeapSize;
+      const deltaMB = Math.round((heapAfter - heapBefore) / 1024 / 1024);
+      if (deltaMB > 2) {
+        const usedMB = Math.round(heapAfter / 1024 / 1024);
+        console.warn(`[HEAP:EventBus] COGNITIVE_TRACE_UPDATED emit #${this.emitCount} — +${deltaMB}MB (${usedMB}MB total)`);
       }
     }
 

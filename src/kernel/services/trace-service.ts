@@ -6,6 +6,15 @@ export type { TraceFilter, TraceExport };
 
 const LOGGER = rootLogger.child('TraceService');
 
+function heapLog(label: string): void {
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } })?.memory;
+  if (mem) {
+    const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
+    const limitMB = Math.round(mem.jsHeapSizeLimit / 1024 / 1024);
+    console.warn(`[HEAP:TraceService] ${label} — ${usedMB}MB / ${limitMB}MB`);
+  }
+}
+
 export interface TraceServiceDeps {
   eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
   database: {
@@ -26,6 +35,9 @@ export class TraceService {
   private deps: TraceServiceDeps;
   private unsubs: Array<() => void> = [];
   private _initialized = false;
+
+  private lastEmitTime = 0;
+  private static EMIT_INTERVAL_MS = 500;
 
   constructor(deps: TraceServiceDeps) {
     this.deps = deps;
@@ -63,7 +75,7 @@ export class TraceService {
     try {
       const saved = await this.deps.database.db.traces.orderBy('startTime').reverse().limit(CONFIG.traces.dbLoadLimit).toArray();
       this.traces = saved;
-      this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+      this.emitTraces();
     } catch (e) { LOGGER.error('TraceService', 'Failed to load traces', { error: String(e) }); }
   }
   
@@ -107,7 +119,8 @@ export class TraceService {
         };
         trace.steps.push(step);
         this.persist(trace);
-        this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+        heapLog(`COGNITIVE_STEP_ACTIVE emit: ${d.nodeId}`);
+        this.throttledEmit();
       })
     );
 
@@ -123,10 +136,11 @@ export class TraceService {
         if (step) {
           step.status = status === 'done' ? 'done' : 'error';
           step.duration = duration ?? (Date.now() - step.timestamp);
-          step.output = output;
+          step.output = output?.slice?.(0, 2000) ?? output;
         }
         this.persist(trace);
-        this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+        heapLog(`COGNITIVE_STEP_COMPLETED emit: ${d.nodeId}`);
+        this.throttledEmit();
       })
     );
 
@@ -142,7 +156,7 @@ export class TraceService {
         }
         trace.status = 'completed';
         trace.endTime = Date.now();
-        trace.output = final_data.output;
+        trace.output = final_data.output?.slice?.(0, 50000) ?? final_data.output;
         const tokenEstimate = this.estimateTokensFromText(final_data.output || '');
         trace.totalTokens = tokenEstimate.totalTokens;
         trace.isApproximate = true;
@@ -153,7 +167,8 @@ export class TraceService {
         };
         this.activeTraces.delete(traceId);
         this.persist(trace);
-        this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+        heapLog(`REQUEST_COMPLETED emit: ${traceId}`);
+        this.throttledEmit();
       })
     );
 
@@ -196,9 +211,21 @@ export class TraceService {
           this.activeTraces.delete(d.requestId);
           // B10-43: Persist trace to database before removing from active traces
           this.persist(trace);
-          this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+          this.throttledEmit();
       })
     );
+  }
+
+  private emitTraces(): void {
+    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, [...this.traces]);
+  }
+
+  private throttledEmit(): void {
+    const now = Date.now();
+    if (now - this.lastEmitTime >= TraceService.EMIT_INTERVAL_MS) {
+      this.lastEmitTime = now;
+      this.emitTraces();
+    }
   }
 
   destroy() {
@@ -246,20 +273,20 @@ export class TraceService {
       trace.dataQuality = { ...trace.dataQuality, retention: this.getRetentionMetadata(evictedOlderEntries) };
       this.traces = [trace, ...this.traces].slice(0, CONFIG.traces.maxEntries);
     }
-    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+    this.throttledEmit();
   }
 
   removeTrace(id: string) {
     this.traces = this.traces.filter(t => t.id !== id);
     this.deps.database.db.traces.delete(id).catch(e => LOGGER.error('TraceService', 'Failed to delete trace', e));
-    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+    this.emitTraces();
   }
 
   clearAll() {
     this.traces = [];
     this.activeTraces.clear();
     this.deps.database.db.traces.clear().catch(e => LOGGER.error('TraceService', 'Failed to clear traces', e));
-    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+    this.emitTraces();
   }
 
   getTraceStats() {
@@ -289,7 +316,7 @@ export class TraceService {
       const exists = this.traces.some(t => t.id === trace.id);
       if (!exists) { this.traces.push(trace); await this.persist(trace); count++; }
     }
-    this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.traces);
+    this.emitTraces();
     return count;
   }
 }

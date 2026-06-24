@@ -89,6 +89,7 @@ export class CognitiveService {
   private readonly PERSIST_INTERVAL = 2000;
   private readonly MAX_INPUT_LENGTH = 5000;
   private readonly MAX_OUTPUT_LENGTH = 50000;
+  private readonly MAX_STEP_OBSERVATIONS_LENGTH = 2000;
 
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
   private persistQueued = false;
@@ -203,7 +204,7 @@ export class CognitiveService {
         if (step) {
           step.status = d.status === 'error' ? 'error' : 'done';
           step.duration = d.duration;
-          step.observations = d.output;
+          step.observations = d.output?.slice?.(0, this.MAX_STEP_OBSERVATIONS_LENGTH) ?? d.output;
         }
 
         if (d.status === 'error') {
@@ -297,7 +298,13 @@ export class CognitiveService {
     const now = Date.now();
     if (now - this.lastEmitTime >= CognitiveService.EMIT_INTERVAL_MS) {
       this.lastEmitTime = now;
+      const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } })?.memory;
+      const heapBefore = mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
       this.deps.eventBus.emit(EVENTS.COGNITIVE_TRACE_UPDATED, this.getTraces());
+      const heapAfter = mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
+      if (heapAfter - heapBefore > 5) {
+        console.warn(`[HEAP:CognitiveService] throttledEmit grew ${heapBefore}→${heapAfter}MB (+${heapAfter-heapBefore})`);
+      }
     }
   }
 

@@ -57,6 +57,11 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
     if (this.store) await this.restore();
     this.unsub = subscribeAll(async (payload) => {
       if (!this.config.enabled) return;
+      // Skip high-frequency execution events — large payloads that don't need replay
+      if (payload.event === 'cognitive:trace:updated') return;
+      if (payload.event === 'cognitive:step:active') return;
+      if (payload.event === 'cognitive:step:completed') return;
+      if (payload.event === 'cognitive:decision:made') return;
       const ts = Date.now();
       const seq = this.sequence++;
       const recorded: RecordedEvent = {

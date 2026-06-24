@@ -9,6 +9,15 @@ import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('Orchestrator');
 
+function heapLog(label: string): void {
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } })?.memory;
+  if (mem) {
+    const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
+    const limitMB = Math.round(mem.jsHeapSizeLimit / 1024 / 1024);
+    console.warn(`[HEAP:Orchestrator] ${label} — ${usedMB}MB / ${limitMB}MB`);
+  }
+}
+
 function estimateTokens(text: string): number {
   let tokens = 0;
   for (const ch of text) {
@@ -146,6 +155,11 @@ export class OrchestrationService {
     const traceId = request.requestId || `trace-${crypto.randomUUID()}`;
     this.executionStats.totalExecutions++;
 
+    heapLog(`execute:start ${startNode.label}`);
+    const _heapTimer = setInterval(() => heapLog('tick'), 1000);
+    setTimeout(() => { clearInterval(_heapTimer); heapLog('execute:monitor_end'); }, 120_000);
+    const _heapStartTime = Date.now();
+
     LOGGER.info('Orchestrator', `Starting ${mode} execution chain at node: ${startNode.label}`, { traceId });
     await this.processNode(startNode, {
       ...request,
@@ -154,6 +168,8 @@ export class OrchestrationService {
       history: [],
       output: request.output || '',
     } as NodeContext, mode);
+    clearInterval(_heapTimer);
+    heapLog(`execute:end duration=${Date.now()-_heapStartTime}ms`);
   }
 
   private async executeNodeLogic(node: ISNode, data: NodeContext, mode: 'production' | 'simulation'): Promise<string> {
@@ -209,7 +225,8 @@ export class OrchestrationService {
     try {
       output = await this.executeNodeLogic(node, data, mode);
     } catch (e: unknown) {
-      output = `Error in node ${node.label}: ${e instanceof Error ? e.message : String(e)}`;
+      const errMsg = e instanceof Error ? e.message : String(e);
+      output = `Error in node ${node.label}: ${errMsg.slice(0, 2000)}`;
       status = 'error';
       this.executionStats.failedNodes++;
     }
@@ -274,15 +291,22 @@ export class OrchestrationService {
         for (let i = 0; i < parallelEdges.length; i += PARALLEL_LIMIT) {
           batches.push(parallelEdges.slice(i, i + PARALLEL_LIMIT));
         }
-        for (const batch of batches) {
+        heapLog(`batches:start total=${parallelEdges.length} batches=${batches.length}`);
+        for (let bi = 0; bi < batches.length; bi++) {
+          const batch = batches[bi];
+          heapLog(`batch:before idx=${bi} nodes=${batch.length}`);
           await Promise.allSettled(batch.map(async (edge) => {
             const nextNode = this.activeTopology?.nodes.find(n => n.id === edge.to);
             if (nextNode) await this.processNode(nextNode, nextData, mode, new Set(visited));
           }));
+          heapLog(`batch:after idx=${bi}`);
         }
+        heapLog('batches:end');
       }
     } else {
+      heapLog('REQUEST_COMPLETED:before');
       this.deps.eventBus.emit(EVENTS.REQUEST_COMPLETED, { final_data: { ...nextData, output: nextData.output || '' } });
+      heapLog('REQUEST_COMPLETED:after');
     }
   }
 

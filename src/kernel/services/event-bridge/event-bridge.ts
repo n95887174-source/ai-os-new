@@ -39,6 +39,12 @@ export class EventBridge {
     }
 
     this.unsub = this.eventBus.subscribeAll((payload: { event: string; data: unknown }) => {
+      // Skip high-frequency execution events — large payloads, ephemeral trace data
+      if (payload.event === 'cognitive:trace:updated') return;
+      if (payload.event === 'cognitive:step:active') return;
+      if (payload.event === 'cognitive:step:completed') return;
+      if (payload.event === 'cognitive:decision:made') return;
+
       const kernelEvent: KernelEvent = {
         type: payload.event,
         payload: payload.data,
