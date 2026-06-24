@@ -72,7 +72,7 @@ export class KeyFingerprints {
 
   suggestModel(provider: string): string | null {
     const suggestions: Record<string, string> = {
-      gemini: 'gemini-3.1-flash-lite',
+      gemini: 'gemini-1.5-flash',
       groq: 'llama-3.1-8b-instant',
       openai: 'gpt-4o-mini',
       anthropic: 'claude-3-5-sonnet',

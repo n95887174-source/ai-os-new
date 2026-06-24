@@ -74,7 +74,7 @@ const DEFAULT_CATALOG: ProviderCatalogEntry[] = [
     baseURL: 'https://generativelanguage.googleapis.com/v1beta',
     authType: 'api-key',
     capabilities: ['chat', 'vision', 'embeddings'],
-    models: ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-pro'],
+    models: ['gemini-1.5-flash', 'gemini-1.5-flash', 'gemini-2.5-pro'],
     features: { streaming: true, tools: true, vision: true, embeddings: true },
     pricing: { inputPer1M: 0.1, outputPer1M: 0.4, currency: 'USD' },
     autoDetected: false,

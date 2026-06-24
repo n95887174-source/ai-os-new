@@ -94,11 +94,10 @@ export class KeyHealth implements IHealthCheckService {
     if (!keyRef) return { id: 'none', provider: 'none', status: 'error', latency: 0 };
 
     const start = performance.now();
-    const healthUrl = this.getHealthUrl(keyRef.provider);
+    const healthUrl = this.getHealthUrl(keyRef.provider, keyRef.key);
     try {
       const response = await fetch(healthUrl, {
         signal: AbortSignal.timeout(CONFIG.keys.healthCheckTimeoutMs),
-        headers: keyRef.provider === 'gemini' ? { 'x-goog-api-key': keyRef.key } : undefined,
       });
       const latency = performance.now() - start;
       if (!response.ok) {
@@ -148,7 +147,11 @@ export class KeyHealth implements IHealthCheckService {
     return results;
   }
 
-  private getHealthUrl(provider: string): string {
+  private getHealthUrl(provider: string, apiKey?: string): string {
+    const isGemini = provider.toLowerCase() === 'gemini';
+    if (isGemini && apiKey) {
+      return `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
+    }
     const urls: Record<string, string> = {
       OpenAI: 'https://api.openai.com/v1/models',
       Gemini: 'https://generativelanguage.googleapis.com/v1/models',

@@ -76,7 +76,7 @@ const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 
 /** Models to try per provider, in priority order. First working model wins. */
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-  gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
+  gemini: ['gemini-1.5-flash', 'gemini-2.0-flash'],
   groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
   openrouter: ['openrouter/auto', 'openrouter/free'],
   nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],

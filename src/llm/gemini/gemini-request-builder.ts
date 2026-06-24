@@ -66,12 +66,12 @@ export class GeminiRequestBuilder {
 
         if (m.toolCalls && m.toolCalls.length > 0) {
           for (const tc of m.toolCalls) {
-            let args: Record<string, unknown> = {};
+            let args: Record<string, unknown>;
             try {
               args = typeof tc.function.arguments === 'string'
                 ? JSON.parse(tc.function.arguments)
                 : tc.function.arguments;
-            } catch (e) {
+            } catch {
               args = { error: 'Failed to parse arguments JSON', raw: tc.function.arguments };
             }
             parts.push({
@@ -82,12 +82,12 @@ export class GeminiRequestBuilder {
             });
           }
         } else if (m.role === 'tool') {
-          let responseJson: Record<string, unknown> = {};
+          let responseJson: Record<string, unknown>;
           try {
             responseJson = typeof m.content === 'string' && m.content.startsWith('{')
               ? JSON.parse(m.content)
               : { result: m.content };
-          } catch (e) {
+          } catch {
             responseJson = { result: m.content };
           }
           parts.push({
@@ -119,7 +119,7 @@ export class GeminiRequestBuilder {
 
     const body: GeminiRequestBody = { contents };
     if (systemParts.length > 0) {
-      // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-3.1-flash-lite),
+      // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-1.5-flash),
       // so merge system prompt into first user message (avoids consecutive user turns which Gemini rejects)
       const firstUserIdx = contents.findIndex(c => c.role === 'user');
       if (firstUserIdx >= 0) {

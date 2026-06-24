@@ -5,7 +5,7 @@ export const MAX_HISTORY = 200;
 export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
   'claude-3-opus': 200000, 'claude-3-sonnet': 200000, 'claude-3-haiku': 200000,
-  'gemini-2.5-pro': 1000000, 'gemini-3.1-flash-lite': 1000000,
+  'gemini-2.5-pro': 1000000, 'gemini-1.5-flash': 1000000,
   'llama-3.3-70b-versatile': 128000, 'llama-3.1-8b-instant': 128000,
   'mixtral-8x7b-32768': 32768,
   'openrouter/auto': 128000,

@@ -39,7 +39,7 @@ const BUILT_IN_TEMPLATES: ChatTemplate[] = [
 5. Test coverage
 
 Provide specific, actionable feedback with code examples.`,
-    defaultModel: 'gemini-3.1-flash-lite',
+    defaultModel: 'gemini-1.5-flash',
     suggestedProviders: ['groq', 'gemini'],
     tags: ['coding', 'development', 'quality'],
     isBuiltIn: true,
@@ -58,8 +58,8 @@ Provide specific, actionable feedback with code examples.`,
 4. Consider multiple perspectives
 5. Organize ideas into actionable categories
 
-Encourage wild ideas — they often lead to innovative solutions.`,
-    defaultModel: 'gemini-3.1-flash-lite',
+Encourage wild ideas ï¿½ they often lead to innovative solutions.`,
+    defaultModel: 'gemini-1.5-flash',
     suggestedProviders: ['gemini', 'openrouter'],
     tags: ['creative', 'ideation', 'planning'],
     isBuiltIn: true,
@@ -97,7 +97,7 @@ Be faithful to the original while making the text natural in the target language
 4. Highlight actionable insights
 5. Include relevant context
 
-Keep summaries focused — aim for 10-20% of original length.`,
+Keep summaries focused ï¿½ aim for 10-20% of original length.`,
     suggestedProviders: ['groq', 'gemini'],
     tags: ['writing', 'productivity', 'information'],
     isBuiltIn: true,
@@ -118,7 +118,7 @@ Keep summaries focused — aim for 10-20% of original length.`,
 6. Present with appropriate caveats
 
 Be objective and cite sources. Distinguish facts from interpretations.`,
-    defaultModel: 'gemini-3.1-flash-lite',
+    defaultModel: 'gemini-1.5-flash',
     suggestedProviders: ['gemini', 'openrouter'],
     tags: ['research', 'analysis', 'information'],
     isBuiltIn: true,
@@ -138,7 +138,7 @@ Be objective and cite sources. Distinguish facts from interpretations.`,
 5. Document the bug and solution
 
 Be methodical. Question assumptions. The first solution is rarely right.`,
-    defaultModel: 'gemini-3.1-flash-lite',
+    defaultModel: 'gemini-1.5-flash',
     suggestedProviders: ['groq', 'gemini'],
     tags: ['debugging', 'troubleshooting', 'development'],
     isBuiltIn: true,
@@ -177,7 +177,7 @@ Be encouraging but honest. Mastery comes with practice.`,
 4. Flow and readability
 5. Call-to-action clarity
 
-Adapt your style to the task — formal for business, casual for friends.`,
+Adapt your style to the task ï¿½ formal for business, casual for friends.`,
     suggestedProviders: ['groq', 'gemini'],
     tags: ['writing', 'communication', 'productivity'],
     isBuiltIn: true,

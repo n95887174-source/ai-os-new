@@ -485,7 +485,7 @@ export class KeyService {
       } else {
         const defaults: Record<string, string[]> = {
           'OpenRouter': ['openrouter/auto', 'openrouter/free', 'anthropic/claude-3-haiku-20240307'],
-          'Gemini': ['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite'],
+          'Gemini': ['gemini-1.5-flash', 'gemini-1.5-flash', 'gemini-1.5-flash'],
           'Groq': ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
           'NVIDIA': ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
           'Cerebras': ['cerebras-gpt-3.5'],

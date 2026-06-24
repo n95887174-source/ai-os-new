@@ -53,14 +53,14 @@ export const DEFAULT_SEMANTIC_RULES: SemanticRouteRule[] = [
     id: 'math',
     label: 'Math → Gemini',
     condition: { intents: ['math'] },
-    target: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
+    target: { provider: 'gemini', model: 'gemini-1.5-flash' },
     priority: 80,
   },
   {
     id: 'creative',
     label: 'Creative → Gemini',
     condition: { intents: ['creative'] },
-    target: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
+    target: { provider: 'gemini', model: 'gemini-1.5-flash' },
     priority: 70,
   },
   {
@@ -81,7 +81,7 @@ export const DEFAULT_SEMANTIC_RULES: SemanticRouteRule[] = [
     id: 'complex-reasoning',
     label: 'Complex reasoning → Gemini',
     condition: { complexities: ['complex'], intents: ['analysis'] },
-    target: { provider: 'gemini', model: 'gemini-3.1-flash-lite' },
+    target: { provider: 'gemini', model: 'gemini-1.5-flash' },
     priority: 40,
   },
 ];

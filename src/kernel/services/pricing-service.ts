@@ -17,7 +17,7 @@ const FALLBACK_PRICING: Record<string, { input: number; output: number; provider
   'claude-2': { input: 8.00, output: 24.00, provider: 'anthropic' },
   'gemini-3.5-flash': { input: 2.50, output: 10.00, provider: 'google' },
   'gemini-3.1-pro': { input: 3.00, output: 12.00, provider: 'google' },
-  'gemini-3.1-flash-lite': { input: 0.08, output: 0.30, provider: 'google' },
+  'gemini-1.5-flash': { input: 0.08, output: 0.30, provider: 'google' },
   'gemini-3.1-flash': { input: 0.50, output: 2.00, provider: 'google' },
   'gemini-3-flash': { input: 0.40, output: 1.50, provider: 'google' },
   'gemini-2.5-pro': { input: 2.50, output: 10.00, provider: 'google' },
