@@ -22,11 +22,11 @@ export class KeyDiagnostics {
       if (p === 'openrouter') {
         let res: Response;
         try {
-          res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+          res = await fetch('/proxy/openrouter/api/v1/auth/key', {
             headers: { 'Authorization': `Bearer ${apiKey}` },
             signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
           });
-        } catch (e) {
+        } catch {
           // Handle abort/timeout - treat as graceful "no data" rather than crash
           result['error'] = 'Introspection unavailable';
           return result;
@@ -43,7 +43,7 @@ export class KeyDiagnostics {
       } else if (p === 'openai') {
         let res: Response;
         try {
-          res = await fetch('https://api.openai.com/v1/dashboard/billing/credit_grants', {
+          res = await fetch('/proxy/openai/v1/dashboard/billing/credit_grants', {
             headers: { 'Authorization': `Bearer ${apiKey}` },
             signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
           });
@@ -62,7 +62,7 @@ export class KeyDiagnostics {
       } else if (p === 'groq') {
         let res: Response;
         try {
-          res = await fetch('https://api.groq.com/openai/v1/models', {
+          res = await fetch('/proxy/groq/models', {
             headers: { 'Authorization': `Bearer ${apiKey}` },
             signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
           });
@@ -87,7 +87,7 @@ export class KeyDiagnostics {
       } else if (p === 'gemini') {
         let res: Response;
         try {
-          res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
+          res = await fetch('/proxy/gemini/v1/models', {
             headers: { 'x-goog-api-key': apiKey },
             signal: AbortSignal.timeout(CONFIG.services.keyService.introspectionTimeoutMs),
           });
@@ -158,7 +158,7 @@ export class KeyDiagnostics {
           fullContent: res.content,
           ttft: Math.min(latency, Math.max(50, latency * 0.3)),
         });
-      } catch (e) {
+      } catch {
         eventBus.emit(EVENTS.NOTIFICATION, { message: 'Benchmark step failed', type: 'error' });
       }
     }

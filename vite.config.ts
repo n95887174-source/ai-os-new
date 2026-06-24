@@ -109,6 +109,12 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/proxy\/cloudflare/, ''),
         secure: true,
       }),
+      '/proxy/openai': withProxyErrorHandler({
+        target: process.env.VITE_PROXY_OPENAI || 'https://api.openai.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/openai/, ''),
+        secure: true,
+      }),
       '/proxy/fetch': {
         target: process.env.VITE_PROXY_FETCH || 'https://api.allorigins.win/get',
         changeOrigin: true,
