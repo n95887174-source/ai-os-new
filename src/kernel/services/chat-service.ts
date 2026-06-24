@@ -260,10 +260,12 @@ export class ChatService {
       // Derived per-attempt controller chained to session-level controller
       const attemptController = new AbortController();
       const onSessionAbort = () => attemptController.abort();
+      // N-26: Register listener FIRST, then check aborted — prevents TOCTOU race
+      // where session is aborted between the check and addEventListener
+      sessionController.signal.addEventListener('abort', onSessionAbort, { once: true });
       if (sessionController.signal.aborted) {
         attemptController.abort();
-      } else {
-        sessionController.signal.addEventListener('abort', onSessionAbort, { once: true });
+        sessionController.signal.removeEventListener('abort', onSessionAbort);
       }
 
       let timedOut = false;

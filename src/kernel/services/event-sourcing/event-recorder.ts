@@ -136,12 +136,17 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
     );
   }
 
-  clear(): void {
+  async clear(): Promise<void> {
     this.events = [];
     this.sequence = 0;
-    this.schedulePersist();
-    // C3: Also clear persisted rows so old events don't resurrect on reload
-    this.store?.clearAll?.().catch((e: unknown) => LOGGER.warn('EventRecorder', 'clearAll failed', { error: e }));
+    if (this.store) {
+      try {
+        await this.store.save({ events: [], sequence: 0 });
+        await this.store.clearAll?.();
+      } catch (e) {
+        LOGGER.warn('EventRecorder', 'clear failed', { error: e });
+      }
+    }
   }
 
   updateConfig(partial: Partial<RecorderConfig>): void {
