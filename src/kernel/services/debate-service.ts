@@ -240,8 +240,14 @@ export class DebateService {
     void this.unsubVerdict; // suppress unused warning
   }
 
-  private persistSession() {
-    void persistActiveSession(this.deps.debateStore, this.activeSession);
+  private async persistSession(): Promise<boolean> {
+    try {
+      await persistActiveSession(this.deps.debateStore, this.activeSession);
+      return true;
+    } catch (e) {
+      LOGGER.warn('DebateService', 'Failed to persist session — in-memory and storage may diverge', { error: e instanceof Error ? e.message : String(e) });
+      return false;
+    }
   }
 
   async startDebate(
@@ -713,6 +719,16 @@ export class DebateService {
     }
   }
 
+  private async persistAndRecover(): Promise<void> {
+    const ok = await this.persistSession();
+    if (!ok) {
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+        message: 'Failed to save debate session — data may be lost on reload. Check console for details.',
+        type: 'warning',
+      });
+    }
+  }
+
   stopDebate(): void {
     this.pendingHumanArguments = [];
     if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
@@ -765,7 +781,7 @@ export class DebateService {
       this.saveToHistory();
       this.participantProviderMap.clear();
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
-      this.persistSession();
+      void this.persistAndRecover();
     }
   }
 
