@@ -20,6 +20,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { autoDebateService as autoDebate } from '../../kernel/instances';
 import { DebateTabContent } from './DebateTabContent';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
+import { useChatStore } from '../../stores/chat/store';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { HistoricalFiguresPicker } from './HistoricalFiguresPicker';
@@ -260,7 +261,8 @@ const DebatePanel: React.FC = () => {
         };
       }).filter(Boolean) as DebateParticipant[];
       const allParticipants = [...agentParticipants, ...historicalParticipants];
-      const started = await debateService.startDebate(topic, allParticipants, strategy, maxRounds, { debateTemperature: debateTemperature / 10 });
+      const activeChatId = useChatStore.getState().activeSessionId;
+      const started = await debateService.startDebate(topic, allParticipants, strategy, maxRounds, { debateTemperature: debateTemperature / 10 }, activeChatId || undefined);
       if (pendingHypothesisId.current && started?.id) {
         void hypothesisService.linkDebate(pendingHypothesisId.current, started.id);
         pendingHypothesisId.current = null;

@@ -396,6 +396,7 @@ export class DebateService {
     topic: string,
     participants: DebateParticipant[],
     config?: Partial<DebateConfig>,
+    chatSessionId?: string,
   ): Promise<DebateSession> {
     if (!this.engine) throw new Error('Engine not available');
     if (participants.length < 2) throw new Error('Need at least 2 participants');
@@ -439,6 +440,10 @@ export class DebateService {
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
     this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, session);
     this.persistSession();
+    if (chatSessionId && session?.id) {
+      this.deps.sessionManager.link(chatSessionId, session.id, 'chat_to_debate', `Debate: ${topic}`).catch(() => {});
+      this.deps.sessionManager.updateMeta(chatSessionId, { linkedDebateId: session.id }).catch(() => {});
+    }
     this._heartbeatTimer = setInterval(() => {
       if (this.activeSession?.status !== 'active') { this._stopHeartbeat(); return; }
       void persistActiveSession(this.deps.debateStore, this.activeSession);

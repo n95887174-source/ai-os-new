@@ -15,6 +15,7 @@ import type { DebateSessionSnapshot, DebatePhase, TopologyType, AgentPhase, Pres
 import type { CognitiveMetricsSnapshot, CognitivePressure, CognitiveIssue } from '../../kernel/instances';
 import type { DebateArgument } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
+import { useChatStore } from '../../stores/chat/store';
 import DebateChat from '../DebatePanel/DebateChat';
 import { AgentControlPanel } from './AgentControlPanel';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -360,7 +361,8 @@ const DebateRuntimePanel: React.FC = () => {
         systemPrompt: n.prompt,
       }));
 
-      const session = await debateService.startTopologyDebate(topology, topic.trim(), debateParticipants);
+      const activeChatId = useChatStore.getState().activeSessionId;
+      const session = await debateService.startTopologyDebate(topology, topic.trim(), debateParticipants, undefined, activeChatId || undefined);
       setTopic('');
       setCreating(false);
       setSelectedId(session.id);
