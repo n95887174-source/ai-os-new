@@ -122,6 +122,7 @@ export interface DebateConfig {
   debateTemperature: number;
   useModerator: boolean;
   timeoutMs: number;
+  maxDurationMs?: number;
   useGovernor?: boolean;
   language?: 'ru' | 'en';
 }

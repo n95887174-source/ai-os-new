@@ -173,6 +173,8 @@ export class DebateService {
   private runtimeSessionId: string | null = null;
   private bridgeCtx: SnapshotBridgeContext | null = null;
   private unsubs: Array<() => void> = [];
+  private debateStartTime = 0;
+  private _durationTimer: ReturnType<typeof setTimeout> | null = null;
   private defaultConfig: DebateConfig = {
     roundDelayMs: 2000,
     maxTokens: 1024,
@@ -180,6 +182,7 @@ export class DebateService {
     debateTemperature: 0.5,
     useModerator: true,
     timeoutMs: 30000,
+    maxDurationMs: 1_800_000,
     language: 'ru',
   };
   private completedSessions: DebateSession[] = [];
@@ -287,6 +290,15 @@ export class DebateService {
     }
 
     const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
+
+    this.debateStartTime = Date.now();
+    const maxDuration = sessionConfig.maxDurationMs ?? 1_800_000;
+    this._durationTimer = setTimeout(() => {
+      if (this.activeSession?.status === 'active') {
+        LOGGER.warn('DebateService', 'Debate timed out after maxDurationMs', { maxDuration });
+        this.stopDebate('cancelled');
+      }
+    }, maxDuration);
 
     // ── Engine path (primary) ──────────────────────────────────────────
     if (this.engine) {
@@ -446,6 +458,7 @@ export class DebateService {
     if (this.isEngineActive()) return;
     const session = this.activeSession;
     if (!session) return;
+    if (this._isOverDuration()) { this.stopDebate('cancelled'); return; }
     const cfg = session.config;
     const gen = this.roundGeneration;
 
@@ -729,7 +742,7 @@ export class DebateService {
     }
   }
 
-  stopDebate(): void {
+  stopDebate(reason?: 'completed' | 'failed' | 'cancelled'): void {
     this.pendingHumanArguments = [];
     if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
       const snap = this.engine.getSession(this.runtimeSessionId);
@@ -741,7 +754,7 @@ export class DebateService {
       return;
     }
     if (this.activeSession) {
-      this.activeSession.status = 'completed';
+      this.activeSession.status = reason ?? 'completed';
       this.computeGraphMetrics();
       this.computeActivityMetrics();
       this.computeQualityMetrics();
@@ -822,6 +835,17 @@ export class DebateService {
       clearTimeout(this.simulationTimeout);
       this.simulationTimeout = null;
     }
+    if (this._durationTimer !== null) {
+      clearTimeout(this._durationTimer);
+      this._durationTimer = null;
+    }
+    this.debateStartTime = 0;
+  }
+
+  private _isOverDuration(): boolean {
+    if (this.debateStartTime === 0) return false;
+    const maxDuration = this.activeSession?.config?.maxDurationMs ?? 1_800_000;
+    return Date.now() - this.debateStartTime >= maxDuration;
   }
 
   // ── Engine bridge methods ──────────────────────────────────────────────

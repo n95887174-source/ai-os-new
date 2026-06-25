@@ -178,6 +178,8 @@ export class DebateGovernor {
 
   shouldStop(): boolean {
     if (this.state.phase !== 'active') return true;
+    // Never stop before at least 1 full round after opening statements
+    if (this.state.round < 2) return false;
     if (this.hasNoNovelClaims()) return true;
     if (this.isConvergencePlateau()) return true;
     if (this.state.contradictions.length > 0 && this.allCriticalContradictionsResolved() && Object.values(this.state.graph.claims).length > 5) {
