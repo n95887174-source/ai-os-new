@@ -190,6 +190,7 @@ export class DebateService {
   private verdictMap = new Map<string, DebateVerdict>();
   private unsubVerdict: (() => void) | null = null;
   private processedArgIds = new Set<string>();
+  private pendingHumanArguments: DebateArgument[] = [];
 
   constructor(deps: DebateServiceDeps) {
     this.deps = deps;
@@ -460,6 +461,7 @@ export class DebateService {
         await this.executeArgumentRound(currentParticipant);
       } finally {
         this.isExecutingRound = false;
+        this.flushPendingArguments();
         if (gen === this.roundGeneration && !this.destroyed && this.activeSession?.status === 'active' && !this.isEngineActive()) {
           this.scheduleNextRound();
         }
@@ -712,6 +714,7 @@ export class DebateService {
   }
 
   stopDebate(): void {
+    this.pendingHumanArguments = [];
     if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
       const snap = this.engine.getSession(this.runtimeSessionId);
       if (snap && snap.phase !== 'completed' && snap.phase !== 'failed' && snap.phase !== 'cancelled') {
@@ -1004,12 +1007,33 @@ export class DebateService {
       position: opts?.position ?? 'neutral' as const,
     };
 
+    if (this.isExecutingRound) {
+      this.pendingHumanArguments.push(arg as DebateArgument);
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+        message: `Argument queued — will be added after current round completes.`,
+        type: 'info',
+      });
+      return;
+    }
+
     this.activeSession.arguments.push(arg);
     this.updateConvergenceScore();
     if (this.activeSession) {
       this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: this.activeSession.id, argument: arg });
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
     }
+  }
+
+  private flushPendingArguments(): void {
+    if (!this.activeSession || this.pendingHumanArguments.length === 0) return;
+    const args = this.pendingHumanArguments;
+    this.pendingHumanArguments = [];
+    for (const arg of args) {
+      this.activeSession.arguments.push(arg);
+      this.updateConvergenceScore();
+      this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, { sessionId: this.activeSession.id, argument: arg });
+    }
+    this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
   }
 
   getSession(): DebateSession | null {
