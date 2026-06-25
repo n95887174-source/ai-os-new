@@ -10,11 +10,23 @@ const HISTORY_LIST_ID = '__debate_history_list__';
 const LS_SESSION_KEY = 'super_agents_debate_session';
 const LS_HISTORY_KEY = 'super_agents_debate_history';
 
-function sessionToRecord(session: DebateSession): {
-  id: string; topic: string; topologyType: string; phase: string; round: number;
-  totalTokens: number; totalCost: number; agentStates: string; arguments: string; topology: string;
-  participants: string; startedAt: number; updatedAt: number; createdAt: number;
-} {
+const STRATEGY_MAP: Record<string, import('../contracts/debate-runtime').TopologyType> = {
+  round_robin: 'roundtable',
+  sequential: 'linear',
+  judge: 'judge',
+  'tree-of-thought': 'tree-of-thought',
+  'red-blue': 'red-blue',
+  'cross-examination': 'roundtable',
+  socratic: 'roundtable',
+  tournament: 'roundtable',
+  argument_tree: 'tree-of-thought',
+  constrained: 'roundtable',
+  moderated: 'roundtable',
+  free_for_all: 'roundtable',
+  jury_trial: 'judge',
+};
+
+function sessionToRecord(session: DebateSession): DebateSessionRecord {
   const extra = JSON.stringify({
     config: session.config || {},
     convergenceScore: session.convergenceScore ?? 0,
@@ -25,7 +37,7 @@ function sessionToRecord(session: DebateSession): {
   return {
     id: session.id,
     topic: session.topic,
-    topologyType: session.strategy || 'roundtable',
+    topologyType: STRATEGY_MAP[session.strategy] ?? 'roundtable',
     phase: session.status || 'active',
     round: session.currentRound || 0,
     totalTokens: session.totalTokens ?? 0,
@@ -42,6 +54,7 @@ function sessionToRecord(session: DebateSession): {
     arguments: JSON.stringify(session.arguments || []),
     topology: extra,
     participants: JSON.stringify(session.participants || []),
+    memory: '{}',
     startedAt: session.createdAt ?? Date.now(),
     updatedAt: Date.now(),
     createdAt: session.createdAt ?? Date.now(),
@@ -102,7 +115,11 @@ export async function loadActiveSession(
     const record = await debateStore.getSnapshot(ACTIVE_SESSION_ID);
     if (!record) return null;
     const session = recordToSession(record);
-    if (session.status === 'active' || session.status === 'paused') return session;
+    if (session.status === 'active') {
+      session.status = 'paused';
+      await debateStore.saveSnapshot(sessionToRecord(session));
+    }
+    if (session.status === 'paused') return session;
   } catch (e) {
     LOGGER.warn('DebateSessionPersistence', 'Failed to load active session', { error: e instanceof Error ? e.message : String(e) });
   }
@@ -162,6 +179,7 @@ export async function persistHistoryList(
       arguments: JSON.stringify(sessions),
       topology: '{}',
       participants: '[]',
+      memory: '{}',
       startedAt: Date.now(),
       updatedAt: Date.now(),
       createdAt: Date.now(),
@@ -169,7 +187,6 @@ export async function persistHistoryList(
   } catch (e) {
     LOGGER.warn('DebateSessionPersistence', 'Failed to persist debate history', { error: e instanceof Error ? e.message : String(e) });
   }
-  return [];
 }
 
 export async function migrateFromLegacyStorage(
@@ -220,6 +237,7 @@ export async function migrateFromLegacyStorage(
           arguments: lsHistory,
           topology: '{}',
           participants: '[]',
+          memory: '{}',
           startedAt: Date.now(),
           updatedAt: Date.now(),
           createdAt: Date.now(),

@@ -926,6 +926,7 @@ export class DebateService {
   private finalize(): void {
     const session = this.activeSession;
     if (!session) return;
+    session.status = 'completed';
     const metrics = computeGraphMetrics(session.arguments, session.strategy);
     if (metrics) session.graphMetrics = metrics;
     const activity = computeActivityMetrics(session.arguments, session.participants);

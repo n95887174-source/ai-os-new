@@ -211,6 +211,7 @@ export class GroupManagerService implements IGroupManager {
       };
       this.passports.set(keyId, passport);
       await this.persist();
+      this.allKeysCache = null;
       return ok(keyId);
     } catch (e) {
       return fail(`Failed to create key: ${e instanceof Error ? e.message : String(e)}`);
@@ -228,6 +229,7 @@ export class GroupManagerService implements IGroupManager {
     }
     this.deps.keyService.updateKey(keyId, updates);
     await this.persist();
+    this.allKeysCache = null;
   }
 
   async deleteKey(keyId: string): Promise<void> {
