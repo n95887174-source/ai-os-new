@@ -470,13 +470,22 @@ export class KeyRegistry {
       }],
     };
 
+    const preAddSnapshot = [...this.keys];
     this.keys.push(newKey);
     this.#keyMap.set(newKey.id, this.keys.length - 1);
-    await this.saveKeys();
+    try {
+      await this.saveKeys();
+    } catch (e) {
+      // P0-11: rollback in-memory state on persist failure — prevent phantom key
+      this.keys = preAddSnapshot;
+      this.#keyMap = new Map(preAddSnapshot.map((k, i) => [k.id, i]));
+      throw e;
+    }
     return newKey;
   }
 
   async removeKey(id: string): Promise<void> {
+    const preRemoveSnapshot = [...this.keys];
     const next = this.keys.filter(k => k.id !== id);
     this.setKeysInternal('removeKey', next, { force: true });
     // Directly delete from Dexie — bulkPut in saveKeys() is upsert-only and
@@ -485,7 +494,14 @@ export class KeyRegistry {
     try {
       await dexieDb.apiKeys.delete(id);
     } catch { /* non-critical — saveKeys handles the rest */ }
-    await this.saveKeys();
+    try {
+      await this.saveKeys();
+    } catch (e) {
+      // P0-11: rollback in-memory state on persist failure
+      this.keys = preRemoveSnapshot;
+      this.#keyMap = new Map(preRemoveSnapshot.map((k, i) => [k.id, i]));
+      throw e;
+    }
   }
 
   pushHistory(keyId: string, action: KeyHistoryEntry['action'], detail: string): void {
