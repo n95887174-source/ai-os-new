@@ -1,4 +1,6 @@
 import { dexieDb } from '../database-service';
+import { eventBus } from '../../events/event-bus';
+import { EVENTS } from '../../events/event-names';
 import type { StorageLayer, KeyStore, MemoryStore, TraceStore, SessionStore, ConfigStore, RolesStore, SkillsStore } from '../../contracts/storage/storage-layer';
 
 const safeReviver = (k: string, v: unknown) => k === '__proto__' ? undefined : v;
@@ -374,8 +376,20 @@ class DexieConfigStore implements ConfigStore {
 }
 
 class DexieDebateStore implements DebateStore {
-  async saveSnapshot(record: DebateSessionRecord): Promise<void> {
-    await dexieDb.debateSessions.put(record);
+  async saveSnapshot(record: DebateSessionRecord): Promise<number> {
+    const current = await dexieDb.debateSessions.get(record.id);
+    const currentVersion = (current as { version?: number })?.version ?? 0;
+    if (current && record.version < currentVersion) {
+      eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
+        sessionId: record.id,
+        currentVersion,
+        attemptedVersion: record.version,
+      });
+      throw new Error(`Debate session ${record.id} version conflict: DB has ${currentVersion}, attempted ${record.version}. Reload the page to get the latest version.`);
+    }
+    const newVersion = currentVersion + 1;
+    await dexieDb.debateSessions.put({ ...record, version: newVersion });
+    return newVersion;
   }
 
   async getSnapshot(id: string): Promise<DebateSessionRecord | null> {

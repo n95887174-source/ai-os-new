@@ -90,6 +90,7 @@ export interface IDebateSession {
   setAgentError(agentId: string, error: string): void;
   recordUsage(agentId: string, tokens: number, cost: number, latency: number): void;
   snapshot(): DebateSessionSnapshot;
+  incrementVersion?(newVersion: number): void;
   destroy(): void;
 }
 
@@ -98,6 +99,7 @@ export interface DebateSessionSnapshot {
   readonly topic: string;
   readonly topology: DebateTopology;
   readonly phase: DebatePhase;
+  readonly version: number;
   readonly round: number;
   readonly agentStates: AgentStateEntry[];
   readonly totalTokens: number;

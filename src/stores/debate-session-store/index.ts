@@ -80,6 +80,7 @@ async function loadFull(id: string): Promise<DebateSession | null> {
 }
 
 let _unsubs: (() => void)[] | null = null;
+let _refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 function scheduleRefresh(): void {
   queueMicrotask(() => useDebateSessionStore.getState().refresh());
@@ -98,7 +99,22 @@ function ensureSubscriptions(): void {
     eventBus.on(EVENTS.DEBATE_STARTED, scheduleRefresh),
     eventBus.on(EVENTS.DEBATE_UPDATED, scheduleRefresh),
   ];
-  void setInterval(() => useDebateSessionStore.getState().refresh(), 30_000);
+  _refreshTimer = setInterval(() => useDebateSessionStore.getState().refresh(), 30_000);
+}
+
+// P0-13: explicit dispose for HMR cleanup
+function dispose(): void {
+  _unsubs?.forEach(u => u());
+  _unsubs = null;
+  if (_refreshTimer !== null) {
+    clearInterval(_refreshTimer);
+    _refreshTimer = null;
+  }
+}
+
+// P0-13: HMR cleanup — prevent duplicate subscriptions and interval leak on hot reload
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => dispose());
 }
 
 export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) => ({
@@ -114,7 +130,7 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
       id, topic,       topologyType: strategy as DebateSessionRecord['topologyType'], phase: 'created', round: 0,
       totalTokens: 0, totalCost: 0, agentStates: '[]', arguments: '[]',
       topology: JSON.stringify({ config }), participants: JSON.stringify(participants),
-      memory: '{}', startedAt: Date.now(), updatedAt: Date.now(), createdAt: Date.now(),
+      memory: '{}', startedAt: Date.now(), updatedAt: Date.now(), createdAt: Date.now(), version: 1,
       tags: [], folder: '', isArchived: false,
     });
     const meta: DebateSessionMeta = {

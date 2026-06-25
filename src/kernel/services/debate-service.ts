@@ -1,6 +1,8 @@
 import { EVENTS } from '../events/event-names';
+import type { EventMap } from '../types/event-map';
 import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
+import { DebateBudget } from './debate-runtime/debate-budget';
 import { DebateConclusionEngine } from './debate-runtime/debate-conclusion-engine';
 import type {
   DebateStrategy, DebateConstraint, ParentResolution, DebateGraphMetrics,
@@ -193,6 +195,7 @@ export class DebateService {
   private factCheckService: FactCheckService;
   private verdictMap = new Map<string, DebateVerdict>();
   private unsubVerdict: (() => void) | null = null;
+  private _budget: DebateBudget | null = null; // P1-10: budget pressure for legacy path
   private processedArgIds = new Set<string>();
   private pendingHumanArguments: DebateArgument[] = [];
 
@@ -363,6 +366,16 @@ export class DebateService {
       argumentTreeRoundMap: {},
     };
 
+    // P1-10: create budget for legacy path (after activeSession is set)
+    this._budget?.destroy();
+    this._budget = new DebateBudget(this.activeSession!.id, {
+      maxTokensPerDebate: 100_000,
+      maxCostPerDebate: 2.0,
+      maxRounds,
+      maxConcurrency: 4,
+      maxDurationMs: maxDuration,
+    }, { emit: (event, data) => this.deps.eventBus.emit(event as keyof EventMap, data) });
+
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
     this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, this.activeSession);
     this.persistSession();
@@ -383,6 +396,11 @@ export class DebateService {
     let anySucceeded = false;
     for (const participant of this.activeSession.participants) {
       try {
+        // P1-10: check budget before opening statement
+        if (this._budget && this.activeSession && !this._budget.reserveAndRecord(this.activeSession.id, 500, 0.001)) {
+          LOGGER.warn('DebateService', 'Budget exceeded during opening statements');
+          break;
+        }
         const executionId = crypto.randomUUID().slice(0, 12);
         const prompt = this.buildOpeningPrompt(participant);
         const { content, provider, model } = await this.callLLM(participant, prompt, this._pauseController?.signal);
@@ -516,6 +534,11 @@ export class DebateService {
         session.arguments
       );
 
+      // P1-10: check budget before each LLM call
+      if (this._budget && !this._budget.reserveAndRecord(session.id, 500, 0.001)) {
+        LOGGER.warn('DebateService', 'Budget exceeded — stopping argument round');
+        return;
+      }
       const executionId = crypto.randomUUID().slice(0, 12);
       let { content, provider, model } = await this.callLLM(participant, prompt, this._pauseController?.signal);
       if (!this.activeSession || this.activeSession.status !== 'active' || genAtStart !== this.roundGeneration) return;
@@ -631,6 +654,7 @@ export class DebateService {
       const argsThisRound = session.arguments.filter(a => a.round === session.currentRound && !a.duplicateOf);
       if (argsThisRound.length >= session.participants.length) {
         session.currentRound++;
+        this._budget?.incrementRound(session.id); // P1-10: track round in budget
 
         // Socratic: rotate questioner every round
         if (session.strategy === 'socratic' && session.participants.length > 1) {
@@ -788,6 +812,7 @@ export class DebateService {
           totalCost: this.activeSession.totalCost ?? 0,
           startedAt: this.activeSession.createdAt,
           updatedAt: Date.now(),
+          version: 1,
           language: this.defaultConfig.language === 'en' ? 'English' : 'Russian',
         };
         verdict = this.conclusionEngine.generateVerdict(snap, timeline);
@@ -848,6 +873,8 @@ export class DebateService {
     this._pauseController?.abort();
     this._pauseController = null;
     this.debateStartTime = 0;
+    this._budget?.destroy(); // P1-10
+    this._budget = null;
   }
 
   private _isOverDuration(): boolean {

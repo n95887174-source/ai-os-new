@@ -7,6 +7,7 @@ import type { ChatResponse } from '../../types/chat';
 import { requestEntryMap, genId, rebuildRequestEntryMap } from './types';
 
 const CHUNK_FLUSH_INTERVAL = 100;
+const BACKGROUND_FLUSH_DELAY = 1000; // P1-22: in background, throttle flushes (UI not visible anyway)
 
 function matchesResponse(r: ChatResponse, provider: string | undefined, requestId: string): boolean {
   if (r.provider !== provider) return false;
@@ -162,9 +163,35 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk
   }
   acc.content += chunk;
   if (!acc.timer) {
-    acc.timer = setTimeout(() => flushChunkAccumulator(requestId, provider), CHUNK_FLUSH_INTERVAL);
+    // P1-22: use longer interval when tab is backgrounded (setTimeout is throttled to 1s anyway)
+    const interval = document.visibilityState === 'visible' ? CHUNK_FLUSH_INTERVAL : BACKGROUND_FLUSH_DELAY;
+    acc.timer = setTimeout(() => flushChunkAccumulator(requestId, provider), interval);
   }
 }));
+
+// P1-22: flush all accumulators immediately when tab returns to foreground
+if (typeof document !== 'undefined') {
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      for (const [key, acc] of chunkAccumulators) {
+        if (acc.timer !== null) {
+          clearTimeout(acc.timer);
+          acc.timer = null;
+        }
+        if (acc.content) {
+          const sepIdx = key.indexOf('::');
+          if (sepIdx !== -1) {
+            const requestId = key.slice(0, sepIdx);
+            const provider = key.slice(sepIdx + 2);
+            flushChunkAccumulator(requestId, provider);
+          }
+        }
+      }
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  moduleUnsubs.push(() => document.removeEventListener('visibilitychange', onVisibilityChange));
+}
 
 moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps, status }) => {
   flushAllForRequest(requestId);

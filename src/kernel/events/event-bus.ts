@@ -28,15 +28,33 @@ export class EventBus implements IEventBus {
   private emitCount = 0;
   private strictMode: boolean;
   private unsubCallbacks: Set<() => void> = new Set(); // H-06: track all unsubs for reset cleanup
+  private _unsubWarned = false; // P0-2: one-shot warn flag for unsubCallbacks capacity
+
+  // P1-18: ring buffer of recent events for late-connecting subscribers
+  private static readonly REPLAY_BUFFER_SIZE = 100;
+  private static readonly REPLAY_SKIP_EVENTS = new Set([
+    'chat:stream:chunk', 'chat:stream:end', 'chat:stream:provider-switch',
+    'cognitive:trace:updated', 'cognitive:step:active', 'cognitive:step:completed', 'cognitive:decision:made',
+    'kernel:heartbeat',
+  ]);
+  private _replayBuffer: Array<{ event: string; data: unknown; timestamp: number }> = [];
+  private _replayHead = 0;
+  private _replayCount = 0;
 
   // PERF-C2: High-frequency events that skip Zod validation to avoid main-thread blocking
   // STREAM_CHUNK fires 50-200/sec during streaming; validation adds 5-50µs per call = significant overhead
-  private readonly hotEvents = new Set<string>([
+  // P0-3: HOT_EVENTS also bypass emitDepth deferral to prevent perpetual "streaming" state
+  private static readonly HOT_EVENTS = new Set([
     'chat:stream:chunk',    // 50-200/sec during streaming
+    'chat:stream:end',      // must never be deferred — terminates streaming state
     'chat:stream:provider-switch', // on provider fallback
     'cognitive:trace:updated', // 20-50/sec during agent workforce — skip deep Zod validation on full traces array
+    'cognitive:step:active',
+    'cognitive:step:completed',
     'cognitive:decision:made', // emitted per agent node but has no subscribers — skip Zod validation entirely
   ]);
+
+  private readonly hotEvents = EventBus.HOT_EVENTS;
 
   constructor(strictMode = true, logger?: ILogger) {
     this.logger = logger;
@@ -79,6 +97,10 @@ private registerAllValidators(): void {
     this.deferCounts.clear();
     this.emitCount = 0;
     this.emitDepth = 0;
+    this._unsubWarned = false;
+    this._replayBuffer = [];
+    this._replayHead = 0;
+    this._replayCount = 0;
     this.logger?.warn('EventBus', 'reset');
   }
 
@@ -101,16 +123,10 @@ private registerAllValidators(): void {
     this.listenerMap.set(key, handlers);
     const unsub = () => this.off(event, callback);
     // H-06: Track unsubscribe so reset() can clean up all subscriptions
-    // H-04 (AUDIT_1): Limit unsubCallbacks growth — if callers discard the return value
-    if (this.unsubCallbacks.size >= 5000) {
-      this.logger?.warn('EventBus', `unsubCallbacks nearing capacity (${this.unsubCallbacks.size}), pruning oldest 1000`);
-      const iter = this.unsubCallbacks.values();
-      for (let i = 0; i < 1000; i++) {
-        const next = iter.next();
-        if (next.done) break;
-        next.value();
-        this.unsubCallbacks.delete(next.value);
-      }
+    // P0-2: warn-only when nearing capacity — never silently prune legitimate subscribers
+    if (this.unsubCallbacks.size >= 5000 && !this._unsubWarned) {
+      this.logger?.warn('EventBus', `unsubCallbacks nearing capacity (${this.unsubCallbacks.size}) — possible leak`);
+      this._unsubWarned = true;
     }
     this.unsubCallbacks.add(unsub);
     return () => {
@@ -163,11 +179,50 @@ private registerAllValidators(): void {
       }
     }
 
+    // P1-18: store non-hot events in ring buffer for late-connecting subscribers
+    if (!EventBus.REPLAY_SKIP_EVENTS.has(eventStr)) {
+      this._replayBuffer[this._replayHead] = { event: eventStr, data: payload, timestamp: Date.now() };
+      this._replayHead = (this._replayHead + 1) % EventBus.REPLAY_BUFFER_SIZE;
+      if (this._replayCount < EventBus.REPLAY_BUFFER_SIZE) this._replayCount++;
+    }
+
     const trace = TraceContext.current;
     if (import.meta.env.DEV) {
       LOGGER.debug('EventBus', `EMIT: ${eventStr}`, { payload: sanitizeObject(payload) as Record<string, unknown>, trace: (trace ?? {}) as Record<string, unknown> });
     }
     this.rawEmit(eventStr, payload);
+  }
+
+  // P0-2: diagnostic API for subscription leak detection
+  getSubscriptionStats(): { totalCallbacks: number; perEvent: Record<string, number> } {
+    return {
+      totalCallbacks: this.unsubCallbacks.size,
+      perEvent: Object.fromEntries(
+        [...this.listenerMap.entries()].map(([k, v]) => [k, v.length])
+      )
+    };
+  }
+
+  // P1-18: replay recent events for late-connecting subscribers
+  // Replays buffer entries where the event name matches filterEvent (or all if '*')
+  // into the callback. Returns the number of replayed events.
+  replay(filterEvent: string, callback: (data: unknown) => void): number {
+    let count = 0;
+    const total = this._replayCount;
+    const size = EventBus.REPLAY_BUFFER_SIZE;
+    if (total === 0) return 0;
+    // Walk the ring buffer from oldest to newest
+    const start = total < size ? 0 : this._replayHead;
+    const len = Math.min(total, size);
+    for (let i = 0; i < len; i++) {
+      const idx = (start + i) % size;
+      const entry = this._replayBuffer[idx];
+      if (!entry) continue;
+      if (filterEvent === '*' || entry.event === filterEvent) {
+        try { callback(entry.data); count++; } catch { /* skip */ }
+      }
+    }
+    return count;
   }
 
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
@@ -190,16 +245,42 @@ private registerAllValidators(): void {
   }
 
   private deferCounts = new Map<string, number>();
-  private readonly MAX_DEFER_CHAIN = 100;
+  private static readonly MAX_DEFER_CHAIN = 1000;
 
   private rawEmit(event: string, data?: unknown): void {
+    // P0-3: hot events (stream chunks, cognitive traces) bypass emitDepth deferral
+    // to prevent perpetual "streaming" state during high-throughput LLM streaming.
+    if (EventBus.HOT_EVENTS.has(event)) {
+      const handlers = this.listenerMap.get(event);
+      const globalHandlers = this.listenerMap.get('*');
+      this.emitDepth++;
+      try {
+        if (handlers) {
+          for (const cb of handlers) {
+            try { (cb as Callback)(data); } catch (e) { this.logger?.error('EventBus', `Error in hot handler for ${event}`, { error: e }); }
+          }
+        }
+        if (globalHandlers && event !== '*') {
+          for (const cb of globalHandlers) {
+            try { (cb as Callback)({ event, data }); } catch (e) { this.logger?.error('EventBus', `Error in global handler for ${event}`, { error: e }); }
+          }
+        }
+      } finally { this.emitDepth--; }
+      return;
+    }
+
     // N-24: prevent infinite recursion when handler emits synchronously
     if (this.emitDepth > 16) {
       const count = (this.deferCounts.get(event) || 0) + 1;
-      if (count > this.MAX_DEFER_CHAIN) {
-        this.logger?.error('EventBus', `Defer chain limit (${this.MAX_DEFER_CHAIN}) reached for ${event} — dropping event`);
+      // P0-3: emit backpressure signal before dropping
+      if (count > EventBus.MAX_DEFER_CHAIN) {
+        this.logger?.error('EventBus', `Defer chain limit (${EventBus.MAX_DEFER_CHAIN}) reached for ${event} — dropping event`);
+        this.emit('system:eventbus:backpressure' as keyof EventMap, { event, depth: this.emitDepth, pending: this.deferCounts.size + 1 });
         this.deferCounts.delete(event);
         return;
+      }
+      if (count === 100) {
+        this.emit('system:eventbus:backpressure' as keyof EventMap, { event, depth: this.emitDepth, pending: this.deferCounts.size + 1 });
       }
       this.deferCounts.set(event, count);
       if (count === 1 || count % 10 === 0) {

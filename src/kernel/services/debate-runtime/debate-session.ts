@@ -35,6 +35,7 @@ export class DebateSession implements IDebateSession {
 
   private _phase: DebatePhase = 'created';
   private _round = 0;
+  private _version = 1;
   private _agentStates = new Map<string, AgentStateEntry>();
   private _totalTokens = 0;
   private _totalCost = 0;
@@ -76,6 +77,7 @@ export class DebateSession implements IDebateSession {
 
   get phase(): DebatePhase { return this._phase; }
   get round(): number { return this._round; }
+  get version(): number { return this._version; }
   get agentStates(): Map<string, AgentStateEntry> { return new Map(this._agentStates); }
   get totalTokens(): number { return this._totalTokens; }
   get totalCost(): number { return this._totalCost; }
@@ -151,6 +153,7 @@ export class DebateSession implements IDebateSession {
       topology: structuredClone(this.topology),
       phase: this._phase,
       round: this._round,
+      version: this._version,
       agentStates: Array.from(this._agentStates.values()),
       totalTokens: this._totalTokens,
       totalCost: this._totalCost,
@@ -158,6 +161,10 @@ export class DebateSession implements IDebateSession {
       updatedAt: Date.now(),
       language: this.language,
     };
+  }
+
+  incrementVersion(newVersion: number): void {
+    this._version = newVersion;
   }
 
   destroy(): void {
@@ -169,6 +176,7 @@ export class DebateSession implements IDebateSession {
   restoreInternalState(snapshot: DebateSessionSnapshot): void {
     this._phase = snapshot.phase;
     this._round = snapshot.round;
+    this._version = snapshot.version;
     this._totalTokens = snapshot.totalTokens;
     this._totalCost = snapshot.totalCost;
     this._startedAt = snapshot.startedAt;

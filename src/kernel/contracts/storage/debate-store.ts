@@ -17,6 +17,7 @@ export interface DebateSessionRecord {
   startedAt: number;
   updatedAt: number;
   createdAt: number;
+  version: number;
   tags?: string[];
   folder?: string;
   isArchived?: boolean;
@@ -37,7 +38,8 @@ export interface DebateVerdictRecord {
 }
 
 export interface DebateStore {
-  saveSnapshot(record: DebateSessionRecord): Promise<void>;
+  /** Returns the new version number after optimistic concurrency check */
+  saveSnapshot(record: DebateSessionRecord): Promise<number>;
   getSnapshot(id: string): Promise<DebateSessionRecord | null>;
   listSessions(options?: { status?: string; limit?: number; offset?: number }): Promise<DebateSessionRecord[]>;
   deleteSession(id: string): Promise<void>;

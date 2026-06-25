@@ -58,6 +58,7 @@ function sessionToRecord(session: DebateSession): DebateSessionRecord {
     startedAt: session.createdAt ?? Date.now(),
     updatedAt: Date.now(),
     createdAt: session.createdAt ?? Date.now(),
+    version: (session as { version?: number }).version ?? 1,
   };
 }
 
@@ -193,6 +194,7 @@ export async function persistHistoryList(
       startedAt: Date.now(),
       updatedAt: Date.now(),
       createdAt: Date.now(),
+      version: 1,
     });
   } catch (e) {
     LOGGER.warn('DebateSessionPersistence', 'Failed to persist debate history', { error: e instanceof Error ? e.message : String(e) });
@@ -251,6 +253,7 @@ export async function migrateFromLegacyStorage(
           startedAt: Date.now(),
           updatedAt: Date.now(),
           createdAt: Date.now(),
+          version: 1,
         });
       }
       storage.removeItem(LS_HISTORY_KEY);

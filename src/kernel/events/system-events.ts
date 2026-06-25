@@ -12,6 +12,7 @@ export const SystemEvents = {
   RUNTIME_READY: 'system:runtime:ready',
   RUNTIME_FAILED: 'system:runtime:failed',
   SHUTDOWN: 'system:shutdown',
+  EVENTBUS_BACKPRESSURE: 'system:eventbus:backpressure',
   CLEAR_DATA: 'system:data:clear',
   RELOAD: 'system:reload',
   COMMAND: 'system:command',
@@ -28,6 +29,7 @@ export type SystemEventMap = {
   'system:runtime:ready': { timestamp: number } | void;
   'system:runtime:failed': { error: string; phase?: string; failedServices?: string[] };
   'system:shutdown': { reason?: string } | void;
+  'system:eventbus:backpressure': { event: string; depth: number; pending: number };
   'system:data:clear': void;
   'system:reload': { timestamp: number };
   'system:command': unknown;

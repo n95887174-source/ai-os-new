@@ -455,6 +455,7 @@ export const DebateSessionRecordSchema = z.object({
   startedAt: z.number().positive(),
   updatedAt: z.number().positive(),
   createdAt: z.number().positive(),
+  version: z.number().int().min(1).default(1),
   language: z.string().optional().default('Russian'),
 });
 

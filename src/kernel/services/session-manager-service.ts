@@ -47,6 +47,7 @@ export class SessionManagerService implements ISessionManager {
         startedAt: now,
         updatedAt: now,
         createdAt: now,
+        version: 1,
         tags: base.tags,
         folder: base.folder,
         isArchived: false,
@@ -101,10 +102,7 @@ export class SessionManagerService implements ISessionManager {
   async pause(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.update(id, {
-        phase: 'paused',
-        updatedAt: Date.now(),
-      });
+      await this.db.debateSessions.put({ ...debate, phase: 'paused', updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
       return;
     }
     throw new Error(`Session ${id} not found or is not a debate`);
@@ -113,10 +111,7 @@ export class SessionManagerService implements ISessionManager {
   async resume(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.update(id, {
-        phase: 'active',
-        updatedAt: Date.now(),
-      });
+      await this.db.debateSessions.put({ ...debate, phase: 'active', updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
       return;
     }
     throw new Error(`Session ${id} not found or is not a debate`);
@@ -189,7 +184,7 @@ export class SessionManagerService implements ISessionManager {
   async archive(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.update(id, { isArchived: true, updatedAt: Date.now() });
+      await this.db.debateSessions.put({ ...debate, isArchived: true, updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
       return;
     }
     const chat = await this.db.sessions.get(id);
@@ -203,7 +198,7 @@ export class SessionManagerService implements ISessionManager {
   async unarchive(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.update(id, { isArchived: false, updatedAt: Date.now() });
+      await this.db.debateSessions.put({ ...debate, isArchived: false, updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
       return;
     }
     const chat = await this.db.sessions.get(id);
@@ -248,12 +243,12 @@ export class SessionManagerService implements ISessionManager {
     const now = Date.now();
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      const patch: Partial<DebateSessionRecord> = { updatedAt: now };
-      if (updates.title !== undefined) patch.topic = updates.title;
-      if (updates.tags !== undefined) patch.tags = updates.tags;
-      if (updates.folder !== undefined) patch.folder = updates.folder;
-      if (updates.isArchived !== undefined) patch.isArchived = updates.isArchived;
-      await this.db.debateSessions.update(id, patch as Parameters<typeof this.db.debateSessions.update>[1]);
+      const updated = { ...debate, updatedAt: now, version: (debate.version ?? 0) + 1 };
+      if (updates.title !== undefined) updated.topic = updates.title;
+      if (updates.tags !== undefined) updated.tags = updates.tags;
+      if (updates.folder !== undefined) updated.folder = updates.folder;
+      if (updates.isArchived !== undefined) updated.isArchived = updates.isArchived;
+      await this.db.debateSessions.put(updated);
       return;
     }
     const chat = await this.db.sessions.get(id);

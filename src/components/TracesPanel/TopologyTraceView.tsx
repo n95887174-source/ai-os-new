@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Activity, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTopologyTraceStore } from '../../stores/topologyTraceStore';
@@ -14,9 +14,6 @@ const NODE_COLORS: Record<string, string> = {
 const TopologyTraceView: React.FC = () => {
   const steps = useTopologyTraceStore(s => s.steps);
   const clearAll = useTopologyTraceStore(s => s.clearAll);
-
-  // C-11: Clean up event subscriptions when TopologyTraceView unmounts
-  useEffect(() => () => useTopologyTraceStore.getState().destroy(), []);
 
   const nodeMap = new Map<string, Array<{ nodeId: string; status: string; duration?: number; timestamp: number }>>();
   for (const step of steps) {

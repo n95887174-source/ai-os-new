@@ -55,6 +55,7 @@ export const DomainEvents = {
   ELO_RATING_UPDATED: 'elo:rating:updated',
   CACHE_INVALIDATED: 'cache:invalidated',
   DEBATE_VERDICT_GENERATED: 'debate:verdict:generated',
+  DEBATE_SESSION_CONFLICT: 'debate:session:conflict',
 } as const;
 
 export type DomainEventMap = {
@@ -105,4 +106,5 @@ export type DomainEventMap = {
   'debate:fact:checked': { argumentId: string; factCheck: unknown };
   'elo:rating:updated': { agentId: string; newRating: number; change: number };
   'cache:invalidated': { reason: string; section?: string };
+  'debate:session:conflict': { sessionId: string; currentVersion: number; attemptedVersion: number; tabId?: string };
 };

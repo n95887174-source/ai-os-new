@@ -885,13 +885,15 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       arguments: snap.arguments ? JSON.stringify(snap.arguments) : '[]',
       memory: JSON.stringify(this.getMemory(sessionId).toJSON()),
       language: snap.language,
+      version: snap.version,
     } as const;
     const parsed = DebateSessionRecordSchema.safeParse(record);
     if (!parsed.success) {
       LOGGER.warn('DebateEngine', `saveSnapshot validation failed for ${sessionId}`, { errors: parsed.error.issues });
       return;
     }
-    await store.saveSnapshot(record);
+    const newVersion = await store.saveSnapshot(record);
+    session.incrementVersion?.(newVersion);
   }
 
   private async validateAndSaveVerdict(store: DebateStore, verdict: DebateVerdictRecord): Promise<void> {
@@ -938,6 +940,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         totalCost: record.totalCost,
         startedAt: record.startedAt,
         updatedAt: record.updatedAt,
+        version: record.version,
         language: (record as { language?: string }).language ?? 'Russian',
       };
       session.restoreInternalState(restoredSnapshot);

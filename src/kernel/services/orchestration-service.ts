@@ -155,21 +155,25 @@ export class OrchestrationService {
     const traceId = request.requestId || `trace-${crypto.randomUUID()}`;
     this.executionStats.totalExecutions++;
 
-    heapLog(`execute:start ${startNode.label}`);
-    const _heapTimer = setInterval(() => heapLog('tick'), 1000);
-    setTimeout(() => { clearInterval(_heapTimer); heapLog('execute:monitor_end'); }, 120_000);
     const _heapStartTime = Date.now();
-
     LOGGER.info('Orchestrator', `Starting ${mode} execution chain at node: ${startNode.label}`, { traceId });
-    await this.processNode(startNode, {
-      ...request,
-      traceId,
-      blackboard: {},
-      history: [],
-      output: request.output || '',
-    } as NodeContext, mode);
-    clearInterval(_heapTimer);
-    heapLog(`execute:end duration=${Date.now()-_heapStartTime}ms`);
+
+    // P0-5: DEV-only heap monitor with proper cleanup in try/finally
+    const _heapTimer = import.meta.env.DEV
+      ? setInterval(() => heapLog('tick'), 5000)
+      : undefined;
+    try {
+      await this.processNode(startNode, {
+        ...request,
+        traceId,
+        blackboard: {},
+        history: [],
+        output: request.output || '',
+      } as NodeContext, mode);
+    } finally {
+      if (_heapTimer !== undefined) clearInterval(_heapTimer);
+      if (import.meta.env.DEV) heapLog(`execute:end duration=${Date.now()-_heapStartTime}ms`);
+    }
   }
 
   private async executeNodeLogic(node: ISNode, data: NodeContext, mode: 'production' | 'simulation'): Promise<string> {

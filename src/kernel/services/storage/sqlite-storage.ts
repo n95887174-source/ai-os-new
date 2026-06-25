@@ -29,7 +29,7 @@ import type { Skill } from '../../contracts/storage/skills-store';
 import { dexieDb } from '../database-service';
 import { rootLogger } from '../logger-service';
 const LOGGER = rootLogger.child('SqliteStorage');
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -92,7 +92,8 @@ CREATE TABLE IF NOT EXISTS debate_sessions (
   memory TEXT DEFAULT '{}',
   started_at INTEGER,
   updated_at INTEGER,
-  created_at INTEGER
+  created_at INTEGER,
+  version INTEGER DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_debate_sessions_phase ON debate_sessions(phase);
 CREATE INDEX IF NOT EXISTS idx_debate_sessions_updated ON debate_sessions(updated_at);
@@ -720,17 +721,20 @@ class SqliteSkillsStore implements SkillsStore {
 class SqliteDebateStore implements DebateStore {
   constructor(private db: () => SqlJsDb) {}
 
-  async saveSnapshot(record: DebateSessionRecord): Promise<void> {
+  async saveSnapshot(record: DebateSessionRecord): Promise<number> {
     const d = this.db();
-    // B10-42: Serialize complex objects to JSON strings for TEXT columns
+    const current = d.exec(`SELECT version FROM debate_sessions WHERE id = ?`, [record.id]);
+    const currentVersion = (current.length && current[0].values.length) ? (current[0].values[0][0] as number) : 0;
+    const newVersion = currentVersion + 1;
     d.run(
-      `INSERT OR REPLACE INTO debate_sessions (id, topic, topology_type, phase, round, total_tokens, total_cost, agent_states, topology, participants, arguments, memory, started_at, updated_at, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT OR REPLACE INTO debate_sessions (id, topic, topology_type, phase, round, total_tokens, total_cost, agent_states, topology, participants, arguments, memory, started_at, updated_at, created_at, version)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [record.id, record.topic, record.topologyType, record.phase, record.round,
        record.totalTokens, record.totalCost, JSON.stringify(record.agentStates), JSON.stringify(record.topology),
-       JSON.stringify(record.participants), JSON.stringify(record.arguments), record.memory ?? '{}', record.startedAt, record.updatedAt, record.createdAt]
+       JSON.stringify(record.participants), JSON.stringify(record.arguments), record.memory ?? '{}', record.startedAt, record.updatedAt, record.createdAt, newVersion]
     );
     await persistSqliteDb();
+    return newVersion;
   }
 
   async getSnapshot(id: string): Promise<DebateSessionRecord | null> {
@@ -1176,7 +1180,7 @@ function createInMemoryStorage(): StorageLayer {
       importAll: async (payload) => { skillList.length = 0; skillList.push(...(safeParse<Skill[]>(payload))); },
     },
     debates: {
-      saveSnapshot: async (record) => { debateSessionMap.set(record.id, record); },
+      saveSnapshot: async (record) => { const current = debateSessionMap.get(record.id); const newVersion = (current?.version ?? 0) + 1; debateSessionMap.set(record.id, { ...record, version: newVersion }); return newVersion; },
       getSnapshot: async (id) => debateSessionMap.get(id) ?? null,
       listSessions: async (opts) => {
         let arr = Array.from(debateSessionMap.values());
@@ -1208,19 +1212,22 @@ export async function createSqliteStorage(): Promise<StorageLayer> {
       const SQL = await initSqlJs({ locateFile: () => wasmUrl });
       const blob = await loadDbBlob();
       _dbInstance = blob ? new SQL.Database(blob) : new SQL.Database();
-      const prevVersion = _dbInstance.exec('PRAGMA user_version')[0]?.values?.[0]?.[0] ?? 0;
+      const rawVersion = _dbInstance.exec('PRAGMA user_version')[0]?.values?.[0]?.[0];
+      const prevVersion = typeof rawVersion === 'number' ? rawVersion : Number(rawVersion) || 0;
       _dbInstance.exec(SCHEMA);
-      if (Number(prevVersion) < SCHEMA_VERSION) {
-        // v2: add arguments column to debate_sessions
+      if (prevVersion < SCHEMA_VERSION) {
         if (prevVersion < 2) {
           try { _dbInstance.exec("ALTER TABLE debate_sessions ADD COLUMN arguments TEXT DEFAULT '[]'"); } catch { /* already exists */ }
         }
-        // v3: add memory column (reasoning chains)
         if (prevVersion < 3) {
           try { _dbInstance.exec("ALTER TABLE debate_sessions ADD COLUMN memory TEXT DEFAULT '{}'"); } catch { /* already exists */ }
         }
+        // v4: add version column for optimistic concurrency
+        if (prevVersion < 4) {
+          try { _dbInstance.exec("ALTER TABLE debate_sessions ADD COLUMN version INTEGER DEFAULT 1"); } catch { /* already exists */ }
+        }
         _dbInstance.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
-        if (Number(prevVersion) > 0) {
+        if (prevVersion > 0) {
           LOGGER.info('SqliteStorage', `sql.js schema migrated: v${prevVersion} → v${SCHEMA_VERSION}`);
         }
       }

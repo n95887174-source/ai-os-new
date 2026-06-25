@@ -400,6 +400,9 @@ export class CognitiveService {
     return alts[0];
   }
 
+  // P0-4: hard timeout for any single adapter call (30s)
+  private static readonly ADAPTER_TIMEOUT_MS = 30_000;
+
   private async executeWithFallback(decision: DecisionAlternative, node: ISNode, data: NodeContext): Promise<string> {
     const keyMeta = decision.metadata?.key as { provider: string; model: string; key: string } | undefined;
 
@@ -413,19 +416,27 @@ export class CognitiveService {
     let output = '';
     let buffer = '';
 
-    if (adapter.streamMessage) {
-      await adapter.streamMessage(messages, keyMeta.model!, keyMeta.key!, (chunk) => {
-        buffer += chunk;
-        if (output.length < this.MAX_OUTPUT_LENGTH) {
-          output += chunk.slice(0, this.MAX_OUTPUT_LENGTH - output.length);
-        }
-        if (buffer.length > this.MAX_CHUNK_BUFFER) {
-          buffer = buffer.slice(-this.MAX_CHUNK_BUFFER);
-        }
-      });
-    } else {
-      const res = await adapter.sendMessage(messages, keyMeta.model!, keyMeta.key!);
-      output = res.content;
+    // P0-4: AbortController for proper HTTP cancellation on timeout
+    const abortController = new AbortController();
+    const timeoutTimer = setTimeout(() => abortController.abort(new Error(`Provider ${keyMeta.provider} timeout after ${CognitiveService.ADAPTER_TIMEOUT_MS}ms`)), CognitiveService.ADAPTER_TIMEOUT_MS);
+
+    try {
+      if (adapter.streamMessage) {
+        await adapter.streamMessage(messages, keyMeta.model!, keyMeta.key!, (chunk) => {
+          buffer += chunk;
+          if (output.length < this.MAX_OUTPUT_LENGTH) {
+            output += chunk.slice(0, this.MAX_OUTPUT_LENGTH - output.length);
+          }
+          if (buffer.length > this.MAX_CHUNK_BUFFER) {
+            buffer = buffer.slice(-this.MAX_CHUNK_BUFFER);
+          }
+        }, abortController.signal);
+      } else {
+        const res = await adapter.sendMessage(messages, keyMeta.model!, keyMeta.key!, abortController.signal);
+        output = res.content;
+      }
+    } finally {
+      clearTimeout(timeoutTimer);
     }
 
     const tokens = estimateTokens(output.slice(-this.MAX_CHUNK_BUFFER));

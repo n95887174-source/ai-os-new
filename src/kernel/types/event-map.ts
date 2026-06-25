@@ -266,6 +266,7 @@ export type EventMap = {
 
   // Debate
   'debate:verdict:generated': { sessionId: string; verdict: unknown };
+  'debate:session:conflict': { sessionId: string; currentVersion: number; attemptedVersion: number; tabId?: string };
   'debate-runtime:agent:chunk': { sessionId: string; agentId: string; chunk: string };
 
   // Experiment

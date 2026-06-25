@@ -39,7 +39,7 @@ import { PressureMapService } from '../services/runtime-intelligence/pressure-ma
 import { DiagnosticService } from '../services/runtime-intelligence/diagnostic-service';
 
 const EMPTY_DEBATE_STORE: DebateStore = {
-  saveSnapshot: async () => {},
+  saveSnapshot: async () => 1,
   getSnapshot: async () => null,
   listSessions: async () => [],
   deleteSession: async () => {},
