@@ -121,6 +121,31 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       };
       window.addEventListener('beforeunload', this._beforeUnloadHandler);
     }
+    // P1-9: Restore orphaned sessions on bootstrap — zombie detection + paused restore
+    await this._restoreOrphanedSessions();
+  }
+
+  private async _restoreOrphanedSessions(): Promise<void> {
+    const store = this.deps.debateStore;
+    if (!store) return;
+    const ZOMBIE_THRESHOLD = 5 * 60 * 1000;
+    const records = await store.listSessions();
+    for (const record of records) {
+      if (record.phase === 'active') {
+        if (Date.now() - record.updatedAt > ZOMBIE_THRESHOLD) {
+          record.phase = 'failed';
+          await store.saveSnapshot(record);
+          LOGGER.warn('DebateEngine', 'Orphaned active session auto-failed (zombie)', { sessionId: record.id, age: Date.now() - record.updatedAt });
+        } else {
+          record.phase = 'paused';
+          await store.saveSnapshot(record);
+          LOGGER.info('DebateEngine', 'Active session auto-paused on reload', { sessionId: record.id });
+        }
+      }
+      if (record.phase === 'paused') {
+        await this.restoreSession(record.id);
+      }
+    }
   }
 
   private cleanupStaleSessions(): void {
