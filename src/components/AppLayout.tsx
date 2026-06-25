@@ -6,13 +6,14 @@ import { Sidebar } from './Sidebar';
 import { AppRoutes } from '../routes';
 import { GlobalErrorBoundary } from './GlobalErrorBoundary';
 import AlertLayer from './AlertLayer/AlertLayer';
-import { eventBus, EVENTS, type EventMap } from '../kernel/events/event-bus';
+import { CommandPalette, useCommandPalette } from './CommandPalette/CommandPalette';
+import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { settingsService, groupManager, featureFlagService } from '../kernel/instances';
-import { setLanguage } from '../i18n/translations';
+import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
 import { NAV_SECTIONS } from '../route-registry';
-import type { TranslationKey } from '../i18n/translations';
 
 const navLabelKey: Record<string, TranslationKey> = {};
 for (const section of NAV_SECTIONS) {
@@ -29,8 +30,8 @@ export const AppLayout: React.FC = () => {
   const activeTab = location.pathname.split('/')[1] || 'dashboard';
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [runtimeStatus, setRuntimeStatus] = useState<'online' | 'degraded' | 'offline'>('online');
+  const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll() ?? {});
 
@@ -87,13 +88,6 @@ export const AppLayout: React.FC = () => {
 
   useChatStoreHydration();
 
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      eventBus.emit(EVENTS.NAVIGATE as keyof EventMap, `search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-    }
-  };
-
   const handleNavigate = useCallback((path: string) => {
     navigate(`/${path}`);
   }, [navigate]);
@@ -123,10 +117,33 @@ export const AppLayout: React.FC = () => {
                 <Menu size={20} />
               </button>
             )}
-            <div className="search-bar">
-              <Search size={18} color="var(--text-muted)" />
-              <input type="text" placeholder={t('nav.search_placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch} />
-            </div>
+            <button
+              onClick={openPalette}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8,
+                padding: '0.4rem 0.875rem',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                minWidth: 220,
+              }}
+              aria-label={t('palette.placeholder')}
+            >
+              <Search size={16} />
+              <span style={{ flex: 1, textAlign: 'left', fontSize: '0.875rem' }}>{t('palette.placeholder')}</span>
+              <kbd style={{
+                padding: '0.1rem 0.35rem',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 4,
+                fontSize: '0.68rem',
+                fontFamily: 'monospace',
+              }}>⌘K</kbd>
+            </button>
             <div className="header-actions">
               <div className="session-timer">
                 <History size={16} />
@@ -157,6 +174,8 @@ export const AppLayout: React.FC = () => {
             </AnimatePresence>
           </section>
           <AlertLayer />
+          <CommandPalette open={isPaletteOpen} onClose={closePalette} t={t as (key: TranslationKey) => string} />
+          <OnboardingWizard t={t as (key: TranslationKey) => string} />
         </main>
       </div>
     </GlobalErrorBoundary>

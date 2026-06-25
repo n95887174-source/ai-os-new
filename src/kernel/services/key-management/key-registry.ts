@@ -419,11 +419,11 @@ export class KeyRegistry {
     const enc = await this.deps.vault.encryptKey(trimmedKey);
     if (!enc) {
       if (this.deps.vault.isLocked()) {
-        // Vault locked — store plaintext with warning
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-          message: 'Vault is locked — key stored unencrypted. Set a vault password in Settings to enable encryption.',
-          type: 'warning',
+          message: 'Vault is locked — unlock or set a vault password before adding API keys. Key was not stored.',
+          type: 'error',
         });
+        return null;
       } else {
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
           message: 'Encryption failed. Key was not added.',

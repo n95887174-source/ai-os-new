@@ -191,7 +191,7 @@ export interface ServicesConfigSection {
   };
   debate: {
     maxRetries: number; baseBackoffMs: number; maxBackoffMs: number;
-    debateTimeoutMs: number; roundDelayMs: number; maxTokens: number;
+    debateTimeoutMs: number; maxDurationMs: number; roundDelayMs: number; maxTokens: number;
     temperature: number; timeoutMs: number; timelineMaxEntries: number;
   };
   cache: {

@@ -71,6 +71,8 @@ interface DebateEngineDeps {
 }
 
 const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
+// P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
+const DEBATE_MAX_DURATION_MS = CONFIG?.services?.debate?.maxDurationMs ?? 1_800_000;
 const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
 const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
 const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
@@ -92,6 +94,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   private participantProviderMap = new Map<string, string>();
   private llmFailureCount = new Map<string, number>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  // P1-2: track per-session start time for max-duration watchdog
+  private sessionStartTimes = new Map<string, number>();
+  private sessionTimeoutTimers = new Map<string, ReturnType<typeof setTimeout>>();
   // CRIT-3 fix: Map<sessionId, Map<agentId, AbortController>> — one controller per agent, not one per session.
   // On cancel/pause, abort ALL agents' controllers, not just the last one.
   private sessionAbortControllers = new Map<string, Map<string, AbortController>>();
@@ -326,6 +331,17 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     session.transition('initializing');
     session.transition('active');
 
+    // P1-2: record start time for max-duration watchdog
+    if (!this.sessionStartTimes.has(sessionId)) {
+      this.sessionStartTimes.set(sessionId, Date.now());
+      this.sessionTimeoutTimers.set(sessionId, setTimeout(() => {
+        LOGGER.warn('DebateEngine', `Session ${sessionId} exceeded max duration (${DEBATE_MAX_DURATION_MS}ms) — cancelling`);
+        this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, { sessionId, error: 'Debate exceeded max duration' });
+        this.cancelSession(sessionId);
+        this.sessionTimeoutTimers.delete(sessionId);
+      }, DEBATE_MAX_DURATION_MS));
+    }
+
     if (!isResume) {
       this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_STARTED, { sessionId });
       await this.runProviderPreflight(sessionId);
@@ -345,6 +361,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
               sessionId, round: event.round, nodes: event.nodes,
             });
 
+            let allErrored = true;
             for (const nodeId of event.nodes) {
               if (session.phase === 'cancelled' || session.phase === 'failed' || session.phase === 'paused') break;
 
@@ -361,7 +378,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 if (budget) {
                   const estimatedTokens = 250;
                   const estimatedCost = estimatedTokens * 0.000002;
-                  // Queue-based mutex prevents TOCTOU: check-and-set is atomic.
                   const allowed = await budget.reserveAndRecord(sessionId, estimatedTokens, estimatedCost);
                   if (!allowed) {
                     const action = budget.getPressureAction();
@@ -399,6 +415,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_RESPONDED, {
                   sessionId, agentId: participant.agentId, content,
                 });
+                allErrored = false;
               } catch (e) {
                 const error = String(e);
                 this.getContext(sessionId).timeline.record({ sessionId, type: 'agent:error', payload: { agentId: participant.agentId, error } });
@@ -408,6 +425,15 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   sessionId, agentId: participant.agentId, error,
                 });
               }
+            }
+            if (allErrored) {
+              const msg = 'All providers unavailable — debate cannot proceed';
+              LOGGER.warn('DebateEngine', msg, { sessionId });
+              session.transition('failed');
+              this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
+                sessionId, error: msg,
+              });
+              earlyExit = true;
             }
             break;
           }
@@ -458,6 +484,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       });
     } finally {
       this.runningSessions.delete(sessionId);
+      // P1-2: clear the max-duration timeout timer
+      const timer = this.sessionTimeoutTimers.get(sessionId);
+      if (timer) { clearTimeout(timer); this.sessionTimeoutTimers.delete(sessionId); }
+      this.sessionStartTimes.delete(sessionId);
     }
   }
 
@@ -838,6 +868,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
     this.preflightDone.delete(sessionId);
     this.runningSessions.delete(sessionId);
+    // P1-2: clear the max-duration timeout timer
+    const timer = this.sessionTimeoutTimers.get(sessionId);
+    if (timer) { clearTimeout(timer); this.sessionTimeoutTimers.delete(sessionId); }
+    this.sessionStartTimes.delete(sessionId);
   }
 
   getSession(sessionId: string): DebateSessionSnapshot | undefined {

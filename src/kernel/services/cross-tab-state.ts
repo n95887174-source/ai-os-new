@@ -8,10 +8,17 @@ const HEARTBEAT_MS = 30_000;
 const TAB_TIMESTAMP_KEY = 'cross-tab:timestamps';
 
 export interface CrossTabStateMessage {
-  type: 'circuit-breaker-update' | 'rate-limit-update' | 'error-update' | 'sync-request' | 'sync-response' | 'heartbeat';
+  type: 'circuit-breaker-update' | 'rate-limit-update' | 'error-update' | 'sync-request' | 'sync-response' | 'heartbeat' | 'debate-update';
   timestamp: number;
   tabId: string;
   payload: unknown;
+}
+
+export interface DebateSyncPayload {
+  sessionId: string;
+  updatedAt: number;
+  phase: string;
+  round: number;
 }
 
 export interface CircuitBreakerState {
@@ -50,6 +57,8 @@ class CrossTabStateSync {
   private syncTimer: ReturnType<typeof setInterval> | null = null;
   private storageHandler: ((event: StorageEvent) => void) | null = null;
   private keyRemovedUnsub?: () => void;
+  private debateUnsub?: () => void;
+  private localDebateVersions: Map<string, { updatedAt: number; phase: string; round: number }> = new Map();
 
   constructor() {
     this.tabId = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
@@ -64,7 +73,6 @@ class CrossTabStateSync {
     // that block new keys with the same ID on re-add, and leak memory.
     this.keyRemovedUnsub = eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
       const keyId = String(id);
-      // We don't know the provider, but we scan all keys with matching suffix.
       for (const key of this.localCircuitBreakers.keys()) {
         if (key.endsWith(`:${keyId}`)) this.localCircuitBreakers.delete(key);
       }
@@ -73,6 +81,17 @@ class CrossTabStateSync {
       }
       this.localErrors = this.localErrors.filter(e => !e.keyId.endsWith(`:${keyId}`));
       LOGGER.debug('CrossTabStateSync', 'key removed', { keyId, cleanedCircuitBreakers: true, cleanedRateLimits: true });
+    });
+
+    this.debateUnsub = eventBus.on(EVENTS.DEBATE_UPDATED, (raw: unknown) => {
+      const data = raw as { id: string; phase: string; round: number };
+      this.localDebateVersions.set(data.id, { updatedAt: Date.now(), phase: data.phase, round: data.round });
+      this.broadcast({
+        type: 'debate-update',
+        timestamp: Date.now(),
+        tabId: this.tabId,
+        payload: { sessionId: data.id, updatedAt: Date.now(), phase: data.phase, round: data.round },
+      });
     });
 
     if (typeof BroadcastChannel !== 'undefined') {
@@ -166,6 +185,9 @@ class CrossTabStateSync {
       case 'sync-response':
         this.handleSyncResponse(message);
         break;
+      case 'debate-update':
+        this.handleDebateUpdate(message.payload as DebateSyncPayload);
+        break;
     }
 
     const listeners = this.listeners.get(message.type);
@@ -205,6 +227,24 @@ class CrossTabStateSync {
     LOGGER.debug('CrossTabStateSync', 'Error synced from another tab', { provider: entry.provider, error: entry.error });
   }
 
+  private handleDebateUpdate(payload: DebateSyncPayload): void {
+    const existing = this.localDebateVersions.get(payload.sessionId);
+    if (existing && existing.updatedAt >= payload.updatedAt) return;
+    if (existing && existing.updatedAt < payload.updatedAt) {
+      LOGGER.warn('CrossTabStateSync', 'Debate session conflict detected', {
+        sessionId: payload.sessionId,
+        local: existing,
+        remote: payload,
+      });
+      eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
+        sessionId: payload.sessionId,
+        currentVersion: existing.round,
+        attemptedVersion: payload.round,
+      });
+    }
+    this.localDebateVersions.set(payload.sessionId, { updatedAt: payload.updatedAt, phase: payload.phase, round: payload.round });
+  }
+
   private handleSyncRequest(_message: CrossTabStateMessage): void {
     this.broadcast({
       type: 'sync-response',
@@ -214,6 +254,7 @@ class CrossTabStateSync {
         circuitBreakers: Array.from(this.localCircuitBreakers.values()),
         rateLimits: Array.from(this.localRateLimits.values()),
         errors: this.localErrors.slice(-50),
+        debates: Array.from(this.localDebateVersions.entries()).map(([sessionId, v]) => ({ sessionId, ...v })),
       },
     });
   }
@@ -230,6 +271,7 @@ class CrossTabStateSync {
       circuitBreakers: CircuitBreakerState[];
       rateLimits: RateLimitState[];
       errors: ErrorEntry[];
+      debates?: DebateSyncPayload[];
     };
 
     for (const cb of payload.circuitBreakers) {
@@ -239,12 +281,17 @@ class CrossTabStateSync {
       this.handleRateLimitUpdate(rl, message.timestamp);
     }
     for (const err of payload.errors) {
-      // Dedup errors by provider+keyId+timestamp — skip if we already have it
       const exists = this.localErrors.some(
         e => e.provider === err.provider && e.keyId === err.keyId && e.timestamp === err.timestamp
       );
       if (!exists) {
         this.handleErrorUpdate(err);
+      }
+    }
+
+    if (payload.debates) {
+      for (const d of payload.debates) {
+        this.handleDebateUpdate(d);
       }
     }
   }
@@ -256,6 +303,9 @@ class CrossTabStateSync {
     }
     for (const [, rl] of this.localRateLimits) {
       parts.push(`${rl.provider}:${rl.keyId}:${rl.remaining}`);
+    }
+    for (const [id, v] of this.localDebateVersions) {
+      parts.push(`${id}:${v.updatedAt}:${v.phase}:${v.round}`);
     }
     parts.sort();
     let hash = 0;
@@ -371,6 +421,16 @@ class CrossTabStateSync {
     });
   }
 
+  updateDebate(sessionId: string, phase: string, round: number): void {
+    this.localDebateVersions.set(sessionId, { updatedAt: Date.now(), phase, round });
+    this.broadcast({
+      type: 'debate-update',
+      timestamp: Date.now(),
+      tabId: this.tabId,
+      payload: { sessionId, updatedAt: Date.now(), phase, round },
+    });
+  }
+
   getCircuitBreaker(provider: string, keyId: string): CircuitBreakerState | undefined {
     return this.localCircuitBreakers.get(`${provider}:${keyId}`);
   }
@@ -423,6 +483,7 @@ class CrossTabStateSync {
 
   destroy(): void {
     this.keyRemovedUnsub?.();
+    this.debateUnsub?.();
     this.channel?.close();
     this.channel = null;
 
@@ -444,6 +505,7 @@ class CrossTabStateSync {
     this.localCircuitBreakers.clear();
     this.localRateLimits.clear();
     this.localErrors = [];
+    this.localDebateVersions.clear();
     LOGGER.info('CrossTabStateSync', 'Destroyed', { tabId: this.tabId });
   }
 }

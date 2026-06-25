@@ -56,6 +56,7 @@ export const DomainEvents = {
   CACHE_INVALIDATED: 'cache:invalidated',
   DEBATE_VERDICT_GENERATED: 'debate:verdict:generated',
   DEBATE_SESSION_CONFLICT: 'debate:session:conflict',
+  SESSION_DELETED: 'session:deleted',
 } as const;
 
 export type DomainEventMap = {
@@ -107,4 +108,5 @@ export type DomainEventMap = {
   'elo:rating:updated': { agentId: string; newRating: number; change: number };
   'cache:invalidated': { reason: string; section?: string };
   'debate:session:conflict': { sessionId: string; currentVersion: number; attemptedVersion: number; tabId?: string };
+  'session:deleted': { id: string; type: import('../contracts/session-manager').SessionType };
 };

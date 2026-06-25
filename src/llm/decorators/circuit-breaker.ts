@@ -24,6 +24,8 @@ const DEFAULT_CONFIG: CircuitConfig = {
 };
 
 const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 403, 405, 422]);
+// P1-6: server errors (5xx) open circuit after 2 failures instead of waiting for default threshold (5)
+const SERVER_ERROR_STATUSES = new Set([500, 502, 503, 504]);
 
 interface CircuitStateData {
   state: CircuitState;
@@ -215,6 +217,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
     let isRateLimit = false;
     let customTimeoutMs: number | undefined;
+    let isServerError = false;
 
     if (statusCode !== undefined) {
       if (statusCode === 429 || statusCode === 402) {
@@ -230,9 +233,14 @@ export class CircuitBreakerDecorator extends BaseDecorator {
           customTimeoutMs = Math.max(customTimeoutMs ?? 0, 5 * 60 * 1000);
         }
       }
+      // P1-6: server errors (5xx) open circuit after 2 failures only
+      if (SERVER_ERROR_STATUSES.has(statusCode)) {
+        isServerError = true;
+      }
     }
 
-    if (this.state.state === 'half-open' || isRateLimit || this.state.failures >= this.config.failureThreshold) {
+    const serverErrorThresholdReached = isServerError && this.state.failures >= 2;
+    if (this.state.state === 'half-open' || isRateLimit || serverErrorThresholdReached || this.state.failures >= this.config.failureThreshold) {
       const prev = this.state.state;
       this.state.state = 'open';
       this.state.openSince = Date.now();

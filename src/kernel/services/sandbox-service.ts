@@ -12,6 +12,7 @@ export interface SandboxServiceDeps {
 export class SandboxService {
   private deps: SandboxServiceDeps;
   private activeWorkers = new Set<Worker>();
+  private readonly codeExecutionEnabled = import.meta.env.DEV || import.meta.env.VITE_SANDBOX_ENABLED === 'true';
   private proxyUrl = (() => {
     const env = import.meta.env.VITE_PROXY_URL;
     if (env) return env.includes('?url=') ? env : `${env}?url=`;
@@ -94,6 +95,13 @@ export class SandboxService {
   }
 
   async execute(code: string, data: unknown = {}, timeoutMs: number = CONFIG?.services?.sandbox?.codeExecutionTimeoutMs ?? 5000, allowedTools: string[] = []): Promise<unknown> {
+    if (!this.codeExecutionEnabled) {
+      throw new Error(
+        'Sandbox code execution is disabled in production because the current worker runner requires unsafe-eval. ' +
+        'Enable VITE_SANDBOX_ENABLED=true only for deployments with a CSP that intentionally permits it.'
+      );
+    }
+
     return new Promise((resolve, reject) => {
       const worker = new Worker(new URL('../../services/sandbox.worker.ts', import.meta.url), {
         type: 'module'

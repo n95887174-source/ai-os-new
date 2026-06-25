@@ -9,6 +9,7 @@ import { securityService as coreSecurity } from './security';
 import { createSqliteStorage } from './services/storage/sqlite-storage';
 import { createDexieStorage } from './services/storage/dexie-storage';
 import { schedulerService } from './services/scheduler-service';
+import { crossTabStateSync } from './services/cross-tab-state';
 import { DataAccessLayerImpl } from './dal/data-access-layer';
 import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
 
@@ -114,8 +115,9 @@ export class RuntimeManager {
       this.healthCheckInterval = null;
     }
     await this.bootstrapper.shutdown();
+    crossTabStateSync.destroy();
     this.container.clear();
-    coreEventBus.reset();
+    coreEventBus.reset('shutdown-reset-42');
     this.registerCoreServices();
     this.initialized = false;
     this.startPromise = null;

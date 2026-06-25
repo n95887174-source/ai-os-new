@@ -82,9 +82,13 @@ private registerAllValidators(): void {
     }
   }
 
+  private static readonly RESET_GUARD = 'shutdown-reset-42';
   /** @internal Called only from RuntimeManager during full system shutdown. Not part of IEventBus. */
-  reset(): void {
-    // H-06: Call all tracked unsubscribe callbacks so consumers know they're unsubscribed
+  reset(guard?: string): void {
+    if (guard !== EventBus.RESET_GUARD) {
+      this.logger?.error('EventBus', 'reset() called without proper guard — use runtime.shutdown() instead');
+      return;
+    }
     for (const unsub of this.unsubCallbacks) {
       try { unsub(); } catch (e) { LOGGER.warn('EventBus', 'unsubscribe callback failed', { error: e }); }
     }

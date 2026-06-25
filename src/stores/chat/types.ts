@@ -49,11 +49,14 @@ export const DEFAULT_SESSION: ChatSession = {
 
 export const SESSION_BATCH_SIZE = 50;
 
+export const DELETED_IDS_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 export interface ChatState {
   sessions: ChatSession[];
   activeSessionId: string;
   activeRequestIds: Set<string>;
   deletedIds: Set<string>;
+  deletedAtTimestamps: Map<string, number>;
   isLoaded: boolean;
   hasMoreSessions: boolean;
   systemPrompt: string;

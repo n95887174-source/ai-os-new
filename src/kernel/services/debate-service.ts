@@ -256,13 +256,20 @@ export class DebateService {
   }
 
   private async persistSession(): Promise<boolean> {
-    try {
-      await persistActiveSession(this.deps.debateStore, this.activeSession);
-      return true;
-    } catch (e) {
-      LOGGER.warn('DebateService', 'Failed to persist session — in-memory and storage may diverge', { error: e instanceof Error ? e.message : String(e) });
-      return false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+      try {
+        await persistActiveSession(this.deps.debateStore, this.activeSession);
+        return true;
+      } catch (e) {
+        LOGGER.warn('DebateService', `Persist attempt ${attempt + 1}/3 failed`, { error: e instanceof Error ? e.message : String(e) });
+      }
     }
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+      message: 'Failed to save debate session after 3 attempts — data may be lost on reload.',
+      type: 'warning',
+    });
+    return false;
   }
 
   async startDebate(
@@ -916,10 +923,17 @@ export class DebateService {
         LOGGER.warn('DebateService', 'Verdict generation failed (legacy stop path)', { error: e });
       }
       if (verdict) this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, { sessionId: this.activeSession.id, verdict });
-      
+
       this.clearTimeout();
       this.saveToHistory();
       this.participantProviderMap.clear();
+      this.deps.eventBus.emit(EVENTS.DEBATE_ENDED, {
+        sessionId: this.activeSession.id,
+        topic: this.activeSession.topic,
+        rounds: this.activeSession.currentRound,
+        durationMs: Date.now() - this.activeSession.createdAt,
+        consensus: this.activeSession.consensus,
+      });
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
       void this.persistAndRecover();
     }

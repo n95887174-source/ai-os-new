@@ -171,6 +171,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/files" element={<PanelLoader name="Workspace"><WorkspacePanel /></PanelLoader>} />
       <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
       <Route path="/debate" element={<PanelLoader name="DebateArena"><DebateArena /></PanelLoader>} />
+      <Route path="/debate-runtime" element={<Navigate to="/debate?mode=runtime" replace />} />
       <Route path="/debate-replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
       <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />
       <Route path="/debate-history" element={<PanelLoader name="DebateHistory"><DebateHistoryPage /></PanelLoader>} />

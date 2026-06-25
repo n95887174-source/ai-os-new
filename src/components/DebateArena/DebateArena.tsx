@@ -1,6 +1,7 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { MessageCircle, GitBranch } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useSearchParams } from 'react-router-dom';
 import ErrorBoundary from '../Common/ErrorBoundary';
 
 const DebatePanel = React.lazy(() => import('../DebatePanel/DebatePanel'));
@@ -9,8 +10,17 @@ const DebateRuntimePanel = React.lazy(() => import('../DebateRuntimePanel/Debate
 type Mode = 'classic' | 'runtime';
 
 const DebateArena: React.FC = () => {
-  const [mode, setMode] = useState<Mode>('classic');
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<Mode>(() => {
+    return searchParams.get('mode') === 'runtime' ? 'runtime' : 'classic';
+  });
   const { t } = useTranslation();
+
+  // Sync if URL changes externally
+  useEffect(() => {
+    const m = searchParams.get('mode') === 'runtime' ? 'runtime' : 'classic';
+    setMode(m);
+  }, [searchParams]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 0, overflow: 'hidden' }}>

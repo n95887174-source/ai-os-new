@@ -28,14 +28,15 @@ const MissionControl: React.FC = () => {
       try { setSuggestions([...advisorService.getSuggestions()]); } catch { /* not ready */ }
     });
 
-    const interval = setInterval(() => {
+    // P1-13: subscribe to kernel:updated instead of polling every 2s
+    const unsubHealth = eventBus.on('kernel:updated', () => {
       try { setHealth(adminService.getSystemHealth()); } catch { /* not ready */ }
-    }, 2000);
+    });
 
     return () => {
       unsubSugg();
       unsubExec();
-      clearInterval(interval);
+      unsubHealth();
     };
   }, []);
 

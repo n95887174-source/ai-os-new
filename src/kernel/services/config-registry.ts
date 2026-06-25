@@ -212,7 +212,7 @@ const rawConfig: ConfigRegistry = {
     },
     debate: {
       maxRetries: 3, baseBackoffMs: 5000, maxBackoffMs: 30000,
-      debateTimeoutMs: 30000, roundDelayMs: 3000, maxTokens: 500,
+      debateTimeoutMs: 30000, maxDurationMs: 1800000, roundDelayMs: 3000, maxTokens: 500,
       temperature: 0.7, timeoutMs: 30000, timelineMaxEntries: 5000,
     },
     cache: { defaultTTLMs: 300000, maxEntries: 500 },

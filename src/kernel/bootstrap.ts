@@ -37,6 +37,7 @@ import { GroupManagerService } from './services/group-manager';
 import type { RouterService } from './services/provider-router';
 import type { KernelEventLog } from './contracts/event-log';
 import type { ICausalScopeManager } from './contracts/causal-debugger';
+import type { DebatePhase } from './contracts/debate-runtime';
 import type { ApiKey } from './types/metrics-types';
 import type { StorageLayer } from './contracts/storage/storage-layer';
 import { MemoryWatchdog } from './utils/memory-watchdog';
@@ -631,7 +632,26 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.warn('Bootstrap', 'KeyStateStore seed failed (non-critical)', { error: e });
     }
 
-      //    this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });
+    // P1-9: Auto-resume interrupted debates found in Dexie after page reload
+    // Mark non-terminated sessions as failed so the user sees them in UI
+    try {
+      const RUNNING_PHASES = new Set<DebatePhase>(['initializing', 'active', 'deliberating', 'consensus', 'summarizing']);
+      const allSessions = await dexieDb.debateSessions.toArray();
+      let interruptedCount = 0;
+      for (const s of allSessions) {
+        if (RUNNING_PHASES.has(s.phase)) {
+          await dexieDb.debateSessions.put({ ...s, phase: 'failed', updatedAt: Date.now(), version: (s.version ?? 0) + 1 });
+          interruptedCount++;
+        }
+      }
+      if (interruptedCount > 0) {
+        this.logger.info('Bootstrap', `Marked ${interruptedCount} debate(s) as interrupted (page reload during active session)`);
+      }
+    } catch (e) {
+      this.logger.warn('Bootstrap', 'Auto-resume debate check failed (non-critical)', { error: e });
+    }
+
+    //    this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });
     this.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Super-Agents OS Runtime ready', type: 'success' });
     this.eventBus.emit(EVENTS.RUNTIME_READY, { timestamp: Date.now() });
 

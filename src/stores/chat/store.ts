@@ -8,7 +8,7 @@ import { executionGovernor, memoryService, workspaceService, featureFlagService,
 import { FEATURE_FLAGS } from '../../kernel/contracts/feature-flags';
 import type { ChatStoreShape, ChatEntry, ChatSession, ZustandSet, ZustandGet } from './types'
 import {
-  DEFAULT_SESSION, SESSION_BATCH_SIZE, MAX_HISTORY, MODEL_CONTEXT_WINDOWS,
+  DEFAULT_SESSION, SESSION_BATCH_SIZE, MAX_HISTORY, MODEL_CONTEXT_WINDOWS, DELETED_IDS_TTL,
   genId,
 } from './types';
 
@@ -40,6 +40,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     activeSessionId: 'default',
     activeRequestIds: new Set<string>(),
     deletedIds: new Set<string>(),
+    deletedAtTimestamps: new Map(),
     isLoaded: false,
     hasMoreSessions: false,
     systemPrompt: '',
@@ -186,6 +187,23 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
           type: 'warning',
         });
       }
+      // P0-5: persist to Dexie BEFORE Zustand update — crash-safe write-through
+      const sStore = resolveSessionStore();
+      if (sStore) {
+        const stateWithNew = {
+          ...get(),
+          sessions: get().sessions.map(sess =>
+            sess.id === sessionId
+              ? { ...sess, history: [...sess.history, newEntry].slice(-MAX_HISTORY), updatedAt: Date.now() }
+              : sess
+          ),
+        };
+        await sStore.syncSessions(stateWithNew.sessions, []).catch((e) => {
+          console.warn('[ChatStore] write-through persist failed — message not saved', e);
+          throw e;
+        });
+      }
+
       set(s => ({
         sessions: s.sessions.map(sess =>
           sess.id === sessionId
@@ -193,13 +211,6 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             : sess
         ),
       }));
-
-      // write-through: persist user message immediately, bypass debounce
-      const sStore = resolveSessionStore();
-      if (sStore) {
-        const state = get();
-        sStore.syncSessions(state.sessions, []).catch(e => console.warn('[ChatStore] write-through persist failed:', e));
-      }
 
       targets.forEach((t, idx) => {
         eventBus.emit(EVENTS.SEND_MESSAGE, {
@@ -259,13 +270,20 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     editEntry: (entryId, newText) => {
+      if (get().isAnySending()) {
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: 'Cannot edit message while a message is being sent. Cancel first or wait for completion.',
+          type: 'warning',
+        });
+        return;
+      }
       uas(prev => prev.map(e => e.id === entryId
         ? {
             ...e,
             text: newText,
             responses: e.responses.some(r => r.status === 'loading' || r.status === 'streaming')
-              ? e.responses
-              : [],
+              ? []
+              : e.responses,
           }
         : e,
       ));
@@ -283,21 +301,31 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     deleteSession: (id) => {
       sessionManager.delete(id).catch(() => {});
       set(s => {
-        const updated = new Set([...s.deletedIds, id]);
+        const now = Date.now();
+        const timestamps = new Map(s.deletedAtTimestamps);
+        timestamps.set(id, now);
+        // Prune entries older than TTL
+        for (const [tsId, ts] of timestamps) {
+          if (now - ts > DELETED_IDS_TTL) timestamps.delete(tsId);
+        }
+        const updated = new Set(timestamps.keys());
         if (updated.size > 1000) {
           const arr = [...updated];
           updated.clear();
-          arr.slice(arr.length - 1000).forEach(x => updated.add(x));
+          for (const x of arr.slice(arr.length - 1000)) updated.add(x);
+          for (const [tsId] of timestamps) {
+            if (!updated.has(tsId)) timestamps.delete(tsId);
+          }
         }
         const filtered = s.sessions.filter(x => x.id !== id);
         if (filtered.length === 0) {
           const fresh: ChatSession = { id: 'default', title: 'New Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() };
-          return { sessions: [fresh], activeSessionId: 'default', deletedIds: updated };
+          return { sessions: [fresh], activeSessionId: 'default', deletedIds: updated, deletedAtTimestamps: timestamps };
         }
         if (s.activeSessionId === id) {
-          return { sessions: filtered, activeSessionId: filtered[0].id, deletedIds: updated };
+          return { sessions: filtered, activeSessionId: filtered[0].id, deletedIds: updated, deletedAtTimestamps: timestamps };
         }
-        return { sessions: filtered, deletedIds: updated };
+        return { sessions: filtered, deletedIds: updated, deletedAtTimestamps: timestamps };
       });
     },
 

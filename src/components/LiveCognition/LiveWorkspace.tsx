@@ -27,7 +27,8 @@ const LiveWorkspace: React.FC = () => {
   useEffect(() => {
     isMountedRef.current = true;
 
-    intervalRef.current = setInterval(() => {
+    // P1-13: subscribe to kernel:updated instead of polling every 2s
+    const unsubHealth = eventBus.on('kernel:updated', () => {
       if (!isMountedRef.current) return;
       try {
         setHealth(adminService.getSystemHealth());
@@ -39,7 +40,7 @@ const LiveWorkspace: React.FC = () => {
           clearErrorAfterDelay();
         }
       }
-    }, 2000);
+    });
 
     let unsubscribeAll: (() => void) | undefined;
     const eventHandler = ({ event, data }: { event: string; data: Record<string, unknown> }) => {
@@ -70,11 +71,16 @@ const LiveWorkspace: React.FC = () => {
       console.warn('[LiveWorkspace] eventBus.subscribeAll does not return an unsubscribe function');
     }
 
+    // Capture refs at effect creation time for cleanup (avoids exhaustive-deps false positive)
+    const savedIntervalRef = intervalRef;
+    const savedTimeoutRef = errorTimeoutRef;
+
     return () => {
       isMountedRef.current = false;
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      unsubHealth();
+      if (savedIntervalRef.current) clearInterval(savedIntervalRef.current);
       if (unsubscribeAll) unsubscribeAll();
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
     };
   }, [clearErrorAfterDelay]);
 

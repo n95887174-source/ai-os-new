@@ -461,11 +461,23 @@ export class ChatService {
           return;
         }
         const errMsg = error instanceof Error ? error.message : String(error);
-        const is429 = (error instanceof LLMError && error.statusCode === 429)
+        const statusCode = error instanceof LLMError ? error.statusCode : undefined;
+        // P1-6: failover on ALL provider-level errors (5xx, auth, network, rate limit),
+        // not just 429. One failing provider should no longer block all requests.
+        const isProviderError = statusCode === 429
+          || statusCode === 402
+          || (statusCode !== undefined && statusCode >= 500 && statusCode < 600)
+          || statusCode === 401 || statusCode === 403
           || /\b429\b/.test(errMsg)
           || errMsg.toLowerCase().includes('rate limit')
-          || errMsg.toLowerCase().includes('quota');
-        if (is429) {
+          || errMsg.toLowerCase().includes('quota')
+          || errMsg.toLowerCase().includes('timed out')
+          || errMsg.toLowerCase().includes('network')
+          || errMsg.toLowerCase().includes('econnrefused')
+          || errMsg.toLowerCase().includes('enotfound')
+          || errMsg.toLowerCase().includes('unauthorized')
+          || errMsg.toLowerCase().includes('forbidden');
+        if (isProviderError) {
           excludedProviders.add(provider);
           let excludedProvider = provider;
           let fallback = this.deps.routerService.resolveWithFallback('auto', excludedProvider, keyObj.id);
@@ -479,18 +491,20 @@ export class ChatService {
             if (activeKeyId) {
               this.deps.keyService.handleProviderError(activeKeyId, errMsg);
               this.deps.keyService.updateKeyStatus(activeKeyId, 'inactive');
-              this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: activeKeyId, provider, quotaType: 'requests' });
+              if (statusCode === 429 || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('quota')) {
+                this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id: activeKeyId, provider, quotaType: 'requests' });
+              }
             }
-            this.deps.logger.warn('ChatService', `429 on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
+            this.deps.logger.warn('ChatService', `${statusCode || 'error'} on ${provider}, failing over to ${fallback.provider} (depth=${depth + 1})`, { provider, fallback: fallback.provider, depth: depth + 1 });
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-              message: `Rate limited on ${provider}, failing over to ${fallback.provider}`,
+              message: `${statusCode === 429 ? 'Rate limited' : statusCode === 402 ? 'Payment required' : 'Provider error'} on ${provider}, failing over to ${fallback.provider}`,
               type: 'warning',
             });
             depth++;
             req = { ...req, provider: fallback.provider, keyId: fallback.key.id };
             continue;
           } else {
-            this.deps.logger.error('ChatService', `429 on ${provider} with no fallback available`, { provider, error: errMsg });
+            this.deps.logger.error('ChatService', `${statusCode || 'error'} on ${provider} with no fallback available`, { provider, error: errMsg });
             this.emitError(req, errMsg);
             return;
           }

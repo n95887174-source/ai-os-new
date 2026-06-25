@@ -91,19 +91,23 @@ export function snapshotToSession(
 ): DebateSession {
   const participants = Array.isArray(ctx.participants) ? ctx.participants : [];
   const args = ctx.timeline ? timelineToArguments(ctx.timeline, participants) : [];
+  const round = Math.max(1, snapshot.round);
+  const socraticQuestioner = ctx.strategy === 'socratic' && participants.length > 1
+    ? (round - 1) % participants.length
+    : 0;
   return {
     id: snapshot.id,
     topic: snapshot.topic,
     status: mapPhaseToLegacyStatus(snapshot.phase),
     strategy: ctx.strategy,
     maxRounds: ctx.maxRounds,
-    currentRound: Math.max(1, snapshot.round),
+    currentRound: round,
     participants,
     arguments: args,
     convergenceScore: 0,
     openingStatements: args.filter((a) => a.round === 0),
     config: ctx.config,
-    socraticQuestioner: 0,
+    socraticQuestioner,
     argumentTreeRoundMap: {},
     createdAt: snapshot.startedAt,
   };

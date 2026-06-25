@@ -19,7 +19,7 @@
     "sync-server": "node server/sync-server.mjs",
     "dev:shared": "node server/run-dev.mjs",
     "preview": "vite preview",
-    "check:circular-kernel": "madge --circular --extensions ts --ts-config tsconfig.json src/kernel/",
+    "check:circular-kernel": "madge --circular --extensions ts --ts-config tsconfig.json src/kernel/ --exit-code 1",
     "prepare": "husky"
   },
   "lint-staged": {
