@@ -30,13 +30,8 @@ const DEFAULT_CONFIG: RecorderConfig = {
   enabled: true,
 };
 
-async function computeChecksum(event: string, data: unknown, timestamp: number): Promise<string> {
-  const str = `${event}|${JSON.stringify(data ?? '')}|${timestamp}`;
-  const encoder = new TextEncoder();
-  const hash = await crypto.subtle.digest('SHA-256', encoder.encode(str));
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
-}
-
+// P0-18: async SHA-256 checksum with bounded concurrency
+// Replaced free function with class method to share the in-flight counter and queue
 export class EventRecorder {
   private events: RecordedEvent[] = [];
   private sequence = 0;
@@ -44,6 +39,24 @@ export class EventRecorder {
   private unsub: (() => void) | null = null;
   private store?: EventRecorderStore;
   private persistQueued = false;
+  private inFlightChecksums = 0;
+  private static readonly MAX_INFLIGHT_CHECKSUMS = 50;
+  private pendingChecksums: Array<() => void> = [];
+
+  private async boundedChecksum(event: string, data: unknown, timestamp: number): Promise<string> {
+    if (this.inFlightChecksums >= EventRecorder.MAX_INFLIGHT_CHECKSUMS) {
+      await new Promise<void>(resolve => { this.pendingChecksums.push(resolve); });
+    }
+    this.inFlightChecksums++;
+    try {
+      const str = `${event}|${JSON.stringify(data ?? '')}|${timestamp}`;
+      const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    } finally {
+      this.inFlightChecksums--;
+      this.pendingChecksums.shift()?.();
+    }
+  }
 
   constructor(config?: Partial<RecorderConfig>, store?: EventRecorderStore) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -69,7 +82,7 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
         event: payload.event,
         data: payload.data,
         timestamp: ts,
-        checksum: await computeChecksum(payload.event, payload.data, ts),
+        checksum: await this.boundedChecksum(payload.event, payload.data, ts),
       };
       if (this.config.filter && !this.config.filter(recorded)) return;
       this.events.push(recorded);
@@ -88,7 +101,7 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
       event,
       data,
       timestamp: ts,
-      checksum: await computeChecksum(event, data, ts),
+      checksum: await this.boundedChecksum(event, data, ts),
     };
     if (this.config.filter && !this.config.filter(recorded)) return;
     this.events.push(recorded);
