@@ -211,7 +211,8 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullCon
   }));
   useChatStore.getState().removeActiveRequestId(requestId);
 
-  if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE)) {
+  // P0-6: don't store error/timeout/empty responses into RAG memory — avoids index pollution
+  if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE) && status !== 'error' && status !== 'timeout' && fullContent) {
     memoryService.store({
       content: fullContent,
       metadata: {
