@@ -112,6 +112,7 @@ export class RuntimeManager {
     }
     await this.bootstrapper.shutdown();
     this.container.clear();
+    coreEventBus.reset();
     this.registerCoreServices();
     this.initialized = false;
     this.startPromise = null;
