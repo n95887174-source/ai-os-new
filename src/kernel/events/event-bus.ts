@@ -64,6 +64,7 @@ private registerAllValidators(): void {
     }
   }
 
+  /** @internal Called only from RuntimeManager during full system shutdown. Not part of IEventBus. */
   reset(): void {
     // H-06: Call all tracked unsubscribe callbacks so consumers know they're unsubscribed
     for (const unsub of this.unsubCallbacks) {

@@ -7,6 +7,7 @@
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { ILocalStorageAdapter } from '../contracts/storage-adapter';
+import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { TraceStore } from '../contracts/storage/storage-layer';
 import type { LoggerService } from '../services/logger-service';
 import type { KeyService } from '../services/key-management/key-service';
@@ -25,7 +26,7 @@ import { BlackboardService } from '../services/blackboard-service';
 import { CognitiveService, type CognitiveServiceDeps } from '../services/cognitive-service';
 import type { StorageLayer } from '../contracts/storage/storage-layer';
 
-export const registerPhase2: Phase = (helpers) => {
+export const registerPhase2: Phase = (helpers, ctx) => {
   const { register, get, asDeps } = helpers;
 
   register('sessionAffinityStore', new SessionAffinityStore(get<IEventBus>('eventBus'), get<KeyStateStore>('keyStateStore')));
@@ -60,6 +61,7 @@ export const registerPhase2: Phase = (helpers) => {
     database: get<IDatabaseService>('database'),
     eventBus: get<IEventBus>('eventBus'),
     featureFlags: get<FeatureFlagService>('featureFlagService'),
+    executionGovernor: (() => { try { return ctx.container.get<IExecutionGovernor>('executionGovernor'); } catch { return undefined; } })(),
   })));
 
   register('externalSecretsService', new ExternalSecretsService({

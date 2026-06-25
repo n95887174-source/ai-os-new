@@ -59,6 +59,9 @@ export interface ChatServiceDeps {
     recordSpend: (agentId: string | null, provider: string, amount: number) => void;
   };
   freeTierLimits: Record<string, { requestsPerDay: number; tokensPerDay: number }>;
+  executionGovernor?: {
+    start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): { complete(): void; fail(e: Error): void };
+  };
   providerRuntime?: {
     createSession: (instanceId: string, provider: string, model: string) => { id: string; instanceId: string; provider: string; status: string; activate: () => void; complete: (latency: number) => void; fail: (error: string) => void; recordTokens: (input: number, output: number) => void; recordCost: (cost: number) => void };
     getOrCreateInstance: (key: { id: string; key: string; provider: string }) => { id: string };
@@ -320,6 +323,12 @@ export class ChatService {
       let ttft: number | undefined;
       let hasStarted = false;
 
+      const llmGovOp = this.deps.executionGovernor?.start({
+        type: 'llm-call',
+        timeoutMs: timeoutMs + 5000,
+        metadata: { provider, model: resolvedModel, requestId },
+      });
+
       try {
         const startTime = Date.now();
 
@@ -376,6 +385,7 @@ export class ChatService {
           this.deps.cacheService.set(cacheKey, fullContent, resolvedModel, provider, estimateTokens(promptText), tokens);
           resolveInflight();
           this.cacheInflight.delete(cacheKey);
+          llmGovOp?.complete();
         } else {
           session?.activate();
 
@@ -425,8 +435,10 @@ export class ChatService {
           this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(promptText), outputTokens);
           resolveInflight();
           this.cacheInflight.delete(cacheKey);
+          llmGovOp?.complete();
         }
       } catch (error: unknown) {
+        llmGovOp?.fail(error instanceof Error ? error : new Error(String(error)));
         rejectInflight?.(error);
         this.cacheInflight.delete(cacheKey);
         session?.fail(error instanceof Error ? error.message : String(error));

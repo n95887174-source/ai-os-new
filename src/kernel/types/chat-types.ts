@@ -1,6 +1,6 @@
 import type { ChatMessage } from '../../llm/core/types';
 
-export type ChatStatus = 'loading' | 'done' | 'error' | 'cancelled' | 'streaming' | 'queued';
+export type ChatStatus = 'loading' | 'done' | 'error' | 'cancelled' | 'streaming' | 'queued' | 'timeout';
 export type ChatRole = 'user' | 'assistant' | 'system' | 'tool';
 export type ChatStrategy = 'auto' | 'broadcast' | 'race' | 'performance' | 'cost' | 'latency' | 'manual';
 

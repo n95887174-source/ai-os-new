@@ -81,7 +81,7 @@ export interface ChatActions {
   cancelMessage: (requestId: string) => void;
   editEntry: (entryId: string, newText: string) => void;
   clearHistory: () => void;
-  createSession: (title?: string) => string;
+  createSession: (title?: string) => string | Promise<string>;
   deleteSession: (id: string) => void;
   forkSession: (entryId: string, newTitle?: string) => void;
   renameSession: (id: string, title: string) => void;

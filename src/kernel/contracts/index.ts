@@ -175,6 +175,8 @@ export type { Projection } from './projection';
 
 export type { IGroupManager, KeyGroup, KeyPassport } from './group-manager';
 
+export type { IExecutionGovernor, OperationSpec, ManagedOperation, OperationState, OperationType, OperationFilter } from './execution-governor';
+
 // ── Counterfactual Explanation ────────────────────────────────────
 export type {
   ICounterfactualExplanationService,

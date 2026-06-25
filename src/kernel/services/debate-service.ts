@@ -160,6 +160,7 @@ export class DebateService {
   private deps: DebateServiceDeps;
   private activeSession: DebateSession | null = null;
   private simulationTimeout: ReturnType<typeof setTimeout> | null = null;
+  private _heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private isExecutingRound = false;
   private roundGeneration = 0;
   private destroyed = false;
@@ -254,6 +255,18 @@ export class DebateService {
       throw new Error('Need at least 2 participants for debate');
     }
 
+    // Pre-flight: check available providers
+    const activeKeys = this.deps.keyService.getActiveKeys();
+    if (activeKeys.length === 0) {
+      throw new Error('No active API keys available — cannot start debate. Add a provider key first.');
+    }
+    const availableProviders = new Set(activeKeys.map(k => k.provider));
+    const hasDebateProvider = ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare']
+      .some(p => availableProviders.has(p));
+    if (!hasDebateProvider) {
+      throw new Error(`No provider with active keys supports debate. Active providers: ${[...availableProviders].join(', ') || 'none'}`);
+    }
+
     this.clearTimeout();
     this.isExecutingRound = false;
     this.roundGeneration++;
@@ -291,6 +304,10 @@ export class DebateService {
         this.deps.sessionManager.link(chatSessionId, session.id, 'chat_to_debate', `Debate: ${topic}`).catch(() => {});
         this.deps.sessionManager.updateMeta(chatSessionId, { linkedDebateId: session.id }).catch(() => {});
       }
+      this._heartbeatTimer = setInterval(() => {
+        if (this.activeSession?.status !== 'active') { this._stopHeartbeat(); return; }
+        void persistActiveSession(this.deps.debateStore, this.activeSession);
+      }, 30_000);
       void this.engine.startSession(runtimeId)
         .then(() => this.finalize())
         .catch((e) => {
@@ -751,6 +768,7 @@ export class DebateService {
 
   destroy(): void {
     this.destroyed = true;
+    this._stopHeartbeat();
     this.clearTimeout();
     if (this.isEngineActive() && this.engine && this.runtimeSessionId) {
       const snap = this.engine.getSession(this.runtimeSessionId);
@@ -771,6 +789,13 @@ export class DebateService {
     this.governor = null;
     if (this.unsubVerdict) { this.unsubVerdict(); this.unsubVerdict = null; }
     this.verdictMap.clear();
+  }
+
+  private _stopHeartbeat(): void {
+    if (this._heartbeatTimer !== null) {
+      clearInterval(this._heartbeatTimer);
+      this._heartbeatTimer = null;
+    }
   }
 
   private clearTimeout(): void {
@@ -933,6 +958,7 @@ export class DebateService {
   }
 
   private finalize(): void {
+    this._stopHeartbeat();
     const session = this.activeSession;
     if (!session) return;
     session.status = 'completed';
@@ -945,6 +971,13 @@ export class DebateService {
     session.interpretation = this.interpreter.interpret(session);
     this.saveToHistory();
     this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+    this.deps.eventBus.emit(EVENTS.DEBATE_ENDED, {
+      sessionId: session.id,
+      topic: session.topic,
+      rounds: session.currentRound,
+      durationMs: Date.now() - session.createdAt,
+      consensus: session.consensus,
+    });
     this.persistSession();
     this.clearListeners();
     this.runtimeSessionId = null;

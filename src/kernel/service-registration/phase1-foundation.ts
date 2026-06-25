@@ -20,6 +20,7 @@ import { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import { KeyService } from '../services/key-management/key-service';
 import { GroupManagerService } from '../services/group-manager';
 import { SessionManagerService } from '../services/session-manager-service';
+import { ExecutionGovernorService } from '../services/execution-governor';
 import type { AdvisorService } from '../services/advisor-service';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from '../services/logger-service';
@@ -139,4 +140,6 @@ export const registerPhase1: Phase = (helpers, ctx) => {
   register('sessionManagerService', new SessionManagerService(
     get<IDatabaseService>('database') as ConstructorParameters<typeof SessionManagerService>[0],
   ));
+
+  register('executionGovernor', new ExecutionGovernorService());
 };

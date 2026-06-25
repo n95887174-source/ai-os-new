@@ -14,7 +14,6 @@ export interface IEventBus {
   emit(event: string, data?: unknown): void;
   onSafe<T>(event: string, callback: (data: T) => void): () => void;
   subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void): () => void;
-  reset(): void;
 }
 
 export interface IDatabaseService {

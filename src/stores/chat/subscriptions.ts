@@ -166,16 +166,17 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, provider, chunk
   }
 }));
 
-moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps }) => {
+moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullContent, latency, ttft, tps, status }) => {
   flushAllForRequest(requestId);
   useChatStore.setState(s => ({
     sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => {
       if (entry.responses.length === 0) return entry;
+      const resolvedStatus = status === 'timeout' || status === 'error' ? status : 'done' as const;
       return {
         ...entry,
         responses: entry.responses.map(r =>
           matchesResponse(r, provider, requestId)
-            ? { ...r, content: fullContent ?? r.content, latency: latency ?? 0, ttft: ttft ?? 0, tps: tps ?? 0, status: 'done' as const }
+            ? { ...r, content: fullContent ?? r.content, latency: latency ?? 0, ttft: ttft ?? 0, tps: tps ?? 0, status: resolvedStatus }
             : r
         ),
       };

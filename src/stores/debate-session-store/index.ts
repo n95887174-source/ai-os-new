@@ -36,7 +36,14 @@ function isServiceId(id: string): boolean {
   return SERVICE_IDS.has(id) || id.startsWith('__debate_');
 }
 
-function toMeta(r: DebateRecord): DebateSessionMeta {
+async function getLinkedIds(id: string): Promise<string[]> {
+  try {
+    const links = await sm().getLinked(id);
+    return links.map(l => l.fromId === id ? l.toId : l.fromId);
+  } catch { return []; }
+}
+
+function toMeta(r: DebateRecord, linkedIds?: string[]): DebateSessionMeta {
   let p: DebateParticipant[];
   try { p = JSON.parse(r.participants || '[]'); } catch { p = []; }
   return {
@@ -47,7 +54,7 @@ function toMeta(r: DebateRecord): DebateSessionMeta {
     tags: r.tags ?? [], folder: r.folder ?? '',
     isArchived: r.isArchived ?? false,
     createdAt: r.createdAt, updatedAt: r.updatedAt,
-    linkedSessionIds: [],
+    linkedSessionIds: linkedIds ?? [],
   };
 }
 
@@ -134,7 +141,7 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
       if (filters?.folder) records = records.filter(r => r.folder === filters.folder);
       if (filters?.search) { const q = filters.search.toLowerCase(); records = records.filter(r => r.topic.toLowerCase().includes(q)); }
       if (filters?.tags?.length) records = records.filter(r => (r.tags ?? []).some(t => filters.tags!.includes(t)));
-      return records.map(toMeta);
+      return await Promise.all(records.map(async r => toMeta(r, await getLinkedIds(r.id))));
     } catch { return []; }
   },
 
@@ -183,7 +190,8 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
   refresh: async () => {
     try {
       const records = await db().debateSessions.orderBy('updatedAt').reverse().toArray() as DebateRecord[];
-      set({ sessions: records.filter(r => !isServiceId(r.id)).map(toMeta), isLoaded: true });
+      const metas = await Promise.all(records.filter(r => !isServiceId(r.id)).map(async r => toMeta(r, await getLinkedIds(r.id))));
+      set({ sessions: metas, isLoaded: true });
     } catch {
       set({ sessions: [], isLoaded: true });
     }

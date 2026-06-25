@@ -8,6 +8,7 @@
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { IContainer } from '../container';
+import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { DataAccessLayer } from '../dal';
 import { rootLogger } from '../services/logger-service';
 import type { LoggerService } from '../services/logger-service';
@@ -69,6 +70,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     },
     logger: get<LoggerService>('logger'),
     llmClient: get<LLMClientService>('llmClientService'),
+    executionGovernor: (() => { try { return ctx.container.get<IExecutionGovernor>('executionGovernor'); } catch { return undefined; } })(),
   })));
 
   register('workspaceService', new WorkspaceService({

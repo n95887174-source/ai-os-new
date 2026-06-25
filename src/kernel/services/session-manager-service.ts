@@ -73,11 +73,17 @@ export class SessionManagerService implements ISessionManager {
   async load(id: string): Promise<SessionMeta | null> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      return this.recordToMeta(debate, 'debate');
+      const meta = this.recordToMeta(debate, 'debate');
+      const links = await this.getLinked(id);
+      meta.linkedSessionIds = links.map(l => l.fromId === id ? l.toId : l.fromId);
+      return meta;
     }
     const chat = await this.db.sessions.get(id);
     if (chat) {
-      return this.chatToMeta(chat);
+      const meta = this.chatToMeta(chat);
+      const links = await this.getLinked(id);
+      meta.linkedSessionIds = links.map(l => l.fromId === id ? l.toId : l.fromId);
+      return meta;
     }
     return null;
   }

@@ -7,6 +7,7 @@
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { IContainer } from '../container';
+import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { StorageLayer, DebateStore } from '../contracts/storage/storage-layer';
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
@@ -129,6 +130,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     get getKeyService() { return () => _container.get<KeyService>('keyService'); },
     get getAdapterRegistry() { return () => _container.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     get getKeyStateStore() { return () => { try { return _container.get<import('../services/key-state-store').KeyStateStore>('keyStateStore'); } catch { return undefined; } }; },
+    get getExecutionGovernor() { return () => _container.get<IExecutionGovernor>('executionGovernor'); },
     debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
   }));
 

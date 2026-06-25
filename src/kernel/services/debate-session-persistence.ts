@@ -115,7 +115,17 @@ export async function loadActiveSession(
     const record = await debateStore.getSnapshot(ACTIVE_SESSION_ID);
     if (!record) return null;
     const session = recordToSession(record);
+    const zombieThreshold = 5 * 60 * 1000;
     if (session.status === 'active') {
+      if (Date.now() - record.updatedAt > zombieThreshold) {
+        session.status = 'failed';
+        LOGGER.warn('DebateSessionPersistence', 'Zombie session detected — auto-failing', {
+          sessionId: session.id, topic: session.topic, age: Date.now() - record.updatedAt,
+        });
+        session.consensus = 'Session timed out (zombie detected on reload)';
+        await debateStore.saveSnapshot(sessionToRecord(session));
+        return null;
+      }
       session.status = 'paused';
       await debateStore.saveSnapshot(sessionToRecord(session));
     }

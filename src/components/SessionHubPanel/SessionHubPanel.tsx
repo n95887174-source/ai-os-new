@@ -43,7 +43,7 @@ const emptyState: React.CSSProperties = {
 type SessionItem = {
   id: string; type: 'chat' | 'debate'; title: string; status: string;
   updatedAt: number; tags: string[]; folder?: string;
-  preview?: string; linkedCount: number;
+  preview?: string; linkedCount: number; linkedId?: string;
 };
 
 export const SessionHubPanel: React.FC = () => {
@@ -62,6 +62,7 @@ export const SessionHubPanel: React.FC = () => {
         id: s.id, type: 'chat', title: s.title, status: s.isArchived ? 'archived' : 'active',
         updatedAt: s.updatedAt ?? s.createdAt, tags: s.tags ?? [], folder: s.folder,
         preview: preview.slice(0, 100), linkedCount: s.linkedDebateId ? 1 : 0,
+        linkedId: s.linkedDebateId,
       });
     }
     for (const s of debateMeta) {
@@ -70,6 +71,7 @@ export const SessionHubPanel: React.FC = () => {
         updatedAt: s.updatedAt, tags: s.tags, folder: s.folder,
         preview: `R${s.round} · ${s.participants.length} agents · ${s.strategy}`,
         linkedCount: s.linkedSessionIds.length,
+        linkedId: s.linkedSessionIds[0],
       });
     }
     result.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -129,7 +131,16 @@ export const SessionHubPanel: React.FC = () => {
                   }}>{item.status}</span>
                   <span>{new Date(item.updatedAt).toLocaleDateString()}</span>
                   {item.folder && <span>📁 {item.folder}</span>}
-                  {item.linkedCount > 0 && <span style={{ color: '#8b5cf6' }}>🔗 {item.linkedCount}</span>}
+                  {item.linkedCount > 0 && item.linkedId && (
+                    <span
+                      style={{ color: '#8b5cf6', cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(item.type === 'chat' ? `/debate-runtime?sessionId=${item.linkedId}` : `/chat?session=${item.linkedId}`);
+                      }}
+                      title={item.type === 'chat' ? 'Open linked debate' : 'Open linked chat'}
+                    >🔗 {item.linkedCount}</span>
+                  )}
                 </div>
                 {item.tags.length > 0 && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>

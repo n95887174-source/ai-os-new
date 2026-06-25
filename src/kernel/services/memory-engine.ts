@@ -47,6 +47,9 @@ export interface MemoryServiceDeps {
     isEnabled: (flag: string) => boolean;
     onChange: (cb: (flag: string, enabled: boolean) => void) => () => void;
   };
+  executionGovernor?: {
+    start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): { complete(): void; fail(e: Error): void };
+  };
 }
 
 export class MemoryService implements IMemoryEngine {
@@ -307,6 +310,11 @@ export class MemoryService implements IMemoryEngine {
       const typ = e.metadata.type ?? 'generic';
       return { ...e, id: this.computeId(e.content, src, typ) } as MemoryEntry;
     });
+    const govOp = this.deps.executionGovernor?.start({
+      type: 'memory-index',
+      timeoutMs: 30_000,
+      metadata: { operation: 'storeBatch', count: newEntries.length },
+    });
     try {
       await Promise.all(newEntries.map(e => this.deps.database.db.memories.put(e)));
       this.memories = [...newEntries, ...this.memories];
@@ -323,7 +331,11 @@ export class MemoryService implements IMemoryEngine {
         }
       }).catch((e) => { LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e }); this.semanticReady = false; });
       this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-    } catch (e) { LOGGER.error('MemoryEngine', 'Batch store failed', { error: e }); }
+      govOp?.complete();
+    } catch (e) {
+      govOp?.fail(e instanceof Error ? e : new Error(String(e)));
+      LOGGER.error('MemoryEngine', 'Batch store failed', { error: e });
+    }
   }
 
   getMemories(limit?: number): MemoryEntry[] {
@@ -382,12 +394,21 @@ export class MemoryService implements IMemoryEngine {
     if (this.isDbReady && this.worker) {
       const useSemantic = mode === 'semantic' || (mode === 'auto' && this.semanticReady);
       if (useSemantic && this.semanticReady) {
+        const govOp = this.deps.executionGovernor?.start({
+          type: 'memory-index',
+          timeoutMs: this.PENDING_TIMEOUT_MS + 5000,
+          metadata: { operation: 'search_semantic', query: query.slice(0, 60) },
+        });
         try {
           const result = await this.sendToWorker('search_semantic', { query, limit });
+          govOp?.complete();
           return ((result.payload as { hits: (MemoryEntry & { score: number })[] }).hits || []).map(h => ({
             entry: h, score: h.score, matchedOn: 'semantic' as const,
           }));
-        } catch (e) { LOGGER.warn('MemoryEngine', 'Semantic search failed, falling back', { error: e }); }
+        } catch (e) {
+          govOp?.fail(e instanceof Error ? e : new Error(String(e)));
+          LOGGER.warn('MemoryEngine', 'Semantic search failed, falling back', { error: e });
+        }
       }
       try {
         const result = await this.sendToWorker('search', { query, limit });

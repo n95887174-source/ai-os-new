@@ -5,9 +5,8 @@ import {
   Thermometer, Zap, Brain, AlertCircle, Check, MessageSquare, Sliders,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { debateEngine } from '../../kernel/instances';
-import { cognitiveIntelligenceService } from '../../kernel/instances';
-import { orchestrator } from '../../kernel/instances';
+import { useNavigate } from 'react-router-dom';
+import { debateEngine, cognitiveIntelligenceService, orchestrator, sessionManager } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import { DebateRuntimeEvents } from '../../kernel/events/debate-runtime-events';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -164,6 +163,7 @@ function PhaseTimeline({ phase }: { phase: DebatePhase }) {
 
 const DebateRuntimePanel: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [sessions, setSessions] = useState<DebateSessionSnapshot[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -182,6 +182,7 @@ const DebateRuntimePanel: React.FC = () => {
   const [cognitiveMetrics, setCognitiveMetrics] = useState<CognitiveMetricsSnapshot | null>(null);
   const [cognitivePressure, setCognitivePressure] = useState<CognitivePressure | null>(null);
   const [diagnosticIssues, setDiagnosticIssues] = useState<CognitiveIssue[]>([]);
+  const [linkedChatIds, setLinkedChatIds] = useState<string[]>([]);
 
   const [availableNodes, setAvailableNodes] = useState<Array<{ id: string; label: string; provider?: string; model?: string; prompt?: string }>>([]);
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
@@ -220,7 +221,7 @@ const DebateRuntimePanel: React.FC = () => {
         setSelectedAgentIds(nodes.map(n => n.id));
       }
     } catch { /* container not ready */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useEffect(() => {
@@ -382,6 +383,15 @@ const DebateRuntimePanel: React.FC = () => {
   };
 
   const selected = sessions.find(s => s.id === selectedId) || null;
+
+  useEffect(() => {
+    if (!selectedId) { setLinkedChatIds([]); return; }
+    let cancelled = false;
+    sessionManager.getLinked(selectedId).then(links => {
+      if (!cancelled) setLinkedChatIds(links.map(l => l.fromId === selectedId ? l.toId : l.fromId));
+    }).catch(() => { if (!cancelled) setLinkedChatIds([]); });
+    return () => { cancelled = true; };
+  }, [selectedId]);
 
   return (
     <div style={debateRuntimeRoot}>
@@ -558,11 +568,16 @@ const DebateRuntimePanel: React.FC = () => {
       {selected && (
         <div style={purpleBorderSection}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
               {selected.topic}
               <span style={{ marginLeft: 8, fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: 4,
                 background: `${PHASE_COLORS[selected.phase]}20`, color: PHASE_COLORS[selected.phase],
               }}>{selected.phase}</span>
+              {linkedChatIds.map(linkedId => (
+                <button key={linkedId} onClick={(e) => { e.stopPropagation(); navigate(`/chat?session=${linkedId}`); }}
+                  style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                  title="Open linked chat">💬 Chat</button>
+              ))}
             </h3>
             <div style={flexGap2}>
               {(selected.phase === 'active' || selected.phase === 'deliberating') && (

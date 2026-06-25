@@ -28,11 +28,12 @@ export function useChatStoreHydration(): void {
       const state = useChatStore.getState();
       try {
         await sStore.syncSessions(state.sessions, [...state.deletedIds]);
-        if (state.deletedIds.size > 0) {
-          useChatStore.setState({ deletedIds: new Set() });
-        }
       } catch (e) {
         console.error('[ChatStore] Failed to sync to Dexie', e);
+      } finally {
+        if (useChatStore.getState().deletedIds.size > 0) {
+          useChatStore.setState({ deletedIds: new Set() });
+        }
       }
     };
 

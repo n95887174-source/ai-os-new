@@ -1,5 +1,6 @@
 import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
   Activity, ChevronRight, Package, ChevronDown, KeyRound,
@@ -377,6 +378,7 @@ const ChatPanel: React.FC = () => {
   const { confirm: confirmClear, ConfirmDialog: ClearConfirmDialog } = useConfirm();
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
+  const navigate = useNavigate();
   const [isSplitView, setIsSplitView] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -729,7 +731,8 @@ const ChatPanel: React.FC = () => {
 
   const groupedSessions = useMemo(() => groupSessions(filteredSessions, t), [filteredSessions, t]);
 
-  const activeSessionTitle = useMemo(() => sessions.find(s => s.id === activeSessionId)?.title ?? t('chat.default_session_title'), [sessions, activeSessionId, t]);
+  const activeSession = useMemo(() => sessions.find(s => s.id === activeSessionId), [sessions, activeSessionId]);
+  const activeSessionTitle = useMemo(() => activeSession?.title ?? t('chat.default_session_title'), [activeSession, t]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -911,6 +914,13 @@ const ChatPanel: React.FC = () => {
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} aria-hidden="true" />
                 {t('chat.engine_status').replace('{0}', String(activeKeys.length))}
               </div>
+              {activeSession?.linkedDebateId && (
+                <button
+                  onClick={() => navigate(`/debate-runtime?sessionId=${activeSession!.linkedDebateId}`)}
+                  style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: 8, background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', marginTop: 2 }}
+                  title="Open linked debate"
+                >🗣️ Debate</button>
+              )}
             </div>
           </div>
 

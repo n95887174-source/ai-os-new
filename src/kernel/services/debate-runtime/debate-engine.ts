@@ -67,6 +67,7 @@ interface DebateEngineDeps {
     update: (id: string, patch: Partial<{ flags: { authFailed: boolean } }>) => void;
   } | undefined;
   debateStore?: DebateStore;
+  getExecutionGovernor?: () => { start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): { complete(): void; fail(e: Error): void; signal: AbortSignal } };
 }
 
 const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
@@ -547,7 +548,26 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           { role: 'user', content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in ${session.language}.` },
         ];
 
-        const response = await adapter.sendMessage(messages, modelId, resolvedKey.key, controller.signal);
+        let govOp: { complete(): void; fail(e: Error): void } | undefined;
+        const gov = this.deps.getExecutionGovernor?.();
+        if (gov && resolvedKey) {
+          govOp = gov.start({
+            type: 'debate',
+            timeoutMs: DEBATE_TIMEOUT_MS + 5000,
+            metadata: { provider: resolvedKey.provider, model: modelId, sessionId, agentId: participant.agentId },
+          });
+          const onGovAbort = () => { if (!controller.signal.aborted) controller.abort(); };
+          (govOp as unknown as { signal: AbortSignal }).signal.addEventListener('abort', onGovAbort, { once: true });
+        }
+
+        let response: { content: string };
+        try {
+          response = await adapter.sendMessage(messages, modelId, resolvedKey.key, controller.signal);
+        } catch (e) {
+          govOp?.fail(e instanceof Error ? e : new Error(String(e)));
+          throw e;
+        }
+        govOp?.complete();
         const content = response.content;
         this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_CHUNK, {
           sessionId: session.id,

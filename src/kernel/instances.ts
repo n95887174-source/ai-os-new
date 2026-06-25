@@ -40,6 +40,7 @@ import type { FeatureFlagService } from './services/feature-flag-service';
 import type { ProbeService } from './services/probe-service';
 import type { SessionAffinityStore } from './services/session-affinity-store';
 import type { IAdapterRegistry } from './contracts/provider-adapter';
+import type { IExecutionGovernor } from './contracts/execution-governor';
 
 export { FREE_TIER_LIMITS };
 
@@ -103,6 +104,7 @@ export const featureFlagService = lazyService<FeatureFlagService>('featureFlagSe
 export const keyStateStore = lazyService<KeyStateStore>('keyStateStore');
 export const probeService = lazyService<ProbeService>('probeService');
 export const sessionAffinityStore = lazyService<SessionAffinityStore>('sessionAffinityStore');
+export const executionGovernor = lazyService<IExecutionGovernor>('executionGovernor');
 import type { PersonaService as PersonaServiceType } from './services/persona-service';
 export const personaService = lazyService<PersonaServiceType>('personaService');
 export const roleVersionService = lazyService<import('../kernel/services/role-version-service').RoleVersionService>('roleVersionService');
@@ -118,6 +120,10 @@ export const keyStateProjection = lazyService<KeyStateProjection>('keyStateProje
 import type { RouterProjection, ProjectedDecision } from './services/projections/router-projection';
 export type { ProjectedDecision };
 export const routerProjection = lazyService<RouterProjection>('routerProjection');
+
+// ── Session Manager ─────────────────────────────────────────────
+import type { ISessionManager } from './contracts/session-manager';
+export const sessionManager = lazyService<ISessionManager>('sessionManagerService');
 
 // ── Causal Debugger Layer ───────────────────────────────────────
 import type { ICausalScopeManager, CausalScope } from './contracts/causal-debugger';

@@ -4,7 +4,7 @@ import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../llm/core/types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
 import { runtime } from '../../kernel/runtime';
-import { memoryService, workspaceService, featureFlagService } from '../../kernel/instances';
+import { executionGovernor, memoryService, workspaceService, featureFlagService, sessionManager } from '../../kernel/instances';
 import { FEATURE_FLAGS } from '../../kernel/contracts/feature-flags';
 import type { ChatStoreShape, ChatEntry, ChatSession, ZustandSet, ZustandGet } from './types'
 import {
@@ -79,18 +79,22 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         return;
       }
       _sendLock = true;
-      try {
+      const govOp = executionGovernor.start({
+        type: 'send-message',
+        timeoutMs: 120_000,
+        metadata: { textPreview: text.slice(0, 80) },
+      });
       const requestId = `chat-${crypto.randomUUID()}`;
       const entryId = crypto.randomUUID();
       const sessionId = get().activeSessionId;
       const currentHistory = (get().sessions.find(s => s.id === sessionId)?.history ?? []).slice(0, MAX_HISTORY);
-
       const requestIdsToTrack: string[] = targets.length > 1
-        ? targets.map((t, i) => `${requestId}-${t.provider}-${t.keyId ?? i}`)
+        ? targets.map((_, idx) => `${requestId}-${idx}`)
         : [requestId];
-
+      try {
       if (get().isAnySending()) {
         console.warn('[ChatStore] sendMessage already in progress, ignored');
+        govOp.complete();
         return;
       }
       requestIdsToTrack.forEach(rid => get().addActiveRequestId(rid));
@@ -163,6 +167,15 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         recalledMemories: relatedMemories.map(m => ({ content: m.entry.content, score: m.score })),
       };
 
+      const sessBefore = get().sessions.find(s => s.id === sessionId);
+      const wouldExceed = (sessBefore?.history.length ?? 0) >= MAX_HISTORY;
+      if (wouldExceed) {
+        const lostCount = (sessBefore?.history.length ?? 0) - MAX_HISTORY + 1;
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: `Chat history limit (${MAX_HISTORY} entries) reached — ${lostCount} older message(s) will be removed from context.`,
+          type: 'warning',
+        });
+      }
       set(s => ({
         sessions: s.sessions.map(sess =>
           sess.id === sessionId
@@ -188,7 +201,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
           options: { temperature, maxTokens },
         });
       });
+      govOp.complete();
+    } catch (e) {
+      requestIdsToTrack.forEach(rid => get().removeActiveRequestId(rid));
+      govOp.fail(e instanceof Error ? e : new Error(String(e)));
+      throw e;
     } finally {
+      requestIdsToTrack.forEach(rid => get().removeActiveRequestId(rid));
       _sendLock = false;
     }
     },
@@ -231,24 +250,31 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
 
     clearHistory: () => uas(() => []),
 
-    createSession: (title = 'New Chat') => {
-      const id = crypto.randomUUID();
+    createSession: async (title = 'New Chat') => {
+      const id = await sessionManager.create('chat', { title }).catch(() => crypto.randomUUID());
       const newSession: ChatSession = { id, title, history: [], createdAt: Date.now(), updatedAt: Date.now() };
       set(s => ({ sessions: [newSession, ...s.sessions], activeSessionId: id }));
       return id;
     },
 
     deleteSession: (id) => {
+      sessionManager.delete(id).catch(() => {});
       set(s => {
+        const updated = new Set([...s.deletedIds, id]);
+        if (updated.size > 1000) {
+          const arr = [...updated];
+          updated.clear();
+          arr.slice(arr.length - 1000).forEach(x => updated.add(x));
+        }
         const filtered = s.sessions.filter(x => x.id !== id);
         if (filtered.length === 0) {
           const fresh: ChatSession = { id: 'default', title: 'New Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() };
-          return { sessions: [fresh], activeSessionId: 'default', deletedIds: new Set([...s.deletedIds, id]) };
+          return { sessions: [fresh], activeSessionId: 'default', deletedIds: updated };
         }
         if (s.activeSessionId === id) {
-          return { sessions: filtered, activeSessionId: filtered[0].id, deletedIds: new Set([...s.deletedIds, id]) };
+          return { sessions: filtered, activeSessionId: filtered[0].id, deletedIds: updated };
         }
-        return { sessions: filtered, deletedIds: new Set([...s.deletedIds, id]) };
+        return { sessions: filtered, deletedIds: updated };
       });
     },
 
