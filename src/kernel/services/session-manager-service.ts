@@ -4,13 +4,17 @@ import type { DatabaseService } from './database-service';
 import type { ISessionManager, SessionMeta, SessionType, SessionStatus, SessionFilters, SessionLink, DebateTimelineEntry, DebateOverride } from '../contracts/session-manager';
 import type { DebateSessionRecord } from '../contracts/storage/debate-store';
 import type { ChatSession } from '../contracts/storage/session-store';
+import type { IEventBus } from '../types/interfaces';
+import { EVENTS } from '../events/event-names';
 
 const LOGGER = rootLogger.child('SessionManagerService');
 
 export class SessionManagerService implements ISessionManager {
   private db: DatabaseService;
-  constructor(db: DatabaseService) {
+  private eventBus: IEventBus;
+  constructor(db: DatabaseService, eventBus: IEventBus) {
     this.db = db;
+    this.eventBus = eventBus;
   }
 
   async create(type: SessionType, meta: Partial<SessionMeta>): Promise<string> {
@@ -210,6 +214,10 @@ export class SessionManagerService implements ISessionManager {
   }
 
   async delete(id: string): Promise<void> {
+    const debate = await this.db.debateSessions.get(id);
+    const chat = debate ? null : await this.db.sessions.get(id);
+    const type: SessionType = debate ? 'debate' : chat ? 'chat' : 'chat';
+
     await Promise.all([
       this.db.debateSessions.delete(id).catch(() => {}),
       this.db.sessions.delete(id).catch(() => {}),
@@ -218,6 +226,8 @@ export class SessionManagerService implements ISessionManager {
       this.db.sessionLinks.where('fromId').equals(id).delete().catch(() => {}),
       this.db.sessionLinks.where('toId').equals(id).delete().catch(() => {}),
     ]);
+
+    this.eventBus.emit(EVENTS.SESSION_DELETED, { id, type });
   }
 
   async link(fromId: string, toId: string, linkType: SessionLink['linkType'], context = ''): Promise<void> {

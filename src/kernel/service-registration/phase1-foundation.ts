@@ -8,6 +8,7 @@
 import type { Phase } from './helpers';
 import type { IContainer } from '../container';
 import type { IEventBus, IDatabaseService, ISecurityService } from '../types/interfaces';
+import type { DatabaseService } from '../services/database-service';
 import type { StorageLayer, KeyStore } from '../contracts/storage/storage-layer';
 import type { SettingsServiceDeps } from '../services/settings-service';
 import { SettingsService } from '../services/settings-service';
@@ -138,7 +139,8 @@ export const registerPhase1: Phase = (helpers, ctx) => {
   })));
 
   register('sessionManagerService', new SessionManagerService(
-    get<IDatabaseService>('database') as ConstructorParameters<typeof SessionManagerService>[0],
+    get<DatabaseService>('database'),
+    get<IEventBus>('eventBus'),
   ));
 
   register('executionGovernor', new ExecutionGovernorService());

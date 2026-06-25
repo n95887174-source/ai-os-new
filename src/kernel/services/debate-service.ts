@@ -245,6 +245,14 @@ export class DebateService {
       this.verdictMap.set(payload.sessionId, payload.verdict);
     });
     void this.unsubVerdict; // suppress unused warning
+    this.unsubs.push(this.deps.eventBus.on(EVENTS.SESSION_DELETED, (data) => {
+      const payload = data as { id: string; type: string };
+      if (payload.type !== 'debate') return;
+      if (payload.id === this.runtimeSessionId || payload.id === this.activeSession?.id) {
+        LOGGER.info('DebateService', `Debate session ${payload.id} deleted — cancelling`);
+        this.stopDebate('cancelled');
+      }
+    }));
   }
 
   private async persistSession(): Promise<boolean> {
