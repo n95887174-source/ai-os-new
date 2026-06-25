@@ -929,8 +929,8 @@ const ChatPanel: React.FC = () => {
               <>
                 {/* ModelSwitcher */}
                 <div ref={modelDropdownRef} style={{ position: 'relative' }}>
-                  <button onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <button onClick={() => { if (!isSending) setShowModelDropdown(!showModelDropdown); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: isSending ? 'not-allowed' : 'pointer', opacity: isSending ? 0.4 : 1, whiteSpace: 'nowrap' }}>
                     <Zap size={12} /> {selectedModel || selectedKey?.availableModels?.[0] || 'model'}
                     <ChevronDown size={10} />
                   </button>
@@ -953,8 +953,8 @@ const ChatPanel: React.FC = () => {
 
                 {/* KeySwitcher */}
                 <div ref={keyDropdownRef} style={{ position: 'relative' }}>
-                  <button onClick={() => setShowKeyDropdown(!showKeyDropdown)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <button onClick={() => { if (!isSending) setShowKeyDropdown(!showKeyDropdown); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: isSending ? 'not-allowed' : 'pointer', opacity: isSending ? 0.4 : 1, whiteSpace: 'nowrap' }}>
                     <KeyRound size={12} /> {selectedKey?.label || 'key'}
                     <ChevronDown size={10} />
                   </button>

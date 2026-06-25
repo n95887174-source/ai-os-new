@@ -329,6 +329,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     switchModel: (provider, model) => {
+      if (get().isAnySending()) {
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: 'Cannot switch model while a message is being sent. Wait for completion.',
+          type: 'warning',
+        });
+        return;
+      }
       const sessionId = get().activeSessionId;
       const session = get().sessions.find(s => s.id === sessionId);
       const historyText = session?.history.map(h => h.text + h.responses.map(r => r.content).join('')).join('') || '';
@@ -357,6 +364,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     switchKey: (keyId) => {
+      if (get().isAnySending()) {
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: 'Cannot switch key while a message is being sent. Wait for completion.',
+          type: 'warning',
+        });
+        return;
+      }
       const sessionId = get().activeSessionId;
       set(s => ({
         sessions: s.sessions.map(x =>
