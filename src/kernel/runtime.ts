@@ -7,6 +7,7 @@ const LOGGER = rootLogger.child('Runtime');
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
 import { createSqliteStorage } from './services/storage/sqlite-storage';
+import { createDexieStorage } from './services/storage/dexie-storage';
 import { schedulerService } from './services/scheduler-service';
 import { DataAccessLayerImpl } from './dal/data-access-layer';
 import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
@@ -52,12 +53,14 @@ export class RuntimeManager {
 
       try {
         this.registerCoreServices();
-        const storage = await createSqliteStorage();
+        const { CONFIG } = await import('./services/config-registry');
+        const storage = CONFIG.storage?.useSqlite ? await createSqliteStorage() : createDexieStorage();
         LOGGER.info('Runtime', 'storage init state', {
           hasStorageLayer: !!storage,
           hasKeys: !!storage?.keys,
           keysType: typeof storage?.keys,
           hasListKeys: typeof storage?.keys?.listKeys === 'function',
+          storageBackend: CONFIG.storage?.useSqlite ? 'sqlite' : 'dexie',
         });
         this.container.register('storageLayer', storage);
         await this.bootstrapper.init();
