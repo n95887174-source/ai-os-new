@@ -93,6 +93,10 @@ export class KeyHealth implements IHealthCheckService {
     const keyRef = this.deps.getKey(keyId);
     if (!keyRef) return { id: 'none', provider: 'none', status: 'error', latency: 0 };
 
+    // Capture version before async work — if user toggles status while
+    // health check is in-flight, skip the status update to avoid TOCTOU race.
+    const versionAtStart = keyRef.statusVersion ?? 0;
+
     const start = performance.now();
     const healthUrl = this.getHealthUrl(keyRef.provider, keyRef.key);
     try {
@@ -106,11 +110,14 @@ export class KeyHealth implements IHealthCheckService {
       }
       const protectedStatuses = new Set(['compromised', 'quarantined']);
       const newStatus = protectedStatuses.has(keyRef.status) ? keyRef.status : (response.ok ? 'active' : 'error');
-      Object.assign(keyRef, { latency, status: newStatus });
+      // Only apply status if version hasn't changed (user didn't toggle during check)
+      if ((keyRef.statusVersion ?? 0) === versionAtStart) {
+        Object.assign(keyRef, { latency, status: newStatus });
+      } else {
+        Object.assign(keyRef, { latency });
+      }
       if (response.ok && keyRef.stats) {
-        keyRef.stats.avgLatency =
-          (keyRef.stats.avgLatency * (keyRef.stats.successCount || 1) + latency) /
-          (keyRef.stats.successCount + 1);
+        keyRef.stats.avgLatency = keyRef.stats.avgLatency * 0.7 + latency * 0.3;
       }
       await this.deps.saveKeys();
       this.deps.notify();
@@ -118,10 +125,15 @@ export class KeyHealth implements IHealthCheckService {
     } catch {
       const latency = performance.now() - start;
       this._healthCache.set(keyId, Date.now());
-      Object.assign(keyRef, { status: 'error' as const, latency });
+      // Only apply status if version hasn't changed
+      if ((keyRef.statusVersion ?? 0) === versionAtStart) {
+        Object.assign(keyRef, { status: 'error' as const, latency });
+      } else {
+        Object.assign(keyRef, { latency });
+      }
       await this.deps.saveKeys();
       this.deps.notify();
-      return { id: keyRef.id, provider: keyRef.provider, status: 'error', latency: -1 };
+      return { id: keyRef.id, provider: keyRef.provider, status: keyRef.status, latency: -1 };
     }
   }
 

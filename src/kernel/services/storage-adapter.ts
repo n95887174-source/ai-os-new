@@ -18,6 +18,48 @@ const LOGGER = rootLogger.child('BucketStorageAdapter');
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
 export type StorageBucket = typeof KNOWN_BUCKETS[number];
 
+const OBFUSCATION_PREFIX = 'xob:';
+
+function obfuscate(text: string): string {
+  const salt = 'b2c3d4e5f6g7h8a1';
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+  }
+  return btoa(result);
+}
+
+function deobfuscate(encoded: string): string | null {
+  try {
+    const text = atob(encoded);
+    const salt = 'b2c3d4e5f6g7h8a1';
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+      result += String.fromCharCode(text.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+function readRaw(key: string): string | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    if (raw.startsWith(OBFUSCATION_PREFIX)) {
+      return deobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
+    }
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+function writeRaw(key: string, value: string): void {
+  localStorage.setItem(key, OBFUSCATION_PREFIX + obfuscate(value));
+}
+
 export class BucketStorageAdapter {
   private readonly bucket: StorageBucket;
   private readonly prefix: string;
@@ -49,7 +91,7 @@ export class BucketStorageAdapter {
 
   async get<T>(key: string): Promise<T | undefined> {
     try {
-      const raw = localStorage.getItem(this.prefix + key);
+      const raw = readRaw(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
     } catch (e) {
       LOGGER.warn('BucketStorageAdapter', 'get failed', { bucket: this.bucket, key, error: e });
@@ -59,7 +101,7 @@ export class BucketStorageAdapter {
 
   async set<T>(key: string, value: T): Promise<void> {
     try {
-      localStorage.setItem(this.prefix + key, JSON.stringify(value));
+      writeRaw(this.prefix + key, JSON.stringify(value));
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         eventBus.emit(EVENTS.NOTIFICATION, {
@@ -96,7 +138,7 @@ export class BucketStorageAdapter {
 
   getSync<T>(key: string): T | undefined {
     try {
-      const raw = localStorage.getItem(this.prefix + key);
+      const raw = readRaw(this.prefix + key);
       return raw ? (JSON.parse(raw) as T) : undefined;
     } catch (e) {
       LOGGER.warn('BucketStorageAdapter', 'getSync failed', { bucket: this.bucket, key, error: e });
@@ -106,7 +148,7 @@ export class BucketStorageAdapter {
 
   setSync<T>(key: string, value: T): void {
     try {
-      localStorage.setItem(this.prefix + key, JSON.stringify(value));
+      writeRaw(this.prefix + key, JSON.stringify(value));
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         throw e;

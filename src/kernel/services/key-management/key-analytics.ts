@@ -179,9 +179,7 @@ export class KeyAnalytics implements IKeyAnalyticsService {
       key.stats.successCount++;
 
       if (res.latency) {
-        key.stats.avgLatency =
-          (key.stats.avgLatency * (key.stats.successCount - 1) + res.latency) /
-          key.stats.successCount;
+        key.stats.avgLatency = key.stats.avgLatency * 0.7 + res.latency * 0.3;
         key.latency = res.latency;
         latencyBreakdown.total = res.latency;
         if (res.ttft) latencyBreakdown.ttft = res.ttft;

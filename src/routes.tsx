@@ -41,6 +41,9 @@ const BookmarksPanel = React.lazy(() => import('./components/BookmarksPanel'));
 const ChatExportPanel = React.lazy(() => import('./components/ChatExportPanel'));
 const DebateAnalysisPanel = React.lazy(() => import('./components/DebateAnalysisPanel'));
 const TopicSuggesterPanel = React.lazy(() => import('./components/TopicSuggesterPanel'));
+const DebatesManagerPanel = React.lazy(() => import('./components/DebatesManager/DebatesManagerPanel'));
+const ChatSessionsManagerPanel = React.lazy(() => import('./components/ChatSessionsManager/ChatSessionsManagerPanel'));
+const SessionHubPanel = React.lazy(() => import('./components/SessionHubPanel/SessionHubPanel'));
 const KeyNotesPanel = React.lazy(() => import('./components/KeyNotesPanel'));
 const AgentJournalPanel = React.lazy(() => import('./components/AgentJournalPanel'));
 const DecisionLogPanel = React.lazy(() => import('./components/DecisionLogPanel'));
@@ -183,6 +186,9 @@ export const AppRoutes: React.FC = () => {
       <Route path="/bookmarks" element={<PanelLoader name="Bookmarks"><BookmarksPanel /></PanelLoader>} />
       <Route path="/chat-export" element={<PanelLoader name="ChatExport"><ChatExportPanel /></PanelLoader>} />
       <Route path="/debate-analysis" element={<PanelLoader name="DebateAnalysis"><DebateAnalysisPanel /></PanelLoader>} />
+      <Route path="/debates-manager" element={<PanelLoader name="DebatesManager"><DebatesManagerPanel /></PanelLoader>} />
+      <Route path="/chat-sessions" element={<PanelLoader name="ChatSessions"><ChatSessionsManagerPanel /></PanelLoader>} />
+      <Route path="/session-hub" element={<PanelLoader name="SessionHub"><SessionHubPanel /></PanelLoader>} />
       <Route path="/strategy-builder" element={<PanelLoader name="StrategyBuilder"><DebateStrategyBuilderPanel /></PanelLoader>} />
       <Route path="/topics" element={<PanelLoader name="Topics"><TopicSuggesterPanel /></PanelLoader>} />
       <Route path="/topic-suggester" element={<PanelLoader name="TopicSuggester"><TopicSuggesterPanel /></PanelLoader>} />

@@ -7,6 +7,7 @@ import type { ExecutionTrace } from '../contracts/observability';
 import type { Role } from '../types/role-types';
 import { MemoryEntrySchema, CognitiveTraceSchema, ChatSessionSchema, KeyNoteSchema, RoleSchema, ExecutionTraceSchema, CognitiveSkillSchema, ConnectorSchema, KeyValueSchema, ApiKeySchema } from '../../types/schemas';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
+import type { DebateTimelineEntry, DebateOverride, SessionLink } from '../contracts/session-manager';
 
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('DatabaseService');
@@ -40,6 +41,10 @@ export class SuperAgentsDB extends Dexie {
   keyValue!: Table<{ id: string; value: unknown; createdAt?: number }>;
   debateSessions!: Table<DebateSessionRecord>;
   debateVerdicts!: Table<DebateVerdictRecord>;
+
+  debateTimeline!: Table<DebateTimelineEntry>;
+  debateOverrides!: Table<DebateOverride>;
+  sessionLinks!: Table<SessionLink>;
 
   // Event log for event-sourcing persistence
   eventLog!: Table<RecordedEventRow>;
@@ -146,6 +151,116 @@ export class SuperAgentsDB extends Dexie {
       debateSessions: 'id, phase, updatedAt',
       debateVerdicts: 'sessionId',
       eventLog: '++id, sequence, event, timestamp',
+    });
+
+    this.version(11).stores({
+      notes: 'id, keyId, type, timestamp',
+      memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+      apiKeys: 'id, provider, status',
+      sessions: 'id, title, updatedAt',
+      roles: 'id, name, metadata.category',
+      cognitiveTraces: 'id, traceId, startTime, status',
+      traces: 'id, startTime, status',
+      skills: 'id, name, category, status',
+      connectors: 'id, name, type, status',
+      keyValue: 'id, createdAt',
+      debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+      debateVerdicts: 'sessionId',
+      debateTimeline: 'id, sessionId, timestamp, type',
+      debateOverrides: 'id, sessionId, appliedAt',
+      sessionLinks: 'id, fromId, toId, linkType',
+      eventLog: '++id, sequence, event, timestamp',
+    }).upgrade(async (tx) => {
+      const debateTable = tx.table('debateSessions');
+      const kvTable = tx.table('keyValue');
+      const ACTIVE_SESSION_ID = '__debate_active_session__';
+      const HISTORY_LIST_ID = '__debate_history_list__';
+
+      const oldActive = await debateTable.get(ACTIVE_SESSION_ID);
+      if (oldActive) {
+        await debateTable.put({ ...oldActive, tags: [], folder: '', isArchived: false });
+        await debateTable.delete(ACTIVE_SESSION_ID);
+        await debateTable.put({ ...oldActive, tags: [], folder: '', isArchived: false });
+      }
+
+      const oldHistory = await debateTable.get(HISTORY_LIST_ID);
+      if (oldHistory) {
+        try {
+          const sessions = JSON.parse(oldHistory.arguments || '[]');
+          if (Array.isArray(sessions)) {
+            for (const s of sessions) {
+              const record: Record<string, unknown> = {
+                id: s.id || crypto.randomUUID(),
+                topic: s.topic || '(untitled)',
+                topologyType: s.strategy || 'roundtable',
+                phase: s.status || 'completed',
+                round: s.currentRound || 0,
+                totalTokens: s.totalTokens ?? 0,
+                totalCost: s.totalCost ?? 0,
+                agentStates: JSON.stringify(s.arguments?.map((a: Record<string, unknown>) => ({
+                  agentId: a.agentId,
+                  nodeId: a.agentName,
+                  phase: 'idle',
+                  round: a.round,
+                  tokensUsed: 0,
+                  latency: 0,
+                  lastActiveAt: a.timestamp,
+                })) || []),
+                arguments: JSON.stringify(s.arguments || []),
+                topology: '{}',
+                participants: JSON.stringify(s.participants || []),
+                startedAt: s.createdAt ?? Date.now(),
+                updatedAt: Date.now(),
+                createdAt: s.createdAt ?? Date.now(),
+                tags: s.tags ?? [],
+                folder: s.folder ?? '',
+                isArchived: true,
+              };
+              await debateTable.put(record);
+            }
+          }
+        } catch (e) {
+          LOGGER.warn('DatabaseService', 'v11 migration: failed to parse history list', { error: e });
+        }
+        await debateTable.delete(HISTORY_LIST_ID);
+      }
+
+      const legacyKv = await kvTable.get('debate_session');
+      if (legacyKv?.value && typeof legacyKv.value === 'object') {
+        const s = legacyKv.value as Record<string, unknown>;
+        const record: Record<string, unknown> = {
+          id: (s.id as string) || crypto.randomUUID(),
+          topic: s.topic || '(untitled)',
+          topologyType: (s as Record<string, string>).strategy || 'roundtable',
+          phase: (s as Record<string, string>).status || 'completed',
+          round: (s as Record<string, number>).currentRound || 0,
+          totalTokens: (s as Record<string, number>).totalTokens ?? 0,
+          totalCost: (s as Record<string, number>).totalCost ?? 0,
+          agentStates: '[]',
+          arguments: JSON.stringify((s as Record<string, unknown[]>).arguments || []),
+          topology: '{}',
+          participants: JSON.stringify((s as Record<string, unknown[]>).participants || []),
+          startedAt: (s as Record<string, number>).createdAt ?? Date.now(),
+          updatedAt: Date.now(),
+          createdAt: (s as Record<string, number>).createdAt ?? Date.now(),
+          tags: [],
+          folder: '',
+          isArchived: true,
+        };
+        await debateTable.put(record);
+        await kvTable.delete('debate_session');
+      }
+
+      const existingAll = await debateTable.toArray();
+      for (const rec of existingAll) {
+        if (rec.tags === undefined || rec.folder === undefined || rec.isArchived === undefined) {
+          await debateTable.update(rec.id, {
+            tags: (rec as Record<string, unknown>).tags ?? [],
+            folder: (rec as Record<string, unknown>).folder ?? '',
+            isArchived: (rec as Record<string, unknown>).isArchived ?? false,
+          });
+        }
+      }
     });
 
     /**
@@ -261,6 +376,7 @@ export class SuperAgentsDB extends Dexie {
       { v: 8, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt' } },
       { v: 9, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt', debateSessions: 'id, phase, updatedAt', debateVerdicts: 'sessionId' } },
       { v: 10, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt', debateSessions: 'id, phase, updatedAt', debateVerdicts: 'sessionId', eventLog: '++id, sequence, event, timestamp' } },
+      { v: 11, tables: { notes: 'id, keyId, type, timestamp', memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]', apiKeys: 'id, provider, status', sessions: 'id, title, updatedAt', roles: 'id, name, metadata.category', cognitiveTraces: 'id, traceId, startTime, status', traces: 'id, startTime, status', skills: 'id, name, category, status', connectors: 'id, name, type, status', keyValue: 'id, createdAt', debateSessions: 'id, phase, updatedAt, topic, folder, isArchived', debateVerdicts: 'sessionId', debateTimeline: 'id, sessionId, timestamp, type', debateOverrides: 'id, sessionId, appliedAt', sessionLinks: 'id, fromId, toId, linkType', eventLog: '++id, sequence, event, timestamp' } },
     ];
 
     for (let i = 1; i < versionDefs.length; i++) {
@@ -351,6 +467,9 @@ export class DatabaseService {
   get keyValue() { return dexieDb.keyValue; }
   get debateSessions() { return dexieDb.debateSessions; }
   get debateVerdicts() { return dexieDb.debateVerdicts; }
+  get debateTimeline() { return dexieDb.debateTimeline; }
+  get debateOverrides() { return dexieDb.debateOverrides; }
+  get sessionLinks() { return dexieDb.sessionLinks; }
   get eventLog() { return dexieDb.eventLog; }
   get db() { return dexieDb; }
 
@@ -371,7 +490,7 @@ export class DatabaseService {
 
   async exportToJson(includeSecrets = false): Promise<Record<string, unknown[]>> {
     // AUDIT FIX: Include debateSessions, debateVerdicts, eventLog (were missing)
-    const [notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue, debateSessions, debateVerdicts, eventLog] = await Promise.all([
+    const [notes, memories, apiKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue, debateSessions, debateVerdicts, debateTimeline, debateOverrides, sessionLinks, eventLog] = await Promise.all([
       dexieDb.notes.toArray(),
       dexieDb.memories.toArray(),
       dexieDb.apiKeys.toArray(),
@@ -384,6 +503,9 @@ export class DatabaseService {
       dexieDb.keyValue.toArray(),
       dexieDb.debateSessions.toArray(),
       dexieDb.debateVerdicts.toArray(),
+      dexieDb.debateTimeline.toArray(),
+      dexieDb.debateOverrides.toArray(),
+      dexieDb.sessionLinks.toArray(),
       dexieDb.eventLog.toArray(),
     ]);
     const exportedKeys = includeSecrets
@@ -392,7 +514,7 @@ export class DatabaseService {
           ...k,
           key: k.key.length > 8 ? k.key.slice(0, 4) + '****' + k.key.slice(-4) : '****',
         }));
-    return { notes, memories, apiKeys: exportedKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue, debateSessions, debateVerdicts, eventLog };
+    return { notes, memories, apiKeys: exportedKeys, sessions, roles, cognitiveTraces, traces, skills, connectors, keyValue, debateSessions, debateVerdicts, debateTimeline, debateOverrides, sessionLinks, eventLog };
   }
 
   async importFromJson(data: Record<string, unknown[]>): Promise<void> {
@@ -410,6 +532,9 @@ export class DatabaseService {
       keyValue: dexieDb.keyValue,
       debateSessions: dexieDb.debateSessions,
       debateVerdicts: dexieDb.debateVerdicts,
+      debateTimeline: dexieDb.debateTimeline,
+      debateOverrides: dexieDb.debateOverrides,
+      sessionLinks: dexieDb.sessionLinks,
       eventLog: dexieDb.eventLog,
     };
     const tables = Object.values(tableMap);

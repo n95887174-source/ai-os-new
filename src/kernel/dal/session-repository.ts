@@ -7,7 +7,7 @@
 import type { DatabaseService } from '../services/database-service';
 import type { ChatSession } from '../contracts/storage/session-store';
 
-const MAX_SESSIONS = 100;
+const MAX_SESSIONS = 500;
 
 export class SessionRepository {
   private cache: Map<string, ChatSession> = new Map();

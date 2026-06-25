@@ -17,6 +17,9 @@ export interface DebateSessionRecord {
   startedAt: number;
   updatedAt: number;
   createdAt: number;
+  tags?: string[];
+  folder?: string;
+  isArchived?: boolean;
 }
 
 export interface DebateVerdictRecord {

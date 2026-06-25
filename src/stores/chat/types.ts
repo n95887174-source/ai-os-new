@@ -29,6 +29,11 @@ export interface ChatSession {
   createdAt: number;
   updatedAt: number;
   tags?: string[];
+  folder?: string;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  summary?: string;
+  linkedDebateId?: string;
   currentProvider?: string;
   currentModel?: string;
   currentKeyId?: string;
@@ -80,6 +85,11 @@ export interface ChatActions {
   deleteSession: (id: string) => void;
   forkSession: (entryId: string, newTitle?: string) => void;
   renameSession: (id: string, title: string) => void;
+  archiveSession: (id: string) => void;
+  unarchiveSession: (id: string) => void;
+  tagSession: (id: string, tags: string[]) => void;
+  moveToFolder: (id: string, folder: string) => void;
+  pinSession: (id: string) => void;
   importSessions: (importedSessions: ChatSession[]) => void;
   switchModel: (provider: string, model: string) => void;
   switchKey: (keyId: string) => void;

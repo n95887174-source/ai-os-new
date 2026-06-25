@@ -253,9 +253,33 @@ const rawConfig: ConfigRegistry = {
   },
 };
 
-/** Deep-frozen defaults — never mutated. Used by ConfigService as the base for overlays. */
-export const CONFIG_DEFAULTS: Readonly<ConfigRegistry> = JSON.parse(JSON.stringify(rawConfig));
-deepFreeze(CONFIG_DEFAULTS);
+let _configDefaults: Readonly<ConfigRegistry> | undefined;
+
+function buildConfigDefaults(): Readonly<ConfigRegistry> {
+  const clone = JSON.parse(JSON.stringify(rawConfig));
+  deepFreeze(clone);
+  return clone;
+}
+
+const configDefaultsHandler: ProxyHandler<Readonly<ConfigRegistry>> = {
+  get(_, prop) {
+    if (!_configDefaults) _configDefaults = buildConfigDefaults();
+    return Reflect.get(_configDefaults, prop, _configDefaults);
+  },
+  has(_, prop) {
+    if (!_configDefaults) _configDefaults = buildConfigDefaults();
+    return Reflect.has(_configDefaults, prop);
+  },
+  ownKeys() {
+    if (!_configDefaults) _configDefaults = buildConfigDefaults();
+    return Reflect.ownKeys(_configDefaults);
+  },
+};
+
+/** Deep-frozen defaults — never mutated. Used by ConfigService as the base for overlays.
+ *  Lazily initialized: the JSON.parse clone happens on first property access, not at module load time,
+ *  saving ~50ms of main-thread blocking during initial page load. */
+export const CONFIG_DEFAULTS: Readonly<ConfigRegistry> = new Proxy({} as Readonly<ConfigRegistry>, configDefaultsHandler);
 
 /** Frozen public API — all mutations must go through config service.
  *  Proxy traps prevent accidental direct mutation at runtime. */

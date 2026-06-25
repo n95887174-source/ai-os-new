@@ -351,6 +351,7 @@ const ChatPanel: React.FC = () => {
   const setSystemPrompt = useChatStore(s => s.setSystemPrompt);
   const isSending = useChatStore(s => s.activeRequestIds.size > 0);
   const history = useActiveSessionHistory();
+  const historyMap = useMemo(() => new Map(history.map(h => [h.id, h])), [history]);
   
   const [mode, setMode] = useState<ExecutionMode>('single');
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
@@ -585,7 +586,7 @@ const ChatPanel: React.FC = () => {
   }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, history, activeSessionId, getSessionConfig, t]);
 
   const handleRegenerate = useCallback(async (entryId: string) => {
-    const entry = history.find(h => h.id === entryId);
+    const entry = historyMap.get(entryId);
     if (!entry || !entry.text) return;
     if (!isMountedRef.current) return;
     setError(null);
@@ -619,7 +620,7 @@ const ChatPanel: React.FC = () => {
       console.warn('[ChatPanel] Failed to regenerate response:', e);
       if (isMountedRef.current) { setError(t('chat.error_regenerate')); clearError(); }
     }
-  }, [history, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, getSessionConfig, t]);
+  }, [historyMap, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, getSessionConfig, t]);
 
   const handleCreateSession = useCallback(() => {
     try { createSession(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to create session:', e); setError(t('chat.error_create_session')); clearError(); }
@@ -697,14 +698,14 @@ const ChatPanel: React.FC = () => {
   const saveEditing = useCallback(() => {
     const id = editingEntryIdRef.current;
     if (!id || !editingText.trim()) return;
-    const prevText = history.find(h => h.id === id)?.text || '';
+    const prevText = historyMap.get(id)?.text || '';
     lastEditedEntryIdRef.current = id;
     editEntry(id, editingText.trim());
     cancelEditing();
     setUndoText(prevText);
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     undoTimerRef.current = setTimeout(() => { setUndoText(null); undoTimerRef.current = null; }, 5000);
-  }, [editingText, editEntry, cancelEditing, history]);
+  }, [editingText, editEntry, cancelEditing, historyMap]);
 
   const handleUndoEdit = useCallback(() => {
     const text = undoText;

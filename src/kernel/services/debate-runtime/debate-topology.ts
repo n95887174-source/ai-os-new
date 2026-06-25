@@ -27,6 +27,42 @@ export class DebateTopologyService implements ITopologyService {
       edgeKeys.add(key);
     }
 
+    // Type-specific validations
+    if (topology.type === 'judge') {
+      const hasJudge = topology.nodes.some(n => n.role === 'judge');
+      if (!hasJudge) return false;
+    }
+
+    if (topology.type === 'red-blue') {
+      const hasAttacker = topology.nodes.some(n => n.role === 'attacker');
+      const hasDefender = topology.nodes.some(n => n.role === 'defender');
+      if (!hasAttacker || !hasDefender) return false;
+    }
+
+    // Detect disconnected subgraphs for linear/tree-of-thought
+    if (topology.type === 'linear' || topology.type === 'tree-of-thought') {
+      const reachable = new Set<string>();
+      const adj = new Map<string, string[]>();
+      for (const id of nodeIds) adj.set(id, []);
+      for (const edge of topology.edges) {
+        adj.get(edge.from)?.push(edge.to);
+        adj.get(edge.to)?.push(edge.from);
+      }
+      // BFS from first node
+      const queue = [topology.nodes[0].id];
+      reachable.add(topology.nodes[0].id);
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        for (const next of adj.get(current) || []) {
+          if (!reachable.has(next)) {
+            reachable.add(next);
+            queue.push(next);
+          }
+        }
+      }
+      if (reachable.size !== nodeIds.size) return false;
+    }
+
     return true;
   }
 

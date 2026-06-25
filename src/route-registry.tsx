@@ -66,6 +66,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'chat',           labelKey: 'nav.chat',           icon: <MessageSquare size={18} />, color: '#10b981' },
       { id: 'message-search', labelKey: 'nav.message_search',  icon: <Search size={18} />,        color: '#06b6d4', lazy: true },
       { id: 'chat-export',    labelKey: 'nav.chat_export',    icon: <FileText size={18} />,      color: '#10b981', lazy: true },
+      { id: 'chat-sessions', labelKey: 'nav.chat_sessions',  icon: <FolderTree size={18} />,    color: '#06b6d4', lazy: true },
+      { id: 'session-hub',   labelKey: 'nav.session_hub',    icon: <LayoutDashboard size={18} />, color: '#8b5cf6', lazy: true },
     ],
   },
 
@@ -117,6 +119,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'strategy-builder', labelKey: 'nav.strategy_builder', icon: <GitMerge size={18} />,         color: '#06b6d4', lazy: true },
       { id: 'debate-analysis', labelKey: 'nav.debate_analysis',   icon: <Brain size={18} />,           color: '#a855f7', lazy: true },
       { id: 'debate-history',  labelKey: 'nav.debate_history',    icon: <History size={18} />,          color: '#6b7280', lazy: true },
+      { id: 'debates-manager', labelKey: 'nav.debates_manager',    icon: <FolderTree size={18} />,       color: '#8b5cf6', lazy: true },
       { id: 'topics',          labelKey: 'nav.topics',             icon: <Sparkles size={18} />,         color: '#a855f7', lazy: true },
     ],
   },

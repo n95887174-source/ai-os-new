@@ -74,6 +74,8 @@ export class ChatService {
   private activeRequests = new Map<string, AbortController>();
   private unsubs: Array<() => void> = [];
   private executingMessages = new Set<string>();
+  /** Cache-key-level inflight dedup — prevents duplicate LLM calls for identical prompts. */
+  private cacheInflight = new Map<string, Promise<void>>();
 
   constructor(deps: ChatServiceDeps) {
     this.deps = deps;
@@ -257,6 +259,42 @@ export class ChatService {
         return;
       }
 
+      // Cache-level inflight dedup: if another request is already fetching this
+      // cache key, wait for it and return the cached result — prevents duplicate
+      // LLM calls for identical prompts (cache read-while-write race).
+      const inflight = this.cacheInflight.get(cacheKey);
+      if (inflight) {
+        await inflight;
+        const nowCached = this.deps.cacheService.get(cacheKey);
+        if (nowCached) {
+          const cachedLatency = Date.now() - cacheStart;
+          this.deps.logger.info('ChatService', `Cache inflight hit for ${cacheKey} (${nowCached.model})`, { cacheKey, model: nowCached.model, latency: cachedLatency });
+          if (settings.streamingEnabled) {
+            this.deps.eventBus.emit(EVENTS.STREAM_START, { requestId, provider, model: resolvedModel, keyId: keyObj.id });
+            this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, { requestId, provider, chunk: nowCached.response, keyId: keyObj.id });
+            this.deps.eventBus.emit(EVENTS.STREAM_END, {
+              requestId, provider, model: resolvedModel, keyId: keyObj.id,
+              fullContent: nowCached.response, latency: cachedLatency, ttft: undefined, tps: (nowCached.completionTokens || 0) / Math.max(cachedLatency, 1) * 1000,
+            });
+          } else {
+            this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+              id: crypto.randomUUID(), requestId, provider, model: resolvedModel, keyId: keyObj.id,
+              content: nowCached.response, latency: cachedLatency, status: 'done',
+              tokens: nowCached.promptTokens + nowCached.completionTokens,
+              ttft: undefined,
+            });
+          }
+          return;
+        }
+      }
+
+      // Register this request in cacheInflight so duplicate cache keys await
+      // the result instead of making a parallel LLM call (cache read-while-write race).
+      let resolveInflight!: () => void;
+      let rejectInflight!: (e: unknown) => void;
+      const inflightPromise = new Promise<void>((res, rej) => { resolveInflight = res; rejectInflight = rej; });
+      this.cacheInflight.set(cacheKey, inflightPromise);
+
       // Derived per-attempt controller chained to session-level controller
       const attemptController = new AbortController();
       const onSessionAbort = () => attemptController.abort();
@@ -336,6 +374,8 @@ export class ChatService {
           this.deps.keyService.recordUsage(provider, latency, tokens, resolvedModel, { ttft, tps });
           this.deps.budgetService?.recordSpend(agentId || null, provider, (tokens || 0) * 0.000002);
           this.deps.cacheService.set(cacheKey, fullContent, resolvedModel, provider, estimateTokens(promptText), tokens);
+          resolveInflight();
+          this.cacheInflight.delete(cacheKey);
         } else {
           session?.activate();
 
@@ -383,8 +423,12 @@ export class ChatService {
           this.deps.budgetService?.recordSpend(agentId || null, provider, (response.tokens || 0) * 0.000002);
           const outputTokens = typeof response.tokens === 'number' ? response.tokens : 0;
           this.deps.cacheService.set(cacheKey, response.content, resolvedModel, provider, estimateTokens(promptText), outputTokens);
+          resolveInflight();
+          this.cacheInflight.delete(cacheKey);
         }
       } catch (error: unknown) {
+        rejectInflight?.(error);
+        this.cacheInflight.delete(cacheKey);
         session?.fail(error instanceof Error ? error.message : String(error));
         if (timedOut) {
           if (settings.streamingEnabled) {

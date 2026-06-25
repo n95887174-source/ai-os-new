@@ -120,14 +120,19 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         ? await workspaceService.getFileTreeSnapshot()
         : null;
 
+      const sanitize = (content: string): string => content
+        .replace(/```[\s\S]*?```/g, '[code removed]')
+        .replace(/\b(system|SYSTEM|System)\s*:/g, '[filtered]:')
+        .replace(/^.*?(IMPORTANT NEW|IGNORE ALL|OVERRIDE|DISREGARD|You are now|From now on|New instructions)/gmi, '[filtered]');
+
       const messages: ChatMessage[] = [
-        ...(systemPromptArg ? [{ role: 'system' as const, content: systemPromptArg }] : []),
-        ...(workspaceContext ? [{ role: 'system' as const, content: `[WORKSPACE FILES]\n${workspaceContext}\n\nYou can read any file by asking me to use the read_file tool.` }] : []),
+        ...(systemPromptArg ? [{ role: 'system' as const, content: sanitize(systemPromptArg) }] : []),
+        ...(workspaceContext ? [{ role: 'system' as const, content: sanitize(`[WORKSPACE FILES]\n${workspaceContext}\n\nYou can read any file by asking me to use the read_file tool.`) }] : []),
         ...currentHistory.flatMap(h => [
-          { role: 'user' as const, content: h.text },
-          ...h.responses.filter(r => r.status === 'done').map(r => ({ role: 'assistant' as const, content: r.content })),
+          { role: 'user' as const, content: sanitize(h.text) },
+          ...h.responses.filter(r => r.status === 'done').map(r => ({ role: 'assistant' as const, content: sanitize(r.content) })),
         ]),
-        { role: 'user' as const, content: contextPrefix + text },
+        { role: 'user' as const, content: sanitize(contextPrefix + text) },
       ];
 
       const loadingResponses: ChatResponse[] = targets.map((t, idx) => ({
@@ -249,6 +254,26 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
 
     renameSession: (id, title) => {
       set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, title } : x) }));
+    },
+
+    archiveSession: (id) => {
+      set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, isArchived: true } : x) }));
+    },
+
+    unarchiveSession: (id) => {
+      set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, isArchived: false } : x) }));
+    },
+
+    tagSession: (id, tags) => {
+      set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, tags } : x) }));
+    },
+
+    moveToFolder: (id, folder) => {
+      set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, folder } : x) }));
+    },
+
+    pinSession: (id) => {
+      set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, isPinned: !x.isPinned } : x) }));
     },
 
     importSessions: (imported) => {

@@ -1,7 +1,7 @@
 import { AuthError, RetryableError, LLMError } from '../core/errors';
 
 export function sanitizeError(text: string): string {
-  return text.replace(/(sk-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|gsk_[a-zA-Z0-9]{30,}|nvapi-[a-zA-Z0-9_-]{30,}|hf_[a-zA-Z0-9]{30,}|pplx-[a-zA-Z0-9]{30,}|cf-[a-zA-Z0-9]{30,}|xai-[a-zA-Z0-9]{30,})/g, '[KEY REDACTED]');
+  return text.replace(/(sk-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{35,}|gsk_[a-zA-Z0-9]{30,}|nvapi-[a-zA-Z0-9_-]{30,}|hf_[a-zA-Z0-9]{30,}|pplx-[a-zA-Z0-9]{30,}|cf-[a-zA-Z0-9]{30,}|xai-[a-zA-Z0-9]{30,})/g, '[KEY REDACTED]');
 }
 
 export function sanitizeApiKey(key: string): string {
@@ -10,10 +10,9 @@ export function sanitizeApiKey(key: string): string {
 }
 
 // Regex patterns for API key formats
-// Reset lastIndex before each use to avoid /g stale state
 const API_KEY_PATTERNS = [
   /sk-[a-zA-Z0-9]{20,}/,
-  /AIza[0-9A-Za-z_-]{35}/,
+  /AIza[0-9A-Za-z_-]{35,}/,
   /gsk_[a-zA-Z0-9]{30,}/,
   /nvapi-[a-zA-Z0-9_-]{30,}/,
   /hf_[a-zA-Z0-9]{30,}/,
@@ -21,6 +20,8 @@ const API_KEY_PATTERNS = [
   /cf-[a-zA-Z0-9]{30,}/,
   /xai-[a-zA-Z0-9]{30,}/,
 ];
+
+const SENSITIVE_KEY_RE = /^(key|token|secret|password|api_key|apiKey)$/i;
 
 export function sanitizeObject(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
@@ -37,8 +38,7 @@ export function sanitizeObject(obj: unknown): unknown {
   if (typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
-      // Skip properties that are likely to contain API keys
-      if (key.toLowerCase().includes('key') || key.toLowerCase().includes('token') || key.toLowerCase().includes('secret') || key.toLowerCase().includes('password')) {
+      if (SENSITIVE_KEY_RE.test(key)) {
         result[key] = '[REDACTED]';
       } else {
         result[key] = sanitizeObject(value);

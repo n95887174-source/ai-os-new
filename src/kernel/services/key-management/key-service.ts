@@ -512,6 +512,7 @@ export class KeyService {
   updateKeyStatus(id: string, status: ApiKey['status'], latency?: number) {
     const key = this.registry.getKey(id);
     if (key) {
+      key.statusVersion = (key.statusVersion ?? 0) + 1;
       const prev = key.status;
       this.health.updateKeyStatus(key, status, latency);
       this.registry.pushHistory(id, 'status_changed', `${prev} > ${status}`);
@@ -544,6 +545,7 @@ export class KeyService {
   async toggleKeyStatus(id: string) {
     const key = this.registry.getKey(id);
     if (key) {
+      key.statusVersion = (key.statusVersion ?? 0) + 1;
       const prev = key.status;
       this.health.toggleKeyStatus(key);
       this.registry.pushHistory(id, 'status_changed', `${prev} > ${key.status}`);

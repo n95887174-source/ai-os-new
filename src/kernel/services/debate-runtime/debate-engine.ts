@@ -105,10 +105,21 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
   async init(): Promise<void> {}
   private _started = false;
+  private _beforeUnloadHandler?: () => void;
   async start(): Promise<void> {
     if (this._started) return;
     this._started = true;
     this.cleanupInterval = setInterval(() => this.cleanupStaleSessions(), 60000);
+    // Persist all active debate snapshots before tab close so ongoing
+    // debates survive page reload (fixes 6.5: Missing Debate Cleanup on Tab Close).
+    if (typeof window !== 'undefined') {
+      this._beforeUnloadHandler = () => {
+        for (const sessionId of this.sessions.keys()) {
+          this.saveSnapshot(sessionId);
+        }
+      };
+      window.addEventListener('beforeunload', this._beforeUnloadHandler);
+    }
   }
 
   private cleanupStaleSessions(): void {
@@ -754,6 +765,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
       agentControllers.clear();
     }
     this.sessionAbortControllers.delete(sessionId);
+    // Transition BEFORE destroying context — phase change callbacks
+    // access getContext(id).timeline which requires a live context.
+    session.transition('cancelled');
+    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CANCELLED, { sessionId });
     // Destroy budget — releases any queued lock promises
     const budget = this.budgets.get(sessionId);
     (budget as DebateBudget).destroy();
@@ -766,6 +781,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     const ctx = this.sessionContexts.get(sessionId);
     if (ctx) ctx.destroy();
     this.sessionContexts.delete(sessionId);
+    // Destroy session itself — clears phase listeners
+    session.destroy();
+    this.sessions.delete(sessionId);
     // Clean per-session tracking
     this.llmFailureCount.delete(sessionId);
     for (const p of session.participants) {
@@ -773,8 +791,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
     this.preflightDone.delete(sessionId);
     this.runningSessions.delete(sessionId);
-    session.transition('cancelled');
-    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CANCELLED, { sessionId });
   }
 
   getSession(sessionId: string): DebateSessionSnapshot | undefined {
@@ -1005,6 +1021,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     this.runningSessions.clear();
     this.preflightDone.clear();
     if (this.cleanupInterval) { clearInterval(this.cleanupInterval); this.cleanupInterval = null; }
+    if (typeof window !== 'undefined' && this._beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+      this._beforeUnloadHandler = undefined;
+    }
     this._started = false;
   }
 }

@@ -153,6 +153,11 @@ export interface ApiKey {
   tags?: string[];
   history?: KeyHistoryEntry[];
   status: 'active' | 'inactive' | 'error' | 'checking' | 'pending' | 'quota_exhausted' | 'invalid' | 'duplicate' | 'quarantined' | 'probation' | 'compromised';
+  /** Monotonically incremented on every user-initiated status toggle.
+   *  Health checks capture the version at start and skip the status update
+   *  if the version changed — prevents TOCTOU race between user toggle and
+   *  concurrent health check completion. */
+  statusVersion?: number;
   latency?: number;
   availableModels?: string[];
   notes?: KeyNote[];

@@ -7,6 +7,11 @@ export interface ChatSession {
   createdAt: number;
   updatedAt: number;
   tags?: string[];
+  folder?: string;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  summary?: string;
+  linkedDebateId?: string;
   currentProvider?: string;
   currentModel?: string;
   currentKeyId?: string;

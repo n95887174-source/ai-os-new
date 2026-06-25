@@ -6,8 +6,15 @@ export class DebateConsensusEngine implements IConsensusEngine {
   private embeddingCache = new Map<string, number[]>();
   private static readonly MAX_CACHE = 500;
   private static readonly MAX_GRAPH = 500;
+  /** Claims-hash-based result cache — skips O(n²) recomputation when same claims set is re-evaluated */
+  private lastClaimsHash: string | null = null;
+  private lastResult: ConsensusResult | null = null;
 
   evaluate(claims: Claim[]): ConsensusResult {
+    const hash = claims.map(c => `${c.id}:${c.confidence.toFixed(3)}`).join('|');
+    if (hash === this.lastClaimsHash && this.lastResult) return this.lastResult;
+    this.lastClaimsHash = hash;
+
     const agreements = this.findAgreements(claims);
     const rawConflicts = this.findConflicts(claims);
     const conflicts = rawConflicts.map(c => {
@@ -23,13 +30,15 @@ export class DebateConsensusEngine implements IConsensusEngine {
     const contradictionDensity = claims.length > 0 ? unresolvedConflicts.length / claims.length : 0;
     const confidence = this.calculateConfidence(agreements, conflicts, claims);
 
-    return {
+    const result: ConsensusResult = {
       agreements,
       conflicts,
       unresolved,
       confidence,
       contradictionDensity,
     };
+    this.lastResult = result;
+    return result;
   }
 
   resolveConflict(conflict: Conflict, resolution: string): Conflict {
@@ -54,6 +63,8 @@ export class DebateConsensusEngine implements IConsensusEngine {
   destroy(): void {
     this.confidenceGraph.clear();
     this.embeddingCache.clear();
+    this.lastClaimsHash = null;
+    this.lastResult = null;
   }
 
   getConfidenceGraph(): Map<string, number> {

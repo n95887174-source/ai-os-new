@@ -40,6 +40,7 @@ export class DebateSession implements IDebateSession {
   private _totalCost = 0;
   private _startedAt = 0;
   private _phaseListeners: Array<(from: DebatePhase, to: DebatePhase) => void> = [];
+  private _transitioning = false;
 
   readonly language: string;
   private _failedProviders = new Set<string>();
@@ -85,6 +86,10 @@ export class DebateSession implements IDebateSession {
   }
 
   transition(to: DebatePhase, tx?: ITransaction): boolean {
+    if (this._transitioning) {
+      LOGGER.warn('DebateSession', 'Re-entrant transition blocked', { from: this._phase, to, sessionId: this.id });
+      return false;
+    }
     const allowed = VALID_TRANSITIONS[this._phase];
     if (!allowed.includes(to)) {
       const msg = `Invalid transition: ${this._phase} -> ${to}`;
@@ -94,11 +99,16 @@ export class DebateSession implements IDebateSession {
       }
       return false;
     }
-    const from = this._phase;
-    this._phase = to;
-    if (to === 'active' && !this._startedAt) this._startedAt = Date.now();
-    for (const cb of this._phaseListeners) cb(from, to);
-    return true;
+    this._transitioning = true;
+    try {
+      const from = this._phase;
+      this._phase = to;
+      if (to === 'active' && !this._startedAt) this._startedAt = Date.now();
+      for (const cb of this._phaseListeners) cb(from, to);
+      return true;
+    } finally {
+      this._transitioning = false;
+    }
   }
 
   incrementRound(): void {

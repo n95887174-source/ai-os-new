@@ -19,6 +19,7 @@ import { MetricsService } from '../services/metrics-service';
 import { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import { KeyService } from '../services/key-management/key-service';
 import { GroupManagerService } from '../services/group-manager';
+import { SessionManagerService } from '../services/session-manager-service';
 import type { AdvisorService } from '../services/advisor-service';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from '../services/logger-service';
@@ -134,4 +135,8 @@ export const registerPhase1: Phase = (helpers, ctx) => {
       setKv: async <T>(id: string, value: T) => { if (configStore) await configStore.set(id, value); },
     },
   })));
+
+  register('sessionManagerService', new SessionManagerService(
+    get<IDatabaseService>('database') as ConstructorParameters<typeof SessionManagerService>[0],
+  ));
 };
