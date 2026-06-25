@@ -9,7 +9,7 @@ import type {
   DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps,
   ActivityMetrics, QualityMetrics, HumanVote, DebateVerdict,
 } from '../contracts/debate-types';
-import type { IDebateEngine } from '../contracts/debate-runtime';
+import type { IDebateEngine, DebateTopology } from '../contracts/debate-runtime';
 import type { SnapshotBridgeContext } from './debate-runtime/debate-bridge';
 import { DebateRuntimeEvents } from '../events/debate-runtime-events';
 import {
@@ -390,6 +390,65 @@ export class DebateService {
     return this.activeSession;
   }
 
+  /** Start a debate with an explicit topology (used by DebateRuntimePanel). */
+  async startTopologyDebate(
+    topology: DebateTopology,
+    topic: string,
+    participants: DebateParticipant[],
+    config?: Partial<DebateConfig>,
+  ): Promise<DebateSession> {
+    if (!this.engine) throw new Error('Engine not available');
+    if (participants.length < 2) throw new Error('Need at least 2 participants');
+
+    const activeKeys = this.deps.keyService.getActiveKeys();
+    if (activeKeys.length === 0) throw new Error('No active API keys available');
+    const availableProviders = new Set(activeKeys.map(k => k.provider));
+    const hasDebateProvider = ['groq', 'gemini', 'openrouter', 'nvidia'].some(p => availableProviders.has(p));
+    if (!hasDebateProvider) throw new Error('No debate-capable provider with active keys');
+
+    this.clearTimeout();
+    this.isExecutingRound = false;
+    this.roundGeneration++;
+    this.clearListeners();
+    this.schedulerState.lastParticipantId = null;
+    this.participantProviderMap.clear();
+    this.failedProviders.clear();
+    if (this.defaultConfig.useGovernor !== false) this.governor = new DebateGovernor();
+
+    const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
+
+    this.debateStartTime = Date.now();
+    this._pauseController = new AbortController();
+    const maxDuration = sessionConfig.maxDurationMs ?? 1_800_000;
+    this._durationTimer = setTimeout(() => {
+      if (this.activeSession?.status === 'active') {
+        LOGGER.warn('DebateService', 'Debate timed out after maxDurationMs', { maxDuration });
+        this.stopDebate('cancelled');
+      }
+    }, maxDuration);
+
+    const runtimeId = this.engine.createSession(
+      topology, topic, participantsToConfig(participants),
+      sessionConfig.language === 'en' ? 'English' : 'Russian',
+    );
+    this.runtimeSessionId = runtimeId;
+    this.bridgeCtx = { participants, strategy: topology.type as DebateSession['strategy'], maxRounds: topology.maxDepth ?? 5, config: sessionConfig };
+    this.setupListeners(runtimeId);
+    this.syncSession();
+    const session = this.activeSession!;
+    this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
+    this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, session);
+    this.persistSession();
+    this._heartbeatTimer = setInterval(() => {
+      if (this.activeSession?.status !== 'active') { this._stopHeartbeat(); return; }
+      void persistActiveSession(this.deps.debateStore, this.activeSession);
+    }, 30_000);
+    void this.engine.startSession(runtimeId)
+      .then(() => this.finalize())
+      .catch((e) => { LOGGER.warn('DebateService', 'Engine debate failed', { error: e }); this.syncSession(); this.finalize(); });
+    return session;
+  }
+
   private async executeOpeningStatements(): Promise<void> {
     if (!this.activeSession) return;
 
@@ -759,6 +818,29 @@ export class DebateService {
       this.activeSession.status = 'active';
       this.startDebateLoop();
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
+    }
+  }
+
+  pauseDebateSession(sessionId: string): void {
+    if (this.engine) {
+      this.engine.pauseSession(sessionId);
+      this.syncSession();
+    }
+  }
+
+  cancelDebateSession(sessionId: string): void {
+    if (this.engine) {
+      const snap = this.engine.getSession(sessionId);
+      if (snap && snap.phase !== 'completed' && snap.phase !== 'failed' && snap.phase !== 'cancelled') {
+        this.engine.cancelSession(sessionId);
+      }
+      this.syncSession();
+    }
+  }
+
+  startDebateSession(sessionId: string): void {
+    if (this.engine) {
+      void this.engine.startSession(sessionId);
     }
   }
 

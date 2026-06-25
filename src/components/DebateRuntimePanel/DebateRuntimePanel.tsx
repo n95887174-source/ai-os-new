@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { debateEngine, cognitiveIntelligenceService, orchestrator, sessionManager } from '../../kernel/instances';
+import { debateEngine, debateService, cognitiveIntelligenceService, orchestrator, sessionManager } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import { DebateRuntimeEvents } from '../../kernel/events/debate-runtime-events';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -170,7 +170,7 @@ const DebateRuntimePanel: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [topologyType, setTopologyType] = useState<TopologyType>('roundtable');
   const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionLoading] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -351,34 +351,23 @@ const DebateRuntimePanel: React.FC = () => {
               : [],
       };
 
-      const participants = selected.map(n => ({
-        agentId: n.id,
-        nodeId: n.id,
+      const debateParticipants = selected.map((n, i) => ({
+        id: n.id,
+        name: n.label,
+        role: (agentRoles[n.id] || availableRoles[i % availableRoles.length]) as import('../../kernel/contracts/debate-types').DebateRole,
         provider: n.provider,
         modelId: n.model,
         systemPrompt: n.prompt,
       }));
 
-      const id = debateEngine.createSession(topology, topic.trim(), participants);
+      const session = await debateService.startTopologyDebate(topology, topic.trim(), debateParticipants);
       setTopic('');
       setCreating(false);
-      setSelectedId(id);
-      eventBus.emit('system:notification', { message: `Debate session created: ${topic}`, type: 'success' });
+      setSelectedId(session.id);
+      eventBus.emit('system:notification', { message: `Debate started: ${topic}`, type: 'success' });
     } catch (e) {
       setError(String(e));
       setCreating(false);
-    }
-  };
-
-  const handleStart = async (id: string) => {
-    setActionLoading(id);
-    setError(null);
-    try {
-      await debateEngine.startSession(id);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -581,19 +570,19 @@ const DebateRuntimePanel: React.FC = () => {
             </h3>
             <div style={flexGap2}>
               {(selected.phase === 'active' || selected.phase === 'deliberating') && (
-                <button onClick={() => debateEngine.pauseSession(selected.id)} style={{
+                <button onClick={() => { debateService.pauseDebateSession(selected.id); refreshSessions(); }} style={{
                   ...buttonSmAction, background: 'rgba(245,158,11,0.2)', color: '#f59e0b',
                 }}><Pause size={14} /> {t('debate_runtime.pause')}</button>
               )}
-              {selected.phase === 'active' && (
-                <button onClick={() => handleStart(selected.id)} disabled={actionLoading === selected.id} style={{
+              {selected.phase === 'created' && (
+                <button onClick={() => { debateService.startDebateSession(selected.id); refreshSessions(); }} disabled={actionLoading === selected.id} style={{
                   ...buttonSmAction, cursor: actionLoading === selected.id ? 'not-allowed' : 'pointer',
                   background: actionLoading === selected.id ? 'rgba(34,197,94,0.3)' : 'rgba(34,197,94,0.2)',
                   color: '#22c55e',
                 }}>{actionLoading === selected.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t('debate_runtime.start')}</button>
               )}
-              {['active', 'deliberating'].includes(selected.phase) && (
-                <button onClick={() => debateEngine.cancelSession(selected.id)} style={{
+              {['active', 'deliberating', 'paused'].includes(selected.phase) && (
+                <button onClick={() => { debateService.cancelDebateSession(selected.id); refreshSessions(); }} style={{
                   ...buttonSmAction, background: 'rgba(239,68,68,0.2)', color: '#ef4444',
                 }}><Square size={14} /> {t('debate_runtime.cancel')}</button>
               )}
