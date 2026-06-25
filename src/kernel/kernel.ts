@@ -5,6 +5,7 @@ import type { EventMap } from './types/event-map';
 import { TransactionContext } from './services/transaction';
 import { updateAdaptiveWeights as updateWeights, setSLAMode as setSLAWeights } from './WeightOptimizer';
 import { rootLogger } from './services/logger-service';
+import { EVENTS } from './events/event-names';
 
 const LOGGER = rootLogger.child('Kernel');
 
@@ -89,6 +90,8 @@ export class SystemKernel implements IKernel {
       await this.tracker.hydrateState?.(this.state);
     } catch (e) {
       this.deps.eventBus?.emit('kernel:load-failed', { error: String(e) });
+      this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, { reason: `DB load failed: ${String(e)}` });
+      this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Kernel state load failed — reset to defaults. SLA, weights, and budget may have been reset.', type: 'warning' });
     }
   }
 
@@ -243,6 +246,8 @@ export class SystemKernel implements IKernel {
         this.eventLogCursor = 0;
         this.eventSeq = 0;
         this.isDirty = true;
+        this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, { reason: `State version mismatch (got ${data.version}, expected 2.1.0-safety)` });
+        this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Kernel state version mismatch — reset to defaults.', type: 'warning' });
         return;
       }
 if (!data.state || typeof data.state !== 'object') throw new Error('Invalid state structure');
@@ -262,6 +267,8 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
       this.eventLogCursor = 0;
       this.eventSeq = 0;
       this.isDirty = true;
+      this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, { reason: `loadState parse error: ${e instanceof Error ? e.message : String(e)}` });
+      this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Kernel state corrupt — reset to defaults.', type: 'warning' });
     }
   }
 
