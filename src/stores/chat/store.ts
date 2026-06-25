@@ -245,7 +245,16 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     editEntry: (entryId, newText) => {
-      uas(prev => prev.map(e => e.id === entryId ? { ...e, text: newText, responses: [] } : e));
+      uas(prev => prev.map(e => e.id === entryId
+        ? {
+            ...e,
+            text: newText,
+            responses: e.responses.some(r => r.status === 'loading' || r.status === 'streaming')
+              ? e.responses
+              : [],
+          }
+        : e,
+      ));
     },
 
     clearHistory: () => uas(() => []),
