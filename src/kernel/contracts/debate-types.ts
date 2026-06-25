@@ -103,7 +103,7 @@ export interface DebateArgument {
   confidence: number;
   timestamp: number;
   round: number;
-  position: 'pro' | 'con' | 'neutral';
+  position: DebateRole;
   provider?: string;
   model?: string;
   executionId?: string;

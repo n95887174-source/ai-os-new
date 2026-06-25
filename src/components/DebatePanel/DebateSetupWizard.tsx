@@ -160,7 +160,7 @@ const DebateSetupWizard: React.FC<DebateSetupWizardProps> = ({
                     <label className="debate-label debate-label--block">{t('debate.strategy')}</label>
                     <select
                       value={strategy}
-                      onChange={(e) => onStrategyChange(e.target.value)}
+                      onChange={(e) => onStrategyChange(e.target.value as import('../../kernel/contracts/debate-types').DebateSessionStrategy)}
                       aria-label={t('debate.strategy')}
                       className="debate-input debate-select"
                     >

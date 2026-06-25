@@ -42,7 +42,7 @@ export type EventMap = {
   'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
   'provider:state:desync': { localHash: string; remoteHash: string; mismatches: number };
   'cognitive:trace:updated': Array<{ id: string; startTime: number; endTime?: number; input: string; output?: string; status: string; steps: CognitiveStep[]; provider?: string; model?: string; totalTokens?: number; latency?: number; error?: string }>;
-  'debate:updated': { sessionId: string; type: string; override?: unknown; event?: unknown };
+  'debate:updated': { sessionId: string; type: string; override?: unknown; event?: unknown; agentEventCount?: number; errorCount?: number; timeoutCount?: number; fallbackCount?: number; roundCount?: number };
   'debate:started': { sessionId: string; topic: string };
   'debate:argument': { sessionId: string; argument: unknown };
   'debate:consensus': { sessionId: string; topic: string; consensus: string; convergenceScore: number; synthesis?: { consensus: string; coreDisagreement: string; resolvedPoints: string[]; unresolvedPoints: string[]; phase: string } };
@@ -111,7 +111,7 @@ export type EventMap = {
   // Chat Lifecycle (Streaming)
   'chat:stream:start': { requestId: string; provider: string; model: string; keyId?: string };
   'chat:stream:chunk': { requestId: string; provider: string; chunk: string; keyId?: string };
-  'chat:stream:end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number; status?: 'timeout' | 'done' | 'cancelled' };
+  'chat:stream:end':   { requestId: string; fullContent: string; latency: number; tokens?: number; provider?: string; model?: string; keyId?: string; ttft?: number; tps?: number; status?: 'timeout' | 'done' | 'cancelled' | 'error' };
   'chat:stream:error': { requestId: string; provider: string; error: string; keyId?: string };
   
   // System Internal Events
@@ -267,6 +267,7 @@ export type EventMap = {
   // Debate
   'debate:verdict:generated': { sessionId: string; verdict: unknown };
   'debate:session:conflict': { sessionId: string; currentVersion: number; attemptedVersion: number; tabId?: string };
+  'session:deleted': { id: string; type: import('../contracts/session-manager').SessionType };
   'debate-runtime:agent:chunk': { sessionId: string; agentId: string; chunk: string };
 
   // Experiment

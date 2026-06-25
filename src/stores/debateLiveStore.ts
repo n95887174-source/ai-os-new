@@ -127,6 +127,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     const timeoutCount = s.agentEvents.filter(e => e.status === 'timeout').length;
     const fallbackCount = s.agentEvents.filter(e => e.status === 'fallback').length;
     eventBus.emit(EVENTS.DEBATE_UPDATED, {
+      sessionId: '',
       type: 'store_metrics',
       agentEventCount: s.agentEvents.length,
       errorCount,

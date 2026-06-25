@@ -133,7 +133,7 @@ export class DebateLLMCaller {
             modelOffset,
           );
 
-        const baseSystem = participant.systemPrompt || getDefaultSystemPrompt(participant.role);
+        const baseSystem = participant.systemPrompt || getDefaultSystemPrompt(participant.role as 'pro' | 'con' | 'neutral');
         const strategyBlock = participant.strategy
           ? `\n\n### Argument Strategy\n${ARGUMENT_STRATEGY_INSTRUCTIONS[participant.strategy]}`
           : '';

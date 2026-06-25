@@ -760,6 +760,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
               agentId: step.agentId,
               round: step.round ?? session.round,
               confidence: step.confidence,
+              speaker: participant.agentId,
+              role: participant.role ?? '',
             });
           }
         }

@@ -368,6 +368,7 @@ export class DebateService {
       participants,
       arguments: [],
       convergenceScore: 0,
+      createdAt: Date.now(),
       openingStatements: [],
       config: sessionConfig,
       socraticQuestioner: 0,

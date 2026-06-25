@@ -129,7 +129,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     get getRouterService() { return () => _container.get<import('../services/provider-router').RouterService>('routerService'); },
     get getKeyService() { return () => _container.get<KeyService>('keyService'); },
     get getAdapterRegistry() { return () => _container.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
-    get getKeyStateStore() { return () => { try { return _container.get<import('../services/key-state-store').KeyStateStore>('keyStateStore'); } catch { return undefined; } }; },
+    get getKeyStateStore() { return () => { try { return _container.get<import('../services/key-state-store').KeyStateStore>('keyStateStore') as { get: (id: string) => { flags: { authFailed: boolean } } | undefined; update: (id: string, patch: Partial<{ flags: { authFailed: boolean } }>) => void }; } catch { return undefined; } }; },
     get getExecutionGovernor() { return () => _container.get<IExecutionGovernor>('executionGovernor'); },
     debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
   }));

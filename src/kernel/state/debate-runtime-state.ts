@@ -1,4 +1,4 @@
-import type { DebateSessionState as ContractSessionState } from '../contracts/debate-runtime';
+import type { IDebateSession as ContractSessionState, AgentPhase } from '../contracts/debate-runtime';
 
 // CRIT-6 fix: debate-runtime-state.ts now re-exports DebateSessionState from the canonical
 // debate-runtime.ts contract. Previously this file defined its own shape that was

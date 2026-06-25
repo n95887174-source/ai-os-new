@@ -1,7 +1,4 @@
-// Re-export the canonical Claim from the runtime contract so both layers
-// use the same type. This eliminates the previous cross-module incompatibility
-// where Governor Claim {speaker,role,status} clashed with Runtime Claim
-// {agentId,confidence,evidence}.
+import type { Claim } from '../../contracts/debate-runtime';
 export type { Claim } from '../../contracts/debate-runtime';
 
 export interface ClaimEdge {

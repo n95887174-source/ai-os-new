@@ -20,6 +20,7 @@ import type {
   DebateStore,
 } from '../../contracts/storage/storage-layer';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../../contracts/storage/debate-store';
+import type { TopologyType, DebatePhase } from '../../contracts/debate-runtime';
 import type { ApiKey } from '../../types/metrics-types';
 import type { MemoryEntry } from '../../types/memory-types';
 import type { CognitiveTrace } from '../../types/domain-types';
@@ -785,8 +786,8 @@ class SqliteDebateStore implements DebateStore {
       sessionId: asString(m('session_id')),
       topic: asString(m('topic')),
       summary: asString(m('summary')),
-      conclusionType: asString(m('conclusion_type'), 'inconclusive'),
-      stanceResult: asString(m('stance_result'), 'no_clear_winner'),
+      conclusionType: asString(m('conclusion_type'), 'inconclusive') as unknown as import('../../contracts/debate-types').ConclusionType,
+      stanceResult: asString(m('stance_result'), 'no_clear_winner') as unknown as import('../../contracts/debate-types').StanceResult,
       keyArguments: asString(m('key_arguments'), '[]'),
       reasoning: asString(m('reasoning')),
       confidence: asNumber(m('confidence'), 0),
@@ -801,8 +802,8 @@ class SqliteDebateStore implements DebateStore {
     return {
       id: asString(m('id')),
       topic: asString(m('topic')),
-      topologyType: asString(m('topology_type'), 'roundtable'),
-      phase: asString(m('phase'), 'created'),
+      topologyType: asString(m('topology_type'), 'roundtable') as unknown as TopologyType,
+      phase: asString(m('phase'), 'created') as unknown as DebatePhase,
       round: asNumber(m('round'), 0),
       totalTokens: asNumber(m('total_tokens'), 0),
       totalCost: asNumber(m('total_cost'), 0),
@@ -814,6 +815,10 @@ class SqliteDebateStore implements DebateStore {
       startedAt: asNumber(m('started_at'), 0),
       updatedAt: asNumber(m('updated_at'), 0),
       createdAt: asNumber(m('created_at'), 0),
+      version: asNumber(m('version'), 1),
+      tags: [],
+      folder: '',
+      isArchived: false,
     };
   }
 
@@ -1017,7 +1022,7 @@ async function loadDbBlob(): Promise<Uint8Array | undefined> {
       if (fromServer && isValidSqliteBlob(fromServer)) {
         LOGGER.info('SqliteStorage', 'loaded DB from sync-server');
         // Also cache locally in IndexedDB
-        await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(fromServer), createdAt: Date.now() }).catch(e => LOGGER.warn('SqliteStorage', 'IndexedDB sync failed', { error: e }));
+        await dexieDb.keyValue.put({ id: DB_BLOB_KEY, value: Array.from(fromServer), createdAt: Date.now() }).catch((e: unknown) => LOGGER.warn('SqliteStorage', 'IndexedDB sync failed', { error: e }));
         return fromServer;
       }
       if (fromServer && !isValidSqliteBlob(fromServer)) {

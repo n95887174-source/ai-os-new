@@ -4,7 +4,7 @@
 #
 # Stage 1 (build): installs deps with legacy-peer-deps to bypass the
 #                  typescript/madge peer-dep conflict, then runs
-#                  `vite build`.
+#                  `tsc -b && vite build`.
 # Stage 2 (runtime): nginx-unprivileged (no root, listens on 8080
 #                    which docker-compose maps to 80/443).
 #
@@ -31,14 +31,8 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps --no-fund
 
 COPY . .
-# BLD-C1: Use build:no-tsc while 534+ tsc errors are still in the tree.
-# `npm run build` runs `tsc -b && vite build` — tsc -b aborts with
-# non-zero exit on type errors and `vite build` never runs, so the
-# Docker image can't be produced. `build:no-tsc` skips type-check and
-# lets Vite produce the bundle. Revert to `npm run build` once tsc is
-# clean (tracked in roadmap Phase 3, debt report).
 ARG VITE_BASE_PATH=/
-RUN VITE_BASE_PATH=$VITE_BASE_PATH npm run build:no-tsc
+RUN VITE_BASE_PATH=$VITE_BASE_PATH npm run build
 
 # ─── Stage 2: runtime (nginx-unprivileged) ──────────────────────
 # nginx-unprivileged listens on 8080 by default; docker-compose maps

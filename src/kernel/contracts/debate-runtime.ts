@@ -168,8 +168,8 @@ export interface Claim {
   readonly evidence?: string;
   readonly citations?: string[];
   // Governor fields
-  readonly speaker?: string;
-  readonly role?: string;
+  readonly speaker: string;
+  readonly role: string;
   readonly status?: 'active' | 'challenged' | 'resolved' | 'disputed';
   readonly supportCount?: number;
   readonly challengeCount?: number;
@@ -309,6 +309,7 @@ export interface IDebateTimeline {
 export interface ParticipantConfig {
   readonly agentId: string;
   readonly nodeId: string;
+  readonly role?: string;
   readonly modelId?: string;
   readonly provider?: string;
   readonly systemPrompt?: string;

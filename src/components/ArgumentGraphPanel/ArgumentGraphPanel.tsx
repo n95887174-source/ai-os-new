@@ -42,7 +42,7 @@ function mapGovStateToNodes(state: GovernorState, _roundLayout: Map<number, stri
     const y = c.round * 180 + 60;
     const x = speakerPos * 320 + 60;
     const color = SPEAKER_COLORS[c.role] ?? DEFAULT_COLOR;
-    const statusColor = STATUS_COLORS[c.status] ?? '#64748b';
+    const statusColor = STATUS_COLORS[c.status ?? ''] ?? '#64748b';
     const shortText = c.text.length > 100 ? c.text.slice(0, 97) + '...' : c.text;
 
     nodes.push({
@@ -364,12 +364,12 @@ const ArgumentGraphPanel: React.FC = () => {
           <div style={{ ...panel, maxWidth: 560, width: '90%', background: '#1e293b' }} onClick={e => e.stopPropagation()}>
             <div style={{ ...flexBetween, marginBottom: 12 }}>
               <div style={flexCenterGap8}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_COLORS[selectedClaim.status] }} />
-                <span style={{ fontWeight: 600, color: SPEAKER_COLORS[selectedClaim.role] ?? DEFAULT_COLOR }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_COLORS[selectedClaim.status ?? ''] ?? '#64748b' }} />
+                <span style={{ fontWeight: 600, color: SPEAKER_COLORS[selectedClaim.role ?? ''] ?? DEFAULT_COLOR }}>
                   {selectedClaim.speaker}
                 </span>
                 <span style={{ ...textMutedXs }}>round {selectedClaim.round}</span>
-                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: `${STATUS_COLORS[selectedClaim.status]}22`, color: STATUS_COLORS[selectedClaim.status] }}>
+                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: `${STATUS_COLORS[selectedClaim.status ?? '']}22`, color: STATUS_COLORS[selectedClaim.status ?? ''] ?? '#64748b' }}>
                   {selectedClaim.status}
                 </span>
               </div>

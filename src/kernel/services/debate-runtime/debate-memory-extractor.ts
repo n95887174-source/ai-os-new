@@ -123,6 +123,8 @@ export class DebateMemoryExtractor {
         agentId: u.agentId,
         round: u.round,
         confidence: u.confidence,
+        speaker: u.agentId,
+        role: '',
       }));
   }
 
