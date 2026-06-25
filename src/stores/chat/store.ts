@@ -171,6 +171,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         ),
       }));
 
+      // write-through: persist user message immediately, bypass debounce
+      const sStore = resolveSessionStore();
+      if (sStore) {
+        const state = get();
+        sStore.syncSessions(state.sessions, []).catch(e => console.warn('[ChatStore] write-through persist failed:', e));
+      }
+
       targets.forEach((t, idx) => {
         eventBus.emit(EVENTS.SEND_MESSAGE, {
           requestId: loadingResponses[idx].requestId,
