@@ -30,6 +30,8 @@ const updateActiveSession =
     }));
   };
 
+let _sendLock = false;
+
 export const useChatStore = create<ChatStoreShape>((set, get) => {
   const uas = updateActiveSession(set, get);
 
@@ -72,6 +74,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     sendMessage: async (targets, text, systemPromptArg, temperature, maxTokens) => {
+      if (_sendLock) {
+        console.warn('[ChatStore] sendMessage ignored — lock held');
+        return;
+      }
+      _sendLock = true;
+      try {
       const requestId = `chat-${crypto.randomUUID()}`;
       const entryId = crypto.randomUUID();
       const sessionId = get().activeSessionId;
@@ -173,6 +181,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
           options: { temperature, maxTokens },
         });
       });
+    } finally {
+      _sendLock = false;
+    }
     },
 
     cancelSending: () => {
