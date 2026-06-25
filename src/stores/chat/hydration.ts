@@ -9,6 +9,24 @@ import { waitForStorage } from '../../kernel/services/storage/sqlite-storage';
 
 const CHECKPOINT_KEY = 'chat_checkpoint';
 
+function cleanupOrphanLoading(sessions: ChatSession[]): ChatSession[] {
+  let changed = false;
+  const cleaned = sessions.map(s => {
+    const history = s.history.map(e => {
+      const responses = e.responses.map(r => {
+        if (r.status === 'loading' || r.status === 'streaming') {
+          changed = true;
+          return { ...r, status: 'error' as const, error: 'Session was interrupted' };
+        }
+        return r;
+      });
+      return responses === e.responses ? e : { ...e, responses };
+    });
+    return history === s.history ? s : { ...s, history };
+  });
+  return changed ? cleaned : sessions;
+}
+
 let _sessionStore: SessionStore | null = null;
 function resolveSessionStore(): SessionStore | null {
   if (_sessionStore) return _sessionStore;
@@ -111,7 +129,16 @@ export function useChatStoreHydration(): void {
       } catch (e) {
         console.warn('[ChatStore] Dexie unavailable, using default session:', e instanceof Error ? e.message : e);
       } finally {
-        if (!cancelled) useChatStore.setState({ isLoaded: true });
+        if (!cancelled) {
+          const current = useChatStore.getState().sessions;
+          const cleaned = cleanupOrphanLoading(current);
+          if (cleaned !== current) {
+            const sStore = resolveSessionStore();
+            if (sStore) sStore.syncSessions(cleaned, []).catch(() => {});
+            useChatStore.setState({ sessions: cleaned });
+          }
+          useChatStore.setState({ isLoaded: true, activeRequestIds: new Set() });
+        }
       }
     };
 
