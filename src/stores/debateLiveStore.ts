@@ -166,40 +166,52 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     return {};
   })();
 
-  // Persist on every state change (debounced)
-  const unsubPersist = useDebateLiveStore.subscribe(() => { schedulePersist(); });
-
   return {
     ...initialState,
     agentEvents: initialState.agentEvents ?? [],
     roundEvents: initialState.roundEvents ?? [],
     currentThinking: new Map(),
     streamingContent: new Map(),
-    addAgentEvent: (event) => set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) })),
-    addRoundEvent: (event) => set(s => ({ roundEvents: [...s.roundEvents, event].slice(-MAX_ROUND_EVENTS) })),
-    clearSession: (sessionId) => set(s => {
-      const sc = new Map(s.streamingContent);
-      for (const k of sc.keys()) { if (k.startsWith(`${sessionId}:`)) sc.delete(k); }
-      return {
-        agentEvents: s.agentEvents.filter(e => e.sessionId !== sessionId),
-        roundEvents: s.roundEvents.filter(e => e.sessionId !== sessionId),
-        streamingContent: sc,
-      };
-    }),
-    clearAll: () => set({ agentEvents: [], roundEvents: [], currentThinking: new Map(), streamingContent: new Map() }),
+    addAgentEvent: (event) => {
+      set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
+      schedulePersist();
+    },
+    addRoundEvent: (event) => {
+      set(s => ({ roundEvents: [...s.roundEvents, event].slice(-MAX_ROUND_EVENTS) }));
+      schedulePersist();
+    },
+    clearSession: (sessionId) => {
+      set(s => {
+        const sc = new Map(s.streamingContent);
+        for (const k of sc.keys()) { if (k.startsWith(`${sessionId}:`)) sc.delete(k); }
+        return {
+          agentEvents: s.agentEvents.filter(e => e.sessionId !== sessionId),
+          roundEvents: s.roundEvents.filter(e => e.sessionId !== sessionId),
+          streamingContent: sc,
+        };
+      });
+      schedulePersist();
+    },
+    clearAll: () => {
+      set({ agentEvents: [], roundEvents: [], currentThinking: new Map(), streamingContent: new Map() });
+      schedulePersist();
+    },
     // B10-114: Cleanup all event subscriptions to prevent memory leaks
     destroy: () => {
       subs.forEach(u => u());
       clearInterval(metricsInterval);
       if (persistTimer) clearTimeout(persistTimer);
-      unsubPersist();
     },
   };
 });
 
 // HMR cleanup: prevent duplicate event subscriptions on hot reload
+let hmrDestroyed = false;
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    useDebateLiveStore.getState().destroy();
+    if (!hmrDestroyed) {
+      hmrDestroyed = true;
+      useDebateLiveStore.getState().destroy();
+    }
   });
 }
