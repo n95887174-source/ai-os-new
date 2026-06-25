@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
 import { EVENTS } from '../kernel/events/event-names';
 
+const LIVE_STORAGE_KEY = 'debate_live_state';
+const LIVE_STORAGE_DEBOUNCE = 500;
+
 const MAX_AGENT_EVENTS = 500;
 const MAX_ROUND_EVENTS = 200;
 const METRICS_INTERVAL_MS = 30_000;
@@ -133,9 +136,42 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     });
   }, METRICS_INTERVAL_MS);
 
+  let persistTimer: ReturnType<typeof setTimeout> | null = null;
+  const schedulePersist = () => {
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      persistTimer = null;
+      const s = get();
+      try {
+        sessionStorage.setItem(LIVE_STORAGE_KEY, JSON.stringify({
+          agentEvents: s.agentEvents,
+          roundEvents: s.roundEvents,
+        }));
+      } catch { /* sessionStorage full or unavailable */ }
+    }, LIVE_STORAGE_DEBOUNCE);
+  };
+
+  const initialState = (() => {
+    try {
+      const saved = sessionStorage.getItem(LIVE_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          agentEvents: Array.isArray(parsed.agentEvents) ? parsed.agentEvents : [],
+          roundEvents: Array.isArray(parsed.roundEvents) ? parsed.roundEvents : [],
+        };
+      }
+    } catch { /* corrupt or unavailable */ }
+    return {};
+  })();
+
+  // Persist on every state change (debounced)
+  const unsubPersist = useDebateLiveStore.subscribe(() => { schedulePersist(); });
+
   return {
-    agentEvents: [],
-    roundEvents: [],
+    ...initialState,
+    agentEvents: initialState.agentEvents ?? [],
+    roundEvents: initialState.roundEvents ?? [],
     currentThinking: new Map(),
     streamingContent: new Map(),
     addAgentEvent: (event) => set(s => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) })),
@@ -154,6 +190,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     destroy: () => {
       subs.forEach(u => u());
       clearInterval(metricsInterval);
+      if (persistTimer) clearTimeout(persistTimer);
+      unsubPersist();
     },
   };
 });
