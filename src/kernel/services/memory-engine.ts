@@ -226,8 +226,28 @@ export class MemoryService implements IMemoryEngine {
     );
   }
 
+  private _passesQualityGate(entry: { content: string; metadata: { importance?: number; source?: string } }): boolean {
+    const content = entry.content?.trim();
+    if (!content || content.length < 5) return false;
+
+    const importance = entry.metadata.importance ?? 0;
+    if (entry.metadata.source === 'system' && importance < 0.3) return false;
+
+    const ERROR_PATTERNS = [
+      /^i'?m sorry/i, /^sorry[,.]/i, /^error[:\s]/i, /^(an|the)\s+error/i,
+      /^failed/i, /^unable to/i, /^could not/i, /^there was an error/i,
+      /^something went wrong/i, /^internal server error/i, /^rate limit/i,
+      /^too many requests/i, /^quota exceeded/i, /^insufficient/i,
+      /^we encountered/i,
+    ];
+    if (ERROR_PATTERNS.some(p => p.test(content))) return false;
+
+    return true;
+  }
+
   async store(entry: Omit<MemoryEntry, 'id'>) {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
+    if (!this._passesQualityGate(entry)) return;
     const source = entry.metadata.source ?? 'unknown';
     const type = entry.metadata.type ?? 'generic';
     const newEntry: MemoryEntry = { ...entry, id: this.computeId(entry.content, source, type) } as MemoryEntry;
@@ -246,6 +266,7 @@ export class MemoryService implements IMemoryEngine {
 
   async upsert(entry: Omit<MemoryEntry, 'id'>) {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
+    if (!this._passesQualityGate(entry)) return;
     const source = entry.metadata.source ?? 'unknown';
     const type = entry.metadata.type ?? 'generic';
     const deterministicId = this.computeId(entry.content, source, type);
@@ -279,7 +300,9 @@ export class MemoryService implements IMemoryEngine {
 
   async storeBatch(entries: Omit<MemoryEntry, 'id'>[]) {
     if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
-    const newEntries = entries.map(e => {
+    const filtered = entries.filter(e => this._passesQualityGate(e));
+    if (filtered.length === 0) return;
+    const newEntries = filtered.map(e => {
       const src = e.metadata.source ?? 'unknown';
       const typ = e.metadata.type ?? 'generic';
       return { ...e, id: this.computeId(e.content, src, typ) } as MemoryEntry;
