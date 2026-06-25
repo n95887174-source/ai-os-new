@@ -258,6 +258,7 @@ export class SessionManagerService implements ISessionManager {
       if (updates.folder !== undefined) patch.folder = updates.folder;
       if (updates.isArchived !== undefined) patch.isArchived = updates.isArchived;
       if (updates.isPinned !== undefined) patch.isPinned = updates.isPinned;
+      if (updates.linkedDebateId !== undefined) patch.linkedDebateId = updates.linkedDebateId;
       await this.db.sessions.update(id, patch);
       return;
     }

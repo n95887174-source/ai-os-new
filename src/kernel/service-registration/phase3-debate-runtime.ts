@@ -62,6 +62,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     getFeatureFlagService: () => _container.get<FeatureFlagService>('featureFlagService'),
     queryEngine: new DebateQueryEngine(),
     debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
+    get sessionManager() { return _container.get<import('../services/session-manager-service').SessionManagerService>('sessionManagerService'); },
   })));
 
   register('collaborativeService', new CollaborativeService({

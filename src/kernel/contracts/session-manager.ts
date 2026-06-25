@@ -14,6 +14,7 @@ export interface SessionMeta {
   createdAt: number;
   updatedAt: number;
   linkedSessionIds: string[];
+  linkedDebateId?: string;
 }
 
 export interface SessionLink {

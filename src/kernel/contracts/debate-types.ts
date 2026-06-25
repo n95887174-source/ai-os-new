@@ -252,6 +252,10 @@ export interface DebateServiceDeps {
     isAttached: () => boolean;
     getFileTreeSnapshot: () => Promise<string | null>;
   };
+  sessionManager: {
+    link: (fromId: string, toId: string, linkType: string, context?: string) => Promise<void>;
+    updateMeta: (id: string, updates: Record<string, unknown>) => Promise<void>;
+  };
   getFeatureFlagService?: () => {
     isEnabled: (flag: FeatureFlag) => boolean;
   };

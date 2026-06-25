@@ -247,7 +247,8 @@ export class DebateService {
     participants: DebateParticipant[],
     strategy: DebateStrategy = 'round_robin',
     maxRounds: number = 5,
-    config?: Partial<DebateConfig>
+    config?: Partial<DebateConfig>,
+    chatSessionId?: string
   ): Promise<DebateSession> {
     if (participants.length < 2) {
       throw new Error('Need at least 2 participants for debate');
@@ -286,6 +287,10 @@ export class DebateService {
       });
       this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, session);
       this.persistSession();
+      if (chatSessionId && session?.id) {
+        this.deps.sessionManager.link(chatSessionId, session.id, 'chat_to_debate', `Debate: ${topic}`).catch(() => {});
+        this.deps.sessionManager.updateMeta(chatSessionId, { linkedDebateId: session.id }).catch(() => {});
+      }
       void this.engine.startSession(runtimeId)
         .then(() => this.finalize())
         .catch((e) => {
@@ -323,6 +328,10 @@ export class DebateService {
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: `Debate started: ${topic} with ${participants.length} agents`, type: 'info' });
     this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, this.activeSession);
     this.persistSession();
+    if (chatSessionId && this.activeSession?.id) {
+      this.deps.sessionManager.link(chatSessionId, this.activeSession.id, 'chat_to_debate', `Debate: ${topic}`).catch(() => {});
+      this.deps.sessionManager.updateMeta(chatSessionId, { linkedDebateId: this.activeSession.id }).catch(() => {});
+    }
 
     await this.executeOpeningStatements();
     this.startDebateLoop();
