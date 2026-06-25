@@ -99,6 +99,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       }
       requestIdsToTrack.forEach(rid => get().addActiveRequestId(rid));
 
+      // P0-7: cancel check — throws if all tracked request IDs were cancelled
+      const cancelGuard = () => {
+        const ids = get().activeRequestIds;
+        const anyActive = requestIdsToTrack.some(rid => ids.has(rid));
+        if (!anyActive) throw new Error('CANCELLED');
+      };
+
       let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
       if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_RAG_ON_CHAT)) {
         try {
@@ -106,6 +113,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         } catch (e) {
           console.warn('[ChatStore] Memory search failed:', e);
         }
+        cancelGuard();
       }
       const contextPrefix = relatedMemories.length > 0
         ? `[RECALLED CONTEXT]\n${relatedMemories.map((m) => `- ${m.entry.content}`).join('\n')}\n\n`
@@ -126,11 +134,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         } catch (e) {
           console.warn('[ChatStore] Memory store failed:', e);
         }
+        cancelGuard();
       }
 
       const workspaceContext = workspaceService.isAttached()
         ? await workspaceService.getFileTreeSnapshot()
         : null;
+      cancelGuard();
 
       const sanitize = (content: string): string => content
         .replace(/```[\s\S]*?```/g, '[code removed]')
@@ -204,6 +214,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       govOp.complete();
     } catch (e) {
       requestIdsToTrack.forEach(rid => get().removeActiveRequestId(rid));
+      if (e instanceof Error && e.message === 'CANCELLED') {
+        govOp.complete();
+        return;
+      }
       govOp.fail(e instanceof Error ? e : new Error(String(e)));
       throw e;
     } finally {
