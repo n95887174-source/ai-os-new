@@ -175,6 +175,7 @@ export class DebateService {
   private unsubs: Array<() => void> = [];
   private debateStartTime = 0;
   private _durationTimer: ReturnType<typeof setTimeout> | null = null;
+  private _pauseController: AbortController | null = null;
   private defaultConfig: DebateConfig = {
     roundDelayMs: 2000,
     maxTokens: 1024,
@@ -292,6 +293,7 @@ export class DebateService {
     const sessionConfig = config ? { ...this.defaultConfig, ...config } : { ...this.defaultConfig };
 
     this.debateStartTime = Date.now();
+    this._pauseController = new AbortController();
     const maxDuration = sessionConfig.maxDurationMs ?? 1_800_000;
     this._durationTimer = setTimeout(() => {
       if (this.activeSession?.status === 'active') {
@@ -383,7 +385,7 @@ export class DebateService {
       try {
         const executionId = crypto.randomUUID().slice(0, 12);
         const prompt = this.buildOpeningPrompt(participant);
-        const { content, provider, model } = await this.callLLM(participant, prompt);
+        const { content, provider, model } = await this.callLLM(participant, prompt, this._pauseController?.signal);
         const arg = {
           id: crypto.randomUUID(),
           agentId: participant.id,
@@ -515,7 +517,7 @@ export class DebateService {
       );
 
       const executionId = crypto.randomUUID().slice(0, 12);
-      let { content, provider, model } = await this.callLLM(participant, prompt);
+      let { content, provider, model } = await this.callLLM(participant, prompt, this._pauseController?.signal);
       if (!this.activeSession || this.activeSession.status !== 'active' || genAtStart !== this.roundGeneration) return;
       const confidence = calculateConfidence(content);
 
@@ -529,7 +531,7 @@ export class DebateService {
           socraticQualityReasons = result.reasons;
           if (result.score >= 40) break;
           // Retry with stricter prompt
-          const retryResult = await this.callLLM(participant, prompt + SOCRATIC_RETRY_PROMPT);
+          const retryResult = await this.callLLM(participant, prompt + SOCRATIC_RETRY_PROMPT, this._pauseController?.signal);
           content = retryResult.content;
           provider = retryResult.provider;
           model = retryResult.model;
@@ -679,8 +681,9 @@ export class DebateService {
   private async callLLM(
     participant: DebateParticipant,
     prompt: string,
+    signal?: AbortSignal,
   ): Promise<{ content: string; provider: string; model: string }> {
-    return this.llmCaller.callLLM(participant, prompt);
+    return this.llmCaller.callLLM(participant, prompt, signal);
   }
 
   private hasNovelClaims(session: DebateSession): boolean {
@@ -713,6 +716,8 @@ export class DebateService {
     }
     if (this.activeSession && this.activeSession.status === 'active') {
       this.activeSession.status = 'paused';
+      this._pauseController?.abort();
+      this._pauseController = null;
       this.clearTimeout();
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
       this.persistSession();
@@ -726,6 +731,7 @@ export class DebateService {
       return;
     }
     if (this.activeSession && this.activeSession.status === 'paused') {
+      this._pauseController = new AbortController();
       this.activeSession.status = 'active';
       this.startDebateLoop();
       this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
@@ -839,6 +845,8 @@ export class DebateService {
       clearTimeout(this._durationTimer);
       this._durationTimer = null;
     }
+    this._pauseController?.abort();
+    this._pauseController = null;
     this.debateStartTime = 0;
   }
 
