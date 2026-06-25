@@ -52,10 +52,6 @@ export class SuperAgentsDB extends Dexie {
   constructor() {
     super('super_agents_os_v4');
 
-    this.version(1).stores({});
-    this.version(2).stores({});
-    this.version(3).stores({});
-    this.version(4).stores({});
     this.version(5).stores({
       notes: 'id, keyId, type, timestamp',
       memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
