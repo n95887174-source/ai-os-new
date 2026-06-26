@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Search, X, PanelRightOpen, PanelRightClose, Star, History } from 'lucide-react'
+import { Search, X, PanelRightOpen, PanelRightClose, Star, History, ChevronDown } from 'lucide-react'
 import { motion } from 'framer-motion';
 import type { TranslationKey } from '../i18n/translations';
-import { NAV_SECTIONS, type RouteMeta, type UserLevel } from '../route-registry'
+import { NAV_SECTIONS, type UserLevel } from '../route-registry'
 
 const RECENT_KEY = 'mavis:palette:recent';
 function getRecent(): string[] {
@@ -25,10 +25,6 @@ interface SidebarProps {
   navLabelKey: Record<string, TranslationKey>;
 }
 
-const navItems: ({ id: string; type: 'header'; labelKey: TranslationKey } | (RouteMeta & { type: 'item' }))[] = NAV_SECTIONS.flatMap(section => [
-  { id: section.id, type: 'header' as const, labelKey: section.labelKey },
-  ...section.items.map(item => ({ ...item, type: 'item' as const })),
-]);
 
 const PINNED_KEY = 'mavis:sidebar:pinned';
 function getPinned(): string[] {
@@ -45,27 +41,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
   const [pinned, setPinned] = useState<string[]>(getPinned);
 
-  const visibleNavItems = useMemo(() => {
-    const q = sidebarSearchQuery.toLowerCase();
-    const levelRank = { L0: 0, L1: 1, L2: 2 };
-    const minRank = levelRank[userLevel];
-    const visibleItemIds = new Set(
-      navItems
-        .filter((item): item is RouteMeta & { type: 'item' } => item.type === 'item')
-        .filter((item) => {
-          if (item.featureFlag && !featureFlags[item.featureFlag]) return false;
-          if (levelRank[item.level || 'L2'] > minRank) return false;
-          if (q && !t(navLabelKey[item.id] ?? 'nav.overview').toLowerCase().includes(q)) return false;
-          return true;
-        })
-        .map((item) => item.id),
-    );
-    return navItems.filter((item) => {
-      if (item.type === 'item') return visibleItemIds.has(item.id);
-      const section = NAV_SECTIONS.find((s) => s.id === item.id);
-      return section?.items.some((meta) => visibleItemIds.has(meta.id)) ?? false;
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem('mavis:collapsedSections') || '[]')); } catch { return new Set<string>(); }
+  });
+  const toggleSection = (sectionId: string) => {
+    setCollapsedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId); else next.add(sectionId);
+      try { localStorage.setItem('mavis:collapsedSections', JSON.stringify([...next])); } catch { /* noop */ }
+      return next;
     });
-  }, [featureFlags, sidebarSearchQuery, t, navLabelKey, userLevel]);
+  };
 
   return (
     <>
@@ -125,30 +111,67 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         <nav className="sidebar-nav">
-          {visibleNavItems.map((item) => (
-            item.type === 'header' ? (
-              !isCollapsed && (
-                <div key={item.id} className="nav-section-header">{t(navLabelKey[item.id] ?? 'nav.overview')}</div>
-              )
-            ) : (
-              <button
-                key={item.id}
-                onClick={() => { onNavigate(item.id); onMobileMenuClose(); }}
-                className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-                aria-current={activeTab === item.id ? 'page' : undefined}
-                style={{
-                  '--active-color': item.color,
-                  justifyContent: isCollapsed ? 'center' : 'flex-start'
-                } as React.CSSProperties}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {!isCollapsed && <span className="nav-label">{t(navLabelKey[item.id] ?? 'nav.overview')}</span>}
-                {!isCollapsed && activeTab === item.id && (
-                  <motion.div layoutId="active-pill" className="active-pill" />
+          {NAV_SECTIONS.map((section) => {
+            const isCollapsed = collapsedSections.has(section.id);
+            const levelRank = { L0: 0, L1: 1, L2: 2 };
+            const minRank = levelRank[userLevel];
+            const q = sidebarSearchQuery.toLowerCase();
+            const hasSearch = q.length > 0 || isCollapsed;
+            const visibleItems = section.items.filter(item => {
+              if (levelRank[item.level || 'L2'] > minRank) return false;
+              if (q && !t(navLabelKey[item.id] ?? '').toLowerCase().includes(q)) return false;
+              return true;
+            });
+            if (visibleItems.length === 0 && !q) return null;
+            const sectionVisible = visibleItems.length > 0;
+            if (!sectionVisible && !q) return null;
+            return (
+              <React.Fragment key={section.id}>
+                {!isCollapsed && (
+                  <div
+                    className="nav-section-header"
+                    onClick={() => toggleSection(section.id)}
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}
+                    title={isCollapsed ? 'Expand section' : 'Collapse section'}
+                  >
+                    <span>{t(navLabelKey[section.id] ?? 'nav.overview')}</span>
+                    <ChevronDown
+                      size={14}
+                      style={{
+                        color: '#475569',
+                        transition: 'transform 0.2s',
+                      }}
+                    />
+                  </div>
                 )}
-              </button>
-            )
-          ))}
+                {(hasSearch ? true : !isCollapsed) && visibleItems.map(item => {
+                  const isDisabled = !!(item.featureFlag && !featureFlags[item.featureFlag]);
+                  if (isDisabled && !q) return null;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => { if (!isDisabled) { onNavigate(item.id); onMobileMenuClose(); } }}
+                      className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+                      aria-current={activeTab === item.id ? 'page' : undefined}
+                      disabled={isDisabled}
+                      style={{
+                        '--active-color': item.color,
+                        justifyContent: isCollapsed ? 'center' : 'flex-start',
+                        opacity: isDisabled ? 0.3 : 1,
+                        cursor: isDisabled ? 'default' : 'pointer',
+                      } as React.CSSProperties}
+                    >
+                      <span className="nav-icon">{item.icon}</span>
+                      {!isCollapsed && <span className="nav-label">{t(navLabelKey[item.id] ?? 'nav.overview')}</span>}
+                      {!isCollapsed && activeTab === item.id && (
+                        <motion.div layoutId="active-pill" className="active-pill" />
+                      )}
+                    </button>
+                  );
+                })}
+              </React.Fragment>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">
