@@ -167,7 +167,7 @@ export type { IFeatureFlagService, FeatureFlag } from './feature-flags';
 export type { ILocalStorageAdapter } from './storage-adapter';
 
 // ── Session Manager ──────────────────────────────────────────────
-export type { ISessionManager, SessionMeta, SessionType, SessionStatus, SessionFilters, SessionLink, DebateTimelineEntry, DebateOverride } from './session-manager';
+export type { ISessionManager, SessionMeta, DebateCreateData, SessionType, SessionStatus, SessionFilters, SessionLink, DebateTimelineEntry, DebateOverride } from './session-manager';
 
 // ── Event Bridge ──────────────────────────────────────────────────
 export type { KernelEvent, KernelEventLog } from './event-log';

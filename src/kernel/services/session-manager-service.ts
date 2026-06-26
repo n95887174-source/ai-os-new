@@ -1,7 +1,7 @@
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { DatabaseService } from './database-service';
-import type { ISessionManager, SessionMeta, SessionType, SessionStatus, SessionFilters, SessionLink, DebateTimelineEntry, DebateOverride } from '../contracts/session-manager';
+import type { ISessionManager, SessionMeta, DebateCreateData, SessionType, SessionStatus, SessionFilters, SessionLink, DebateTimelineEntry, DebateOverride } from '../contracts/session-manager';
 import type { DebateSessionRecord } from '../contracts/storage/debate-store';
 import type { ChatSession } from '../contracts/storage/session-store';
 import type { IEventBus } from '../types/interfaces';
@@ -18,7 +18,7 @@ export class SessionManagerService implements ISessionManager {
     this.eventBus = eventBus;
   }
 
-  async create(type: SessionType, meta: Partial<SessionMeta>): Promise<string> {
+  async create(type: SessionType, meta: Partial<SessionMeta>, debateData?: DebateCreateData): Promise<string> {
     const id = meta.id || genId();
     const now = Date.now();
     const base: SessionMeta = {
@@ -39,22 +39,22 @@ export class SessionManagerService implements ISessionManager {
       const record: DebateSessionRecord = {
         id,
         topic: base.title,
-        topologyType: 'roundtable',
+        topologyType: (debateData?.topologyType as DebateSessionRecord['topologyType']) ?? 'roundtable',
         phase: 'created',
         round: 0,
         totalTokens: 0,
         totalCost: 0,
         agentStates: '[]',
         arguments: '[]',
-        topology: '{}',
-        participants: '[]',
+        topology: debateData?.topology ?? '{}',
+        participants: debateData?.participants ?? '[]',
         memory: '{}',
         startedAt: now,
         updatedAt: now,
         createdAt: now,
         version: 1,
-        tags: base.tags,
-        folder: base.folder,
+        tags: debateData?.tags ?? base.tags,
+        folder: debateData?.folder ?? base.folder,
         isArchived: false,
       };
       await this.db.debateSessions.put(record);

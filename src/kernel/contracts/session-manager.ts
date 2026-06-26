@@ -51,8 +51,17 @@ export interface DebateOverride {
   appliedAt: number;
 }
 
+/** Debate-specific fields for create() */
+export interface DebateCreateData {
+  topologyType?: string;
+  participants?: string;
+  topology?: string;
+  tags?: string[];
+  folder?: string;
+}
+
 export interface ISessionManager {
-  create(type: SessionType, meta: Partial<SessionMeta>): Promise<string>;
+  create(type: SessionType, meta: Partial<SessionMeta>, debateData?: DebateCreateData): Promise<string>;
   load(id: string): Promise<SessionMeta | null>;
   save(id: string): Promise<void>;
   pause(id: string): Promise<void>;

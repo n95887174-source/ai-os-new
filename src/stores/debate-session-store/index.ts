@@ -6,7 +6,6 @@ import { genId } from '../../utils/gen-id';
 import type { DebateParticipant, DebateSession } from '../../kernel/contracts/debate-types';
 import type { DebateSessionMeta, DebateSessionStoreShape } from './types';
 import type { ISessionManager } from '../../kernel/contracts/session-manager';
-import type { DebateSessionRecord } from '../../kernel/contracts/storage/debate-store';
 import type { DatabaseService } from '../../kernel/services/database-service';
 
 interface DebateRecord {
@@ -127,12 +126,12 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
 
   createSession: async (topic, strategy, participants, config) => {
     const id = genId('debate-session');
-    await db().debateSessions.put({
-      id, topic,       topologyType: strategy as DebateSessionRecord['topologyType'], phase: 'created', round: 0,
-      totalTokens: 0, totalCost: 0, agentStates: '[]', arguments: '[]',
-      topology: JSON.stringify({ config }), participants: JSON.stringify(participants),
-      memory: '{}', startedAt: Date.now(), updatedAt: Date.now(), createdAt: Date.now(), version: 1,
-      tags: [], folder: '', isArchived: false,
+    await sm().create('debate', { id, title: topic, tags: [], folder: '' }, {
+      topologyType: strategy,
+      participants: JSON.stringify(participants),
+      topology: JSON.stringify({ config }),
+      tags: [],
+      folder: '',
     });
     const meta: DebateSessionMeta = {
       id, topic, strategy, phase: 'created', round: 0, participants,
