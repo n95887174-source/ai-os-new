@@ -9,6 +9,7 @@ import AlertLayer from './AlertLayer/AlertLayer';
 import { CommandPalette, useCommandPalette } from './CommandPalette/CommandPalette';
 import { Breadcrumbs } from './Common/Breadcrumbs';
 import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
+import { KeyboardShortcutsModal } from './Common/KeyboardShortcutsModal';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { settingsService, groupManager, featureFlagService } from '../kernel/instances';
 import { setLanguage, type TranslationKey } from '../i18n/translations';
@@ -42,6 +43,17 @@ export const AppLayout: React.FC = () => {
   const handleUserLevelChange = useCallback((level: UserLevel) => {
     setUserLevel(level);
     try { localStorage.setItem('mavis:userLevel', level); } catch { /* noop */ }
+  }, []);
+
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+        setShortcutsOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   useEffect(() => {
@@ -165,6 +177,14 @@ export const AppLayout: React.FC = () => {
                 <div className="avatar" aria-hidden="true" />
                 <span>{t('nav.operator')}</span>
               </div>
+              <button
+                onClick={() => setShortcutsOpen(true)}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem 0.5rem', fontSize: '0.85rem', fontWeight: 700, borderRadius: 6 }}
+                title="Keyboard shortcuts"
+                aria-label="Keyboard shortcuts"
+              >
+                ?
+              </button>
             </div>
           </header>
 
@@ -188,6 +208,7 @@ export const AppLayout: React.FC = () => {
           <AlertLayer />
           <CommandPalette open={isPaletteOpen} onClose={closePalette} t={t as (key: TranslationKey) => string} />
           <OnboardingWizard t={t as (key: TranslationKey) => string} />
+          <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         </main>
       </div>
     </GlobalErrorBoundary>
