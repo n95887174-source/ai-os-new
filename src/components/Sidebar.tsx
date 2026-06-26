@@ -146,7 +146,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
                 {(hasSearch ? true : !isCollapsed) && visibleItems.map(item => {
                   const isDisabled = !!(item.featureFlag && !featureFlags[item.featureFlag]);
-                  if (isDisabled && !q) return null;
                   return (
                     <button
                       key={item.id}

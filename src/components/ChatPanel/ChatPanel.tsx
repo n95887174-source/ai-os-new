@@ -1,360 +1,34 @@
 import { storageAdapter } from '../../kernel/instances';
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Send, Square, Zap, Loader2, AlertCircle, CheckCircle2, 
-  Activity, ChevronRight, Package, ChevronDown, KeyRound,
-  ShieldAlert, 
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+
+import {
+  Send, Square,
+  Activity, ChevronRight, ChevronDown,
   BrainCircuit,
-  Plus, MessageSquare, Trash2, GitFork,
-  Bookmark, Split, Layout, Settings,
-  AlertTriangle, X, RefreshCw, Search, ThumbsUp, ThumbsDown, Edit3, CornerDownRight, FileDown, Monitor
+  Plus, MessageSquare, Trash2,
+  Split, Settings,
+  X, Search, FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import type { ChatResponse } from '../../types/chat';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore, useActiveSessionHistory } from '../../stores/useChatStore';
-// legacy migration: decode old XOR-obfuscated values from localStorage
-const decodeLegacyObfuscated = (encoded: string): string | null => {
-  try {
-    const chars = atob(encoded).split('');
-    return chars.map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256))).join('');
-  } catch { return null; }
-};
-import { routerService, probeService, chatSummarizerService } from '../../kernel/instances';
-import type { ProbeResult } from '../../kernel/contracts/probe';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { MarkdownRenderer } from './MarkdownRenderer';
 import { VoiceButton } from './VoiceButton';
 import { PersonaSelector } from './PersonaSelector';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import SummaryPanel from './SummaryPanel';
 import MessageSearchPanel from '../MessageSearchPanel';
 import ChatExportPanel from '../ChatExportPanel';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useTranslation } from '../../i18n/useTranslation';
  
-import { ContextMenu } from '../Common/ContextMenu';
-import { errorCard, flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterSmGap, flexCol, iconBtnMuted, posRelative, textCenter, toastBase } from '../../styles/common';
-function getProviderColor(provider: string | undefined): string {
-  const colors: Record<string, string> = {
-    openrouter: '#60a5fa',
-    gemini:     '#c084fc',
-    groq:       '#34d399',
-    nvidia:     '#fbbf24',
-  };
-  return colors[(provider || '').toLowerCase()] || '#94a3b8';
-}
-
-const DEFAULT_MODELS: Record<string, string> = {
-  OpenRouter: 'openai/gpt-4o',
-  Gemini:     'gemini-3.1-flash-lite',
-  Groq:       'llama-3.3-70b-versatile',
-  NVIDIA:     'meta/llama-3.3-70b-instruct',
-};
-
-type ExecutionMode = 'auto' | 'parallel' | 'single';
-
-function formatTime(ts: number, t: (key: string) => string): string {
-  const d = new Date(ts);
-  const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === yesterday.toDateString()) return t('chat.yesterday_prefix') + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-}
-
-function groupSessions(sessions: { id: string; title: string; updatedAt: number }[], t: (key: string) => string): { label: string; sessions: typeof sessions }[] {
-  const now = new Date();
-  const today = now.toDateString();
-  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toDateString();
-  const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
-
-  const groups: Record<string, { label: string; sessions: typeof sessions }> = {
-    today: { label: t('chat.session_group_today'), sessions: [] },
-    yesterday: { label: t('chat.session_group_yesterday'), sessions: [] },
-    week: { label: t('chat.session_group_week'), sessions: [] },
-    earlier: { label: t('chat.session_group_earlier'), sessions: [] },
-  };
-
-  for (const s of sessions) {
-    const d = new Date(s.updatedAt).toDateString();
-    if (d === today) groups.today.sessions.push(s);
-    else if (d === yesterdayStr) groups.yesterday.sessions.push(s);
-    else if (s.updatedAt >= weekAgo.getTime()) groups.week.sessions.push(s);
-    else groups.earlier.sessions.push(s);
-  }
-
-  return Object.values(groups).filter(g => g.sessions.length > 0);
-}
-
-const ResponseCard = memo<{
-  res: ChatResponse;
-  entryId: string;
-  displayMode?: 'standard' | 'technical';
-  onFork?: (entryId: string) => void;
-  onRegenerate?: (entryId: string) => void;
-}>(({ res, entryId, displayMode = 'standard', onFork, onRegenerate }) => {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
-  const color = getProviderColor(res?.provider);
-  const isStreaming = res.status === 'loading' || res.status === 'streaming';
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    };
-  }, []);
-
-  const handleCopy = useCallback(() => {
-    if (!res) return;
-    navigator.clipboard.writeText(res.content);
-    setCopied(true);
-    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    copyTimeoutRef.current = setTimeout(() => {
-      setCopied(false);
-      copyTimeoutRef.current = null;
-    }, 2000);
-  }, [res]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        setCtxMenu({ x: e.clientX, y: e.clientY });
-      }}
-      style={{
-        background: 'rgba(255,255,255,0.025)',
-        border: `1px solid rgba(255,255,255,0.07)`,
-        borderLeft: `3px solid ${color}`,
-        borderRadius: 12,
-        padding: '1.2rem',
-        marginTop: '0.75rem',
-        position: 'relative',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: displayMode === 'technical' ? '0.75rem' : '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <div style={{ padding: 6, borderRadius: 8, background: 'rgba(255,255,255,0.03)' }}>
-            <ProviderIcon provider={res.provider} size={16} />
-          </div>
-          <div style={flexCol}>
-            <div style={flexCenterGap6px}>
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color }}>{res.provider}</span>
-              {isStreaming && <Loader2 size={12} color={color} style={{ animation: 'spin 1s linear infinite' }} />}
-              {res.status === 'error' && <AlertCircle size={12} color="#ef4444" />}
-              {res.status === 'streaming' && (
-                <span style={{ fontSize: '0.6rem', color, background: `${color}20`, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{t('chat.live')}</span>
-              )}
-            </div>
-            {displayMode === 'technical' && <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{res.model}</span>}
-          </div>
-        </div>
-        <div style={flexCenterGap3}>
-          {displayMode === 'technical' && res.latency > 0 && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{res.latency}{t('chat.latency_ms')}</span>
-          )}
-          {res.status === 'done' && (
-            <div style={{ display: 'flex', gap: '0.25rem' }}>
-              <button onClick={() => setFeedback(feedback === 'up' ? null : 'up')} title={t('chat.helpful')} aria-label={t('chat.helpful_aria')} style={{ background: 'none', border: 'none', color: feedback === 'up' ? '#10b981' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
-                <ThumbsUp size={13} aria-hidden="true" />
-              </button>
-              <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} title={t('chat.not_helpful')} aria-label={t('chat.not_helpful_aria')} style={{ background: 'none', border: 'none', color: feedback === 'down' ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
-                <ThumbsDown size={13} aria-hidden="true" />
-              </button>
-              {displayMode === 'technical' && (
-                <button onClick={() => onFork?.(entryId)} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={iconBtnMuted}>
-                  <GitFork size={14} aria-hidden="true" />
-                </button>
-              )}
-              <button onClick={handleCopy} title={t('chat.copy_title')} aria-label={t('chat.copy_aria')} style={iconBtnMuted}>
-                {copied ? <CheckCircle2 size={14} color="#10b981" /> : <Package size={14} />}
-              </button>
-              {onRegenerate && (
-                <button onClick={() => onRegenerate?.(entryId)} title={t('chat.regenerate_title')} aria-label={t('chat.regenerate_aria')} style={iconBtnMuted}>
-                  <RefreshCw size={14} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {res.status === 'loading' && !res.content && (
-        <div style={{ display: 'flex', gap: 4, padding: '0.5rem 0' }}>
-          {[0,1,2].map(i => (
-            <motion.div key={i} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-              style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
-          ))}
-        </div>
-      )}
-
-      {(res.status === 'streaming' || (res.status === 'loading' && res.content) || res.status === 'done') && res.content && (
-        <>
-          <MarkdownRenderer content={res.content} isStreaming={isStreaming} />
-          {isStreaming && (
-            <motion.span
-              animate={{ opacity: [1, 0] }}
-              transition={{ repeat: Infinity, duration: 0.8 }}
-              style={{ display: 'inline-block', width: 8, height: 16, background: color, marginLeft: 2, borderRadius: 1, verticalAlign: 'middle' }}
-            />
-          )}
-          {displayMode === 'technical' && isStreaming && (
-            <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
-              <span style={flexCenterSmGap}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
-              <span style={flexCenterSmGap}><ChevronRight size={10} /> {res.tps != null ? res.tps.toFixed(1) : '—'} {t('chat.tokens_per_sec')}</span>
-            </div>
-          )}
-          {displayMode === 'technical' && res.status === 'done' && (
-            <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              <span style={flexCenterSmGap}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
-              <span style={flexCenterSmGap}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
-              <span style={flexCenterSmGap}><ChevronRight size={12} /> {res.tps?.toFixed(1) || '—'} {t('chat.tokens_per_sec')}</span>
-            </div>
-          )}
-        </>
-      )}
-
-      {res.status === 'error' && (
-        <div style={errorCard}>
-          {res.error}
-          {onRegenerate && (
-            <div style={{ marginTop: '0.5rem' }}>
-              <button onClick={() => onRegenerate?.(entryId)} style={{ padding: '0.3rem 0.75rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fca5a5', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
-                {t('common.retry')}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      {ctxMenu && (
-        <ContextMenu
-          x={ctxMenu.x}
-          y={ctxMenu.y}
-          onClose={() => setCtxMenu(null)}
-          actions={[
-            { id: 'copy', label: t('chat.copy_title'), icon: <Package size={14} />, onClick: handleCopy },
-            { id: 'fork', label: t('chat.fork_title'), icon: <GitFork size={14} />, onClick: () => onFork?.(entryId), disabled: !onFork },
-            { id: 'regenerate', label: t('chat.regenerate_title'), icon: <RefreshCw size={14} />, onClick: () => onRegenerate?.(entryId), disabled: !onRegenerate, divider: true },
-          ]}
-        />
-      )}
-    </motion.div>
-  );
-});
-
+import { iconBtnMuted, toastBase } from '../../styles/common';
+import { DEFAULT_MODELS, type ExecutionMode, groupSessions } from './chat-panel-utils';
 import type { ChatEntry } from '../../stores/useChatStore';
-
-const ChatHistoryEntry = memo<{
-  entry: ChatEntry;
-  entryIdx: number;
-  isEditing: boolean;
-  editText: string;
-  isSplitView: boolean;
-  displayMode: 'standard' | 'technical';
-  onStartEdit: (id: string, text: string) => void;
-  onCancelEdit: () => void;
-  onSaveEdit: () => void;
-  onSetEditText: (text: string) => void;
-  onFork?: (entryId: string) => void;
-  onRegenerate?: (entryId: string) => void;
-}>(({ entry, entryIdx, isEditing, editText, isSplitView, displayMode, onStartEdit, onCancelEdit, onSaveEdit, onSetEditText, onFork, onRegenerate }) => {
-  const { t } = useTranslation();
-  return (
-    entry.role === 'system' ? (
-      <div key={entry.id} style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem', flexShrink: 0 }}>
-        <div style={{ padding: '0.35rem 1rem', borderRadius: 12, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500, fontStyle: 'italic' }}>
-          {entry.text}
-        </div>
-      </div>
-    ) : (
-    <div key={entry.id} style={{ marginBottom: '3rem', position: 'relative', flexShrink: 0 }}>
-      {entry.parentId && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem', padding: '0.3rem 0.75rem', background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.12)', borderRadius: 8, fontSize: '0.7rem', color: '#a855f7', fontWeight: 600 }}>
-          <CornerDownRight size={12} aria-hidden="true" />
-          {t('chat.forked_from')}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.75rem', maxWidth: '75%' }}>
-          {isEditing ? (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <textarea
-                value={editText}
-                onChange={e => onSetEditText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSaveEdit(); } if (e.key === 'Escape') onCancelEdit(); }}
-                style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 12, color: 'var(--text-main)', fontSize: '1rem', outline: 'none', resize: 'none', fontFamily: 'inherit', lineHeight: 1.6 }}
-                autoFocus
-              />
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                <button onClick={onCancelEdit} style={{ padding: '0.4rem 0.8rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>{t('common.cancel')}</button>
-                <button onClick={onSaveEdit} className="btn-primary" style={{ padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600 }}>{t('common.save')}</button>
-              </div>
-            </div>
-          ) : (
-            <div style={{
-              padding: '1rem 1.5rem',
-              background: 'var(--bg-panel)',
-              border: '1px solid var(--border)',
-              borderRadius: '24px 24px 4px 24px',
-              fontSize: '1rem', lineHeight: 1.6, color: 'var(--text-main)',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-              position: 'relative',
-              cursor: 'pointer',
-            }}
-              onClick={() => onStartEdit(entry.id, entry.text)}
-              title={t('chat.click_to_edit')}
-            >
-              <MarkdownRenderer content={entry.text} />
-              <div style={{ position: 'absolute', top: 8, right: 8, opacity: 0, transition: 'opacity 0.2s', background: 'rgba(0,0,0,0.4)', padding: 3, borderRadius: 4 }}
-                className="edit-message-hover"
-              >
-                <Edit3 size={12} color="var(--text-muted)" />
-              </div>
-            </div>
-          )}
-          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2, opacity: 0.6 }}>{formatTime(entry.timestamp, t)}</span>
-          
-          {entry.recalledMemories && entry.recalledMemories.length > 0 && (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {entry.recalledMemories.map((m, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.15)', borderRadius: 100, fontSize: '0.7rem', color: '#a855f7', fontWeight: 600 }}>
-                  <Bookmark size={10} aria-hidden="true" />
-                  <span>{t('chat.knowledge_recall_label').replace('{0}', m.content.substring(0, 30))}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {entry.responses.length > 0 && entryIdx > 0 && (
-        <div style={{ position: 'absolute', left: -8, top: 0, bottom: 0, width: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 1 }} aria-hidden="true" />
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: isSplitView ? '1fr 1fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
-        {entry.responses.map((res, j) => (
-          <ResponseCard key={`${entry.id}-${res.id}-${j}`} res={res} entryId={entry.id} onFork={onFork} onRegenerate={onRegenerate} displayMode={displayMode} />
-        ))}
-      </div>
-    </div>
-    )
-  );
-});
+import ChatHistoryEntry from './ChatHistoryEntry';
 
 const ChatPanel: React.FC = () => {
-  const { keys, activeKeys } = useKeyList();
+  const { activeKeys } = useKeyList();
   const activeKeysRef = useRef(activeKeys);
   useEffect(() => { activeKeysRef.current = activeKeys; }, [activeKeys]);
   const sendMessage = useChatStore(s => s.sendMessage);
@@ -370,8 +44,6 @@ const ChatPanel: React.FC = () => {
   const hasMoreSessions = useChatStore(s => s.hasMoreSessions);
   const loadMoreSessions = useChatStore(s => s.loadMoreSessions);
   const getSessionConfig = useChatStore(s => s.getSessionConfig);
-  const switchModel = useChatStore(s => s.switchModel);
-  const switchKey = useChatStore(s => s.switchKey);
   const systemPrompt = useChatStore(s => s.systemPrompt);
   const setSystemPrompt = useChatStore(s => s.setSystemPrompt);
   const isSending = useChatStore(s => s.activeRequestIds.size > 0);
@@ -402,900 +74,594 @@ const ChatPanel: React.FC = () => {
   const { confirm: confirmClear, ConfirmDialog: ClearConfirmDialog } = useConfirm();
   const [input, setInput] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
-  const navigate = useNavigate();
-  const [isSplitView, setIsSplitView] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const editingEntryIdRef = useRef<string | null>(null);
-  const lastEditedEntryIdRef = useRef<string | null>(null);
   const [editingText, setEditingText] = useState('');
-  const [undoText, setUndoText] = useState<string | null>(null);
-  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isScrolledUp, setIsScrolledUp] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(50);
-  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
-  const [temperature, setTemperature] = useState<number>(0.7);
-  const [maxTokens, setMaxTokens] = useState<number>(4096);
-  const [chatProbes, setChatProbes] = useState<Map<string, ProbeResult>>(new Map());
-  const [chatProbeLoading, setChatProbeLoading] = useState<string | null>(null);
-  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'standard' | 'technical'>('standard');
+  const [isSplitView, setIsSplitView] = useState(() => storageAdapter.getItem('chat-split-view') === 'true');
+  const [showSearch, setShowSearch] = useState(false);
   const [showExportOverlay, setShowExportOverlay] = useState(false);
-  const [responseDisplayMode, setResponseDisplayMode] = useState<'standard' | 'technical'>('standard');
-  const lastPromptRef = useRef('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  const selectedKey = useMemo(() => selectedKeys[0] ? keys.find(k => k.id === selectedKeys[0]) : undefined, [keys, selectedKeys]);
-  
-  const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const [showKeyDropdown, setShowKeyDropdown] = useState(false);
-  const modelDropdownRef = useRef<HTMLDivElement>(null);
-  const keyDropdownRef = useRef<HTMLDivElement>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [systemPromptDraft, setSystemPromptDraft] = useState(systemPrompt);
 
-  const allModelOptions = useMemo(() => {
-    const map: Record<string, Set<string>> = {};
-    for (const k of activeKeys) {
-      const models = k.availableModels || [];
-      if (models.length === 0) continue;
-      if (!map[k.provider]) map[k.provider] = new Set();
-      for (const m of models) map[k.provider].add(m);
-    }
-    return Object.entries(map).map(([provider, models]) => ({
-      provider,
-      models: [...models],
-    }));
-  }, [activeKeys]);
+  // UX-07: track which groups have been auto-expanded for context
+  const autoExpandedGroupRef = useRef(false);
+  const [showSystemPromptInput, setShowSystemPromptInput] = useState(false);
+  const [showModelConfig, setShowModelConfig] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sidebarWidth = 280;
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [showSearchWithinChat, setShowSearchWithinChat] = useState(false);
+  const [searchWithinQuery, setSearchWithinQuery] = useState('');
+  const [searchWithinResults, setSearchWithinResults] = useState<number[]>([]);
+  const [searchWithinIndex, setSearchWithinIndex] = useState(0);
 
-  useEffect(() => {
-    if (!showModelDropdown) return;
-    const handler = (e: MouseEvent) => {
-      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) setShowModelDropdown(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showModelDropdown]);
-
-  useEffect(() => {
-    if (!showKeyDropdown) return;
-    const handler = (e: MouseEvent) => {
-      if (keyDropdownRef.current && !keyDropdownRef.current.contains(e.target as Node)) setShowKeyDropdown(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showKeyDropdown]);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isMountedRef = useRef(true);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const clearError = useAutoClearError(setError);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (undoTimerRef.current) { clearTimeout(undoTimerRef.current); undoTimerRef.current = null; }
-    };
+  const showStatus = useCallback((text: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setStatusMessage({ text, type });
+    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    statusTimeoutRef.current = setTimeout(() => setStatusMessage(null), 3000);
   }, []);
 
-  useEffect(() => {
-    const handler = ({ provider, model, keyId }: { provider: string; model: string; keyId: string }) => {
-      if (!isMountedRef.current) return;
-      try {
-        setMode('single');
-        setSelectedKeys([keyId]);
-        setSelectedModel(model);
-        setIsSplitView(false);
-        createSession(`Chat with ${provider} (${model.split('/').pop()})`);
-        setError(null);
-      } catch (e) {
-        console.warn('[ChatPanel] Failed to create chat session:', e);
-        if (isMountedRef.current) { setError(t('chat.error_create_chat_session')); clearError(); }
-      }
-    };
-    const unsub = eventBus.on(EVENTS.START_CHAT_WITH_TARGET, handler);
-    return () => unsub();
-  }, [createSession, clearError, t]);
+  useAutoClearError(statusMessage, setStatusMessage, statusTimeoutRef);
 
   useEffect(() => {
-    const handler = ({ provider, model }: { provider: string; model: string }) => {
-      if (!isMountedRef.current) return;
-      try {
-        const key = keys.find(k => k.provider === provider);
-        if (!key) { setError(t('chat.error_no_key_for_provider').replace('{0}', provider)); clearError(); return; }
-        setMode('single');
-        setSelectedKeys([key.id]);
-        setSelectedModel(model);
-        setIsSplitView(false);
-        createSession(`Chat with ${provider} (${model.split('/').pop()})`);
-        setError(null);
-      } catch (e) {
-        console.warn('[ChatPanel] Failed to apply model selection:', e);
-        if (isMountedRef.current) { setError(t('chat.error_apply_model_selection')); clearError(); }
-      }
-    };
-    const unsub = eventBus.on(EVENTS.SELECT_MODEL, handler);
-    return () => unsub();
-  }, [keys, createSession, clearError, t]);
+    storageAdapter.setItem('chat-split-view', String(isSplitView));
+  }, [isSplitView]);
 
-  useEffect(() => {
-    if (!isMountedRef.current) return;
-    const currentKeys = activeKeysRef.current;
-    setSelectedModelPerKey(prev => {
-      const newMap: Record<string, string> = {};
-      let changed = false;
-      const ids = new Set(currentKeys.map(k => k.id));
-      for (const id of ids) {
-        const existing = prev[id];
-        const next = existing || currentKeys.find(k => k.id === id)?.availableModels?.[0] || DEFAULT_MODELS[currentKeys.find(k => k.id === id)?.provider || ''] || '';
-        newMap[id] = next;
-        if (existing !== next) changed = true;
-      }
-      if (!changed && Object.keys(prev).every(id => ids.has(id))) return prev;
-      return newMap;
-    });
-    setSelectedKeys(prev => {
-      if (prev.length === 0) return currentKeys.length > 0 ? [currentKeys[0].id] : [];
-      const valid = prev.filter(id => currentKeys.some(k => k.id === id));
-      return valid.length > 0 ? valid : (currentKeys.length > 0 ? [currentKeys[0].id] : []);
-    });
-  }, [activeKeys]);  
-
-  const isStreamingRef = useRef(false);
-
-  useEffect(() => {
-    isStreamingRef.current = isSending;
-  }, [isSending]);
-
-  useEffect(() => {
-    if (!isSending && !isScrolledUp) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history, isScrolledUp, isSending]);
-
-  const handleScroll = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-    setIsScrolledUp(!atBottom);
-  }, []);
-
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(() => {
     const text = input.trim();
-    if (!text || isSending) return;
-    if (!isMountedRef.current) return;
-    if (activeKeys.length === 0) { setError(t('chat.error_no_active_keys')); clearError(); return; }
-    setError(null);
-    try {
-      let targets: { provider: string; model: string; keyId?: string }[] = [];
-      if (isSplitView && selectedKeys.length >= 2) {
-        targets = selectedKeys.map(id => {
-          const k = keys.find(key => key.id === id);
-          return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '', keyId: k?.id };
-        });
-      } else if (mode === 'single') {
-        const firstKeyId = selectedKeys[0];
-        const k = firstKeyId ? keys.find(key => key.id === firstKeyId) : activeKeys[0];
-        if (!k) return;
-        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }];
-      } else if (mode === 'parallel') {
-        targets = activeKeys.map(k => ({ provider: k.provider, model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }));
-      } else {
-        const sessionConfig = getSessionConfig?.();
-        if (sessionConfig?.provider && sessionConfig?.model) {
-          targets = [{ provider: sessionConfig.provider, model: sessionConfig.model, keyId: sessionConfig.keyId }];
-        } else {
-          const ranked = routerService.getRankedProviders('latency', text);
-          const best = ranked && ranked[0];
-          if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '', keyId: best.id }];
-        }
-      }
-      if (targets.length === 0) return;
-      storageAdapter.setItem('lastPrompt', text);
-      lastPromptRef.current = text;
-      await sendMessage(targets, text, systemPrompt || undefined, temperature, maxTokens);
-      if (isMountedRef.current) {
-        setInput('');
-        const newCount = history.length + 1;
-        if (newCount >= 30 && newCount % 30 === 0) {
-          const msgs = history.flatMap((e) => [
-            { id: `${e.id}:user`, role: 'user' as const, content: e.text, timestamp: e.timestamp },
-            ...e.responses.map((r, i) => ({
-              id: `${e.id}:assistant:${i}`,
-              role: 'assistant' as const,
-              content: r.content,
-              timestamp: e.timestamp,
-            })),
-          ]);
-          void chatSummarizerService.autoSummarize(activeSessionId || 'default', msgs);
-        }
-      }
-    } catch (e) {
-      console.warn('[ChatPanel] Failed to send message:', e);
-      if (isMountedRef.current) { setError(t('chat.error_send_message')); clearError(); }
-    }
-  }, [input, isSending, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, history, activeSessionId, getSessionConfig, t]);
-
-  const handleRegenerate = useCallback(async (entryId: string) => {
-    const entry = historyMap.get(entryId);
-    if (!entry || !entry.text) return;
-    if (!isMountedRef.current) return;
-    setError(null);
-    try {
-      let targets: { provider: string; model: string; keyId?: string }[] = [];
-      if (isSplitView && selectedKeys.length >= 2) {
-        targets = selectedKeys.map(id => {
-          const k = keys.find(key => key.id === id);
-          return { provider: k?.provider || '', model: selectedModelPerKey[id] || k?.availableModels?.[0] || DEFAULT_MODELS[k?.provider || ''] || '', keyId: k?.id };
-        });
-      } else if (mode === 'single') {
-        const firstKeyId = selectedKeys[0];
-        const k = firstKeyId ? keys.find(key => key.id === firstKeyId) : activeKeys[0];
-        if (!k) return;
-        targets = [{ provider: k.provider, model: selectedModelPerKey[k.id] || selectedModel || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }];
-      } else if (mode === 'parallel') {
-        targets = activeKeys.map(k => ({ provider: k.provider, model: selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '', keyId: k.id }));
-      } else {
-        const sessionConfig = getSessionConfig?.();
-        if (sessionConfig?.provider && sessionConfig?.model) {
-          targets = [{ provider: sessionConfig.provider, model: sessionConfig.model, keyId: sessionConfig.keyId }];
-        } else {
-          const ranked = routerService.getRankedProviders('latency', entry.text);
-          const best = ranked && ranked[0];
-          if (best) targets = [{ provider: best.provider, model: best.stats?.lastModel || best.availableModels?.[0] || DEFAULT_MODELS[best.provider] || '', keyId: best.id }];
-        }
-      }
-      if (targets.length === 0) return;
-      await sendMessage(targets, entry.text, systemPrompt || undefined, temperature, maxTokens);
-    } catch (e) {
-      console.warn('[ChatPanel] Failed to regenerate response:', e);
-      if (isMountedRef.current) { setError(t('chat.error_regenerate')); clearError(); }
-    }
-  }, [historyMap, isSplitView, selectedKeys, keys, activeKeys, mode, selectedModelPerKey, selectedModel, sendMessage, clearError, systemPrompt, temperature, maxTokens, getSessionConfig, t]);
-
-  const handleCreateSession = useCallback(() => {
-    try { createSession(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to create session:', e); setError(t('chat.error_create_session')); clearError(); }
-  }, [createSession, clearError, t]);
-
-  const handleDeleteSession = useCallback(async (sessionId: string) => {
-    const ok = await confirmDelete({ title: t('chat.confirm_delete_title'), message: t('chat.confirm_delete_message'), confirmLabel: t('common.delete'), variant: 'danger' });
-    if (!ok) return;
-    try { deleteSession(sessionId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to delete session:', e); setError(t('chat.error_delete_session')); clearError(); }
-  }, [deleteSession, clearError, t, confirmDelete]);
-
-  const handleClearHistory = useCallback(async () => {
-    const ok = await confirmClear({ title: t('chat.confirm_clear_title'), message: t('chat.confirm_clear_message'), confirmLabel: t('common.clear'), variant: 'danger' });
-    if (!ok) return;
-    try { clearHistory(); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to clear history:', e); setError(t('chat.error_clear_history')); clearError(); }
-  }, [clearHistory, clearError, t, confirmClear]);
-
-  const handleForkSession = useCallback((entryId: string) => {
-    try { forkSession(entryId); setError(null); } catch (e) { console.warn('[ChatPanel] Failed to fork session:', e); setError(t('chat.error_fork_session')); clearError(); }
-  }, [forkSession, clearError, t]);
-
-  const toggleSplitView = useCallback(() => {
-    if (activeKeys.length < 2) { setError(t('chat.error_comparison_needs_two')); clearError(); return; }
-    setError(null);
-    setIsSplitView(prev => !prev);
-    if (!isSplitView && selectedKeys.length < 2 && activeKeys.length >= 2) {
-      const secondId = activeKeys.find(k => k.id !== selectedKeys[0])?.id;
-      if (secondId && selectedKeys[0]) setSelectedKeys([selectedKeys[0], secondId]);
-    }
-  }, [activeKeys, isSplitView, selectedKeys, clearError, t]);
+    if (!text) return;
+    setInput('');
+    sendMessage(text, selectedKeys, selectedModel, mode);
+  }, [input, sendMessage, selectedKeys, selectedModel, mode]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   }, [handleSend]);
 
-  const toggleKeySelection = useCallback((id: string) => {
-    if (!isMountedRef.current) return;
-    const key = keys.find(k => k.id === id);
-    if (!key || key.status !== 'active') { setError(t('chat.error_provider_not_active').replace('{0}', key?.label || id)); clearError(); return; }
-    setSelectedKeys(prev => {
-      if (!Array.isArray(prev) || prev.length === 0) return [id];
-      let newKeys;
-      if (prev.includes(id)) {
-        if (prev.length === 1) return prev;
-        newKeys = prev.filter(k => k !== id);
-      } else {
-        if (isSplitView && prev.length >= 2) newKeys = [prev[0]!, id];
-        else if (isSplitView && prev.length === 1) newKeys = [prev[0]!, id];
-        else newKeys = [id];
-      }
-      return newKeys;
-    });
-    const selectedKeyObj = keys.find(k => k.id === id);
-    if (selectedKeyObj) {
-      const model = selectedModelPerKey[selectedKeyObj.id] || selectedKeyObj.availableModels?.[0] || DEFAULT_MODELS[selectedKeyObj.provider] || '';
-      setSelectedModel(model);
-      switchKey?.(id);
-      switchModel?.(selectedKeyObj.provider, model);
-    }
-  }, [keys, isSplitView, selectedModelPerKey, clearError, switchKey, switchModel, t]);
+  const handleCancel = useCallback(() => {
+    cancelSending();
+  }, [cancelSending]);
 
-  const startEditing = useCallback((entryId: string, text: string) => {
-    setEditingEntryId(entryId);
-    editingEntryIdRef.current = entryId;
+  const handleStartEdit = useCallback((id: string, text: string) => {
+    setEditingEntryId(id);
     setEditingText(text);
-    setUndoText(null);
   }, []);
 
-  const cancelEditing = useCallback(() => {
+  const handleCancelEdit = useCallback(() => {
     setEditingEntryId(null);
-    editingEntryIdRef.current = null;
     setEditingText('');
   }, []);
 
-  const saveEditing = useCallback(() => {
-    const id = editingEntryIdRef.current;
-    if (!id || !editingText.trim()) return;
-    const prevText = historyMap.get(id)?.text || '';
-    lastEditedEntryIdRef.current = id;
-    editEntry(id, editingText.trim());
-    cancelEditing();
-    setUndoText(prevText);
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => { setUndoText(null); undoTimerRef.current = null; }, 5000);
-  }, [editingText, editEntry, cancelEditing, historyMap]);
-
-  const handleUndoEdit = useCallback(() => {
-    const text = undoText;
-    if (!text) return;
-    const targetId = lastEditedEntryIdRef.current || history[history.length - 1]?.id;
-    if (!targetId) return;
-    editEntry(targetId, text);
-    setUndoText(null);
-  }, [undoText, editEntry, history]);
-
-  const filteredSessions = useMemo(() => searchQuery
-    ? sessions.filter(s => {
-        const q = searchQuery.toLowerCase();
-        if (s.title.toLowerCase().includes(q)) return true;
-        return s.history.some(e => {
-          if (e.text.toLowerCase().includes(q)) return true;
-          return e.responses.some(r => r.content.toLowerCase().includes(q));
-        });
-      })
-    : sessions, [sessions, searchQuery]);
-
-  const groupedSessions = useMemo(() => groupSessions(filteredSessions, t), [filteredSessions, t]);
-
-  const activeSession = useMemo(() => sessions.find(s => s.id === activeSessionId), [sessions, activeSessionId]);
-  const activeSessionTitle = useMemo(() => activeSession?.title ?? t('chat.default_session_title'), [activeSession, t]);
-
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 200) + 'px';
+  const handleSaveEdit = useCallback(() => {
+    if (editingEntryId && editingText.trim()) {
+      editEntry(editingEntryId, editingText);
     }
-  }, [input]);
+    setEditingEntryId(null);
+    setEditingText('');
+  }, [editingEntryId, editingText, editEntry]);
 
-  const cancelSendingRef = useRef(cancelSending);
-  useEffect(() => { cancelSendingRef.current = cancelSending; }, [cancelSending]);
+  const handleFork = useCallback((entryId: string) => {
+    const newId = forkSession(entryId);
+    if (newId) {
+      setActiveSessionId(newId);
+      showStatus(t('chat.forked'));
+    }
+  }, [forkSession, setActiveSessionId, showStatus, t]);
 
-  useEffect(() => {
-    const saved = storageAdapter.getItem('lastPrompt');
-    if (saved) lastPromptRef.current = decodeLegacyObfuscated(saved) || saved;
+  const handleRegenerate = useCallback((entryId: string) => {
+    sendMessage('', selectedKeys, selectedModel, 'single', entryId);
+  }, [sendMessage, selectedKeys, selectedModel]);
+
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery.trim()) return sessions;
+    const q = searchQuery.toLowerCase();
+    return sessions.filter(s =>
+      s.title.toLowerCase().includes(q) ||
+      (historyMap.get(s.id)?.entries || []).some((e: ChatEntry) => e.text.toLowerCase().includes(q))
+    );
+  }, [sessions, searchQuery, historyMap]);
+
+  const sessionGroups = useMemo(() => groupSessions(filteredSessions, t), [filteredSessions, t]);
+
+  const activeSession = sessions.find(s => s.id === activeSessionId);
+  const historyEntries = activeSessionId && historyMap.get(activeSessionId)?.entries;
+
+  // retrieve config for active session
+  const activeConfig = activeSessionId ? getSessionConfig(activeSessionId) : undefined;
+  const activeModel = activeConfig?.model || selectedModel;
+  const handleNewChat = useCallback(() => {
+    const newId = createSession();
+    setActiveSessionId(newId);
+    setInput('');
+    setEditingEntryId(null);
+    setShowSidebar(true);
+    autoExpandedGroupRef.current = true;
+  }, [createSession, setActiveSessionId]);
+
+  const handleDeleteSession = useCallback(async (id: string) => {
+    const confirmed = await confirmDelete(t('chat.confirm_delete'));
+    if (!confirmed) return;
+    deleteSession(id);
+    if (id === activeSessionId) {
+      setActiveSessionId(history.length > 0 ? history[history.length - 1].id : '');
+    }
+  }, [confirmDelete, deleteSession, activeSessionId, history, setActiveSessionId, t]);
+
+  const handleClearHistory = useCallback(async () => {
+    const confirmed = await confirmClear(t('chat.confirm_clear'));
+    if (!confirmed) return;
+    clearHistory();
+  }, [confirmClear, clearHistory, t]);
+
+  const handleSessionClick = useCallback((id: string) => {
+    setActiveSessionId(id);
+    setShowSidebar(false);
+  }, [setActiveSessionId]);
+
+  const toggleGroup = useCallback((label: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
   }, []);
 
+  // Search within active chat
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
-        const saved = storageAdapter.getItem('lastPrompt');
-        if (saved) { setInput(decodeLegacyObfuscated(saved) || saved); e.preventDefault(); }
-      }
-      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-      if (e.key === 'Escape') {
-        if (isSending) { cancelSendingRef.current(); e.preventDefault(); }
-        else (document.activeElement as HTMLElement)?.blur();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isSending]);
-
-  if (activeKeys.length === 0) {
-    return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1.5rem', opacity: 0.8 }}>
-         <div style={{ background: 'rgba(239,68,68,0.1)', padding: '2.5rem', borderRadius: '50%', border: '1px solid rgba(239,68,68,0.2)' }}>
-          <ShieldAlert size={64} color="#ef4444" />
-         </div>
-         <div style={textCenter}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>{t('chat.no_providers_title')}</h3>
-            <p style={{ fontSize: '1rem', maxWidth: 400, color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('chat.no_providers_desc')}</p>
-            <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => eventBus.emit(EVENTS.NAVIGATE, 'keys')}>{t('chat.configure_providers')}</button>
-         </div>
-      </div>
-    );
-  }
+    if (!searchWithinQuery.trim() || !historyEntries) {
+      setSearchWithinResults([]);
+      return;
+    }
+    const q = searchWithinQuery.toLowerCase();
+    const indices: number[] = [];
+    historyEntries.forEach((entry, idx) => {
+      if (entry.text.toLowerCase().includes(q)) indices.push(idx);
+    });
+    setSearchWithinResults(indices);
+    setSearchWithinIndex(0);
+  }, [searchWithinQuery, historyEntries]);
 
   return (
-    <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative', background: 'var(--bg-main)', color: 'var(--text-main)' }}>
-      {/* H-31: Single style tag outside .map() to avoid N identical DOM nodes */}
-      <style>{`.edit-message-hover { opacity: 0; } div:hover > .edit-message-hover { opacity: 1; }`}</style>
-      <DeleteConfirmDialog />
-      <ClearConfirmDialog />
+    <div style={{ display: 'flex', height: '100%', position: 'relative' }}>
+      {/* Sidebar */}
       <AnimatePresence>
-        {error && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ ...toastBase, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5' }}
-            role="alert" aria-live="polite"
-          >
-            <AlertTriangle size={14} aria-hidden="true" /> {error}
-            <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss_error')}>
-              <X size={14} aria-hidden="true" />
-            </button>
-          </motion.div>
-        )}
-        {undoText && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ ...toastBase, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399' }}
-            role="status" aria-live="polite"
-          >
-            <span>{t('chat.message_edited')}</span>
-            <button onClick={handleUndoEdit} style={{ cursor: 'pointer', padding: '2px 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: 'inherit', fontWeight: 700, fontSize: '0.8rem' }}>{t('common.undo')}</button>
-            <button onClick={() => setUndoText(null)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'inherit' }} aria-label={t('common.dismiss')}>
-              <X size={14} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showSidebar && (
-          <motion.div 
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 280, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.02)', borderRight: '1px solid var(--border)', alignSelf: 'stretch' }}
-          >
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button onClick={handleCreateSession} className="btn-primary" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '0.75rem' }} aria-label={t('chat.new_conversation_aria')}>
-                <Plus size={16} aria-hidden="true" /> {t('chat.new_conversation')}
-              </button>
-              <div style={posRelative}>
+      {showSidebar && (
+        <motion.div
+          ref={sidebarRef}
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width: sidebarWidth, opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          style={{ overflow: 'hidden', flexShrink: 0, borderRight: '1px solid var(--border)', background: 'var(--bg-panel)' }}
+        >
+          <div style={{ width: sidebarWidth, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('chat.sessions_label')}</span>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  <button onClick={handleNewChat} style={{ padding: '0.4rem', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer' }} title={t('chat.new_session')} aria-label={t('chat.new_session')}>
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+              <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} aria-hidden="true" />
                 <input
-                  ref={searchInputRef}
+                  type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder={t('chat.search_sessions')}
-                  style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }}
+                  placeholder={t('chat.search_placeholder')}
+                  aria-label={t('chat.search_sessions')}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem 0.55rem 2rem', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }}
                 />
               </div>
             </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
-              {groupedSessions.length === 0 && searchQuery && (
-                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('chat.no_sessions_found')}</div>
-              )}
-              {groupedSessions.map(group => (
+            <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem' }}>
+              {sessionGroups.map((group) => (
                 <div key={group.label} style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', padding: '0 0.5rem 0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{group.label}</div>
-                  {group.sessions.map(s => (
-                    <div 
-                      key={s.id}
-                      onClick={() => setActiveSessionId(s.id)}
-                      style={{ 
-                        padding: '0.8rem 1rem', borderRadius: 12, cursor: 'pointer', marginBottom: '0.3rem',
-                        background: activeSessionId === s.id ? 'rgba(59,130,246,0.12)' : 'transparent',
-                        border: activeSessionId === s.id ? '1px solid rgba(59,130,246,0.2)' : '1px solid transparent',
-                        display: 'flex', alignItems: 'center', gap: '0.8rem', transition: 'all 0.2s',
-                        position: 'relative', overflow: 'hidden'
-                      }}
-                      role="button" tabIndex={0}
-                      aria-label={t('chat.switch_session_aria').replace('{0}', s.title)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveSessionId(s.id); }}
-                    >
-                      <MessageSquare size={16} color={activeSessionId === s.id ? '#3b82f6' : 'var(--text-muted)'} aria-hidden="true" />
-                      <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: activeSessionId === s.id ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{formatTime(s.updatedAt, t)}</div>
-                      </div>
-                      {activeSessionId === s.id && (
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }} style={{ ...iconBtnMuted, opacity: 0.6 }} aria-label={t('chat.delete_session_aria').replace('{0}', s.title)}>
-                          <Trash2 size={14} aria-hidden="true" />
+                  <div
+                    onClick={() => toggleGroup(group.label)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.5rem', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}
+                  >
+                    <ChevronDown size={12} style={{ transform: collapsedGroups.has(group.label) ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} aria-hidden="true" />
+                    {group.label}
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', opacity: 0.5 }}>{group.sessions.length}</span>
+                  </div>
+                  {!collapsedGroups.has(group.label) && group.sessions.map(s => {
+                    const isActive = s.id === activeSessionId;
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => handleSessionClick(s.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.35rem',
+                          padding: '0.45rem 0.5rem', borderRadius: 8, cursor: 'pointer',
+                          fontSize: '0.78rem', color: isActive ? '#3b82f6' : 'var(--text-main)',
+                          background: isActive ? 'rgba(59,130,246,0.08)' : 'transparent',
+                          fontWeight: isActive ? 600 : 400,
+                          border: isActive ? '1px solid rgba(59,130,246,0.15)' : '1px solid transparent',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        <MessageSquare size={12} style={{ flexShrink: 0, opacity: 0.5 }} aria-hidden="true" />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{s.title}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
+                          style={{ padding: 2, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.4, flexShrink: 0 }}
+                          title={t('chat.delete_session')}
+                          aria-label={t('chat.delete_session_aria')}
+                        >
+                          <Trash2 size={12} aria-hidden="true" />
                         </button>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
               {hasMoreSessions && (
-                <div style={{ textAlign: 'center', padding: '0.75rem' }}>
-                  <button onClick={loadMoreSessions} style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, width: '100%' }}>
-                    {t('chat.load_more')}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem' }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(45deg, #3b82f6, #8b5cf6)' }} aria-hidden="true" />
-                <div style={flex1}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{t('chat.operator_label')}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t('chat.pro_account')}</div>
-                </div>
-                <button onClick={() => eventBus.emit(EVENTS.NAVIGATE, 'settings')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('chat.settings_aria')}>
-                  <Settings size={14} aria-hidden="true" />
+                <button onClick={loadMoreSessions} style={{ width: '100%', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  {t('chat.load_more')}
                 </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'transparent' }}>
-        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)', backdropFilter: 'blur(10px)' }}>
-          <div style={flexCenterGap4}>
-            <button onClick={() => setShowSidebar(!showSidebar)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: 6, color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={showSidebar ? t('chat.hide_sidebar_aria') : t('chat.show_sidebar_aria')}>
-              <Layout size={18} aria-hidden="true" />
-            </button>
-            <div>
-              <div style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                  {activeSessionTitle}
-              </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} aria-hidden="true" />
-                {t('chat.engine_status').replace('{0}', String(activeKeys.length))}
-              </div>
-              {activeSession?.linkedDebateId && (
-                <button
-                  onClick={() => navigate(`/debate-runtime?sessionId=${activeSession!.linkedDebateId}`)}
-                  style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: 8, background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', marginTop: 2 }}
-                  title="Open linked debate"
-                >🗣️ Debate</button>
               )}
+              {sessionGroups.length === 0 && (
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  {searchQuery ? t('chat.no_search_results') : t('chat.no_sessions')}
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '0.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.35rem', justifyContent: 'center' }}>
+              <button onClick={handleClearHistory} style={{ padding: '0.4rem 0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#ef4444', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 600 }}>
+                {t('chat.clear_all')}
+              </button>
             </div>
           </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
-          <div style={flexCenterGap3}>
-            {selectedKey && (
-              <>
-                {/* ModelSwitcher */}
-                <div ref={modelDropdownRef} style={{ position: 'relative' }}>
-                  <button onClick={() => { if (!isSending) setShowModelDropdown(!showModelDropdown); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: isSending ? 'not-allowed' : 'pointer', opacity: isSending ? 0.4 : 1, whiteSpace: 'nowrap' }}>
-                    <Zap size={12} /> {selectedModel || selectedKey?.availableModels?.[0] || 'model'}
-                    <ChevronDown size={10} />
-                  </button>
-                  {showModelDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1e293b', border: '1px solid var(--border)', borderRadius: 10, padding: '0.5rem', minWidth: 220, maxHeight: 300, overflowY: 'auto', zIndex: 100, boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-                      {allModelOptions.map(group => (
-                        <div key={group.provider}>
-                          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: getProviderColor(group.provider), textTransform: 'uppercase', padding: '0.35rem 0.5rem', letterSpacing: '0.03em' }}>{group.provider}</div>
-                          {group.models.map(model => (
-                            <button key={model} onClick={() => { switchModel?.(group.provider, model); setSelectedModel(model); setShowModelDropdown(false); }}
-                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.35rem 0.5rem', borderRadius: 6, background: selectedModel === model ? 'rgba(59,130,246,0.15)' : 'transparent', border: 'none', color: selectedModel === model ? '#60a5fa' : '#e2e8f0', fontSize: '0.75rem', cursor: 'pointer' }}>
-                              {model}
-                            </button>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* KeySwitcher */}
-                <div ref={keyDropdownRef} style={{ position: 'relative' }}>
-                  <button onClick={() => { if (!isSending) setShowKeyDropdown(!showKeyDropdown); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.35rem 0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: 'var(--bg-panel)', color: 'var(--text-muted)', cursor: isSending ? 'not-allowed' : 'pointer', opacity: isSending ? 0.4 : 1, whiteSpace: 'nowrap' }}>
-                    <KeyRound size={12} /> {selectedKey?.label || 'key'}
-                    <ChevronDown size={10} />
-                  </button>
-                  {showKeyDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1e293b', border: '1px solid var(--border)', borderRadius: 10, padding: '0.5rem', minWidth: 200, maxHeight: 300, overflowY: 'auto', zIndex: 100, boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-                      {activeKeys.map(k => (
-                        <button key={k.id} onClick={() => { switchKey?.(k.id); setSelectedKeys([k.id]); setShowKeyDropdown(false); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '0.4rem 0.5rem', borderRadius: 6, background: selectedKeys[0] === k.id ? 'rgba(59,130,246,0.15)' : 'transparent', border: 'none', color: selectedKeys[0] === k.id ? '#60a5fa' : '#e2e8f0', fontSize: '0.75rem', cursor: 'pointer' }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: getProviderColor(k.provider), flexShrink: 0 }} />
-                          <span style={{ flex: 1 }}>{k.label}</span>
-                          <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.provider}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-            <button 
-              onClick={toggleSplitView}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem 0.8rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '0.8rem', fontWeight: 700, background: isSplitView ? 'rgba(59,130,246,0.1)' : 'var(--bg-panel)', color: isSplitView ? '#3b82f6' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
-              aria-label={isSplitView ? t('chat.comparison_mode_disable_aria') : t('chat.comparison_mode_enable_aria')}
-            >
-              <Split size={16} aria-hidden="true" />
-              {t('chat.comparison_mode')}
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button onClick={() => setShowSidebar(!showSidebar)} style={{ padding: 6, borderRadius: 8, background: 'none', border: 'none', color: showSidebar ? '#3b82f6' : 'var(--text-muted)', cursor: 'pointer' }} title={t('chat.toggle_sidebar')} aria-label={t('chat.toggle_sidebar')}>
+              <MessageSquare size={18} aria-hidden="true" />
             </button>
-            <div style={{ width: 1, height: 20, background: 'var(--border)' }} aria-hidden="true" />
-            <button
-              onClick={() => setResponseDisplayMode(m => m === 'standard' ? 'technical' : 'standard')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.7rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: responseDisplayMode === 'technical' ? 'rgba(16,185,129,0.1)' : 'var(--bg-panel)', color: responseDisplayMode === 'technical' ? '#10b981' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
-              aria-label={responseDisplayMode === 'technical' ? t('chat.display_standard_aria') : t('chat.display_technical_aria')}
-            >
-              <Monitor size={14} aria-hidden="true" />
-              {responseDisplayMode === 'technical' ? t('chat.display_standard') : t('chat.display_technical')}
+            <div>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{activeSession?.title || t('chat.no_session')}</span>
+              {activeModel && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>{activeModel}</span>}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+            <button onClick={() => setShowSearch(true)} style={iconBtnMuted} title={t('chat.search_messages')} aria-label={t('chat.search_messages')}>
+              <Search size={16} />
             </button>
-            <button onClick={handleClearHistory} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('chat.clear_history_aria')}>
-              <Trash2 size={18} aria-hidden="true" />
+            <button onClick={() => { setShowSearchWithinChat(!showSearchWithinChat); setSearchWithinQuery(''); }} style={iconBtnMuted} title={t('chat.search_in_chat')} aria-label={t('chat.search_in_chat')}>
+              <Search size={16} />
             </button>
-            <button onClick={() => setShowSearchOverlay(true)} style={{ background: 'none', border: 'none', color: showSearchOverlay ? '#06b6d4' : 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('nav.message_search')}>
-              <Search size={18} aria-hidden="true" />
+            <ModuleInfo moduleKey="chat" />
+            <button onClick={() => setShowExportOverlay(true)} style={iconBtnMuted} title={t('chat.export')} aria-label={t('chat.export_aria')}>
+              <FileDown size={16} />
             </button>
-            <button onClick={() => setShowExportOverlay(true)} style={{ background: 'none', border: 'none', color: showExportOverlay ? '#10b981' : 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('nav.chat_export')}>
-              <FileDown size={18} aria-hidden="true" />
+            <button onClick={() => setDisplayMode(d => d === 'standard' ? 'technical' : 'standard')} style={{
+              ...iconBtnMuted,
+              color: displayMode === 'technical' ? '#a855f7' : 'var(--text-muted)',
+              background: displayMode === 'technical' ? 'rgba(168,85,247,0.1)' : 'transparent'
+            }} title={displayMode === 'technical' ? t('chat.standard_mode') : t('chat.technical_mode')} aria-label={displayMode === 'technical' ? t('chat.standard_mode') : t('chat.technical_mode')}>
+              <Activity size={16} />
+            </button>
+            <button onClick={() => { setIsSplitView(!isSplitView); showStatus(isSplitView ? t('chat.split_view_disabled') : t('chat.split_view_enabled'), 'info'); }} style={{
+              ...iconBtnMuted,
+              color: isSplitView ? '#a855f7' : 'var(--text-muted)',
+              background: isSplitView ? 'rgba(168,85,247,0.1)' : 'transparent'
+            }} title={t('chat.split_view')} aria-label={t('chat.split_view')}>
+              <Split size={16} />
+            </button>
+            <button onClick={() => setShowSystemPromptInput(!showSystemPromptInput)} style={{ ...iconBtnMuted, color: showSystemPromptInput ? '#3b82f6' : 'var(--text-muted)' }} title={t('chat.system_prompt')} aria-label={t('chat.system_prompt')}>
+              <Settings size={16} />
             </button>
           </div>
         </div>
 
-        <div style={{ flexShrink: 0, padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('chat.select_provider_model')}</span>
-          {Object.entries(
-            activeKeys.reduce((acc, k) => {
-              (acc[k.provider] ??= []).push(k);
-              return acc;
-            }, {} as Record<string, typeof activeKeys>)
-          ).map(([provider, providerKeys]) => (
-            <div key={provider} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 90, fontSize: '0.75rem', fontWeight: 800, color: getProviderColor(provider), textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <ProviderIcon provider={provider} size={14} /> {provider}
+        {/* System prompt */}
+        {showSystemPromptInput && (
+          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'rgba(59,130,246,0.03)' }}>
+            <textarea
+              value={systemPromptDraft}
+              onChange={e => setSystemPromptDraft(e.target.value)}
+              placeholder={t('chat.system_prompt_placeholder')}
+              rows={3}
+              style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: 'var(--text-main)', fontSize: '0.85rem', resize: 'vertical', outline: 'none', fontFamily: 'inherit' }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <button onClick={() => { setSystemPrompt(systemPromptDraft); showStatus(t('chat.system_prompt_saved'), 'success'); }} className="btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}>{t('common.save')}</button>
+              <button onClick={() => { setSystemPrompt(''); setSystemPromptDraft(''); showStatus(t('chat.system_prompt_cleared'), 'info'); }} style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>{t('chat.clear_prompt')}</button>
+            </div>
+          </div>
+        )}
+
+        {/* Search in chat */}
+        {showSearchWithinChat && (
+          <div style={{ padding: '0.5rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(168,85,247,0.03)' }}>
+            <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} aria-hidden="true" />
+            <input
+              type="text"
+              value={searchWithinQuery}
+              onChange={e => setSearchWithinQuery(e.target.value)}
+              placeholder={t('chat.search_in_chat_placeholder')}
+              style={{ flex: 1, padding: '0.35rem 0.5rem', borderRadius: 6, background: 'rgba(0,0,0,0.15)', border: '1px solid var(--border)', color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none' }}
+              autoFocus
+            />
+            {searchWithinResults.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <button onClick={() => setSearchWithinIndex(i => Math.max(0, i - 1))} style={iconBtnMuted} aria-label={t('chat.previous_match')}>
+                  <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} />
+                </button>
+                <span>{searchWithinIndex + 1}/{searchWithinResults.length}</span>
+                <button onClick={() => setSearchWithinIndex(i => Math.min(searchWithinResults.length - 1, i + 1))} style={iconBtnMuted} aria-label={t('chat.next_match')}>
+                  <ChevronRight size={14} />
+                </button>
+                <button onClick={() => { setSearchWithinQuery(''); setSearchWithinResults([]); }} style={iconBtnMuted} aria-label={t('common.close')}>
+                  <X size={14} />
+                </button>
               </div>
-              {providerKeys.map(k => {
-                const chatProbe = chatProbes.get(k.id);
-                return (
-                  <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 0.75rem', borderRadius: 16, background: selectedKeys.includes(k.id) ? `${getProviderColor(k.provider)}20` : 'rgba(255,255,255,0.05)', border: `2px solid ${selectedKeys.includes(k.id) ? getProviderColor(k.provider) + '50' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
-                    <button 
-                      onClick={() => toggleKeySelection(k.id)} 
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: 'none', border: 'none', color: selectedKeys.includes(k.id) ? getProviderColor(k.provider) : 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem', padding: 0 }}
-                      aria-pressed={selectedKeys.includes(k.id)}
-                      aria-label={t('chat.select_provider_aria').replace('{0}', k.label)}
-                    >
-                      {k.label}
-                    </button>
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        setChatProbeLoading(k.id);
-                        try {
-                          const result = await probeService.probeKey(k.id);
-                          if (!isMountedRef.current) return;
-                          setChatProbes(prev => { const m = new Map(prev); m.set(k.id, result); return m; });
-                        } finally {
-                          if (isMountedRef.current) setChatProbeLoading(null);
-                        }
-                      }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', padding: 2, fontSize: '0.7rem' }}
-                      title={t('chat.quick_test')}
-                    >
-                      {chatProbeLoading === k.id ? <Loader2 size={10} className="spinning" /> : chatProbe ? <div style={{ width: 6, height: 6, borderRadius: '50%', background: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b' }} /> : <Activity size={10} color="#475569" />}
-                    </button>
-                    {chatProbe && (
-                      <span style={{ fontSize: '0.68rem', color: chatProbe.status === 'ready' ? '#10b981' : chatProbe.status === 'broken' ? '#ef4444' : '#f59e0b', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                        {chatProbe.status === 'ready' ? `${chatProbe.latency}ms` : chatProbe.error?.slice(0, 15)}
+            )}
+          </div>
+        )}
+
+        {/* Messages */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
+          {historyEntries && historyEntries.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div id="chat-messages-container">
+                {historyEntries.map((entry, entryIdx) => {
+                  const isEditing = editingEntryId === entry.id;
+                  const isSearchMatch = searchWithinResults.includes(entryIdx);
+                  const searchRef = isSearchMatch && searchWithinIndex === searchWithinResults.indexOf(entryIdx) ? 'chat-search-highlight' : undefined;
+                  
+                  return (
+                    <div key={entry.id} id={searchRef} style={{ scrollMarginTop: '4rem' }}>
+                      <ChatHistoryEntry
+                        entry={entry}
+                        entryIdx={entryIdx}
+                        isEditing={isEditing}
+                        editText={editingText}
+                        isSplitView={isSplitView}
+                        displayMode={displayMode}
+                        onStartEdit={handleStartEdit}
+                        onCancelEdit={handleCancelEdit}
+                        onSaveEdit={handleSaveEdit}
+                        onSetEditText={setEditingText}
+                        onFork={handleFork}
+                        onRegenerate={handleRegenerate}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', color: 'var(--text-muted)' }}>
+              <BrainCircuit size={48} style={{ opacity: 0.3 }} aria-hidden="true" />
+              <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{t('chat.empty_title')}</div>
+              <div style={{ fontSize: '0.85rem', maxWidth: 400, textAlign: 'center' }}>{t('chat.empty_desc')}</div>
+            </div>
+          )}
+
+          {/* Model config popovers */}
+          {showModelConfig && historyEntries && historyEntries.length > 0 && (
+            <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)' }}>
+              <div style={{ marginBottom: '0.75rem', fontWeight: 600, fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span>{t('chat.model_config')}</span>
+                <button onClick={() => setShowModelConfig(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
+              </div>
+              {historyEntries.map((entry, idx) => (
+                <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: idx < historyEntries.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
+                    {entry.text.substring(0, 60)}{entry.text.length > 60 ? '...' : ''}
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    {entry.responses.map((res, j) => (
+                      <span key={j} style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
+                        {res.provider} / {res.model}
                       </span>
-                    )}
-                    {selectedKeys.includes(k.id) && (
-                      <select
-                        value={selectedModelPerKey[k.id] || k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''}
-                        onChange={(e) => {
-                          setSelectedModelPerKey(prev => ({ ...prev, [k.id]: e.target.value }));
-                          if (selectedKeys[0] === k.id) setSelectedModel(e.target.value);
-                          switchModel?.(k.provider, e.target.value);
-                        }}
-                        aria-label={t('chat.model_for_aria').replace('{0}', k.label)}
-                        style={{ background: 'rgba(0,0,0,0.4)', border: '2px solid rgba(255,255,255,0.15)', borderRadius: 10, color: 'white', fontSize: '0.8rem', padding: '0.35rem 0.6rem', cursor: 'pointer', outline: 'none', minWidth: 160 }}
-                      >
-                        {(k.availableModels || []).map(model => (
-                          <option key={model} value={model}>{model}</option>
-                        ))}
-                      </select>
-                    )}
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Input area */}
+        <div style={{ borderTop: '1px solid var(--border)', padding: '1rem 1.25rem', background: 'var(--bg-panel)' }}>
+          {/* Mode selector */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {(['single', 'parallel', 'auto'] as ExecutionMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  padding: '0.3rem 0.75rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                  background: mode === m ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)',
+                  border: mode === m ? '1px solid rgba(59,130,246,0.3)' : '1px solid var(--border)',
+                  color: mode === m ? '#3b82f6' : 'var(--text-muted)',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {m === 'single' ? t('chat.mode_single') : m === 'parallel' ? t('chat.mode_parallel') : t('chat.mode_auto')}
+              </button>
+            ))}
+            <PersonaSelector />
+          </div>
+
+          {/* Key pills */}
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+            {activeKeys.map(k => {
+              const isSelected = selectedKeys.includes(k.id);
+              return (
+                <button
+                  key={k.id}
+                  onClick={() => {
+                    setSelectedKeys(prev => isSelected ? prev.filter(id => id !== k.id) : [...prev, k.id]);
+                    if (!isSelected && !selectedModelPerKey[k.id]) {
+                      setSelectedModelPerKey(prev => ({
+                        ...prev,
+                        [k.id]: k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || ''
+                      }));
+                    }
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.35rem',
+                    padding: '0.3rem 0.65rem', borderRadius: 100, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                    background: isSelected ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: isSelected ? '1px solid rgba(59,130,246,0.2)' : '1px solid var(--border)',
+                    color: isSelected ? '#3b82f6' : 'var(--text-muted)',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <ProviderIcon provider={k.provider} size={12} />
+                  {k.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Model selector per key */}
+          {selectedKeys.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              {selectedKeys.map(kid => {
+                const k = activeKeys.find(ak => ak.id === kid);
+                if (!k) return null;
+                const models = k.availableModels || [];
+                const currentModel = selectedModelPerKey[k.id] || '';
+                return (
+                  <div key={kid} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    <span style={{ fontWeight: 600 }}>{k.label}:</span>
+                    <select
+                      value={currentModel}
+                      onChange={e => {
+                        const m = e.target.value;
+                        setSelectedModelPerKey(prev => ({ ...prev, [k.id]: m }));
+                        setSelectedModel(m);
+                      }}
+                      style={{
+                        padding: '0.25rem 0.5rem', borderRadius: 6, background: 'rgba(0,0,0,0.2)',
+                        border: '1px solid var(--border)', color: 'var(--text-main)', fontSize: '0.7rem', outline: 'none'
+                      }}
+                    >
+                      {models.length > 0 ? models.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      )) : (
+                        <option value="">{t('chat.no_models')}</option>
+                      )}
+                    </select>
                   </div>
                 );
               })}
             </div>
-          ))}
-        </div>
-
-        <div ref={scrollContainerRef} onScroll={handleScroll} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.5rem 2rem', scrollBehavior: 'smooth', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-          {history.length > 0 && (
-            <SummaryPanel sessionId={activeSessionId || 'default'} messageCount={history.length} />
           )}
-          {history.length === 0 && (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '2rem' }}>
-              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={posRelative}>
-                <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)', borderRadius: '50%' }} aria-hidden="true" />
-                <BrainCircuit size={80} color="#3b82f6" style={{ filter: 'drop-shadow(0 0 20px rgba(59,130,246,0.3))' }} aria-hidden="true" />
-              </motion.div>
-              <div style={{ textAlign: 'center', maxWidth: 500 }}>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>{t('chat.greeting_title')}</h2>
-                <p style={{ fontSize: '1rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('chat.greeting_desc_full')}</p>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 500, marginBottom: '1.5rem' }}>
-                {[
-                  { icon: <Zap size={16} />, label: t('chat.suggestion_fast_execution'), desc: t('chat.suggestion_fast_execution_desc') },
-                  { icon: <BrainCircuit size={16} />, label: t('chat.suggestion_deep_reasoning'), desc: t('chat.suggestion_deep_reasoning_desc') },
-                ].map((tip, i) => (
-                  <div key={i} className="glass-panel" style={{ padding: '1.25rem', borderRadius: 16, cursor: 'pointer', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, fontWeight: 700, fontSize: '0.9rem' }}>{tip.icon} {tip.label}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tip.desc}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', maxWidth: 600 }}>
-                {(() => {
-                  const providers = [...new Set(activeKeys.map(k => k.provider))];
-                  const suggestions = providers.length > 0
-                    ? [
-                        t('chat.suggestion_ask_about').replace('{0}', providers[0]).replace('{1}', providers.length > 1 ? providers[1] : t('chat.itself')),
-                        t('chat.suggestion_explain_quantum'),
-                        t('chat.suggestion_write_poem'),
-                        t('chat.suggestion_compare').replace('{0}', providers[0]).replace('{1}', providers.length > 1 ? providers[1] : providers[0])
-                      ]
-                    : [t('chat.quick_reply_quantum'), t('chat.quick_reply_fibonacci'), t('chat.quick_reply_trip'), t('chat.quick_reply_news')];
-                  return suggestions;
-                })().map((quickReply, idx) => (
-                  <button key={idx} onClick={() => { setInput(quickReply); inputRef.current?.focus(); }} aria-label={t('chat.quick_reply_aria').replace('{0}', quickReply)}
-                    style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 100, fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
-                  >{quickReply}</button>
-                ))}
-              </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  selectedKeys.length === 0
+                    ? t('chat.no_keys_selected')
+                    : isSending
+                    ? t('chat.sending')
+                    : t('chat.placeholder')
+                }
+                rows={2}
+                disabled={isSending || selectedKeys.length === 0}
+                style={{
+                  width: '100%',
+                  padding: '0.85rem 1rem',
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid var(--border)',
+                  resize: 'none',
+                  fontSize: '0.95rem',
+                  lineHeight: 1.5,
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+              <VoiceButton onResult={setInput} />
             </div>
-          )}
-
-          {history.length > visibleCount && (
-            <div style={{ textAlign: 'center', padding: '0.5rem', marginBottom: '0.5rem' }}>
-              <button onClick={() => setVisibleCount(c => Math.min(c + 50, history.length))}
-                style={{ padding: '0.4rem 1rem', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
-                {t('chat.load_earlier').replace('{count}', String(Math.min(50, history.length - visibleCount))).replace('{remaining}', String(history.length - visibleCount))}
+            {isSending ? (
+              <button onClick={handleCancel} className="btn-secondary" style={{ padding: '0.85rem 1.25rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Square size={16} aria-hidden="true" />
+                {t('chat.stop')}
               </button>
-            </div>
-          )}
-          {history.slice(-visibleCount).map((entry, entryIdx) => (
-            <ChatHistoryEntry
-              key={entry.id}
-              entry={entry}
-              entryIdx={entryIdx}
-              isEditing={editingEntryId === entry.id}
-              editText={editingEntryId === entry.id ? editingText : ''}
-              isSplitView={isSplitView}
-              displayMode={responseDisplayMode}
-              onStartEdit={startEditing}
-              onCancelEdit={cancelEditing}
-              onSaveEdit={saveEditing}
-              onSetEditText={setEditingText}
-              onFork={handleForkSession}
-              onRegenerate={handleRegenerate}
-            />
-          ))}
-          <div ref={bottomRef} />
-          {isScrolledUp && (
-            <button onClick={() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); setIsScrolledUp(false); }}
-              style={{ position: 'sticky', bottom: 8, alignSelf: 'center', padding: '0.4rem 1rem', borderRadius: 20, background: '#3b82f6', border: 'none', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', zIndex: 10 }}>
-              {t('chat.scroll_to_bottom')}
-            </button>
-          )}
-          {history.length > 0 && <div style={{ flexShrink: 0 }}><ModuleInfo moduleKey="chat" /></div>}
-        </div>
-
-        <div style={{ flexShrink: 0, padding: '0 2rem 2rem', position: 'relative' }}>
-          <div style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: 24, padding: '0.75rem 1rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0.5rem' }}>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {isSplitView ? (
-                  <div style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Split size={10} aria-hidden="true" /> {t('chat.split_view_label')}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', gap: 2, background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 2 }}>
-                    {(['auto', 'parallel', 'single'] as ExecutionMode[]).map(m => (
-                      <button key={m} onClick={() => setMode(m)}
-                        style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: mode === m ? 'rgba(59,130,246,0.3)' : 'transparent', color: mode === m ? '#60a5fa' : 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer', textTransform: 'uppercase' }}
-                        aria-label={`${t('chat.mode_' + m)} ${t('chat.mode_suffix')}`}
-                      >{m}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div style={{ width: 1, height: 12, background: 'var(--border)' }} aria-hidden="true" />
-              <div style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                {isSplitView ? t('chat.comparing_models').replace('{0}', String(selectedKeys.length)) : t('chat.executing_via').replace('{0}', selectedKey?.label || t('chat.mode_auto'))}
-              </div>
-              <button onClick={() => setShowSystemPrompt(!showSystemPrompt)}
-                style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--border)', background: showSystemPrompt ? 'rgba(59,130,246,0.1)' : 'transparent', color: showSystemPrompt ? '#60a5fa' : 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}
-                aria-label={t('chat.options_aria')}
-              >{t('common.options')}</button>
-            </div>
-            {showSystemPrompt && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem' }}>
-                <textarea
-                  value={systemPrompt}
-                  onChange={e => setSystemPrompt(e.target.value)}
-                  placeholder={t('chat.system_prompt_placeholder')}
-                  rows={2}
-                  style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-main)', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
-                  aria-label={t('chat.system_prompt_aria')}
-                />
-                <div style={flexCenterGap4}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('chat.temp_label')} {temperature.toFixed(1)}</span>
-                    <input type="range" min="0" max="2" step="0.1" value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))}
-                      style={{ flex: 1, height: 4, accentColor: '#3b82f6', cursor: 'pointer' }}
-                      aria-label={t('chat.temperature_aria')}
-                    />
-                  </div>
-                  <div style={flexCenterGap2}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('chat.max_tokens_label')}</span>
-                    <input type="number" min="64" max="128000" step="64" value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value) || 4096)}
-                      style={{ width: 80, padding: '0.3rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-main)', fontSize: '0.75rem', outline: 'none' }}
-                      aria-label={t('chat.max_tokens_aria')}
-                    />
-                  </div>
-                </div>
-              </div>
+            ) : (
+              <button onClick={handleSend} className="btn-primary" style={{ padding: '0.85rem 1.25rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6 }} disabled={!input.trim() || selectedKeys.length === 0}>
+                <Send size={16} aria-hidden="true" />
+                {t('chat.send')}
+              </button>
             )}
-
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.25rem' }}>
-                <PersonaSelector />
-                <VoiceButton onTranscript={(text) => setInput(prev => prev + text)} />
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`${t('chat.input_placeholder')} ${t('chat.markdown_supported')}`}
-                  rows={1}
-                  style={{ flex: 1, padding: '0.5rem 0.5rem', background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.05rem', outline: 'none', resize: 'none', lineHeight: 1.6, maxHeight: 200, fontFamily: 'inherit' }}
-                  aria-label={t('chat.input_aria')}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', paddingBottom: 4 }}>
-                {isSending ? (
-                  <button onClick={cancelSending} style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ef4444', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(239,68,68,0.4)' }} aria-label={t('chat.stop_streaming_aria')}>
-                    <Square size={18} color="white" aria-hidden="true" />
-                  </button>
-                ) : (
-                  <button className="btn-primary" onClick={(e) => { if (e.shiftKey) { cancelSending(); return; } handleSend(); }} disabled={!input.trim()} style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', border: 'none', cursor: !input.trim() ? 'default' : 'pointer', opacity: !input.trim() ? 0.5 : 1 }} aria-label={t('chat.send_aria')}>
-                    <Send size={20} aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
-            {t('chat.footer')} · {t('chat.footer_shortcuts')}
           </div>
         </div>
       </div>
 
-      {/* Message Search Overlay */}
-      {showSearchOverlay && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowSearchOverlay(false)}
-        >
-          <div
-            style={{ width: '90vw', height: '85vh', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-            onClick={e => e.stopPropagation()}
+      {/* Right sidebar — search */}
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            style={{ overflow: 'hidden', flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-panel)' }}
           >
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.5rem' }}>
-              <button onClick={() => setShowSearchOverlay(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 8 }} aria-label={t('common.close')}>
-                <X size={20} />
-              </button>
+            <div style={{ width: 320, display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{t('chat.message_search')}</span>
+                <button onClick={() => setShowSearch(false)} style={iconBtnMuted} aria-label={t('common.close')}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                <MessageSearchPanel />
+              </div>
             </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <MessageSearchPanel />
-            </div>
-          </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Status toast */}
+      {statusMessage && (
+        <div style={{
+          ...toastBase,
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 1000,
+          background: statusMessage.type === 'success' ? 'rgba(16,185,129,0.95)' : statusMessage.type === 'error' ? 'rgba(239,68,68,0.95)' : 'rgba(59,130,246,0.95)',
+          color: '#fff', padding: '0.6rem 1.25rem', borderRadius: 100, fontSize: '0.85rem', fontWeight: 600,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+        }}>
+          {statusMessage.text}
         </div>
       )}
+      
+      {/* Memory search */}
 
-      {/* Chat Export Overlay */}
+      {/* Export Overlay */}
       {showExportOverlay && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(4px)'
+          }}
           onClick={() => setShowExportOverlay(false)}
         >
           <div
@@ -1313,6 +679,8 @@ const ChatPanel: React.FC = () => {
           </div>
         </div>
       )}
+      <DeleteConfirmDialog />
+      <ClearConfirmDialog />
     </div>
   );
 };

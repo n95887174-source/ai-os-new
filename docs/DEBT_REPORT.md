@@ -95,13 +95,13 @@ EventsTimeline строго лучше — умеет всё то же само�
 
 | Файл | Строк | Проблема |
 |------|-------|---------|
-| `ChatPanel.tsx` | 940 | Чат + streaming + markdown + история |
-| `InstalledProvidersView.tsx` | 1066 | Таблица + drag-drop + поиск + фильтр + bulk |
+| `ChatPanel.tsx` | ~530 | ✅ Split: `ResponseCard.tsx`, `ChatHistoryEntry.tsx`, `chat-panel-utils.ts` |
+| `InstalledProvidersView.tsx` | ~306 | ✅ Split: `ProviderTableRow.tsx`, `ProviderCard.tsx`, `provider-utils.tsx` |
 | `SettingsPanel/` | ~400 shell + tabs | ✅ Split: `GeneralTab`, `WritingTab`, `ReadingTab`, `AlertsTab`, `AdvancedTab`, `settings-shared` |
-| `AddKeyModal.tsx` | 615 | 3 шага в одном файле |
-| `DebatePanel.tsx` | 1151 | setup + active + analytics + history |
+| `AddKeyModal.tsx` | ~530 | ✅ Split: `BulkImportStep.tsx`, `add-key-constants.ts` |
+| `DebatePanel.tsx` | 497 | ✅ Already split into 17+ sub-modules (DebateChat, DebateSetupWizard, DebateSidebar, DebateAnalytics и др.) |
 
-**Что делать:** При следующем изменении — выделять в под-компоненты (остальные файлы в таблице).
+**Статус:** Все 5 файлов разбиты. D-08 закрыт.
 
 ---
 
@@ -132,7 +132,7 @@ EventsTimeline строго лучше — умеет всё то же само�
 | D-05 | HealingPipeline в Checker | merge | **P1** | — | ✅ |
 | D-06 | RoutingIntelligenceView дубль | re-route | **P1** | — | ✅ |
 | D-07 | latency-tracker контракт | clean | **P2** | — | ✅ |
-| D-08 | oversized UI | split | **P2** | — | 🟡 SettingsPanel done; 4 files remain |
+| D-08 | oversized UI | split | **P2** | — | ✅ All 5 files split |
 | D-09 | 7 as any | watch | **P3** | 0 | не увеличивать |
 | D-10 | kernel circular deps check | infra | **P3** | — | ✅ `check:circular-kernel` (19 known cycles) |
 

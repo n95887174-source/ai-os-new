@@ -1034,3 +1034,62 @@ Eliminate remaining memory leak sources: InsightEngine running every 60s, ProbeS
 
 **Files changed**:
 - `src/kernel/services/debate-runtime/debate-engine.ts` — added `providerCanBeUsed()` method, imported `IAdapterRegistry`, replaced 5 `hasProviderFailed` calls
+
+---
+
+## Current Session (2026-06-27) — UX Evaluation Report Implementation
+
+### Goal
+Evaluate and implement all items from `audit/roadmap/ai-os-ux-evaluation-report.md` (10 UX agents, 22 action items across 4 phases).
+
+### Findings
+Almost the entire report was already implemented in previous sessions. Verified current state:
+
+#### Phase 1: Critical ✅ (6/6)
+| # | Item | Status |
+|---|------|--------|
+| 1 | Header search → 404 | ✅ Opens CommandPalette (AppLayout.tsx:144) |
+| 2 | Onboarding (3-step wizard) | ✅ Exists at OnboardingWizard.tsx, renders on first visit |
+| 3 | Dashboard "Get Started" card | ✅ Shown when `providerCounts.active === 0 && keys.length === 0` |
+| 4 | Merge /debate and /debate-runtime | ✅ `/debate-runtime` → redirect to `/debate?mode=runtime` |
+| 5 | Arguments in RuntimePanel | ✅ `sessionViewTab` with 'arguments' tab renders `DebateChat` + streaming |
+| 6 | Message Search + Chat Export inline | ✅ `/message-search` → `/chat`, `/chat-export` → `/chat` |
+
+#### Phase 2: Structure ✅ (6/6)
+| # | Item | Status |
+|---|------|--------|
+| 7 | Sidebar 60+ → 9 sections | ✅ 9 sections matching proposed structure |
+| 8 | Command palette Cmd+K | ✅ CommandPalette rendered in AppLayout |
+| 9 | Breadcrumbs | ✅ Breadcrumbs rendered in header |
+| 10 | Quick Access bar | ✅ Pinned + recent in Sidebar |
+| 11 | Debate setup wizard | ✅ 3-step DebateSetupWizard (514 lines) |
+| 12 | Response card modes | ✅ `displayMode` prop, ChatPanel toggle button |
+
+#### Phase 3: Polish ✅ (5/6)
+| # | Item | Status |
+|---|------|--------|
+| 13 | Progressive disclosure L0/L1/L2 | ✅ Sidebar filters by `userLevel` |
+| 14 | Renaming (Connections, Status) | ✅ "Connections" section exists |
+| 15 | Context menus | ✅ ContextMenu component exists, wired in ResponseCard |
+| 16 | Keyboard shortcuts modal | ✅ "?" key opens KeyboardShortcutsModal |
+| 17 | Section collapse/expand | ✅ `collapsedSections` state in Sidebar |
+| 18 | Feature flags grayed-out | ✅ **Fixed this session** — removed early `return null` so disabled items render with `opacity: 0.3` |
+
+#### Phase 4: Advanced ✅ (5/5)
+| # | Item | Status |
+|---|------|--------|
+| 19 | Nested URLs | ✅ `/debates/arena`, `/diagnostics/health`, etc. |
+| 20 | 404 page with search | ✅ Search + suggestions + Dashboard/Chat buttons |
+| 21 | Unified session model | N/A (architectural, beyond scope) |
+| 22 | Debate post-debate summary | ✅ Verdict tab in DebatePanel |
+| 23 | Inline rename + pin | ✅ Quick Access pin + recent |
+
+### Changed This Session
+| File | Change |
+|------|--------|
+| `src/components/Sidebar.tsx` | Removed `if (isDisabled && !q) return null` — feature-flagged items now render grayed-out instead of hidden |
+| `docs/DEBT_REPORT.md` | D-08 updated: all 5 oversized files split ✅ |
+
+### TypeScript
+- `npx tsc --noEmit` ✅ zero errors
+- `npx vite build` ✅ 6.19s passes
