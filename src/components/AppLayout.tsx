@@ -7,6 +7,7 @@ import { AppRoutes } from '../routes';
 import { GlobalErrorBoundary } from './GlobalErrorBoundary';
 import AlertLayer from './AlertLayer/AlertLayer';
 import { CommandPalette, useCommandPalette } from './CommandPalette/CommandPalette';
+import { Breadcrumbs } from './Common/Breadcrumbs';
 import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { settingsService, groupManager, featureFlagService } from '../kernel/instances';
@@ -144,6 +145,7 @@ export const AppLayout: React.FC = () => {
                 fontFamily: 'monospace',
               }}>⌘K</kbd>
             </button>
+            <Breadcrumbs path={location.pathname} t={t as (key: TranslationKey) => string} />
             <div className="header-actions">
               <div className="session-timer">
                 <History size={16} />

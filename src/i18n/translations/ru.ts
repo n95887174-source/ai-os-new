@@ -9,6 +9,7 @@ const ru = {
   'nav.section_integrations': 'ИНТЕГРАЦИИ',
   'nav.section_settings': 'НАСТРОЙКИ',
   'nav.overview': 'Обзор',
+  'nav.quick_access': 'Быстрый доступ',
   'nav.chat': 'Чат',
   'nav.tasks': 'Задачи',
   'nav.sre_agent': 'SRE Агент',

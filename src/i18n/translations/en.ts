@@ -9,6 +9,7 @@ const en = {
   'nav.section_integrations': 'INTEGRATIONS',
   'nav.section_settings': 'SETTINGS',
   'nav.overview': 'Overview',
+  'nav.quick_access': 'Quick Access',
   'nav.chat': 'Chat',
   'nav.tasks': 'Tasks',
   'nav.sre_agent': 'SRE Agent',
