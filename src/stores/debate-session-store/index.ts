@@ -10,7 +10,7 @@ import type { DatabaseService } from '../../kernel/services/database-service';
 
 interface DebateRecord {
   id: string; topic: string; topologyType?: string; phase: string; round: number;
-  participants?: string; tags?: string[]; folder?: string; isArchived?: boolean;
+  participants?: string; tags?: string[]; folder?: string; isArchived?: boolean; isPinned?: boolean;
   createdAt: number; updatedAt: number; arguments?: string;
   totalTokens?: number; totalCost?: number;
 }
@@ -53,6 +53,7 @@ function toMeta(r: DebateRecord, linkedIds?: string[]): DebateSessionMeta {
     round: r.round || 0, participants: p,
     tags: r.tags ?? [], folder: r.folder ?? '',
     isArchived: r.isArchived ?? false,
+    isPinned: r.isPinned ?? false,
     createdAt: r.createdAt, updatedAt: r.updatedAt,
     linkedSessionIds: linkedIds ?? [],
   };
@@ -135,7 +136,7 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
     });
     const meta: DebateSessionMeta = {
       id, topic, strategy, phase: 'created', round: 0, participants,
-      tags: [], folder: '', isArchived: false, createdAt: Date.now(),
+      tags: [], folder: '', isArchived: false, isPinned: false, createdAt: Date.now(),
       updatedAt: Date.now(), linkedSessionIds: [],
     };
     set(s => ({ sessions: [meta, ...s.sessions], activeSessionId: id }));
@@ -199,6 +200,14 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
   renameSession: async (id, title) => {
     await sm().updateMeta(id, { title });
     set(s => ({ sessions: s.sessions.map(ss => ss.id === id ? { ...ss, topic: title } : ss) }));
+  },
+
+  pinSession: async (id) => {
+    const current = get().sessions.find(ss => ss.id === id);
+    if (!current) return;
+    const next = !current.isPinned;
+    await sm().updateMeta(id, { isPinned: next });
+    set(s => ({ sessions: s.sessions.map(ss => ss.id === id ? { ...ss, isPinned: next } : ss) }));
   },
 
   setActiveSessionId: (id) => set({ activeSessionId: id }),

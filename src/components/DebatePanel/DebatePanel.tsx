@@ -94,6 +94,7 @@ const DebatePanel: React.FC = () => {
   const [showHistoricalPicker, setShowHistoricalPicker] = useState(false);
 
   const prevRoundRef = useRef(0);
+  const lastSessionRef = useRef<DebateSession | null>(null);
   const [humanVotes, setHumanVotes] = useState<HumanVote[]>(() => debateService.getHumanVotes());
   const [showVotePanel, setShowVotePanel] = useState<number | null>(null);
 
@@ -146,9 +147,12 @@ const DebatePanel: React.FC = () => {
           prevRoundRef.current = data.currentRound;
           syncHumanVotesFromSession(data);
           setSession({ ...data });
-          // Reset viewTab when debate becomes active (e.g. restore from history)
+          lastSessionRef.current = data;
           if (data.status === 'active') {
             setViewTab((prev) => prev === 'verdict' ? 'active' : prev);
+          }
+          if (data.status === 'completed') {
+            setViewTab((prev) => prev === 'active' ? 'verdict' : prev);
           }
           setIsLoading(false);
           setError(null);
@@ -296,6 +300,18 @@ const DebatePanel: React.FC = () => {
       setError(t('debate.error_inject'));
       clearError();
     }
+  };
+
+  const handleReplay = () => {
+    const s = lastSessionRef.current || session;
+    if (!s) return;
+    setTopic(s.topic);
+    const agentIds = (s.participants ?? [])
+      .filter(p => !p.id.startsWith('historical:'))
+      .map(p => p.id)
+      .filter(id => availableAgents.some(a => a.id === id));
+    setSelectedAgents(agentIds);
+    queueMicrotask(() => handleStart());
   };
 
   const toggleAgent = (id: string) => {
@@ -451,6 +467,7 @@ const DebatePanel: React.FC = () => {
           autoWinRates,
           refreshAuto,
           onStart: handleStart,
+          replay: handleReplay,
         } as const;
         return isMobile ? (
           <DebateTabContent

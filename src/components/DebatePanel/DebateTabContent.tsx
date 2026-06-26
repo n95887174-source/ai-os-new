@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Clock, Brain, Eye, ThumbsUp, Loader2, Send, BarChart3, Swords } from 'lucide-react';
+import { MessageSquare, Clock, Brain, Eye, ThumbsUp, Loader2, Send, BarChart3, Swords, Play, Download } from 'lucide-react';
 import DebateSetupWizard from './DebateSetupWizard';
 import DebateHistoryPanel from './DebateHistoryPanel';
 import DebateAnalytics from './DebateAnalytics';
@@ -51,7 +51,7 @@ export function DebateTabContent({
   handleInject, isLoading, t,
   probeResults, expandedProbe, setExpandedProbe, setProbeResults,
   showAuto, setShowAuto, autoResults, autoWinRates, refreshAuto,
-  onConstraintChange, onStart,
+  onConstraintChange, onStart, replay,
 }: {
   containerStyle: React.CSSProperties;
   showSidebar?: boolean;
@@ -89,6 +89,7 @@ export function DebateTabContent({
   refreshAuto: () => void;
   onConstraintChange: (id: string, constraint: string) => void;
   onStart: () => void;
+  replay?: () => void;
 }) {
   const flexColumn: React.CSSProperties = { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' };
   const [internalProbeLoading, setInternalProbeLoading] = useState(false);
@@ -160,6 +161,46 @@ export function DebateTabContent({
         ) : viewTab === 'verdict' && verdict ? (
           <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
             <DebateVerdictPanel verdict={verdict} sessionId={session?.id ?? ''} />
+            <div style={{ display: 'flex', gap: 10, marginTop: '1rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => setViewTab('active')}
+                style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <BarChart3 size={16} /> {t('debate.verdict.view_analysis')}
+              </button>
+              {replay && (
+                <button
+                  onClick={replay}
+                  style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#34d399', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Play size={16} /> {t('debate.verdict.replay')}
+                </button>
+              )}
+              {session?.status === 'completed' && (
+                <button
+                  onClick={() => {
+                    const exportData = {
+                      topic: session.topic, strategy: session.strategy,
+                      status: session.status, maxRounds: session.maxRounds, currentRound: session.currentRound,
+                      participants: (session.participants ?? []).map(p => ({ id: p.id, name: p.name, role: p.role, model: p.modelId })),
+                      arguments: (session.arguments ?? []).map(a => ({ id: a.id, agentId: a.agentId, content: a.content, round: a.round, timestamp: a.timestamp, confidence: a.confidence })),
+                      graphMetrics: (session as unknown as Record<string, unknown>).graphMetrics,
+                      interpretation: (session as unknown as Record<string, unknown>).interpretation,
+                    };
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `debate-${(session.topic ?? '').slice(0, 50).replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#a78bfa', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Download size={16} /> {t('debate.verdict.export')}
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: session ? '1fr 380px' : '1fr', gap: '1.5rem', minHeight: 0, overflow: 'hidden' }}>

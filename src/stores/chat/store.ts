@@ -349,6 +349,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
 
     renameSession: (id, title) => {
       set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, title } : x) }));
+      sessionManager.updateMeta(id, { title }).catch(() => {});
     },
 
     archiveSession: (id) => {
@@ -368,7 +369,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
     },
 
     pinSession: (id) => {
-      set(s => ({ sessions: s.sessions.map(x => x.id === id ? { ...x, isPinned: !x.isPinned } : x) }));
+      set(s => {
+        const current = s.sessions.find(x => x.id === id);
+        const next = !current?.isPinned;
+        sessionManager.updateMeta(id, { isPinned: next }).catch(() => {});
+        return { sessions: s.sessions.map(x => x.id === id ? { ...x, isPinned: next } : x) };
+      });
     },
 
     importSessions: (imported) => {

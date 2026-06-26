@@ -1,8 +1,9 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import { t as translate } from './i18n/translations';
-import { Home } from 'lucide-react';
+import { Home, Search, MessageSquare } from 'lucide-react';
+import { NAV_SECTIONS } from './route-registry';
 
 // Lazy panels
 const MissionControl = React.lazy(() => import('./components/LiveCognition/MissionControl'));
@@ -93,13 +94,64 @@ import PatternsPanel from './components/PatternsPanel/PatternsPanel';
 
 const NotFound: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchVal, setSearchVal] = useState('');
+  const suggestions = React.useMemo(() => {
+    const allItems = NAV_SECTIONS.flatMap(s => s.items);
+    const pathPart = location.pathname.split('/').filter(Boolean).pop()?.toLowerCase() || '';
+    if (pathPart) {
+      return allItems.filter(item => {
+        const label = translate(item.labelKey).toLowerCase();
+        return label.includes(pathPart) || item.id.includes(pathPart);
+      }).slice(0, 6);
+    }
+    return allItems.slice(0, 8);
+  }, [location.pathname]);
+  const filtered = React.useMemo(() => {
+    if (!searchVal) return suggestions;
+    const q = searchVal.toLowerCase();
+    return NAV_SECTIONS.flatMap(s => s.items).filter(item => {
+      return translate(item.labelKey).toLowerCase().includes(q) || item.id.includes(q);
+    }).slice(0, 8);
+  }, [searchVal, suggestions]);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '1rem' }}>
-      <div style={{ fontSize: '4rem', fontWeight: 800, color: '#64748b', opacity: 0.3 }}>404</div>
-      <div style={{ fontSize: '1.2rem', color: '#94a3b8' }}>Page not found</div>
-      <button onClick={() => navigate('/dashboard')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 1.2rem', borderRadius: 8, background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', cursor: 'pointer', fontWeight: 600 }}>
-        <Home size={16} /> Go to Dashboard
-      </button>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '1.5rem', padding: '2rem' }}>
+      <div style={{ fontSize: '5rem', fontWeight: 900, color: '#64748b', opacity: 0.15, lineHeight: 1, letterSpacing: '-0.05em' }}>404</div>
+      <div style={{ fontSize: '1.2rem', color: '#94a3b8', fontWeight: 600 }}>Page not found</div>
+      <div style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: 400, textAlign: 'center' }}>
+        The page <code style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4, fontSize: '0.75rem' }}>{location.pathname}</code> doesn't exist.
+      </div>
+      <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
+        <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+        <input
+          value={searchVal}
+          onChange={e => setSearchVal(e.target.value)}
+          placeholder="Search pages..."
+          autoFocus
+          style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#e2e8f0', fontSize: '0.9rem', outline: 'none' }}
+        />
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', maxWidth: 500 }}>
+        {filtered.map(item => (
+          <button
+            key={item.id}
+            onClick={() => navigate(`/${item.id}`)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.15s' }}
+          >
+            {item.icon}
+            <span>{translate(item.labelKey)}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+        <button onClick={() => navigate('/dashboard')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 1.2rem', borderRadius: 8, background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', cursor: 'pointer', fontWeight: 600 }}>
+          <Home size={16} /> Dashboard
+        </button>
+        <button onClick={() => navigate('/chat')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 1.2rem', borderRadius: 8, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', cursor: 'pointer', fontWeight: 600 }}>
+          <MessageSquare size={16} /> Chat
+        </button>
+      </div>
     </div>
   );
 };

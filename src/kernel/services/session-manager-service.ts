@@ -263,6 +263,7 @@ export class SessionManagerService implements ISessionManager {
       if (updates.tags !== undefined) updated.tags = updates.tags;
       if (updates.folder !== undefined) updated.folder = updates.folder;
       if (updates.isArchived !== undefined) updated.isArchived = updates.isArchived;
+      if (updates.isPinned !== undefined) updated.isPinned = updates.isPinned;
       await this.db.debateSessions.put(updated);
       return;
     }
@@ -326,7 +327,7 @@ export class SessionManagerService implements ISessionManager {
       tags: record.tags ?? [],
       folder: record.folder ?? '',
       isArchived: record.isArchived ?? false,
-      isPinned: false,
+      isPinned: record.isPinned ?? false,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       linkedSessionIds: [],

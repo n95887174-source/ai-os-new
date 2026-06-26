@@ -21,6 +21,7 @@ export interface DebateSessionRecord {
   tags?: string[];
   folder?: string;
   isArchived?: boolean;
+  isPinned?: boolean;
 }
 
 export interface DebateVerdictRecord {

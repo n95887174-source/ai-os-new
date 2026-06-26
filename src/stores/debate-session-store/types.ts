@@ -11,6 +11,7 @@ export interface DebateSessionMeta {
   tags: string[];
   folder: string;
   isArchived: boolean;
+  isPinned: boolean;
   createdAt: number;
   updatedAt: number;
   linkedSessionIds: string[];
@@ -36,6 +37,7 @@ export interface DebateSessionStoreActions {
   tagSession: (id: string, tags: string[]) => Promise<void>;
   moveToFolder: (id: string, folder: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
+  pinSession: (id: string) => Promise<void>;
   setActiveSessionId: (id: string | null) => void;
   refresh: () => Promise<void>;
 }
