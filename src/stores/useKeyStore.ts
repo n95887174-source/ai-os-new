@@ -420,6 +420,11 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
   const exportKeys = useCallback(() => keyService.exportKeys(), []);
 
   const importKeys = useCallback(async (jsonData: string) => {
+    // Check vault status first - if locked, keys cannot be added
+    if (keyService.vaultService?.isLocked()) {
+      throw new Error('Vault is locked — unlock or set a vault password before importing keys.');
+    }
+
     const imported = JSON.parse(jsonData, (key, value) => {
       if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined;
       return value;

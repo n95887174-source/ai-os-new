@@ -81,7 +81,10 @@ const ProviderManagerContainer: React.FC = () => {
           throw new Error(`${missingFields.length} entr${missingFields.length === 1 ? 'y' : 'ies'} missing required fields (provider, label)`);
         }
         const count = await importKeys(raw);
-        eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${count} provider(s)`, type: 'success' });
+        // Only show success if keys were actually imported; vault-locked case already shows an error from importKeys
+        if (count > 0) {
+          eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${count} provider(s)`, type: 'success' });
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Unknown error';
         console.warn('[ProviderManager] Failed to import providers:', e);

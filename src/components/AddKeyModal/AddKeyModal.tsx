@@ -47,7 +47,7 @@ const PROVIDER_META: Record<string, { name: string; desc: string; docsUrl: strin
 
 const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
   const { addKey, keys } = useKeyStore();
-  const [step, setStep] = useState<1 | 2 | 3>(defaultProvider ? 2 : 1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(defaultProvider ? 2 : 1);
   const [provider, setProvider] = useState(defaultProvider || 'OpenRouter');
   const [label, setLabel] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -62,10 +62,21 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
   const [group, setGroup] = useState('');
   const [account, setAccount] = useState('');
   const [accountId, setAccountId] = useState<string>('');
+  const [vaultPassword, setVaultPassword] = useState('');
+  const [vaultUnlocking, setVaultUnlocking] = useState(false);
+  const [vaultError, setVaultError] = useState('');
 
   const pipeline = useKeyIntelligence();
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
+
+  // Check vault status on mount - if locked, require unlock first
+  useEffect(() => {
+    if (step !== 0 && keyService.vaultService?.isLocked()) {
+      queueMicrotask(() => setStep(0));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const providers = useMemo(() => {
     const fromRegistry = adapterRegistry.getAllProviders();
@@ -94,8 +105,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
 
   useEffect(() => {
     if (defaultProvider && !label) {
-      setLabel(generateAlias(defaultProvider));
+      queueMicrotask(() => setLabel(generateAlias(defaultProvider)));
     }
+     
   }, [defaultProvider, label, generateAlias]);
 
   useEffect(() => {
@@ -128,9 +140,42 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     }
   };
 
+  const handleVaultUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vaultPassword.trim()) {
+      setVaultError(t('settings.error_vault_password'));
+      return;
+    }
+
+    setVaultUnlocking(true);
+    setVaultError('');
+
+    try {
+      const ok = await keyService.unlockVault(vaultPassword);
+      if (!isMountedRef.current) return;
+      if (ok) {
+        setStep(defaultProvider ? 2 : 1);
+        setVaultPassword('');
+      } else {
+        setVaultError(t('settings.error_vault_operation'));
+      }
+    } catch {
+      if (!isMountedRef.current) return;
+      setVaultError(t('settings.error_vault_operation'));
+    } finally {
+      if (isMountedRef.current) setVaultUnlocking(false);
+    }
+  };
+
   const handleBack = () => {
     if (step === 3) {
       setStep(2);
+      setError('');
+      return;
+    }
+    if (step === 2 || step === 0) {
+      // Vault is persistent - don't go back to vault step
+      setStep(1);
       setError('');
       return;
     }
@@ -386,24 +431,31 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
               <span className="modal-sidebar-header-text">{t('add_key.section_connection')}</span>
             </div>
             <div style={flexColGap6}>
-                <div className="modal-step" style={{ opacity: step === 1 ? 1 : 0.4 }}>
+              <div className="modal-step" style={{ opacity: step === 0 ? 1 : 0.4 }}>
+                <div className="modal-step-number" style={{ background: step === 0 ? '#f59e0b' : step > 0 ? '#3b82f6' : 'transparent' }}>
+                  {step > 0 ? <CheckCircle2 size={14} /> : <Shield size={14} />}
+                </div>
+                <span className="modal-step-label" style={{ fontWeight: step === 0 ? 700 : 500, color: step === 0 ? '#f59e0b' : undefined }}>{t('settings.vault_title')}</span>
+                <span style={textXsMutedAuto}>{step === 0 ? '1/4' : ''}</span>
+              </div>
+              <div className="modal-step" style={{ opacity: step === 1 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step >= 1 ? '#3b82f6' : 'transparent' }}>
-                  {step > 1 ? <CheckCircle2 size={14} /> : '1'}
+                  {step > 1 ? <CheckCircle2 size={14} /> : '2'}
                 </div>
                 <span className="modal-step-label" style={{ fontWeight: step === 1 ? 700 : 500 }}>{t('add_key.step_provider')}</span>
-                <span style={textXsMutedAuto}>{step === 1 ? '1/3' : ''}</span>
+                <span style={textXsMutedAuto}>{step === 1 ? '2/4' : ''}</span>
               </div>
               <div className="modal-step" style={{ opacity: step === 2 ? 1 : 0.4 }}>
                 <div className="modal-step-number" style={{ background: step >= 2 ? '#3b82f6' : 'transparent' }}>
-                  {step > 2 ? <CheckCircle2 size={14} /> : '2'}
+                  {step > 2 ? <CheckCircle2 size={14} /> : '3'}
                 </div>
                 <span className="modal-step-label" style={{ fontWeight: step === 2 ? 700 : 500 }}>{t('add_key.step_details')}</span>
-                <span style={textXsMutedAuto}>{step === 2 ? '2/3' : ''}</span>
+                <span style={textXsMutedAuto}>{step === 2 ? '3/4' : ''}</span>
               </div>
               <div className="modal-step" style={{ opacity: step === 3 ? 1 : 0.4 }}>
-                <div className="modal-step-number" style={{ background: step === 3 ? '#3b82f6' : 'transparent' }}>3</div>
+                <div className="modal-step-number" style={{ background: step === 3 ? '#3b82f6' : 'transparent' }}>4</div>
                 <span className="modal-step-label" style={{ fontWeight: step === 3 ? 700 : 500 }}>Default Model</span>
-                <span style={textXsMutedAuto}>{step === 3 ? '3/3' : ''}</span>
+                <span style={textXsMutedAuto}>{step === 3 ? '4/4' : ''}</span>
               </div>
             </div>
             <div className="modal-sidebar-footer">
@@ -415,13 +467,52 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
           <div className="modal-body">
             <div className="modal-body-header">
               <h3 className="modal-body-title">
-                {step === 1 ? t('add_key.title_provider') : step === 3 ? 'Select Default Model' : bulkMode ? t('add_key.title_bulk') : t('add_key.title_configure').replace('{0}', provider)}
+                {step === 0 ? t('settings.vault_title') : step === 1 ? t('add_key.title_provider') : step === 3 ? 'Select Default Model' : bulkMode ? t('add_key.title_bulk') : t('add_key.title_configure').replace('{0}', provider)}
               </h3>
               <button onClick={onClose} className="modal-close-btn" aria-label={t('add_key.close_aria')}><X size={20} /></button>
             </div>
 
             <div className="modal-content">
-              {step === 1 ? (
+              {step === 0 ? (
+                <form onSubmit={handleVaultUnlock} className="modal-form" noValidate>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', padding: '1rem 0' }}>
+                    <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(245,158,11,0.1)', border: '2px solid rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Shield size={28} color="#f59e0b" />
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc', marginBottom: '0.5rem' }}>Vault is Locked</div>
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Enter your master password to unlock the vault and add API keys securely.</div>
+                    </div>
+                    <div style={{ width: '100%', maxWidth: 320 }}>
+                      <input
+                        type="password"
+                        autoFocus
+                        value={vaultPassword}
+                        onChange={e => setVaultPassword(e.target.value)}
+                        placeholder={t('settings.vault_password_aria')}
+                        className="modal-input"
+                        style={{ width: '100%', textAlign: 'center' }}
+                        aria-label={t('settings.vault_password_aria')}
+                        aria-invalid={vaultError ? 'true' : undefined}
+                      />
+                      {vaultError && (
+                        <div className="modal-error" role="alert" style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+                          {vaultError}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      style={{ width: '100%', maxWidth: 320, padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                      disabled={vaultUnlocking}
+                    >
+                      {vaultUnlocking ? <Loader2 size={18} className="spinning" aria-hidden="true" /> : <Shield size={18} aria-hidden="true" />}
+                      {vaultUnlocking ? 'Unlocking...' : 'Unlock Vault'}
+                    </button>
+                  </div>
+                </form>
+              ) : step === 1 ? (
                 <div className="modal-provider-grid">
                   {providers.map((p) => (
                     <button
@@ -682,8 +773,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             </div>
 
             <div className="modal-footer-dots">
-              <div className={`modal-dot${step === 1 ? ' modal-dot--active' : ''}`} />
-              <div className={`modal-dot${step === 2 ? ' modal-dot--active' : ''}`} />
+              <div className={`modal-dot${step === 0 ? ' modal-dot--active' : step > 0 ? ' modal-dot--done' : ''}`} />
+              <div className={`modal-dot${step === 1 ? ' modal-dot--active' : step > 1 ? ' modal-dot--done' : ''}`} />
+              <div className={`modal-dot${step === 2 ? ' modal-dot--active' : step > 2 ? ' modal-dot--done' : ''}`} />
               <div className={`modal-dot${step === 3 ? ' modal-dot--active' : ''}`} />
             </div>
           </div>

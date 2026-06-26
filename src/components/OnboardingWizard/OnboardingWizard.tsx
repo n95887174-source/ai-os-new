@@ -218,6 +218,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ t }) => {
     if (!selectedProvider) { setError(t('onboarding.error_select_provider')); return; }
     if (!apiKey.trim()) { setError(t('onboarding.error_enter_key')); return; }
 
+    // Check vault status before attempting to add key
+    if (keyService.vaultService?.isLocked()) {
+      setError('Vault is locked. Please unlock the vault in Settings → Advanced first.');
+      return;
+    }
+
     setSaving(true);
     setError('');
 

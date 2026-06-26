@@ -2657,6 +2657,24 @@ div:focus:not(:focus-visible) {
   margin-top: 0.5rem;
 }
 
+.modal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: all 0.3s;
+}
+
+.modal-dot--active {
+  background: #3b82f6;
+  width: 24px;
+  border-radius: 4px;
+}
+
+.modal-dot--done {
+  background: rgba(59,130,246,0.4);
+}
+
 /* === ModelBrowser === */
 .model-browser-overlay {
   position: fixed;
