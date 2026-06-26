@@ -783,6 +783,7 @@ const ru = {
   'routing.detail.table.cost': 'Стоимость',
 
   'pressure_map.title': 'Карта Давления Системы',
+  'pressure_map.runtime_title': 'Карта Давления Среды',
   'pressure_map.refresh': 'Обновить',
   'pressure_map.loading': 'Генерация карты давления...',
   'pressure_map.empty': 'Нет настроенных провайдеров.',

@@ -764,6 +764,7 @@ const en = {
   'routing.detail.table.cost': 'Cost',
 
   'pressure_map.title': 'System Pressure Map',
+  'pressure_map.runtime_title': 'Runtime Pressure Map',
   'pressure_map.refresh': 'Refresh',
   'pressure_map.loading': 'Generating pressure map...',
   'pressure_map.empty': 'No providers configured.',

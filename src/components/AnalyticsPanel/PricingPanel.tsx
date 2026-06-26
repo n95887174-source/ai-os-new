@@ -11,8 +11,10 @@ import {
 import { pricingService, type ModelPricing, type BudgetInfo } from '../../kernel/instances';
 import { motion, AnimatePresence } from 'framer-motion';
 import { budgetValueLarge } from '../../styles/common';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const PricingPanel: React.FC = () => {
+  const { t } = useTranslation();
   const [prices, setPrices] = useState<Record<string, ModelPricing>>({});
   const [overrides, setOverrides] = useState<Record<string, ModelPricing>>({});
   const [budget, setBudget] = useState<BudgetInfo | null>(null);
@@ -21,18 +23,18 @@ const PricingPanel: React.FC = () => {
   const [editingModel, setEditingModel] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState<ModelPricing>({ input: 0, output: 0 });
 
-  useEffect(() => {
-    refreshData();
-    const interval = setInterval(refreshData, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   const refreshData = () => {
     setPrices(pricingService.getAllPrices());
     setOverrides(pricingService.getUserOverrides());
     setBudget(pricingService.getBudgetInfo());
     setLastSync(pricingService.getLastSync());
   };
+
+  useEffect(() => {
+    refreshData();
+    const interval = setInterval(refreshData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -64,9 +66,9 @@ const PricingPanel: React.FC = () => {
       <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <DollarSign size={28} color="#10b981" /> ECONOMIC PLANE
+            <DollarSign size={28} color="#10b981" /> {t('pricing.plane_title')}
           </h1>
-          <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Manage model costs, budgets, and pricing synchronization</p>
+          <p style={{ fontSize: '0.9rem', color: '#64748b' }}>{t('pricing.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button 
@@ -79,7 +81,7 @@ const PricingPanel: React.FC = () => {
             }}
           >
             <RefreshCcw size={16} className={isSyncing ? 'animate-spin' : ''} />
-            {isSyncing ? 'Syncing...' : 'Sync OpenRouter'}
+            {isSyncing ? t('pricing.syncing') : t('pricing.sync_openrouter')}
           </button>
         </div>
       </header>
@@ -87,26 +89,26 @@ const PricingPanel: React.FC = () => {
       {/* Budget Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
-          <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Spent This Month</div>
+          <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('pricing.spent_this_month')}</div>
           <div style={budgetValueLarge}>${budget?.spentThisMonth.toFixed(2)}</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>Daily Avg: ${budget?.dailyAverage.toFixed(2)}</div>
+          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>{t('pricing.daily_avg', { amount: budget?.dailyAverage.toFixed(2) ?? '0.00' })}</div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
-          <div style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Remaining Budget</div>
-          <div style={budgetValueLarge}>${budget != null && !isFinite(budget.remainingBudget) ? '∞' : budget?.remainingBudget?.toFixed(2) ?? '0.00'}</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>of ${budget?.monthlyBudget.toFixed(2)} goal</div>
+          <div style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('pricing.remaining_budget')}</div>
+          <div style={budgetValueLarge}>{budget != null && !isFinite(budget.remainingBudget) ? '∞' : `$${budget?.remainingBudget?.toFixed(2) ?? '0.00'}`}</div>
+          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>{t('pricing.of_goal', { amount: budget?.monthlyBudget.toFixed(2) ?? '0.00' })}</div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.1)' }}>
-          <div style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Projected Month-End</div>
+          <div style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('pricing.projected_month_end')}</div>
           <div style={budgetValueLarge}>${budget?.projectedMonthly.toFixed(2)}</div>
           <div style={{ fontSize: '0.8rem', color: (budget?.projectedMonthly ?? 0) > (budget?.monthlyBudget ?? 0) ? '#ef4444' : '#10b981', marginTop: '0.5rem' }}>
-            {(budget?.projectedMonthly ?? 0) > (budget?.monthlyBudget ?? 0) ? 'Exceeds budget' : 'Within budget'}
+            {(budget?.projectedMonthly ?? 0) > (budget?.monthlyBudget ?? 0) ? t('pricing.exceeds_budget') : t('pricing.within_budget')}
           </div>
         </div>
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>Last Sync</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' }}>{lastSync ? new Date(lastSync).toLocaleTimeString() : 'Never'}</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>TTL: 60 min</div>
+          <div style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('pricing.last_sync')}</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' }}>{lastSync ? new Date(lastSync).toLocaleTimeString() : t('pricing.never')}</div>
+          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>{t('pricing.ttl')}</div>
         </div>
       </div>
 
@@ -114,17 +116,17 @@ const PricingPanel: React.FC = () => {
         {/* Pricing Table */}
         <section className="glass-panel" style={{ padding: '1.5rem', borderRadius: 24, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BarChart3 size={18} color="#3b82f6" /> Model Pricing Catalog
+            <BarChart3 size={18} color="#3b82f6" /> {t('pricing.catalog')}
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#64748b' }}>
-                  <th style={{ textAlign: 'left', padding: '1rem' }}>Model ID</th>
-                  <th style={{ textAlign: 'right', padding: '1rem' }}>Input ($/1M)</th>
-                  <th style={{ textAlign: 'right', padding: '1rem' }}>Output ($/1M)</th>
-                  <th style={{ textAlign: 'center', padding: '1rem' }}>Status</th>
-                  <th style={{ textAlign: 'right', padding: '1rem' }}>Actions</th>
+                  <th style={{ textAlign: 'left', padding: '1rem' }}>{t('pricing.table.model')}</th>
+                  <th style={{ textAlign: 'right', padding: '1rem' }}>{t('pricing.table.input')}</th>
+                  <th style={{ textAlign: 'right', padding: '1rem' }}>{t('pricing.table.output')}</th>
+                  <th style={{ textAlign: 'center', padding: '1rem' }}>{t('pricing.table.status')}</th>
+                  <th style={{ textAlign: 'right', padding: '1rem' }}>{t('pricing.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,15 +137,15 @@ const PricingPanel: React.FC = () => {
                     <td style={{ padding: '1rem', textAlign: 'right' }}>${p.output.toFixed(2)}</td>
                     <td style={{ padding: '1rem', textAlign: 'center' }}>
                       {overrides[id] ? (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 700 }}>OVERRIDDEN</span>
+                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 700 }}>{t('pricing.status.overridden')}</span>
                       ) : (
-                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: 4, background: 'rgba(255,255,255,0.05)', color: '#64748b' }}>SYNCED</span>
+                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: 4, background: 'rgba(255,255,255,0.05)', color: '#64748b' }}>{t('pricing.status.synced')}</span>
                       )}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      <button onClick={() => startEdit(id, overrides[id] || p)} style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', marginRight: '0.5rem' }}>Edit</button>
+                      <button onClick={() => startEdit(id, overrides[id] || p)} style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', marginRight: '0.5rem' }}>{t('pricing.edit')}</button>
                       {overrides[id] && (
-                        <button onClick={() => removeOverride(id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>Reset</button>
+                        <button onClick={() => removeOverride(id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>{t('pricing.reset')}</button>
                       )}
                     </td>
                   </tr>
@@ -157,10 +159,10 @@ const PricingPanel: React.FC = () => {
         <aside style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Settings size={16} /> Budget Configuration
+              <Settings size={16} /> {t('pricing.budget_config')}
             </h4>
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Monthly Global Budget ($)</label>
+              <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>{t('pricing.monthly_budget')}</label>
               <input 
                 type="number" 
                 value={budget?.monthlyBudget || 0}
@@ -170,21 +172,21 @@ const PricingPanel: React.FC = () => {
             </div>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', background: 'rgba(59,130,246,0.05)', padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(59,130,246,0.1)' }}>
               <Info size={14} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} />
-              Budgets are enforced at the Router level. System will prioritize free models when approaching limit.
+              {t('pricing.budget_hint')}
             </div>
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 20, background: 'rgba(139,92,246,0.03)', border: '1px solid rgba(139,92,246,0.1)' }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>Active Overrides</h4>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>{t('pricing.active_overrides')}</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {Object.keys(overrides).length === 0 ? (
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>No manual price overrides active.</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>{t('pricing.no_overrides')}</div>
               ) : (
                 Object.entries(overrides).map(([id, p]) => (
                   <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 10 }}>
                     <div>
                       <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>{id}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#10b981' }}>In: ${p.input} | Out: ${p.output}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#10b981' }}>{t('pricing.override_entry', { input: `$${p.input}`, output: `$${p.output}` })}</div>
                     </div>
                     <button onClick={() => removeOverride(id)} style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}>
                       <Trash2 size={14} />
@@ -214,9 +216,9 @@ const PricingPanel: React.FC = () => {
                 className="glass-panel"
                 style={{ width: 400, padding: '2rem', borderRadius: 24, background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}
               >
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>Edit Pricing: {editingModel}</h3>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', marginBottom: '1.5rem' }}>{t('pricing.edit_title', { model: editingModel })}</h3>
               <div style={{ marginBottom: '1.2rem' }}>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Input Cost ($ per 1M tokens)</label>
+                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>{t('pricing.input_cost')}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -226,7 +228,7 @@ const PricingPanel: React.FC = () => {
                 />
               </div>
               <div style={{ marginBottom: '2rem' }}>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>Output Cost ($ per 1M tokens)</label>
+                <label style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>{t('pricing.output_cost')}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -240,13 +242,13 @@ const PricingPanel: React.FC = () => {
                   onClick={() => setEditingModel(null)}
                   style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button 
                   onClick={saveOverride}
                   style={{ flex: 1, padding: '0.75rem', borderRadius: 12, background: '#10b981', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
-                  <Save size={18} /> Save Override
+                  <Save size={18} /> {t('pricing.save_override')}
                 </button>
               </div>
             </motion.div>

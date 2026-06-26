@@ -127,6 +127,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'provider-marketplace', labelKey: 'nav.provider_marketplace', icon: <Star size={18} />,      color: '#10b981', lazy: true, level: 'L2' },
       { id: 'connectors',          labelKey: 'nav.connectors',         icon: <Share2 size={18} />,       color: '#3b82f6', level: 'L1' },
       { id: 'mcp',                labelKey: 'nav.mcp_servers',        icon: <Server size={18} />,       color: '#a855f7', level: 'L1' },
+      { id: 'session-bindings',   labelKey: 'nav.session_bindings',   icon: <Share2 size={18} />,       color: '#8b5cf6', lazy: true, level: 'L2' },
     ],
   },
 
@@ -154,7 +155,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'shadow',             labelKey: 'nav.shadow',             icon: <GitBranch size={18} />,    color: '#8b5cf6', lazy: true, level: 'L2' },
       { id: 'causal-debugger',    labelKey: 'nav.causal_debugger',    icon: <Shuffle size={18} />,      color: '#a78bfa', lazy: true, level: 'L2' },
       { id: 'counterfactual',     labelKey: 'nav.counterfactual',     icon: <MessageCircle size={18} />, color: '#f59e0b', lazy: true, level: 'L2' },
-      { id: 'session-bindings',   labelKey: 'nav.session_bindings',   icon: <Share2 size={18} />,       color: '#8b5cf6', lazy: true, level: 'L2' },
       { id: 'aquarium',           labelKey: 'nav.aquarium',           icon: <Eye size={18} />,          color: '#06b6d4', lazy: true, level: 'L2' },
     ],
   },
