@@ -36,6 +36,7 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useTranslation } from '../../i18n/useTranslation';
  
+import { ContextMenu } from '../Common/ContextMenu';
 import { errorCard, flex1, flexCenterGap2, flexCenterGap3, flexCenterGap4, flexCenterGap6px, flexCenterSmGap, flexCol, iconBtnMuted, posRelative, textCenter, toastBase } from '../../styles/common';
 function getProviderColor(provider: string | undefined): string {
   const colors: Record<string, string> = {
@@ -101,6 +102,7 @@ const ResponseCard = memo<{
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const color = getProviderColor(res?.provider);
   const isStreaming = res.status === 'loading' || res.status === 'streaming';
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,6 +128,10 @@ const ResponseCard = memo<{
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setCtxMenu({ x: e.clientX, y: e.clientY });
+      }}
       style={{
         background: 'rgba(255,255,255,0.025)',
         border: `1px solid rgba(255,255,255,0.07)`,
@@ -230,6 +236,18 @@ const ResponseCard = memo<{
             </div>
           )}
         </div>
+      )}
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          actions={[
+            { id: 'copy', label: t('chat.copy_title'), icon: <Package size={14} />, onClick: handleCopy },
+            { id: 'fork', label: t('chat.fork_title'), icon: <GitFork size={14} />, onClick: () => onFork?.(entryId), disabled: !onFork },
+            { id: 'regenerate', label: t('chat.regenerate_title'), icon: <RefreshCw size={14} />, onClick: () => onRegenerate?.(entryId), disabled: !onRegenerate, divider: true },
+          ]}
+        />
       )}
     </motion.div>
   );
