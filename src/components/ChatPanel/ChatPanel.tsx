@@ -8,7 +8,7 @@ import {
   BrainCircuit,
   Plus, MessageSquare, Trash2, GitFork,
   Bookmark, Split, Layout, Settings,
-  AlertTriangle, X, RefreshCw, Search, ThumbsUp, ThumbsDown, Edit3, CornerDownRight, FileDown
+  AlertTriangle, X, RefreshCw, Search, ThumbsUp, ThumbsDown, Edit3, CornerDownRight, FileDown, Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
@@ -94,9 +94,10 @@ function groupSessions(sessions: { id: string; title: string; updatedAt: number 
 const ResponseCard = memo<{
   res: ChatResponse;
   entryId: string;
+  displayMode?: 'standard' | 'technical';
   onFork?: (entryId: string) => void;
   onRegenerate?: (entryId: string) => void;
-}>(({ res, entryId, onFork, onRegenerate }) => {
+}>(({ res, entryId, displayMode = 'standard', onFork, onRegenerate }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
@@ -136,7 +137,7 @@ const ResponseCard = memo<{
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: displayMode === 'technical' ? '0.75rem' : '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <div style={{ padding: 6, borderRadius: 8, background: 'rgba(255,255,255,0.03)' }}>
             <ProviderIcon provider={res.provider} size={16} />
@@ -150,11 +151,11 @@ const ResponseCard = memo<{
                 <span style={{ fontSize: '0.6rem', color, background: `${color}20`, padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>{t('chat.live')}</span>
               )}
             </div>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{res.model}</span>
+            {displayMode === 'technical' && <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{res.model}</span>}
           </div>
         </div>
         <div style={flexCenterGap3}>
-          {res.latency > 0 && (
+          {displayMode === 'technical' && res.latency > 0 && (
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{res.latency}{t('chat.latency_ms')}</span>
           )}
           {res.status === 'done' && (
@@ -165,9 +166,11 @@ const ResponseCard = memo<{
               <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} title={t('chat.not_helpful')} aria-label={t('chat.not_helpful_aria')} style={{ background: 'none', border: 'none', color: feedback === 'down' ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
                 <ThumbsDown size={13} aria-hidden="true" />
               </button>
-               <button onClick={() => onFork?.(entryId)} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={iconBtnMuted}>
-                <GitFork size={14} aria-hidden="true" />
-              </button>
+              {displayMode === 'technical' && (
+                <button onClick={() => onFork?.(entryId)} title={t('chat.fork_title')} aria-label={t('chat.fork_aria')} style={iconBtnMuted}>
+                  <GitFork size={14} aria-hidden="true" />
+                </button>
+              )}
               <button onClick={handleCopy} title={t('chat.copy_title')} aria-label={t('chat.copy_aria')} style={iconBtnMuted}>
                 {copied ? <CheckCircle2 size={14} color="#10b981" /> : <Package size={14} />}
               </button>
@@ -200,13 +203,13 @@ const ResponseCard = memo<{
               style={{ display: 'inline-block', width: 8, height: 16, background: color, marginLeft: 2, borderRadius: 1, verticalAlign: 'middle' }}
             />
           )}
-          {isStreaming && (
+          {displayMode === 'technical' && isStreaming && (
             <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', opacity: 0.6 }}>
               <span style={flexCenterSmGap}><Activity size={10} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
               <span style={flexCenterSmGap}><ChevronRight size={10} /> {res.tps != null ? res.tps.toFixed(1) : '—'} {t('chat.tokens_per_sec')}</span>
             </div>
           )}
-          {res.status === 'done' && (
+          {displayMode === 'technical' && res.status === 'done' && (
             <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '1.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
               <span style={flexCenterSmGap}><Zap size={12} color={color} /> {res.ttft || res.latency}{t('chat.latency_ms')} {t('chat.ttft_label')}</span>
               <span style={flexCenterSmGap}><Activity size={12} color="#a855f7" /> ~{Math.round((res.content?.length || 0) / 4)} {t('chat.tokens_label')}</span>
@@ -240,13 +243,14 @@ const ChatHistoryEntry = memo<{
   isEditing: boolean;
   editText: string;
   isSplitView: boolean;
+  displayMode: 'standard' | 'technical';
   onStartEdit: (id: string, text: string) => void;
   onCancelEdit: () => void;
   onSaveEdit: () => void;
   onSetEditText: (text: string) => void;
   onFork?: (entryId: string) => void;
   onRegenerate?: (entryId: string) => void;
-}>(({ entry, entryIdx, isEditing, editText, isSplitView, onStartEdit, onCancelEdit, onSaveEdit, onSetEditText, onFork, onRegenerate }) => {
+}>(({ entry, entryIdx, isEditing, editText, isSplitView, displayMode, onStartEdit, onCancelEdit, onSaveEdit, onSetEditText, onFork, onRegenerate }) => {
   const { t } = useTranslation();
   return (
     entry.role === 'system' ? (
@@ -323,7 +327,7 @@ const ChatHistoryEntry = memo<{
 
       <div style={{ display: 'grid', gridTemplateColumns: isSplitView ? '1fr 1fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
         {entry.responses.map((res, j) => (
-          <ResponseCard key={`${entry.id}-${res.id}-${j}`} res={res} entryId={entry.id} onFork={onFork} onRegenerate={onRegenerate} />
+          <ResponseCard key={`${entry.id}-${res.id}-${j}`} res={res} entryId={entry.id} onFork={onFork} onRegenerate={onRegenerate} displayMode={displayMode} />
         ))}
       </div>
     </div>
@@ -399,6 +403,7 @@ const ChatPanel: React.FC = () => {
   const [chatProbeLoading, setChatProbeLoading] = useState<string | null>(null);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [showExportOverlay, setShowExportOverlay] = useState(false);
+  const [responseDisplayMode, setResponseDisplayMode] = useState<'standard' | 'technical'>('standard');
   const lastPromptRef = useRef('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -986,6 +991,14 @@ const ChatPanel: React.FC = () => {
               {t('chat.comparison_mode')}
             </button>
             <div style={{ width: 1, height: 20, background: 'var(--border)' }} aria-hidden="true" />
+            <button
+              onClick={() => setResponseDisplayMode(m => m === 'standard' ? 'technical' : 'standard')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.7rem', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.75rem', fontWeight: 700, background: responseDisplayMode === 'technical' ? 'rgba(16,185,129,0.1)' : 'var(--bg-panel)', color: responseDisplayMode === 'technical' ? '#10b981' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }}
+              aria-label={responseDisplayMode === 'technical' ? t('chat.display_standard_aria') : t('chat.display_technical_aria')}
+            >
+              <Monitor size={14} aria-hidden="true" />
+              {responseDisplayMode === 'technical' ? t('chat.display_standard') : t('chat.display_technical')}
+            </button>
             <button onClick={handleClearHistory} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('chat.clear_history_aria')}>
               <Trash2 size={18} aria-hidden="true" />
             </button>
@@ -1129,6 +1142,7 @@ const ChatPanel: React.FC = () => {
               isEditing={editingEntryId === entry.id}
               editText={editingEntryId === entry.id ? editingText : ''}
               isSplitView={isSplitView}
+              displayMode={responseDisplayMode}
               onStartEdit={startEditing}
               onCancelEdit={cancelEditing}
               onSaveEdit={saveEditing}
