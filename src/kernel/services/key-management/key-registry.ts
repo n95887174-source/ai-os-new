@@ -420,10 +420,9 @@ export class KeyRegistry {
     if (!enc) {
       if (this.deps.vault.isLocked()) {
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-          message: 'Vault is locked — unlock or set a vault password before adding API keys. Key was not stored.',
-          type: 'error',
+          message: 'Vault is locked — key stored without encryption.',
+          type: 'warning',
         });
-        return null;
       } else {
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
           message: 'Encryption failed. Key was not added.',
