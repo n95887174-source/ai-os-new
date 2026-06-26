@@ -79,6 +79,13 @@ export class GroupManagerService implements IGroupManager {
         void this.persist();
       }),
     );
+    // Re-sync passports when keys are (re)loaded — covers the case where
+    // syncExistingKeys() ran before all keys were available in KeyRegistry.
+    this.unsubs.push(
+      this.deps.eventBus.onSafe<ApiKey[]>(EVENTS.KEYS_LOADED, () => {
+        void this.syncExistingKeys();
+      }),
+    );
   }
 
   async destroy(): Promise<void> {
@@ -260,14 +267,34 @@ export class GroupManagerService implements IGroupManager {
     if (this.allKeysCache) return this.allKeysCache;
     const keys = this.deps.keyService.getKeys();
     this.allKeysCache = keys.map(k => {
-      const p = this.passports.get(k.id);
+      let p = this.passports.get(k.id);
       if (!p) {
-        if (this.loaded) LOGGER.warn('GroupManager', `No passport for key ${k.id} (${k.label}) — raw key returned`);
-        return k;
+        p = this.ensurePassport(k);
       }
       return { ...k, group: p.groupName, account: p.account, accountId: p.accountId, status: p.status as ApiKey['status'] };
     });
     return this.allKeysCache;
+  }
+
+  private ensurePassport(k: ApiKey): KeyPassport {
+    const groupName = k.group || DEFAULT_GROUP_NAME;
+    const g = this.groups.find(g => g.name === groupName) || this.getDefaultGroup();
+    if (!g.keyIds.includes(k.id)) g.keyIds.push(k.id);
+    const p: KeyPassport = {
+      keyId: k.id,
+      keyLabel: k.label,
+      provider: k.provider,
+      groupId: g.id,
+      groupName,
+      account: k.account,
+      accountId: k.accountId,
+      status: k.status || 'active',
+      createdAt: k.createdAt || Date.now(),
+      source: 'migration',
+    };
+    this.passports.set(k.id, p);
+    void this.persist();
+    return p;
   }
 
   invalidateKeysCache(): void {
@@ -277,10 +304,9 @@ export class GroupManagerService implements IGroupManager {
   getKeyById(keyId: string): ApiKey | undefined {
     const k = this.deps.keyService.getKey(keyId);
     if (!k) return undefined;
-    const p = this.passports.get(keyId);
+    let p = this.passports.get(keyId);
     if (!p) {
-      if (this.loaded) LOGGER.warn('GroupManager', `No passport for key ${keyId} (${k.label}) — raw key returned`);
-      return k;
+      p = this.ensurePassport(k);
     }
     return { ...k, group: p.groupName, account: p.account, accountId: p.accountId, status: p.status as ApiKey['status'] };
   }
