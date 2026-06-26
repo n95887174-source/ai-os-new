@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, X, PanelRightOpen, PanelRightClose, Star, History } from 'lucide-react'
 import { motion } from 'framer-motion';
 import type { TranslationKey } from '../i18n/translations';
-import { NAV_SECTIONS, type RouteMeta } from '../route-registry'
+import { NAV_SECTIONS, type RouteMeta, type UserLevel } from '../route-registry'
 
 const RECENT_KEY = 'mavis:palette:recent';
 function getRecent(): string[] {
@@ -19,6 +19,8 @@ interface SidebarProps {
   runtimeStatus: 'online' | 'degraded' | 'offline';
   isDesktop: boolean;
   featureFlags: Record<string, boolean>;
+  userLevel: UserLevel;
+  onUserLevelChange: (level: UserLevel) => void;
   t: (key: TranslationKey) => string;
   navLabelKey: Record<string, TranslationKey>;
 }
@@ -38,18 +40,21 @@ function savePinned(pinned: string[]) {
 
 export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed, onToggleCollapse, mobileMenuOpen, onMobileMenuClose,
-  activeTab, onNavigate, runtimeStatus, isDesktop, featureFlags, t, navLabelKey,
+  activeTab, onNavigate, runtimeStatus, isDesktop, featureFlags, userLevel, onUserLevelChange, t, navLabelKey,
 }) => {
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
   const [pinned, setPinned] = useState<string[]>(getPinned);
 
   const visibleNavItems = useMemo(() => {
     const q = sidebarSearchQuery.toLowerCase();
+    const levelRank = { L0: 0, L1: 1, L2: 2 };
+    const minRank = levelRank[userLevel];
     const visibleItemIds = new Set(
       navItems
         .filter((item): item is RouteMeta & { type: 'item' } => item.type === 'item')
         .filter((item) => {
           if (item.featureFlag && !featureFlags[item.featureFlag]) return false;
+          if (levelRank[item.level || 'L2'] > minRank) return false;
           if (q && !t(navLabelKey[item.id] ?? 'nav.overview').toLowerCase().includes(q)) return false;
           return true;
         })
@@ -60,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       const section = NAV_SECTIONS.find((s) => s.id === item.id);
       return section?.items.some((meta) => visibleItemIds.has(meta.id)) ?? false;
     });
-  }, [featureFlags, sidebarSearchQuery, t, navLabelKey]);
+  }, [featureFlags, sidebarSearchQuery, t, navLabelKey, userLevel]);
 
   return (
     <>
@@ -147,6 +152,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         <div className="sidebar-footer">
+          {!isCollapsed && (
+            <div style={{ padding: '0.25rem 1rem', display: 'flex', gap: 2, borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 2 }}>
+              {(['L0', 'L1', 'L2'] as UserLevel[]).map(lvl => (
+                <button
+                  key={lvl}
+                  onClick={() => onUserLevelChange(lvl)}
+                  style={{
+                    flex: 1, padding: '0.25rem 0', borderRadius: 4, border: 'none',
+                    background: userLevel === lvl ? 'rgba(168,85,247,0.2)' : 'transparent',
+                    color: userLevel === lvl ? '#a855f7' : '#64748b',
+                    fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                  }}
+                  title={lvl === 'L0' ? 'Chat mode' : lvl === 'L1' ? 'Creator mode' : 'Admin mode'}
+                >
+                  {lvl === 'L0' ? '💬' : lvl === 'L1' ? '⚡' : '⚙️'} {lvl}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="system-status">
             <div className={`status-indicator ${runtimeStatus}`} />
             {!isCollapsed && <span role="status" aria-live="polite">{runtimeStatus === 'offline' ? 'No providers' : runtimeStatus === 'degraded' ? 'Degraded' : t('nav.runtime_online')}</span>}

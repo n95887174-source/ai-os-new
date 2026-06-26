@@ -14,7 +14,7 @@ import { settingsService, groupManager, featureFlagService } from '../kernel/ins
 import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
-import { NAV_SECTIONS } from '../route-registry';
+import { NAV_SECTIONS, type UserLevel } from '../route-registry';
 
 const navLabelKey: Record<string, TranslationKey> = {};
 for (const section of NAV_SECTIONS) {
@@ -35,6 +35,14 @@ export const AppLayout: React.FC = () => {
   const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll() ?? {});
+
+  const [userLevel, setUserLevel] = useState<UserLevel>(() => {
+    try { return (localStorage.getItem('mavis:userLevel') as UserLevel) || 'L0'; } catch { return 'L0'; }
+  });
+  const handleUserLevelChange = useCallback((level: UserLevel) => {
+    setUserLevel(level);
+    try { localStorage.setItem('mavis:userLevel', level); } catch { /* noop */ }
+  }, []);
 
   useEffect(() => {
     const check = () => {
@@ -107,6 +115,8 @@ export const AppLayout: React.FC = () => {
           runtimeStatus={runtimeStatus}
           isDesktop={isDesktop}
           featureFlags={featureFlags}
+          userLevel={userLevel}
+          onUserLevelChange={handleUserLevelChange}
           t={t}
           navLabelKey={navLabelKey}
         />
