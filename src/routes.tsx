@@ -168,6 +168,25 @@ export const AppRoutes: React.FC = () => {
       <Route path="/files" element={<PanelLoader name="Workspace"><WorkspacePanel /></PanelLoader>} />
       <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
       <Route path="/debate" element={<PanelLoader name="DebateArena"><DebateArena /></PanelLoader>} />
+      {/* Nested URL aliases */}
+      <Route path="/debates/arena" element={<PanelLoader name="DebateArena"><DebateArena /></PanelLoader>} />
+      <Route path="/debates/live" element={<PanelLoader name="DebateLive"><DebateLivePanel /></PanelLoader>} />
+      <Route path="/debates/replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
+      <Route path="/debates/tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />
+      <Route path="/debates/history" element={<PanelLoader name="DebateHistory"><DebateHistoryPage /></PanelLoader>} />
+      <Route path="/debates/analysis" element={<PanelLoader name="DebateAnalysis"><DebateAnalysisPanel /></PanelLoader>} />
+      <Route path="/debates/graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
+      <Route path="/debates/topics" element={<PanelLoader name="Topics"><TopicSuggesterPanel /></PanelLoader>} />
+      <Route path="/diagnostics/logs" element={<PanelLoader name="Logs"><LogsPanel /></PanelLoader>} />
+      <Route path="/diagnostics/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
+      <Route path="/diagnostics/system" element={<PanelLoader name="SystemHealth"><SystemHealthPanel /></PanelLoader>} />
+      <Route path="/diagnostics/traces" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
+      <Route path="/diagnostics/memory" element={<PanelLoader name="Memory"><MemoryPanel /></PanelLoader>} />
+      <Route path="/diagnostics/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
+      <Route path="/services/keys" element={<ErrorBoundary name="Providers" variant="panel"><ProviderManager /></ErrorBoundary>} />
+      <Route path="/services/groups" element={<PanelLoader name="Groups"><GroupsPanel /></PanelLoader>} />
+      <Route path="/services/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
+      <Route path="/services/mcp" element={<ErrorBoundary name="MCP" variant="panel"><MCPPanel /></ErrorBoundary>} />
       <Route path="/debate-runtime" element={<Navigate to="/debate?mode=runtime" replace />} />
       <Route path="/debate-replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
       <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />

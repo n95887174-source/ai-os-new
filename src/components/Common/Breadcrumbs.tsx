@@ -11,6 +11,20 @@ interface BreadcrumbsProps {
 function getCrumbs(path: string, t: (key: TranslationKey) => string): Array<{ label: string; path: string }> {
   const segments = path.replace(/^\//, '').split('/').filter(Boolean);
   if (segments.length === 0) segments.push('dashboard');
+  
+  if (segments.length >= 2) {
+    const section = NAV_SECTIONS.find(s => s.id === `section-${segments[0]}`);
+    if (section) {
+      const item = section.items.find(i => i.id === segments.slice(1).join('-'));
+      if (item) {
+        return [
+          { label: t(section.labelKey), path: '#' },
+          { label: t(item.labelKey), path: `/${segments.join('/')}` },
+        ];
+      }
+    }
+  }
+
   const id = segments[0];
   for (const section of NAV_SECTIONS) {
     for (const item of section.items) {
