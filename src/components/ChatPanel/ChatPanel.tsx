@@ -8,7 +8,7 @@ import {
   BrainCircuit,
   Plus, MessageSquare, Trash2, GitFork,
   Bookmark, Split, Layout, Settings,
-  AlertTriangle, X, RefreshCw, Search, ThumbsUp, ThumbsDown, Edit3, CornerDownRight
+  AlertTriangle, X, RefreshCw, Search, ThumbsUp, ThumbsDown, Edit3, CornerDownRight, FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
@@ -30,6 +30,8 @@ import { VoiceButton } from './VoiceButton';
 import { PersonaSelector } from './PersonaSelector';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import SummaryPanel from './SummaryPanel';
+import MessageSearchPanel from '../MessageSearchPanel';
+import ChatExportPanel from '../ChatExportPanel';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -395,6 +397,8 @@ const ChatPanel: React.FC = () => {
   const [maxTokens, setMaxTokens] = useState<number>(4096);
   const [chatProbes, setChatProbes] = useState<Map<string, ProbeResult>>(new Map());
   const [chatProbeLoading, setChatProbeLoading] = useState<string | null>(null);
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [showExportOverlay, setShowExportOverlay] = useState(false);
   const lastPromptRef = useRef('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -985,6 +989,12 @@ const ChatPanel: React.FC = () => {
             <button onClick={handleClearHistory} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('chat.clear_history_aria')}>
               <Trash2 size={18} aria-hidden="true" />
             </button>
+            <button onClick={() => setShowSearchOverlay(true)} style={{ background: 'none', border: 'none', color: showSearchOverlay ? '#06b6d4' : 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('nav.message_search')}>
+              <Search size={18} aria-hidden="true" />
+            </button>
+            <button onClick={() => setShowExportOverlay(true)} style={{ background: 'none', border: 'none', color: showExportOverlay ? '#10b981' : 'var(--text-muted)', cursor: 'pointer' }} aria-label={t('nav.chat_export')}>
+              <FileDown size={18} aria-hidden="true" />
+            </button>
           </div>
         </div>
 
@@ -1227,6 +1237,50 @@ const ChatPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Message Search Overlay */}
+      {showSearchOverlay && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowSearchOverlay(false)}
+        >
+          <div
+            style={{ width: '90vw', height: '85vh', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.5rem' }}>
+              <button onClick={() => setShowSearchOverlay(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 8 }} aria-label={t('common.close')}>
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <MessageSearchPanel />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Export Overlay */}
+      {showExportOverlay && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowExportOverlay(false)}
+        >
+          <div
+            style={{ width: '90vw', height: '85vh', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.5rem' }}>
+              <button onClick={() => setShowExportOverlay(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 8 }} aria-label={t('common.close')}>
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <ChatExportPanel />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

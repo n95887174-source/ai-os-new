@@ -5,7 +5,7 @@ import {
   // System
   LayoutDashboard, Settings,
   // Chat
-  MessageSquare, CheckSquare, FileText, Search, Bookmark, StickyNote,
+  MessageSquare, CheckSquare, Search, Bookmark, StickyNote,
   // Agents
   Bot, Star, Radio, Zap,
   // Debates
@@ -64,8 +64,6 @@ export const NAV_SECTIONS: NavSection[] = [
     labelKey: 'nav.section_chat',
     items: [
       { id: 'chat',           labelKey: 'nav.chat',           icon: <MessageSquare size={18} />, color: '#10b981' },
-      { id: 'message-search', labelKey: 'nav.message_search',  icon: <Search size={18} />,        color: '#06b6d4', lazy: true },
-      { id: 'chat-export',    labelKey: 'nav.chat_export',    icon: <FileText size={18} />,      color: '#10b981', lazy: true },
       { id: 'chat-sessions', labelKey: 'nav.chat_sessions',  icon: <FolderTree size={18} />,    color: '#06b6d4', lazy: true },
       { id: 'session-hub',   labelKey: 'nav.session_hub',    icon: <LayoutDashboard size={18} />, color: '#8b5cf6', lazy: true },
     ],
