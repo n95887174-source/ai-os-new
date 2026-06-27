@@ -1093,3 +1093,34 @@ Almost the entire report was already implemented in previous sessions. Verified 
 ### TypeScript
 - `npx tsc --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.19s passes
+
+---
+
+## Current Session (2026-06-27 continued) — P0-C + P1-B: Legacy DebateService deletion + KeyRepository removal
+
+### P0-C: Delete legacy DebateService (commit `f17d673`)
+- Removed 30s heartbeat interval from `startTopologyDebate()` (LAW 2 parallel-write violation)
+- Removed redundant `persistSession()` calls from `syncSession()`, `finalize()`
+- Removed legacy `if (!this.engine)` fallback path in `startDebate()` (entire 47-line block)
+- Removed 12 legacy-only private methods: `executeOpeningStatements`, `scheduleNextRound`, `startDebateLoop`, `getNextParticipant`, `executeArgumentRound`, `callLLM`, `buildOpeningPrompt`, `buildArgumentPrompt`, `buildHistoryMessages`, `hasNovelClaims`, `isConvergencePlateau`, `generateConsensus`, `flushPendingArguments`, `feedGovernor`, `computeGraphMetrics/ActivityMetrics/QualityMetrics`
+- Removed 8 legacy-only fields: `simulationTimeout`, `isExecutingRound`, `roundGeneration`, `schedulerState`, `participantProviderMap`, `failedProviders`, `llmCaller`, `_budget`, `_pauseController` unused fields, `debateStartTime`, `destroyed` (now unused), `conclusionEngine`
+- Simplified `stopDebate()`, `resumeDebate()`, `pauseDebate()` to engine-only
+- Cleaned unused imports: `DebateBudget`, `DebateConstraint`, `DebateLLMCaller`, `selectNextParticipant`, `generateDebateConsensus`, `buildOpeningPrompt`/`buildArgumentPrompt`, `calculateConfidence`, `hasNovelClaims`, `isConvergencePlateau`, `SOCRATIC_RETRY_PROMPT`
+- File: 1558 → 940 lines (-618)
+
+### P1-B: Remove KeyRepository from DAL (commit `cf08ff2`)
+- Replaced all `this.deps.repo.getAll()` → `this.deps.keyStore.listKeys()` in `key-registry.ts`
+- Replaced all `this.deps.repo.delete(id)` → `this.deps.keyStore.deleteKey(id)`
+- Removed `repo: KeyRepository` from `KeyRegistryDeps`, `KeyServiceDeps`, `HydrationDeps`, `MigrationDeps`
+- Removed `keys: KeyRepository` from `DataAccessLayer` interface + `DataAccessLayerImpl`
+- Deleted `src/kernel/dal/key-repository.ts` (119-line class with cache layer)
+- Updated `key-migration.ts` to use `KeyStore` instead of `KeyRepository`
+- Updated `bootstrap.ts` to use `storageLayer.keys` (KeyStore) instead of `dal.keys`
+- Updated `phase1-foundation.ts` to remove `repo` from KeyService DI wiring
+- File changes: 10 files, 30 insertions, 172 deletions
+
+### Current State
+- No parallel-write LAW 2 violations in debate service (single engine path)
+- No parallel-write LAW 2 violations in key management (single KeyStore path)
+- All key persistence through `storageLayer.keys` (DexieKeyStore)
+- `tsc --noEmit` ✅ | `vite build` ✅ 3.86s
