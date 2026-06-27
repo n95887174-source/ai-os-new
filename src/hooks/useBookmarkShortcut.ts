@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { eventBus, type EventMap } from '../kernel/events/event-bus';
 import { BucketStorageAdapter } from '../kernel/instances';
+import { EVENTS } from '../kernel/events/event-names';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
 
@@ -47,7 +48,7 @@ export function useBookmarkShortcut(): void {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'b') {
         e.preventDefault();
-        eventBus.emit('chat:bookmark:request', undefined);
+        eventBus.emit(EVENTS.CHAT_BOOKMARK_REQUEST, undefined);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -55,7 +56,7 @@ export function useBookmarkShortcut(): void {
   }, []);
 
   useEffect(() => {
-    const unsub = eventBus.on('chat:bookmark:save', (raw: unknown) => {
+    const unsub = eventBus.on(EVENTS.CHAT_BOOKMARK_SAVE, (raw: unknown) => {
       if (!raw || typeof raw !== 'object') return;
       const data = raw as BookmarkShortcutPayload;
       if (!data.sessionId || !data.message?.content) return;

@@ -4,6 +4,7 @@ import type { PressureLevel } from '../../contracts/debate-runtime';
 import { CONFIG } from '../config-registry';
 import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
 import { ProviderEvents } from '../../events/provider-events';
+import { EVENTS } from '../../events/event-names';
 
 const MAX_TREND_HISTORY = CONFIG?.services?.pressureMap?.maxTrendHistory ?? 200;
 const ALERT_COOLDOWN_MS = CONFIG?.services?.pressureMap?.alertCooldownMs ?? 60000;
@@ -220,10 +221,10 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
   private emit() {
     const snapshot = this.getSnapshot();
     // OBS-105: emit to eventBus too, not just local listeners
-    this.deps.eventBus.emit('pressure:map:updated', snapshot);
+    this.deps.eventBus.emit(EVENTS.PRESSURE_MAP_UPDATED, snapshot);
     const activeAlerts = this.getAlerts().filter(a => !a.acknowledged);
     for (const alert of activeAlerts) {
-      this.deps.eventBus.emit('pressure:alert:raised', alert);
+      this.deps.eventBus.emit(EVENTS.PRESSURE_ALERT_RAISED, alert);
     }
     for (const cb of this.listeners) cb(snapshot);
   }

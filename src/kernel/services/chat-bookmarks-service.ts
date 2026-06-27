@@ -2,6 +2,7 @@ import { genId } from '../../utils/gen-id';
 import type { ILogger } from '../contracts/logger';
 import type { ChatMessage } from '../../llm/core/types';
 import { BucketStorageAdapter } from './storage-adapter';
+import { EVENTS } from '../events/event-names';
 
 export interface ChatBookmark {
   id: string;
@@ -72,7 +73,7 @@ export class ChatBookmarksService {
     } catch (err) {
       this.deps.logger?.error('ChatBookmarks', 'init failed', { error: String(err) });
     }
-    this.unsubs.push(this.deps.eventBus.on('chat:rewound', (...args: unknown[]) => {
+    this.unsubs.push(this.deps.eventBus.on(EVENTS.CHAT_REWOUND, (...args: unknown[]) => {
       const data = args[0] as { sessionId?: string } | undefined;
       if (data?.sessionId) {
         const sessionId = data.sessionId;
@@ -112,7 +113,7 @@ export class ChatBookmarksService {
     } catch (err) {
       this.deps.logger?.warn('ChatBookmarks', 'persist failed', { error: String(err) });
     }
-    this.deps.eventBus.emit('chat:bookmark:added', bookmark);
+    this.deps.eventBus.emit(EVENTS.CHAT_BOOKMARK_ADDED, bookmark);
     return bookmark;
   }
 
@@ -123,7 +124,7 @@ export class ChatBookmarksService {
     } catch (err) {
       this.deps.logger?.warn('ChatBookmarks', 'delete failed', { error: String(err) });
     }
-    this.deps.eventBus.emit('chat:bookmark:removed', { id });
+    this.deps.eventBus.emit(EVENTS.CHAT_BOOKMARK_REMOVED, { id });
   }
 
   async clearAll(): Promise<void> {
@@ -133,7 +134,7 @@ export class ChatBookmarksService {
     } catch (err) {
       this.deps.logger?.warn('ChatBookmarks', 'clear failed', { error: String(err) });
     }
-    this.deps.eventBus.emit('chat:bookmark:cleared', undefined);
+    this.deps.eventBus.emit(EVENTS.CHAT_BOOKMARK_CLEARED, undefined);
   }
 
   listAll(): ChatBookmark[] {

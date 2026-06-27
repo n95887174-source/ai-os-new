@@ -43,7 +43,7 @@ const SkillsPanel: React.FC = () => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    const unsub = eventBus.on('skills:updated', (data: CognitiveSkill[]) => {
+    const unsub = eventBus.on(EVENTS.SKILLS_UPDATED, (data: CognitiveSkill[]) => {
       if (!isMountedRef.current) return;
       setSkills([...data]);
     });

@@ -10,6 +10,7 @@ import type {
 import type { TopologyWhatIf } from '../../contracts/cognitive-intelligence';
 import type { ISPolicy } from '../policy-service';
 import { CONFIG } from '../config-registry';
+import { EVENTS } from '../../events/event-names';
 
 const MAX_HISTORY = CONFIG?.services?.whatif?.maxHistory ?? 100;
 
@@ -52,7 +53,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     if (result) {
       this.record('topology', { sessionId, proposedType }, result as unknown as Record<string, unknown>);
     }
-    this.deps.eventBus.emit('whatif:simulation:completed', { type: 'topology', sessionId, proposedType, hasResult: !!result });
+    this.deps.eventBus.emit(EVENTS.WHATIF_SIMULATION_COMPLETED, { type: 'topology', sessionId, proposedType, hasResult: !!result });
     return result;
   }
 
@@ -64,7 +65,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
     if (result) {
       this.record('participant', { sessionId, additionalAgents }, result as unknown as Record<string, unknown>);
     }
-    this.deps.eventBus.emit('whatif:simulation:completed', { type: 'participant', sessionId, additionalAgents, hasResult: !!result });
+    this.deps.eventBus.emit(EVENTS.WHATIF_SIMULATION_COMPLETED, { type: 'participant', sessionId, additionalAgents, hasResult: !!result });
     return result;
   }
 
@@ -89,7 +90,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
             : 'Budget change is within acceptable range',
     };
     this.record('budget', { sessionId, proposedBudget }, result as unknown as Record<string, unknown>);
-    this.deps.eventBus.emit('whatif:simulation:completed', { type: 'budget', sessionId, proposedBudget, currentBudget, ratio });
+    this.deps.eventBus.emit(EVENTS.WHATIF_SIMULATION_COMPLETED, { type: 'budget', sessionId, proposedBudget, currentBudget, ratio });
     return result;
   }
 
@@ -118,7 +119,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
       recommendation,
     };
     this.record('provider', { currentProvider, proposedProvider }, result as unknown as Record<string, unknown>);
-    this.deps.eventBus.emit('whatif:simulation:completed', { type: 'provider', currentProvider, proposedProvider, latencyImpact, costImpact, reliabilityImpact });
+    this.deps.eventBus.emit(EVENTS.WHATIF_SIMULATION_COMPLETED, { type: 'provider', currentProvider, proposedProvider, latencyImpact, costImpact, reliabilityImpact });
     return result;
   }
 
@@ -168,7 +169,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
       recommendation: recs.join('; ') || 'No significant impact expected',
     };
     this.record('strategy', { currentStrategy, proposedStrategy }, result as unknown as Record<string, unknown>);
-    this.deps.eventBus.emit('whatif:simulation:completed', { type: 'strategy', currentStrategy, proposedStrategy, estimatedQualityChange, estimatedLatencyChange, estimatedCostChange });
+    this.deps.eventBus.emit(EVENTS.WHATIF_SIMULATION_COMPLETED, { type: 'strategy', currentStrategy, proposedStrategy, estimatedQualityChange, estimatedLatencyChange, estimatedCostChange });
     return result;
   }
 
@@ -257,7 +258,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
 
     const result: PolicyDryRunResult = { violationsCount, blockedRequestsCount, severityLevel, projectedImpact, blockedNodes };
     this.record('policy_dry_run', proposedPolicy as unknown as Record<string, unknown>, result as unknown as Record<string, unknown>);
-    this.deps.eventBus.emit('whatif:simulation:completed', { type: 'policy_dry_run', policyType: proposedPolicy.type, violationsCount, severityLevel });
+    this.deps.eventBus.emit(EVENTS.WHATIF_SIMULATION_COMPLETED, { type: 'policy_dry_run', policyType: proposedPolicy.type, violationsCount, severityLevel });
     return result;
   }
 

@@ -19,14 +19,14 @@ export class CompromiseWebhookService {
   handleGitHubPayload(payload: GitHubSecretAlert): boolean {
     if (!payload || payload.action === 'resolved') {
       LOGGER.warn('CompromiseWebhook', 'GitHub payload rejected', { action: payload?.action, reason: 'resolved_or_empty' });
-      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'github', reason: payload?.action === 'resolved' ? 'resolved' : 'empty' });
+      this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, { source: 'github', reason: payload?.action === 'resolved' ? 'resolved' : 'empty' });
       return false;
     }
 
     const alertInfo = payload.alert;
     if (!alertInfo) {
       LOGGER.warn('CompromiseWebhook', 'GitHub payload rejected: missing alert info');
-      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'github', reason: 'missing_alert_info' });
+      this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, { source: 'github', reason: 'missing_alert_info' });
       return false;
     }
 
@@ -45,7 +45,7 @@ export class CompromiseWebhookService {
   handleSentryPayload(payload: SentryAlert): boolean {
     if (!payload) {
       LOGGER.warn('CompromiseWebhook', 'Sentry payload rejected: empty');
-      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'sentry', reason: 'empty' });
+      this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, { source: 'sentry', reason: 'empty' });
       return false;
     }
 
@@ -64,7 +64,7 @@ export class CompromiseWebhookService {
   emitSignal(signal: CompromiseSignal): boolean {
     if (!signal.id && !signal.fingerprint) {
       LOGGER.warn('CompromiseWebhook', 'Signal rejected: missing id and fingerprint');
-      this.deps.eventBus.emit('compromise:signal:rejected', { source: 'custom', reason: 'missing_id_and_fingerprint' });
+      this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, { source: 'custom', reason: 'missing_id_and_fingerprint' });
       return false;
     }
 
@@ -103,14 +103,14 @@ export class CompromiseWebhookService {
     const secret = CONFIG.security?.webhookSecret;
     if (secret && (!signature || !rawBody)) {
       LOGGER.warn('CompromiseWebhook', 'Missing signature or raw body when secret configured');
-      this.deps.eventBus.emit('compromise:signal:rejected', { source, reason: 'missing_signature' });
+      this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, { source, reason: 'missing_signature' });
       return false;
     }
     if (signature && rawBody) {
       const isValid = await this.verifySignature(rawBody, signature);
       if (!isValid) {
         LOGGER.warn('CompromiseWebhook', 'Invalid HMAC signature');
-        this.deps.eventBus.emit('compromise:signal:rejected', { source, reason: 'invalid_signature' });
+        this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, { source, reason: 'invalid_signature' });
         return false;
       }
     }

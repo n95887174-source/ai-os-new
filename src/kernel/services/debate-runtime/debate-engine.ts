@@ -18,6 +18,7 @@ import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import { rootLogger } from '../logger-service';
+import { EVENTS } from '../../events/event-names';
 const LOGGER = rootLogger.child('DebateEngine');
 
 interface SnapshotBridgeContext {
@@ -280,7 +281,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 totalTokens: verdict.totalTokens,
               }).catch(e => LOGGER.warn('DebateEngine', 'verdict persist failed', { error: e }));
             }
-            this.deps.eventBus.emit('debate:verdict:generated', { sessionId: id, verdict });
+            this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, { sessionId: id, verdict });
           }).catch(e => LOGGER.warn('DebateEngine', 'LLM-enhanced verdict failed, using heuristic', { error: e }));
         }
         this.saveSnapshot(id).catch(e => LOGGER.warn('DebateEngine', 'auto-checkpoint failed', { error: e }));

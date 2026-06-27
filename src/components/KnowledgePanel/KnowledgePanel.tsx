@@ -6,7 +6,7 @@ import {
 import { t } from '../../i18n/translations';
 import { useConfirm } from '../../hooks/useConfirm';
 import { memoryService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { errorBanner, dismissBtn, flexCenterGap6px, flexCenterGap3, flexGap2, flexColGap2, grid2, textSmBoldUppercase, textXsUppercaseBold, textSmWeight600FlexGap6, infoCardBorderVar, flexBetweenStart, edgeRow } from '../../styles/common';
 
@@ -35,7 +35,7 @@ const KnowledgePanel: React.FC = () => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    const unsub = eventBus.on('memory:updated', () => {
+    const unsub = eventBus.on(EVENTS.MEMORY_UPDATED, () => {
       if (!isMountedRef.current) return;
       setMemories([...memoryService.getMemories()]);
       setIsLoading(false);

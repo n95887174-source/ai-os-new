@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { BookOpen, Plus, Trash2, X, Search, Tag, Clock, Zap, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
-import { eventBus, type EventMap } from '../kernel/events/event-bus';
+import { eventBus, EVENTS, type EventMap } from '../kernel/events/event-bus';
 import { storageAdapter } from '../kernel/instances';
 import { AgentJournalService } from '../kernel/services/agent-journal-service';
 import type { JournalEntry } from '../kernel/services/agent-journal-service';
@@ -89,9 +89,9 @@ const AgentJournalPanel: React.FC = () => {
         setLoading(false);
       }
     });
-    const unsub1 = eventBus.on('agent:journal:added', () => { if (isMountedRef.current) refresh(); });
-    const unsub2 = eventBus.on('agent:journal:removed', () => { if (isMountedRef.current) refresh(); });
-    const unsub3 = eventBus.on('agent:journal:cleared', () => { if (isMountedRef.current) refresh(); });
+    const unsub1 = eventBus.on(EVENTS.AGENT_JOURNAL_ADDED, () => { if (isMountedRef.current) refresh(); });
+    const unsub2 = eventBus.on(EVENTS.AGENT_JOURNAL_REMOVED, () => { if (isMountedRef.current) refresh(); });
+    const unsub3 = eventBus.on(EVENTS.AGENT_JOURNAL_CLEARED, () => { if (isMountedRef.current) refresh(); });
     return () => {
       isMountedRef.current = false;
       unsub1(); unsub2(); unsub3();

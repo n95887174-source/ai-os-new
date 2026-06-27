@@ -51,11 +51,11 @@ const AgentLiveBoard: React.FC = () => {
   const [agents, setAgents] = useState<AgentLiveState[]>(getAgentsFromTopology());
 
   useEffect(() => {
-    const unsubMount = eventBus.on('system:topology:mounted', () => {
+    const unsubMount = eventBus.on(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, () => {
       setAgents(getAgentsFromTopology());
     });
 
-    const unsubActive = eventBus.onSafe<Record<string, unknown>>('cognitive:step:active', (data) => {
+    const unsubActive = eventBus.onSafe<Record<string, unknown>>(EVENTS.COGNITIVE_STEP_ACTIVE, (data) => {
       setAgents(prev => prev.map(a => 
         a.id === data.nodeId ? { ...a, status: 'acting', currentTask: 'Processing request...', lastStep: 'Executing step' } : a
       ));

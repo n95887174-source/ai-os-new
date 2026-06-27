@@ -93,7 +93,7 @@ export class SystemKernel implements IKernel {
         this.loadState(saved);
       }
     } catch (e) {
-      this.deps.eventBus?.emit('kernel:load-failed', { error: String(e) });
+      this.deps.eventBus?.emit(EVENTS.KERNEL_LOAD_FAILED as keyof EventMap, { error: String(e) });
       this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, { reason: `DB load failed: ${String(e)}` });
       this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, { message: 'Kernel state load failed — reset to defaults. SLA, weights, and budget may have been reset.', type: 'warning' });
     }
@@ -104,7 +104,7 @@ export class SystemKernel implements IKernel {
       await this.deps.database.setKv(STORAGE_KEY, this.dumpState());
       this.isDirty = false;
     } catch (e) {
-      this.deps.eventBus?.emit('kernel:persist-failed', { error: String(e) });
+      this.deps.eventBus?.emit(EVENTS.KERNEL_PERSIST_FAILED as keyof EventMap, { error: String(e) });
     }
   }
 
@@ -129,12 +129,12 @@ export class SystemKernel implements IKernel {
 
   private setupListeners() {
     this.unsubs.push(
-      this.deps.eventBus.on('chat:stream:end', (data) => this.reduce('METRIC_UPDATE', data)),
-      this.deps.eventBus.on('chat:stream:error', (data) => this.reduce('METRIC_ERROR', data)),
-      this.deps.eventBus.on('system:decision', (data) => this.reduce('DECISION_MADE', data)),
-      this.deps.eventBus.on('router:signal', (data) => this.reduce('LEARNING_SIGNAL', data)),
-      this.deps.eventBus.on('provider-runtime:state', (data) => this.reduce('PROVIDER_RUNTIME_STATE', data)),
-      this.deps.eventBus.on('provider-runtime:budget', (data) => this.reduce('PROVIDER_RUNTIME_BUDGET', data))
+      this.deps.eventBus.on(EVENTS.STREAM_END, (data) => this.reduce('METRIC_UPDATE', data)),
+      this.deps.eventBus.on(EVENTS.STREAM_ERROR, (data) => this.reduce('METRIC_ERROR', data)),
+      this.deps.eventBus.on(EVENTS.DECISION, (data) => this.reduce('DECISION_MADE', data)),
+      this.deps.eventBus.on(EVENTS.ROUTER_SIGNAL, (data) => this.reduce('LEARNING_SIGNAL', data)),
+      this.deps.eventBus.on(EVENTS.PROVIDER_RUNTIME_STATE, (data) => this.reduce('PROVIDER_RUNTIME_STATE', data)),
+      this.deps.eventBus.on(EVENTS.PROVIDER_RUNTIME_BUDGET, (data) => this.reduce('PROVIDER_RUNTIME_BUDGET', data))
     );
   }
 
@@ -159,7 +159,7 @@ export class SystemKernel implements IKernel {
     this.applyMutation(type, payload);
     this.isDirty = true;
     this.cachedFrozenState = null; // KC-H02: Invalidate cache on any state mutation
-    this.deps.eventBus.emit('kernel:updated', this.state);
+    this.deps.eventBus.emit(EVENTS.KERNEL_UPDATED, this.state);
   }
 
   private applyMutation(type: string, payload: unknown): void {
@@ -243,9 +243,9 @@ export class SystemKernel implements IKernel {
     this.cachedFrozenState = null;
     if (tx) {
       tx.deferPersist(async () => { this.saveToStorage(); });
-      tx.deferEmit('kernel:updated', this.state);
+      tx.deferEmit(EVENTS.KERNEL_UPDATED, this.state);
     } else {
-      this.deps.eventBus.emit('kernel:updated', this.state);
+      this.deps.eventBus.emit(EVENTS.KERNEL_UPDATED, this.state);
     }
   }
 
@@ -291,7 +291,7 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
       this.eventSeq = this.eventLog.length;
       this.isDirty = false;
       this.cachedFrozenState = null; // KC-H02: Invalidate cache on state reload
-      this.deps.eventBus.emit('kernel:updated', this.state);
+      this.deps.eventBus.emit(EVENTS.KERNEL_UPDATED, this.state);
     } catch (e) {
       getLogger()?.warn('Kernel', 'loadState failed, resetting to defaults', { error: e });
       this.state = this.getInitialState();

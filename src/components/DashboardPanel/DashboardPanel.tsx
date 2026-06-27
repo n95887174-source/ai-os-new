@@ -90,7 +90,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   }, []);
 
   useEffect(() => {
-    const unsubscribeKernel = eventBus.on('kernel:updated', (state) => {
+    const unsubscribeKernel = eventBus.on(EVENTS.KERNEL_UPDATED, (state) => {
       if (!isMountedRef.current) return;
       try {
         setSystemState({ ...state });

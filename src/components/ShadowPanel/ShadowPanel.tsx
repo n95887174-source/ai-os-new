@@ -188,7 +188,7 @@ const ShadowPanel: React.FC = () => {
 
       // OBS-80: emit drift events to monitoring
       if (report.driftScore > 0) {
-        eventBus.emit('shadow:drift', {
+        eventBus.emit(EVENTS.SHADOW_DRIFT, {
           driftScore: report.driftScore,
           criticalCount: report.criticalCount,
           mismatchCount: report.mismatches.length,
@@ -197,7 +197,7 @@ const ShadowPanel: React.FC = () => {
         });
       }
       if (rReport.driftScore > 0) {
-        eventBus.emit('shadow:drift', {
+        eventBus.emit(EVENTS.SHADOW_DRIFT, {
           driftScore: rReport.driftScore,
           criticalCount: rReport.criticalCount,
           mismatchCount: rReport.mismatches.length,

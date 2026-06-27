@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
+import { EVENTS } from '../kernel/events/event-names';
 
 const MAX_STEPS = 1000;
 const MAX_ACTIVE_TRACES = 100;
@@ -56,7 +57,7 @@ export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
         return { steps: [...s.steps, step].slice(-MAX_STEPS), activeTraces };
       });
     }),
-    eventBus.on('request:completed', () => {
+    eventBus.on(EVENTS.REQUEST_COMPLETED, () => {
       // trace naturally ends — keep in store for UI reference
     }),
   ];
@@ -65,7 +66,7 @@ export const useTopologyTraceStore = create<TopologyTraceState>((set, get) => {
     const s = get();
     const errorCount = s.steps.filter(st => st.status === 'error').length;
     const activeCount = s.steps.filter(st => st.status === 'active').length;
-    eventBus.emit('system:runtime:metrics', {
+    eventBus.emit(EVENTS.SYSTEM_RUNTIME_METRICS, {
       source: 'topologyTraceStore',
       totalSteps: s.steps.length,
       errorCount,

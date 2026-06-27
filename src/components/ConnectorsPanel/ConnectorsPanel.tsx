@@ -187,7 +187,7 @@ const ConnectorsPanel: React.FC = () => {
       return updated;
     });
     setConfirmDisconnect(null);
-    eventBus.emit('system:notification', { message: `OAuth token for ${id} revoked.`, type: 'info' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `OAuth token for ${id} revoked.`, type: 'info' });
   }, [persist]);
 
   const handleAddCustom = useCallback(() => {
@@ -214,8 +214,8 @@ const ConnectorsPanel: React.FC = () => {
     setNewName('');
     setNewType('');
     setShowAddForm(false);
-    eventBus.emit('system:notification', { message: `Connector ${newConnector.name} added.`, type: 'success' });
-  }, [newName, newType, persist, clearErrorAfterDelay]);
+    eventBus.emit(EVENTS.NOTIFICATION, { message: `Connector ${newConnector.name} added.`, type: 'success' });
+  }, [newName, newType, persist, clearErrorAfterDelay, t]);
 
   const handleViewChange = useCallback((view: 'grid' | 'webhooks') => {
     setActiveView(view);

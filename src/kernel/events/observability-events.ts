@@ -11,6 +11,7 @@ export const ObservabilityEvents = {
   TRACE_COMPLETED: 'observability:trace:completed',
   SYSTEM_HEALTH_CHANGED: 'observability:health:changed',
   ERROR_BOUNDARY_CAUGHT: 'observability:error-boundary:caught',
+  METRICS_ALERT_FIRED: 'metrics:alert-fired',
 } as const;
 
 export type ObservabilityEventMap = {

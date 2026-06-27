@@ -160,7 +160,7 @@ export class NotificationWebhookService {
 
       LOGGER.warn('NotificationWebhookService', 'HTTP error sending webhook', { webhookName: webhook.name, event, statusCode: res.status });
       if (attempt >= MAX_RETRIES) {
-        this.deps.eventBus.emit('webhook:delivery:failed', { webhookId: webhook.id, event, attempt, statusCode: res.status, error: `HTTP ${res.status}` });
+        this.deps.eventBus.emit(EVENTS.WEBHOOK_DELIVERY_FAILED, { webhookId: webhook.id, event, attempt, statusCode: res.status, error: `HTTP ${res.status}` });
       }
       return false;
     } catch (e) {
@@ -169,7 +169,7 @@ export class NotificationWebhookService {
         return this.sendWithRetry(webhook, event, data, attempt + 1);
       }
       LOGGER.warn('NotificationWebhookService', 'Failed to send webhook after retries', { webhookName: webhook.name, attempts: MAX_RETRIES + 1, error: e });
-      this.deps.eventBus.emit('webhook:delivery:failed', { webhookId: webhook.id, event, attempt, statusCode: 0, error: String(e) });
+      this.deps.eventBus.emit(EVENTS.WEBHOOK_DELIVERY_FAILED, { webhookId: webhook.id, event, attempt, statusCode: 0, error: String(e) });
       return false;
     }
   }

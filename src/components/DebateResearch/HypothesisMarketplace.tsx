@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { hypothesisService } from '../../kernel/instances';
 import type { ResearchHypothesis, HypothesisCategory, HypothesisStatus } from '../../kernel/types/research-types';
 import { HYPOTHESIS_CATEGORIES, HYPOTHESIS_STATUSES } from '../../kernel/types/research-types';
-import { eventBus } from '../../kernel/events/event-bus'
+import { eventBus, EVENTS } from '../../kernel/events/event-bus'
 import { glassPanel } from '../../styles/common';
 import { StorageAdapter } from '../../kernel/services/storage-adapter';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -79,7 +79,7 @@ export const HypothesisMarketplace: React.FC = () => {
       }
     };
     load();
-    const unsub = eventBus.on('hypotheses:updated', load);
+    const unsub = eventBus.on(EVENTS.HYPOTHESES_UPDATED, load);
     return () => { isMountedRef.current = false; unsub(); };
   }, []);
 

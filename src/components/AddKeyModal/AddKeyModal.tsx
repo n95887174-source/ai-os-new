@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { X, Key, Eye, EyeOff, Shield, CheckCircle2, HelpCircle, Loader2, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FocusScope } from '@react-aria/focus';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { keyService, adapterRegistry } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
@@ -215,7 +215,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
       availableModels: availableModels.length > 0 ? availableModels : undefined,
     });
 
-    eventBus.emit('system:notification', {
+    eventBus.emit(EVENTS.NOTIFICATION, {
       message: `${provider} key added — ${availableModels.length > 0 ? availableModels.length + ' models available' : 'health check pending'}${selectedModel ? ', default: ' + selectedModel : ''}`,
       type: 'success',
     });
@@ -348,7 +348,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
         setBulkProgress(null);
       }
 
-      eventBus.emit('system:notification', {
+      eventBus.emit(EVENTS.NOTIFICATION, {
         message: `Bulk import complete: ${r.added} added (pending verification), ${r.duplicates} duplicates, ${r.invalid} invalid${healthIssuesList.length > 0 ? ' — ' + healthIssuesList.length + ' key(s) failed health check' : ''}`,
         type: r.added > 0 ? 'info' : 'warning',
       });
@@ -368,7 +368,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     if (docsUrl) {
       window.open(docsUrl, '_blank', 'noopener,noreferrer');
     } else {
-      eventBus.emit('system:notification', {
+      eventBus.emit(EVENTS.NOTIFICATION, {
         message: 'No official documentation link available for this provider.',
         type: 'info',
       });

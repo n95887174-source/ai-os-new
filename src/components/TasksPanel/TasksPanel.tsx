@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { cognitiveService } from '../../kernel/instances';
 import type { CognitiveTrace } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -97,7 +97,7 @@ const TasksPanel: React.FC = () => {
         setError(t('tasks.error_load'));
         clearError();
       }
-      eventBus.emit('system:notification', { message: t('tasks.error_load'), type: 'error' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('tasks.error_load'), type: 'error' });
     }
     if (isMountedRef.current) setLoading(false);
   }, [clearError, t]);
@@ -106,7 +106,7 @@ const TasksPanel: React.FC = () => {
     isMountedRef.current = true;
     updateTasksFromTraces();
 
-    const unsub = eventBus.on('trace:updated', () => {
+    const unsub = eventBus.on(EVENTS.TRACE_UPDATED, () => {
       if (!isMountedRef.current) return;
       try {
         const traces = cognitiveService.getTraces();
@@ -144,7 +144,7 @@ const TasksPanel: React.FC = () => {
         setError(t('tasks.error_refresh'));
         clearError();
       }
-      eventBus.emit('system:notification', { message: t('tasks.error_refresh'), type: 'error' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('tasks.error_refresh'), type: 'error' });
     } finally {
       if (isMountedRef.current) setIsRefreshing(false);
     }

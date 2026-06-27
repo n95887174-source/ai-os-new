@@ -74,7 +74,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
       }
     });
 
-    const subStreamStart = eventBus.on('chat:stream:start', ({ requestId }) => {
+    const subStreamStart = eventBus.on(EVENTS.STREAM_START, ({ requestId }) => {
       if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
         isDoneRef.current = false;
         setStatus('loading');
@@ -82,7 +82,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
       }
     });
 
-    const subStreamChunk = eventBus.on('chat:stream:chunk', ({ requestId, chunk }) => {
+    const subStreamChunk = eventBus.on(EVENTS.STREAM_CHUNK, ({ requestId, chunk }) => {
       if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
         setMessages(prev => {
           const last = prev[prev.length - 1];
@@ -94,7 +94,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
       }
     });
 
-    const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
+    const subStreamEnd = eventBus.on(EVENTS.STREAM_END, ({ requestId, fullContent }) => {
       if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
         isDoneRef.current = true;
         setStatus('idle');
@@ -110,7 +110,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
       }
     });
 
-    const subStreamError = eventBus.on('chat:stream:error', ({ requestId, error }) => {
+    const subStreamError = eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, error }) => {
       if (requestId.startsWith(`sandbox-${apiKey.id}`) && isMountedRef.current) {
         isDoneRef.current = true;
         setStatus('error');

@@ -4,7 +4,7 @@ import { agentService, agentVersionService } from '../../kernel/instances';
 import { toolService } from '../../kernel/instances';
 import { roleService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import AgentsPanelView from './AgentsPanelView';
 import { AgentsPanelContext } from './AgentsPanelContext';
 import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
@@ -65,12 +65,12 @@ const AgentsPanelContainer: React.FC = () => {
     const currentTopology = orchestrator.getActiveTopology();
     console.log('[AgentsPanel] Mounted. Topology exists:', !!currentTopology, currentTopology?.name);
 
-    const unsubTopology = eventBus.on('system:topology:mounted', () => {
+    const unsubTopology = eventBus.on(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, () => {
       console.log('[AgentsPanel] Topology mounted event received');
       setAgents(getAgentsFromTopology());
       setIsLoading(false);
     });
-    const unsubStats = eventBus.on('cognitive:step:completed', () => {
+    const unsubStats = eventBus.on(EVENTS.COGNITIVE_STEP_COMPLETED, () => {
       setAgentStats({ ...agentService.getAllStats() });
     });
     const timer = setTimeout(() => { if (containerIsMountedRef.current) setIsLoading(false); }, 3000);
@@ -173,13 +173,13 @@ const AgentsPanelContainer: React.FC = () => {
   const handlePauseAll = useCallback(() => {
     agentService.pauseAllAgents();
     setAgents(getAgentsFromTopology());
-    eventBus.emit('system:notification', { message: 'All agents paused', type: 'info' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: 'All agents paused', type: 'info' });
   }, []);
 
   const handleResumeAll = useCallback(() => {
     agentService.resumeAllAgents();
     setAgents(getAgentsFromTopology());
-    eventBus.emit('system:notification', { message: 'All agents resumed', type: 'success' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: 'All agents resumed', type: 'success' });
   }, []);
 
   const handleDeleteAgent = useCallback((agentId: string) => {
@@ -187,7 +187,7 @@ const AgentsPanelContainer: React.FC = () => {
       agentService.deleteAgent(agentId);
       setAgents(getAgentsFromTopology());
       setSelectedAgentId(null);
-      eventBus.emit('system:notification', { message: 'Agent deleted', type: 'info' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Agent deleted', type: 'info' });
     } catch (e) {
       console.warn('[AgentsPanel] Failed to delete agent:', e);
       setErrorWithTimeout('Failed to delete agent');
@@ -199,13 +199,14 @@ const AgentsPanelContainer: React.FC = () => {
       const agentToCopy = agents.find(a => a.id === agentId);
       if (!agentToCopy) throw new Error('Agent not found');
 
-      const { id, stats, ...copyFields } = agentToCopy;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { id, stats, ...copyFields } = agentToCopy;
       const newId = agentService.spawnAgent(`${agentToCopy.name} (Copy)`, undefined, copyFields as unknown as Record<string, unknown>);
       if (!newId) throw new Error('Failed to spawn copy');
 
       setAgents(getAgentsFromTopology());
       setSelectedAgentId(newId);
-      eventBus.emit('system:notification', { message: 'Agent duplicated successfully', type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Agent duplicated successfully', type: 'success' });
     } catch (e) {
       console.warn('[AgentsPanel] Failed to duplicate agent:', e);
       setErrorWithTimeout('Failed to duplicate agent');
@@ -216,7 +217,7 @@ const AgentsPanelContainer: React.FC = () => {
     try {
       agentService.resetStats(agentId);
       setAgentStats({ ...agentService.getAllStats() });
-      eventBus.emit('system:notification', { message: 'Agent stats reset', type: 'info' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Agent stats reset', type: 'info' });
     } catch (e) {
       console.warn('[AgentsPanel] Failed to reset stats:', e);
       setErrorWithTimeout('Failed to reset stats');
@@ -226,7 +227,7 @@ const AgentsPanelContainer: React.FC = () => {
   const handleResetAllStats = useCallback(() => {
     if (!resetAllArmed) {
       setResetAllArmed(true);
-      eventBus.emit('system:notification', { message: 'Click again to reset ALL agent stats', type: 'warning' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Click again to reset ALL agent stats', type: 'warning' });
       if (armTimerRef.current) clearTimeout(armTimerRef.current);
       armTimerRef.current = setTimeout(() => { if (containerIsMountedRef.current) setResetAllArmed(false); }, 5000);
       return;
@@ -234,7 +235,7 @@ const AgentsPanelContainer: React.FC = () => {
     agentService.resetAllStats();
     setAgentStats({ ...agentService.getAllStats() });
     setResetAllArmed(false);
-    eventBus.emit('system:notification', { message: 'All agent stats reset', type: 'info' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: 'All agent stats reset', type: 'info' });
   }, [resetAllArmed]);
 
   const handleExportAgents = useCallback(() => {
@@ -246,7 +247,7 @@ const AgentsPanelContainer: React.FC = () => {
     a.download = `agents-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    eventBus.emit('system:notification', { message: 'Agents exported successfully', type: 'success' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: 'Agents exported successfully', type: 'success' });
   }, []);
 
   const handleImportAgents = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,17 +258,17 @@ const AgentsPanelContainer: React.FC = () => {
       try {
         const count = agentService.importAgents(event.target?.result as string);
         setAgents(getAgentsFromTopology());
-        eventBus.emit('system:notification', { message: `Successfully imported ${count} agent(s)`, type: 'success' });
+        eventBus.emit(EVENTS.NOTIFICATION, { message: `Successfully imported ${count} agent(s)`, type: 'success' });
       } catch (e) {
         console.warn('[AgentsPanel] Failed to import agents:', e);
-        eventBus.emit('system:notification', { message: 'Failed to import agents', type: 'error' });
+        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to import agents', type: 'error' });
       }
     };
     reader.readAsText(file);
   }, []);
 
   const handleNavigateBuilder = useCallback(() => {
-    eventBus.emit('system:navigate', 'builder');
+    eventBus.emit(EVENTS.NAVIGATE, 'builder');
   }, []);
 
   const selectedAgent = agents.find(a => a.id === selectedAgentId) || null;

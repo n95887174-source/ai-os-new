@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, XCircle, Loader2, Shield, Wrench, Search, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { consistencyChecker, consistencyHealingPipeline } from '../kernel/instances';
 import type { ConsistencyReport, HealingPlan } from '../kernel/instances'
-import { eventBus } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, textMutedXs, textSecondaryXs, textSm, flexBetween, button } from '../styles/common'
@@ -71,7 +71,7 @@ const DocsHealthPanel: React.FC = () => {
       const newReport = consistencyChecker.checkDocs(docContents);
       if (isMountedRef.current) {
         setReport(newReport);
-        eventBus.emit('system:notification', { message: t('docs_health.check_done'), type: 'success' });
+        eventBus.emit(EVENTS.NOTIFICATION, { message: t('docs_health.check_done'), type: 'success' });
       }
     } catch {
       if (isMountedRef.current) {
@@ -97,7 +97,7 @@ const DocsHealthPanel: React.FC = () => {
         setPlan(newPlan);
         const executed = await consistencyHealingPipeline.executeAll();
         const succeeded = executed.filter(t => t.status === 'completed').length;
-        eventBus.emit('system:notification', { message: t('docs_health.fix_done', { count: succeeded }), type: 'success' });
+        eventBus.emit(EVENTS.NOTIFICATION, { message: t('docs_health.fix_done', { count: succeeded }), type: 'success' });
       }
     } catch {
       if (isMountedRef.current) {

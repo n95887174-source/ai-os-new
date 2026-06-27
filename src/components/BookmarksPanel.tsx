@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bookmark, Search, Trash2, Tag, X, Copy, Check, ExternalLink, BookmarkPlus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus, type EventMap } from '../kernel/events/event-bus';
+import { eventBus, EVENTS, type EventMap } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { storageAdapter } from '../kernel/instances';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
@@ -81,9 +81,9 @@ const BookmarksPanel: React.FC = () => {
         setLoading(false);
       }
     });
-    const unsubAdd = eventBus.on('chat:bookmark:added', () => { if (isMountedRef.current) refresh(); });
-    const unsubRem = eventBus.on('chat:bookmark:removed', () => { if (isMountedRef.current) refresh(); });
-    const unsubClr = eventBus.on('chat:bookmark:cleared', () => { if (isMountedRef.current) refresh(); });
+    const unsubAdd = eventBus.on(EVENTS.CHAT_BOOKMARK_ADDED, () => { if (isMountedRef.current) refresh(); });
+    const unsubRem = eventBus.on(EVENTS.CHAT_BOOKMARK_REMOVED, () => { if (isMountedRef.current) refresh(); });
+    const unsubClr = eventBus.on(EVENTS.CHAT_BOOKMARK_CLEARED, () => { if (isMountedRef.current) refresh(); });
     return () => {
       isMountedRef.current = false;
       unsubAdd();

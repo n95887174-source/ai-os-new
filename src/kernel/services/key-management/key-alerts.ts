@@ -52,7 +52,7 @@ export class KeyAlerts {
       if (alert) {
         alert.resolved = true;
         // OBS-57: emit alert resolution event
-        this.deps.eventBus.emit('key:alert:resolved', { alertId, keyId: key.id, type: alert.type, severity: alert.severity, resolvedAt: Date.now() });
+        this.deps.eventBus.emit(EVENTS.KEY_ALERT_RESOLVED, { alertId, keyId: key.id, type: alert.type, severity: alert.severity, resolvedAt: Date.now() });
         return;
       }
     }

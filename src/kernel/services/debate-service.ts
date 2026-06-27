@@ -328,7 +328,7 @@ export class DebateService {
   async init() {
     this.activeSession = await loadActiveSession(this.deps.debateStore);
     this.completedSessions = await loadHistoryList(this.deps.debateStore, this.MAX_HISTORY);
-    this.unsubVerdict = this.deps.eventBus.on('debate:verdict:generated', (data) => {
+    this.unsubVerdict = this.deps.eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
       const payload = data as { sessionId: string; verdict: DebateVerdict };
       this.verdictMap.set(payload.sessionId, payload.verdict);
     });

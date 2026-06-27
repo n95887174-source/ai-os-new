@@ -9,7 +9,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService, probeService, keyStateStore } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { keyService, kernel } from '../../kernel/instances';
 import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import { getHealthBand, HEALTH_THRESHOLDS } from '../../kernel/contracts/key-state';
@@ -55,6 +55,11 @@ const HealthPanel: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kernelId] = useState(generateId().slice(0, 8));
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
   
   const clearError = useAutoClearError(setError);
   const totalActive = (health as { runtime?: { totalActive?: number } })?.runtime?.totalActive ?? 0;
@@ -110,7 +115,7 @@ const HealthPanel: React.FC = () => {
     }
     
     isMountedRef.current = true;
-    const unsub = eventBus.on('kernel:updated', () => {
+    const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, () => {
       if (!isMountedRef.current) return;
       try {
         setHealth(adminService.getSystemHealth());
@@ -135,6 +140,7 @@ const HealthPanel: React.FC = () => {
 
   useEffect(() => {
     const activeKeys = keys.filter(k => k.status === 'active');
+    /* eslint-disable react-hooks/set-state-in-effect */
     const newBees: Bee[] = activeKeys.map((key, i) => ({
       id: generateId(),
       providerId: key.id,
@@ -143,12 +149,14 @@ const HealthPanel: React.FC = () => {
       delay: Math.random() * 3,
     }));
     setBees(newBees);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [keys]);
 
   useEffect(() => {
     const activeKeys = keys.filter(k => k.status === 'active');
     if (activeKeys.length === 0) return;
     const ac = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIntrospectingKeys(true);
     (async () => {
       const results: Record<string, Record<string, unknown>> = {};
@@ -170,6 +178,7 @@ const HealthPanel: React.FC = () => {
 
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHealthEvents(kernel.getHealthEvents());
     } catch { /* kernel may not be ready */ }
   }, []);
@@ -537,10 +546,10 @@ const HealthPanel: React.FC = () => {
                   ? Math.ceil((HEALTH_THRESHOLDS.healthy - ks.healthScore) / 5)
                   : 0;
                 const degradedAgo = ks.degradedSince
-                  ? Math.round((Date.now() - ks.degradedSince) / 60000)
+                  ? Math.round((now - ks.degradedSince) / 60000)
                   : null;
                 const healthyAgo = ks.lastHealthyAt
-                  ? Math.round((Date.now() - ks.lastHealthyAt) / 60000)
+                  ? Math.round((now - ks.lastHealthyAt) / 60000)
                   : null;
                 return (
                   <div key={ks.id} style={{ padding: '1rem', borderRadius: 12, background: 'rgba(0,0,0,0.2)', border: `1px solid ${color}20` }}>
@@ -605,7 +614,7 @@ const HealthPanel: React.FC = () => {
                   : ev.type === 'status_change' ? <span aria-hidden="true">◉</span>
                   : ev.type === 'rate_limit' ? <span aria-hidden="true">⚠</span>
                   : <span aria-hidden="true">✓</span>;
-                const ago = Math.floor((Date.now() - ev.timestamp) / 1000);
+                const ago = Math.floor((now - ev.timestamp) / 1000);
                 const agoStr = ago < 60 ? `${ago}s` : `${Math.floor(ago / 60)}m`;
                 return (
                   <div key={`${ev.provider}-${ev.timestamp}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)', fontSize: '0.75rem' }}>

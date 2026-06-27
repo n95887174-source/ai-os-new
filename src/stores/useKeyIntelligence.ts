@@ -4,6 +4,7 @@ import { KeyFingerprints } from '../kernel/services/key-management/key-fingerpri
 import { keyService, adapterRegistry } from '../kernel/instances';
 import { eventBus } from '../kernel/events/event-bus';
 import { rootLogger } from '../kernel/services/logger-service';
+import { EVENTS } from '../kernel/events/event-names';
 import type { KeyImportReport, KeyIntelligenceInput } from '../kernel/contracts/key-intelligence';
 import type { AdapterHealthCheck } from '../kernel/services/key-intelligence-pipeline';
 
@@ -71,7 +72,7 @@ export function useKeyIntelligence(): UseKeyIntelligenceReturn {
       const msg = err instanceof Error ? err.message : 'Pipeline execution failed';
       setError(msg);
       // OBS-82: emit pipeline error to monitoring
-      eventBus.emit('key-intelligence:pipeline-error', { message: msg, input });
+      eventBus.emit(EVENTS.KEY_INTELLIGENCE_PIPELINE_ERROR, { message: msg, input });
       rootLogger.error('useKeyIntelligence', 'Pipeline execution failed', { error: msg });
     } finally {
       if (!ac.signal.aborted) {

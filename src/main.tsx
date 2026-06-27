@@ -10,6 +10,8 @@ import { BrowserRouter } from 'react-router-dom';
 
 import ErrorBoundary from './components/Common/ErrorBoundary';
 
+import { EVENTS } from './kernel/events/event-names';
+
 // Persist SQLite before page unload
 window.addEventListener('beforeunload', () => persistSqliteDb());
 
@@ -26,7 +28,7 @@ window.addEventListener('unhandledrejection', (event) => {
   // duplicate processing of the boot error.
   if (event.defaultPrevented) return;
   console.error('[UnhandledRejection]', event.reason);
-  eventBus.emit('system:notification', {
+  eventBus.emit(EVENTS.NOTIFICATION, {
     message: `Unhandled async error: ${event.reason instanceof Error ? event.reason.message : String(event.reason)}`,
     type: 'error'
   });

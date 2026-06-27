@@ -11,7 +11,7 @@ import {
   Coins, Hash, History, ChevronRight,
   Zap, Cpu, GitMerge, AlertTriangle, X, HardDrive
 } from 'lucide-react';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { dismissBtn, errorBanner, h3ChartTitle, providerMetricBox, summaryMetricCard, workloadInfoBox } from '../../styles/common'
@@ -119,7 +119,7 @@ const AnalyticsPanel: React.FC = () => {
     };
 
     update(kernel.getState());
-    const unsub = eventBus.on('kernel:updated', update);
+    const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, update);
     return () => unsub();
   }, [clearError]);
 

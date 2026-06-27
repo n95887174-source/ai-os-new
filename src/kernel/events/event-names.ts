@@ -272,6 +272,36 @@ export const EVENTS = {
 
   // ── Metrics Events ──────────────────────────────────────────────────
   KEY_STORE_GAUGES: 'metrics:key-store-gauges',
+
+  // ── P1-A Added Events ────────────────────────────────────────────────
+  KERNEL_LOAD_FAILED: 'kernel:load-failed',
+  KERNEL_PERSIST_FAILED: 'kernel:persist-failed',
+  CHAT_BOOKMARK_ADDED: 'chat:bookmark:added',
+  CHAT_BOOKMARK_REMOVED: 'chat:bookmark:removed',
+  CHAT_BOOKMARK_CLEARED: 'chat:bookmark:cleared',
+  CHAT_BOOKMARK_REQUEST: 'chat:bookmark:request',
+  CHAT_BOOKMARK_SAVE: 'chat:bookmark:save',
+  AGENT_JOURNAL_ADDED: 'agent:journal:added',
+  AGENT_JOURNAL_REMOVED: 'agent:journal:removed',
+  AGENT_JOURNAL_CLEARED: 'agent:journal:cleared',
+  AGENT_TASK_COMPLETED: 'agent:task:completed',
+  WHATIF_SIMULATION_COMPLETED: 'whatif:simulation:completed',
+  PRESSURE_MAP_UPDATED: 'pressure:map:updated',
+  PRESSURE_ALERT_RAISED: 'pressure:alert:raised',
+  WEBHOOK_DELIVERY_FAILED: 'webhook:delivery:failed',
+  SECRETS_LOOKUP_FAILED: 'secrets:lookup:failed',
+  COMPROMISE_SIGNAL_REJECTED: 'compromise:signal:rejected',
+  TOPOLOGY_EVALUATED: 'topology:evaluated',
+  QUEUE_TASK_FAILED: 'queue:task:failed',
+  DEBATE_HUMAN_VOTE: 'debate:human:vote',
+  KEY_ALERT_RESOLVED: 'key:alert:resolved',
+  HYPOTHESES_UPDATED: 'hypotheses:updated',
+  METRICS_ALERT_FIRED: 'metrics:alert-fired',
+  CONSISTENCY_DRIFT_DETECTED: 'consistency:drift-detected',
+  SHADOW_DRIFT: 'shadow:drift',
+  DEBATE_INJECT_MESSAGE: 'debate:inject:message',
+  KEY_INTELLIGENCE_PIPELINE_ERROR: 'key-intelligence:pipeline-error',
+  SYSTEM_RUNTIME_METRICS: 'system:runtime:metrics',
 } as const;
 
 export type { CognitiveEventMap } from './cognitive-events';

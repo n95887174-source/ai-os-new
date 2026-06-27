@@ -157,7 +157,7 @@ export class TopologyManager implements ILifecycle {
   private evaluateTopology() {
     if (!this.enabled) return;
     this.lastEvaluationTime = Date.now();
-    this.deps.eventBus.emit('topology:evaluated', { timestamp: this.lastEvaluationTime });
+    this.deps.eventBus.emit(EVENTS.TOPOLOGY_EVALUATED, { timestamp: this.lastEvaluationTime });
 
     const topology = this.deps.orchestrator.getActiveTopology();
     if (!topology) return;

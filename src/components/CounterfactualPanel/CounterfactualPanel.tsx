@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertTriangle, CheckCircle2, Zap, BarChart3, MessageSquare } from 'lucide-react'
 import { causalTimelineService, counterfactualEngine, counterfactualExplanationService, counterfactualNarrativeService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { CausalTraceEntry } from '../../kernel/contracts/causal-debugger';
 import type { CounterfactualResult, CounterfactualOverride } from '../../kernel/contracts/counterfactual';
 import type { DecisionExplanation } from '../../kernel/contracts/counterfactual-explanation';
@@ -61,7 +61,7 @@ const CounterfactualPanel: React.FC = () => {
 
   useEffect(() => {
     refresh();
-    const unsub = eventBus.on('system:decision', refresh);
+    const unsub = eventBus.on(EVENTS.DECISION, refresh);
     return () => { unsub(); };
   }, [refresh]);
 

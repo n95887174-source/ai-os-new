@@ -13,7 +13,7 @@ import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes'
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { DEBATE_ARCHETYPES, getArchetypesForRole } from '../../kernel/services/debate-archetypes';
 import { orchestrator } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -183,7 +183,7 @@ const DebatePanel: React.FC = () => {
   }, [syncHumanVotesFromSession, refreshHistory]);
 
   useEffect(() => {
-    const unsubVerdict = eventBus.on('debate:verdict:generated', (data) => {
+    const unsubVerdict = eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
       const payload = data as { sessionId: string; verdict: DebateVerdict };
       setVerdict(payload.verdict);
     });
@@ -214,7 +214,7 @@ const DebatePanel: React.FC = () => {
   const availableAgents = orchestrator.getActiveTopology()?.nodes.filter(n => n.type === 'agent') || [];
 
   const notify = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    eventBus.emit('system:notification', { message, type });
+    eventBus.emit(EVENTS.NOTIFICATION, { message, type });
   };
 
   const clearError = useAutoClearError(setError);

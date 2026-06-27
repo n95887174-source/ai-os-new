@@ -72,7 +72,7 @@ export class CollaborativeService {
       score,
       timestamp: Date.now(),
     };
-    this.deps.eventBus.emit('debate:human:vote', { sessionId, vote, userName });
+    this.deps.eventBus.emit(EVENTS.DEBATE_HUMAN_VOTE, { sessionId, vote, userName });
   }
 
   getCollabDebateSessionId(): string | null {

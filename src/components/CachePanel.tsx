@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Database, Trash2, RefreshCw, AlertTriangle, Loader2, Search, X, HardDrive, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { cacheService } from '../kernel/instances';
-import { eventBus } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { useConfirm } from '../hooks/useConfirm';
@@ -62,7 +62,7 @@ const CachePanel: React.FC = () => {
         cacheService.invalidate();
       }
       loadStats();
-      eventBus.emit('system:notification', { message: t('cache.cleared'), type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: t('cache.cleared'), type: 'success' });
     } catch {
       if (isMountedRef.current) {
         setError(t('cache.error_clear'));
@@ -75,7 +75,7 @@ const CachePanel: React.FC = () => {
 
   const handleRefresh = () => {
     loadStats();
-    eventBus.emit('system:notification', { message: t('cache.refreshed'), type: 'info' });
+    eventBus.emit(EVENTS.NOTIFICATION, { message: t('cache.refreshed'), type: 'info' });
   };
 
   if (loading) {

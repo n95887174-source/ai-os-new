@@ -8,7 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { memoryService } from '../../kernel/instances';
 import type { MemoryEntry } from '../../types/memory';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { configService } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
@@ -192,7 +192,7 @@ const MemoryPanel: React.FC = () => {
       a.download = `memory-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      eventBus.emit('system:notification', { message: 'Memory vectors exported', type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: 'Memory vectors exported', type: 'success' });
     } catch (err) {
       console.warn('[MemoryPanel] Export failed:', err);
       if (isMountedRef.current) {

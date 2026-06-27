@@ -5,7 +5,7 @@ import { t } from '../../i18n/translations';
 import { metricCardCenter, labelMetricSub, emptyStateCenter, emptyStateTitle, flexAlignCenterGap2Mb03 } from '../../styles/common'
 import { advisorService } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { OptimizationSuggestion } from '../../kernel/instances';
 
 type SREAlert = {
@@ -83,9 +83,9 @@ const SREAgentPanel: React.FC = () => {
       } catch { /* already logged by resolver */ }
     };
 
-    const unsub1 = eventBus.on('advisor:suggestion', refresh);
-    const unsub2 = eventBus.on('advisor:suggestion:executed', refresh);
-    const unsub3 = eventBus.on('advisor:suggestion:dismissed', refresh);
+    const unsub1 = eventBus.on(EVENTS.ADVISOR_SUGGESTION, refresh);
+    const unsub2 = eventBus.on(EVENTS.ADVISOR_SUGGESTION_EXECUTED, refresh);
+    const unsub3 = eventBus.on(EVENTS.ADVISOR_SUGGESTION_DISMISSED, refresh);
     const interval = setInterval(refresh, 5000);
     tryRefresh();
 

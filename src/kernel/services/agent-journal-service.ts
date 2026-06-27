@@ -1,6 +1,7 @@
 import { genId } from '../../utils/gen-id';
 import type { ILogger } from '../contracts/logger';
 import { BucketStorageAdapter } from './storage-adapter';
+import { EVENTS } from '../events/event-names';
 
 export interface JournalEntry {
   id: string;
@@ -80,7 +81,7 @@ export class AgentJournalService {
   }
 
   private subscribe(): void {
-    const off1 = this.deps.eventBus.on('agent:task:completed', (raw: unknown) => {
+    const off1 = this.deps.eventBus.on(EVENTS.AGENT_TASK_COMPLETED, (raw: unknown) => {
       if (typeof raw !== 'object' || raw === null) return;
       const e = raw as Partial<JournalEntry> & { agentId: string; taskType: string };
       this.record({
@@ -118,7 +119,7 @@ export class AgentJournalService {
     } catch (err) {
       this.deps.logger?.warn('AgentJournal', 'persist failed', { error: String(err) });
     }
-    this.deps.eventBus.emit('agent:journal:added', entry);
+    this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_ADDED, entry);
     return entry;
   }
 
@@ -127,7 +128,7 @@ export class AgentJournalService {
     try {
       await this.storage.delete(id);
     } catch { /* noop */ }
-    this.deps.eventBus.emit('agent:journal:removed', { id });
+    this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_REMOVED, { id });
   }
 
   async clear(): Promise<void> {
@@ -135,7 +136,7 @@ export class AgentJournalService {
     try {
       await this.storage.clear();
     } catch { /* noop */ }
-    this.deps.eventBus.emit('agent:journal:cleared', undefined);
+    this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_CLEARED, undefined);
   }
 
   listAll(): JournalEntry[] {

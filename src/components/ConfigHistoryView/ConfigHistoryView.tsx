@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { History, RotateCcw, Activity, Camera, Clock, AlertTriangle } from 'lucide-react';
 import { snapshotService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { SystemSnapshot } from '../../kernel/instances';
 
 const ConfigHistoryView: React.FC = () => {
@@ -15,7 +15,7 @@ const ConfigHistoryView: React.FC = () => {
       setRestoreError(null);
     };
     refresh();
-    const unsub = eventBus.on('snapshot:captured', refresh);
+    const unsub = eventBus.on(EVENTS.SNAPSHOT_CAPTURED, refresh);
     return () => { unsub(); };
   }, []);
 
@@ -25,7 +25,7 @@ const ConfigHistoryView: React.FC = () => {
       const ok = snapshotService.restoreById(id);
       if (ok) {
         setRestoreError(null);
-        eventBus.emit('system:notification', { message: 'Config restored to snapshot', type: 'success' });
+        eventBus.emit(EVENTS.NOTIFICATION, { message: 'Config restored to snapshot', type: 'success' });
       } else {
         setRestoreError('Failed to restore snapshot');
       }

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Power, PowerOff, RotateCw, Send, Sliders, Thermometer, Brain, FileText, Loader2, Check } from 'lucide-react';
 import { agentService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
 
 interface AgentControlPanelProps {
@@ -62,7 +62,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
     if (!text) return;
     setInjecting(prev => ({ ...prev, [agentId]: true }));
     try {
-      (eventBus as unknown as { emit: (event: string, data: unknown) => void }).emit('debate:inject:message', { sessionId: session.id, agentId, message: text });
+      (eventBus as unknown as { emit: (event: string, data: unknown) => void }).emit(EVENTS.DEBATE_INJECT_MESSAGE, { sessionId: session.id, agentId, message: text });
       setInjectText(prev => ({ ...prev, [agentId]: '' }));
     } catch (e) {
       console.warn('[AgentControlPanel] inject failed:', e);

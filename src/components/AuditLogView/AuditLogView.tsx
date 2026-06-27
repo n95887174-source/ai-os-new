@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Terminal, AlertTriangle, Info, Zap, Activity, Search } from 'lucide-react';
 import { adminService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { AdminAuditEntry } from '../../kernel/instances';
 
 const SEVERITY_ICONS = {
@@ -18,7 +18,7 @@ const AuditLogView: React.FC = () => {
   useEffect(() => {
     const refresh = () => setEntries(adminService.getAuditLog(200) ?? []);
     refresh();
-    const unsub = eventBus.on('system:notification', refresh);
+    const unsub = eventBus.on(EVENTS.NOTIFICATION, refresh);
     const interval = setInterval(refresh, 5000);
     return () => { unsub(); clearInterval(interval); };
   }, []);

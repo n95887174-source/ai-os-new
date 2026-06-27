@@ -92,7 +92,7 @@ export class ExternalSecretsService {
 
     let value = await store.get(ref).catch(e => {
       LOGGER.warn('ExternalSecretsService', 'Active backend get failed:', { error: e });
-      this.deps.eventBus.emit('secrets:lookup:failed', { backend: this.activeBackend, path: ref.path, error: String(e) });
+      this.deps.eventBus.emit(EVENTS.SECRETS_LOOKUP_FAILED, { backend: this.activeBackend, path: ref.path, error: String(e) });
       return null;
     });
     if (value == null && this.activeBackend !== 'local') {

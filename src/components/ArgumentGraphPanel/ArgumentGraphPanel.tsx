@@ -5,7 +5,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { debateService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { GovernorState, Claim } from '../../kernel/services/debate-governor/types'
 import { flexBetween, panel, textMuted, textMutedXs, label, buttonGhost, iconBtn, emptyState, flexCenterGap8, flexCenterGap12, flex1RelativeMargin075 } from '../../styles/common'
 
@@ -154,10 +154,10 @@ const ArgumentGraphPanel: React.FC = () => {
     };
 
     const unsubs = [
-      eventBus.on('debate:updated', handler),
-      eventBus.on('debate:argument', handler),
-      eventBus.on('debate:consensus', handler),
-      eventBus.on('debate:started', handler),
+      eventBus.on(EVENTS.DEBATE_UPDATED, handler),
+      eventBus.on(EVENTS.DEBATE_ARGUMENT, handler),
+      eventBus.on(EVENTS.DEBATE_CONSENSUS, handler),
+      eventBus.on(EVENTS.DEBATE_STARTED, handler),
     ];
 
     // Poll every 2s as safety net

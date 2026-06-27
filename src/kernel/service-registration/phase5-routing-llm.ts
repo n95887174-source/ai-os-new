@@ -40,6 +40,7 @@ import { LLMClientService } from '../services/llm-client-service';
 import { FREE_TIER_LIMITS } from '../services/key-management/key-service';
 import { VirtualKeyService } from '../services/virtual-key-service';
 import { ProviderRuntimeService } from '../services/provider-runtime/provider-service';
+import { EVENTS } from '../events/event-names';
 
 export const registerPhase5: Phase = (helpers, ctx) => {
   const { register, get, asDeps } = helpers;
@@ -136,10 +137,10 @@ export const registerPhase5: Phase = (helpers, ctx) => {
 
   register('providerRuntimeService', new ProviderRuntimeService({
     onStateChange: (snap) => {
-      ctx.eventBus.emit('provider-runtime:state', snap);
+      ctx.eventBus.emit(EVENTS.PROVIDER_RUNTIME_STATE, snap);
     },
     onBudgetChange: (snap) => {
-      ctx.eventBus.emit('provider-runtime:budget', snap);
+      ctx.eventBus.emit(EVENTS.PROVIDER_RUNTIME_BUDGET, snap);
     },
   }));
 };

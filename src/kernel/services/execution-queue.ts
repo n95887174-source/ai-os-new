@@ -1,4 +1,4 @@
-import { EventBus } from '../event-bus';
+import { EventBus, EVENTS } from '../events/event-bus';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ExecutionQueue');
@@ -61,7 +61,7 @@ export class ExecutionQueue {
         .catch((err) => {
           this.totalErrors++;
           LOGGER.error('ExecutionQueue', 'Task failed', { taskId: task.id, priority: task.priority, age: Date.now() - task.enqueuedAt, error: err });
-          EventBus.emit('queue:task:failed', { taskId: task.id, priority: task.priority, error: String(err), timestamp: Date.now() });
+          EventBus.emit(EVENTS.QUEUE_TASK_FAILED, { taskId: task.id, priority: task.priority, error: String(err), timestamp: Date.now() });
         })
         .finally(() => {
           this.inFlight--;

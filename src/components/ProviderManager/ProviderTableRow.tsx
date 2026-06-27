@@ -107,7 +107,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       }
     });
     
-    const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
+    const subStreamEnd = eventBus.on(EVENTS.STREAM_END, ({ requestId, fullContent }) => {
       if (!isMountedRef.current) return;
       if (requestId === reqId && !isDone) {
         isDone = true;
@@ -116,7 +116,7 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
       }
     });
 
-    const subStreamErr = eventBus.on('chat:stream:error', ({ requestId, error }) => {
+    const subStreamErr = eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, error }) => {
       if (!isMountedRef.current) return;
       if (requestId === reqId && !isDone) {
         isDone = true;

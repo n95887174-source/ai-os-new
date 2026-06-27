@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GitBranch, Search, ChevronRight, Clock, SkipBack, SkipForward, Rewind, FastForward } from 'lucide-react'
 import { causalTimelineService, causalScopeManager, temporalReplayService, truthConsistencyMonitor, kernel, keyStateProjection } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { textXxsMuted, flexCenterGap8, detailGrid2, preBlockMono, sectionHeaderDebug } from '../../styles/common';
 import type { CausalTraceEntry, CausalTrace, CausalScope } from '../../kernel/contracts/causal-debugger';
 import type { TemporalTrace } from '../../kernel/contracts/temporal-replay'
@@ -44,7 +44,7 @@ const CausalDebugger: React.FC = () => {
 
   useEffect(() => {
     refresh();
-    const unsub = eventBus.on('system:decision', refresh);
+    const unsub = eventBus.on(EVENTS.DECISION, refresh);
     return () => { unsub(); };
   }, [refresh]);
 
@@ -84,7 +84,7 @@ const CausalDebugger: React.FC = () => {
       setConsistencyReport(report ?? null);
       // OBS-79: emit drift events to monitoring
       if (report && (report.status === 'DRIFT' || report.status === 'CRITICAL')) {
-        eventBus.emit('consistency:drift-detected', {
+        eventBus.emit(EVENTS.CONSISTENCY_DRIFT_DETECTED, {
           status: report.status,
           driftScore: report.driftScore,
           mismatchCount: report.mismatches.length,

@@ -21,6 +21,7 @@ export const ProviderEvents = {
   PROVIDER_RATE_LIMIT_SYNCED: 'provider:rate-limit:synced',
   PROVIDER_ERROR_SYNCED: 'provider:error:synced',
   PROVIDER_STATE_DESYNC: 'provider:state:desync',
+  KEY_ALERT_RESOLVED: 'key:alert:resolved',
 } as const;
 
 export type ProviderEventMap = {

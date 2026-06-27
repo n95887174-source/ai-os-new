@@ -104,7 +104,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ apiKey, onSelect, onCheckHe
       }
     });
     
-    const subStreamEnd = eventBus.on('chat:stream:end', ({ requestId, fullContent }) => {
+    const subStreamEnd = eventBus.on(EVENTS.STREAM_END, ({ requestId, fullContent }) => {
       if (!cardIsMountedRef.current) return;
       if (requestId === reqId && !isDone) {
         isDone = true;

@@ -61,7 +61,7 @@ const RolesPanel: React.FC = () => {
     };
     load();
 
-const unsub = eventBus.on('roles:updated', () => {
+const unsub = eventBus.on(EVENTS.ROLES_UPDATED, () => {
       if (!isMountedRef.current) return;
       setRoles(roleService.getAllRoles() ?? []);
       setStats(roleService.getAllStats() ?? {});

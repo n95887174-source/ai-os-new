@@ -7,7 +7,7 @@ import {
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { debateEngine, debateService, cognitiveIntelligenceService, orchestrator, sessionManager } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { DebateRuntimeEvents } from '../../kernel/events/debate-runtime-events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -231,11 +231,11 @@ const DebateRuntimePanel: React.FC = () => {
     refreshCognitive();
     const intTimer = setInterval(() => { if (isMountedRef.current) refreshCognitive(); }, 5000);
     const unsubs = [
-      eventBus.on('debate-runtime:session:created', refreshSessions),
-      eventBus.on('debate-runtime:session:started', refreshSessions),
-      eventBus.on('debate-runtime:session:completed', () => { refreshSessions(); refreshCognitive(); }),
-      eventBus.on('debate-runtime:session:failed', () => { refreshSessions(); refreshCognitive(); }),
-      eventBus.on('debate-runtime:session:cancelled', refreshSessions),
+      eventBus.on(EVENTS.DEBATE_SESSION_CREATED, refreshSessions),
+      eventBus.on(EVENTS.DEBATE_SESSION_STARTED, refreshSessions),
+      eventBus.on(EVENTS.DEBATE_SESSION_COMPLETED, () => { refreshSessions(); refreshCognitive(); }),
+      eventBus.on(EVENTS.DEBATE_SESSION_FAILED, () => { refreshSessions(); refreshCognitive(); }),
+      eventBus.on(EVENTS.DEBATE_SESSION_CANCELLED, refreshSessions),
       eventBus.on('debate-runtime:phase:changed', refreshSessions),
       eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>(DebateRuntimeEvents.AGENT_CHUNK, (d) => {
         const streamKey = `streaming-${d.agentId}`;
@@ -366,7 +366,7 @@ const DebateRuntimePanel: React.FC = () => {
       setTopic('');
       setCreating(false);
       setSelectedId(session.id);
-      eventBus.emit('system:notification', { message: `Debate started: ${topic}`, type: 'success' });
+      eventBus.emit(EVENTS.NOTIFICATION, { message: `Debate started: ${topic}`, type: 'success' });
     } catch (e) {
       setError(String(e));
       setCreating(false);

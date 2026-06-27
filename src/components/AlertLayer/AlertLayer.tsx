@@ -48,7 +48,7 @@ const AlertLayer: React.FC = () => {
     }, TOAST_DURATION));
     // OBS-88: emit metrics event for critical/warning toasts
     if (type === 'error' || type === 'warning') {
-      eventBus.emit('metrics:alert-fired', { type, title, message, timestamp: Date.now() });
+      eventBus.emit(EVENTS.METRICS_ALERT_FIRED, { type, title, message, timestamp: Date.now() });
     }
   }, []);
 

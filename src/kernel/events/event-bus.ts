@@ -5,7 +5,8 @@ import { EventValidators } from '../types/schema-types';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
 import { sanitizeObject } from '../../llm/http/llm-http-client';
-export { EVENTS } from './event-names';
+import { EVENTS } from './event-names';
+export { EVENTS };
 
 function getLogger(): ILogger {
   return (rootLogger?.child('EventBus') ?? { debug() {}, info() {}, warn() {}, error() {}, child() { return this as unknown as ILogger; }, getBuffer() { return []; }, query() { return []; }, clear() {}, setTraceContext() {} }) as ILogger;
@@ -166,7 +167,7 @@ private registerAllValidators(): void {
       if (!result.success) {
         const msg = result.error?.issues[0]?.message || 'unknown error';
         this.logger?.warn('EventBus', `Validation failed for ${String(event)}`, { issue: msg });
-        this.rawEmit('system:notification', { message: `Validation failed for ${String(event)}: ${msg}`, type: 'warning', source: 'EventBus' });
+        this.rawEmit(EVENTS.NOTIFICATION, { message: `Validation failed for ${String(event)}: ${msg}`, type: 'warning', source: 'EventBus' });
         if (this.strictMode) {
           this.logger?.error('EventBus', `Blocked event ${String(event)} - strict mode`, { issues: result.error?.issues });
           return;
@@ -281,12 +282,12 @@ private registerAllValidators(): void {
       // P0-3: emit backpressure signal before dropping
       if (count > EventBus.MAX_DEFER_CHAIN) {
         this.logger?.error('EventBus', `Defer chain limit (${EventBus.MAX_DEFER_CHAIN}) reached for ${event} — dropping event`);
-        this.emit('system:eventbus:backpressure' as keyof EventMap, { event, depth: this.emitDepth, pending: this.deferCounts.size + 1 });
+        this.emit(EVENTS.EVENTBUS_BACKPRESSURE, { event, depth: this.emitDepth, pending: this.deferCounts.size + 1 });
         this.deferCounts.delete(event);
         return;
       }
       if (count === 100) {
-        this.emit('system:eventbus:backpressure' as keyof EventMap, { event, depth: this.emitDepth, pending: this.deferCounts.size + 1 });
+        this.emit(EVENTS.EVENTBUS_BACKPRESSURE, { event, depth: this.emitDepth, pending: this.deferCounts.size + 1 });
       }
       this.deferCounts.set(event, count);
       if (count === 1 || count % 10 === 0) {

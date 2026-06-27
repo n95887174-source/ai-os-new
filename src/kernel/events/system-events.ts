@@ -16,6 +16,9 @@ export const SystemEvents = {
   CLEAR_DATA: 'system:data:clear',
   RELOAD: 'system:reload',
   COMMAND: 'system:command',
+  KERNEL_LOAD_FAILED: 'kernel:load-failed',
+  KERNEL_PERSIST_FAILED: 'kernel:persist-failed',
+  SYSTEM_RUNTIME_METRICS: 'system:runtime:metrics',
 } as const;
 
 export type SystemEventMap = {

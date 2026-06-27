@@ -206,6 +206,10 @@ export type EventMap = {
   // Achievements
   'achievement:unlocked': unknown;
 
+  // Agent
+  'agent:task:completed': unknown;
+  'agent:alert:resolved': unknown;
+
   // Agent Delegation
   'agent:delegation:created': unknown;
   'agent:delegation:started': unknown;
@@ -269,6 +273,8 @@ export type EventMap = {
   'debate:session:conflict': { sessionId: string; currentVersion: number; attemptedVersion: number; tabId?: string };
   'session:deleted': { id: string; type: import('../contracts/session-manager').SessionType };
   'debate-runtime:agent:chunk': { sessionId: string; agentId: string; chunk: string };
+  'debate:human:vote': unknown;
+  'debate:inject:message': unknown;
 
   // Experiment
   'experiment:created-from-hypothesis': unknown;
@@ -292,6 +298,13 @@ export type EventMap = {
   'key:rotation-policy:updated': unknown;
   'key:rotation-policy:deleted': unknown;
   'key-intelligence:pipeline-error': unknown;
+  'key:alert:resolved': unknown;
+  'whatif:simulation:completed': unknown;
+  'pressure:map:updated': unknown;
+  'pressure:alert:raised': unknown;
+  'webhook:delivery:failed': unknown;
+  'secrets:lookup:failed': unknown;
+  'compromise:signal:rejected': unknown;
 
   // Local Provider
   'local-provider:detected': unknown;
@@ -361,6 +374,7 @@ export type EventMap = {
   'stt:state:changed': { state: string; error?: string };
 
   // System
+  'system:eventbus:backpressure': { event: string; depth: number; pending: number };
   'system:node:spawn': { nodeId: string; type: string };
   'system:node:removed': { id: string };
   'system:runtime:metrics': Record<string, unknown>;

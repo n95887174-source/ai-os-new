@@ -7,7 +7,7 @@ import LiveWorkspace from './LiveWorkspace';
 
 import { advisorService } from '../../kernel/instances';
 import type { OptimizationSuggestion } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { adminService } from '../../kernel/instances';
 
 const MissionControl: React.FC = () => {
@@ -21,15 +21,15 @@ const MissionControl: React.FC = () => {
     };
     tryInit();
 
-    const unsubSugg = eventBus.on('advisor:suggestion', () => {
+    const unsubSugg = eventBus.on(EVENTS.ADVISOR_SUGGESTION, () => {
       try { setSuggestions([...advisorService.getSuggestions()]); } catch { /* not ready */ }
     });
-    const unsubExec = eventBus.on('advisor:suggestion:executed', () => {
+    const unsubExec = eventBus.on(EVENTS.ADVISOR_SUGGESTION_EXECUTED, () => {
       try { setSuggestions([...advisorService.getSuggestions()]); } catch { /* not ready */ }
     });
 
     // P1-13: subscribe to kernel:updated instead of polling every 2s
-    const unsubHealth = eventBus.on('kernel:updated', () => {
+    const unsubHealth = eventBus.on(EVENTS.KERNEL_UPDATED, () => {
       try { setHealth(adminService.getSystemHealth()); } catch { /* not ready */ }
     });
 

@@ -28,7 +28,7 @@ const LiveWorkspace: React.FC = () => {
     isMountedRef.current = true;
 
     // P1-13: subscribe to kernel:updated instead of polling every 2s
-    const unsubHealth = eventBus.on('kernel:updated', () => {
+    const unsubHealth = eventBus.on(EVENTS.KERNEL_UPDATED, () => {
       if (!isMountedRef.current) return;
       try {
         setHealth(adminService.getSystemHealth());
