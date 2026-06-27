@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Activity, Terminal, AlertTriangle, CheckCircle, Trash2, Zap, Search, Clock, Filter } from 'lucide-react'
+import { useNow } from '../../hooks/useNow';
 import { eventBus } from '../../kernel/events/event-bus';
 import { storageAdapter } from '../../kernel/instances';
 import { btnEventControl, buttonGroupPill, flex1Min0, flexAlignCenterGap2, posRelative, textSecondaryXs } from '../../styles/common';
@@ -47,8 +48,7 @@ const saveEvents = (events: TimelineEvent[]) => {
   } catch { /* quota exceeded */ }
 };
 
-const getTimeGroup = (ts: number): string => {
-  const now = Date.now();
+const getTimeGroup = (ts: number, now: number): string => {
   const diff = now - ts;
   if (diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
@@ -59,6 +59,7 @@ const getTimeGroup = (ts: number): string => {
 };
 
 const EventsTimeline: React.FC = () => {
+  const now = useNow();
   const [events, setEvents] = useState<TimelineEvent[]>(() => loadEvents());
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,12 +137,12 @@ const EventsTimeline: React.FC = () => {
     if (groupMode === 'none') return null;
     const groups: Record<string, TimelineEvent[]> = {};
     for (const e of filteredEvents) {
-      const key = groupMode === 'time' ? getTimeGroup(e.timestamp) : e.event;
+      const key = groupMode === 'time' ? getTimeGroup(e.timestamp, now) : e.event;
       if (!groups[key]) groups[key] = [];
       groups[key].push(e);
     }
     return groups;
-  }, [filteredEvents, groupMode]);
+  }, [filteredEvents, groupMode, now]);
 
   const clearEvents = () => {
     setEvents([]);

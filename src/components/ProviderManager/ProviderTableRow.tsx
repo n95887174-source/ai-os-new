@@ -9,6 +9,7 @@ import { keyStateStore } from '../../kernel/instances';
 import { getHealthBand } from '../../kernel/contracts/key-state'
 import { errorBox, flexBetweenSuccessLabel, iconBtn36, infoIcon, posRelative, selectSmall, successBox, textErrorContent, textErrorLabel, textResultBox, textXs } from '../../styles/common'
 import { useTranslation } from '../../i18n/useTranslation';
+import { useNow } from '../../hooks/useNow';
 import { statusBadge, highlightText } from './provider-utils';
 
 export interface ProviderRowProps {
@@ -29,6 +30,7 @@ export interface ProviderRowProps {
 
 const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onToggleExpand?: () => void }> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery, isExpanded, onToggleExpand, isDragging, isDragOver, onDragStart, onDragOver, onDrop }) => {
   const { t } = useTranslation();
+  const now = useNow();
   const status = statusBadge(apiKey.status);
   const reputation = apiKey.stats?.extended?.reputationScore || 0;
   const modelCount = apiKey.availableModels?.length || 0;
@@ -184,13 +186,11 @@ const ProviderTableRow: React.FC<ProviderRowProps & { isExpanded?: boolean; onTo
           const c = bandColors[band] || '#64748b';
           return <span style={{ marginLeft: 4, padding: '1px 6px', borderRadius: 8, fontSize: '0.6rem', fontWeight: 700, color: c, background: `${c}18`, textTransform: 'uppercase' }} title={`Health score: ${ks.healthScore}/100 — ${band}`}>{band} {ks.healthScore}</span>;
         })()}
-        {/* eslint-disable react-hooks/purity */}
         {apiKey.expiresAt && (
-          <span style={{ marginLeft: 4, fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, background: apiKey.expiresAt < Date.now() ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
+          <span style={{ marginLeft: 4, fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, background: apiKey.expiresAt < now ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < now + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < now ? '#ef4444' : apiKey.expiresAt < now + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
             {new Date(apiKey.expiresAt).toLocaleDateString()}
           </span>
         )}
-        {/* eslint-enable react-hooks/purity */}
       </td>
       <td style={posRelative}>
         <div className="provider-action-group">

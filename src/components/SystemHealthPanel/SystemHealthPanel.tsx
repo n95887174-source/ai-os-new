@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSystemStatus } from '../../stores/useSystemStatus';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useNow } from '../../hooks/useNow';
 import { Heart, AlertTriangle, CheckCircle, Loader2, Activity, Key, Shield, BarChart3 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -48,12 +49,12 @@ const AREA_STATUS_COLORS: Record<string, string> = {
 const SystemHealthPanel: React.FC = () => {
   const { t } = useTranslation();
   const { report } = useSystemStatus();
-
+  const now = useNow();
   const status = report?.status ?? 'LOADING';
   const summary = report?.summary ?? '';
   const areas = report?.areas ?? { groupManager: 'loading' as const, keys: 'empty' as const, passports: 'missing' as const, projections: 'unavailable' as const };
   const warnings = report?.warnings ?? [];
-  const timestamp = report?.timestamp ?? Date.now();
+  const timestamp = report?.timestamp ?? now;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>

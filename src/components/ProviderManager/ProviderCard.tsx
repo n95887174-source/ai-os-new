@@ -10,6 +10,7 @@ import { getHealthBand } from '../../kernel/contracts/key-state';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { errorBox, flexBetweenSuccessLabel, flexCenterGap6px, flexWrapGap2, iconBtn36, infoIcon, posRelative, selectSmall, successBox, textErrorContent, textErrorLabel, textResultBox, textSecondary, textXs } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useNow } from '../../hooks/useNow';
 import { statusBadge, highlightText } from './provider-utils';
 
 export interface ProviderCardProps {
@@ -24,6 +25,7 @@ export interface ProviderCardProps {
 
 const ProviderCard: React.FC<ProviderCardProps> = ({ apiKey, onSelect, onCheckHealth, onToggleStatus, onRemoveKey, isChecking, searchQuery }) => {
   const { t } = useTranslation();
+  const now = useNow();
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('');
   const [testTemperature] = useState(0.7);
@@ -169,13 +171,11 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ apiKey, onSelect, onCheckHe
             const c = bandColors[band] || '#64748b';
             return <span style={{ marginLeft: 4, padding: '1px 6px', borderRadius: 8, fontSize: '0.6rem', fontWeight: 700, color: c, background: `${c}18`, textTransform: 'uppercase' }} title={`Health score: ${ks.healthScore}/100 — ${band}`}>{band} {ks.healthScore}</span>;
           })()}
-          {/* eslint-disable react-hooks/purity */}
           {apiKey.expiresAt && (
-            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, marginTop: 4, display: 'inline-block', background: apiKey.expiresAt < Date.now() ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < Date.now() ? '#ef4444' : apiKey.expiresAt < Date.now() + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
-              {apiKey.expiresAt < Date.now() ? `${t('provider.expired')}: ` : `${t('provider.expires')}: `}{new Date(apiKey.expiresAt).toLocaleDateString()}
+            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, marginTop: 4, display: 'inline-block', background: apiKey.expiresAt < now ? 'rgba(239,68,68,0.15)' : apiKey.expiresAt < now + 7 * 86400000 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', color: apiKey.expiresAt < now ? '#ef4444' : apiKey.expiresAt < now + 7 * 86400000 ? '#f59e0b' : '#94a3b8' }}>
+              {apiKey.expiresAt < now ? `${t('provider.expired')}: ` : `${t('provider.expires')}: `}{new Date(apiKey.expiresAt).toLocaleDateString()}
             </span>
           )}
-          {/* eslint-enable react-hooks/purity */}
           {apiKey.tags && apiKey.tags.length > 0 && (
             <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
               {apiKey.tags.map(tag => (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useNow } from '../../hooks/useNow';
 import { sessionAffinityStore, keyStateStore } from '../../kernel/instances';
 import type { SessionBinding } from '../../kernel/contracts/session-affinity';
 import { Link, RefreshCw } from 'lucide-react';
@@ -20,6 +21,7 @@ interface EnrichedBinding extends SessionBinding {
 
 const SessionBindingsPanel: React.FC = () => {
   const { t } = useTranslation();
+  const now = useNow(30_000);
   const [bindings, setBindings] = useState<EnrichedBinding[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -35,7 +37,7 @@ const SessionBindingsPanel: React.FC = () => {
   const handleRefresh = () => setRefreshKey(k => k + 1);
 
   const formatAge = (ts: number): string => {
-    const sec = Math.floor((Date.now() - ts) / 1000);
+    const sec = Math.floor((now - ts) / 1000);
     if (sec < 60) return `${sec}s`;
     const min = Math.floor(sec / 60);
     if (min < 60) return `${min}m`;

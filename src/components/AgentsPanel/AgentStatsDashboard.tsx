@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNow } from '../../hooks/useNow';
 import { BarChart3, TrendingUp, Activity, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -24,15 +25,16 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
-  let offset = 0;
+  const cumulativeOffsets = segments.map((_, i) =>
+    segments.slice(0, i).reduce((a, s) => a + (s.value / total) * circumference, 0)
+  );
 
   return (
     <svg width={size} height={size} style={{ display: 'block' }}>
       {segments.map((seg, i) => {
         const pct = seg.value / total;
         const dash = pct * circumference;
-        const dashOffset = -offset;
-        offset += dash;
+        const dashOffset = -cumulativeOffsets[i];
         return (
           <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color} strokeWidth="6"
             strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={dashOffset}
@@ -46,7 +48,7 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
 };
 
 export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentStats, agents }) => {
-  const {} = useTranslation();
+  useTranslation();
 
   const totalCalls = Object.values(agentStats).reduce((s, a) => s + a.calls, 0);
   const totalTokens = Object.values(agentStats).reduce((s, a) => s + a.tokens, 0);
@@ -59,10 +61,11 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
   const maxCalls = Math.max(...agents.map(a => a.stats.calls), 1);
   const maxTokens = Math.max(...agents.map(a => a.stats.tokens), 1);
 
+  const now = useNow(30_000);
   const RECENT_THRESHOLD_MS = 30 * 60 * 1000;
   const statusSegments = [
-    { label: 'Active', value: agents.filter(a => (a.stats.lastActive ?? 0) > Date.now() - RECENT_THRESHOLD_MS).length, color: '#10b981' },
-    { label: 'Idle', value: agents.filter(a => (a.stats.lastActive ?? 0) <= Date.now() - RECENT_THRESHOLD_MS).length, color: '#64748b' },
+    { label: 'Active', value: agents.filter(a => (a.stats.lastActive ?? 0) > now - RECENT_THRESHOLD_MS).length, color: '#10b981' },
+    { label: 'Idle', value: agents.filter(a => (a.stats.lastActive ?? 0) <= now - RECENT_THRESHOLD_MS).length, color: '#64748b' },
   ];
 
   const topAgents = agents.slice().sort((a, b) => b.stats.calls - a.stats.calls).slice(0, 8);

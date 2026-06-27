@@ -5,6 +5,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import KeyProfileExtended from '../KeyTable/KeyProfileExtended';
 import type { ApiKey } from '../../types/metrics';
 import { keyService } from '../../kernel/instances';
+import { useNow } from '../../hooks/useNow';
 
 interface ProviderDetailModalProps {
   profile: ApiKey;
@@ -16,6 +17,7 @@ interface ProviderDetailModalProps {
 }
 
 const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, initialTab, onClose, onCheckHealth, onRemove, checkingIds }) => {
+  const now = useNow();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [introspectionData, setIntrospectionData] = useState<string | null>(null);
   const [introspecting, setIntrospecting] = useState(false);
@@ -87,8 +89,8 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({ profile, init
               <h2>{profile.label}</h2>
               <span className="provider-modal-sub">{profile.provider}</span>
               {profile.expiresAt && (
-                <span className="provider-modal-sub" style={{ marginLeft: '0.75rem', color: profile.expiresAt < Date.now() ? '#ef4444' : '#f59e0b' }}>
-                  {profile.expiresAt < Date.now() ? 'Expired' : 'Expires'} {new Date(profile.expiresAt).toLocaleDateString()}
+                <span className="provider-modal-sub" style={{ marginLeft: '0.75rem', color: profile.expiresAt < now ? '#ef4444' : '#f59e0b' }}>
+                  {profile.expiresAt < now ? 'Expired' : 'Expires'} {new Date(profile.expiresAt).toLocaleDateString()}
                 </span>
               )}
             </div>

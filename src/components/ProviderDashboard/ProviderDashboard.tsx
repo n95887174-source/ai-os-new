@@ -3,6 +3,7 @@ import { Activity, Globe, Clock, TrendingUp, CheckCircle2, Zap, Shield, DollarSi
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { kernel, keyStateStore } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useNow } from '../../hooks/useNow';
 import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import type { SystemState } from '../../kernel/types/metrics-types';
 
@@ -23,6 +24,7 @@ const SparklineMemo = React.memo(Sparkline);
 
 const ProviderDashboard: React.FC = () => {
   const { t } = useTranslation();
+  const now = useNow(30_000);
   const [state, setState] = useState<SystemState>(() => { try { return kernel.getState(); } catch { return null!; } });
   const [healthEvents, setHealthEvents] = useState<HealthEvent[]>([]);
   const [keyStates, setKeyStates] = useState(() => { try { return keyStateStore.getAll(); } catch { return []; } });
@@ -72,7 +74,7 @@ const ProviderDashboard: React.FC = () => {
         <Activity size={20} color="#8b5cf6" aria-hidden="true" />
         <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0' }}>{t('provider_dashboard.title')}</h2>
         <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#64748b' }}>
-          Last updated: {Math.round((Date.now() - lastUpdated) / 1000)}s ago
+          Last updated: {Math.round((now - lastUpdated) / 1000)}s ago
         </span>
       </div>
 
@@ -146,7 +148,7 @@ const ProviderDashboard: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: 160, overflowY: 'auto' }}>
             {healthEvents.slice(0, 20).map((ev, i) => {
               const c = ev.type === 'latency_spike' ? '#f59e0b' : ev.type === 'error_burst' ? '#ef4444' : ev.type === 'status_change' ? '#8b5cf6' : ev.type === 'rate_limit' ? '#f97316' : '#10b981';
-              const ago = Math.floor((Date.now() - ev.timestamp) / 1000);
+              const ago = Math.floor((now - ev.timestamp) / 1000);
               return (
                 <div key={`${ev.provider}-${ev.timestamp}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.5rem', borderRadius: 6, background: 'rgba(0,0,0,0.1)', fontSize: '0.7rem' }}>
                   <div style={{ width: 5, height: 5, borderRadius: '50%', background: c, flexShrink: 0 }} />

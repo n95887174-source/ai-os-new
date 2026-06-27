@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Gauge, Activity, Clock, Zap, BarChart3, X, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNow } from '../hooks/useNow';
 import { rootLogger } from '../kernel/instances';
 import { useTranslation } from '../i18n/useTranslation';
 import { errorContainer, dismissBtnRed, textMutedXs, textWhiteXs } from '../styles/common'
@@ -67,6 +68,7 @@ function aggregate(entries: ReadonlyArray<LogEntry>): ServiceStats[] {
 
 export const PerformanceProfilerPanel: React.FC = () => {
   const { t } = useTranslation();
+  const now = useNow(60_000);
   const [entries, setEntries] = useState<ReadonlyArray<LogEntry>>([]);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -179,7 +181,7 @@ export const PerformanceProfilerPanel: React.FC = () => {
         if (!sel) return null;
         const recent = entries.filter(e => e.service === selectedService && typeof e.latency === 'number').slice(-20).reverse();
         const all = entries.filter(e => e.service === selectedService);
-        const oneMinuteAgo = Date.now() - 60_000;
+        const oneMinuteAgo = now - 60_000;
         const lastMinute = all.filter(e => e.timestamp >= oneMinuteAgo).length;
         return (
           <div style={{ padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(168,85,247,0.2)', background: 'rgba(168,85,247,0.05)' }}>
