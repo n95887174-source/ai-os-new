@@ -5,8 +5,6 @@ import { DEFAULT_SESSION, SESSION_BATCH_SIZE } from './types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
 import { runtime } from '../../kernel/runtime';
 import { BucketStorageAdapter } from '../../kernel/instances';
-import { waitForStorage } from '../../kernel/services/storage/sqlite-storage';
-
 function cleanupOrphanLoading(sessions: ChatSession[]): ChatSession[] {
   let changed = false;
   const cleaned = sessions.map(s => {
@@ -55,9 +53,8 @@ export function useChatStoreHydration(): void {
 
     const load = async () => {
       try {
-        const storage = await waitForStorage();
         if (cancelled) return;
-        const sStore = storage?.sessions ?? null;
+        const sStore = resolveSessionStore();
         if (!sStore) {
           console.warn('[ChatStore] SessionStore unavailable — using default session');
           useChatStore.setState({ isLoaded: true });

@@ -158,32 +158,6 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.warn('Bootstrap', 'Key migration failed (non-critical)', { error: e });
     }
 
-    // StorageRouter: audit all 3 sources, score them, select winner by mode.
-    // Runs BEFORE hydration so the result can inform downstream decisions.
-    // The router is READ-ONLY — it does not mutate any storage backend.
-    try {
-      // @ts-expect-error — storage-router was added by E3-E10 stash but the file was never committed
-      const { routeStorage, setForcedStorageMode } = await import('./services/storage-router');
-      // Read debug override from globalThis if set externally.
-      const result = await routeStorage('auto');
-      this.logger.info('Bootstrap', 'StorageRouter result', {
-        mode: result.mode,
-        winner: result.winner,
-        localStorage: result.diagnostics.localStorage,
-        dexie: result.diagnostics.dexie,
-        sql: result.diagnostics.sql,
-        scores: result.scores,
-      });
-      if (result.mode === 'auto' && result.winner) {
-        if (import.meta.env.DEV) console.log(
-          `[BOOTSTRAP] StorageRouter winner: ${result.winner} (${result.diagnostics.reason})`
-        );
-      }
-      void setForcedStorageMode;
-    } catch (e) {
-      this.logger.warn('Bootstrap', 'StorageRouter audit failed (non-critical)', { error: e });
-    }
-
     // Hydrate: read KeyRepository and push to KeyRegistry.
     // No merge, no SQLite blob, no cross-source combination.
     try {

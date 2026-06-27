@@ -1,6 +1,7 @@
 import React from 'react';
 import { Moon, Globe, Bell, Activity, HardDrive, Zap, MessageSquare, Sliders, Waves } from 'lucide-react';
-import { CONFIG, setFeatureFlag } from '../../kernel/services/config-registry';
+import { CONFIG } from '../../kernel/services/config-registry';
+import { setFeatureFlag } from '../../kernel/services/config-mutations';
 import { settingsService } from '../../kernel/instances';
 import type { SystemSettings } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';

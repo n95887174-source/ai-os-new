@@ -4,21 +4,12 @@ import App from './App.tsx';
 import './index.css';
 import './theme-init'; // Must run before React mounts — sets dark class on <html>
 import { runtime } from './kernel/runtime';
-import { persistSqliteDb } from './kernel/services/storage/sqlite-storage';
 import { eventBus } from './kernel/events/event-bus';
 import { BrowserRouter } from 'react-router-dom';
 
 import ErrorBoundary from './components/Common/ErrorBoundary';
 
 import { EVENTS } from './kernel/events/event-names';
-
-// Persist SQLite before page unload
-window.addEventListener('beforeunload', () => persistSqliteDb());
-
-// Persist when tab hidden
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') persistSqliteDb();
-});
 
 // Global unhandled rejection handler — catches ONLY errors that somehow bypass
 // both the runtime.start() try/catch and all service-level error handlers.
@@ -72,7 +63,6 @@ root.render(
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    persistSqliteDb();
     (window as unknown as { __cleanupKeyStore?: () => void }).__cleanupKeyStore?.();
     runtime.shutdown();
   });
