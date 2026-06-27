@@ -40,6 +40,7 @@ import type { ICausalScopeManager } from './contracts/causal-debugger';
 import type { DebatePhase } from './contracts/debate-runtime';
 import type { ApiKey } from './types/metrics-types';
 import type { StorageLayer } from './contracts/storage/storage-layer';
+import type { DataAccessLayer } from './dal';
 import { MemoryWatchdog } from './utils/memory-watchdog';
 import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state';
 
@@ -198,7 +199,9 @@ export class SystemBootstrap implements IBootstrap {
     try {
       const { hydrateKeyStorage } = await import('./services/key-storage-hydrator');
       const keyService = this.container.get<KeyService>('keyService');
-      await hydrateKeyStorage({ eventBus: this.eventBus, keyService });
+      const dal = this.container.get<DataAccessLayer>('dal');
+      const repo = dal.keys as import('./dal/key-repository').KeyRepository;
+      await hydrateKeyStorage({ eventBus: this.eventBus, keyService, repo });
     } catch (e) {
       this.logger.warn('Bootstrap', 'Key storage hydration failed (non-critical)', { error: e });
     }

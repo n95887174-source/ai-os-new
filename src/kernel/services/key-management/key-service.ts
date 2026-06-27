@@ -20,6 +20,7 @@ import type { PoolStrategy } from '../../contracts/pool-selector';
 import type { IGroupManager } from '../../contracts/group-manager';
 import { clearSeedCache } from '../key-reset';
 import type { KeyStore } from '../../contracts/storage/key-store';
+import type { KeyRepository } from '../../dal/key-repository';
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
 
@@ -66,6 +67,7 @@ export interface KeyServiceDeps {
       };
     };
   };
+  repo: KeyRepository;
   advisorService?: {
     getSuggestions(): Array<{ targetNodeId?: string }>;
   };
@@ -114,6 +116,7 @@ export class KeyService {
       database: deps.database,
       vault: this.vault,
       freeTierLimits: this.freeTierLimits,
+      repo: deps.repo,
     });
 
     this.alerts = new KeyAlerts({ eventBus: deps.eventBus });
@@ -313,17 +316,12 @@ export class KeyService {
    * ends up empty despite Dexie holding data (race, stub keyStore, etc.).
    */
   async forceResyncFromDexie(): Promise<number> {
-    const beforeCount = this.registry.getKeys().length;
-    const dexieKeys = await (await import('../database-service')).dexieDb.apiKeys.toArray();
-    if (dexieKeys.length > 0 && beforeCount === 0) {
-      const restored = await this.registry.forceResyncFromDexie();
-      if (restored > 0) {
-        this.notify();
-        this.deps.eventBus.emit(EVENTS.KEYS_LOADED, this.registry.getKeys());
-      }
-      return restored;
+    const restored = await this.registry.forceResyncFromDexie();
+    if (restored > 0) {
+      this.notify();
+      this.deps.eventBus.emit(EVENTS.KEYS_LOADED, this.registry.getKeys());
     }
-    return beforeCount;
+    return restored;
   }
 
   // -- Config Persistence ---------------------------------------------
