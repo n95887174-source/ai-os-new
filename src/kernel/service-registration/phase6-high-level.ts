@@ -73,8 +73,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     executionGovernor: (() => { try { return ctx.container.get<IExecutionGovernor>('executionGovernor'); } catch { return undefined; } })(),
   })));
 
+  const workspaceRepo = get<DataAccessLayer>('dal').workspace as import('../dal/workspace-repository').WorkspaceRepository;
   register('workspaceService', new WorkspaceService({
     eventBus: get<IEventBus>('eventBus'),
+    repo: workspaceRepo,
   }));
 
   register('probeService', new ProbeService(asDeps<ConstructorParameters<typeof ProbeService>[0]>({

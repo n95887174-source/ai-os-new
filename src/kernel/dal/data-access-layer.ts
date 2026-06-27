@@ -10,6 +10,7 @@
 
 import type { DatabaseService } from '../services/database-service';
 import type { DataAccessLayer, KvRepository } from './types';
+import { WorkspaceRepository } from './workspace-repository';
 import { MemoryRepository } from './memory-repository';
 import { SessionRepository } from './session-repository';
 import { KeyRepository } from './key-repository';
@@ -28,6 +29,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
   readonly debate: DebateRepository;
   readonly trace: TraceRepository;
   readonly cognitive: CognitiveRepository;
+  readonly workspace: WorkspaceRepository;
   readonly kv: KvRepository;
 
   constructor(db: DatabaseService) {
@@ -40,6 +42,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
     this.trace = new TraceRepository(db);
     this.cognitive = new CognitiveRepository(db);
     this.kv = new KvRepositoryImpl(db);
+    this.workspace = new WorkspaceRepository(this.kv);
   }
 }
 

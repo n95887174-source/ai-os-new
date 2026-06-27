@@ -113,6 +113,13 @@ export interface CognitiveRepository {
   deleteCognitiveTrace(id: string): Promise<void>;
 }
 
+/** Workspace domain — File System Access handle persistence */
+export interface WorkspaceRepository {
+  saveHandle(handle: FileSystemDirectoryHandle): Promise<void>;
+  getHandle(): Promise<FileSystemDirectoryHandle | null>;
+  deleteHandle(): Promise<void>;
+}
+
 /** Key-Value store — generic key-value persistence */
 export interface KvRepository {
   get<T>(id: string): Promise<T | null>;
@@ -135,6 +142,7 @@ export interface DataAccessLayer {
   debate: DebateRepository;
   trace: TraceRepository;
   cognitive: CognitiveRepository;
+  workspace: WorkspaceRepository;
   kv: KvRepository;
 }
 

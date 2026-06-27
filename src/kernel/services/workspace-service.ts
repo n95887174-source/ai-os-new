@@ -1,7 +1,7 @@
 import type { IWorkspaceService, FileNode, SearchMatch, FileReadRecord } from '../contracts/workspace';
 import { WORKSPACE_EVENTS } from '../contracts/workspace';
 import type { ILifecycle } from '../contracts/lifecycle';
-import { dexieDb } from './database-service';
+import type { WorkspaceRepository } from '../dal';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('WorkspaceService');
@@ -15,7 +15,6 @@ const MAX_FILES = 1000;
 const MAX_READ_SIZE = 500_000;
 const MAX_GREP_RESULTS = 20;
 const MAX_GREP_FILE_SIZE = 100_000;
-const HANDLE_KV_KEY = 'workspace_handle';
 const BINARY_EXTENSIONS = new Set([
   '.exe', '.dll', '.so', '.dylib', '.bin', '.dat', '.wasm',
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.webp',
@@ -31,6 +30,7 @@ const SKIP_DIRS = new Set([
 
 export interface WorkspaceServiceDeps {
   eventBus: { emit: (event: string, data?: unknown) => void };
+  repo: WorkspaceRepository;
 }
 
 export class WorkspaceService implements IWorkspaceService, ILifecycle {
@@ -172,7 +172,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
   private async persistHandle(): Promise<void> {
     if (!this.rootHandle) return;
     try {
-      await dexieDb.keyValue.put({ id: HANDLE_KV_KEY, value: this.rootHandle, createdAt: Date.now() });
+      await this.deps.repo.saveHandle(this.rootHandle);
     } catch (e) {
       LOGGER.warn('WorkspaceService', 'Failed to persist handle', { error: String(e) });
     }
@@ -180,7 +180,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
 
   private removePersistedHandle(): void {
     try {
-      dexieDb.keyValue.delete(HANDLE_KV_KEY);
+      this.deps.repo.deleteHandle();
     } catch (e) {
       LOGGER.warn('WorkspaceService', 'Failed to remove persisted handle', { error: String(e) });
     }
@@ -188,9 +188,9 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
 
   private async tryRestoreHandle(): Promise<void> {
     try {
-      const record = await dexieDb.keyValue.get(HANDLE_KV_KEY);
-      if (!record?.value) return;
-      const handle = record.value as FileSystemDirectoryHandle & {
+      const record = await this.deps.repo.getHandle();
+      if (!record) return;
+      const handle = record as FileSystemDirectoryHandle & {
         queryPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<PermissionState>;
         requestPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<PermissionState>;
       };
