@@ -15,18 +15,16 @@ const TYPE_COLORS: Record<MarketplaceItem['type'], string> = {
 const AgentMarketplacePanel: React.FC = () => {
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<MarketplaceItem['type'] | 'all'>('all');
-  const [installTick, setInstallTick] = useState(0);
   const [installedSet, setInstalledSet] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(
     () => agentMarketplace.search(query, typeFilter === 'all' ? undefined : typeFilter),
-    [query, typeFilter, installTick],
+    [query, typeFilter],
   );
 
   const handleInstall = (id: string) => {
     if (agentMarketplace.install(id)) {
       setInstalledSet(prev => new Set(prev).add(id));
-      setInstallTick(n => n + 1);
     }
   };
 

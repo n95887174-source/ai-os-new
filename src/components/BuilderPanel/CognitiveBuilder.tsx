@@ -272,7 +272,7 @@ const CognitiveBuilder: React.FC = () => {
         clearError();
       }
     }
-  }, [nodes, edges, clearError]);
+  }, [nodes, edges, clearError, t]);
 
   const addNode = useCallback((type: string, label: string) => {
     const newNode: Node = {

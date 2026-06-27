@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   DollarSign, 
   RefreshCcw, 
@@ -23,18 +23,18 @@ const PricingPanel: React.FC = () => {
   const [editingModel, setEditingModel] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState<ModelPricing>({ input: 0, output: 0 });
 
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
     setPrices(pricingService.getAllPrices());
     setOverrides(pricingService.getUserOverrides());
     setBudget(budgetService.getBudgetInfo());
     setLastSync(pricingService.getLastSync());
-  };
+  }, []);
 
   useEffect(() => {
     refreshData();
     const interval = setInterval(refreshData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshData]);
 
   const handleSync = async () => {
     setIsSyncing(true);

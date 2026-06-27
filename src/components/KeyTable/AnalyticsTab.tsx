@@ -63,7 +63,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
 
   const latencySeries = useMemo(
     () => (ext?.throughputHistory || []).map((h) => h.latency).filter((v) => v > 0),
-    [ext?.throughputHistory, setTick],
+    [ext?.throughputHistory],
   );
 
   const taskRecommendations = useMemo(() => {
@@ -74,7 +74,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
       .slice(0, 3)
       .map(([task]) => task);
     return ranked;
-  }, [learning, setTick]);
+  }, [learning]);
 
   const taskAvoid = useMemo(() => {
     const insights = learning?.advisorInsights;
@@ -84,7 +84,7 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ apiKey }) => {
       .slice(0, 2)
       .map(([task]) => task);
     return ranked;
-  }, [learning, setTick]);
+  }, [learning]);
 
   const getReputationColor = (score: number) => (score > 70 ? '#10b981' : score > 40 ? '#f59e0b' : '#ef4444');
   const getStabilityColor = (score: number) => (score > 0.7 ? '#10b981' : score > 0.4 ? '#f59e0b' : '#ef4444');

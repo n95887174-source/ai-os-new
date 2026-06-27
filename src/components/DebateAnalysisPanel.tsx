@@ -31,7 +31,7 @@ const DebateAnalysisPanel: React.FC = () => {
       if (isMountedRef.current) setLoading(false);
     }
     return () => { isMountedRef.current = false; };
-  }, []);
+  }, [sessionId]);
 
   const runAnalysis = useMemo(() => {
     if (!sessionId) return null;
@@ -46,7 +46,7 @@ const DebateAnalysisPanel: React.FC = () => {
         parentId: a.parentId,
       }));
       return analyzeDebate(args);
-    } catch (err) {
+    } catch {
       return null;
     }
   }, [sessionId]);

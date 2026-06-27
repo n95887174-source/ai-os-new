@@ -78,7 +78,7 @@ function estimateLines(size: number): number {
 }
 
 const ProjectOsExplorer: React.FC = () => {
-  const {} = useTranslation();
+  useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [attached, setAttached] = useState(() => { try { return workspaceService.isAttached(); } catch { return false; } });
@@ -115,11 +115,11 @@ const ProjectOsExplorer: React.FC = () => {
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
-  const persistRecent = (path: string) => {
+  const persistRecent = useCallback((path: string) => {
     const next = [path, ...recentFiles.filter(f => f !== path)].slice(0, 10);
     setRecentFiles(next);
     StorageAdapter.UI.setSync(RECENT_KEY, next);
-  };
+  }, [recentFiles]);
 
   const refreshTree = useCallback(async () => {
     setTreeLoading(true);
@@ -132,17 +132,6 @@ const ProjectOsExplorer: React.FC = () => {
   useEffect(() => {
     if (attached) refreshTree();
   }, [attached, refreshTree]);
-
-  useEffect(() => {
-    const fileParam = searchParams.get('file');
-    if (fileParam && tree.length > 0) {
-      const flat = flattenTree(tree).filter(n => n.type === 'file');
-      if (flat.some(f => f.path === fileParam)) {
-        handleSelectFile(fileParam);
-        window.history.replaceState({}, '', '/project-os');
-      }
-    }
-  }, [searchParams, tree]);
 
   const handleAttach = async () => {
     try {
@@ -169,7 +158,7 @@ const ProjectOsExplorer: React.FC = () => {
     });
   };
 
-  const handleSelectFile = async (path: string) => {
+  const handleSelectFile = useCallback(async (path: string) => {
     setSelectedPath(path);
     setPreviewLoading(true);
     setPreviewError(null);
@@ -184,7 +173,7 @@ const ProjectOsExplorer: React.FC = () => {
     } catch (e) {
       setPreviewError(e instanceof Error ? e.message : 'Failed to read file');
     } finally { setPreviewLoading(false); }
-  };
+  }, [persistRecent]);
 
   const handleContextMenu = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
@@ -220,12 +209,23 @@ const ProjectOsExplorer: React.FC = () => {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const flattenTree = (nodes: FileNode[], base: FileNode[] = []): FileNode[] => {
-    for (const n of nodes) { base.push(n); if (n.type === 'dir' && n.children) flattenTree(n.children, base); }
+  const flattenTree = useCallback(function flattenTreeRec(nodes: FileNode[], base: FileNode[] = []): FileNode[] {
+    for (const n of nodes) { base.push(n); if (n.type === 'dir' && n.children) flattenTreeRec(n.children, base); }
     return base;
-  };
+  }, []);
 
-  const allFiles = useMemo(() => flattenTree(tree).filter(n => n.type === 'file'), [tree]);
+  useEffect(() => {
+    const fileParam = searchParams.get('file');
+    if (fileParam && tree.length > 0) {
+      const flat = flattenTree(tree).filter(n => n.type === 'file');
+      if (flat.some(f => f.path === fileParam)) {
+        handleSelectFile(fileParam);
+        window.history.replaceState({}, '', '/project-os');
+      }
+    }
+  }, [searchParams, tree, flattenTree, handleSelectFile]);
+
+  const allFiles = useMemo(() => flattenTree(tree).filter(n => n.type === 'file'), [tree, flattenTree]);
 
   const projectStats = useMemo(() => {
     const byExt: Record<string, number> = {};
@@ -311,7 +311,7 @@ const ProjectOsExplorer: React.FC = () => {
           <div
             onClick={() => isDir ? handleToggleDir(node.path) : handleSelectFile(node.path)}
             onContextMenu={(e) => { if (!isDir) handleContextMenu(e, node.path); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') { isDir ? handleToggleDir(node.path) : handleSelectFile(node.path); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { if (isDir) handleToggleDir(node.path); else handleSelectFile(node.path); } }}
             role="button" tabIndex={0}
             style={{
               display: 'flex', alignItems: 'center', gap: 4, padding: '2px 6px', paddingLeft,
