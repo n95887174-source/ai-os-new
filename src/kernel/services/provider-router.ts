@@ -54,7 +54,6 @@ export interface RouterServiceDeps {
     isProviderRateLimited: (provider: string) => boolean;
   };
   pricingService: {
-    getBudgetInfo: () => { providerBudgets: { provider: string; monthlyBudget: number; spentThisMonth: number }[] };
     getPricingForModel: (model: string) => { input?: number; output?: number } | undefined;
   };
   eventBus: {
@@ -64,6 +63,7 @@ export interface RouterServiceDeps {
   };
   budgetService: {
     canUseProvider: (provider: string) => boolean;
+    getBudgetInfo: () => { providerBudgets: { provider: string; monthlyBudget: number; spentThisMonth: number }[] };
   };
   policyService: {
     checkAgentPolicy: (agentId: string, provider: string, model?: string) => { allowed: boolean; reason?: string };
@@ -676,7 +676,7 @@ export class RouterService {
   }
 
   private getBudgetPenalty(provider: string): number {
-    const info = this.deps.pricingService.getBudgetInfo();
+    const info = this.deps.budgetService.getBudgetInfo();
     const provInfo = info.providerBudgets.find(p => p.provider === provider);
     if (!provInfo) return 0;
     return this.deps.routingPolicyService.calculateBudgetPenalty(provider, provInfo.spentThisMonth, provInfo.monthlyBudget);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, BarChart3, Activity, ShieldAlert } from 'lucide-react'
-import { pricingService } from '../../kernel/instances';
+import { budgetService } from '../../kernel/instances';
 import PanelLoader from '../PanelLoader';
 import { glassPanel, glassPanelPad15r, textXsMuted, flexBetween, progressBarSmall } from '../../styles/common';
 
@@ -18,21 +18,20 @@ const CostAnalyticsPanel: React.FC = () => {
   const [days, setDays] = useState(30);
 
   useEffect(() => {
+    const refresh = () => {
+      setDailyCosts(budgetService.getDailyCosts(days));
+      setTrend(budgetService.getCostTrend());
+      setAnomalies(budgetService.detectAnomalies());
+      setByProvider(budgetService.getCostByProvider());
+      setByModel(budgetService.getCostByModel());
+      setByAgent(budgetService.getCostByAgent());
+      const bi = budgetService.getBudgetInfo();
+      setBudget({ spentThisMonth: bi.spentThisMonth, monthlyBudget: bi.monthlyBudget, projectedMonthly: bi.projectedMonthly });
+    };
     refresh();
     const interval = setInterval(refresh, 10000);
     return () => clearInterval(interval);
   }, [days]);
-
-  const refresh = () => {
-    setDailyCosts(pricingService.getDailyCosts(days));
-    setTrend(pricingService.getCostTrend());
-    setAnomalies(pricingService.detectAnomalies());
-    setByProvider(pricingService.getCostByProvider());
-    setByModel(pricingService.getCostByModel());
-    setByAgent(pricingService.getCostByAgent());
-    const bi = pricingService.getBudgetInfo();
-    setBudget({ spentThisMonth: bi.spentThisMonth, monthlyBudget: bi.monthlyBudget, projectedMonthly: bi.projectedMonthly });
-  };
 
   const totalCost = Object.values(byProvider).reduce((s, v) => s + v, 0);
 

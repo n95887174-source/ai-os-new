@@ -38,8 +38,10 @@ export interface AdvisorServiceDeps {
   };
   orchestrator: { getActiveTopology: () => { nodes: Array<{ id: string; label: string; type: string; config: Record<string, unknown>; model?: string; provider?: string }> } | null };
   keyStateStore?: { get: (id: string) => KeyState | undefined };
-  pricingService: { getBudgetInfo: () => { monthlyBudget: number; spentThisMonth: number; remainingBudget: number; dailyAverage: number; projectedMonthly: number; providerBudgets: Array<{ provider: string; monthlyBudget: number; spentThisMonth: number; remainingBudget: number }> } };
-  budgetService: { getSpendSummary: () => { global: { pct: number; remaining: number }; providers: Array<{ provider: string; pct: number }> } };
+  budgetService: {
+    getBudgetInfo: () => { monthlyBudget: number; spentThisMonth: number; remainingBudget: number; dailyAverage: number; projectedMonthly: number; providerBudgets: Array<{ provider: string; monthlyBudget: number; spentThisMonth: number; remainingBudget: number }> };
+    getSpendSummary: () => { global: { pct: number; remaining: number }; providers: Array<{ provider: string; pct: number }> };
+  };
   healthCheckService: { getSummary: () => { total: number; healthy: number; degraded: number; offline: number } };
   metricsService: { generateReport: () => { aggregated: { totalRequests: number; totalTokens: number; estimatedCost: number; avgLatency: number; successRate: number; errorRate: number }; providers: Array<{ id: string; status: string; reliability: number; avgTTFT: number }> } };
 }

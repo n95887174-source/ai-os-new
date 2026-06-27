@@ -1,7 +1,7 @@
-﻿import { EVENTS } from '../events/event-names';
+import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokens } from '../utils/tokenEstimate';
-import type { ICostCalculator, BudgetInfo, ProviderBudget, CostEstimate } from '../contracts/pricing';
+import type { ICostCalculator } from '../contracts/pricing';
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('PricingService');
 
@@ -39,7 +39,6 @@ const FALLBACK_PRICING: Record<string, { input: number; output: number; provider
 
 const OVERRIDES_KEY = 'super_agents_pricing_overrides';
 const CACHE_KEY_DB = 'pricing_cache';
-const BUDGET_KEY = 'super_agents_pricing_budget';
 
 export interface PricingServiceDeps {
   eventBus: { on?: (event: string, cb: (...args: unknown[]) => void) => () => void; emit: (event: string, data?: unknown) => void };
@@ -58,16 +57,10 @@ export interface ModelPricing {
 export class PricingService implements ICostCalculator {
   protected pricingData: Record<string, { input: number; output: number; provider?: string }> = { ...FALLBACK_PRICING };
   protected lastFetch: number = 0;
-  protected costHistory: CostEstimate[] = [];
-  protected monthlyBudget: number = CONFIG.pricing.defaultMonthlyBudget;
-  protected providerBudgets: Record<string, number> = {};
   protected prefixCache = new Map<string, { input: number; output: number; provider?: string }>();
   protected userOverrides: Record<string, ModelPricing> = {};
   private fetchPromise: Promise<void> | null = null;
   private deps: PricingServiceDeps;
-  private budgetInfoCache: { result: BudgetInfo; timestamp: number } | null = null;
-  private readonly BUDGET_CACHE_TTL = 1000;
-  private _costDedupSet?: Set<string>;
 
   constructor(deps: PricingServiceDeps) {
     this.deps = deps;
@@ -75,9 +68,6 @@ export class PricingService implements ICostCalculator {
 
   async init() {
     await this.loadCache();
-    await this.loadBudget();
-    await this.loadProviderBudgets();
-    await this.loadHistory();
     await this.loadOverrides();
   }
 
@@ -90,12 +80,6 @@ export class PricingService implements ICostCalculator {
     } catch (e) { LOGGER.warn('PricingService', 'Failed to save cache', { error: e }); }
   }
 
-  protected async saveHistory() {
-    try {
-      await this.deps.database.setKv('super_agents_cost_history', this.costHistory);
-    } catch (e) { LOGGER.warn('PricingService', 'Failed to save history', { error: e }); }
-  }
-
   private async loadCache() {
     try {
       const cached = await this.deps.database.getKv<{ data: Record<string, { input: number; output: number; provider?: string }>; timestamp: number }>(CACHE_KEY_DB);
@@ -104,39 +88,6 @@ export class PricingService implements ICostCalculator {
         this.lastFetch = cached.timestamp;
       }
     } catch (e) { LOGGER.warn('PricingService', 'Failed to load pricing cache', { error: e }); }
-  }
-
-  private async loadBudget() {
-    try {
-      const saved = await this.deps.database.getKv<{ monthlyBudget: number }>(BUDGET_KEY);
-      if (saved) this.monthlyBudget = saved.monthlyBudget;
-    } catch (e) { LOGGER.warn('PricingService', 'Failed to load budget', { error: e }); }
-  }
-
-  private async loadProviderBudgets() {
-    try {
-      const saved = await this.deps.database.getKv<Record<string, number>>('provider_budgets');
-      if (saved) this.providerBudgets = saved;
-    } catch (e) { LOGGER.warn('PricingService', 'Failed to load provider budgets', { error: e }); }
-  }
-
-  private async loadHistory() {
-    try {
-      const saved = await this.deps.database.getKv<CostEstimate[]>('super_agents_cost_history');
-      if (saved) {
-        this.costHistory = saved.map(c => ({
-          model: c.model,
-          provider: (c as unknown as Record<string, unknown>).provider as string ||
-            (c.model.includes('/') ? c.model.split('/')[0] : c.model),
-          inputTokens: c.inputTokens,
-          outputTokens: c.outputTokens,
-          inputCost: c.inputCost,
-          outputCost: c.outputCost,
-          totalCost: c.totalCost,
-          timestamp: c.timestamp,
-        }));
-      }
-    } catch (e) { LOGGER.warn('PricingService', 'Failed to load cost history', { error: e }); }
   }
 
   private async loadOverrides() {
@@ -173,31 +124,8 @@ export class PricingService implements ICostCalculator {
     return inputCost + outputCost;
   }
 
-  recordCost(model: string, inputTokens: number, outputTokens: number, dedupKey?: string): number {
-    this.budgetInfoCache = null;
-    const pricing = this.lookup(model);
-    const inputCost = (inputTokens / 1_000_000) * pricing.input;
-    const outputCost = (outputTokens / 1_000_000) * pricing.output;
-    const totalCost = inputCost + outputCost;
-    const provider = pricing.provider || (model.includes('/') ? model.split('/')[0] : model);
-    if (dedupKey) {
-      if (!this._costDedupSet) this._costDedupSet = new Set<string>();
-      if (this._costDedupSet.has(dedupKey)) return totalCost;
-      this._costDedupSet.add(dedupKey);
-    }
-    this.costHistory.push({
-      model, provider, inputTokens, outputTokens, inputCost, outputCost,
-      totalCost, timestamp: Date.now(),
-      ...(dedupKey ? { dedupKey } : {}),
-    });
-    if (this.costHistory.length > CONFIG.pricing.costHistoryMax) {
-      this.costHistory = this.costHistory.slice(-CONFIG.pricing.costHistoryMax);
-      if (this._costDedupSet) {
-        this._costDedupSet = new Set(this.costHistory.map(e => (e as unknown as Record<string, unknown>).dedupKey).filter(Boolean) as string[]);
-      }
-    }
-    this.saveHistory();
-    return totalCost;
+  recordCost(model: string, inputTokens: number, outputTokens: number, _dedupKey?: string): number {
+    return this.calculateCost(model, inputTokens, outputTokens);
   }
 
   estimateCost(model: string, promptLength: number, estimatedOutputTokens: number = CONFIG.pricing.defaultEstimatedOutputTokens): number {
@@ -263,65 +191,6 @@ export class PricingService implements ICostCalculator {
     };
   }
 
-  getBudgetInfo(): BudgetInfo {
-    if (this.budgetInfoCache && Date.now() - this.budgetInfoCache.timestamp < this.BUDGET_CACHE_TTL) {
-      return this.budgetInfoCache.result;
-    }
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const dayOfMonth = now.getDate();
-    const monthlyCost = this.costHistory
-      .filter(c => c.timestamp >= startOfMonth)
-      .reduce((sum, c) => sum + c.totalCost, 0);
-
-    const providerBudgets: ProviderBudget[] = [];
-    const providers = new Set(this.costHistory.filter(c => c.timestamp >= startOfMonth).map(c => c.provider));
-    for (const provider of providers) {
-      const spent = this.costHistory
-        .filter(c => c.timestamp >= startOfMonth && c.provider === provider)
-        .reduce((sum, c) => sum + c.totalCost, 0);
-      const budget = this.providerBudgets[provider] || 0;
-      providerBudgets.push({
-        provider,
-        monthlyBudget: budget,
-        spentThisMonth: spent,
-        remainingBudget: budget > 0 ? Math.max(0, budget - spent) : Number.MAX_SAFE_INTEGER,
-      });
-    }
-
-    const result: BudgetInfo = {
-      monthlyBudget: this.monthlyBudget,
-      spentThisMonth: monthlyCost,
-      remainingBudget: Math.max(0, this.monthlyBudget - monthlyCost),
-      dailyAverage: dayOfMonth > 0 ? monthlyCost / dayOfMonth : 0,
-      projectedMonthly: dayOfMonth > 0 ? (monthlyCost / dayOfMonth) * daysInMonth : 0,
-      providerBudgets,
-    };
-    this.budgetInfoCache = { result, timestamp: Date.now() };
-    return result;
-  }
-
-  getProviderBudget(provider: string): number {
-    return this.providerBudgets[provider.toLowerCase()] || 0;
-  }
-
-  setMonthlyBudget(budget: number) {
-    this.budgetInfoCache = null;
-    this.monthlyBudget = budget;
-    this.deps.database.setKv(BUDGET_KEY, { monthlyBudget: budget }).catch(e => LOGGER.warn('PricingService', 'Persist budget failed', { error: e }));
-  }
-
-  setProviderBudget(provider: string, budget: number) {
-    this.budgetInfoCache = null;
-    this.providerBudgets[provider.toLowerCase()] = budget;
-    this.deps.database.setKv('provider_budgets', this.providerBudgets).catch(e => LOGGER.warn('PricingService', 'Persist provider budget failed', { error: e }));
-  }
-
-  getCostHistory(limit = 50): CostEstimate[] {
-    return this.costHistory.slice(-limit);
-  }
-
   async syncFromOpenRouter(): Promise<void> {
     if (this.fetchPromise) return this.fetchPromise;
     this.fetchPromise = (async () => {
@@ -357,91 +226,6 @@ export class PricingService implements ICostCalculator {
   getAllPrices(): Record<string, ModelPricing> { return { ...this.pricingData }; }
   getLastSync(): number { return this.lastFetch; }
 
-  checkProviderBudget(provider: string, cost: number): boolean {
-    const budget = this.providerBudgets[provider.toLowerCase()];
-    if (!budget || budget <= 0) return true;
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-    const spent = this.costHistory.filter(c =>
-      c.timestamp >= startOfMonth && (c.provider || '').toLowerCase() === provider.toLowerCase()
-    ).reduce((sum, c) => sum + c.totalCost, 0);
-    return (spent + cost) <= budget;
-  }
-
-  getCostByProvider(): Record<string, number> {
-    const byProvider: Record<string, number> = {};
-    for (const c of this.costHistory) {
-      const provider = c.provider || this.lookup(c.model).provider || 'unknown';
-      byProvider[provider] = (byProvider[provider] || 0) + c.totalCost;
-    }
-    return byProvider;
-  }
-
-  getCostByModel(): Record<string, number> {
-    const byModel: Record<string, number> = {};
-    for (const c of this.costHistory) {
-      byModel[c.model] = (byModel[c.model] || 0) + c.totalCost;
-    }
-    return byModel;
-  }
-
-  getCostByAgent(): Record<string, number> {
-    const byAgent: Record<string, number> = {};
-    for (const c of this.costHistory) {
-      if (c.agentId) byAgent[c.agentId] = (byAgent[c.agentId] || 0) + c.totalCost;
-    }
-    return byAgent;
-  }
-
-  getDailyCosts(days = 30): Array<{ date: string; cost: number; count: number }> {
-    const cutoff = Date.now() - days * 86400000;
-    const dayBuckets = new Map<string, { cost: number; count: number }>();
-    for (const c of this.costHistory) {
-      if (c.timestamp < cutoff) continue;
-      const date = new Date(c.timestamp).toISOString().slice(0, 10);
-      const b = dayBuckets.get(date) || { cost: 0, count: 0 };
-      b.cost += c.totalCost;
-      b.count += 1;
-      dayBuckets.set(date, b);
-    }
-    const sorted = Array.from(dayBuckets.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    return sorted.map(([date, v]) => ({ date, cost: Math.round(v.cost * 100) / 100, count: v.count }));
-  }
-
-  getCostTrend(): { direction: 'up' | 'down' | 'stable'; dailyAvg: number; projectedMonthly: number; forecast: number } {
-    const daily = this.getDailyCosts(7);
-    if (daily.length < 2) return { direction: 'stable', dailyAvg: 0, projectedMonthly: 0, forecast: 0 };
-    const recent = daily.slice(-3).reduce((s, d) => s + d.cost, 0) / Math.min(3, daily.slice(-3).length);
-    const older = daily.slice(0, Math.min(3, daily.length)).reduce((s, d) => s + d.cost, 0) / Math.min(3, daily.length);
-    const direction = recent > older * 1.2 ? 'up' : recent < older * 0.8 ? 'down' : 'stable';
-    const dailyAvg = daily.reduce((s, d) => s + d.cost, 0) / daily.length;
-    const projectedMonthly = dailyAvg * 30;
-    const forecast = direction === 'up' ? projectedMonthly * 1.15 : direction === 'down' ? projectedMonthly * 0.85 : projectedMonthly;
-    return { direction, dailyAvg: Math.round(dailyAvg * 100) / 100, projectedMonthly: Math.round(projectedMonthly * 100) / 100, forecast: Math.round(forecast * 100) / 100 };
-  }
-
-  detectAnomalies(): Array<{ date: string; cost: number; expected: number; deviation: number; severity: 'low' | 'medium' | 'high' }> {
-    const daily = this.getDailyCosts(60);
-    if (daily.length < 5) return [];
-    const costs = daily.map(d => d.cost);
-    const mean = costs.reduce((s, c) => s + c, 0) / costs.length;
-    const variance = costs.reduce((s, c) => s + (c - mean) ** 2, 0) / costs.length;
-    const stddev = Math.sqrt(variance);
-    const anomalies: Array<{ date: string; cost: number; expected: number; deviation: number; severity: 'low' | 'medium' | 'high' }> = [];
-    for (const d of daily) {
-      if (d.cost > 0 && d.cost > mean + stddev) {
-        const deviation = (d.cost - mean) / stddev;
-        const severity = deviation > 3 ? 'high' : deviation > 2 ? 'medium' : 'low';
-        anomalies.push({ date: d.date, cost: Math.round(d.cost * 100) / 100, expected: Math.round(mean * 100) / 100, deviation: Math.round(deviation * 100) / 100, severity });
-      }
-    }
-    return anomalies.sort((a, b) => b.deviation - a.deviation);
-  }
-
-  clearHistory() {
-    this.costHistory = [];
-    this.saveHistory();
-  }
-
   setOverride(model: string, pricing: ModelPricing) {
     this.userOverrides[model.toLowerCase().trim()] = pricing;
     this.prefixCache.clear();
@@ -460,7 +244,6 @@ export class PricingService implements ICostCalculator {
 
   destroy() {
     this.prefixCache.clear();
-    this.costHistory = [];
     this.fetchPromise = null;
   }
 }

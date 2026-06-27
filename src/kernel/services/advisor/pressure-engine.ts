@@ -28,14 +28,12 @@ export interface PressureEngineDeps {
   routerService: {
     getProviderStats: () => Array<{ id: string; status: string; reliability: number; avgTTFT: number }>;
   };
-  pricingService: {
+  budgetService: {
     getBudgetInfo: () => {
       monthlyBudget: number; spentThisMonth: number; remainingBudget: number;
       dailyAverage: number; projectedMonthly: number;
       providerBudgets: Array<{ provider: string; monthlyBudget: number; spentThisMonth: number; remainingBudget: number }>;
     };
-  };
-  budgetService: {
     getSpendSummary: () => { global: { pct: number; remaining: number }; providers: Array<{ provider: string; pct: number }> };
   };
   healthCheckService: {
@@ -67,7 +65,7 @@ export class PressureEngine implements IPressureEngine {
   generateSnapshot(): PressureMapSnapshot {
     const keys = this.deps.keyService.getKeys();
     const state = this.deps.kernel.getState();
-    const budgetInfo = this.deps.pricingService.getBudgetInfo();
+    const budgetInfo = this.deps.budgetService.getBudgetInfo();
     const spendSummary = this.deps.budgetService.getSpendSummary();
     const alerts = this.deps.keyService.getAlerts();
     const providerStats = this.deps.routerService.getProviderStats();

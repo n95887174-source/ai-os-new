@@ -66,7 +66,6 @@ export class AdvisorService {
       keyService: deps.keyService satisfies PressureEngineDeps['keyService'],
       kernel: deps.kernel satisfies PressureEngineDeps['kernel'],
       routerService: deps.routerService satisfies PressureEngineDeps['routerService'],
-      pricingService: deps.pricingService satisfies PressureEngineDeps['pricingService'],
       budgetService: deps.budgetService satisfies PressureEngineDeps['budgetService'],
       healthCheckService: deps.healthCheckService satisfies PressureEngineDeps['healthCheckService'],
       metricsService: deps.metricsService satisfies PressureEngineDeps['metricsService'],
@@ -79,7 +78,7 @@ export class AdvisorService {
 
     this.whatIf = new WhatIfEngine({
       keyService: deps.keyService satisfies WhatIfEngineDeps['keyService'],
-      pricingService: deps.pricingService satisfies WhatIfEngineDeps['pricingService'],
+      budgetService: deps.budgetService satisfies WhatIfEngineDeps['budgetService'],
       freeTierLimits: DEFAULT_FREE_TIER_LIMITS,
     });
 
@@ -96,7 +95,7 @@ export class AdvisorService {
       eventBus: deps.eventBus satisfies OptimizationEngineDeps['eventBus'],
       routerService: deps.routerService satisfies OptimizationEngineDeps['routerService'],
       keyService: deps.keyService satisfies OptimizationEngineDeps['keyService'],
-      pricingService: deps.pricingService satisfies OptimizationEngineDeps['pricingService'],
+      budgetService: deps.budgetService satisfies OptimizationEngineDeps['budgetService'],
       freeTierLimits: DEFAULT_FREE_TIER_LIMITS,
     });
 

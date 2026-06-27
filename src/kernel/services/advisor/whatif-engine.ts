@@ -20,7 +20,7 @@ export interface WhatIfEngineDeps {
       availableModels?: string[];
     }>;
   };
-  pricingService: {
+  budgetService: {
     getBudgetInfo: () => {
       monthlyBudget: number; spentThisMonth: number; remainingBudget: number;
       dailyAverage: number; projectedMonthly: number;
@@ -160,7 +160,7 @@ export class WhatIfEngine implements IWhatIfEngine {
       });
     }
 
-    const budget = this.deps.pricingService.getBudgetInfo();
+    const budget = this.deps.budgetService.getBudgetInfo();
     if (budget.monthlyBudget > 0 && budget.projectedMonthly > budget.monthlyBudget) {
       const overage = budget.projectedMonthly - budget.monthlyBudget;
       results.push({

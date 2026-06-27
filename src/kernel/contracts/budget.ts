@@ -1,5 +1,6 @@
 import type { Result } from './results';
 import type { ConfigError } from './errors';
+import type { CostEstimate, BudgetInfo } from './pricing';
 
 export interface AgentBudget {
   agentId: string;
@@ -38,4 +39,17 @@ export interface IBudgetService {
   clearAlerts(): void;
   trySetAgentBudget?(agentId: string, budget: number): Result<void, ConfigError>;
   trySetProviderBudget?(provider: string, budget: number): Result<void, ConfigError>;
+
+  // Budget consolidation — moved from PricingService
+  setMonthlyBudget(budget: number): void;
+  getBudgetInfo(): BudgetInfo;
+  checkProviderBudget?(provider: string, cost: number): boolean;
+  getCostHistory?(limit?: number): CostEstimate[];
+  getDailyCosts(days?: number): Array<{ date: string; cost: number; count: number }>;
+  getCostTrend(): { direction: 'up' | 'down' | 'stable'; dailyAvg: number; projectedMonthly: number; forecast: number };
+  detectAnomalies(): Array<{ date: string; cost: number; expected: number; deviation: number; severity: 'low' | 'medium' | 'high' }>;
+  getCostByProvider(): Record<string, number>;
+  getCostByModel(): Record<string, number>;
+  getCostByAgent(): Record<string, number>;
+  clearHistory(): void;
 }

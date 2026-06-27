@@ -11,7 +11,7 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { kernel } from '../../kernel/kernel';
 import { settingsService } from '../../kernel/instances';
 import { cognitiveService } from '../../kernel/instances';
-import { pricingService } from '../../kernel/instances';
+import { budgetService } from '../../kernel/instances';
 import { routerService } from '../../kernel/instances';
 import { monitoringService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
@@ -190,7 +190,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
   );
 
   const estimatedCost = useMemo(
-    () => pricingService.getBudgetInfo()?.spentThisMonth ?? (totalTokens / 1000) * 0.01,
+    () => budgetService.getBudgetInfo()?.spentThisMonth ?? (totalTokens / 1000) * 0.01,
     [totalTokens]
   );
 

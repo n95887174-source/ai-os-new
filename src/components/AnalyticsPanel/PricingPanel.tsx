@@ -8,7 +8,7 @@ import {
   BarChart3,
   Info
 } from 'lucide-react';
-import { pricingService, type ModelPricing, type BudgetInfo } from '../../kernel/instances';
+import { pricingService, budgetService, type ModelPricing, type BudgetInfo } from '../../kernel/instances';
 import { motion, AnimatePresence } from 'framer-motion';
 import { budgetValueLarge } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -26,7 +26,7 @@ const PricingPanel: React.FC = () => {
   const refreshData = () => {
     setPrices(pricingService.getAllPrices());
     setOverrides(pricingService.getUserOverrides());
-    setBudget(pricingService.getBudgetInfo());
+    setBudget(budgetService.getBudgetInfo());
     setLastSync(pricingService.getLastSync());
   };
 
@@ -166,7 +166,7 @@ const PricingPanel: React.FC = () => {
               <input 
                 type="number" 
                 value={budget?.monthlyBudget || 0}
-                onChange={(e) => { pricingService.setMonthlyBudget(parseFloat(e.target.value) || 0); refreshData(); }}
+                onChange={(e) => { budgetService.setMonthlyBudget(parseFloat(e.target.value) || 0); refreshData(); }}
                 style={{ width: '100%', padding: '0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
               />
             </div>

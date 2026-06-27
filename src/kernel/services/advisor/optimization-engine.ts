@@ -9,7 +9,7 @@ export interface OptimizationEngineDeps {
     updateKeyStatus: (id: string, status: string, latency?: number) => void;
     setLatencyThreshold?: (ms: number) => void;
   };
-  pricingService: { getBudgetInfo: () => { monthlyBudget: number; spentThisMonth: number; projectedMonthly: number } };
+  budgetService: { getBudgetInfo: () => { monthlyBudget: number; spentThisMonth: number; projectedMonthly: number } };
   freeTierLimits: Record<string, { requestsPerDay: number; tokensPerDay: number }>;
 }
 
@@ -112,9 +112,8 @@ export class OptimizationEngine implements IOptimizationEngine {
   }
 
   checkBudgetHealth() {
-    if (!this.deps.pricingService) return;
     try {
-      const budget = this.deps.pricingService.getBudgetInfo();
+      const budget = this.deps.budgetService.getBudgetInfo();
       if (budget.monthlyBudget > 0) {
         const usagePct = (budget.spentThisMonth / budget.monthlyBudget) * 100;
         if (usagePct >= 90 && !this.budgetWarningSent) {
