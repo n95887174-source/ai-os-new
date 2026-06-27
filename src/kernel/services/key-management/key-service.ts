@@ -18,7 +18,6 @@ import type { IHealthCheckService } from '../../contracts/health-check';
 import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
 import type { PoolStrategy } from '../../contracts/pool-selector';
 import type { IGroupManager } from '../../contracts/group-manager';
-import { clearSeedCache } from '../key-reset';
 import type { KeyStore } from '../../contracts/storage/key-store';
 import type { KeyRepository } from '../../dal/key-repository';
 import { CONFIG } from '../config-registry';
@@ -418,7 +417,6 @@ export class KeyService {
     // A second call is redundant � the snapshot hasn't changed.
     this.health.cleanupKey(id);
     this.lifecycle.cleanupKey(id);
-    clearSeedCache();
     this.notify();
     this.deps.eventBus.emit(EVENTS.KEY_REMOVED, id);
     this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key removed', type: 'info' });

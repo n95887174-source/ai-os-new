@@ -286,7 +286,6 @@ export type EventMap = {
   'kernel:persist-failed': { error: string };
 
   // Key
-  'key:reconciliation:complete': unknown;
   'key:rotation:triggered': { keyId: string; provider?: string; trigger?: string; reason?: string; timestamp?: number; autoRotate?: boolean; metadata?: { error: string } };
   'key:rotation:notification': { keyId: string; message: string; provider?: string; interval?: number; notifyBefore?: number; nextRotation?: number };
   'key:rotation-policy:created': unknown;
