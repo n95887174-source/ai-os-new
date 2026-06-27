@@ -1,4 +1,4 @@
-import type { KernelEventLog } from '../contracts/event-log';
+import type { EventRecorder } from './event-sourcing/event-recorder';
 import type { CausalTraceEntry, EventRef, ICausalScopeManager } from '../contracts/causal-debugger';
 import type { ITemporalReplayService, TemporalTrace, TemporalFrame, ScoreSnapshot } from '../contracts/temporal-replay';
 import type { RouterService, RoutingStrategy } from './provider-router';
@@ -212,7 +212,7 @@ function rescore(
 
 export class TemporalReplayService implements ITemporalReplayService {
   constructor(
-    private eventLog: KernelEventLog,
+    private recorder: EventRecorder,
     private routerService: RouterService,
     private scopeManager: ICausalScopeManager,
   ) {}
@@ -225,7 +225,7 @@ export class TemporalReplayService implements ITemporalReplayService {
     const decisionWinner = String((trace.decision as Record<string, unknown>).selected ?? '');
 
     // Step 1: get all events from RingEventLog within time window
-    const allEvents = this.eventLog.replay();
+    const allEvents = this.recorder.getAll();
     const windowStart = trace.before?.keyState?.takenAt ?? 0;
     const windowEnd = trace.after?.keyState?.takenAt ?? Infinity;
     const windowEvents = allEvents.filter(e =>
@@ -239,8 +239,8 @@ export class TemporalReplayService implements ITemporalReplayService {
       'kernel:updated',
     ]);
     const relevantEvents = windowEvents.filter(e => {
-      if (GLOBAL_EVENT_NAMES.has(e.type)) return true;
-      const payload = e.payload as Record<string, unknown> | undefined;
+      if (GLOBAL_EVENT_NAMES.has(e.event)) return true;
+      const payload = e.data as Record<string, unknown> | undefined;
       const provId = String(payload?.provider ?? '');
       if (provId && providerIds.has(provId)) return true;
       return false;
@@ -258,12 +258,12 @@ export class TemporalReplayService implements ITemporalReplayService {
     for (let i = 0; i < relevantEvents.length; i++) {
       const evt = relevantEvents[i];
       const eventRef: EventRef = {
-        eventName: evt.type as EventName,
+        eventName: evt.event as EventName,
         timestamp: evt.timestamp,
-        payload: (evt.payload ?? {}) as Record<string, unknown>,
+        payload: (evt.data ?? {}) as Record<string, unknown>,
       };
 
-      const isScoring = isScoringEvent(evt.type);
+      const isScoring = isScoringEvent(evt.event);
       if (isScoring) {
         applyEvent(providerMetrics, eventRef);
       }
@@ -281,7 +281,7 @@ export class TemporalReplayService implements ITemporalReplayService {
       }
 
       // If this is the decision event, mark it
-      if (evt.type === 'system:decision') {
+      if (evt.event === 'system:decision') {
         decisionFrameIndex = frames.length;
       }
 
@@ -292,7 +292,7 @@ export class TemporalReplayService implements ITemporalReplayService {
 
       frames.push({
         index: frames.length,
-        logPos: evt.seq,
+        logPos: evt.sequence,
         event: eventRef,
         keyState: { ...providerMetrics } as unknown as Record<string, unknown>,
         scoreState,

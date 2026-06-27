@@ -4,7 +4,9 @@ import type { ILifecycle } from './contracts/lifecycle';
 import { LifecycleManager } from './services/lifecycle-manager';
 import { LoggerService, rootLogger } from './services/logger-service';
 
-const LOGGER = rootLogger.child('Bootstrap');
+function getLogger() {
+  return rootLogger?.child('Bootstrap');
+}
 import { EVENTS } from './events/event-names';
 import { dexieDb } from './services/database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie-identity';
@@ -21,7 +23,6 @@ import { RotationService } from './services/rotation-service';
 import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
 import { registerServices } from './service-registration/index';
-import { RingEventLog } from './services/event-bridge/ring-event-log';
 import { ProjectionRegistry } from './services/event-bridge/projection-registry';
 import { EventBridge } from './services/event-bridge/event-bridge';
 import { KeyStateProjection } from './services/projections/key-state-projection';
@@ -35,7 +36,6 @@ import { TemporalReplayService } from './services/temporal-replay-service';
 import { TruthConsistencyMonitor } from './services/truth-consistency-monitor';
 import { GroupManagerService } from './services/group-manager';
 import type { RouterService } from './services/provider-router';
-import type { KernelEventLog } from './contracts/event-log';
 import type { ICausalScopeManager } from './contracts/causal-debugger';
 import type { DebatePhase } from './contracts/debate-runtime';
 import type { ApiKey } from './types/metrics-types';
@@ -122,16 +122,14 @@ export class SystemBootstrap implements IBootstrap {
     // ── EventBridge (must start BEFORE any events are emitted) ──────────
     if (ENABLE_EVENT_BRIDGE) {
       try {
-        const eventLog = new RingEventLog(10_000);
         const registry = new ProjectionRegistry();
         const keyStateProjection = new KeyStateProjection();
         const routerProjection = new RouterProjection();
         registry.register(keyStateProjection);
         registry.register(routerProjection);
-        const bridge = new EventBridge(this.eventBus, eventLog, registry);
+        const bridge = new EventBridge(this.eventBus, registry);
         bridge.start();
         this.eventBridge = bridge;
-        this.container.register('eventLog', eventLog);
         this.container.register('projectionRegistry', registry);
         this.container.register('keyStateProjection', keyStateProjection);
         this.container.register('routerProjection', routerProjection);
@@ -210,7 +208,7 @@ export class SystemBootstrap implements IBootstrap {
     const dalS = this.container.get<DataAccessLayer>('dal');
     const repoS = dalS.keys as import('./dal/key-repository').KeyRepository;
     const repoKeys = await repoS.getAll();
-    if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot repo count', { count: repoKeys.length });
+    if (import.meta.env.DEV) getLogger()?.info('Bootstrap', 'Snapshot repo count', { count: repoKeys.length });
 
     let snapshotKeys: ApiKey[] = repoKeys;
     let snapshotSource = repoKeys.length > 0 ? 'repo' : 'unknown';
@@ -567,9 +565,9 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.info('Bootstrap', '[MODULE START] TemporalReplayService');
       try {
         const routerService = this.container.get<RouterService>('routerService');
-        const eventLog = this.container.get<KernelEventLog>('eventLog');
+        const eventSourcing = this.container.get<EventSourcingService>('eventSourcingService');
         const scopeManager = this.container.get<ICausalScopeManager>('causalScopeManager');
-        const temporalReplayService = new TemporalReplayService(eventLog, routerService, scopeManager);
+        const temporalReplayService = new TemporalReplayService(eventSourcing.recorder, routerService, scopeManager);
         this.container.register('temporalReplayService', temporalReplayService);
         const memAfter = getHeapMB();
         this.logger.info('Bootstrap', `[MODULE END] TemporalReplayService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`);

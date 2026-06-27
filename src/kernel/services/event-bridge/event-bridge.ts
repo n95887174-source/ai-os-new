@@ -1,5 +1,4 @@
 import type { IEventBus } from '../../types/interfaces';
-import type { KernelEvent, KernelEventLog } from '../../contracts/event-log';
 import { ProjectionRegistry } from './projection-registry';
 
 export class EventBridge {
@@ -9,7 +8,6 @@ export class EventBridge {
 
   constructor(
     private eventBus: IEventBus,
-    private log: KernelEventLog,
     private registry: ProjectionRegistry,
   ) {}
 
@@ -24,35 +22,18 @@ export class EventBridge {
     if (this.started) return;
     this.started = true;
 
-    // Replay buffered pre-start events
-    const buffer = this.preStartBuffer;
-    this.preStartBuffer = [];
-    for (const be of buffer) {
-      const kernelEvent: KernelEvent = {
-        type: be.event,
-        payload: be.data,
-        timestamp: be.timestamp,
-        seq: 0,
-      };
-      this.log.append(kernelEvent);
-      this.registry.dispatch(kernelEvent);
+    for (const be of this.preStartBuffer) {
+      this.registry.dispatch({ type: be.event, payload: be.data, timestamp: be.timestamp, seq: 0 });
     }
+    this.preStartBuffer = [];
 
     this.unsub = this.eventBus.subscribeAll((payload: { event: string; data: unknown }) => {
-      // Skip high-frequency execution events — large payloads, ephemeral trace data
       if (payload.event === 'cognitive:trace:updated') return;
       if (payload.event === 'cognitive:step:active') return;
       if (payload.event === 'cognitive:step:completed') return;
       if (payload.event === 'cognitive:decision:made') return;
 
-      const kernelEvent: KernelEvent = {
-        type: payload.event,
-        payload: payload.data,
-        timestamp: Date.now(),
-        seq: 0,
-      };
-
-      this.log.append(kernelEvent);
+      const kernelEvent = { type: payload.event, payload: payload.data, timestamp: Date.now(), seq: 0 };
       this.registry.dispatch(kernelEvent);
     });
   }

@@ -10,7 +10,9 @@ import { estimateTokens } from './utils/tokenEstimate';
 
 const ALPHA = 0.15;
 
-const LOGGER = rootLogger.child('Kernel');
+function getLogger() {
+  return rootLogger?.child('Kernel');
+}
 
 const STORAGE_KEY = 'super_agents_kernel_state';
 const DB_TIMEOUT = 5_000;
@@ -79,7 +81,7 @@ export class SystemKernel implements IKernel {
     try {
       let timer: ReturnType<typeof setTimeout> | undefined;
       const dbPromise = this.deps.database.getKv<string>(STORAGE_KEY);
-      dbPromise.catch(e => { if (import.meta.env.DEV) LOGGER.warn('Kernel', 'DB load failed', { error: e }); });
+      dbPromise.catch(e => { if (import.meta.env.DEV) getLogger()?.warn('Kernel', 'DB load failed', { error: e }); });
       const saved = await Promise.race([
         dbPromise,
         new Promise<undefined>((_, reject) => {
@@ -231,7 +233,7 @@ export class SystemKernel implements IKernel {
         break;
       }
       default:
-        LOGGER.warn('Kernel', 'Unknown mutation type', { type });
+        getLogger()?.warn('Kernel', 'Unknown mutation type', { type });
     }
   }
 
@@ -291,7 +293,7 @@ if (!data.state || typeof data.state !== 'object') throw new Error('Invalid stat
       this.cachedFrozenState = null; // KC-H02: Invalidate cache on state reload
       this.deps.eventBus.emit('kernel:updated', this.state);
     } catch (e) {
-      LOGGER.warn('Kernel', 'loadState failed, resetting to defaults', { error: e });
+      getLogger()?.warn('Kernel', 'loadState failed, resetting to defaults', { error: e });
       this.state = this.getInitialState();
       this.eventLog = [];
       this.eventLogCursor = 0;

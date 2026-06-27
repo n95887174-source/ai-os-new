@@ -3,7 +3,9 @@ import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus, EVENTS } from './events/event-bus';
 import { rootLogger } from './services/logger-service';
 
-const LOGGER = rootLogger.child('Runtime');
+function getLogger() {
+  return rootLogger?.child('Runtime');
+}
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
 import { createDexieStorage } from './services/storage/dexie-storage';
@@ -54,7 +56,7 @@ export class RuntimeManager {
       try {
         this.registerCoreServices();
         const storage = createDexieStorage();
-        LOGGER.info('Runtime', 'Storage initialized', {
+        getLogger()?.info('Runtime', 'Storage initialized', {
           hasStorageLayer: !!storage,
           hasKeys: !!storage?.keys,
           keysType: typeof storage?.keys,
@@ -74,7 +76,7 @@ export class RuntimeManager {
       } catch (e) {
         this.phase = 'error';
         this.lastError = e instanceof Error ? e.message : String(e);
-        LOGGER.error('Runtime', 'Failed to start', { error: e });
+        getLogger()?.error('Runtime', 'Failed to start', { error: e });
         await this.shutdown();
         return false;
       }
