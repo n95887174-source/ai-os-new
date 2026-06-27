@@ -20,6 +20,67 @@ import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import { rootLogger } from '../logger-service';
 const LOGGER = rootLogger.child('DebateEngine');
 
+interface SnapshotBridgeContext {
+  participants: LegacyDebateParticipant[];
+  strategy: import('../../contracts/debate-types').DebateSessionStrategy;
+  maxRounds: number;
+  config: LegacyDebateConfig;
+  timeline?: TimelineEntry[];
+}
+
+function timelineToArguments(
+  timeline: TimelineEntry[],
+  participants: LegacyDebateParticipant[],
+  defaultConfidence = 0.7,
+): LegacyDebateArgument[] {
+  const nameById = new Map(participants.map((p) => [p.id, p.name]));
+  return timeline
+    .filter((e) => e.type === 'agent:responded')
+    .map((e, idx) => {
+      const payload = e.payload as { agentId?: string; content?: string; round?: number };
+      const agentId = payload.agentId ?? 'unknown';
+      return {
+        id: e.id || `arg-${idx}`,
+        agentId,
+        agentName: nameById.get(agentId) || agentId,
+        content: payload.content ?? '',
+        confidence: defaultConfidence,
+        timestamp: e.timestamp,
+        round: payload.round ?? 1,
+        position: 'neutral' as const,
+        source: 'llm' as const,
+      };
+    });
+}
+
+function snapshotToSession(
+  snapshot: DebateSessionSnapshot,
+  ctx: SnapshotBridgeContext,
+): LegacyDebateSession {
+  const participants = Array.isArray(ctx.participants) ? ctx.participants : [];
+  const args = ctx.timeline ? timelineToArguments(ctx.timeline, participants) : [];
+  const round = Math.max(1, snapshot.round);
+  const socraticQuestioner = ctx.strategy === 'socratic' && participants.length > 1
+    ? (round - 1) % participants.length
+    : 0;
+  return {
+    id: snapshot.id,
+    topic: snapshot.topic,
+    status: snapshot.phase,
+    strategy: ctx.strategy,
+    maxRounds: ctx.maxRounds,
+    currentRound: round,
+    participants,
+    arguments: args,
+    convergenceScore: 0,
+    openingStatements: args.filter((a) => a.round === 0),
+    config: ctx.config,
+    socraticQuestioner,
+    argumentTreeRoundMap: {},
+    createdAt: snapshot.startedAt,
+  };
+}
+
 function estimateConfidence(content: string): number {
   const certaintyMarkers = /\b(definitely|certainly|undoubtedly|absolutely|clearly|obviously|always|never|must|without doubt|unquestionably|undeniably|in fact|indeed)\b/gi;
   const hedgingMarkers = /\b(perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i assume|i suppose|it seems|it appears|maybe)\b/gi;
@@ -47,12 +108,13 @@ interface AdapterLike {
 import { DebateBudget } from './debate-budget';
 import { DebateMemory } from './debate-memory';
 import { DebateSessionContext } from './debate-session-context';
+import type {
+  DebateSession as LegacyDebateSession,
+  DebateParticipant as LegacyDebateParticipant,
+  DebateArgument as LegacyDebateArgument,
+  DebateConfig as LegacyDebateConfig,
+} from '../../contracts/debate-types';
 import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
-import {
-  snapshotToSession,
-  type SnapshotBridgeContext,
-} from './debate-bridge';
-import type { DebateSession } from '../../contracts/debate-types';
 import { DebateSession as DebateSessionInstance } from './debate-session';
 import type { DebateStore, DebateVerdictRecord } from '../../contracts/storage/debate-store';
 import { DebateSessionRecordSchema, DebateVerdictRecordSchema } from '../../types/schema-types';
@@ -1042,7 +1104,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
   exportLegacySession(
     sessionId: string,
     ctx: Omit<SnapshotBridgeContext, 'timeline'>,
-  ): DebateSession | null {
+  ): LegacyDebateSession | null {
     const snapshot = this.getSession(sessionId);
     if (!snapshot) return null;
     const timeline = this.getTimeline(sessionId);

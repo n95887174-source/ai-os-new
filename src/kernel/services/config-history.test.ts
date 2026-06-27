@@ -1,8 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ConfigHistoryService } from './config-history';
 import { CONFIG } from './config-registry';
 
 describe('ConfigHistoryService', () => {
+  beforeEach(() => {
+    localStorage.removeItem('config_history_v1');
+  });
   it('should seed initial version and register new commits', () => {
     const service = new ConfigHistoryService();
     const history = service.getHistory();
@@ -28,7 +31,7 @@ describe('ConfigHistoryService', () => {
     const modifiedConfig = JSON.parse(JSON.stringify(CONFIG));
     modifiedConfig.llm.retry.maxRetries = 99;
 
-    const ver = service.commit(modifiedConfig, 'Bob', 'Bump max retries up');
+    service.commit(modifiedConfig, 'Bob', 'Bump max retries up');
 
     // Mutate live config by mimicking the commit
     CONFIG.llm.retry.maxRetries = 99;

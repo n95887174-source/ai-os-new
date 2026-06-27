@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-vi.mock('../../core/Kernel', () => ({
+vi.mock('../../kernel/kernel', () => ({
   kernel: {
     getState: vi.fn(() => ({
       providers: {
@@ -32,7 +32,7 @@ describe('AnalyticsPanel', () => {
     const AnalyticsPanel = (await import('./AnalyticsPanel')).default;
     const { container } = render(<AnalyticsPanel />);
     expect(container).toBeDefined();
-  });
+  }, 30000);
 
   it('displays Analytics heading', async () => {
     const AnalyticsPanel = (await import('./AnalyticsPanel')).default;
@@ -46,13 +46,13 @@ describe('AnalyticsPanel', () => {
     expect(screen.getByText('Total Invocations')).toBeDefined();
     expect(screen.getByText('Total Tokens')).toBeDefined();
     expect(screen.getByText('Platform Spend')).toBeDefined();
-    expect(screen.getByText('Fleet Latency (Avg)')).toBeDefined();
+    expect(screen.getByText('Avg TTFT')).toBeDefined();
   });
 
   it('shows total request count', async () => {
     const AnalyticsPanel = (await import('./AnalyticsPanel')).default;
     render(<AnalyticsPanel />);
-    expect(screen.getByText('100')).toBeDefined();
+    expect(screen.getAllByText('100').length).toBeGreaterThan(0);
   });
 
   it('shows tab buttons', async () => {

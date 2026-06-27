@@ -12,7 +12,6 @@ import type { StorageLayer, DebateStore } from '../contracts/storage/storage-lay
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import type { WorkspaceService } from '../services/workspace-service';
-import type { FeatureFlagService } from '../services/feature-flag-service';
 import type { RoleService } from '../services/role-service';
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { MemoryService } from '../services/memory-engine';
@@ -60,7 +59,6 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     get keyService() { return _container.get<KeyService>('keyService'); },
     get adapterRegistry() { return _container.get<ProviderAdapterRegistry>('providerAdapterRegistry'); },
     get workspaceService() { return _container.get<WorkspaceService>('workspaceService'); },
-    getFeatureFlagService: () => _container.get<FeatureFlagService>('featureFlagService'),
     queryEngine: new DebateQueryEngine(),
     debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
     get sessionManager() { return _container.get<import('../services/session-manager-service').SessionManagerService>('sessionManagerService'); },

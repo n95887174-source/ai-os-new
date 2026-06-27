@@ -30,12 +30,6 @@ function db(): DatabaseService {
   return _db;
 }
 
-const SERVICE_IDS = new Set(['__debate_active_session__', '__debate_history_list__']);
-
-function isServiceId(id: string): boolean {
-  return SERVICE_IDS.has(id) || id.startsWith('__debate_');
-}
-
 async function getLinkedIds(id: string): Promise<string[]> {
   try {
     const links = await sm().getLinked(id);
@@ -153,7 +147,6 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
   listSessions: async (filters) => {
     try {
       let records = await db().debateSessions.orderBy('updatedAt').reverse().toArray() as DebateRecord[];
-      records = records.filter(r => !isServiceId(r.id));
       if (filters?.status) records = records.filter(r => r.phase === filters.status);
       if (filters?.folder) records = records.filter(r => r.folder === filters.folder);
       if (filters?.search) { const q = filters.search.toLowerCase(); records = records.filter(r => r.topic.toLowerCase().includes(q)); }
@@ -215,7 +208,7 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
   refresh: async () => {
     try {
       const records = await db().debateSessions.orderBy('updatedAt').reverse().toArray() as DebateRecord[];
-      const metas = await Promise.all(records.filter(r => !isServiceId(r.id)).map(async r => toMeta(r, await getLinkedIds(r.id))));
+      const metas = await Promise.all(records.map(async r => toMeta(r, await getLinkedIds(r.id))));
       set({ sessions: metas, isLoaded: true });
     } catch {
       set({ sessions: [], isLoaded: true });

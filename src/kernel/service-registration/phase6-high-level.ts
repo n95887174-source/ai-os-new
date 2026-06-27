@@ -109,6 +109,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
       const logger = get<LoggerService>('logger');
       logger.info('EventSourcing', `Replay: ${event.event} #${event.sequence}`);
     },
+    eventLogStore: get<DataAccessLayer>('dal').eventLog,
     kv: get<DataAccessLayer>('dal').kv,
   }));
 

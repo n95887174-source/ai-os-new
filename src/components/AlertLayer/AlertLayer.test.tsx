@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 const mockOn = vi.fn(() => vi.fn());
 const mockGetAlerts = vi.fn(() => []);
@@ -8,6 +8,7 @@ vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: {
     emit: vi.fn(),
     on: (...args: unknown[]) => mockOn(...args),
+    onSafe: (...args: unknown[]) => mockOn(...args),
     off: vi.fn(),
     subscribeAll: vi.fn(() => vi.fn()),
   },
@@ -19,6 +20,7 @@ vi.mock('../../kernel/events/event-bus', () => ({
     KEY_REPUTATION_DOWN: 'key:reputation:threshold:crossed',
     KEY_STATE_CHANGED: 'key:state:changed',
     KEY_UPDATED: 'key:updated',
+    METRICS_ALERT: 'observability:metrics:alert',
   },
 }));
 

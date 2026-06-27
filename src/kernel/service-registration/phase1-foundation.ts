@@ -47,12 +47,13 @@ export const registerPhase1: Phase = (helpers, ctx) => {
 
   register('keyStateStore', new KeyStateStore(get<IEventBus>('eventBus'), get<IDatabaseService>('database')));
 
-  register('providerTracker', new ProviderTracker({
+  const tracker = new ProviderTracker({
     costCalculator: get<PricingService>('pricingService'),
     keyStateStore: get<KeyStateStore>('keyStateStore'),
     database: get<IDatabaseService>('database'),
-    eventBus: get<IEventBus>('eventBus'),
-  }));
+  });
+  tracker.start(get<IEventBus>('eventBus'));
+  register('providerTracker', tracker);
 
   register('kernel', new SystemKernel({
     database: get<IDatabaseService>('database'),
@@ -87,8 +88,8 @@ export const registerPhase1: Phase = (helpers, ctx) => {
   const keyStore = storageLayer?.keys;
   const configStore = storageLayer?.config;
 
-  if (import.meta.env.DEV) {
-    LOGGER.info('Phase1Foundation', 'keyStore implementation type', {
+  if (typeof console !== 'undefined' && import.meta.env.DEV) {
+    console.log('[KEY_FLOW] keyStore implementation type:', {
       storageLayerExists: !!storageLayer,
       keyStoreExists: !!keyStore,
       isStub: !storageLayer,

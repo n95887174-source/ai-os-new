@@ -1,5 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
+
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+});
 
 vi.mock('@xyflow/react', () => ({
   ReactFlow: ({ children }: { children: React.ReactNode }) => <div data-testid="react-flow">{children}</div>,
@@ -24,6 +40,7 @@ vi.mock('../../stores/useKeyStore', () => ({
 vi.mock('../../kernel/instances', () => ({
   toolService: { getTools: vi.fn(() => []) },
   orchestrator: { mount: vi.fn() },
+  settingsService: { getSettings: vi.fn(() => ({ language: 'en' })), subscribe: vi.fn(() => vi.fn()) },
 }));
 
 vi.mock('../../kernel/events/event-bus', () => ({

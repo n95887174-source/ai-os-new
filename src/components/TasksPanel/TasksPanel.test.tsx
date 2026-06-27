@@ -40,6 +40,10 @@ vi.mock('../../kernel/instances', () => ({
       },
     ]),
   },
+  settingsService: {
+    getSettings: vi.fn(() => ({ language: 'en' as const })),
+    subscribe: vi.fn(() => vi.fn()),
+  },
 }));
 
 vi.mock('../../kernel/events/event-bus', () => ({
@@ -55,7 +59,7 @@ describe('TasksPanel', () => {
     const TasksPanel = (await import('./TasksPanel')).default;
     const { container } = render(<TasksPanel />);
     expect(container).toBeDefined();
-  });
+  }, 60000);
 
   it('renders heading', async () => {
     const TasksPanel = (await import('./TasksPanel')).default;

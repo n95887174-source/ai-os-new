@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import KnowledgePanel from './KnowledgePanel';
 
 const mockMemories = [
   { id: 'm1', content: 'AI is transforming the world of software engineering.', metadata: { source: 'conversation', type: 'context', timestamp: Date.now(), importance: 0.9 } },
@@ -25,32 +26,27 @@ describe('KnowledgePanel', () => {
   });
 
   it('renders Semantic Knowledge Graph heading', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     expect(await screen.findByText('Semantic Knowledge Graph')).toBeDefined();
   });
 
   it('renders memory node type buttons', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     expect(await screen.findByText('All (3)')).toBeDefined();
   });
 
   it('shows graph topology section', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     expect(await screen.findByText('GRAPH TOPOLOGY')).toBeDefined();
   });
 
   it('shows entity count in topology', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     expect(await screen.findByText(/Mapped/)).toBeDefined();
-    expect(screen.getByText(/cognitive entities/)).toBeDefined();
+    expect(screen.getByText(/cognitive entities with/)).toBeDefined();
   });
 
   it('renders search input', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     await screen.findByText('Semantic Knowledge Graph');
     const search = document.querySelector('input[placeholder="Search nodes..."]');
@@ -58,7 +54,6 @@ describe('KnowledgePanel', () => {
   });
 
   it('filters by type button click', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     await screen.findByText('All (3)');
     const contextBtn = screen.getByText('context (1)');
@@ -67,7 +62,6 @@ describe('KnowledgePanel', () => {
   });
 
   it('shows legend items', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     await screen.findByText('Semantic Knowledge Graph');
     expect(screen.getByText('Context')).toBeDefined();
@@ -80,13 +74,11 @@ describe('KnowledgePanel', () => {
   it('shows empty state when no memories match filter', async () => {
     const { memoryService } = await import('../../kernel/instances');
     vi.mocked(memoryService.getMemories).mockReturnValueOnce([]);
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     expect(await screen.findByText('No memory nodes yet', {}, { timeout: 5000 })).toBeDefined();
   });
 
   it('renders connection density bar', async () => {
-    const KnowledgePanel = (await import('./KnowledgePanel')).default;
     render(<KnowledgePanel />);
     expect(await screen.findByText('Connection Density')).toBeDefined();
   });

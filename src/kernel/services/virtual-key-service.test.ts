@@ -11,6 +11,7 @@ function makeDeps() {
     eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()) },
     keyService: {
       getKeys: vi.fn(() => [{ id: 'key-1', provider: 'openai' }]),
+      getKey: vi.fn((id: string) => [{ id: 'key-1', provider: 'openai' }].find(k => k.id === id)),
     },
   };
 }

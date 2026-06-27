@@ -4,7 +4,7 @@ import {
   Settings, Sliders, Info, AlertTriangle,
   MessageSquare, Cpu, Bell, BookText, Lock,
 } from 'lucide-react';
-import { keyService, featureFlagService } from '../../kernel/instances';
+import { keyService } from '../../kernel/instances';
 import { securityService } from '../../kernel/security';
 import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
@@ -56,7 +56,7 @@ const SettingsPanel: React.FC = () => {
   const [secretsBackends, setSecretsBackends] = useState<BackendStatus[]>([]);
   const [showSecretsDetail, setShowSecretsDetail] = useState(false);
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
-  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(() => featureFlagService.getAll());
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(() => JSON.parse(JSON.stringify(CONFIG.featureFlags)));
 
   const isMountedRef = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -69,8 +69,8 @@ const SettingsPanel: React.FC = () => {
       if (isMountedRef.current) setSettings(newSettings);
     });
 
-    const unsubFlags = featureFlagService.onChange(() => {
-      if (isMountedRef.current) setFeatureFlags(featureFlagService.getAll());
+    const unsubFlags = eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
+      if (isMountedRef.current) setFeatureFlags(JSON.parse(JSON.stringify(CONFIG.featureFlags)));
     });
 
     setIsVaultActive(!securityService.isLocked());

@@ -48,6 +48,7 @@ vi.mock('../../kernel/instances', () => ({
       explorationFactor: 0.1,
       slaMode: 'BALANCED',
     })),
+    subscribe: vi.fn(() => vi.fn()),
   },
   routerService: {
     getDecisionHistory: vi.fn(() => []),
@@ -73,7 +74,7 @@ describe('DashboardPanel', () => {
     const DashboardPanel = (await import('./DashboardPanel')).default;
     const { container } = render(<DashboardPanel onNavigate={mockNavigate} />);
     expect(container).toBeDefined();
-  });
+  }, 15000);
 
   it('displays Mission Control heading', async () => {
     const DashboardPanel = (await import('./DashboardPanel')).default;

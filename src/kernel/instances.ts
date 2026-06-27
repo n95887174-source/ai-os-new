@@ -36,7 +36,6 @@ import type { CompromiseWebhookService } from './services/compromise-webhook-ser
 import type { SkillService } from './services/skill-service';
 import type { WorkspaceService } from './services/workspace-service';
 import type { KeyStateStore } from './services/key-state-store';
-import type { FeatureFlagService } from './services/feature-flag-service';
 import type { ProbeService } from './services/probe-service';
 import type { SessionAffinityStore } from './services/session-affinity-store';
 import type { IAdapterRegistry } from './contracts/provider-adapter';
@@ -100,7 +99,6 @@ export const chatService = lazyService<ChatService>('chatService');
 export const adapterRegistry = lazyService<IAdapterRegistry>('providerAdapterRegistry');
 export const autoDebateService = lazyService<AutoDebateService>('autoDebateService');
 export const workspaceService = lazyService<WorkspaceService>('workspaceService');
-export const featureFlagService = lazyService<FeatureFlagService>('featureFlagService');
 export const keyStateStore = lazyService<KeyStateStore>('keyStateStore');
 export const probeService = lazyService<ProbeService>('probeService');
 export const sessionAffinityStore = lazyService<SessionAffinityStore>('sessionAffinityStore');
@@ -262,6 +260,4 @@ export const eloService = lazyService<EloRatingService>('eloService');
 import type { ChatSummarizerService as ChatSummarizerServiceType } from './services/chat-summarizer-service';
 export const chatSummarizerService = lazyService<ChatSummarizerServiceType>('chatSummarizerService');
 
-// ── Rewind Service ──────────────────────────────────────────────
-import type { RewindService as RewindServiceType } from './services/rewind-service';
-export const rewindService = lazyService<RewindServiceType>('rewindService');
+

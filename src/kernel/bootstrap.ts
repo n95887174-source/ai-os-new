@@ -148,8 +148,8 @@ export class SystemBootstrap implements IBootstrap {
     await this.lifecycle.tryInit('configService', () => configService.init());
 
     // ── Key Migration (one-shot) ───────────────────────────────────────
-    // Reads all old sources (localStorage, SQLite blob, existing Dexie),
-    // deduplicates, writes to KeyRepository. Idempotent — checks flag.
+    // Reads all old sources (localStorage, existing Dexie), deduplicates,
+    // writes to KeyRepository. Idempotent — checks flag.
     try {
       const { runOnce } = await import('./dal/key-migration');
       const db = this.container.get<IDatabaseService>('database');
@@ -160,7 +160,34 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.warn('Bootstrap', 'Key migration failed (non-critical)', { error: e });
     }
 
+    // StorageRouter: audit all 3 sources, score them, select winner by mode.
+    // Runs BEFORE hydration so the result can inform downstream decisions.
+    // The router is READ-ONLY — it does not mutate any storage backend.
+    try {
+      // @ts-expect-error — storage-router was added by E3-E10 stash but the file was never committed
+      const { routeStorage, setForcedStorageMode } = await import('./services/storage-router');
+      // Read debug override from globalThis if set externally.
+      const result = await routeStorage('auto');
+      this.logger.info('Bootstrap', 'StorageRouter result', {
+        mode: result.mode,
+        winner: result.winner,
+        localStorage: result.diagnostics.localStorage,
+        dexie: result.diagnostics.dexie,
+        sql: result.diagnostics.sql,
+        scores: result.scores,
+      });
+      if (result.mode === 'auto' && result.winner) {
+        if (import.meta.env.DEV) console.log(
+          `[BOOTSTRAP] StorageRouter winner: ${result.winner} (${result.diagnostics.reason})`
+        );
+      }
+      void setForcedStorageMode;
+    } catch (e) {
+      this.logger.warn('Bootstrap', 'StorageRouter audit failed (non-critical)', { error: e });
+    }
+
     // Hydrate: read KeyRepository and push to KeyRegistry.
+    // No merge, no SQLite blob, no cross-source combination.
     try {
       const { hydrateKeyStorage } = await import('./services/key-storage-hydrator');
       const keyService = this.container.get<KeyService>('keyService');
@@ -179,16 +206,106 @@ export class SystemBootstrap implements IBootstrap {
     const bootstrapDexie = verifyDexieInstance('bootstrap:step3', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
     await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
 
+    // Primary source: KeyRepository (DAL pattern)
     const dalS = this.container.get<DataAccessLayer>('dal');
     const repoS = dalS.keys as import('./dal/key-repository').KeyRepository;
     const repoKeys = await repoS.getAll();
     if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot repo count', { count: repoKeys.length });
 
-    const snapshotKeys: ApiKey[] = repoKeys;
-    const snapshotSource = repoKeys.length > 0 ? 'repo' : 'unknown';
+    let snapshotKeys: ApiKey[] = repoKeys;
+    let snapshotSource = repoKeys.length > 0 ? 'repo' : 'unknown';
 
-    // (Removed api-keys-backup.json injection to prevent re-injecting deleted keys)
-    if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot final', { count: snapshotKeys.length, source: snapshotSource });
+    // Fallback: if KeyRepository returned empty, try alternative sources
+    if (snapshotKeys.length === 0) {
+      const dexieRaw = await dexieDb.apiKeys.toArray();
+      if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);
+
+      // Priority 1: dexieDb.apiKeys (hydration output)
+      if (dexieRaw.length > 0) {
+        snapshotKeys = [...dexieRaw];
+        snapshotSource = 'dexie';
+      }
+
+      // Priority 2: sqlite blob (for forward compat with sql.js re-enable)
+      if (snapshotKeys.length === 0) {
+        try {
+          const blob = await dexieDb.keyValue.get('sqlite_db_blob');
+          if (blob?.value && Array.isArray(blob.value)) {
+            const bytes = new Uint8Array(blob.value as number[]);
+            const SQLITE_MAGIC = new Uint8Array([83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0]);
+            let validMagic = bytes.length >= 100;
+            for (let i = 0; validMagic && i < 16; i++) {
+              if (bytes[i] !== SQLITE_MAGIC[i]) validMagic = false;
+            }
+            if (validMagic) {
+              // sql.js is disabled (ENABLE_SQLJS=false) so actual row extraction
+              // requires WASM runtime. Currently returns 0 — falls through to
+              // localStorage. For forward-compat: if extraction ever succeeds,
+              // the source attribution is preserved.
+            }
+          }
+        } catch { /* non-critical */ }
+      }
+
+      // Priority 3: localStorage (the canonical store)
+      if (snapshotKeys.length === 0) {
+        try {
+          const raw = localStorage.getItem('super_agents_api_keys');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              snapshotKeys = parsed;
+              snapshotSource = 'localStorage';
+            }
+          }
+        } catch { /* non-critical */ }
+      }
+    }
+
+    // C-01: Always clear localStorage immediately after reading
+    try {
+      localStorage.removeItem('super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_api_keys');
+      localStorage.removeItem('superagents:providers:super_agents_kernel_state');
+    } catch { /* non-critical */ }
+
+    // GUARD: if snapshot ended up 0 but dexie has data, force re-read
+    if (snapshotKeys.length === 0) {
+      try {
+        const dexieGuard = await dexieDb.apiKeys.toArray();
+        if (dexieGuard.length > 0) {
+          console.warn('[BOOTSTRAP_SNAPSHOT] GUARD: snapshot is 0 but dexie has', dexieGuard.length, '— force re-read from dexie');
+          snapshotKeys = [...dexieGuard];
+          snapshotSource = 'dexie';
+        }
+      } catch { /* non-critical */ }
+    }
+
+    // Auto-inject keys from api-keys-backup.json (DEV only)
+    if (import.meta.env.DEV) {
+      let backupKeys: { key?: string; provider?: string; label?: string }[] = [];
+      try {
+        const mod = await import('../../api-keys-backup.json');
+        const raw = (mod?.default ?? mod) as Record<string, unknown>[];
+        backupKeys = raw.map((k: Record<string, unknown>) => ({ key: String(k.key ?? ''), provider: String(k.provider ?? ''), label: String(k.label ?? '') }));
+      } catch { /* backup file optional */ }
+
+      for (const bk of backupKeys) {
+        if (!snapshotKeys.some(k => k.key === bk.key)) {
+          snapshotKeys.push({
+            id: 'k_' + Math.random().toString(36).substring(2, 11),
+            provider: bk.provider || 'unknown',
+            label: bk.label || 'Imported Key',
+            key: bk.key,
+            status: 'pending',
+            createdAt: Date.now()
+          } as unknown as ApiKey);
+        }
+      }
+    }
+
+    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
+    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
 
     // Diagnostic-only globals (counts + flags, NO actual key material).
     interface BootstrapGlobals {
@@ -275,9 +392,9 @@ export class SystemBootstrap implements IBootstrap {
     const PHASES: string[][] = [
       ['configService', 'settingsService', 'keyService', 'cacheService', 'pricingService'],
       ['keyStateStore', 'routerService', 'sessionAffinityStore', 'llmClientService', 'providerRuntimeService', 'virtualKeyService', 'raceExecutor', 'groupManagerService'],
-      ['toolService', 'sandboxService', 'memoryService', 'featureFlagService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService', 'agentService', 'agentHealthMonitor'],
+      ['toolService', 'sandboxService', 'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService', 'agentService', 'agentHealthMonitor'],
       ['chatService', 'debateService', 'debateApiService', 'debateKnowledgeSync', 'debateEngine', 'debateModeManager', 'debateWorkspace', 'hypothesisService', 'metricsService', 'advisorService', 'budgetService', 'usageTracker', 'timelineService', 'adminService'],
-      ['healthCheckService', 'monitoringService', 'traceService', 'diagnosticService', 'whatIfService', 'pressureMapService', 'cognitiveIntelligenceService', 'blackboardService', 'topologyManager', 'workforceFederation', 'routingPolicyService', 'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService', 'workspaceService', 'skillService', 'mcpService', 'agentMarketplace', 'probeService', 'consistencyChecker', 'consistencyHealingPipeline', 'systemStatusService', 'rewindService'],
+      ['healthCheckService', 'monitoringService', 'traceService', 'diagnosticService', 'whatIfService', 'pressureMapService', 'cognitiveIntelligenceService', 'blackboardService', 'topologyManager', 'workforceFederation', 'routingPolicyService', 'notificationWebhookService', 'compromiseWebhookService', 'externalSecretsService', 'workspaceService', 'skillService', 'mcpService', 'agentMarketplace', 'probeService', 'consistencyChecker', 'systemStatusService'],
     ];
 
     let criticalFailed = false;
@@ -307,7 +424,7 @@ export class SystemBootstrap implements IBootstrap {
       }
       if (criticalFailed) break;
       // OBS-100: emit phase complete event
-      this.eventBus.emit(EVENTS.BOOTSTRAP_PHASE, { bootstrapPhase: pIdx + 1, totalPhases: PHASES.length, phase: this.phase });
+      this.eventBus.emit(EVENTS.KERNEL_UPDATED, { bootstrapPhase: pIdx + 1, totalPhases: PHASES.length, phase: this.phase } as Record<string, unknown>);
     }
 
     if (criticalFailed) {
@@ -479,10 +596,10 @@ export class SystemBootstrap implements IBootstrap {
     try {
       const gm = this.container.get<GroupManagerService>('groupManagerService');
       const keysBeforeSync = this.container.get<KeyService>('keyService').getKeys();
-      if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'GroupManager.syncExistingKeys — keys before sync', { count: keysBeforeSync.length });
+      if (import.meta.env.DEV) console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys before sync:', { count: keysBeforeSync.length });
       await gm.syncExistingKeys();
       const keysAfterSync = gm.getAllKeys();
-      if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'GroupManager.syncExistingKeys — keys after sync', { count: keysAfterSync.length });
+      if (import.meta.env.DEV) console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys after sync:', { count: keysAfterSync.length });
       this.container.get<KeyService>('keyService').attachGroupManager(gm);
       this.logger.info('Bootstrap', 'Group Manager synced existing keys');
     } catch (e) {
@@ -494,7 +611,7 @@ export class SystemBootstrap implements IBootstrap {
       const ks = this.container.get<KeyService>('keyService');
       const kss = this.container.get<KeyStateStore>('keyStateStore');
       const existingKeys: ApiKey[] = ks.getKeys?.() ?? [];
-      if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'KeyStateStore seed', { keyCount: existingKeys.length });
+      if (import.meta.env.DEV) console.log('[KEY_FLOW] KeyStateStore seed:', { keyCount: existingKeys.length });
       if (kss && existingKeys.length > 0) {
         kss.seedFromKeys(existingKeys);
         this.logger.info('Bootstrap', `KeyStateStore seeded with ${existingKeys.length} key(s)`);

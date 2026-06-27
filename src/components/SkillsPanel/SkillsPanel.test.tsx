@@ -19,6 +19,10 @@ vi.mock('../../kernel/instances', () => ({
     toggleActive: vi.fn(),
     installSkill: vi.fn(),
   },
+  settingsService: {
+    getSettings: vi.fn(() => ({ language: 'en' })),
+    subscribe: vi.fn(() => vi.fn()),
+  },
 }));
 
 vi.mock('../../kernel/events/event-bus', () => ({

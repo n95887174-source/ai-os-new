@@ -52,10 +52,10 @@ describe('EventsTimeline', () => {
     expect(screen.getByPlaceholderText('Search events...')).toBeDefined();
   });
 
-  it('renders save and clear buttons', async () => {
+  it('renders live and clear buttons', async () => {
     const EventsTimeline = (await import('./EventsTimeline')).default;
     render(<EventsTimeline />);
-    expect(screen.getByText('Save')).toBeDefined();
+    expect(screen.getByText('LIVE')).toBeDefined();
     expect(screen.getByText('Clear')).toBeDefined();
   });
 

@@ -7,7 +7,13 @@ vi.mock('../../kernel/events/event-bus', () => ({
     on: vi.fn(() => vi.fn()),
     off: vi.fn(),
   },
-  EVENTS: { NAVIGATE: 'navigate' },
+  EVENTS: {
+    NAVIGATE: 'navigate',
+    KEY_UPDATED: 'key:updated',
+    KEY_STATE_CHANGED: 'key:state:changed',
+    SETTINGS_UPDATED: 'settings:updated',
+    ROUTER_SIGNAL: 'router:signal',
+  },
 }));
 
 vi.mock('../../kernel/instances', () => ({
@@ -17,9 +23,21 @@ vi.mock('../../kernel/instances', () => ({
       fallbackChains: {},
       modelDowngradeChains: {},
     })),
+    getABTest: vi.fn(() => null),
+    setFallbackChain: vi.fn(),
+    setDowngradeChain: vi.fn(),
+    setActiveProfile: vi.fn(),
+    updateActiveProfileWeights: vi.fn(),
+    startABTest: vi.fn(),
+    stopABTest: vi.fn(),
   },
   keyService: {
     getKeys: vi.fn(() => []),
+  },
+  settingsService: {
+    getSettings: vi.fn(() => ({ slaMode: 'BALANCED' })),
+    updateSettings: vi.fn(),
+    subscribe: vi.fn(() => () => {}),
   },
 }));
 
@@ -50,7 +68,7 @@ describe('RoutingIntelligence', () => {
     const RoutingIntelligence = (await import('./RoutingIntelligence')).default;
     render(<RoutingIntelligence />);
     fireEvent.click(screen.getByText('Decision Tree'));
-    expect(await screen.findByText(/No decisions yet/)).toBeDefined();
+    expect(await screen.findByText(/No routing decisions yet/)).toBeDefined();
   });
 
   it('switches to advanced control tab', async () => {

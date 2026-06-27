@@ -7,7 +7,7 @@ vi.mock('../../kernel/events/event-bus', () => ({
 }));
 
 vi.mock('../../kernel/services/database-service', () => ({
-  dexieDb: {
+  db: {
     connectors: {
       count: vi.fn().mockResolvedValue(0),
       toArray: vi.fn().mockResolvedValue([]),
@@ -95,12 +95,11 @@ describe('ConnectorsPanel', () => {
     expect(connectBtns.length).toBeGreaterThan(0);
   });
 
-  it('emits notification on connect', async () => {
+  it('shows Authenticated status after connect', async () => {
     render(<ConnectorsPanel />);
-    const { eventBus } = await import('../../kernel/events/event-bus');
     const connectBtn = (await screen.findAllByText('Connect'))[0];
     fireEvent.click(connectBtn);
-    expect(eventBus.emit).toHaveBeenCalledWith('system:notification', expect.objectContaining({ type: 'success' }));
+    expect(await screen.findByText('Authenticated')).toBeDefined();
   });
 
   it('shows Revoke button when connected', async () => {

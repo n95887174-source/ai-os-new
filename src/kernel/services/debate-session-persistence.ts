@@ -1,14 +1,8 @@
 import type { DebateSession } from '../contracts/debate-types';
-import type { DebateServiceDeps } from '../contracts/debate-types';
 import type { DebateStore, DebateSessionRecord } from '../contracts/storage/debate-store';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('DebateSessionPersistence');
-
-const ACTIVE_SESSION_ID = '__debate_active_session__';
-const HISTORY_LIST_ID = '__debate_history_list__';
-const LS_SESSION_KEY = 'super_agents_debate_session';
-const LS_HISTORY_KEY = 'super_agents_debate_history';
 
 const STRATEGY_MAP: Record<string, import('../contracts/debate-runtime').TopologyType> = {
   round_robin: 'roundtable',
@@ -58,7 +52,6 @@ function sessionToRecord(session: DebateSession): DebateSessionRecord {
     startedAt: session.createdAt ?? Date.now(),
     updatedAt: Date.now(),
     createdAt: session.createdAt ?? Date.now(),
-    version: (session as { version?: number }).version ?? 1,
   };
 }
 
@@ -113,8 +106,12 @@ export async function loadActiveSession(
   debateStore: DebateStore,
 ): Promise<DebateSession | null> {
   try {
-    const record = await debateStore.getSnapshot(ACTIVE_SESSION_ID);
-    if (!record) return null;
+    let records = await debateStore.listSessions({ status: 'active', limit: 1 });
+    if (records.length === 0) {
+      records = await debateStore.listSessions({ status: 'paused', limit: 1 });
+    }
+    if (records.length === 0) return null;
+    const record = records[0];
     const session = recordToSession(record);
     const zombieThreshold = 5 * 60 * 1000;
     if (session.status === 'active') {
@@ -141,12 +138,9 @@ export async function persistActiveSession(
   debateStore: DebateStore,
   session: DebateSession | null,
 ): Promise<void> {
+  if (!session) return;
   try {
-    if (session) {
-      await debateStore.saveSnapshot(sessionToRecord(session));
-    } else {
-      await debateStore.deleteSession(ACTIVE_SESSION_ID);
-    }
+    await debateStore.saveSnapshot(sessionToRecord(session));
   } catch (e) {
     LOGGER.warn('DebateSessionPersistence', 'Failed to persist active session', { error: e instanceof Error ? e.message : String(e) });
   }
@@ -157,16 +151,8 @@ export async function loadHistoryList(
   maxHistory: number,
 ): Promise<DebateSession[]> {
   try {
-    const record = await debateStore.getSnapshot(HISTORY_LIST_ID);
-    if (!record) return [];
-    const parsed = JSON.parse(record.agentStates || '[]');
-    if (Array.isArray(parsed)) {
-      return parsed.slice(0, maxHistory).map((s: Record<string, unknown>) => ({
-        ...s,
-        participants: Array.isArray(s.participants) ? s.participants : [],
-        arguments: Array.isArray(s.arguments) ? s.arguments : [],
-      })) as DebateSession[];
-    }
+    const records = await debateStore.listSessions({ status: 'completed', limit: maxHistory });
+    return records.map(recordToSession);
   } catch (e) {
     LOGGER.warn('DebateSessionPersistence', 'Failed to load debate history', { error: e instanceof Error ? e.message : String(e) });
   }
@@ -177,92 +163,16 @@ export async function persistHistoryList(
   debateStore: DebateStore,
   sessions: DebateSession[],
 ): Promise<void> {
-  try {
-    await debateStore.saveSnapshot({
-      id: HISTORY_LIST_ID,
-      topic: 'debate_history_list',
-      topologyType: 'roundtable',
-      phase: 'completed',
-      round: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      agentStates: '[]',
-      arguments: JSON.stringify(sessions),
-      topology: '{}',
-      participants: '[]',
-      memory: '{}',
-      startedAt: Date.now(),
-      updatedAt: Date.now(),
-      createdAt: Date.now(),
-      version: 1,
-    });
-  } catch (e) {
-    LOGGER.warn('DebateSessionPersistence', 'Failed to persist debate history', { error: e instanceof Error ? e.message : String(e) });
+  for (const session of sessions) {
+    try {
+      await debateStore.saveSnapshot(sessionToRecord(session));
+    } catch (e) {
+      LOGGER.warn('DebateSessionPersistence', 'Failed to persist history session', {
+        error: e instanceof Error ? e.message : String(e),
+        sessionId: session.id,
+      });
+    }
   }
 }
 
-export async function migrateFromLegacyStorage(
-  debateStore: DebateStore,
-  storage: { getItem: (k: string) => string | null; removeItem: (k: string) => void },
-  database: DebateServiceDeps['database'],
-): Promise<void> {
-  try {
-    const activeRecord = await debateStore.getSnapshot(ACTIVE_SESSION_ID);
-    const historyRecord = await debateStore.getSnapshot(HISTORY_LIST_ID);
-    const hasExistingData = activeRecord || historyRecord;
-    if (hasExistingData) {
-      storage.removeItem(LS_SESSION_KEY);
-      storage.removeItem(LS_HISTORY_KEY);
-      return;
-    }
 
-    let migratedSession = false;
-    const lsSession = storage.getItem(LS_SESSION_KEY);
-    if (lsSession) {
-      const parsed = JSON.parse(lsSession) as DebateSession;
-      if (parsed) {
-        await debateStore.saveSnapshot(sessionToRecord(parsed));
-        migratedSession = true;
-      }
-      storage.removeItem(LS_SESSION_KEY);
-    }
-
-    const dbSession = await database.getKv<DebateSession>('debate_session');
-    if (dbSession && !migratedSession) {
-      await debateStore.saveSnapshot(sessionToRecord(dbSession));
-    }
-    await database.keyValue.delete('debate_session');
-
-    const lsHistory = storage.getItem(LS_HISTORY_KEY);
-    if (lsHistory) {
-      const parsed = JSON.parse(lsHistory);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        await debateStore.saveSnapshot({
-          id: HISTORY_LIST_ID,
-          topic: 'debate_history_list',
-          topologyType: 'roundtable',
-          phase: 'completed',
-          round: 0,
-          totalTokens: 0,
-          totalCost: 0,
-          agentStates: '[]',
-          arguments: lsHistory,
-          topology: '{}',
-          participants: '[]',
-          memory: '{}',
-          startedAt: Date.now(),
-          updatedAt: Date.now(),
-          createdAt: Date.now(),
-          version: 1,
-        });
-      }
-      storage.removeItem(LS_HISTORY_KEY);
-    }
-
-    if (migratedSession || lsHistory) {
-      LOGGER.info('DebateSessionPersistence', 'Migrated debate data from legacy storage to DexieDebateStore');
-    }
-  } catch (e) {
-    LOGGER.warn('DebateSessionPersistence', 'Failed to migrate legacy debate storage', { error: e instanceof Error ? e.message : String(e) });
-  }
-}

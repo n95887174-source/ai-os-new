@@ -77,10 +77,10 @@ describe('CompromiseWebhookService', () => {
     expect(ok).toBe(false);
   });
 
-  it('should route webhook requests by source', () => {
+  it('should route webhook requests by source', async () => {
     const deps = makeDeps();
     const svc = new CompromiseWebhookService(deps);
-    svc.onWebhookRequest('custom', { id: 'route-test', source: 'custom' });
+    await svc.onWebhookRequest('custom', { id: 'route-test', source: 'custom' });
     expect(deps.eventBus.emit).toHaveBeenCalled();
   });
 

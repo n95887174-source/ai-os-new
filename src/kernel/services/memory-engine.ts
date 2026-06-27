@@ -4,7 +4,6 @@ import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
 import type { MemoryEntry, MemoryStats, MemorySearchResult, MemoryPruneOptions, MemoryPruneResult } from '../types/memory-types';
 import type { IMemoryEngine, MemoryCapability } from '../contracts/memory';
-import { FEATURE_FLAGS } from '../contracts/feature-flags';
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('MemoryEngine');
 
@@ -42,10 +41,6 @@ export interface MemoryServiceDeps {
         clear: () => Promise<void>;
       };
     };
-  };
-  featureFlags: {
-    isEnabled: (flag: string) => boolean;
-    onChange: (cb: (flag: string, enabled: boolean) => void) => () => void;
   };
   executionGovernor?: {
     start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): { complete(): void; fail(e: Error): void };
@@ -221,8 +216,9 @@ export class MemoryService implements IMemoryEngine {
     );
 
     this.unsubs.push(
-      this.deps.featureFlags.onChange((flag, enabled) => {
-        if (flag === FEATURE_FLAGS.MEMORY_ENABLED && !enabled) {
+      this.deps.eventBus.on(EVENTS.SETTINGS_UPDATED, (data: unknown) => {
+        const changes = (data as { changes?: Record<string, unknown> })?.changes;
+        if (changes && 'featureFlags.memory.enabled' in changes && changes['featureFlags.memory.enabled'] === false) {
           this.memories = [];
         }
       })
@@ -249,7 +245,7 @@ export class MemoryService implements IMemoryEngine {
   }
 
   async store(entry: Omit<MemoryEntry, 'id'>) {
-    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
+    if (!CONFIG.featureFlags.memory.enabled) return;
     if (!this._passesQualityGate(entry)) return;
     const source = entry.metadata.source ?? 'unknown';
     const type = entry.metadata.type ?? 'generic';
@@ -268,7 +264,7 @@ export class MemoryService implements IMemoryEngine {
   }
 
   async upsert(entry: Omit<MemoryEntry, 'id'>) {
-    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
+    if (!CONFIG.featureFlags.memory.enabled) return;
     if (!this._passesQualityGate(entry)) return;
     const source = entry.metadata.source ?? 'unknown';
     const type = entry.metadata.type ?? 'generic';
@@ -302,7 +298,7 @@ export class MemoryService implements IMemoryEngine {
   }
 
   async storeBatch(entries: Omit<MemoryEntry, 'id'>[]) {
-    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return;
+    if (!CONFIG.featureFlags.memory.enabled) return;
     const filtered = entries.filter(e => this._passesQualityGate(e));
     if (filtered.length === 0) return;
     const newEntries = filtered.map(e => {
@@ -384,7 +380,7 @@ export class MemoryService implements IMemoryEngine {
   }
 
   async search(query: string, limit: number = 5, mode: SearchMode = 'auto'): Promise<MemorySearchResult[]> {
-    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return [];
+    if (!CONFIG.featureFlags.memory.enabled) return [];
     if (!query.trim()) return this.memories.slice(0, limit).map(e => ({ entry: e, score: 0, matchedOn: 'keyword' }));
 
     if (!this.worker) {
@@ -507,7 +503,7 @@ await this.deps.database.db.memories.where('[metadata.timestamp]').below(cutoff)
   }
 
   recall(context: string, limit = 3): MemoryEntry[] {
-    if (!this.deps.featureFlags.isEnabled(FEATURE_FLAGS.MEMORY_ENABLED)) return [];
+    if (!CONFIG.featureFlags.memory.enabled) return [];
     const keywords = context.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     if (keywords.length === 0) return this.memories.slice(0, limit);
 

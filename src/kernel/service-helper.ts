@@ -1,8 +1,14 @@
-import { runtime } from './runtime';
+import { defaultContainer } from './container';
+import type { IContainer } from './container';
 
-const container = runtime.getContainer();
+let _container: IContainer;
 const resolved = new Map<string, unknown>();
 const boundMethods = new WeakMap<object, Map<string | symbol, unknown>>();
+
+function ensureContainer(): IContainer {
+  if (!_container) _container = defaultContainer;
+  return _container;
+}
 
 export function lazyService<T extends object>(
   name: string,
@@ -13,7 +19,7 @@ export function lazyService<T extends object>(
       let instance = resolved.get(name);
       if (!instance) {
         try {
-          instance = container.get<unknown>(name);
+          instance = ensureContainer().get<unknown>(name);
           resolved.set(name, instance);
         } catch {
           // container.get threw — service not yet registered
@@ -40,5 +46,5 @@ export function lazyService<T extends object>(
 }
 
 export function getContainer() {
-  return container;
+  return ensureContainer();
 }

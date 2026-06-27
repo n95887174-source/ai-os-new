@@ -11,12 +11,16 @@ vi.mock('../../kernel/instances', () => ({
   cognitiveService: {
     getTraces: vi.fn(() => mockTraces),
   },
+  settingsService: {
+    getSettings: vi.fn(() => ({ language: 'en' })),
+    subscribe: vi.fn(() => vi.fn()),
+  },
 }));
 
 vi.mock('./CognitiveMicroscope', () => ({ default: () => <div>Microscope</div> }));
 vi.mock('./DecisionGraph', () => ({ default: () => <div>Graph</div> }));
 vi.mock('../../kernel/events/event-bus', () => ({
-  eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+  eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn(), onSafe: vi.fn(() => vi.fn()) },
 }));
 
 describe('TracesPanel', () => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Moon, Globe, Bell, Activity, HardDrive, Zap, MessageSquare, Sliders, Waves } from 'lucide-react';
-import { featureFlagService, settingsService } from '../../kernel/instances';
+import { CONFIG, setFeatureFlag } from '../../kernel/services/config-registry';
+import { settingsService } from '../../kernel/instances';
 import type { SystemSettings } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { detailsContainer, detailsSummary, sectionTitleLarge, settingSelect } from '../../styles/common';
@@ -76,8 +77,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
             <Toggle
               checked={featureFlags['memory.enabled'] ?? true}
               onChange={(v) => {
-                featureFlagService.setEnabled('memory.enabled', v);
-                setFeatureFlags(featureFlagService.getAll());
+                setFeatureFlag('memory.enabled', v);
+                setFeatureFlags(                JSON.parse(JSON.stringify(CONFIG.featureFlags)));
               }}
               accent="#10b981"
             />
@@ -86,8 +87,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
             <Toggle
               checked={featureFlags['memory.semantic'] ?? true}
               onChange={(v) => {
-                featureFlagService.setEnabled('memory.semantic', v);
-                setFeatureFlags(featureFlagService.getAll());
+                setFeatureFlag('memory.semantic', v);
+                setFeatureFlags(                JSON.parse(JSON.stringify(CONFIG.featureFlags)));
               }}
               accent="#8b5cf6"
             />
@@ -96,8 +97,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
             <Toggle
               checked={featureFlags['memory.ragOnChat'] ?? true}
               onChange={(v) => {
-                featureFlagService.setEnabled('memory.ragOnChat', v);
-                setFeatureFlags(featureFlagService.getAll());
+                setFeatureFlag('memory.ragOnChat', v);
+                setFeatureFlags(                JSON.parse(JSON.stringify(CONFIG.featureFlags)));
               }}
               accent="#f59e0b"
             />
@@ -106,8 +107,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
             <Toggle
               checked={featureFlags['memory.autoStore'] ?? true}
               onChange={(v) => {
-                featureFlagService.setEnabled('memory.autoStore', v);
-                setFeatureFlags(featureFlagService.getAll());
+                setFeatureFlag('memory.autoStore', v);
+                setFeatureFlags(                JSON.parse(JSON.stringify(CONFIG.featureFlags)));
               }}
               accent="#3b82f6"
             />
@@ -116,8 +117,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
             <Toggle
               checked={featureFlags['debate.runtimeEngine'] ?? false}
               onChange={(v) => {
-                featureFlagService.setEnabled('debate.runtimeEngine', v);
-                setFeatureFlags(featureFlagService.getAll());
+                setFeatureFlag('debate.runtimeEngine', v);
+                setFeatureFlags(                JSON.parse(JSON.stringify(CONFIG.featureFlags)));
               }}
               accent="#ec4899"
             />
@@ -126,8 +127,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
             <Toggle
               checked={featureFlags['ui.experimentalVisuals'] ?? false}
               onChange={(v) => {
-                featureFlagService.setEnabled('ui.experimentalVisuals', v);
-                setFeatureFlags(featureFlagService.getAll());
+                setFeatureFlag('ui.experimentalVisuals', v);
+                setFeatureFlags(                JSON.parse(JSON.stringify(CONFIG.featureFlags)));
               }}
               accent="#06b6d4"
             />

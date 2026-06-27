@@ -15,10 +15,14 @@ vi.mock('../../kernel/instances', () => ({
     execute: vi.fn(() => Promise.resolve({ status: 'success', data: { result: 'ok' } })),
     toggleTool: vi.fn(),
   },
+  settingsService: {
+    getSettings: vi.fn(() => ({ language: 'en' })),
+    subscribe: vi.fn(() => () => {}),
+  },
 }));
 
 vi.mock('../../kernel/events/event-bus', () => ({
-  eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+  eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn(), onSafe: vi.fn(() => vi.fn()) },
   EVENTS: { NOTIFICATION: 'notification' },
 }));
 

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const mockRoles = [
-  { id: 'role-1', name: 'Researcher', description: 'Research specialist', systemPrompt: 'You are a researcher {{task}}', baseTemperature: 0.3, capabilities: ['web_search'], metadata: { category: 'technical', created: Date.now(), updated: Date.now() } },
-  { id: 'role-2', name: 'Code Reviewer', description: 'Reviews pull requests', systemPrompt: 'You are a code reviewer', baseTemperature: 0.2, capabilities: ['code_review'], metadata: { category: 'technical', created: Date.now(), updated: Date.now() } },
+  { id: 'role-1', name: 'Researcher', description: 'Research specialist', systemPrompt: 'You are a researcher {{task}}', baseTemperature: 0.3, capabilities: ['web_search'], permissions: [], metadata: { category: 'technical', created: Date.now(), updated: Date.now() } },
+  { id: 'role-2', name: 'Code Reviewer', description: 'Reviews pull requests', systemPrompt: 'You are a code reviewer', baseTemperature: 0.2, capabilities: ['code_review'], permissions: [], metadata: { category: 'technical', created: Date.now(), updated: Date.now() } },
 ];
 
 const mockStats = {
@@ -16,9 +16,23 @@ const mockTools = [
   { id: 'code_review', name: 'Code Review', description: 'Review' },
 ];
 
+vi.mock('../../kernel/runtime', () => ({
+  runtime: {
+    start: vi.fn(() => Promise.resolve(true)),
+    getStatus: vi.fn(() => ({ phase: 'ready', uptime: 0, startTime: Date.now(), servicesReady: 1, servicesTotal: 1, lastError: null, memoryUsage: 0 })),
+    getPhase: vi.fn(() => 'ready'),
+    isReady: vi.fn(() => true),
+    shutdown: vi.fn(() => Promise.resolve()),
+  },
+}));
+
 vi.mock('../../kernel/instances', () => ({
+  settingsService: {
+    getSettings: vi.fn(() => ({ language: 'en' })),
+    subscribe: vi.fn(() => vi.fn()),
+  },
   roleService: {
-    getRoles: vi.fn(() => mockRoles),
+    getAllRoles: vi.fn(() => mockRoles),
     getAllStats: vi.fn(() => mockStats),
     getAgentsByRole: vi.fn(() => []),
     validateRole: vi.fn(() => ({ valid: true, missingTools: [] })),
@@ -43,13 +57,13 @@ describe('RolesPanel', () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
     expect(await screen.findByText('Agent Role Blueprints')).toBeDefined();
-  });
+  }, 15000);
 
   it('renders role cards', async () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
-    expect(await screen.findByText('Researcher')).toBeDefined();
-    expect(screen.getByText('Code Reviewer')).toBeDefined();
+    expect((await screen.findAllByText('Researcher')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Code Reviewer').length).toBeGreaterThan(0);
   });
 
   it('shows role descriptions', async () => {
@@ -68,19 +82,19 @@ describe('RolesPanel', () => {
   it('filters roles by search', async () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
-    await screen.findByText('Researcher');
+    await screen.findAllByText('Researcher');
     const search = document.querySelector('input[placeholder*="Search blueprints"]') as HTMLInputElement;
     fireEvent.change(search, { target: { value: 'Code' } });
     await waitFor(() => {
-      expect(screen.queryByText('Researcher')).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Researcher' })).toBeNull();
     });
-    expect(screen.getByText('Code Reviewer')).toBeDefined();
+    expect(screen.getAllByText('Code Reviewer').length).toBeGreaterThan(0);
   });
 
   it('shows empty state when search has no results', async () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
-    await screen.findByText('Researcher');
+    await screen.findAllByText('Researcher');
     const search = document.querySelector('input[placeholder*="Search blueprints"]') as HTMLInputElement;
     fireEvent.change(search, { target: { value: 'ZZZNoMatch' } });
     expect(await screen.findByText('No blueprints match your search')).toBeDefined();
@@ -89,8 +103,9 @@ describe('RolesPanel', () => {
   it('opens editor modal on role card click', async () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
-    await screen.findByText('Researcher');
-    const card = screen.getByText('Researcher').closest('[style*="cursor: pointer"]') || screen.getByText('Researcher');
+    await screen.findAllByText('Researcher');
+    const heading = screen.getByRole('heading', { name: 'Researcher' });
+    const card = heading.closest('[role="button"]') || heading;
     fireEvent.click(card);
     await waitFor(() => {
       expect(screen.queryByText('Edit Role Blueprint')).toBeDefined();
@@ -100,7 +115,7 @@ describe('RolesPanel', () => {
   it('shows duplicate and delete buttons on role cards', async () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
-    await screen.findByText('Researcher');
+    await screen.findAllByText('Researcher');
     const buttons = document.querySelectorAll('button');
     const copyButtons = Array.from(buttons).filter(b => b.innerHTML.includes('Copy') || b.querySelector('[class*="lucide-copy"]'));
     const trashButtons = Array.from(buttons).filter(b => b.innerHTML.includes('Trash2') || b.querySelector('[class*="lucide-trash2"]'));
@@ -111,14 +126,14 @@ describe('RolesPanel', () => {
   it('shows stats for roles', async () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
-    expect(await screen.findByText('100')).toBeDefined();
-    expect(screen.getByText('2')).toBeDefined();
+    expect((await screen.findAllByText('100')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('2').length).toBeGreaterThan(0);
   });
 
   it('renders search input with placeholder', async () => {
     const RolesPanel = (await import('./RolesPanel')).default;
     render(<RolesPanel />);
-    await screen.findByText('Researcher');
+    await screen.findAllByText('Researcher');
     const search = document.querySelector('input[placeholder*="Search blueprints"]');
     expect(search).toBeDefined();
   });

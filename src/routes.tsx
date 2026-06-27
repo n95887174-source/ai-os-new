@@ -30,7 +30,7 @@ const BudgetPanel = React.lazy(() => import('./components/BudgetPanel'));
 const CostAnalyticsPanel = React.lazy(() => import('./components/CostAnalyticsPanel/CostAnalyticsPanel'));
 const ProviderMarketplace = React.lazy(() => import('./components/ProviderMarketplace/ProviderMarketplace'));
 const AgentMarketplacePanel = React.lazy(() => import('./components/AgentMarketplacePanel/AgentMarketplacePanel'));
-const PressureMapPanel = React.lazy(() => import('./components/PressureMapPanel/PressureMapPanel'));
+const PressureMapPanelLazy = React.lazy(() => import('./components/PressureMapPanel/PressureMapPanel'));
 const DiagnosticPanel = React.lazy(() => import('./components/DiagnosticPanel/DiagnosticPanel'));
 const ShadowPanel = React.lazy(() => import('./components/ShadowPanel/ShadowPanel'));
 const CausalDebugger = React.lazy(() => import('./components/CausalDebugger/CausalDebugger'));
@@ -91,6 +91,91 @@ import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
 import PolicyPanel from './components/PolicyPanel/PolicyPanel';
 import MCPPanel from './components/MCPPanel/MCPPanel';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
+
+// Component map: nav id → React component (dashboard handled manually for onNavigate)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  analytics: AnalyticsPanel,
+  pricing: PricingPanel,
+  budget: BudgetPanel,
+  'cost-analytics': CostAnalyticsPanel,
+  routing: RoutingIntelligence,
+  chat: ChatPanel,
+  'chat-sessions': ChatSessionsManagerPanel,
+  'session-hub': SessionHubPanel,
+  bookmarks: BookmarksPanel,
+  tasks: TasksPanel,
+  files: WorkspacePanel,
+  debate: DebateArena,
+  builder: CognitiveBuilder,
+  'debate-live': DebateLivePanel,
+  'debate-workspace': DebateWorkspacePanel,
+  'debate-replay': DebateReplayPanel,
+  'debate-tournament': TournamentPanel,
+  'argument-graph': ArgumentGraphPanel,
+  'strategy-builder': DebateStrategyBuilderPanel,
+  'debate-analysis': DebateAnalysisPanel,
+  'debate-history': DebateHistoryPage,
+  'debates-manager': DebatesManagerPanel,
+  topics: TopicSuggesterPanel,
+  agents: AgentsPanel,
+  roles: RolesPanel,
+  sre: SREAgentPanel,
+  'agent-journal': AgentJournalPanel,
+  mission: MissionControl,
+  live: LiveWorkspace,
+  'agent-marketplace': AgentMarketplacePanel,
+  keys: ProviderManager,
+  pools: PoolStatusPanel,
+  groups: GroupsPanel,
+  'key-notes': KeyNotesPanel,
+  'provider-dashboard': ProviderDashboard,
+  'provider-marketplace': ProviderMarketplace,
+  connectors: ConnectorsPanel,
+  mcp: MCPPanel,
+  'session-bindings': SessionBindingsPanel,
+  logs: LogsPanel,
+  debugger: TracesPanel,
+  'router-trace': RouterTraceView,
+  memory: MemoryPanel,
+  health: HealthPanel,
+  'system-health': SystemHealthPanel,
+  'docs-health': DocsHealthPanel,
+  pressure: PressureMap,
+  'runtime-pressure': PressureMapPanelLazy,
+  'what-if': WhatIfPanel,
+  'dependency-map': DependencyMapPanel,
+  diagnostics: DiagnosticPanel,
+  'state-inspector': StateInspectorPanel,
+  'performance-profiler': PerformanceProfilerPanel,
+  shadow: ShadowPanel,
+  'causal-debugger': CausalDebugger,
+  counterfactual: CounterfactualPanel,
+  aquarium: AquariumPanel,
+  patterns: PatternsPanel,
+  knowledge: KnowledgePanel,
+  docs: DocumentationPanel,
+  'decision-log': DecisionLogPanel,
+  'project-os': ProjectOsExplorer,
+  'hypothesis-gen': HypothesisGenerator,
+  'arch-review': ArchitectureReview,
+  'prompt-audit': PromptAudit,
+  'routing-experiments': RoutingExperiments,
+  'gov-stress-test': GovStressTest,
+  'obs-gaps': ObsGaps,
+  'debate-system-research': DebateSystemResearch,
+  skills: SkillsPanel,
+  tools: ToolsPanel,
+  cache: CachePanel,
+  webhooks: WebhooksPanel,
+  rotations: RotationsPanel,
+  'service-registry': ServiceRegistryPanel,
+  settings: SettingsPanel,
+  policies: PolicyPanel,
+  'policy-editor': PolicyEditorPanelLazy,
+  audit: AuditLogView,
+  history: ConfigHistoryView,
+};
 
 const NotFound: React.FC = () => {
   const navigate = useNavigate();
@@ -167,60 +252,35 @@ const PanelLoader: React.FC<{ name: string; children: React.ReactNode }> = ({ na
 export const AppRoutes: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
   return (
     <Routes location={location}>
+      {/* ── Landing & dashboard (manual — special onNavigate prop) ── */}
       <Route path="/" element={<PanelLoader name="Dashboard"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></PanelLoader>} />
       <Route path="/dashboard" element={<PanelLoader name="Dashboard"><DashboardPanel onNavigate={(p) => navigate(`/${p}`)} /></PanelLoader>} />
-      <Route path="/analytics" element={<PanelLoader name="Analytics"><AnalyticsPanel /></PanelLoader>} />
-      <Route path="/keys" element={<ErrorBoundary name="Providers" variant="panel"><ProviderManager /></ErrorBoundary>} />
-      <Route path="/pools" element={<ErrorBoundary name="Pools" variant="panel"><PoolStatusPanel /></ErrorBoundary>} />
-      <Route path="/policies" element={<ErrorBoundary name="Policies" variant="panel"><PolicyPanel /></ErrorBoundary>} />
-      <Route path="/policy-editor" element={<PanelLoader name="PolicyEditor"><PolicyEditorPanelLazy /></PanelLoader>} />
-      <Route path="/mcp" element={<ErrorBoundary name="MCP" variant="panel"><MCPPanel /></ErrorBoundary>} />
-      <Route path="/roles" element={<ErrorBoundary name="Roles" variant="panel"><RolesPanel /></ErrorBoundary>} />
-      <Route path="/chat" element={<PanelLoader name="Chat"><ChatPanel /></PanelLoader>} />
-      <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
+
+      {/* ── Primary routes from registry ── */}
+      {NAV_SECTIONS.flatMap(s => s.items).filter(i => i.id !== 'dashboard').map(item => {
+        const Component = PANEL_COMPONENTS[item.id];
+        if (!Component) return null;
+        const routePath = item.path ?? `/${item.id}`;
+        return (
+          <Route key={item.id} path={routePath} element={
+            item.lazy
+              ? <PanelLoader name={item.id}><Component /></PanelLoader>
+              : <ErrorBoundary name={item.id} variant="panel"><Component /></ErrorBoundary>
+          } />
+        );
+      })}
+
+      {/* ── Redirects ── */}
       <Route path="/events" element={<Navigate to="/timeline" replace />} />
-      <Route path="/logs" element={<PanelLoader name="Logs"><LogsPanel /></PanelLoader>} />
-      <Route path="/timeline" element={<PanelLoader name="Timeline"><EventsTimeline /></PanelLoader>} />
-      <Route path="/sre" element={<PanelLoader name="SREAgent"><SREAgentPanel /></PanelLoader>} />
-      <Route path="/routing" element={<PanelLoader name="Routing"><RoutingIntelligence /></PanelLoader>} />
-      <Route path="/audit" element={<ErrorBoundary name="AuditLog" variant="panel"><AuditLogView /></ErrorBoundary>} />
-      <Route path="/history" element={<ErrorBoundary name="ConfigHistory" variant="panel"><ConfigHistoryView /></ErrorBoundary>} />
-      <Route path="/tasks" element={<ErrorBoundary name="Tasks" variant="panel"><TasksPanel /></ErrorBoundary>} />
-      <Route path="/memory" element={<PanelLoader name="Memory"><MemoryPanel /></PanelLoader>} />
-      <Route path="/knowledge" element={<ErrorBoundary name="Knowledge" variant="panel"><KnowledgePanel /></ErrorBoundary>} />
-      <Route path="/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
-      <Route path="/system-health" element={<PanelLoader name="SystemHealth"><SystemHealthPanel /></PanelLoader>} />
-      <Route path="/provider-dashboard" element={<PanelLoader name="ProviderDashboard"><ProviderDashboard /></PanelLoader>} />
-      <Route path="/docs-health" element={<PanelLoader name="DocsHealth"><DocsHealthPanel /></PanelLoader>} />
-      <Route path="/pressure" element={<PanelLoader name="PressureMap"><PressureMap /></PanelLoader>} />
-      <Route path="/what-if" element={<PanelLoader name="WhatIf"><WhatIfPanel /></PanelLoader>} />
-      <Route path="/runtime-pressure" element={<PanelLoader name="RuntimePressure"><PressureMapPanel /></PanelLoader>} />
-      <Route path="/dependency-map" element={<PanelLoader name="DependencyMap"><DependencyMapPanel /></PanelLoader>} />
-      <Route path="/service-registry" element={<PanelLoader name="ServiceRegistry"><ServiceRegistryPanel /></PanelLoader>} />
-      <Route path="/diagnostics" element={<PanelLoader name="Diagnostics"><DiagnosticPanel /></PanelLoader>} />
-      <Route path="/state-inspector" element={<PanelLoader name="StateInspector"><StateInspectorPanel /></PanelLoader>} />
-      <Route path="/performance-profiler" element={<PanelLoader name="PerformanceProfiler"><PerformanceProfilerPanel /></PanelLoader>} />
       <Route path="/message-search" element={<Navigate to="/chat" replace />} />
-      <Route path="/shadow" element={<PanelLoader name="Shadow"><ShadowPanel /></PanelLoader>} />
-      <Route path="/causal-debugger" element={<PanelLoader name="CausalDebugger"><CausalDebugger /></PanelLoader>} />
-      <Route path="/counterfactual" element={<PanelLoader name="Counterfactual"><CounterfactualPanel /></PanelLoader>} />
-      <Route path="/session-bindings" element={<PanelLoader name="SessionBindings"><SessionBindingsPanel /></PanelLoader>} />
-      <Route path="/settings" element={<ErrorBoundary name="Settings" variant="panel"><SettingsPanel /></ErrorBoundary>} />
-      <Route path="/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
-      <Route path="/skills" element={<ErrorBoundary name="Skills" variant="panel"><SkillsPanel /></ErrorBoundary>} />
-      <Route path="/tools" element={<ErrorBoundary name="Tools" variant="panel"><ToolsPanel /></ErrorBoundary>} />
-      <Route path="/cache" element={<PanelLoader name="Cache"><CachePanel /></PanelLoader>} />
-      <Route path="/webhooks" element={<PanelLoader name="Webhooks"><WebhooksPanel /></PanelLoader>} />
-      <Route path="/rotations" element={<PanelLoader name="Rotations"><RotationsPanel /></PanelLoader>} />
-      <Route path="/groups" element={<PanelLoader name="Groups"><GroupsPanel /></PanelLoader>} />
-      <Route path="/mission" element={<PanelLoader name="MissionControl"><MissionControl /></PanelLoader>} />
-      <Route path="/live" element={<PanelLoader name="LiveWorkspace"><LiveWorkspace /></PanelLoader>} />
-      <Route path="/files" element={<PanelLoader name="Workspace"><WorkspacePanel /></PanelLoader>} />
-      <Route path="/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
-      <Route path="/debate" element={<PanelLoader name="DebateArena"><DebateArena /></PanelLoader>} />
-      {/* Nested URL aliases */}
+      <Route path="/chat-export" element={<Navigate to="/chat" replace />} />
+      <Route path="/debate-runtime" element={<Navigate to="/debate?mode=runtime" replace />} />
+      <Route path="/topic-suggester" element={<Navigate to="/topics" replace />} />
+
+      {/* ── Nested URL aliases (debates/*) ── */}
       <Route path="/debates/arena" element={<PanelLoader name="DebateArena"><DebateArena /></PanelLoader>} />
       <Route path="/debates/live" element={<PanelLoader name="DebateLive"><DebateLivePanel /></PanelLoader>} />
       <Route path="/debates/replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
@@ -229,54 +289,28 @@ export const AppRoutes: React.FC = () => {
       <Route path="/debates/analysis" element={<PanelLoader name="DebateAnalysis"><DebateAnalysisPanel /></PanelLoader>} />
       <Route path="/debates/graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
       <Route path="/debates/topics" element={<PanelLoader name="Topics"><TopicSuggesterPanel /></PanelLoader>} />
+
+      {/* ── Nested URL aliases (diagnostics/*) ── */}
       <Route path="/diagnostics/logs" element={<PanelLoader name="Logs"><LogsPanel /></PanelLoader>} />
       <Route path="/diagnostics/health" element={<PanelLoader name="Health"><HealthPanel /></PanelLoader>} />
       <Route path="/diagnostics/system" element={<PanelLoader name="SystemHealth"><SystemHealthPanel /></PanelLoader>} />
       <Route path="/diagnostics/traces" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
       <Route path="/diagnostics/memory" element={<PanelLoader name="Memory"><MemoryPanel /></PanelLoader>} />
       <Route path="/diagnostics/aquarium" element={<PanelLoader name="Aquarium"><AquariumPanel /></PanelLoader>} />
+
+      {/* ── Nested URL aliases (services/*) ── */}
       <Route path="/services/keys" element={<ErrorBoundary name="Providers" variant="panel"><ProviderManager /></ErrorBoundary>} />
       <Route path="/services/groups" element={<PanelLoader name="Groups"><GroupsPanel /></PanelLoader>} />
       <Route path="/services/connectors" element={<ErrorBoundary name="Connectors" variant="panel"><ConnectorsPanel /></ErrorBoundary>} />
       <Route path="/services/mcp" element={<ErrorBoundary name="MCP" variant="panel"><MCPPanel /></ErrorBoundary>} />
-      <Route path="/debate-runtime" element={<Navigate to="/debate?mode=runtime" replace />} />
-      <Route path="/debate-replay" element={<PanelLoader name="DebateReplay"><DebateReplayPanel /></PanelLoader>} />
-      <Route path="/debate-tournament" element={<PanelLoader name="Tournament"><TournamentPanel /></PanelLoader>} />
-      <Route path="/debate-history" element={<PanelLoader name="DebateHistory"><DebateHistoryPage /></PanelLoader>} />
-      <Route path="/debate-live" element={<PanelLoader name="DebateLive"><DebateLivePanel /></PanelLoader>} />
-      <Route path="/argument-graph" element={<PanelLoader name="ArgumentGraph"><ArgumentGraphPanel /></PanelLoader>} />
-      <Route path="/debate-workspace" element={<PanelLoader name="DebateWorkspace"><DebateWorkspacePanel /></PanelLoader>} />
-      <Route path="/builder" element={<PanelLoader name="Builder"><CognitiveBuilder /></PanelLoader>} />
-      <Route path="/debugger" element={<PanelLoader name="Traces"><TracesPanel /></PanelLoader>} />
-      <Route path="/router-trace" element={<PanelLoader name="RouterTrace"><RouterTraceView /></PanelLoader>} />
-      <Route path="/pricing" element={<PanelLoader name="Pricing"><PricingPanel /></PanelLoader>} />
-      <Route path="/budget" element={<PanelLoader name="Budget"><BudgetPanel /></PanelLoader>} />
-      <Route path="/bookmarks" element={<PanelLoader name="Bookmarks"><BookmarksPanel /></PanelLoader>} />
-      <Route path="/chat-export" element={<Navigate to="/chat" replace />} />
-      <Route path="/debate-analysis" element={<PanelLoader name="DebateAnalysis"><DebateAnalysisPanel /></PanelLoader>} />
-      <Route path="/debates-manager" element={<PanelLoader name="DebatesManager"><DebatesManagerPanel /></PanelLoader>} />
-      <Route path="/chat-sessions" element={<PanelLoader name="ChatSessions"><ChatSessionsManagerPanel /></PanelLoader>} />
-      <Route path="/session-hub" element={<PanelLoader name="SessionHub"><SessionHubPanel /></PanelLoader>} />
-      <Route path="/strategy-builder" element={<PanelLoader name="StrategyBuilder"><DebateStrategyBuilderPanel /></PanelLoader>} />
-      <Route path="/topics" element={<PanelLoader name="Topics"><TopicSuggesterPanel /></PanelLoader>} />
-      <Route path="/topic-suggester" element={<PanelLoader name="TopicSuggester"><TopicSuggesterPanel /></PanelLoader>} />
-      <Route path="/key-notes" element={<PanelLoader name="KeyNotes"><KeyNotesPanel /></PanelLoader>} />
-      <Route path="/agent-journal" element={<PanelLoader name="AgentJournal"><AgentJournalPanel /></PanelLoader>} />
-      <Route path="/decision-log" element={<PanelLoader name="DecisionLog"><DecisionLogPanel /></PanelLoader>} />
-      <Route path="/cost-analytics" element={<PanelLoader name="CostAnalytics"><CostAnalyticsPanel /></PanelLoader>} />
-      <Route path="/provider-marketplace" element={<PanelLoader name="ProviderMarketplace"><ProviderMarketplace /></PanelLoader>} />
-      <Route path="/agents" element={<PanelLoader name="Agents"><AgentsPanel /></PanelLoader>} />
-      <Route path="/agent-marketplace" element={<PanelLoader name="AgentMarketplace"><AgentMarketplacePanel /></PanelLoader>} />
-      <Route path="/patterns" element={<PanelLoader name="Patterns"><PatternsPanel /></PanelLoader>} />
-      <Route path="/debate-system-research" element={<PanelLoader name="DebateSystemResearch"><DebateSystemResearch /></PanelLoader>} />
-      <Route path="/project-os" element={<PanelLoader name="ProjectOsExplorer"><ProjectOsExplorer /></PanelLoader>} />
-      <Route path="/hypothesis-gen" element={<PanelLoader name="HypothesisGenerator"><HypothesisGenerator /></PanelLoader>} />
-      <Route path="/arch-review" element={<PanelLoader name="ArchitectureReview"><ArchitectureReview /></PanelLoader>} />
-      <Route path="/prompt-audit" element={<PanelLoader name="PromptAudit"><PromptAudit /></PanelLoader>} />
-      <Route path="/routing-experiments" element={<PanelLoader name="RoutingExperiments"><RoutingExperiments /></PanelLoader>} />
-      <Route path="/gov-stress-test" element={<PanelLoader name="GovStressTest"><GovStressTest /></PanelLoader>} />
-      <Route path="/obs-gaps" element={<PanelLoader name="ObsGaps"><ObsGaps /></PanelLoader>} />
-      <Route path="/docs" element={<ErrorBoundary name="Docs" variant="panel"><DocumentationPanel /></ErrorBoundary>} />
+
+      {/* ── Legacy admin route (no nav entry) ── */}
+      <Route path="/chat-admin" element={<ErrorBoundary name="ChatAdmin" variant="panel"><ChatAdminPanel /></ErrorBoundary>} />
+
+      {/* ── Legacy route for timeline/events ── */}
+      <Route path="/timeline" element={<PanelLoader name="Timeline"><EventsTimeline /></PanelLoader>} />
+
+      {/* ── 404 catch-all ── */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

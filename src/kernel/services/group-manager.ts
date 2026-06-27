@@ -5,10 +5,6 @@ import type { ApiKey } from '../types/metrics-types';
 import type { Result } from '../contracts/results';
 import { ok, fail } from '../contracts/results';
 import type { IEventBus } from '../types/interfaces';
-import { rootLogger } from './logger-service';
-
-const LOGGER = rootLogger.child('GroupManager');
-
 const KV_GROUPS = 'key_groups';
 const DEFAULT_GROUP_ID = '__default__';
 const DEFAULT_GROUP_NAME = 'Default';
@@ -322,7 +318,7 @@ export class GroupManagerService implements IGroupManager {
       const before = g.keyIds.length;
       g.keyIds = g.keyIds.filter(id => allKeyIds.has(id));
       if (g.keyIds.length < before) {
-        if (import.meta.env.DEV) LOGGER.info('GroupManager', `cleaned ${before - g.keyIds.length} orphan keyIds from group "${g.name}"`);
+        if (import.meta.env.DEV) console.log(`[GroupManager] cleaned ${before - g.keyIds.length} orphan keyIds from group "${g.name}"`);
       }
     }
 

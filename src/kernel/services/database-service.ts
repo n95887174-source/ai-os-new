@@ -259,6 +259,54 @@ export class SuperAgentsDB extends Dexie {
       }
     });
 
+    this.version(12).stores({
+      notes: 'id, keyId, type, timestamp',
+      memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+      apiKeys: 'id, provider, status',
+      sessions: 'id, title, updatedAt',
+      roles: 'id, name, metadata.category',
+      cognitiveTraces: 'id, traceId, startTime, status',
+      traces: 'id, startTime, status',
+      skills: 'id, name, category, status',
+      connectors: 'id, name, type, status',
+      keyValue: 'id, createdAt',
+      debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+      debateVerdicts: 'sessionId',
+      debateTimeline: 'id, sessionId, timestamp, type',
+      debateOverrides: 'id, sessionId, appliedAt',
+      sessionLinks: 'id, fromId, toId, linkType',
+      eventLog: '++id, sequence, event, timestamp',
+    }).upgrade(async (tx) => {
+      const debateTable = tx.table('debateSessions');
+
+      // Migrate __debate_active_session__ magic key to real session ID
+      const ACTIVE_SESSION_ID = '__debate_active_session__';
+      const oldActive = await debateTable.get(ACTIVE_SESSION_ID);
+      if (oldActive) {
+        try {
+          const parsedArgs = oldActive.arguments ? JSON.parse(oldActive.arguments) : null;
+          const realId = parsedArgs && Array.isArray(parsedArgs)
+            ? (oldActive.id.length > 20 ? oldActive.id : crypto.randomUUID())
+            : crypto.randomUUID();
+          const idToUse = realId !== ACTIVE_SESSION_ID ? realId : crypto.randomUUID();
+          await debateTable.put({ ...oldActive, id: idToUse, tags: [], folder: '', isArchived: false });
+          await debateTable.delete(ACTIVE_SESSION_ID);
+          LOGGER.info('DatabaseService', 'v12: migrated active session magic key to real ID', { id: idToUse });
+        } catch (e) {
+          LOGGER.warn('DatabaseService', 'v12: failed to migrate active session', { error: e });
+          await debateTable.delete(ACTIVE_SESSION_ID);
+        }
+      }
+
+      // Safety net: ensure __debate_history_list__ is deleted
+      const HISTORY_LIST_ID = '__debate_history_list__';
+      const oldHistory = await debateTable.get(HISTORY_LIST_ID);
+      if (oldHistory) {
+        await debateTable.delete(HISTORY_LIST_ID);
+        LOGGER.info('DatabaseService', 'v12: cleaned up orphaned history list magic key');
+      }
+    });
+
     /**
      * CRIT-1: Validation hooks must REJECT invalid data, not just warn
      * Return false or throw to reject the write operation
@@ -394,20 +442,20 @@ export class SuperAgentsDB extends Dexie {
 }
 
 /**
- * @deprecated Direct access to the Dexie singleton is reserved for the
- * storage layer (`src/kernel/services/storage/dexie-storage.ts`).
- * All other code MUST go through:
- *   1. The StorageLayer interfaces in `src/kernel/contracts/storage/`
- *      (preferred — see `databaseService.getStorageLayer()` or
- *      `container.get('storageLayer')`).
- *   2. The DataAccessLayer (DAL) for fine-grained queries
- *      (see `src/kernel/dal/index.ts` and `container.get('dal')`).
+ * @deprecated Direct access to the Dexie singleton is reserved for:
+ *   - `src/kernel/dal/` — Data Access Layer repositories
+ *   - `src/kernel/services/storage/` — storage adapters (DexieStorage, SqliteStorage)
+ *   - `src/kernel/services/database-service.ts` — this file
  *
- * Direct `dexieDb.X` calls outside `src/kernel/services/storage/` skip
- * the StorageLayer abstractions, the SQLite write-through for hot
- * stores, and the consistency guarantees of the DAL.  New code should
- * NOT import `dexieDb`; this symbol is kept for the storage layer
- * only and will be removed once the migration to the DAL is complete.
+ * All other code MUST go through the DataAccessLayer (DAL):
+ *   const dal = container.get<DataAccessLayer>('dal');
+ *   const keys = await dal.keys.getAll();
+ *
+ * Direct `dexieDb.X` calls outside the allowed paths skip DAL consistency
+ * guarantees and repository-level abstractions. Remaining import sites
+ * (bootstrap.ts, key-registry.ts, key-storage-hydrator.ts, dexie-identity.ts)
+ * are on the cleanup path and will be migrated in upcoming epics.
+ * The ESLint rule `no-restricted-imports` enforces this boundary.
  */
 let _dexieDb: SuperAgentsDB | null = null;
 

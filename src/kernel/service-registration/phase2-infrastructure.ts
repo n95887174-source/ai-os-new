@@ -6,7 +6,6 @@
  */
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
-import type { ILocalStorageAdapter } from '../contracts/storage-adapter';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { TraceStore } from '../contracts/storage/storage-layer';
 import type { LoggerService } from '../services/logger-service';
@@ -19,7 +18,6 @@ import { SystemStatusService } from '../services/system-status-service';
 import { RotationService } from '../services/rotation-service';
 import { PolicyService } from '../services/policy-service';
 import { ToolService } from '../services/tool-executor';
-import { FeatureFlagService } from '../services/feature-flag-service';
 import { MemoryService } from '../services/memory-engine';
 import { ExternalSecretsService } from '../services/external-secrets-service';
 import { BlackboardService } from '../services/blackboard-service';
@@ -55,12 +53,9 @@ export const registerPhase2: Phase = (helpers, ctx) => {
     eventBus: get<IEventBus>('eventBus'),
   }));
 
-  register('featureFlagService', new FeatureFlagService(get<ILocalStorageAdapter>('BucketStorageAdapter')));
-
   register('memoryService', new MemoryService(asDeps<ConstructorParameters<typeof MemoryService>[0]>({
     database: get<IDatabaseService>('database'),
     eventBus: get<IEventBus>('eventBus'),
-    featureFlags: get<FeatureFlagService>('featureFlagService'),
     executionGovernor: (() => { try { return ctx.container.get<IExecutionGovernor>('executionGovernor'); } catch { return undefined; } })(),
   })));
 

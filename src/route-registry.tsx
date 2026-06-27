@@ -23,6 +23,8 @@ export type UserLevel = 'L0' | 'L1' | 'L2';
 
 export interface RouteMeta {
   id: string;
+  /** URL path — defaults to `/${id}` if omitted */
+  path?: string;
   labelKey: TranslationKey;
   icon: React.ReactNode;
   color: string;
@@ -48,7 +50,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'section-dashboard',
     labelKey: 'nav.section_dashboard',
     items: [
-      { id: 'dashboard',      labelKey: 'nav.overview',       icon: <LayoutDashboard size={18} />, color: '#3b82f6', level: 'L0' },
+      { id: 'dashboard',      labelKey: 'nav.overview',       icon: <LayoutDashboard size={18} />, color: '#3b82f6', lazy: true, level: 'L0' },
       { id: 'analytics',      labelKey: 'nav.analytics',      icon: <BarChart3 size={18} />,       color: '#8b5cf6', level: 'L1' },
       { id: 'pricing',        labelKey: 'nav.economics',      icon: <DollarSign size={18} />,      color: '#10b981', lazy: true, level: 'L2' },
       { id: 'budget',         labelKey: 'nav.budget',          icon: <TrendingUp size={18} />,      color: '#10b981', lazy: true, level: 'L2' },
@@ -64,7 +66,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'section-chat',
     labelKey: 'nav.section_chat',
     items: [
-      { id: 'chat',           labelKey: 'nav.chat',            icon: <MessageSquare size={18} />,   color: '#10b981', level: 'L0' },
+      { id: 'chat',           labelKey: 'nav.chat',            icon: <MessageSquare size={18} />,   color: '#10b981', lazy: true, level: 'L0' },
       { id: 'chat-sessions',  labelKey: 'nav.chat_sessions',  icon: <FolderTree size={18} />,      color: '#06b6d4', lazy: true, level: 'L0' },
       { id: 'session-hub',    labelKey: 'nav.session_hub',     icon: <SessionHubIcon size={18} />,  color: '#8b5cf6', lazy: true, level: 'L1' },
       { id: 'bookmarks',      labelKey: 'nav.bookmarks',       icon: <Bookmark size={18} />,        color: '#f59e0b', lazy: true, level: 'L1' },
@@ -121,7 +123,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'keys',               labelKey: 'nav.providers',          icon: <Key size={18} />,          color: '#3b82f6', level: 'L0' },
       { id: 'pools',              labelKey: 'nav.key_pools',          icon: <Layers size={18} />,       color: '#3b82f6', level: 'L2' },
-      { id: 'groups',             labelKey: 'nav.groups',             icon: <FolderTree size={18} />,   color: '#3b82f6', level: 'L1' },
+      { id: 'groups',             labelKey: 'nav.groups',             icon: <FolderTree size={18} />,   color: '#3b82f6', lazy: true, level: 'L1' },
       { id: 'key-notes',          labelKey: 'nav.key_notes',          icon: <StickyNote size={18} />,   color: '#f59e0b', lazy: true, level: 'L1' },
       { id: 'provider-dashboard',  labelKey: 'nav.provider_dashboard', icon: <Gauge size={18} />,        color: '#8b5cf6', lazy: true, level: 'L2' },
       { id: 'provider-marketplace', labelKey: 'nav.provider_marketplace', icon: <Star size={18} />,      color: '#10b981', lazy: true, level: 'L2' },

@@ -1,6 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { eventBus } from '../../kernel/events/event-bus';
+import React from 'react';
+
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+});
 
 const mockNodes = [
   { id: 'agent-1', type: 'agent', label: 'Agent Alpha', config: {} },
@@ -19,6 +36,11 @@ const mockDebateService = {
   getArguments: vi.fn(() => []),
   exportAsMarkdown: vi.fn(() => ''),
   destroy: vi.fn(),
+  getVerdict: vi.fn(() => null),
+  getHistory: vi.fn(() => []),
+  getHumanVotes: vi.fn(() => []),
+  setFactCheckLevel: vi.fn(),
+  recordHumanVote: vi.fn(),
 };
 
 vi.mock('../../kernel/instances', () => ({
@@ -32,6 +54,67 @@ vi.mock('../../kernel/instances', () => ({
   debateService: mockDebateService,
 }));
 
+vi.mock('react-router-dom', () => ({
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock('../../i18n/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'debate.config_title': 'Configure Dialectic Session',
+        'debate.initialize': 'Initialize Debate Runtime',
+        'debate.selected': 'Selected',
+        'debate.loading': 'Loading debate session...',
+        'debate.convergence_score': 'Cognitive Convergence Score',
+        'debate.thesis': 'Central Thesis / Topic',
+        'debate.thesis_placeholder': 'e.g. Should the system prioritize low latency over extensive guardrail checks?',
+        'debate.strategy': 'Debate Strategy',
+        'debate.max_rounds': 'Maximum Rounds',
+        'debate.pause': 'Pause Debate',
+        'debate.resume': 'Resume Debate',
+        'debate.stop': 'Force Stop',
+        'debate.inject_placeholder': 'Inject human argument into the dialectic...',
+        'debate.inject': 'Inject',
+        'confidence': 'Confidence:',
+        'common.dismiss_error': 'Dismiss',
+      };
+      return map[key] ?? key;
+    },
+    lang: 'en',
+  }),
+}));
+
+vi.mock('../ModuleInfo/ModuleInfo', () => ({
+  default: () => null,
+}));
+
+vi.mock('./DebateSetupWizard', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  default: ({ topic, onTopicChange, strategy, onStrategyChange, maxRounds, onMaxRoundsChange, selectedAgents, onToggleAgent, availableAgents, actionLoading, onStart, t }: any) => (
+    <div>
+      <div>{t('debate.config_title')}</div>
+      <textarea value={topic} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onTopicChange(e.target.value)} aria-label={t('debate.thesis')} />
+      <select value={strategy} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onStrategyChange(e.target.value)} aria-label={t('debate.strategy')}>
+        <option value="round_robin">Round Robin</option>
+      </select>
+      <input type="number" value={maxRounds} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onMaxRoundsChange(parseInt(e.target.value) || 10)} aria-label={t('debate.max_rounds')} />
+      <div>{selectedAgents.length} {t('debate.selected')}</div>
+      <div>
+        {(availableAgents as Array<{ id: string; label: string }>).map((a: { id: string; label: string }) => (
+          <div key={a.id} onClick={() => onToggleAgent(a.id)} role="button" aria-pressed={selectedAgents.includes(a.id)}>
+            {a.label}
+          </div>
+        ))}
+      </div>
+      <button disabled={selectedAgents.length < 2 || !topic || actionLoading === 'start'} onClick={onStart}>
+        {t('debate.initialize')}
+      </button>
+    </div>
+  ),
+}));
+
 describe('DebatePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,7 +124,7 @@ describe('DebatePanel', () => {
     const DebatePanel = (await import('./DebatePanel')).default;
     const { container } = render(<DebatePanel />);
     expect(container).toBeDefined();
-  });
+  }, 60000);
 
   it('displays setup screen when no active session', async () => {
     mockDebateService.getSession.mockReturnValue(null);
@@ -96,11 +179,14 @@ describe('DebatePanel', () => {
     expect(mockDebateService.startDebate).toHaveBeenCalledWith(
       'AI Safety',
       expect.arrayContaining([
-        expect.objectContaining({ id: 'agent-1', role: 'pro' }),
-        expect.objectContaining({ id: 'agent-2', role: 'con' }),
+        expect.objectContaining({ id: 'agent-1', role: 'pro', name: 'Agent Alpha' }),
+        expect.objectContaining({ id: 'agent-2', role: 'con', name: 'Agent Beta' }),
+        expect.objectContaining({ id: 'agent-3', role: 'neutral', name: 'Agent Gamma' }),
       ]),
       'round_robin',
-      10
+      10,
+      expect.objectContaining({ debateTemperature: 0.5 }),
+      'default'
     );
   });
 

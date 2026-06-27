@@ -243,6 +243,22 @@ export interface ServicesConfigSection {
   };
 }
 
+export interface FeatureFlagsConfigSection {
+  memory: {
+    enabled: boolean;
+    semantic: boolean;
+    ragOnChat: boolean;
+    autoStore: boolean;
+  };
+  debate: {
+    runtimeEngine: boolean;
+    engineOnly: boolean;
+  };
+  ui: {
+    experimentalVisuals: boolean;
+  };
+}
+
 export interface ConfigRegistry {
   version: string;
   buildId: string;
@@ -261,8 +277,10 @@ export interface ConfigRegistry {
     adminToken?: string;
     webhookSecret?: string;
   };
+  featureFlags: FeatureFlagsConfigSection;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface StorageConfigSection {
-  useSqlite: boolean;
+  // SQL storage has been removed — Dexie is the only backend
 }

@@ -1,8 +1,7 @@
-import { EventRecorder, type RecordedEvent, type RecorderConfig } from './event-recorder';
+import { EventRecorder, type RecordedEvent, type RecorderConfig, type EventRecorderStore } from './event-recorder';
 import { ReplayEngine, type ReplayConfig } from './replay-engine'
 import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
 import type { KvRepository } from '../../dal';
-import { dexieDb, type RecordedEventRow } from '../database-service';
 import { rootLogger } from '../logger-service';
 
 const LOGGER = rootLogger.child('EventSourcingService');
@@ -11,84 +10,11 @@ export type { RecordedEvent, RecorderConfig } from './event-recorder';
 export type { ReplayConfig, ReplayStatus, ReplaySnapshot } from './replay-engine';
 export type { Checkpoint, CheckpointStoreConfig } from './checkpoint-store';
 
-/**
- * Dexie-backed store for EventRecorder — events survive page reloads.
- * Uses ++id auto-increment so persistence is incremental (no full snapshot each time).
- * Old rows beyond maxEvents are pruned on save.
- */
-class DexieEventRecorderStore {
-  private lastPersistedSeq = -1;
-
-  async load(): Promise<{ events: RecordedEvent[]; sequence: number } | null> {
-    try {
-      const total = await dexieDb.eventLog.count();
-      if (total === 0) return null;
-      const keep = Math.min(total, 1000);
-      const rows = await dexieDb.eventLog.orderBy('sequence').reverse().limit(keep).toArray();
-      rows.reverse();
-
-      const seq = rows[rows.length - 1].sequence;
-      this.lastPersistedSeq = seq;
-      const events: RecordedEvent[] = rows.map(row => ({
-        sequence: row.sequence,
-        event: row.event,
-        data: JSON.parse(row.dataJson),
-        timestamp: row.timestamp,
-        checksum: row.checksum,
-      }));
-      return { events, sequence: seq + 1 };
-    } catch (e) {
-      LOGGER.warn('DexieEventRecorderStore', 'Load failed', { error: e });
-      return null;
-    }
-  }
-
-  async save(snapshot: { events: RecordedEvent[]; sequence: number }): Promise<void> {
-    try {
-      await dexieDb.transaction('rw', [dexieDb.eventLog], async () => {
-        const toInsert: RecordedEventRow[] = [];
-        for (const ev of snapshot.events) {
-          if (ev.sequence > this.lastPersistedSeq) {
-            toInsert.push({
-              sequence: ev.sequence,
-              event: ev.event,
-              dataJson: JSON.stringify(ev.data),
-              checksum: ev.checksum,
-              timestamp: ev.timestamp,
-            });
-          }
-        }
-
-        if (toInsert.length > 0) {
-          await dexieDb.eventLog.bulkAdd(toInsert);
-          this.lastPersistedSeq = Math.max(this.lastPersistedSeq, ...toInsert.map(r => r.sequence));
-        }
-
-        const totalCount = await dexieDb.eventLog.count();
-        const maxEvents = 1000;
-        if (totalCount > maxEvents) {
-          const excess = totalCount - maxEvents;
-          const oldest = await dexieDb.eventLog.orderBy('id').limit(excess).toArray();
-          const oldestIds = oldest.map(r => r.id!);
-          await dexieDb.eventLog.bulkDelete(oldestIds);
-        }
-      });
-    } catch (e) {
-      LOGGER.warn('DexieEventRecorderStore', 'Save failed', { error: e });
-    }
-  }
-
-  async clearAll(): Promise<void> {
-    // C3: Delete all event rows from DB so cleared events don't resurrect on reload
-    await dexieDb.eventLog.clear();
-    this.lastPersistedSeq = -1;
-  }
-}
-
 export interface EventSourcingDeps {
   subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void;
   getStateSnapshot: () => unknown;
   onReplayEvent?: (event: RecordedEvent) => void;
+  eventLogStore?: EventRecorderStore;
   kv?: KvRepository;
 }
 
@@ -107,8 +33,7 @@ export class EventSourcingService {
   }) {
     this.deps = deps;
 
-    const dexieStore = new DexieEventRecorderStore();
-    this.recorder = new EventRecorder(config?.recorder, dexieStore);
+    this.recorder = new EventRecorder(config?.recorder, deps.eventLogStore);
 
     const kv = deps.kv;
     this.replay = new ReplayEngine({

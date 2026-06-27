@@ -26,3 +26,4 @@ export { TraceRepository } from './trace-repository';
 export { CognitiveRepository } from './cognitive-repository';
 export { DataAccessLayerImpl } from './data-access-layer';
 export { WorkspaceRepository } from './workspace-repository';
+export { EventLogRepository } from './event-log-repository';

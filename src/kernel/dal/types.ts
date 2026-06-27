@@ -15,6 +15,7 @@ import type { Role } from '../types/role-types';
 import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain-types';
 import type { ExecutionTrace } from '../contracts/observability';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
+import type { EventLogRepository } from './event-log-repository';
 
 // =============================================================================
 // Repository Interfaces
@@ -143,6 +144,7 @@ export interface DataAccessLayer {
   trace: TraceRepository;
   cognitive: CognitiveRepository;
   workspace: WorkspaceRepository;
+  eventLog: EventLogRepository;
   kv: KvRepository;
 }
 

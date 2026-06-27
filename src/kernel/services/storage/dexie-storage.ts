@@ -379,7 +379,7 @@ class DexieDebateStore implements DebateStore {
   async saveSnapshot(record: DebateSessionRecord): Promise<number> {
     const current = await dexieDb.debateSessions.get(record.id);
     const currentVersion = (current as { version?: number })?.version ?? 0;
-    if (current && record.version < currentVersion) {
+    if (current && record.version != null && record.version < currentVersion) {
       eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
         sessionId: record.id,
         currentVersion,

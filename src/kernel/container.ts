@@ -1,6 +1,10 @@
 import { rootLogger } from './services/logger-service';
 
-const LOGGER = rootLogger.child('Container');
+let _containerLogger: ReturnType<typeof rootLogger.child>;
+function getLogger() {
+  if (!_containerLogger) _containerLogger = rootLogger.child('Container');
+  return _containerLogger;
+}
 
 export type ServiceIdentifier = string | symbol;
 
@@ -80,7 +84,7 @@ export class Container implements IContainer {
       if (service && typeof (service as Record<string, unknown>).destroy === 'function') {
         try { (service as { destroy: () => void }).destroy(); } catch (e) {
           errors.push({ service: String(id), error: e });
-          LOGGER.error('Container', 'destroy failed', { service: String(id), error: e });
+          getLogger().error('Container', 'destroy failed', { service: String(id), error: e });
         }
       }
     }
@@ -104,3 +108,5 @@ export class Container implements IContainer {
     return Array.from(all).map(String);
   }
 }
+
+export const defaultContainer = new Container();

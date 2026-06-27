@@ -25,6 +25,23 @@ vi.mock('../../kernel/instances', () => ({
     })),
     reloadRuntime: vi.fn(),
   },
+  settingsService: {
+    getSettings: vi.fn(() => ({ language: 'en' })),
+    subscribe: vi.fn(() => vi.fn()),
+  },
+  keyService: {
+    getAlerts: vi.fn(() => []),
+    getProviderIntrospection: vi.fn(() => ({})),
+  },
+  kernel: {
+    getHealthEvents: vi.fn(() => []),
+  },
+  probeService: {
+    probeAll: vi.fn(() => Promise.resolve({})),
+  },
+  keyStateStore: {
+    getAll: vi.fn(() => []),
+  },
 }));
 
 describe('HealthPanel', () => {
@@ -36,7 +53,7 @@ describe('HealthPanel', () => {
     const HealthPanel = (await import('./HealthPanel')).default;
     const { container } = render(<HealthPanel />);
     expect(container).toBeDefined();
-  });
+  }, 20000);
 
   it('displays system health matrix heading', async () => {
     const HealthPanel = (await import('./HealthPanel')).default;

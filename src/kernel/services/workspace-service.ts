@@ -86,6 +86,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
       this.workspaceName = handle.name;
       this.attached = true;
       await this.persistHandle();
+      LOGGER.info('WorkspaceService', 'Workspace attached', { name: this.workspaceName });
       this.deps.eventBus.emit(WORKSPACE_EVENTS.ATTACHED, { name: this.workspaceName, fileCount: 0 });
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -131,6 +132,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
 
       const text = await file.text();
       const latency = Math.round(performance.now() - start);
+      LOGGER.info('WorkspaceService', 'File read', { path, size: file.size, latency });
       this.recordRead(path, file.size, latency, undefined, executionId);
       this.deps.eventBus.emit(WORKSPACE_EVENTS.FILE_READ, { path, executionId });
       return text;

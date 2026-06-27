@@ -1,4 +1,5 @@
 import { EVENTS } from '../events/event-names';
+import { CONFIG } from './config-registry';
 import type { EventMap } from '../types/event-map';
 import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
@@ -9,12 +10,9 @@ import type {
   DebateParticipant, DebateArgument, DebateConfig, DebateSession, DebateServiceDeps,
   ActivityMetrics, QualityMetrics, HumanVote, DebateVerdict,
 } from '../contracts/debate-types';
-import type { IDebateEngine, DebateTopology } from '../contracts/debate-runtime';
-import type { SnapshotBridgeContext } from './debate-runtime/debate-bridge';
+import type { IDebateEngine, DebateTopology, TimelineEntry, ParticipantConfig } from '../contracts/debate-runtime';
+import type { DebateSessionSnapshot } from '../contracts/debate-runtime';
 import { DebateRuntimeEvents } from '../events/debate-runtime-events';
-import {
-  buildRoundtableTopology, participantsToConfig, snapshotToSession,
-} from './debate-runtime/debate-bridge';
 import { jaccardSimilarity } from '../contracts/debate-types';
 import {
   computeGraphMetrics, computeActivityMetrics, computeQualityMetrics,
@@ -34,7 +32,6 @@ import {
   persistActiveSession,
   loadHistoryList,
   persistHistoryList,
-  migrateFromLegacyStorage,
 } from './debate-session-persistence';
 import { rootLogger } from './logger-service';
 
@@ -158,6 +155,102 @@ function scoreSocraticQuestion(content: string, previousArgs: DebateArgument[]):
 
 const SOCRATIC_RETRY_PROMPT = '\n\n### ⚠️ QUALITY GATE: Your previous question was rejected as too trivial/syntactic.\nAsk a DEEP, probing question that:\n1. Targets a SPECIFIC claim or assumption from someone\'s argument\n2. Asks about evidence, causality, logic, or hidden premises\n3. Cannot be answered with a simple "yes" or "no"\n4. Reveals contradictions or gaps in reasoning\n\nBAD examples: "Can you elaborate?", "What do you mean?", "Tell me more."\nGOOD examples: "What evidence supports your claim that X causes Y?", "How do you reconcile your position with Z?", "Under what conditions would your argument fail?"';
 
+interface SnapshotBridgeContext {
+  participants: DebateParticipant[];
+  strategy: DebateStrategy;
+  maxRounds: number;
+  config: DebateConfig;
+  timeline?: TimelineEntry[];
+}
+
+function participantsToConfig(participants: DebateParticipant[]): ParticipantConfig[] {
+  return participants.map((p) => ({
+    agentId: p.id,
+    nodeId: p.id,
+    modelId: p.modelId,
+    provider: p.provider,
+    systemPrompt: p.systemPrompt,
+  }));
+}
+
+function buildRoundtableTopology(participants: DebateParticipant[]): DebateTopology {
+  const nodes = participants.map((p) => ({
+    id: p.id,
+    label: p.name,
+    role: p.role,
+    modelId: p.modelId,
+    provider: p.provider,
+  }));
+  const edges =
+    participants.length > 1
+      ? participants.map((p, i) => ({
+          from: p.id,
+          to: participants[(i + 1) % participants.length].id,
+          type: 'sequential' as const,
+        }))
+      : [];
+  return {
+    id: `topo-${Date.now()}`,
+    type: 'roundtable',
+    nodes,
+    edges,
+  };
+}
+
+function timelineToArguments(
+  timeline: TimelineEntry[],
+  participants: DebateParticipant[],
+  defaultConfidence = 0.7,
+): DebateArgument[] {
+  const nameById = new Map(participants.map((p) => [p.id, p.name]));
+  const roleById = new Map(participants.map((p) => [p.id, p.role]));
+  return timeline
+    .filter((e) => e.type === 'agent:responded')
+    .map((e, idx) => {
+      const payload = e.payload as { agentId?: string; content?: string; round?: number };
+      const agentId = payload.agentId ?? 'unknown';
+      return {
+        id: e.id || `arg-${idx}`,
+        agentId,
+        agentName: nameById.get(agentId) || agentId,
+        content: payload.content ?? '',
+        confidence: defaultConfidence,
+        timestamp: e.timestamp,
+        round: payload.round ?? 1,
+        position: (roleById.get(agentId) ?? 'neutral') as 'pro' | 'con' | 'neutral',
+        source: 'llm' as const,
+      };
+    });
+}
+
+function snapshotToSession(
+  snapshot: DebateSessionSnapshot,
+  ctx: SnapshotBridgeContext,
+): DebateSession {
+  const participants = Array.isArray(ctx.participants) ? ctx.participants : [];
+  const args = ctx.timeline ? timelineToArguments(ctx.timeline, participants) : [];
+  const round = Math.max(1, snapshot.round);
+  const socraticQuestioner = ctx.strategy === 'socratic' && participants.length > 1
+    ? (round - 1) % participants.length
+    : 0;
+  return {
+    id: snapshot.id,
+    topic: snapshot.topic,
+    status: snapshot.phase,
+    strategy: ctx.strategy,
+    maxRounds: ctx.maxRounds,
+    currentRound: round,
+    participants,
+    arguments: args,
+    convergenceScore: 0,
+    openingStatements: args.filter((a) => a.round === 0),
+    config: ctx.config,
+    socraticQuestioner,
+    argumentTreeRoundMap: {},
+    createdAt: snapshot.startedAt,
+  };
+}
+
 export class DebateService {
   private deps: DebateServiceDeps;
   private activeSession: DebateSession | null = null;
@@ -198,9 +291,11 @@ export class DebateService {
   private _budget: DebateBudget | null = null; // P1-10: budget pressure for legacy path
   private processedArgIds = new Set<string>();
   private pendingHumanArguments: DebateArgument[] = [];
+  private engineOnly = false;
 
   constructor(deps: DebateServiceDeps) {
     this.deps = deps;
+    this.engineOnly = CONFIG.featureFlags.debate.engineOnly;
     this.llmCaller = new DebateLLMCaller(deps, {
       participantProviderMap: this.participantProviderMap,
       failedProviders: this.failedProviders,
@@ -231,13 +326,6 @@ export class DebateService {
   }
 
   async init() {
-    // N-06: protect from SSR/Web Worker where localStorage is not available
-    const ls = typeof window !== 'undefined' ? localStorage : null;
-    await migrateFromLegacyStorage(
-      this.deps.debateStore,
-      { getItem: (k) => ls?.getItem(k) ?? null, removeItem: (k) => ls?.removeItem(k) },
-      this.deps.database,
-    );
     this.activeSession = await loadActiveSession(this.deps.debateStore);
     this.completedSessions = await loadHistoryList(this.deps.debateStore, this.MAX_HISTORY);
     this.unsubVerdict = this.deps.eventBus.on('debate:verdict:generated', (data) => {
@@ -280,6 +368,7 @@ export class DebateService {
     config?: Partial<DebateConfig>,
     chatSessionId?: string
   ): Promise<DebateSession> {
+    LOGGER.info('DebateService', 'Starting debate', { topic, participants: participants.length, strategy, maxRounds });
     if (participants.length < 2) {
       throw new Error('Need at least 2 participants for debate');
     }
@@ -319,6 +408,11 @@ export class DebateService {
         this.stopDebate('cancelled');
       }
     }, maxDuration);
+
+    // ── Engine-only guard ─────────────────────────────────────────────
+    if (this.engineOnly && !this.engine) {
+      throw new Error('debate.engineOnly flag is set but no DebateEngine configured');
+    }
 
     // ── Engine path (primary) ──────────────────────────────────────────
     if (this.engine) {

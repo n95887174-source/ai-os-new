@@ -23,7 +23,24 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'react-hooks/exhaustive-deps': 'error',
       'react-refresh/only-export-components': 'warn',
-      'react-hooks/set-state-in-effect': 'warn'
+      'react-hooks/set-state-in-effect': 'warn',
+      'no-restricted-imports': ['warn', {
+        patterns: [{
+          group: ['**/database-service'],
+          importNames: ['dexieDb'],
+          message: 'Direct dexieDb access is reserved for DAL (src/kernel/dal/), storage layer (src/kernel/services/storage/), and database-service.ts itself. Use DataAccessLayer (DAL) repository instead.'
+        }],
+      }],
     }
+  },
+  {
+    files: [
+      'src/kernel/dal/**',
+      'src/kernel/services/storage/**',
+      'src/kernel/services/database-service.ts',
+    ],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
   },
 ])

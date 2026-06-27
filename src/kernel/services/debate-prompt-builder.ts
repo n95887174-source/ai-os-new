@@ -10,7 +10,6 @@ function stableSelectIndex(seed: string, size: number): number {
   }
   return (Math.abs(hash) >>> 0) % size;
 }
-
 /** Sanitize user-supplied strings to prevent prompt injection.
  *  Strips common injection markers and wraps user content in delimiters. */
 function sanitizeForPrompt(input: string, maxLength = 500): string {

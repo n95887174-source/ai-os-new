@@ -24,48 +24,6 @@ class WorkerMock {
 
 vi.stubGlobal('Worker', WorkerMock);
 
-// ─── sql.js mock ─────────────────────────────────────────────────
-// In Vite/browser runtime, sqlite-storage.ts does
-//   import initSqlJs from 'sql.js';
-//   import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
-// Under Vitest/jsdom the ?url import resolves to a non-existent
-// path and initSqlJs() tries to fetch the wasm → unhandled rejection.
-// Stub both: a no-op init that returns a tiny in-memory DB, and a
-// stub for the ?url asset import.  Tests that need real SQL can
-// un-mock via vi.unmock('sql.js').
-vi.mock('sql.js', () => {
-  const stmt = {
-    bind: () => true,
-    step: () => false,
-    getAsObject: () => ({}),
-    free: () => {},
-    run: () => {},
-  };
-  const emptyDb = {
-    run: () => {},
-    prepare: () => stmt,
-    exec: () => [],
-    export: () => new Uint8Array(0),
-    close: () => {},
-    getRowsModified: () => 0,
-  };
-  return {
-    default: vi.fn(async () => ({
-      Database: vi.fn(() => emptyDb),
-      // Mark as a stub so production code can detect & bail.
-      __isSqlJsStub: true,
-    })),
-  };
-});
-
-// Vite's ?url suffix import is transformed at build time; under
-// Vitest it's a bare string export.  Provide a stub module so the
-// `import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url'` line in
-// sqlite-storage.ts doesn't break the resolver.
-vi.mock('sql.js/dist/sql-wasm.wasm?url', () => ({
-  default: 'data:application/wasm;base64,',
-}));
-
 // Mock crypto.randomUUID
 const globalCrypto = globalThis as unknown as { crypto: { randomUUID: () => string } };
 if (!globalCrypto.crypto.randomUUID) {

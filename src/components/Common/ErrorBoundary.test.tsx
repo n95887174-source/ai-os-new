@@ -19,7 +19,7 @@ describe('ErrorBoundary', () => {
   it('catches error and shows panel fallback', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<ErrorBoundary variant="panel" name="Test"><CrashChild /></ErrorBoundary>);
-    expect(screen.getByText('Test crashed')).toBeDefined();
+    expect(screen.getByText('Test: Panel crashed')).toBeDefined();
     expect(screen.getByText('Test crash')).toBeDefined();
     expect(screen.getByText('Reload')).toBeDefined();
   });

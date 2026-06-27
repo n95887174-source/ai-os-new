@@ -158,6 +158,15 @@ const wss = new WebSocketServer({
       callback(true);
       return;
     }
+    // Extract ?token= from the URL path (used by SharedDbChannel WS client)
+    try {
+      const url = new URL(info.req.url || '/', 'http://localhost');
+      const urlToken = url.searchParams.get('token');
+      if (urlToken === SYNC_SECRET) {
+        callback(true);
+        return;
+      }
+    } catch { /* ignore parse errors */ }
     // CRIT-11: Reject WebSocket connections from disallowed origins
     const wsOrigin = info.origin || info.req.headers['origin'] || '';
     if (wsOrigin && !isAllowedOrigin(wsOrigin)) {

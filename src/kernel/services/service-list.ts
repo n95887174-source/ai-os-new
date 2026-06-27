@@ -1,6 +1,6 @@
 export const BOOTSTRAP_SERVICES = [
   'configService', 'settingsService', 'keyService', 'toolService', 'sandboxService', 'agentService',
-  'memoryService', 'featureFlagService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
+  'memoryService', 'cognitiveService', 'policyService', 'roleService', 'snapshotService',
   'debateService', 'debateApiService', 'debateKnowledgeSync', 'hypothesisService', 'metricsService', 'advisorService', 'pricingService',
   'budgetService', 'usageTracker', 'cacheService', 'chatService',
   'timelineService', 'adminService', 'healthCheckService', 'monitoringService',

@@ -1,4 +1,4 @@
-import { Container, type IContainer } from './container';
+import { defaultContainer, type IContainer } from './container';
 import { SystemBootstrap } from './bootstrap';
 import { eventBus as coreEventBus, EVENTS } from './events/event-bus';
 import { rootLogger } from './services/logger-service';
@@ -6,7 +6,6 @@ import { rootLogger } from './services/logger-service';
 const LOGGER = rootLogger.child('Runtime');
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
-import { createSqliteStorage } from './services/storage/sqlite-storage';
 import { createDexieStorage } from './services/storage/dexie-storage';
 import { schedulerService } from './services/scheduler-service';
 import { crossTabStateSync } from './services/cross-tab-state';
@@ -54,14 +53,13 @@ export class RuntimeManager {
 
       try {
         this.registerCoreServices();
-        const { CONFIG } = await import('./services/config-registry');
-        const storage = CONFIG.storage?.useSqlite ? await createSqliteStorage() : createDexieStorage();
-        LOGGER.info('Runtime', 'storage init state', {
+        const storage = createDexieStorage();
+        LOGGER.info('Runtime', 'Storage initialized', {
           hasStorageLayer: !!storage,
           hasKeys: !!storage?.keys,
           keysType: typeof storage?.keys,
           hasListKeys: typeof storage?.keys?.listKeys === 'function',
-          storageBackend: CONFIG.storage?.useSqlite ? 'sqlite' : 'dexie',
+          storageBackend: 'dexie',
         });
         this.container.register('storageLayer', storage);
         await this.bootstrapper.init();
@@ -183,7 +181,6 @@ export class RuntimeManager {
   }
 }
 
-const _container = new Container();
 const localStorageAdapter = new LocalStorageAdapter();
-// storageLayer registered in RuntimeManager.start() via SQLite-over-IndexedDB — works in all browsers
-export const runtime = new RuntimeManager(_container, new SystemBootstrap(_container, coreEventBus));
+// storageLayer registered in RuntimeManager.start() — works in all browsers
+export const runtime = new RuntimeManager(defaultContainer, new SystemBootstrap(defaultContainer, coreEventBus));

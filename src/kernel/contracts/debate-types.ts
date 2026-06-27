@@ -1,5 +1,4 @@
 import type { ApiKey } from '../types/metrics-types';
-import type { FeatureFlag } from './feature-flags';
 import type { IDebateQueryEngine } from './debate-runtime';
 import type { DebateStore } from './storage/debate-store';
 import type { DebatePhase } from './debate-runtime';
@@ -256,9 +255,6 @@ export interface DebateServiceDeps {
   sessionManager: {
     link: (fromId: string, toId: string, linkType: string, context?: string) => Promise<void>;
     updateMeta: (id: string, updates: Record<string, unknown>) => Promise<void>;
-  };
-  getFeatureFlagService?: () => {
-    isEnabled: (flag: FeatureFlag) => boolean;
   };
   queryEngine: IDebateQueryEngine;
   debateStore: DebateStore;

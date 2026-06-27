@@ -199,6 +199,7 @@ export class SettingsService implements ISettingsService {
 
   updateSettings(updates: Partial<SystemSettings>) {
     const validated = validateSettings(updates);
+    LOGGER.info('SettingsService', 'Settings updated', { changedKeys: Object.keys(validated) });
     this.settings = this.deepMergeSettings(this.settings, validated);
     this.save();
     this.applySettings(validated);

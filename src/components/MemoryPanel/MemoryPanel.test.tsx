@@ -15,10 +15,82 @@ vi.mock('../../kernel/instances', () => ({
     clear: vi.fn(() => Promise.resolve()),
     ensureSemantic: vi.fn(() => Promise.resolve()),
   },
+  settingsService: {
+    getSettings: vi.fn(() => ({
+      notifications: true,
+      autoHealthCheck: true,
+      defaultMode: 'smart',
+      streamingEnabled: true,
+      historyPersistence: true,
+      fallbackEnabled: true,
+      debugMode: false,
+      theme: 'dark',
+      language: 'en',
+      explorationFactor: 0.1,
+      slaMode: 'BALANCED',
+    })),
+    subscribe: vi.fn(() => vi.fn()),
+  },
+  configService: {
+    updateServices: vi.fn(() => Promise.resolve()),
+  },
 }));
 
 vi.mock('../../kernel/events/event-bus', () => ({
-  eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+  eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn(), onSafe: vi.fn(() => vi.fn()) },
+}));
+
+vi.mock('../../kernel/services/config-registry', () => ({
+  CONFIG: {
+    services: {
+      memory: {
+        semanticEnabled: false,
+      },
+    },
+  },
+}));
+
+vi.mock('../../i18n/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const labels: Record<string, string> = {
+        'memory.title': 'Vector Memory Mesh',
+        'memory.subtitle': 'Explore and manage memory entries',
+        'memory.wipe_index': 'Wipe Index',
+        'memory.export_vectors': 'Export Vectors',
+        'memory.index_params': 'Index Parameters',
+        'memory.knowledge_growth': 'Knowledge Growth',
+        'memory.entries_label': 'Memory Entries',
+        'memory.dimensions_label': 'Dimensions',
+        'memory.density_label': 'Index Density',
+        'memory.clarity_label': 'Semantic Clarity',
+        'memory.tab.long_term': 'Long-Term Memory',
+        'memory.tab.ephemeral': 'Ephemeral Context',
+        'memory.tab.rag': 'RAG Knowledge',
+        'memory.context_fallback': 'context',
+        'memory.loading': 'Loading memory...',
+        'memory.empty_collection': 'No entries',
+        'memory.empty_search': 'No results',
+        'memory.search_semantic': 'Search semantically...',
+        'memory.search_exact': 'Search text...',
+        'memory.switch_search_aria': 'Switch to {0}',
+        'memory.retrieval_latency': 'Avg retrieval: ',
+        'memory.fragments_added': '{0} fragments {1}',
+        'memory.today': 'today',
+        'memory.days_ago': 'days ago',
+        'memory.knowledge_desc': 'Knowledge base with {0} entries',
+        'memory.error_search': 'Search failed',
+        'memory.error_wipe': 'Wipe failed',
+        'memory.error_delete': 'Delete failed',
+        'memory.error_export': 'Export failed',
+        'common.dismiss_error': 'Dismiss',
+      };
+      return labels[key] ?? key;
+    },
+    lang: 'en',
+    setLanguage: () => {},
+    settingsService: { subscribe: () => () => {} },
+  }),
 }));
 
 describe('MemoryPanel', () => {

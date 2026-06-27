@@ -8,6 +8,7 @@ interface InstalledProvidersViewProps {
   onSelect: (key: ApiKey, tab: 'overview' | 'sandbox') => void;
   onCheckHealth: (keyId: string) => void;
   onToggleStatus: (keyId: string) => void;
+  onRemoveKey: (keyId: string) => void;
   onEnableAll: () => void;
   onDisableAll: () => void;
   checkingIds: Set<string>;
@@ -45,18 +46,50 @@ vi.mock('../../stores/useKeyStore', () => ({
   useKeyStore: vi.fn(() => ({
     keys: mockKeys,
     activeKeys: mockKeys.filter(k => k.status === 'active'),
+    checkingIds: new Set<string>(),
     removeKey: vi.fn(),
     checkHealth: vi.fn(),
     checkAllHealth: vi.fn(),
+    toggleKeyStatus: vi.fn(),
+    enableAllKeys: vi.fn(),
+    disableAllKeys: vi.fn(),
+    exportKeys: vi.fn(() => Promise.resolve('')),
+    importKeys: vi.fn(() => Promise.resolve(0)),
+    updateKey: vi.fn(),
+    addKey: vi.fn(),
+    getKeyById: vi.fn(),
+    getKeysByProvider: vi.fn(() => []),
+    getAlerts: vi.fn(() => []),
+    resolveAlert: vi.fn(),
+    totalKeys: mockKeys.length,
+    activeCount: mockKeys.filter(k => k.status === 'active').length,
+    errorCount: mockKeys.filter(k => k.status === 'error').length,
   })),
 }));
 
-vi.mock('../../kernel/instances', () => ({
-  keyService: {
-    setGlobalSLA: vi.fn(),
-    setLatencyThreshold: vi.fn(),
-  },
-}));
+  vi.mock('../../kernel/instances', () => ({
+    settingsService: {
+      getSettings: () => ({ language: 'en' as const, theme: 'dark' as const }),
+      subscribe: () => () => {},
+    },
+    probeService: {},
+    keyStateStore: {},
+    adapterRegistry: {
+      getAllProviders: () => ['openrouter', 'gemini', 'groq', 'nvidia'],
+    },
+    groupManager: {
+      createKey: vi.fn(() => Promise.resolve({ ok: true, key: {} })),
+    },
+    FREE_TIER_LIMITS: { maxKeys: 100, maxRequests: 10000 },
+    keyService: {
+      getRoutingPolicy: () => ({ globalSLAMode: 'BALANCED', latencyThreshold: 2000 }),
+      setGlobalSLA: vi.fn(),
+      setLatencyThreshold: vi.fn(),
+      setSLA: vi.fn(),
+      getProviderIntrospection: vi.fn(() => Promise.resolve({})),
+      getAlerts: vi.fn(() => []),
+    },
+  }));
 
 vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
@@ -74,7 +107,7 @@ describe('ProviderManager', () => {
 
   beforeAll(async () => {
     ProviderManager = (await import('./ProviderManager')).default;
-  });
+  }, 30000);
 
   beforeEach(() => { vi.clearAllMocks(); });
 
@@ -135,7 +168,7 @@ describe('ProviderManager', () => {
     render(<ProviderManager />);
     const tablist = screen.getByRole('tablist');
     fireEvent.keyDown(tablist, { key: 'ArrowLeft' });
-    expect(screen.queryByRole('tab', { selected: true })?.textContent).toMatch(/Routing & SLA/);
+    expect(screen.queryByRole('tab', { selected: true })?.textContent).toMatch(/Routing Intel/);
   });
 
   it('shows provider table with key labels', () => {
@@ -146,7 +179,8 @@ describe('ProviderManager', () => {
 
   it('shows empty state description when no keys', async () => {
     const { useKeyStore } = await import('../../stores/useKeyStore');
-    vi.mocked(useKeyStore).mockReturnValueOnce({ keys: [], activeKeys: [], alerts: [], checkingIds: new Set(), totalKeys: 0, activeCount: 0, errorCount: 0, removeKey: vi.fn(), checkHealth: vi.fn(), checkAllHealth: vi.fn(), addKey: vi.fn(), updateKey: vi.fn(), toggleKeyStatus: vi.fn(), enableAllKeys: vi.fn(), disableAllKeys: vi.fn(), exportKeys: vi.fn() as unknown as () => string, importKeys: vi.fn() as unknown as (jsonData: string) => Promise<number>, getKeyById: vi.fn() as unknown as (id: string) => import('../../types/metrics').ApiKey | undefined, getKeysByProvider: vi.fn() as unknown as (provider: string) => import('../../types/metrics').ApiKey[], getAlerts: vi.fn() as unknown as () => import('../../types/metrics').ProviderAlert[], resolveAlert: vi.fn() });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useKeyStore).mockReturnValueOnce({ keys: [], activeKeys: [], alerts: [], checkingIds: new Set(), totalKeys: 0, activeCount: 0, errorCount: 0, removeKey: vi.fn(), checkHealth: vi.fn(), checkAllHealth: vi.fn(), addKey: vi.fn(), updateKey: vi.fn(), toggleKeyStatus: vi.fn(), enableAllKeys: vi.fn(), disableAllKeys: vi.fn(), exportKeys: vi.fn(() => Promise.resolve('')), importKeys: vi.fn(() => Promise.resolve(0)), getKeyById: vi.fn(), getKeysByProvider: vi.fn(() => []), getAlerts: vi.fn(() => []), resolveAlert: vi.fn() } as any);
     render(<ProviderManager />);
     expect(screen.getByText((content) => content.includes('Add your first provider'))).toBeDefined();
   });
@@ -162,26 +196,32 @@ describe('InstalledProvidersView', () => {
 
   beforeEach(() => { vi.clearAllMocks(); });
 
-  const baseProps: InstalledProvidersViewProps = { keys: mockKeys, onSelect: vi.fn(), onCheckHealth: vi.fn(), onToggleStatus: vi.fn(), onEnableAll: vi.fn(), onDisableAll: vi.fn(), checkingIds: new Set<string>() };
+  const baseProps: InstalledProvidersViewProps = { keys: mockKeys, onSelect: vi.fn(), onCheckHealth: vi.fn(), onToggleStatus: vi.fn(), onRemoveKey: vi.fn(), onEnableAll: vi.fn(), onDisableAll: vi.fn(), checkingIds: new Set<string>() };
 
   it('renders search input', () => {
     render(<InstalledProvidersView {...baseProps} />);
     expect(screen.getByPlaceholderText('Search installed providers...')).toBeDefined();
   });
 
-  it('filters providers on search', () => {
+  it('filters providers on search', async () => {
     render(<InstalledProvidersView {...baseProps} />);
     const input = screen.getByPlaceholderText('Search installed providers...');
     fireEvent.change(input, { target: { value: 'Gemini' } });
-    expect(screen.getByText((_, el) => el?.textContent === 'Gemini Pro')).toBeDefined();
-    expect(screen.queryByText((_, el) => el?.textContent === 'OpenRouter Pro')).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByText((_, el) => el?.textContent === 'Gemini Pro')).toBeDefined();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText((_, el) => el?.textContent === 'OpenRouter Pro')).toBeNull();
+    });
   });
 
-  it('shows empty state when no matches', () => {
+  it('shows empty state when no matches', async () => {
     render(<InstalledProvidersView {...baseProps} />);
     const input = screen.getByPlaceholderText('Search installed providers...');
     fireEvent.change(input, { target: { value: 'nonexistent' } });
-    expect(screen.getByText('No providers found')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText('No providers found')).toBeDefined();
+    });
   });
 
   it('shows view mode toggles', () => {

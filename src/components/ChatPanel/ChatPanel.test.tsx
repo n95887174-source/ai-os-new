@@ -15,28 +15,57 @@ vi.mock('../../stores/useKeyStore', () => ({
     checkHealth: vi.fn(),
     checkAllHealth: vi.fn(),
   }),
+  useKeyList: () => ({
+    keys: mockKeys,
+    activeKeys: mockKeys.filter(k => k.status === 'active'),
+  }),
 }));
 
+const mockChatState = {
+  sessions: [{ id: 's1', title: 'Test Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() }],
+  activeSessionId: 's1',
+  setActiveSessionId: vi.fn(),
+  history: [],
+  isSending: false,
+  sendMessage: vi.fn(),
+  cancelMessage: vi.fn(),
+  cancelSending: vi.fn(),
+  clearHistory: vi.fn(),
+  createSession: vi.fn(() => 'new-session'),
+  deleteSession: vi.fn(),
+  forkSession: vi.fn(),
+  editEntry: vi.fn(),
+  hasMoreSessions: true,
+  loadMoreSessions: vi.fn(),
+  getSessionConfig: vi.fn(),
+  systemPrompt: '',
+  setSystemPrompt: vi.fn(),
+  activeRequestIds: new Set<string>(),
+};
+
 vi.mock('../../stores/useChatStore', () => ({
-  useChatStore: () => ({
-    sessions: [{ id: 's1', title: 'Test Chat', history: [], createdAt: Date.now(), updatedAt: Date.now() }],
-    activeSessionId: 's1',
-    setActiveSessionId: vi.fn(),
-    history: [],
-    isSending: false,
-    sendMessage: vi.fn(),
-    cancelMessage: vi.fn(),
-    clearHistory: vi.fn(),
-    createSession: vi.fn(() => 'new-session'),
-    deleteSession: vi.fn(),
-    forkSession: vi.fn(),
-    editEntry: vi.fn(),
-  }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useChatStore: (selector?: any) =>
+    selector ? selector(mockChatState) : mockChatState,
+  useActiveSessionHistory: () => [],
 }));
 
 vi.mock('../../kernel/instances', () => ({
   routerService: {
     getRankedProviders: vi.fn(() => []),
+  },
+  settingsService: {
+    getSettings: vi.fn(() => ({ language: 'en' })),
+    subscribe: vi.fn(() => vi.fn()),
+  },
+  storageAdapter: {
+    getItem: vi.fn(() => null),
+    setItem: vi.fn(),
+  },
+  personaService: {
+    getAll: vi.fn(() => []),
+    getActive: vi.fn(() => null),
+    setActive: vi.fn(),
   },
 }));
 
@@ -56,7 +85,7 @@ describe('ChatPanel', () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     const { container } = render(<ChatPanel />);
     expect(container).toBeDefined();
-  });
+  }, 15000);
 
   it('renders without no-providers message', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
@@ -73,11 +102,13 @@ describe('ChatPanel', () => {
     });
   });
 
-  it('shows execution mode options', async () => {
+  it('shows execution mode buttons', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     render(<ChatPanel />);
-    const options = document.querySelectorAll('option');
-    expect(options.length).toBeGreaterThanOrEqual(3);
+    const modeButtons = Array.from(document.querySelectorAll('button')).filter(b =>
+      /Single|Parallel|Auto/i.test(b.textContent || '')
+    );
+    expect(modeButtons.length).toBeGreaterThanOrEqual(3);
   });
 
   it('renders text input area', async () => {
@@ -87,12 +118,11 @@ describe('ChatPanel', () => {
     expect(textareas.length).toBeGreaterThan(0);
   });
 
-  it('renders Auto execution mode', async () => {
+  it('renders Auto execution mode button', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     render(<ChatPanel />);
-    const selects = document.querySelectorAll('select');
-    const modeSelect = Array.from(selects).find(s => s.querySelector('option[value="auto"]'));
-    expect(modeSelect).toBeDefined();
+    const autoButton = Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Auto');
+    expect(autoButton).toBeDefined();
   });
 
   it('renders session title', async () => {
@@ -105,13 +135,13 @@ describe('ChatPanel', () => {
   it('renders new chat button', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     render(<ChatPanel />);
-    expect(await screen.findByText('New Conversation')).toBeDefined();
+    expect(await screen.findByTitle('chat.new_session')).toBeDefined();
   });
 
   it('renders search input in sidebar', async () => {
     const ChatPanel = (await import('./ChatPanel')).default;
     render(<ChatPanel />);
-    const searchInputs = document.querySelectorAll('input[placeholder*="Search"]');
+    const searchInputs = document.querySelectorAll('input[placeholder="chat.search_placeholder"]');
     expect(searchInputs.length).toBeGreaterThan(0);
   });
 

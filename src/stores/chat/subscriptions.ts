@@ -1,6 +1,6 @@
+import { CONFIG } from '../../kernel/services/config-registry';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { featureFlagService, memoryService } from '../../kernel/instances';
-import { FEATURE_FLAGS } from '../../kernel/contracts/feature-flags';
+import { memoryService } from '../../kernel/instances';
 import { useChatStore } from './store';
 import type { ChatEntry, ChatSession } from './types';
 import type { ChatResponse } from '../../types/chat';
@@ -212,7 +212,7 @@ moduleUnsubs.push(eventBus.on(EVENTS.STREAM_END, ({ requestId, provider, fullCon
   useChatStore.getState().removeActiveRequestId(requestId);
 
   // P0-6: don't store error/timeout/empty responses into RAG memory — avoids index pollution
-  if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE) && status !== 'error' && status !== 'timeout' && fullContent) {
+  if (CONFIG.featureFlags.memory.autoStore && status !== 'error' && status !== 'timeout' && fullContent) {
     memoryService.store({
       content: fullContent,
       metadata: {

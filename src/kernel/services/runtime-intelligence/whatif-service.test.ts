@@ -5,8 +5,11 @@ import type { ISPolicy } from '../policy-service';
 describe('WhatIfService - Policy Dry-Run', () => {
   const mockCognitive = {
     simulateTopologyChange: () => undefined,
+    simulateParticipantChange: () => undefined,
   };
-  const service = new WhatIfService({ cognitiveIntelligenceService: mockCognitive as any });
+  const mockEventBus = { emit: () => {} };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const service = new WhatIfService({ cognitiveIntelligenceService: mockCognitive as any, eventBus: mockEventBus });
 
   it('should simulate a latency threshold policy dry-run successfully', async () => {
     const policy: ISPolicy = {

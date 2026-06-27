@@ -146,12 +146,13 @@ export type ProviderRanking = {
 };
 
 export interface IProviderTracker {
-  updateProviderMetric(state: SystemState, data: { provider: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string }): void;
-  updateProviderError(state: SystemState, data: { provider: string }): void;
-  calculateSelectionRates(state: SystemState): void;
+  start(eventBus: IEventBus): void;
   getHealthEvents(provider?: string, limit?: number): HealthEvent[];
-  getProviderRankings(state: SystemState, catalogProviders?: string[]): ProviderRanking[];
-  getCollaborativeSuggestions(state: SystemState, installedProviders?: string[]): Array<{ provider: string; reason: string; matchScore: number }>;
-  hydrateState?(state: SystemState): Promise<void>;
-  persistProviderMetrics?(state: SystemState): void;
+  getMetrics(provider: string, keyId: string): {
+    errors: number; totalRequests: number; avgLatency: number;
+    quotaRemaining: number; quotaLimit: number; reputation: number; lastUsed: number;
+  } | null;
+  getProviderRankings(catalogProviders?: string[]): ProviderRanking[];
+  getCollaborativeSuggestions(installedProviders?: string[]): Array<{ provider: string; reason: string; matchScore: number }>;
+  destroy(): void;
 }

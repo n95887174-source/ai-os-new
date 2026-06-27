@@ -49,20 +49,29 @@ function MetricBar({ label, control, experiment, higherIsBetter, format }: {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface TreeNode {
+  label: string;
+  sub?: string;
+  color: string;
+  children?: TreeNode[];
+}
+
 function WeightTunerInner({ profile, actions }: {
   profile: { defaultWeights: { ttft: number; tps: number; reliability: number } };
   actions: { updateActiveProfileWeights: (w: { ttft: number; tps: number; reliability: number }) => Promise<void> };
 }) {
-  const w = profile.defaultWeights;
-
+  const w = profile?.defaultWeights ?? { ttft: 0.5, tps: 0.3, reliability: 0.2 };
   const [localWeights, setLocalWeights] = useState(w);
   const [saved, setSaved] = useState(true);
 
-  // CRIT-3 fix: Sync local state when profile changes via useEffect
   useEffect(() => {
-    setLocalWeights(profile.defaultWeights);
+    setLocalWeights(w);
     setSaved(true);
-  }, [profile.defaultWeights]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.defaultWeights?.ttft, profile?.defaultWeights?.tps, profile?.defaultWeights?.reliability]);
+
+  if (!profile) return <div style={{ color: '#64748b', fontSize: '0.8rem' }}>No active profile</div>;
 
   const hasChanges = localWeights.ttft !== w.ttft || localWeights.tps !== w.tps || localWeights.reliability !== w.reliability;
 

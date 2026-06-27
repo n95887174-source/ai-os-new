@@ -10,8 +10,9 @@ import { CommandPalette, useCommandPalette } from './CommandPalette/CommandPalet
 import { Breadcrumbs } from './Common/Breadcrumbs';
 import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
 import { KeyboardShortcutsModal } from './Common/KeyboardShortcutsModal';
+import { CONFIG } from '../kernel/services/config-registry';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
-import { settingsService, groupManager, featureFlagService } from '../kernel/instances';
+import { settingsService, groupManager } from '../kernel/instances';
 import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
@@ -35,7 +36,7 @@ export const AppLayout: React.FC = () => {
   const [runtimeStatus, setRuntimeStatus] = useState<'online' | 'degraded' | 'offline'>('online');
   const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
-  const [featureFlags, setFeatureFlags] = useState(() => featureFlagService.getAll() ?? {});
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(() => JSON.parse(JSON.stringify(CONFIG.featureFlags)));
 
   const [userLevel, setUserLevel] = useState<UserLevel>(() => {
     try { return (localStorage.getItem('mavis:userLevel') as UserLevel) || 'L0'; } catch { return 'L0'; }
@@ -80,7 +81,7 @@ export const AppLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const unsub = featureFlagService.onChange(() => setFeatureFlags(featureFlagService.getAll()));
+    const unsub = eventBus.on(EVENTS.SETTINGS_UPDATED, () => setFeatureFlags(JSON.parse(JSON.stringify(CONFIG.featureFlags))));
     return () => unsub();
   }, []);
 

@@ -161,8 +161,8 @@ export type { IProbeService, ProbeResult, ProbeStatus } from './probe';
 export type { IKeyStateStore, KeyState, KeyStatus, KeyProbeSnapshot, KeyHealthSnapshot, KeyQuotaSnapshot, KeyRoutingState } from './key-state';
 export type { KeyStateEvent } from './key-state';
 
-export { FEATURE_FLAGS, DEFAULT_FEATURE_FLAGS } from './feature-flags';
-export type { IFeatureFlagService, FeatureFlag } from './feature-flags';
+export { FEATURE_FLAGS } from './feature-flags';
+export type { FeatureFlag } from './feature-flags';
 
 export type { ILocalStorageAdapter } from './storage-adapter';
 

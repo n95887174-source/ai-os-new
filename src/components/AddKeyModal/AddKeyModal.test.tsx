@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AddKeyModal from './AddKeyModal';
 
 describe('AddKeyModal', () => {
@@ -47,7 +47,7 @@ describe('AddKeyModal', () => {
   it('shows error on submit with empty fields', () => {
     render(<AddKeyModal onClose={vi.fn()} />);
     fireEvent.click(screen.getByText('OpenAI'));
-    fireEvent.click(screen.getByText('Connect Provider'));
+    fireEvent.click(screen.getByText('Add Key'));
     expect(screen.getByText('Label and API key are required.')).toBeDefined();
   });
 
@@ -73,7 +73,7 @@ describe('AddKeyModal', () => {
     render(<AddKeyModal onClose={vi.fn()} />);
     fireEvent.click(screen.getByText('Google Gemini'));
     const nameInput = screen.getByLabelText('Connection name') as HTMLInputElement;
-    expect(nameInput.value).toBe('Google Gemini Key');
+    expect(nameInput.value).toBe('google-gemini-01');
   });
 
   it('has dialog role and aria-modal', () => {
@@ -82,13 +82,13 @@ describe('AddKeyModal', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true');
   });
 
-  it('calls onClose after successful submit', () => {
+  it('calls onClose after successful submit', async () => {
     const onClose = vi.fn();
     render(<AddKeyModal onClose={onClose} />);
     fireEvent.click(screen.getByText('OpenAI'));
     fireEvent.change(screen.getByLabelText('Connection name'), { target: { value: 'My Key' } });
     fireEvent.change(screen.getByLabelText('API key'), { target: { value: 'sk-test' } });
-    fireEvent.click(screen.getByText('Connect Provider'));
-    expect(onClose).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByText('Save & Close'));
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 });

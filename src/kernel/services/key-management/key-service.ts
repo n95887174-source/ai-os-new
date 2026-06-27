@@ -212,7 +212,7 @@ export class KeyService {
     await this.loadConfig();
     await this.registry.loadKeys();
     const keysAfterLoad = this.registry.getKeys();
-    if (import.meta.env.DEV) rootLogger.info('KeyService', '[KEY_FLOW] KeyService final keys count:', {
+    if (import.meta.env.DEV) console.log('[KEY_FLOW] KeyService final keys count:', {
       count: keysAfterLoad.length,
       providers: [...new Set(keysAfterLoad.map(k => k.provider))],
       activeCount: keysAfterLoad.filter(k => k.status === 'active').length,

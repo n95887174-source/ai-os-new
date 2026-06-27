@@ -6,6 +6,9 @@ import { TransactionContext } from './services/transaction';
 import { updateAdaptiveWeights as updateWeights, setSLAMode as setSLAWeights } from './WeightOptimizer';
 import { rootLogger } from './services/logger-service';
 import { EVENTS } from './events/event-names';
+import { estimateTokens } from './utils/tokenEstimate';
+
+const ALPHA = 0.15;
 
 const LOGGER = rootLogger.child('Kernel');
 
@@ -87,7 +90,6 @@ export class SystemKernel implements IKernel {
       if (saved) {
         this.loadState(saved);
       }
-      await this.tracker.hydrateState?.(this.state);
     } catch (e) {
       this.deps.eventBus?.emit('kernel:load-failed', { error: String(e) });
       this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, { reason: `DB load failed: ${String(e)}` });
@@ -160,17 +162,45 @@ export class SystemKernel implements IKernel {
 
   private applyMutation(type: string, payload: unknown): void {
     switch (type) {
-      case 'METRIC_UPDATE':
-        this.tracker.updateProviderMetric(this.state, payload as Parameters<IProviderTracker['updateProviderMetric']>[1]);
-        this.tracker.persistProviderMetrics?.(this.state);
+      case 'METRIC_UPDATE': {
+        const data = payload as { provider?: string; tokens?: number; fullContent?: string; latency: number; ttft?: number; model?: string };
+        if (!data.provider) break;
+        const provKey = data.provider.toLowerCase();
+        const base = this.state.providers[provKey] || { id: provKey, avgTTFT: 0, avgTPS: 0, reliability: 0, stabilityIndex: 0, reputationScore: 0, totalRequests: 0, estimatedCost: 0, selectionRate: 0, status: 'unknown' as const };
+        const tokens = data.tokens || estimateTokens(data.fullContent || '');
+        const genTime = (data.latency - (data.ttft || 0)) / 1000;
+        let currentTPS = base.avgTPS;
+        if (genTime > 0 && tokens > 0) {
+          const raw = tokens / genTime;
+          if (isFinite(raw) && raw >= 0) currentTPS = raw;
+        }
+        base.avgTTFT = data.ttft ? (ALPHA * data.ttft) + (1 - ALPHA) * base.avgTTFT : base.avgTTFT;
+        base.avgTPS = (ALPHA * currentTPS) + (1 - ALPHA) * base.avgTPS;
+        const quality = data.ttft && data.latency ? Math.max(0, Math.min(1, 1 - (data.ttft / data.latency))) : 0.9;
+        base.reliability = (ALPHA * quality) + (1 - ALPHA) * base.reliability;
+        base.stabilityIndex = Math.min(1.0, (ALPHA * quality) + (1 - ALPHA) * base.stabilityIndex);
+        base.reputationScore = Math.min(100, (ALPHA * 100) + (1 - ALPHA) * base.reputationScore);
+        base.status = base.reliability > 0.8 ? 'healthy' : base.reliability > 0.4 ? 'degraded' : 'offline';
+        base.totalRequests++;
+        this.state.providers[provKey] = base;
+        this.state.totalRequests++;
+        this.state.totalTokens += tokens;
         break;
-      case 'METRIC_ERROR':
-        this.tracker.updateProviderError(this.state, payload as { provider: string });
-        this.tracker.persistProviderMetrics?.(this.state);
+      }
+      case 'METRIC_ERROR': {
+        const errData = payload as { provider: string };
+        const eProvKey = errData.provider.toLowerCase();
+        const eBase = this.state.providers[eProvKey] || { id: eProvKey, avgTTFT: 0, avgTPS: 0, reliability: 0, stabilityIndex: 0, reputationScore: 0, totalRequests: 0, estimatedCost: 0, selectionRate: 0, status: 'unknown' as const };
+        eBase.reliability = (ALPHA * 0) + (1 - ALPHA) * eBase.reliability;
+        eBase.stabilityIndex = Math.max(0, (ALPHA * 0) + (1 - ALPHA) * eBase.stabilityIndex);
+        eBase.reputationScore = Math.max(0, (ALPHA * 0) + (1 - ALPHA) * eBase.reputationScore);
+        eBase.totalRequests++;
+        this.state.providers[eProvKey] = eBase;
+        this.state.totalRequests++;
         break;
+      }
       case 'DECISION_MADE':
         this.state.decisions = [payload as DecisionTrace, ...this.state.decisions].slice(0, 50);
-        this.tracker.calculateSelectionRates(this.state);
         break;
       case 'LEARNING_SIGNAL':
         this.updateAdaptiveWeights(payload as { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number });
@@ -226,11 +256,11 @@ export class SystemKernel implements IKernel {
   }
 
   getProviderRankings(catalogProviders?: string[]) {
-    return this.tracker.getProviderRankings(this.state, catalogProviders);
+    return this.tracker.getProviderRankings(catalogProviders);
   }
 
   getCollaborativeSuggestions(installedProviders?: string[]) {
-    return this.tracker.getCollaborativeSuggestions(this.state, installedProviders);
+    return this.tracker.getCollaborativeSuggestions(installedProviders);
   }
 
   dumpState() { return JSON.stringify({ state: this.state, eventLog: this.eventLog, eventLogCursor: this.eventLogCursor, version: '2.1.0-safety' }); }

@@ -1,4 +1,4 @@
-import type { ConfigRegistry } from '../contracts/config-registry';
+import type { ConfigRegistry, StorageConfigSection } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
 import { eventBus } from '../events/event-bus';
 
@@ -232,21 +232,23 @@ const rawConfig: ConfigRegistry = {
     memory: { semanticEnabled: true, autoEmbedOnStore: true },
   },
 
-  /**
-   * Storage backend selection.
-   *
-   * `useSqlite: false` (default) — sql.js storage layer is NOT loaded.
-   * Keys live in Dexie (IndexedDB) + localStorage mirror. The legacy
-   * `super_agents_api_keys` localStorage entry is read once at bootstrap
-   * and migrated to Dexie; after that, Dexie is the source of truth.
-   *
-   * `useSqlite: true` — load sql.js WASM, read/write the encrypted blob
-   * alongside Dexie. Use only for migration testing; not recommended
-   * for production. Will be removed in v5.
-   */
-  storage: {
-    useSqlite: false,
+  featureFlags: {
+    memory: {
+      enabled: true,
+      semantic: true,
+      ragOnChat: true,
+      autoStore: true,
+    },
+    debate: {
+      runtimeEngine: false,
+      engineOnly: false,
+    },
+    ui: {
+      experimentalVisuals: false,
+    },
   },
+
+  storage: {} as StorageConfigSection,
   security: {
     adminToken: undefined,
     webhookSecret: undefined as string | undefined,
@@ -312,4 +314,21 @@ export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigR
   (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
   deepFreeze(rawConfig); // N-14: freeze after mutation
   eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
+}
+
+/** Update a feature flag value in rawConfig. Clones the section, mutates, and replaces via setConfig.
+ *  Works around deepFreeze by replacing the whole section instead of mutating a frozen object. */
+export function setFeatureFlag(path: string, enabled: boolean): void {
+  const section = JSON.parse(JSON.stringify(rawConfig.featureFlags));
+  const parts = path.replace(/^featureFlags\./, '').split('.');
+  let target: Record<string, unknown> = section;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const next = target[parts[i]];
+    if (!next || typeof next !== 'object') return;
+    target = next as Record<string, unknown>;
+  }
+  const flagKey = parts[parts.length - 1];
+  if (target[flagKey] === enabled) return;
+  target[flagKey] = enabled;
+  setConfig('featureFlags', section);
 }

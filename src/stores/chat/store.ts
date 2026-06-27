@@ -3,9 +3,9 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../llm/core/types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
+import { CONFIG } from '../../kernel/services/config-registry';
 import { runtime } from '../../kernel/runtime';
-import { executionGovernor, memoryService, workspaceService, featureFlagService, sessionManager } from '../../kernel/instances';
-import { FEATURE_FLAGS } from '../../kernel/contracts/feature-flags';
+import { executionGovernor, memoryService, workspaceService, sessionManager } from '../../kernel/instances';
 import type { ChatStoreShape, ChatEntry, ChatSession, ZustandSet, ZustandGet } from './types'
 import {
   DEFAULT_SESSION, SESSION_BATCH_SIZE, MAX_HISTORY, MODEL_CONTEXT_WINDOWS, DELETED_IDS_TTL,
@@ -108,7 +108,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       };
 
       let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
-      if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_RAG_ON_CHAT)) {
+      if (CONFIG.featureFlags.memory.ragOnChat) {
         try {
           relatedMemories = (await memoryService.search(text, 3)) || [];
         } catch (e) {
@@ -120,7 +120,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         ? `[RECALLED CONTEXT]\n${relatedMemories.map((m) => `- ${m.entry.content}`).join('\n')}\n\n`
         : '';
 
-      if (featureFlagService.isEnabled(FEATURE_FLAGS.MEMORY_AUTO_STORE)) {
+      if (CONFIG.featureFlags.memory.autoStore) {
         try {
           await memoryService.store({
             content: text,
