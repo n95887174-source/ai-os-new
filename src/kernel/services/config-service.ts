@@ -1,4 +1,5 @@
-import { CONFIG_DEFAULTS, setConfig } from './config-registry'
+import { CONFIG_DEFAULTS } from './config-registry'
+import { setConfig } from './config-mutations'
 import { getRouterConfig } from './router-config-manager'
 import type { RouterConfigSection } from '../contracts/config-registry';
 import type {

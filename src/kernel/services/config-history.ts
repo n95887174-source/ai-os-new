@@ -1,6 +1,7 @@
 import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
-import { CONFIG, replaceConfig } from './config-registry';
+import { CONFIG } from './config-registry';
+import { replaceConfig } from './config-mutations';
 import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
 

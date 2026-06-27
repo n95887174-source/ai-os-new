@@ -1,8 +1,6 @@
 import type { ConfigRegistry, StorageConfigSection } from '../contracts/config-registry';
-import { EVENTS } from '../events/event-names';
-import { eventBus } from '../events/event-bus';
 
-const rawConfig: ConfigRegistry = {
+export const rawConfig: ConfigRegistry = {
   version: '1.0.0',
   buildId: typeof import.meta !== 'undefined' && import.meta.env?.VITE_BUILD_ID ? import.meta.env.VITE_BUILD_ID as string : 'dev',
 
@@ -292,43 +290,11 @@ export const CONFIG: Readonly<ConfigRegistry> = new Proxy(rawConfig, {
 }) as Readonly<ConfigRegistry>;
 
 /** N-14: deep freeze helper to prevent accidental CONFIG mutation */
-function deepFreeze(obj: unknown): void {
+export function deepFreeze(obj: unknown): void {
   if (obj === null || typeof obj !== 'object') return;
   if (Object.isFrozen(obj)) return;
   Object.freeze(obj);
   for (const val of Object.values(obj as Record<string, unknown>)) deepFreeze(val);
 }
 
-/** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
-export function replaceConfig(next: ConfigRegistry): void {
-  const mutableRaw = rawConfig as unknown as Record<string, unknown>;
-  const mutableNext = next as unknown as Record<string, unknown>;
-  for (const key of Object.keys(rawConfig)) delete mutableRaw[key];
-  for (const key of Object.keys(next)) mutableRaw[key] = mutableNext[key];
-  deepFreeze(rawConfig); // N-14: freeze after mutation
-  eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
-}
 
-/** Update a single top-level section in rawConfig (used by config-service). */
-export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
-  (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
-  deepFreeze(rawConfig); // N-14: freeze after mutation
-  eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
-}
-
-/** Update a feature flag value in rawConfig. Clones the section, mutates, and replaces via setConfig.
- *  Works around deepFreeze by replacing the whole section instead of mutating a frozen object. */
-export function setFeatureFlag(path: string, enabled: boolean): void {
-  const section = JSON.parse(JSON.stringify(rawConfig.featureFlags));
-  const parts = path.replace(/^featureFlags\./, '').split('.');
-  let target: Record<string, unknown> = section;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const next = target[parts[i]];
-    if (!next || typeof next !== 'object') return;
-    target = next as Record<string, unknown>;
-  }
-  const flagKey = parts[parts.length - 1];
-  if (target[flagKey] === enabled) return;
-  target[flagKey] = enabled;
-  setConfig('featureFlags', section);
-}
