@@ -4,7 +4,6 @@ import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-service';
 import { CONFIG } from '../config-registry';
 import type { KeyStore } from '../../contracts/storage/key-store';
-import type { KeyRepository } from '../../dal/key-repository';
 import { dexieDb } from '../database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
 import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';
@@ -39,7 +38,6 @@ export interface KeyRegistryDeps {
     stripPlaintextKeys: (keys: ApiKey[]) => ApiKey[];
   };
   freeTierLimits: Record<string, FreeTierLimit>;
-  repo: KeyRepository;
 }
 
 export class KeyRegistry {
@@ -129,7 +127,7 @@ export class KeyRegistry {
       try {
         // DEXIE_IDENTITY: log identity on every reload peek
         await logDexieIdentityWithCount('KeyRegistry.reload:peek', dexieDb as unknown as Parameters<typeof logDexieIdentityWithCount>[1]);
-        const dexieKeys = await this.deps.repo.getAll();
+        const dexieKeys = await this.deps.keyStore.listKeys();
         if (dexieKeys.length === 0) {
           LOGGER.warn('KeyRegistry', `reload() BLOCKED: registry has ${this.keys.length} keys but dexie source is empty. Skipping reload to avoid overwrite.`);
           return;
@@ -194,8 +192,8 @@ export class KeyRegistry {
         }
       }
 
-      // ── Normal path: read from KeyRepository ─────────────────────
-      const dexieKeys = await this.deps.repo.getAll();
+      // ── Normal path: read from KeyStore ─────────────────────
+      const dexieKeys = await this.deps.keyStore.listKeys();
       this.traceKeyDrop(_dropRun, 'loadDexie', 0, dexieKeys.length, dexieKeys, { source: 'repo.getAll()' });
 
       // ── DIAGNOSTIC: print structure of the first 3 raw keys BEFORE filter
@@ -238,7 +236,7 @@ export class KeyRegistry {
       const droppedIds = loaded.filter(k => k.id && (!k.key || k.key.trim() === '')).map(k => k.id);
       if (droppedIds.length > 0) {
         try {
-          await Promise.all(droppedIds.map(id => this.deps.repo.delete(id)));
+          await Promise.all(droppedIds.map(id => this.deps.keyStore.deleteKey(id)));
           if (import.meta.env.DEV) LOGGER.info('KeyRegistry', `Cleaned ${droppedIds.length} empty-key demo entries from Dexie`);
         } catch { /* non-critical */ }
       }
@@ -329,7 +327,7 @@ export class KeyRegistry {
       const verifiedInstance = verifyDexieInstance('KeyRegistry.forceResyncFromDexie', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
       await logDexieIdentityWithCount('KeyRegistry.forceResyncFromDexie', verifiedInstance);
 
-      const dexieKeys = await this.deps.repo.getAll();
+      const dexieKeys = await this.deps.keyStore.listKeys();
       this.traceKeyDrop(_dropRun, 'loadDexie', 0, dexieKeys.length, dexieKeys, { source: 'repo.getAll()' });
       if (dexieKeys.length === 0) {
         return 0;
@@ -503,7 +501,7 @@ export class KeyRegistry {
     // the stale cleanup is timing-dependent. This ensures the key is gone
     // before the next bootstrap reads Dexie.
     try {
-      await this.deps.repo.delete(id);
+      await this.deps.keyStore.deleteKey(id);
     } catch { /* non-critical — saveKeys handles the rest */ }
     try {
       await this.saveKeys();

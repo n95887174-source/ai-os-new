@@ -1,5 +1,5 @@
 import type { IDatabaseService } from '../types/interfaces';
-import type { KeyRepository } from './key-repository';
+import type { KeyStore } from '../contracts/storage/key-store';
 import type { ApiKey } from '../types/metrics-types';
 import { rootLogger } from '../services/logger-service';
 
@@ -11,7 +11,7 @@ const DB_BLOB_KEY = 'sqlite_db_blob';
 
 interface MigrationDeps {
   db: IDatabaseService;
-  repo: KeyRepository;
+  keyStore: KeyStore;
 }
 
 function readRawFromLocalStorage(key: string): string | null {
@@ -51,9 +51,9 @@ async function readSqliteBlobKeys(db: IDatabaseService): Promise<ApiKey[]> {
   }
 }
 
-async function readDexieKeys(repo: KeyRepository): Promise<ApiKey[]> {
+async function readDexieKeys(keyStore: KeyStore): Promise<ApiKey[]> {
   try {
-    return await repo.getAll();
+    return await keyStore.listKeys();
   } catch {
     return [];
   }
@@ -82,7 +82,7 @@ export async function runOnce(deps: MigrationDeps): Promise<{ migrated: number; 
   const [localKeys, blobKeys, dexieKeys] = await Promise.all([
     readLocalStorageKeys(),
     readSqliteBlobKeys(deps.db),
-    readDexieKeys(deps.repo),
+    readDexieKeys(deps.keyStore),
   ]);
 
   const allKeys = [...localKeys, ...blobKeys, ...dexieKeys];
@@ -93,7 +93,7 @@ export async function runOnce(deps: MigrationDeps): Promise<{ migrated: number; 
   }
 
   const deduped = dedupKeys(allKeys);
-  await deps.repo.bulkPut(deduped);
+  await deps.keyStore.bulkPut(deduped);
   await deps.db.setKv(MIGRATION_FLAG, { done: true, timestamp: Date.now() });
 
   LOGGER.info('KeyMigration', 'Migration complete', {

@@ -39,7 +39,7 @@ import type { RouterService } from './services/provider-router';
 import type { ICausalScopeManager } from './contracts/causal-debugger';
 import type { DebatePhase } from './contracts/debate-runtime';
 import type { ApiKey } from './types/metrics-types';
-import type { DataAccessLayer } from './dal';
+import type { StorageLayer } from './contracts/storage/storage-layer';
 import { MemoryWatchdog } from './utils/memory-watchdog';
 import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state';
 
@@ -147,47 +147,44 @@ export class SystemBootstrap implements IBootstrap {
 
     // ── Key Migration (one-shot) ───────────────────────────────────────
     // Reads all old sources (localStorage, existing Dexie), deduplicates,
-    // writes to KeyRepository. Idempotent — checks flag.
+    // writes to KeyStore. Idempotent — checks flag.
     try {
       const { runOnce } = await import('./dal/key-migration');
       const db = this.container.get<IDatabaseService>('database');
-      const dal = this.container.get<DataAccessLayer>('dal');
-      const repo = dal.keys as import('./dal/key-repository').KeyRepository;
-      await runOnce({ db, repo });
+      const storageMig = this.container.get<StorageLayer>('storageLayer');
+      await runOnce({ db, keyStore: storageMig.keys });
     } catch (e) {
       this.logger.warn('Bootstrap', 'Key migration failed (non-critical)', { error: e });
     }
 
-    // Hydrate: read KeyRepository and push to KeyRegistry.
+    // Hydrate: read KeyStore and push to KeyRegistry.
     // No merge, no SQLite blob, no cross-source combination.
     try {
       const { hydrateKeyStorage } = await import('./services/key-storage-hydrator');
       const keyService = this.container.get<KeyService>('keyService');
-      const dalH = this.container.get<DataAccessLayer>('dal');
-      const repoH = dalH.keys as import('./dal/key-repository').KeyRepository;
-      await hydrateKeyStorage({ eventBus: this.eventBus, keyService, repo: repoH });
+      const storageHyd = this.container.get<StorageLayer>('storageLayer');
+      await hydrateKeyStorage({ eventBus: this.eventBus, keyService, keyStore: storageHyd.keys });
     } catch (e) {
       this.logger.warn('Bootstrap', 'Key storage hydration failed (non-critical)', { error: e });
     }
 
     // ════════════════════════════════════════════════════════════════════
-    //   BOOTSTRAP SNAPSHOT — read from KeyRepository
+    //   BOOTSTRAP SNAPSHOT — read from KeyStore
     // ════════════════════════════════════════════════════════════════════
     // DEXIE_IDENTITY: verify the bootstrap module sees the same Dexie
     // instance as the hydration + KeyRegistry layers.
     const bootstrapDexie = verifyDexieInstance('bootstrap:step3', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
     await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
 
-    // Primary source: KeyRepository (DAL pattern)
-    const dalS = this.container.get<DataAccessLayer>('dal');
-    const repoS = dalS.keys as import('./dal/key-repository').KeyRepository;
-    const repoKeys = await repoS.getAll();
+    // Primary source: storageLayer.keys (KeyStore)
+    const storage = this.container.get<StorageLayer>('storageLayer');
+    const repoKeys = await storage.keys.listKeys();
     if (import.meta.env.DEV) getLogger()?.info('Bootstrap', 'Snapshot repo count', { count: repoKeys.length });
 
     let snapshotKeys: ApiKey[] = repoKeys;
-    let snapshotSource = repoKeys.length > 0 ? 'repo' : 'unknown';
+    let snapshotSource = repoKeys.length > 0 ? 'keystore' : 'unknown';
 
-    // Fallback: if KeyRepository returned empty, try alternative sources
+    // Fallback: if KeyStore returned empty, try alternative sources
     if (snapshotKeys.length === 0) {
       const dexieRaw = await dexieDb.apiKeys.toArray();
       if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);

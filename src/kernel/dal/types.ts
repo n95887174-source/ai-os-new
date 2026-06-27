@@ -10,7 +10,7 @@
 
 import type { MemoryEntry } from '../types/memory-types';
 import type { ChatSession } from '../contracts/storage/session-store';
-import type { KeyNote, ApiKey } from '../types/metrics-types';
+import type { KeyNote } from '../types/metrics-types';
 import type { Role } from '../types/role-types';
 import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain-types';
 import type { ExecutionTrace } from '../contracts/observability';
@@ -40,15 +40,6 @@ export interface SessionRepository {
   save(session: ChatSession): Promise<void>;
   delete(id: string): Promise<void>;
   listRecent(limit?: number): Promise<ChatSession[]>;
-}
-
-/** API Keys domain — provider credentials */
-export interface KeyRepository {
-  getAll(): Promise<ApiKey[]>;
-  get(id: string): Promise<ApiKey | undefined>;
-  save(key: ApiKey): Promise<void>;
-  delete(id: string): Promise<void>;
-  listByProvider(provider: string): Promise<ApiKey[]>;
 }
 
 /** Key Notes domain — analytics and observations */
@@ -137,7 +128,6 @@ export interface KvRepository {
 export interface DataAccessLayer {
   memory: MemoryRepository;
   session: SessionRepository;
-  keys: KeyRepository;
   notes: NoteRepository;
   roles: RoleRepository;
   debate: DebateRepository;

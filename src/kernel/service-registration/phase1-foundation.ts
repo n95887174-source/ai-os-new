@@ -11,7 +11,6 @@ import type { IEventBus, IDatabaseService, ISecurityService } from '../types/int
 import type { DatabaseService } from '../services/database-service';
 import type { StorageLayer, KeyStore } from '../contracts/storage/storage-layer';
 import type { SettingsServiceDeps } from '../services/settings-service';
-import type { DataAccessLayer } from '../dal';
 import { SettingsService } from '../services/settings-service';
 import { PricingService } from '../services/pricing-service';
 import { KeyStateStore } from '../services/key-state-store';
@@ -127,7 +126,6 @@ export const registerPhase1: Phase = (helpers, ctx) => {
     pricingService: get<PricingService>('pricingService'),
     providerAdapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
     get advisorService() { return _container.get<AdvisorService>('advisorService'); },
-    repo: get<DataAccessLayer>('dal').keys,
   })));
 
   // groupManagerService depends on configStore; keep it here so phases

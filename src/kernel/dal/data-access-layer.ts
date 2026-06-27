@@ -13,7 +13,7 @@ import type { DataAccessLayer, KvRepository } from './types';
 import { WorkspaceRepository } from './workspace-repository';
 import { MemoryRepository } from './memory-repository';
 import { SessionRepository } from './session-repository';
-import { KeyRepository } from './key-repository';
+
 import { NoteRepository } from './note-repository';
 import { RoleRepository } from './role-repository';
 import { DebateRepository } from './debate-repository';
@@ -24,7 +24,6 @@ import { EventLogRepository } from './event-log-repository';
 export class DataAccessLayerImpl implements DataAccessLayer {
   readonly memory: MemoryRepository;
   readonly session: SessionRepository;
-  readonly keys: KeyRepository;
   readonly notes: NoteRepository;
   readonly roles: RoleRepository;
   readonly debate: DebateRepository;
@@ -37,7 +36,6 @@ export class DataAccessLayerImpl implements DataAccessLayer {
   constructor(db: DatabaseService) {
     this.memory = new MemoryRepository(db);
     this.session = new SessionRepository(db);
-    this.keys = new KeyRepository(db);
     this.notes = new NoteRepository(db);
     this.roles = new RoleRepository(db);
     this.debate = new DebateRepository(db);

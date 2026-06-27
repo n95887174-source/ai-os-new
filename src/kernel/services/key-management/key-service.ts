@@ -19,7 +19,6 @@ import type { IKeyAnalyticsService } from '../../contracts/key-analytics';
 import type { PoolStrategy } from '../../contracts/pool-selector';
 import type { IGroupManager } from '../../contracts/group-manager';
 import type { KeyStore } from '../../contracts/storage/key-store';
-import type { KeyRepository } from '../../dal/key-repository';
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
 
@@ -66,7 +65,6 @@ export interface KeyServiceDeps {
       };
     };
   };
-  repo: KeyRepository;
   advisorService?: {
     getSuggestions(): Array<{ targetNodeId?: string }>;
   };
@@ -115,7 +113,6 @@ export class KeyService {
       database: deps.database,
       vault: this.vault,
       freeTierLimits: this.freeTierLimits,
-      repo: deps.repo,
     });
 
     this.alerts = new KeyAlerts({ eventBus: deps.eventBus });

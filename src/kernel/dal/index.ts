@@ -18,7 +18,6 @@ export type {
 
 export { MemoryRepository } from './memory-repository';
 export { SessionRepository } from './session-repository';
-export { KeyRepository } from './key-repository';
 export { NoteRepository } from './note-repository';
 export { RoleRepository } from './role-repository';
 export { DebateRepository } from './debate-repository';
