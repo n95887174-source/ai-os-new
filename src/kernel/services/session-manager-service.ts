@@ -2,7 +2,7 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { DatabaseService } from './database-service';
 import type { ISessionManager, SessionMeta, DebateCreateData, SessionType, SessionStatus, SessionFilters, SessionLink, DebateTimelineEntry, DebateOverride } from '../contracts/session-manager';
-import type { DebateSessionRecord } from '../contracts/storage/debate-store';
+import type { DebateSessionRecord, DebateStore } from '../contracts/storage/debate-store';
 import type { ChatSession } from '../contracts/storage/session-store';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
@@ -13,9 +13,11 @@ const LOGGER = rootLogger.child('SessionManagerService');
 export class SessionManagerService implements ISessionManager {
   private db: DatabaseService;
   private eventBus: IEventBus;
-  constructor(db: DatabaseService, eventBus: IEventBus) {
+  private debateStore: DebateStore;
+  constructor(db: DatabaseService, eventBus: IEventBus, debateStore: DebateStore) {
     this.db = db;
     this.eventBus = eventBus;
+    this.debateStore = debateStore;
   }
 
   async create(type: SessionType, meta: Partial<SessionMeta>, debateData?: DebateCreateData): Promise<string> {
@@ -57,7 +59,7 @@ export class SessionManagerService implements ISessionManager {
         folder: debateData?.folder ?? base.folder,
         isArchived: false,
       };
-      await this.db.debateSessions.put(record);
+      await this.debateStore.saveSnapshot(record);
     } else {
       const session: ChatSession = {
         id,
@@ -107,7 +109,7 @@ export class SessionManagerService implements ISessionManager {
   async pause(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.put({ ...debate, phase: 'paused', updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
+      await this.debateStore.saveSnapshot({ ...debate, phase: 'paused', updatedAt: Date.now() });
       return;
     }
     throw new Error(`Session ${id} not found or is not a debate`);
@@ -116,7 +118,7 @@ export class SessionManagerService implements ISessionManager {
   async resume(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.put({ ...debate, phase: 'active', updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
+      await this.debateStore.saveSnapshot({ ...debate, phase: 'active', updatedAt: Date.now() });
       return;
     }
     throw new Error(`Session ${id} not found or is not a debate`);
@@ -189,7 +191,7 @@ export class SessionManagerService implements ISessionManager {
   async archive(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.put({ ...debate, isArchived: true, updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
+      await this.debateStore.saveSnapshot({ ...debate, isArchived: true, updatedAt: Date.now() });
       return;
     }
     const chat = await this.db.sessions.get(id);
@@ -203,7 +205,7 @@ export class SessionManagerService implements ISessionManager {
   async unarchive(id: string): Promise<void> {
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      await this.db.debateSessions.put({ ...debate, isArchived: false, updatedAt: Date.now(), version: (debate.version ?? 0) + 1 });
+      await this.debateStore.saveSnapshot({ ...debate, isArchived: false, updatedAt: Date.now() });
       return;
     }
     const chat = await this.db.sessions.get(id);
@@ -224,7 +226,7 @@ export class SessionManagerService implements ISessionManager {
     try { debateEngine.cancelSession(id); } catch { /* ignore — session may not be managed by debate engine */ }
 
     await Promise.all([
-      this.db.debateSessions.delete(id).catch(() => {}),
+      this.debateStore.deleteSession(id).catch(() => {}),
       this.db.sessions.delete(id).catch(() => {}),
       this.db.debateTimeline.where('sessionId').equals(id).delete().catch(() => {}),
       this.db.debateOverrides.where('sessionId').equals(id).delete().catch(() => {}),
@@ -258,13 +260,13 @@ export class SessionManagerService implements ISessionManager {
     const now = Date.now();
     const debate = await this.db.debateSessions.get(id);
     if (debate) {
-      const updated = { ...debate, updatedAt: now, version: (debate.version ?? 0) + 1 };
+      const updated = { ...debate, updatedAt: now };
       if (updates.title !== undefined) updated.topic = updates.title;
       if (updates.tags !== undefined) updated.tags = updates.tags;
       if (updates.folder !== undefined) updated.folder = updates.folder;
       if (updates.isArchived !== undefined) updated.isArchived = updates.isArchived;
       if (updates.isPinned !== undefined) updated.isPinned = updates.isPinned;
-      await this.db.debateSessions.put(updated);
+      await this.debateStore.saveSnapshot(updated);
       return;
     }
     const chat = await this.db.sessions.get(id);

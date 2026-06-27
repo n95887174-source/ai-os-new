@@ -142,6 +142,7 @@ export const registerPhase1: Phase = (helpers, ctx) => {
   register('sessionManagerService', new SessionManagerService(
     get<DatabaseService>('database'),
     get<IEventBus>('eventBus'),
+    storageLayer.debates,
   ));
 
   register('executionGovernor', new ExecutionGovernorService());
