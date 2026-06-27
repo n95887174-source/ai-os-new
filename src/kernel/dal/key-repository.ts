@@ -99,4 +99,21 @@ export class KeyRepository {
     this.cache.clear();
     this.cacheLoaded = false;
   }
+
+  async bulkPut(keys: ApiKey[]): Promise<void> {
+    await this.db.apiKeys.bulkPut(keys);
+    for (const key of keys) {
+      this.cache.set(key.id, key);
+    }
+  }
+
+  async count(): Promise<number> {
+    await this.ensureCache();
+    return this.cache.size;
+  }
+
+  async clearAll(): Promise<void> {
+    await this.db.apiKeys.clear();
+    this.cache.clear();
+  }
 }
