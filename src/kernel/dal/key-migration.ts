@@ -1,4 +1,4 @@
-import type { DatabaseService } from '../services/database-service';
+import type { IDatabaseService } from '../types/interfaces';
 import type { KeyRepository } from './key-repository';
 import type { ApiKey } from '../types/metrics-types';
 import { rootLogger } from '../services/logger-service';
@@ -10,7 +10,7 @@ const STORAGE_KEY = 'super_agents_api_keys';
 const DB_BLOB_KEY = 'sqlite_db_blob';
 
 interface MigrationDeps {
-  db: DatabaseService;
+  db: IDatabaseService;
   repo: KeyRepository;
 }
 
@@ -32,7 +32,7 @@ function readLocalStorageKeys(): ApiKey[] {
   }
 }
 
-async function readSqliteBlobKeys(db: DatabaseService): Promise<ApiKey[]> {
+async function readSqliteBlobKeys(db: IDatabaseService): Promise<ApiKey[]> {
   try {
     const blobRecord = await db.getKv<{ value: number[] }>(DB_BLOB_KEY);
     if (!blobRecord) return [];

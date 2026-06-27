@@ -1,4 +1,4 @@
-import type { IBootstrap, IEventBus } from './types/interfaces';
+import type { IBootstrap, IEventBus, IDatabaseService } from './types/interfaces';
 import { type IContainer } from './container';
 import type { ILifecycle } from './contracts/lifecycle';
 import { LifecycleManager } from './services/lifecycle-manager';
@@ -39,7 +39,6 @@ import type { KernelEventLog } from './contracts/event-log';
 import type { ICausalScopeManager } from './contracts/causal-debugger';
 import type { DebatePhase } from './contracts/debate-runtime';
 import type { ApiKey } from './types/metrics-types';
-import type { StorageLayer } from './contracts/storage/storage-layer';
 import type { DataAccessLayer } from './dal';
 import { MemoryWatchdog } from './utils/memory-watchdog';
 import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state';
@@ -148,178 +147,47 @@ export class SystemBootstrap implements IBootstrap {
     const configService = this.container.get<ConfigService>('configService');
     await this.lifecycle.tryInit('configService', () => configService.init());
 
-    // HARD RESET: Force storage to canonical (localStorage.super_agents_api_keys).
-    // Wipes dexieDb.apiKeys, sqlite blob, in-memory caches — converges all browsers
-    // to a single deterministic key set. Must run BEFORE hydration.
+    // ── Key Migration (one-shot) ───────────────────────────────────────
+    // Reads all old sources (localStorage, SQLite blob, existing Dexie),
+    // deduplicates, writes to KeyRepository. Idempotent — checks flag.
     try {
-      const { resetKeyStorageToCanonical } = await import('./services/key-reset');
-      const keyService = this.container.get<KeyService>('keyService');
-      const storageLayer = (this.container.has('storageLayer')
-        ? this.container.get<StorageLayer>('storageLayer')
-        : null);
-      await resetKeyStorageToCanonical({
-        eventBus: this.eventBus,
-        storageLayer,
-        keyService,
-      });
+      const { runOnce } = await import('./dal/key-migration');
+      const db = this.container.get<IDatabaseService>('database');
+      const dal = this.container.get<DataAccessLayer>('dal');
+      const repo = dal.keys as import('./dal/key-repository').KeyRepository;
+      await runOnce({ db, repo });
     } catch (e) {
-      this.logger.warn('Bootstrap', 'Key storage reset failed (non-critical)', { error: e });
+      this.logger.warn('Bootstrap', 'Key migration failed (non-critical)', { error: e });
     }
 
-    // StorageRouter: audit all 3 sources, score them, select winner by mode.
-    // Runs BEFORE hydration so the result can inform downstream decisions.
-    // The router is READ-ONLY — it does not mutate any storage backend.
-    try {
-      const { routeStorage, setForcedStorageMode } = await import('./services/storage-router');
-      // Read debug override from globalThis if set externally.
-      const result = await routeStorage('auto');
-      this.logger.info('Bootstrap', 'StorageRouter result', {
-        mode: result.mode,
-        winner: result.winner,
-        localStorage: result.diagnostics.localStorage,
-        dexie: result.diagnostics.dexie,
-        sql: result.diagnostics.sql,
-        scores: result.scores,
-      });
-      if (result.mode === 'auto' && result.winner) {
-        // Inform the rest of bootstrap about the selected source. We do NOT
-        // mutate storage here — resetKeyStorageToCanonical() already did that.
-        // This log makes the source-of-truth explicit for debugging.
-        if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'StorageRouter winner', { winner: result.winner, reason: result.diagnostics.reason });
-      }
-      // Reference setForcedStorageMode to prevent tree-shaking of the export
-      // (callers can set the override via DevTools: setForcedStorageMode('dexie')).
-      void setForcedStorageMode;
-    } catch (e) {
-      this.logger.warn('Bootstrap', 'StorageRouter audit failed (non-critical)', { error: e });
-    }
-
-    // Hydrate: read dexieDb.apiKeys (mirror of localStorage) and push to KeyRegistry.
-    // No merge, no SQLite blob, no cross-source combination.
+    // Hydrate: read KeyRepository and push to KeyRegistry.
     try {
       const { hydrateKeyStorage } = await import('./services/key-storage-hydrator');
       const keyService = this.container.get<KeyService>('keyService');
-      const dal = this.container.get<DataAccessLayer>('dal');
-      const repo = dal.keys as import('./dal/key-repository').KeyRepository;
-      await hydrateKeyStorage({ eventBus: this.eventBus, keyService, repo });
+      const dalH = this.container.get<DataAccessLayer>('dal');
+      const repoH = dalH.keys as import('./dal/key-repository').KeyRepository;
+      await hydrateKeyStorage({ eventBus: this.eventBus, keyService, repo: repoH });
     } catch (e) {
       this.logger.warn('Bootstrap', 'Key storage hydration failed (non-critical)', { error: e });
     }
 
-    // Key Reconciler: forensic audit + safe merge of REAL keys across all
-    // backends. If any of the 3+1 sources (localStorage, kernel state in
-    // localStorage, kernel state in Dexie, sql.js blob) holds a real key
-    // missing from Dexie.apiKeys, insert it. NEVER overwrite. NEVER wipe.
-    // NEVER promote placeholders. Runs AFTER hydration so the canonical
-    // localStorage state is already known; runs BEFORE the bootstrap
-    // snapshot so the reconciled state is what gets snapshotted.
-    try {
-      const { reconcileAndSync } = await import('./services/key-reconciler');
-      const report = await reconcileAndSync();
-      this.logger.info('Bootstrap', 'KeyReconciler result', {
-        merged: report.totals.merged,
-        realMerged: report.totals.realMerged,
-        placeholders: report.totals.placeholders,
-        duplicates: report.duplicates.length,
-        missing: report.missing.length,
-        conflicts: report.conflicts.length,
-        finalDexie: report.sync?.finalDexieCount ?? report.totals.dexie,
-        finalLocalStorage: report.sync?.finalLocalStorageCount ?? report.totals.localStorage,
-      });
-    } catch (e) {
-      this.logger.warn('Bootstrap', 'KeyReconciler failed (non-critical)', { error: e });
-    }
-
     // ════════════════════════════════════════════════════════════════════
-    //   STRICT BOOTSTRAP SNAPSHOT — read dexie DIRECTLY, not from KeyRegistry
-    // ════════════════════════════════════════════════════════════════════
-    //   STEP 3: READ dexieDb.apiKeys.toArray() directly
-    //   STEP 4: assign globalThis.__BOOTSTRAP_KEY_SNAPSHOT__
-    //   STEP 5: set globalThis.__BOOTSTRAP_PHASE__ = true
-    //
-    //   HARD RULE: KeyRegistry.loadKeys() is NEVER used to construct the
-    //   snapshot. The snapshot is the dexie hydration output, fallback chain
-    //   is dexie → sqlite blob → localStorage. KeyRegistry mutations
-    //   during initServices cannot affect this snapshot.
+    //   BOOTSTRAP SNAPSHOT — read from KeyRepository
     // ════════════════════════════════════════════════════════════════════
     // DEXIE_IDENTITY: verify the bootstrap module sees the same Dexie
-    // instance as the hydration + KeyRegistry layers. Throws
-    // [DEXIE MISMATCH] on split.
+    // instance as the hydration + KeyRegistry layers.
     const bootstrapDexie = verifyDexieInstance('bootstrap:step3', dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1]);
     await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
 
-    const dexieRaw = await dexieDb.apiKeys.toArray();
-    if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot raw dexie count', { count: dexieRaw.length });
+    const dalS = this.container.get<DataAccessLayer>('dal');
+    const repoS = dalS.keys as import('./dal/key-repository').KeyRepository;
+    const repoKeys = await repoS.getAll();
+    if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot repo count', { count: repoKeys.length });
 
-    let snapshotKeys: ApiKey[] = [];
-    let snapshotSource: 'dexie' | 'sqlite' | 'localStorage' | 'unknown' = 'unknown';
-
-    // Priority 1: dexieDb.apiKeys (hydration output)
-    if (dexieRaw.length > 0) {
-      snapshotKeys = [...dexieRaw];
-      snapshotSource = 'dexie';
-    }
-
-    // Priority 2: sqlite blob (for forward compat with sql.js re-enable)
-    if (snapshotKeys.length === 0) {
-      try {
-        const blob = await dexieDb.keyValue.get('sqlite_db_blob');
-        if (blob?.value && Array.isArray(blob.value)) {
-          const bytes = new Uint8Array(blob.value as number[]);
-          const SQLITE_MAGIC = new Uint8Array([83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0]);
-          let validMagic = bytes.length >= 100;
-          for (let i = 0; validMagic && i < 16; i++) {
-            if (bytes[i] !== SQLITE_MAGIC[i]) validMagic = false;
-          }
-          if (validMagic) {
-            // sql.js is disabled (ENABLE_SQLJS=false) so actual row extraction
-            // requires WASM runtime. Currently returns 0 — falls through to
-            // localStorage. For forward-compat: if extraction ever succeeds,
-            // the source attribution is preserved.
-            // (tryExtractApiKeysFromSqliteBlob is in key-reset.ts; kept here as
-            // a no-op since we don't import the heavy path.)
-          }
-        }
-      } catch { /* non-critical */ }
-    }
-
-    // Priority 3: localStorage (the canonical store)
-    if (snapshotKeys.length === 0) {
-      try {
-        const raw = localStorage.getItem('super_agents_api_keys');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            snapshotKeys = parsed;
-            snapshotSource = 'localStorage';
-          }
-        }
-      } catch { /* non-critical */ }
-    }
-
-    // C-01: Always clear localStorage immediately after reading, not after initServices
-    // This prevents keys from lingering in localStorage if initServices() fails later,
-    // and minimizes the XSS window between read and cleanup.
-    try {
-      localStorage.removeItem('super_agents_api_keys');
-      localStorage.removeItem('superagents:providers:super_agents_api_keys');
-      localStorage.removeItem('superagents:providers:super_agents_kernel_state');
-    } catch { /* non-critical */ }
-
-    // GUARD: if snapshot ended up 0 but dexieDb.apiKeys has data, force
-    // re-read from dexie. This catches any edge case where the assignment
-    // was dropped silently.
-    if (snapshotKeys.length === 0 && dexieRaw.length > 0) {
-      LOGGER.warn('Bootstrap', 'Snapshot guard: snapshot is 0 but dexie has data — force re-read', { dexieCount: dexieRaw.length });
-      snapshotKeys = [...dexieRaw];
-      snapshotSource = 'dexie';
-    }
+    const snapshotKeys: ApiKey[] = repoKeys;
+    const snapshotSource = repoKeys.length > 0 ? 'repo' : 'unknown';
 
     // (Removed api-keys-backup.json injection to prevent re-injecting deleted keys)
-
-    // Always clean up stale prefixed localStorage keys AFTER services initialized.
-    // If initServices() fails and snapshot is cleared, keys still exist in localStorage
-    // as a recovery source.
     if (import.meta.env.DEV) LOGGER.info('Bootstrap', 'Snapshot final', { count: snapshotKeys.length, source: snapshotSource });
 
     // Diagnostic-only globals (counts + flags, NO actual key material).
