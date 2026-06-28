@@ -10,14 +10,11 @@ export { isProviderError, isQuotaError, isMemoryError, isToolError, isRoutingErr
 export type { ICostCalculator, IUsageTracker, CostEstimate, ProviderBudget, BudgetInfo, PricingCapability, CostCalculationError } from './pricing';
 export type { IProviderRouter, IProviderStateManager, ProviderCapability, RequestClassification, RouterDecision } from './provider';
 export type { IMemoryEngine, IToolExecutor, MemoryCapability, MemoryQuery } from './memory';
-export type { IToolRegistry, ToolDescriptor, ToolCategory, ToolExecutionRequest, ToolExecutionResult, ToolCapabilityDescriptor } from './tool';
-export type { IRoutingEngine, IFallbackChain, RoutingRequest, RoutingCandidate, RoutingDecision, RoutingStrategy, RoutingCapability } from './routing';
 
 export type {
   TimelineEvent, TimelineFilter, TimelineEventType, TimelineCategory,
   ITraceContract, IMetricsContract, ITimelineContract, IMonitoringContract,
 } from './observability';
-export type { ITimelineStore, ITimelineIngester, TimelinePreset } from './timeline';
 
 export type {
   AdapterMessage, AdapterSafetyRating, AdapterFinishReason,

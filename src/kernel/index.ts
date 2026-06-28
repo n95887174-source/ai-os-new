@@ -118,8 +118,6 @@ export type {
 export type { ICostCalculator, IUsageTracker, CostEstimate, ProviderBudget, BudgetInfo, PricingCapability, CostCalculationError } from './contracts/pricing';
 export type { IProviderRouter, IProviderStateManager, ProviderCapability, RequestClassification, RouterDecision } from './contracts/provider';
 export type { IMemoryEngine, IToolExecutor, MemoryCapability, MemoryQuery } from './contracts/memory';
-export type { IToolRegistry, ToolDescriptor, ToolCategory, ToolExecutionRequest, ToolExecutionResult, ToolCapabilityDescriptor } from './contracts/tool';
-export type { IRoutingEngine, IFallbackChain, RoutingRequest, RoutingCandidate, RoutingDecision, RoutingStrategy, RoutingCapability } from './contracts/routing';
 export type {
   ITraceContract, IMetricsContract, ITimelineContract, IMonitoringContract,
 } from './contracts/observability';
