@@ -380,7 +380,7 @@ export class AgentService {
         this.transitionLifecycle(agentId, current, 'initializing');
         this.stats.set(agentId, this.emptyStats());
         this.deps.orchestrator.setNodeDisabled(agentId, false);
-        await new Promise((r) => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 500));
         this.transitionLifecycle(agentId, 'initializing', 'ready');
         this.deps.eventBus.emit(EVENTS.AGENT_RESTARTED, { id: agentId });
     }

@@ -1,57 +1,87 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { NAV_SECTIONS } from '../../routes';
 import type { TranslationKey } from '../../i18n/translations';
 
 interface BreadcrumbsProps {
-  path: string;
-  t: (key: TranslationKey) => string;
+    path: string;
+    t: (key: TranslationKey) => string;
 }
 
-function getCrumbs(path: string, t: (key: TranslationKey) => string): Array<{ label: string; path: string }> {
-  const segments = path.replace(/^\//, '').split('/').filter(Boolean);
-  if (segments.length === 0) segments.push('dashboard');
-  
-  if (segments.length >= 2) {
-    const section = NAV_SECTIONS.find(s => s.id === `section-${segments[0]}`);
-    if (section) {
-      const item = section.items.find(i => i.id === segments.slice(1).join('-'));
-      if (item) {
-        return [
-          { label: t(section.labelKey), path: '#' },
-          { label: t(item.labelKey), path: `/${segments.join('/')}` },
-        ];
-      }
-    }
-  }
+function getCrumbs(
+    path: string,
+    t: (key: TranslationKey) => string,
+): Array<{ label: string; path: string }> {
+    const segments = path.replace(/^\//, '').split('/').filter(Boolean);
+    if (segments.length === 0) segments.push('dashboard');
 
-  const id = segments[0];
-  for (const section of NAV_SECTIONS) {
-    for (const item of section.items) {
-      if (item.id === id) {
-        return [
-          { label: t(section.labelKey), path: '#' },
-          { label: t(item.labelKey), path: `/${item.id}` },
-        ];
-      }
+    if (segments.length >= 2) {
+        const section = NAV_SECTIONS.find((s) => s.id === `section-${segments[0]}`);
+        if (section) {
+            const item = section.items.find((i) => i.id === segments.slice(1).join('-'));
+            if (item) {
+                return [
+                    { label: t(section.labelKey), path: '#' },
+                    { label: t(item.labelKey), path: `/${segments.join('/')}` },
+                ];
+            }
+        }
     }
-  }
-  return [{ label: id, path: `/${id}` }];
+
+    const id = segments[0];
+    for (const section of NAV_SECTIONS) {
+        for (const item of section.items) {
+            if (item.id === id) {
+                return [
+                    { label: t(section.labelKey), path: '#' },
+                    { label: t(item.labelKey), path: `/${item.id}` },
+                ];
+            }
+        }
+    }
+    return [{ label: id, path: `/${id}` }];
 }
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ path, t }) => {
-  const crumbs = getCrumbs(path, t);
+    const navigate = useNavigate();
+    const crumbs = getCrumbs(path, t);
 
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-      {crumbs.map((crumb, i) => (
-        <React.Fragment key={crumb.path}>
-          {i > 0 && <ChevronRight size={12} style={{ opacity: 0.4 }} />}
-          <span style={{ opacity: i === crumbs.length - 1 ? 1 : 0.6, fontWeight: i === crumbs.length - 1 ? 700 : 400 }}>
-            {crumb.label}
-          </span>
-        </React.Fragment>
-      ))}
-    </div>
-  );
+    return (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: '0.75rem',
+                color: 'var(--text-muted)',
+                whiteSpace: 'nowrap',
+            }}
+        >
+            {crumbs.map((crumb, i) => (
+                <React.Fragment key={crumb.path}>
+                    {i > 0 && <ChevronRight size={12} style={{ opacity: 0.4 }} />}
+                    {i < crumbs.length - 1 ? (
+                        <button
+                            onClick={() => navigate(crumb.path)}
+                            style={{
+                                opacity: 0.6,
+                                fontWeight: 400,
+                                background: 'none',
+                                border: 'none',
+                                color: 'inherit',
+                                cursor: 'pointer',
+                                padding: 0,
+                                fontSize: 'inherit',
+                            }}
+                        >
+                            {crumb.label}
+                        </button>
+                    ) : (
+                        <span style={{ opacity: 1, fontWeight: 700 }}>{crumb.label}</span>
+                    )}
+                </React.Fragment>
+            ))}
+        </div>
+    );
 };
