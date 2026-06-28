@@ -130,7 +130,7 @@ export class VirtualKeyService implements IVirtualKeyService {
     async revoke(id: string): Promise<void> {
         const vk = this.cache.get(id);
         if (vk) {
-            vk.active = false;
+            this.cache.set(id, { ...vk, active: false });
             await this.persistNow();
             this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_REVOKED, { virtualKeyId: id });
         }

@@ -60,17 +60,14 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 function pruneEntries(): void {
     if (entries.length > MAX_ENTRIES) {
-        // Remove oldest entries (first in array)
         const toRemove = entries.length - MAX_ENTRIES;
-        for (let i = 0; i < toRemove; i++) {
-            const removed = entries.shift();
-            if (removed) {
-                vectors.delete(removed.id);
-                try {
-                    if (db) void oramaRemove(db as AnyOrama, removed.id);
-                } catch (e) {
-                    console.warn('[MemoryWorker] prune remove error:', e);
-                }
+        const removed = entries.splice(0, toRemove);
+        for (const entry of removed) {
+            vectors.delete(entry.id);
+            try {
+                if (db) void oramaRemove(db as AnyOrama, entry.id);
+            } catch (e) {
+                console.warn('[MemoryWorker] prune remove error:', e);
             }
         }
     }
