@@ -110,7 +110,9 @@ export class CompromiseWebhookService {
                 false,
                 ['verify'],
             );
-            const sigHex = signature.replace(/^sha256=/, '');
+            if (!signature.startsWith('sha256='))
+                throw new Error('Unsupported HMAC algorithm — expected sha256');
+            const sigHex = signature.slice(7);
             if (!/^[0-9a-f]+$/i.test(sigHex)) throw new Error('Invalid HMAC signature format');
             const sigBytes = new Uint8Array(
                 sigHex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],

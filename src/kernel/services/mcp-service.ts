@@ -132,11 +132,13 @@ export class MCPService {
 
     private validateUri(uri: string): void {
         const decoded = decodeURIComponent(uri.replace(/\+/g, ' '));
-        const forbidden = ['http://', 'https://', 'file://', 'ftp://', 'smb://', '\\', '..', '@'];
-        for (const pattern of forbidden) {
-            if (decoded.includes(pattern))
-                throw new Error(`MCP URI contains forbidden pattern: ${pattern}`);
-        }
+        const allowedSchemes = ['http:', 'https:', 'file:', 'ws:', 'wss:', 'mcp:'];
+        const scheme = decoded.split('://')[0] + ':';
+        if (!allowedSchemes.includes(scheme))
+            throw new Error(`MCP URI scheme not allowed: ${scheme}`);
+        const path = decoded.split('://').slice(1).join('://');
+        if (path.includes('..') || path.includes('\\') || path.includes('@'))
+            throw new Error('MCP URI contains forbidden characters');
     }
 
     private async safeFetch(url: string, init?: RequestInit): Promise<Response> {
