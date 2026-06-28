@@ -52,6 +52,9 @@ export function useChatStoreHydration(): void {
     };
 
     const load = async () => {
+      const preloadSessions = useChatStore.getState().sessions;
+      // H1: Capture pre-load session IDs to detect concurrent user mutations during load
+      const preloadSessionIds = new Set(preloadSessions.map(s => s.id));
       try {
         if (cancelled) return;
         const sStore = resolveSessionStore();
@@ -87,7 +90,15 @@ export function useChatStoreHydration(): void {
           BucketStorageAdapter.removeItem('super_agents_chat_sessions');
           BucketStorageAdapter.removeItem('super_agents_chat_sessions_ts');
         } else if (total > 0) {
-          const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
+          let batch = await sStore.listSessions(SESSION_BATCH_SIZE);
+          // H1: If user created sessions during load, merge them in
+          const currentSessions = useChatStore.getState().sessions;
+          if (currentSessions !== preloadSessions) {
+            const newLocalSessions = currentSessions.filter(s => !preloadSessionIds.has(s.id));
+            if (newLocalSessions.length > 0) {
+              batch = [...newLocalSessions, ...batch];
+            }
+          }
           useChatStore.setState({
             sessions: batch,
             activeSessionId: batch[0]?.id ?? 'default',
