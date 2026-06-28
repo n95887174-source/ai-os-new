@@ -65,6 +65,7 @@ const ChatPanel: React.FC = () => {
     const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
         activeKeys.length > 0 ? [activeKeys[0].id] : [],
     );
+    const lastAutoSelectRef = useRef<string[]>([]);
     const [selectedModel, setSelectedModel] = useState<string>(
         () =>
             activeKeys[0]?.availableModels?.[0] ||
@@ -82,15 +83,23 @@ const ChatPanel: React.FC = () => {
             : {},
     );
     useEffect(() => {
-        if (activeKeys.length > 0 && selectedKeys.length === 0) {
-            setSelectedKeys([activeKeys[0].id]);
-            const firstModel =
-                activeKeys[0]?.availableModels?.[0] ||
-                DEFAULT_MODELS[activeKeys[0]?.provider || ''] ||
-                '';
-            setSelectedModel(firstModel);
-            setSelectedModelPerKey({ [activeKeys[0].id]: firstModel });
+        if (activeKeys.length === 0) return;
+        const activeIds = new Set(activeKeys.map((k) => k.id));
+        if (
+            lastAutoSelectRef.current.length > 0 &&
+            lastAutoSelectRef.current.some((id) => activeIds.has(id))
+        ) {
+            return;
         }
+        lastAutoSelectRef.current = [activeKeys[0].id];
+        if (selectedKeys.length > 0) return;
+        setSelectedKeys(lastAutoSelectRef.current);
+        const firstModel =
+            activeKeys[0]?.availableModels?.[0] ||
+            DEFAULT_MODELS[activeKeys[0]?.provider || ''] ||
+            '';
+        setSelectedModel(firstModel);
+        setSelectedModelPerKey({ [activeKeys[0].id]: firstModel });
     }, [activeKeys]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const { t } = useTranslation();
