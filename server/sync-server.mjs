@@ -21,9 +21,26 @@ if (!AUTH_TOKEN) {
 const SYNC_SECRET = AUTH_TOKEN;
 
 const ALLOWED_ORIGINS = (process.env.SYNC_ORIGINS || 'http://localhost:5173').split(',');
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 30;
+const rateLimits = new Map();
 
 function isAllowedOrigin(origin) {
   return ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*');
+}
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimits.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimits.set(ip, { windowStart: now, count: 1 });
+    return true;
+  }
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX_REQUESTS) {
+    return false;
+  }
+  return true;
 }
 
 function hasAuth(req) {
@@ -46,6 +63,13 @@ let writeQueue = Promise.resolve();
 
 const server = http.createServer((req, res) => {
   const origin = req.headers['origin'] || '';
+  const ip = req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+  // Rate limit
+  if (!checkRateLimit(ip)) {
+    res.writeHead(429);
+    res.end('Too many requests');
+    return;
+  }
   // CORS
   if (origin && !isAllowedOrigin(origin)) {
     res.writeHead(403);
