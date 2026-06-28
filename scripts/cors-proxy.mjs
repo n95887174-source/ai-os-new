@@ -6,7 +6,11 @@ import dns from 'dns';
 
 const PORT = 3002;
 // BLD-21: Allow CORS origin to be configured via env var (defaults to localhost:5173 for dev)
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const CORS_ORIGIN = process.env.CORS_ORIGIN;
+if (!CORS_ORIGIN) {
+  console.error('[cors-proxy] FATAL: CORS_ORIGIN environment variable is required. Set it to the allowed origin (e.g. http://localhost:5173).');
+  process.exit(1);
+}
 const MAX_SIZE = 100 * 1024 * 1024; // 100MB limit — N-08
 
 function isPrivateIP(ip) {
