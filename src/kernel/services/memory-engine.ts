@@ -321,7 +321,9 @@ export class MemoryService implements IMemoryEngine {
         } as MemoryEntry;
         try {
             await this.deps.database.db.memories.put(newEntry);
-            this.memories = [newEntry, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
+            this.memories.unshift(newEntry);
+            if (this.memories.length > MAX_MEMORY_ENTRIES)
+                this.memories.length = MAX_MEMORY_ENTRIES;
             this.ensureWorker()
                 .then(() => {
                     if (this.worker) {
@@ -358,7 +360,9 @@ export class MemoryService implements IMemoryEngine {
             if (existing >= 0) {
                 this.memories[existing] = newEntry;
             } else {
-                this.memories = [newEntry, ...this.memories].slice(0, MAX_MEMORY_ENTRIES);
+                this.memories.unshift(newEntry);
+                if (this.memories.length > MAX_MEMORY_ENTRIES)
+                    this.memories.length = MAX_MEMORY_ENTRIES;
             }
             this.ensureWorker()
                 .then(() => {

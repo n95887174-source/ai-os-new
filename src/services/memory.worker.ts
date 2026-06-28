@@ -1,4 +1,10 @@
-import { create, insert, remove as oramaRemove, search as oramaSearch, type AnyOrama } from '@orama/orama';
+import {
+    create,
+    insert,
+    remove as oramaRemove,
+    search as oramaSearch,
+    type AnyOrama,
+} from '@orama/orama';
 import { pipeline } from '@huggingface/transformers';
 import type { MemoryEntry } from '../types/memory';
 
@@ -11,187 +17,217 @@ const MAX_ENTRIES = 10000;
 const MAX_VECTORS = 10000;
 
 const SCHEMA = {
-  id: 'string',
-  content: 'string',
-  metadata: {
-    source: 'string',
-    type: 'string',
-    timestamp: 'number',
-    importance: 'number',
-  },
+    id: 'string',
+    content: 'string',
+    metadata: {
+        source: 'string',
+        type: 'string',
+        timestamp: 'number',
+        importance: 'number',
+    },
 } as const;
 
 async function loadEmbeddingModel() {
-  try {
-    extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    semanticReady = true;
-  } catch (e) {
-    self.postMessage({ type: 'semantic_error', payload: { message: (e as Error)?.message ?? String(e) } });
-  }
+    try {
+        extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+        semanticReady = true;
+    } catch (e) {
+        self.postMessage({
+            type: 'semantic_error',
+            payload: { message: (e as Error)?.message ?? String(e) },
+        });
+    }
 }
 
 async function getEmbedding(text: string): Promise<number[]> {
-  const result = await (extractor as (text: string, opts: Record<string, unknown>) => Promise<{ data: number[] }>)(text, { pooling: 'mean', normalize: true });
-  return Array.from((result as { data: number[] }).data) as number[];
+    const result = await (
+        extractor as (text: string, opts: Record<string, unknown>) => Promise<{ data: number[] }>
+    )(text, { pooling: 'mean', normalize: true });
+    return Array.from((result as { data: number[] }).data) as number[];
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0, normA = 0, normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    let dot = 0,
+        normA = 0,
+        normB = 0;
+    for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 function pruneEntries(): void {
-  if (entries.length > MAX_ENTRIES) {
-    // Remove oldest entries (first in array)
-    const toRemove = entries.length - MAX_ENTRIES;
-    for (let i = 0; i < toRemove; i++) {
-      const removed = entries.shift();
-      if (removed) {
-        vectors.delete(removed.id);
-        try { if (db) void oramaRemove(db as AnyOrama, removed.id); } catch (e) { console.warn('[MemoryWorker] prune remove error:', e); }
-      }
+    if (entries.length > MAX_ENTRIES) {
+        // Remove oldest entries (first in array)
+        const toRemove = entries.length - MAX_ENTRIES;
+        for (let i = 0; i < toRemove; i++) {
+            const removed = entries.shift();
+            if (removed) {
+                vectors.delete(removed.id);
+                try {
+                    if (db) void oramaRemove(db as AnyOrama, removed.id);
+                } catch (e) {
+                    console.warn('[MemoryWorker] prune remove error:', e);
+                }
+            }
+        }
     }
-  }
 }
 
 function pruneVectors(): void {
-  if (vectors.size > MAX_VECTORS) {
-    // Remove oldest vectors (FIFO based on insertion order approximation)
-    const toRemove = vectors.size - MAX_VECTORS;
-    let count = 0;
-    for (const [id] of vectors.entries()) {
-      if (count >= toRemove) break;
-      vectors.delete(id);
-      count++;
+    if (vectors.size > MAX_VECTORS) {
+        // Remove oldest vectors (FIFO based on insertion order approximation)
+        const toRemove = vectors.size - MAX_VECTORS;
+        let count = 0;
+        for (const [id] of vectors.entries()) {
+            if (count >= toRemove) break;
+            vectors.delete(id);
+            count++;
+        }
     }
-  }
 }
 
 self.onmessage = async (event: MessageEvent) => {
-  const { requestId, type, payload } = event.data;
+    const { requestId, type, payload } = event.data;
 
-  try {
-    switch (type) {
+    try {
+        switch (type) {
+            case 'init': {
+                db = await create({ schema: SCHEMA });
+                entries = payload?.memories || [];
+                for (const m of entries) {
+                    await insert(db as AnyOrama, m);
+                    if (m.vector) vectors.set(m.id, m.vector);
+                }
+                self.postMessage({ requestId, type: 'init' });
+                break;
+            }
 
-      case 'init': {
-        db = await create({ schema: SCHEMA });
-        entries = payload?.memories || [];
-        for (const m of entries) {
-          await insert(db as AnyOrama, m);
-          if (m.vector) vectors.set(m.id, m.vector);
+            case 'enable_semantic': {
+                await loadEmbeddingModel();
+                self.postMessage({ requestId, type: 'semantic_ready' });
+                break;
+            }
+
+            case 'insert': {
+                const entry: MemoryEntry = payload.entry;
+                if (db) await insert(db as AnyOrama, entry);
+                entries.push(entry);
+
+                let embedding: number[] | undefined;
+                if (payload.generateEmbedding && semanticReady) {
+                    embedding = await getEmbedding(entry.content);
+                    vectors.set(entry.id, embedding);
+                }
+
+                pruneEntries();
+                pruneVectors();
+
+                self.postMessage({
+                    requestId,
+                    type: 'insert',
+                    payload: { id: entry.id, embedding },
+                });
+                break;
+            }
+
+            case 'upsert': {
+                const entry: MemoryEntry = payload.entry;
+                const existingIdx = entries.findIndex((e) => e.id === entry.id);
+                if (existingIdx >= 0) {
+                    entries[existingIdx] = entry;
+                    try {
+                        if (db) await oramaRemove(db as AnyOrama, entry.id);
+                    } catch (e) {
+                        console.warn('[MemoryWorker] upsert remove error:', e);
+                    }
+                } else {
+                    entries.push(entry);
+                }
+                if (db) await insert(db as AnyOrama, entry);
+
+                let embedding: number[] | undefined;
+                if (payload.generateEmbedding && semanticReady) {
+                    embedding = await getEmbedding(entry.content);
+                    vectors.set(entry.id, embedding);
+                }
+
+                pruneEntries();
+                pruneVectors();
+
+                self.postMessage({
+                    requestId,
+                    type: 'upsert',
+                    payload: { id: entry.id, embedding },
+                });
+                break;
+            }
+
+            case 'remove': {
+                const id = payload.id;
+                entries = entries.filter((e) => e.id !== id);
+                vectors.delete(id);
+                try {
+                    if (db) await oramaRemove(db as AnyOrama, id);
+                } catch (e) {
+                    console.warn('[MemoryWorker] remove error:', e);
+                }
+                self.postMessage({ requestId, type: 'remove', payload: { id } });
+                break;
+            }
+
+            case 'search': {
+                if (!db) {
+                    self.postMessage({ requestId, type: 'search', payload: { hits: [] } });
+                    break;
+                }
+                const results = await oramaSearch(db as AnyOrama, {
+                    term: payload.query,
+                    limit: payload.limit ?? 5,
+                    boost: { content: 2 },
+                });
+                self.postMessage({ requestId, type: 'search', payload: { hits: results.hits } });
+                break;
+            }
+
+            case 'search_semantic': {
+                if (!semanticReady || !db) {
+                    self.postMessage({ requestId, type: 'search_semantic', payload: { hits: [] } });
+                    break;
+                }
+
+                const queryVec = await getEmbedding(payload.query);
+                const scored = entries
+                    .filter((e) => vectors.has(e.id))
+                    .map((e) => ({
+                        ...e,
+                        score: cosineSimilarity(queryVec, vectors.get(e.id)!),
+                    }))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, payload.limit ?? 5);
+
+                self.postMessage({ requestId, type: 'search_semantic', payload: { hits: scored } });
+                break;
+            }
+
+            default:
+                self.postMessage({
+                    requestId,
+                    type: 'error',
+                    payload: { message: `Unknown message type: ${type}` },
+                });
         }
-        self.postMessage({ requestId, type: 'init' });
-        break;
-      }
-
-      case 'enable_semantic': {
-        await loadEmbeddingModel();
-        self.postMessage({ requestId, type: 'semantic_ready' });
-        break;
-      }
-
-      case 'insert': {
-        const entry: MemoryEntry = payload.entry;
-        if (db) await insert(db as AnyOrama, entry);
-        entries.push(entry);
-
-        let embedding: number[] | undefined;
-        if (payload.generateEmbedding && semanticReady) {
-          embedding = await getEmbedding(entry.content);
-          vectors.set(entry.id, embedding);
-        }
-
-        pruneEntries();
-        pruneVectors();
-
-        self.postMessage({ requestId, type: 'insert', payload: { id: entry.id, embedding } });
-        break;
-      }
-
-      case 'upsert': {
-        const entry: MemoryEntry = payload.entry;
-        const existingIdx = entries.findIndex(e => e.id === entry.id);
-        if (existingIdx >= 0) {
-          entries[existingIdx] = entry;
-          try { if (db) await oramaRemove(db as AnyOrama, entry.id); } catch (e) { console.warn('[MemoryWorker] upsert remove error:', e); }
-        } else {
-          entries.push(entry);
-        }
-        if (db) await insert(db as AnyOrama, entry);
-
-        let embedding: number[] | undefined;
-        if (payload.generateEmbedding && semanticReady) {
-          embedding = await getEmbedding(entry.content);
-          vectors.set(entry.id, embedding);
-        }
-
-        pruneEntries();
-        pruneVectors();
-
-        self.postMessage({ requestId, type: 'upsert', payload: { id: entry.id, embedding } });
-        break;
-      }
-
-      case 'remove': {
-        const id = payload.id;
-        entries = entries.filter(e => e.id !== id);
-        vectors.delete(id);
-        try { if (db) await oramaRemove(db as AnyOrama, id); } catch (e) { console.warn('[MemoryWorker] remove error:', e); }
-        self.postMessage({ requestId, type: 'remove', payload: { id } });
-        break;
-      }
-
-      case 'search': {
-        if (!db) {
-          self.postMessage({ requestId, type: 'search', payload: { hits: [] } });
-          break;
-        }
-        const results = await oramaSearch(db as AnyOrama, {
-          term: payload.query,
-          limit: payload.limit ?? 5,
-          boost: { content: 2 },
-        });
-        self.postMessage({ requestId, type: 'search', payload: { hits: results.hits } });
-        break;
-      }
-
-      case 'search_semantic': {
-        if (!semanticReady || !db) {
-          self.postMessage({ requestId, type: 'search_semantic', payload: { hits: [] } });
-          break;
-        }
-
-        const queryVec = await getEmbedding(payload.query);
-        const scored = entries
-          .filter(e => vectors.has(e.id))
-          .map(e => ({
-            ...e,
-            score: cosineSimilarity(queryVec, vectors.get(e.id)!),
-          }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, payload.limit ?? 5);
-
-        self.postMessage({ requestId, type: 'search_semantic', payload: { hits: scored } });
-        break;
-      }
-
-      default:
+    } catch (error) {
         self.postMessage({
-          requestId,
-          type: 'error',
-          payload: { message: `Unknown message type: ${type}` },
+            requestId,
+            type: 'error',
+            payload: { message: (error as Error)?.message ?? String(error) },
         });
     }
-  } catch (error) {
-    self.postMessage({
-      requestId,
-      type: 'error',
-      payload: { message: (error as Error)?.message ?? String(error) },
-    });
-  }
+};
+
+self.onmessageerror = (event) => {
+    console.error('[MemoryWorker] Failed to deserialize message:', event);
 };
