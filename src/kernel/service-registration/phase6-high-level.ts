@@ -9,10 +9,9 @@ import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { IContainer } from '../container';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
-import type { DataAccessLayer } from '../dal';
-import { rootLogger } from '../services/logger-service';
 import type { LoggerService } from '../services/logger-service';
-const LOGGER = rootLogger.child('Phase6');
+import type { DataAccessLayer } from '../dal';
+
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import type { KeyStateStore } from '../services/key-state-store';
@@ -35,7 +34,7 @@ import { ChatService } from '../services/chat-service';
 import { WorkspaceService } from '../services/workspace-service';
 import { ProbeService } from '../services/probe-service';
 import { AutoDebateService } from '../services/auto-debate/auto-debate-service';
-import { EventSourcingService } from '../services/event-sourcing/event-sourcing-service';
+import { EventRecorder } from '../services/event-sourcing/event-recorder';
 import { NotificationWebhookService } from '../services/notification-webhook-service';
 import { CompromiseWebhookService } from '../services/compromise-webhook-service';
 import { ConsistencyChecker } from '../services/consistency-checker';
@@ -99,21 +98,13 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     },
   }));
 
-  register('eventSourcingService', new EventSourcingService({
-    subscribeAll: (cb) => ctx.eventBus.subscribeAll(cb),
-    getStateSnapshot: () => {
-      try {
-        const kernel = get<SystemKernel>('kernel');
-        return kernel.getState?.() ?? {};
-      } catch (e) { LOGGER.warn('getStateSnapshot', 'Snapshot failed', { error: e }); return {}; }
-    },
-    onReplayEvent: (event) => {
-      const logger = get<LoggerService>('logger');
-      logger.info('EventSourcing', `Replay: ${event.event} #${event.sequence}`);
-    },
-    eventLogStore: get<DataAccessLayer>('dal').eventLog,
-    kv: get<DataAccessLayer>('dal').kv,
-  }));
+  register('eventSourcingService', new EventRecorder(
+    undefined,
+    get<DataAccessLayer>('dal').eventLog,
+    undefined,
+    undefined,
+    get<DataAccessLayer>('dal').kv,
+  ));
 
   register('notificationWebhookService', new NotificationWebhookService({
     eventBus: get<IEventBus>('eventBus'),

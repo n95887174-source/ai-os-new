@@ -20,7 +20,7 @@ import type { CognitiveService } from './services/cognitive-service';
 import type { PolicyService } from './services/policy-service';
 import { ProviderRuntimeService } from './services/provider-runtime/provider-service';
 import { RotationService } from './services/rotation-service';
-import { EventSourcingService } from './services/event-sourcing/event-sourcing-service';
+import { EventRecorder } from './services/event-sourcing/event-recorder';
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
 import { registerServices } from './service-registration/index';
 import { ProjectionRegistry } from './services/event-bridge/projection-registry';
@@ -386,7 +386,10 @@ export class SystemBootstrap implements IBootstrap {
     this.logger.info('Bootstrap', `Before eventSourcing init, memMB: ${memPreEventSourcing ? Math.round(memPreEventSourcing / 1024 / 1024) : 'n/a'}`);
 
     await this.lifecycle.tryInit('eventSourcingService', () => {
-      return this.container.get<EventSourcingService>('eventSourcingService').init();
+      return this.container.get<EventRecorder>('eventSourcingService').init(
+
+        (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => this.eventBus.subscribeAll(cb),
+      );
     });
 
     const memPreProviderRuntime = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
@@ -513,9 +516,9 @@ export class SystemBootstrap implements IBootstrap {
       this.logger.info('Bootstrap', '[MODULE START] TemporalReplayService');
       try {
         const routerService = this.container.get<RouterService>('routerService');
-        const eventSourcing = this.container.get<EventSourcingService>('eventSourcingService');
+        const eventSourcing = this.container.get<EventRecorder>('eventSourcingService');
         const scopeManager = this.container.get<ICausalScopeManager>('causalScopeManager');
-        const temporalReplayService = new TemporalReplayService(eventSourcing.recorder, routerService, scopeManager);
+        const temporalReplayService = new TemporalReplayService(eventSourcing, routerService, scopeManager);
         this.container.register('temporalReplayService', temporalReplayService);
         const memAfter = getHeapMB();
         this.logger.info('Bootstrap', `[MODULE END] TemporalReplayService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`);

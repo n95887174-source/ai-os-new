@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ProviderRuntimeService } from './provider-runtime/provider-service';
-import { EventSourcingService } from './event-sourcing/event-sourcing-service';
+import { EventRecorder } from './event-sourcing/event-recorder';
 import { LLMClientService } from './llm-client-service';
 import type { IProviderAdapter, IAdapterRegistry } from '../contracts/provider-adapter';
 import type { ApiKey } from '../types/metrics-types';
@@ -90,14 +90,14 @@ describe('Provider Stack E2E', () => {
     off: ReturnType<typeof vi.fn>;
   };
   let eventHandlers: Record<string, Array<(...args: unknown[]) => void>>;
-  let eventSourcing: EventSourcingService;
+  let eventSourcing: EventRecorder;
   let providerRuntime: ProviderRuntimeService;
   let adapterRegistry: IAdapterRegistry;
   let llmClient: LLMClientService;
   let adapter: IProviderAdapter;
   let recordedEvents: Array<{ event: string; data: Record<string, unknown> }>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     recordedEvents = [];
     eventHandlers = {};
 
@@ -118,18 +118,15 @@ describe('Provider Stack E2E', () => {
 
     providerRuntime = new ProviderRuntimeService();
 
-    eventSourcing = new EventSourcingService({
-      subscribeAll: (cb) => {
-        const wrapped = (payload: { event: string; data: Record<string, unknown> }) => {
-          recordedEvents.push(payload);
-          cb(payload);
-        };
-        const unsub = eventBus.on('*', wrapped as (...args: unknown[]) => void);
-        return unsub;
-      },
-      getStateSnapshot: () => ({ providerRuntime: providerRuntime.getRuntimeSnapshot() }),
+    eventSourcing = new EventRecorder();
+    await eventSourcing.init((cb: (payload: { event: string; data: Record<string, unknown> }) => void) => {
+      const wrapped = (payload: { event: string; data: Record<string, unknown> }) => {
+        recordedEvents.push(payload);
+        cb(payload);
+      };
+      const unsub = eventBus.on('*', wrapped as (...args: unknown[]) => void);
+      return unsub;
     });
-    eventSourcing.init();
 
     adapter = mockAdapter();
     adapterRegistry = mockRegistry(adapter);

@@ -1,3 +1,5 @@
+export type { Checkpoint } from './checkpoint-store';
+
 export interface RecordedEvent {
   readonly sequence: number;
   readonly event: string;
@@ -22,6 +24,9 @@ export interface EventRecorderStore {
 
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
+import { ReplayEngine, type ReplayConfig } from './replay-engine';
+import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
+import type { KvRepository } from '../../dal';
 
 const LOGGER = rootLogger.child('EventRecorder');
 
@@ -30,8 +35,6 @@ const DEFAULT_CONFIG: RecorderConfig = {
   enabled: true,
 };
 
-// P0-18: async SHA-256 checksum with bounded concurrency
-// Replaced free function with class method to share the in-flight counter and queue
 export class EventRecorder {
   private events: RecordedEvent[] = [];
   private sequence = 0;
@@ -42,6 +45,10 @@ export class EventRecorder {
   private inFlightChecksums = 0;
   private static readonly MAX_INFLIGHT_CHECKSUMS = 50;
   private pendingChecksums: Array<() => void> = [];
+
+  readonly replay: ReplayEngine;
+  readonly checkpoints: CheckpointStore;
+  private restoreHandler: ((checkpoint: Checkpoint) => boolean) | null = null;
 
   private async boundedChecksum(event: string, data: unknown, timestamp: number): Promise<string> {
     if (this.inFlightChecksums >= EventRecorder.MAX_INFLIGHT_CHECKSUMS) {
@@ -58,19 +65,37 @@ export class EventRecorder {
     }
   }
 
-  constructor(config?: Partial<RecorderConfig>, store?: EventRecorderStore) {
+  constructor(
+    config?: Partial<RecorderConfig>,
+    store?: EventRecorderStore,
+    replayConfig?: Partial<ReplayConfig>,
+    checkpointConfig?: Partial<CheckpointStoreConfig>,
+    kv?: KvRepository,
+  ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.store = store;
+
+    this.replay = new ReplayEngine({
+      onStatusChange: (status) => {
+        if (status === 'completed') {
+          this.createAutoCheckpoint();
+        }
+      },
+      ...replayConfig,
+    });
+
+    this.checkpoints = new CheckpointStore(checkpointConfig, kv ? {
+      load: () => kv.get<Checkpoint[]>('event-sourcing:checkpoints'),
+      save: (checkpoints) => kv.set('event-sourcing:checkpoints', checkpoints),
+    } : undefined);
   }
 
-async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): Promise<void> {
+  async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, unknown> }) => void) => () => void): Promise<void> {
     if (this.unsub) return;
-    // Restore persisted sequence counter to avoid collisions after page reload
-    // Only loads up to maxEvents entries — safe with capped buffer
     if (this.store) await this.restore();
+    await this.checkpoints.init();
     this.unsub = subscribeAll(async (payload) => {
       if (!this.config.enabled) return;
-      // Skip high-frequency execution events — large payloads that don't need replay
       if (payload.event === 'cognitive:trace:updated') return;
       if (payload.event === 'cognitive:step:active') return;
       if (payload.event === 'cognitive:step:completed') return;
@@ -149,9 +174,87 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
     );
   }
 
+  onRestore(cb: (checkpoint: Checkpoint) => boolean): void {
+    this.restoreHandler = cb;
+  }
+
+  createCheckpoint(label: string, options?: { tags?: string[]; description?: string }): Checkpoint {
+    return this.checkpoints.create(
+      label,
+      this.getSequenceRange().last,
+      {},
+      options,
+    );
+  }
+
+  private createAutoCheckpoint(): void {
+    const seq = this.getSequenceRange().last;
+    this.checkpoints.create(`replay-end-${seq}`, seq, {}, {
+      tags: ['auto', 'replay-end'],
+    });
+  }
+
+  restoreCheckpoint(checkpointId: string): boolean {
+    const cp = this.checkpoints.get(checkpointId);
+    if (!cp) return false;
+    if (!this.restoreHandler) return false;
+    return this.restoreHandler(cp);
+  }
+
+  restoreLatestCheckpoint(): boolean {
+    const cp = this.checkpoints.getLatest();
+    if (!cp) return false;
+    return this.restoreCheckpoint(cp.id);
+  }
+
+  startReplay(fromCheckpointId?: string): boolean {
+    if (fromCheckpointId) {
+      const cp = this.checkpoints.get(fromCheckpointId);
+      if (!cp) return false;
+      if (this.restoreHandler) {
+        this.restoreHandler(cp);
+      }
+      const eventsSince = this.getSince(cp.sequence);
+      this.replay.loadFromCheckpoint(cp, eventsSince);
+    } else {
+      const allEvents = this.getAll();
+      this.replay.load(allEvents);
+    }
+
+    return this.replay.play();
+  }
+
+  getEventsSinceCheckpoint(checkpointId: string): RecordedEvent[] {
+    const cp = this.checkpoints.get(checkpointId);
+    if (!cp) return [];
+    return this.getSince(cp.sequence);
+  }
+
+  exportSession(): string {
+    return JSON.stringify({
+      events: this.exportLog(),
+      checkpoints: this.checkpoints.exportCheckpoints(),
+      exportedAt: Date.now(),
+    });
+  }
+
+  importSession(json: string): { events: number; checkpoints: number } {
+    try {
+      const data = JSON.parse(json);
+      const events = this.importLog(data.events ?? '{}');
+      const checkpoints = this.checkpoints.importCheckpoints(data.checkpoints ?? '{}');
+      return { events, checkpoints };
+    } catch (e) {
+      LOGGER.warn('EventRecorder', 'Import session failed', { error: e });
+      return { events: 0, checkpoints: 0 };
+    }
+  }
+
   async clear(): Promise<void> {
     this.events = [];
     this.sequence = 0;
+    this.replay.clear();
+    this.checkpoints.clear();
     if (this.store) {
       try {
         await this.store.save({ events: [], sequence: 0 });
@@ -202,6 +305,8 @@ async init(subscribeAll: (cb: (payload: { event: string; data: Record<string, un
     this.unsub = null;
     this.events = [];
     this.sequence = 0;
+    this.replay.destroy();
+    this.checkpoints.destroy();
   }
 
   private async restore(): Promise<void> {

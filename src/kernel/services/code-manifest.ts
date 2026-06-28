@@ -63,7 +63,7 @@ const FILE_ENTRIES: CodeManifestEntry[] = [
   { name: 'src/kernel/services/policy-service.ts', type: 'file_path', location: 'services/policy-service.ts' },
   { name: 'src/kernel/services/routing-policy/routing-policy-service.ts', type: 'file_path', location: 'services/routing-policy/' },
   { name: 'src/kernel/services/session-affinity-store.ts', type: 'file_path', location: 'services/session-affinity-store.ts' },
-  { name: 'src/kernel/services/event-sourcing/event-sourcing-service.ts', type: 'file_path', location: 'services/event-sourcing/' },
+  { name: 'src/kernel/services/event-sourcing/event-recorder.ts', type: 'file_path', location: 'services/event-sourcing/' },
   { name: 'src/kernel/services/event-bridge/projection-registry.ts', type: 'file_path', location: 'services/event-bridge/' },
   { name: 'src/kernel/services/event-bridge/event-bridge.ts', type: 'file_path', location: 'services/event-bridge/' },
   { name: 'src/kernel/services/projections/key-state-projection.ts', type: 'file_path', location: 'services/projections/' },
@@ -293,7 +293,7 @@ const SERVICE_ENTRIES: CodeManifestEntry[] = [
   { name: 'SnapshotService', type: 'service_name', location: 'services/snapshot-service.ts' },
   { name: 'BudgetService', type: 'service_name', location: 'services/budget-service.ts' },
   { name: 'PricingService', type: 'service_name', location: 'services/pricing-service.ts' },
-  { name: 'EventSourcingService', type: 'service_name', location: 'services/event-sourcing/event-sourcing-service.ts' },
+  { name: 'EventSourcingService', type: 'service_name', location: 'services/event-sourcing/event-recorder.ts' },
 ];
 
 const METHOD_ENTRIES: CodeManifestEntry[] = [
