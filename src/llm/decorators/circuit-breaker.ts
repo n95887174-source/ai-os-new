@@ -130,6 +130,13 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         this.state.openSince = Date.now();
         this.state.currentTimeoutMs = this.config.openTimeoutMs;
         this.transitioningToHalfOpen = false;
+        crossTabStateSync.updateCircuitBreaker({
+            provider: this.getProviderId(),
+            keyId: this.inner.id,
+            status: 'open',
+            failureCount: this.state.failures,
+            lastFailure: this.state.lastFailureTime,
+        });
     }
 
     private async callWithCircuit<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
