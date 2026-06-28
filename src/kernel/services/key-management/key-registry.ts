@@ -61,7 +61,9 @@ export class KeyRegistry {
 
   getKey(id: string): ApiKey | undefined {
     const idx = this.#keyMap.get(id);
-    return idx !== undefined ? this.keys[idx] : undefined;
+    // C2: Return deep clone like getKeys() — callers must not mutate canonical state.
+    // Use modifyKey() or updateKey() for writes.
+    return idx !== undefined ? structuredClone(this.keys[idx]) : undefined;
   }
 
   getKeysByProvider(provider: string): ApiKey[] {

@@ -179,11 +179,29 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     if (this._started) return;
     this._started = true;
     this.cleanupInterval = setInterval(() => this.cleanupStaleSessions(), 60000);
-    // Persist all active debate snapshots before tab close so ongoing
-    // debates survive page reload (fixes 6.5: Missing Debate Cleanup on Tab Close).
-    if (typeof window !== 'undefined') {
+    // C1: Use visibilitychange (fires 5-10s before beforeunload) to persist
+    // snapshots before tab close. Also keep a sync localStorage fallback for
+    // beforeunload since async saveSnapshot may not complete in time.
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          for (const sessionId of this.sessions.keys()) {
+            this.saveSnapshot(sessionId).catch(e =>
+              LOGGER.warn('DebateEngine', 'visibilitychange save failed', { error: e, sessionId })
+            );
+          }
+        }
+      });
       this._beforeUnloadHandler = () => {
         for (const sessionId of this.sessions.keys()) {
+          // Sync fallback to localStorage for critical state
+          try {
+            const snap = this.sessions.get(sessionId)?.snapshot();
+            if (snap) {
+              const key = `debate_pending_${sessionId}`;
+              localStorage.setItem(key, JSON.stringify({ snapshot: snap, ts: Date.now() }));
+            }
+          } catch { /* best-effort */ }
           this.saveSnapshot(sessionId);
         }
       };

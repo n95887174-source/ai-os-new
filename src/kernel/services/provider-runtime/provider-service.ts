@@ -22,6 +22,8 @@ export class ProviderRuntimeService {
   private instances = new Map<string, IProviderInstance>();
   private sessions = new Map<string, ProviderSession>();
   private deps: ProviderRuntimeDeps;
+  private static readonly SESSION_RETENTION_MS = 60_000;
+  private pendingDeletions: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   constructor(deps?: ProviderRuntimeDeps) {
     this.deps = deps ?? {};
@@ -117,6 +119,9 @@ export class ProviderRuntimeService {
       instance.release();
     }
 
+    // C5: Schedule deletion after retention period to allow post-completion reads
+    this.scheduleSessionDeletion(sessionId);
+
     return session.snapshot();
   }
 
@@ -132,6 +137,9 @@ export class ProviderRuntimeService {
       instance.release();
     }
 
+    // C5: Schedule deletion after retention period
+    this.scheduleSessionDeletion(sessionId);
+
     return session.snapshot();
   }
 
@@ -146,7 +154,28 @@ export class ProviderRuntimeService {
       instance.release();
     }
 
+    // C5: Schedule deletion after retention period
+    this.scheduleSessionDeletion(sessionId);
+
     return session.snapshot();
+  }
+
+  private scheduleSessionDeletion(sessionId: string): void {
+    // Cancel any pending deletion for this session (re-schedule)
+    const existing = this.pendingDeletions.get(sessionId);
+    if (existing) clearTimeout(existing);
+
+    const timer = setTimeout(() => {
+      this.sessions.delete(sessionId);
+      this.pendingDeletions.delete(sessionId);
+    }, ProviderRuntimeService.SESSION_RETENTION_MS);
+
+    // Allow the timer to not keep the process alive
+    if (typeof timer === 'object' && 'unref' in timer) {
+      (timer as NodeJS.Timeout).unref();
+    }
+
+    this.pendingDeletions.set(sessionId, timer);
   }
 
   getSession(sessionId: string): ProviderSession | undefined {

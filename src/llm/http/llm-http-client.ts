@@ -196,12 +196,15 @@ export class LLMHttpClient {
   }
 }
 
-function parseRetryAfter(res: Response): number | undefined {
-  const header = res.headers.get('Retry-After');
+export function parseRetryAfterHeader(header: string | null): number | undefined {
   if (!header) return undefined;
   const seconds = parseInt(header, 10);
   if (!isNaN(seconds) && seconds > 0) return seconds * 1000;
   const parsed = Date.parse(header);
   if (!isNaN(parsed)) return Math.max(0, parsed - Date.now());
   return undefined;
+}
+
+function parseRetryAfter(res: Response): number | undefined {
+  return parseRetryAfterHeader(res.headers.get('Retry-After'));
 }

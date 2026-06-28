@@ -50,6 +50,7 @@ const ChatPanel: React.FC = () => {
   const history = useActiveSessionHistory();
   const historyMap = useMemo(() => new Map(history.map(h => [h.id, h])), [history]);
   
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<ExecutionMode>('single');
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
     activeKeys.length > 0 ? [activeKeys[0].id] : []
@@ -108,6 +109,12 @@ const ChatPanel: React.FC = () => {
   useEffect(() => {
     storageAdapter.setItem('chat-split-view', String(isSplitView));
   }, [isSplitView]);
+
+  // C2: Auto-scroll to bottom on new messages
+  const historyLen = history?.length;
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [historyLen]);
 
   const handleSend = useCallback(() => {
     const text = input.trim();
@@ -420,6 +427,7 @@ const ChatPanel: React.FC = () => {
           {historyEntries && historyEntries.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div id="chat-messages-container">
+                <div ref={messagesEndRef} />
                 {historyEntries.map((entry, entryIdx) => {
                   const isEditing = editingEntryId === entry.id;
                   const isSearchMatch = searchWithinResults.includes(entryIdx);

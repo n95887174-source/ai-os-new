@@ -130,17 +130,10 @@ export async function parseSSEStream(
           }
         }
 
-        if (dataAccumulator) {
-          try {
-            const parsed = JSON.parse(dataAccumulator);
-            const chunk = extractor(parsed);
-            onLine?.(parsed);
-            if (chunk) controller.enqueue(chunk);
-          } catch (e) {
-            LOGGER.warn('SSEParser', 'Non-JSON data', { error: (e as Error).message, preview: dataAccumulator.slice(0, 200) });
-          }
-          dataAccumulator = '';
-        }
+        // C-01: Do NOT flush dataAccumulator here — it may be a partial multi-chunk event.
+        // The accumulator should only be flushed at empty-line event boundaries (above)
+        // or when the stream ends (done branch). Flushing here destroys SSE events
+        // that cross read() boundaries.
       } catch (e) {
         // L9-03: Cancel bodyReader before erroring on idle timeout
         if (e instanceof Error && e.message === 'idle timeout') {

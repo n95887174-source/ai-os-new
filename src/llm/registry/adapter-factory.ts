@@ -152,9 +152,9 @@ export class AdapterFactory {
       adapter = cbRef;
     }
     if (this.#config.priorityQueue) adapter = new PriorityQueueDecorator(adapter, this.#config.priorityQueueConfig);
-    if (this.#config.logging) adapter = new LoggingDecorator(adapter);
     if (this.#config.costManager) adapter = new CostManagerDecorator(adapter, { logCosts: true });
     if (this.#config.cache) adapter = new CacheDecorator(adapter, this.#config.cacheTtlMs, this.#config.cacheMaxEntries);
+    if (this.#config.logging) adapter = new LoggingDecorator(adapter);
 
     if (rlRef) this.#rateLimiters.set(normalized, rlRef);
     if (cbRef) this.#circuitBreakers.set(normalized, cbRef);

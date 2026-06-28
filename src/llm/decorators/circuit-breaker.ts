@@ -51,8 +51,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
   // LLM-C02: Prevent race between timer-triggered OPEN→HALF_OPEN and concurrent callWithCircuit.
   // Only one transition should occur; subsequent callers during transition wait for it.
   private transitioningToHalfOpen = false;
-  /** Track the current request's signal to distinguish user-abort from timeout-abort */
-  private currentSignal?: AbortSignal;
+
   readonly #config: CircuitConfig;
 
   constructor(
@@ -128,7 +127,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     this.transitioningToHalfOpen = false;
   }
 
-  private async callWithCircuit<T>(fn: () => Promise<T>): Promise<T> {
+  private async callWithCircuit<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     const circuitState = this.updateAndGetState();
     if (circuitState === 'open') {
       const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
@@ -151,7 +150,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
       if (statusCode !== undefined && NON_CIRCUIT_HTTP_STATUSES.has(statusCode)) {
         throw e;
       }
-      this.onFailure(e, circuitState);
+      this.onFailure(e, circuitState, signal);
       if (e instanceof RetryableError) {
         const error = new LLMError(
           e instanceof Error ? e.message : String(e),
@@ -180,9 +179,12 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     return this.inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
   }
 
-  private isUserInitiatedAbort(e: unknown): boolean {
+  private isUserInitiatedAbort(e: unknown, signal?: AbortSignal): boolean {
     if (!(e instanceof DOMException) || e.name !== 'AbortError') return false;
-    return this.currentSignal?.aborted === true;
+    // C-03: Use the per-call signal, not `this.currentSignal` which is shared
+    // across concurrent requests. When request B overwrites currentSignal,
+    // request A's abort is misattributed as a circuit failure.
+    return signal?.aborted === true;
   }
 
   private onSuccess(capturedState: CircuitState): void {
@@ -204,8 +206,8 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     }
   }
 
-  private onFailure(e?: unknown, capturedState?: CircuitState): void {
-    if (this.isUserInitiatedAbort(e)) return;
+  private onFailure(e?: unknown, capturedState?: CircuitState, signal?: AbortSignal): void {
+    if (this.isUserInitiatedAbort(e, signal)) return;
     const statusCode = this.getStatusCode(e);
     if (statusCode !== undefined && NON_CIRCUIT_HTTP_STATUSES.has(statusCode)) {
       return;
@@ -305,8 +307,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<ProviderResponse> {
-    this.currentSignal = signal;
-    return this.callWithCircuit(() => this.inner.sendMessage(messages, model, apiKey, signal, options));
+    return this.callWithCircuit(() => this.inner.sendMessage(messages, model, apiKey, signal, options), signal);
   }
 
   async streamMessage(
@@ -317,10 +318,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     signal?: AbortSignal,
     options?: SendMessageOptions,
   ): Promise<void> {
-    this.currentSignal = signal;
     const streamMessage = this.inner.streamMessage;
     if (!streamMessage) throw new Error('CircuitBreaker: inner adapter does not support streaming');
-    return this.callWithCircuit(() => streamMessage.call(this.inner, messages, model, apiKey, onChunk, signal, options));
+    return this.callWithCircuit(() => streamMessage.call(this.inner, messages, model, apiKey, onChunk, signal, options), signal);
   }
 
   async batchSendMessage(requests: Array<{ messages: ChatMessage[]; model: string; apiKey: string; signal?: AbortSignal; options?: SendMessageOptions }>): Promise<ProviderResponse[]> {

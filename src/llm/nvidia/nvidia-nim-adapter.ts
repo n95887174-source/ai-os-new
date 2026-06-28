@@ -2,7 +2,7 @@ import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/t
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
-import { sanitizeError } from '../http/llm-http-client';
+import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
 import { estimateTokenCount } from '../utils/token-counter';
 import { NvidiaNIMResponseSchema, type NvidiaNIMResponse } from './nvidia-nim-types';
 import { LLMError, RetryableError } from '../core/errors';
@@ -94,7 +94,9 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        throw new RetryableError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id);
+        // H-02: Pass statusCode and retryAfter so circuit breaker respects server backoff
+        const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+        throw new RetryableError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id, res.status, undefined, retryAfter);
       }
       throw new LLMError(`NVIDIA NIM Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, this.id, res.status);
     }
@@ -124,7 +126,8 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        throw new RetryableError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id);
+        const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+        throw new RetryableError(`Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`, this.id, res.status, undefined, retryAfter);
       }
       throw new LLMError(`NVIDIA NIM Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, this.id, res.status);
     }

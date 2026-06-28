@@ -125,8 +125,10 @@ export class GeminiRequestBuilder {
       if (firstUserIdx >= 0) {
         const firstUserMsg = contents[firstUserIdx];
         const systemText = systemParts.map(p => p.text).join('\n');
-        const existingText = firstUserMsg.parts[0] && 'text' in firstUserMsg.parts[0] ? (firstUserMsg.parts[0] as { text: string }).text : '';
-        contents[firstUserIdx] = { ...firstUserMsg, parts: [{ text: systemText + '\n\n' + existingText }] };
+        // C-02: Prepend system text as a new part instead of replacing ALL parts.
+        // The old code discarded functionResponse/tool-call parts, breaking multi-turn
+        // tool-calling conversations with system prompts on Gemini.
+        contents[firstUserIdx] = { ...firstUserMsg, parts: [{ text: systemText }, ...firstUserMsg.parts] };
       } else {
         contents.unshift({ role: 'user', parts: systemParts });
       }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
@@ -26,6 +26,13 @@ const NotesTab: React.FC<NotesTabProps> = ({ apiKey }) => {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [localNotes, setLocalNotes] = useState(apiKey.notes || []);
 
+  // C4: Sync local state when apiKey.notes changes (parent refetch)
+  useEffect(() => {
+    if (apiKey.notes && apiKey.notes.length > 0) {
+      setLocalNotes(apiKey.notes);
+    }
+  }, [apiKey.notes]);
+
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
     setIsAddingNote(true);
@@ -51,7 +58,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ apiKey }) => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {(apiKey.notes || localNotes).slice().sort((a, b) => b.timestamp - a.timestamp).map(note => (
+        {localNotes.slice().sort((a, b) => b.timestamp - a.timestamp).map(note => (
           <NoteItem key={note.id} note={note} />
         ))}
       </div>

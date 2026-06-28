@@ -103,7 +103,10 @@ export class ChatService {
     this.unsubs.push(
       this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
         const r = req as QueuedRequest;
-        const fp = `${r.provider}:${r.model}:${r.messages.map(m => m.content).join('').slice(0, 200)}`;
+        // C4: Use full content as fingerprint — no truncation to avoid collisions
+        // on long prompts. Set key length does not affect lookup performance.
+        const joined = r.messages.map(m => m.content).join('');
+        const fp = `${r.provider}:${r.model}:${joined}`;
         if (this.executingMessages.has(fp)) return;
         this.executingMessages.add(fp);
         this.executeRequest({ ...r, requestId: r.requestId || crypto.randomUUID() })
@@ -267,7 +270,14 @@ export class ChatService {
       // LLM calls for identical prompts (cache read-while-write race).
       const inflight = this.cacheInflight.get(cacheKey);
       if (inflight) {
-        await inflight;
+        try {
+          await inflight;
+        } catch {
+          // C3: If the in-flight request failed, fall through to make a fresh
+          // LLM call instead of silently dropping this request (which would
+          // leave the UI in perpetual "thinking..." state).
+          this.deps.logger.warn('ChatService', 'Cache inflight failed, making fresh call', { cacheKey });
+        }
         const nowCached = this.deps.cacheService.get(cacheKey);
         if (nowCached) {
           const cachedLatency = Date.now() - cacheStart;
