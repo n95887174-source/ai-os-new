@@ -164,8 +164,11 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             setError('');
             return;
         }
-        if (step === 2 || step === 0) {
-            // Vault is persistent - don't go back to vault step
+        if (step === 0) {
+            onClose();
+            return;
+        }
+        if (step === 2) {
             setStep(1);
             setError('');
             return;
