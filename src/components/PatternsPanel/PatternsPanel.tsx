@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 
 interface PatternNote {
@@ -91,7 +92,7 @@ const PatternsPanel: React.FC = () => {
             />
           </div>
           <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer', opacity: 0.5 }}
-            onClick={() => alert(t('patterns.coming_soon'))}
+            onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: t('patterns.coming_soon'), type: 'info' })}
           >
             <Plus size={18} /> {t('patterns.create')}
           </button>
@@ -272,11 +273,11 @@ const PatternsPanel: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button className="btn-secondary" style={{ padding: '0.6rem 1.2rem', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', opacity: 0.5 }}
-                    onClick={() => alert(t('patterns.coming_soon'))}>
+                    onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: t('patterns.coming_soon'), type: 'info' })}>
                     {t('patterns.detail.edit')}
                   </button>
                   <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem', borderRadius: 12, background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer', opacity: 0.5 }}
-                    onClick={() => alert(t('patterns.coming_soon'))}>
+                    onClick={() => eventBus.emit(EVENTS.NOTIFICATION, { message: t('patterns.coming_soon'), type: 'info' })}>
                     <Save size={18} /> {t('patterns.detail.save')}
                   </button>
                 </div>

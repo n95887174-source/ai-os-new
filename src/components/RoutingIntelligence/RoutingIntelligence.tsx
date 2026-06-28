@@ -4,6 +4,7 @@ import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
 import type { RouterDecision } from '../../kernel/services/provider-router';
 import { useTranslation } from '../../i18n/useTranslation';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { ABTestConfig } from '../../kernel/types/routing-types';
 
@@ -49,13 +50,6 @@ function MetricBar({ label, control, experiment, higherIsBetter, format }: {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface TreeNode {
-  label: string;
-  sub?: string;
-  color: string;
-  children?: TreeNode[];
-}
 
 function WeightTunerInner({ profile, actions }: {
   profile: { defaultWeights: { ttft: number; tps: number; reliability: number } };
@@ -214,7 +208,7 @@ function ABTestPanel({ abTest, profiles, actions }: {
           </div>
           <button onClick={async () => {
             const ok = await actions.startABTest(control, experiment, split);
-            if (!ok) alert('Failed to start A/B test');
+            if (!ok) eventBus.emit(EVENTS.NOTIFICATION, { message: 'Failed to start A/B test', type: 'error' });
           }} style={{ alignSelf: 'flex-start', padding: '0.6rem 1.25rem', borderRadius: 10, background: 'linear-gradient(135deg, #7c3aed, #6366f1)', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Play size={16} /> Start A/B Test
           </button>

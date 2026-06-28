@@ -426,13 +426,18 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     });
     if (!Array.isArray(imported)) throw new Error('Invalid data format');
     let count = 0;
+    const makeFingerprint = (provider: string, label: string, key: string) => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+      return `${provider.toLowerCase()}::${label.toLowerCase()}::${h.toString(36)}`;
+    };
     const existingFingerprints = new Set(
-      groupManager.getAllKeys().map(k => `${k.provider.toLowerCase()}::${k.label.toLowerCase()}::${k.key}`)
+      groupManager.getAllKeys().map(k => makeFingerprint(k.provider, k.label, k.key))
     );
     for (const item of imported) {
       const parsed = parseImportedKey(item);
       if (!parsed) continue;
-      const fingerprint = `${parsed.provider.toLowerCase()}::${parsed.label.toLowerCase()}::${parsed.key}`;
+      const fingerprint = makeFingerprint(parsed.provider, parsed.label, parsed.key);
       if (existingFingerprints.has(fingerprint)) continue;
       const result = await groupManager.createKey(parsed, { source: 'import' });
       if (result.ok) {

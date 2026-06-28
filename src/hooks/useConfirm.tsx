@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { FocusScope } from '@react-aria/focus';
 
 interface ConfirmOptions {
@@ -29,6 +29,14 @@ export function useConfirm() {
   });
 
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
+
+  useEffect(() => {
+    if (state.open) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [state.open]);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {

@@ -11,7 +11,7 @@ import type { DatabaseService } from '../../kernel/services/database-service';
 interface DebateRecord {
   id: string; topic: string; topologyType?: string; phase: string; round: number;
   participants?: string; tags?: string[]; folder?: string; isArchived?: boolean; isPinned?: boolean;
-  createdAt: number; updatedAt: number; arguments?: string;
+  createdAt: number; updatedAt: number; arguments?: string; topology?: string;
   totalTokens?: number; totalCost?: number;
 }
 
@@ -60,6 +60,11 @@ async function loadFull(id: string): Promise<DebateSession | null> {
     let args: unknown[] = []; let parts: unknown[] = [];
     try { args = JSON.parse(r.arguments || '[]'); } catch { args = []; }
     try { parts = JSON.parse(r.participants || '[]'); } catch { parts = []; }
+    let storedConfig: Record<string, unknown> = {};
+    try {
+      const topology = JSON.parse(r.topology || '{}');
+      storedConfig = (topology.config || topology) as Record<string, unknown>;
+    } catch { /* ignore parse errors */ }
     return {
       id: r.id, topic: r.topic || '(untitled)',
       status: r.phase as DebateSession['status'],
@@ -69,7 +74,7 @@ async function loadFull(id: string): Promise<DebateSession | null> {
       arguments: Array.isArray(args) ? args as DebateSession['arguments'] : [],
       convergenceScore: 0, totalTokens: r.totalTokens || 0,
       totalCost: r.totalCost || 0, createdAt: r.createdAt,
-      config: { roundDelayMs: 2000, maxTokens: 4096, temperature: 0.7, debateTemperature: 0.7, useModerator: false, timeoutMs: 30000 },
+      config: { roundDelayMs: 2000, maxTokens: 4096, temperature: 0.7, debateTemperature: 0.7, useModerator: false, timeoutMs: 30000, ...storedConfig },
     };
   } catch { return null; }
 }

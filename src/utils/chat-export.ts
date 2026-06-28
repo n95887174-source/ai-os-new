@@ -128,7 +128,7 @@ export function exportChatToJSON(chat: ExportableChat, pretty = true): string {
 
 export function exportChatToHtml(chat: ExportableChat, options: ChatExportOptions = {}): string {
   const opts = { includeTimestamps: true, includeModel: true, ...options };
-  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const parts: string[] = [];
   parts.push(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(chat.title || 'Chat')}</title>`);
   parts.push(`<style>body{font-family:system-ui,sans-serif;max-width:780px;margin:2rem auto;padding:0 1rem;color:#0f172a;}h1{margin:0 0 .5rem;}h2{font-size:1rem;color:#475569;border-bottom:1px solid #e2e8f0;padding-bottom:0.3rem;margin-top:1.5rem;}.role-user{color:#2563eb;}.role-assistant{color:#16a34a;}.role-system{color:#64748b;}.role-tool{color:#a855f7;}.msg{white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:.75rem 1rem;border-radius:8px;margin:.5rem 0;}.meta{color:#94a3b8;font-size:.8rem;}</style>`);
@@ -140,7 +140,7 @@ export function exportChatToHtml(chat: ExportableChat, options: ChatExportOption
     parts.push(`<div class="meta">Created: ${esc(formatDate(chat.createdAt))}</div>`);
   }
   for (const m of chat.messages) {
-    parts.push(`<h2 class="role-${m.role}">${esc(m.role)}</h2>`);
+    parts.push(`<h2 class="role-${esc(m.role)}">${esc(m.role)}</h2>`);
     parts.push(`<div class="msg">${esc(m.content ?? '')}</div>`);
   }
   parts.push('</body></html>');

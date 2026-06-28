@@ -19,6 +19,7 @@ import {
 import type { AgentTemplate as ServiceAgentTemplate } from '../../kernel/services/template-service';
 import type { ISNode } from '../../kernel/contracts/topology';
 import { PromptOptimizer } from '../../kernel/services/prompt-optimizer';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { AgentStatsDashboard } from './AgentStatsDashboard';
 import { LiveActivityStream } from './LiveActivityStream';
@@ -199,7 +200,7 @@ const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
         {!isLatest && (
           <button onClick={async () => {
             const cfg = await agentVersionService.rollback(agentId, v.id);
-            if (cfg) { alert(`Rollback to v${versions.length - i} — config keys: ${Object.keys(cfg).join(', ')}`); }
+            if (cfg) { eventBus.emit(EVENTS.NOTIFICATION, { message: `Rollback to v${versions.length - i} — config keys: ${Object.keys(cfg).join(', ')}`, type: 'info' }); }
           }} style={{ fontSize: '0.7rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             Rollback to this version
           </button>
@@ -721,7 +722,7 @@ const AgentsPanelView: React.FC = () => {
                           <span className="agents-config-optimize" onClick={() => {
                             const optimizer = new PromptOptimizer();
                             const suggestions = optimizer.analyze(agent.systemPrompt, agent.stats);
-                            if (suggestions.length === 0) { alert('Prompt already optimized!'); return; }
+                            if (suggestions.length === 0) { eventBus.emit(EVENTS.NOTIFICATION, { message: 'Prompt already optimized!', type: 'info' }); return; }
                             const chosen = suggestions.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n');
                             const idx = parseInt(prompt(`Optimization suggestions:\n\n${chosen}\n\nEnter number to apply (or Cancel to skip):`) || '0', 10);
                             if (idx > 0 && idx <= suggestions.length) {

@@ -131,8 +131,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div
                     className="nav-section-header"
                     onClick={() => toggleSection(section.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(section.id); } }}
+                    role="button"
+                    tabIndex={0}
                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}
                     title={isCollapsed ? 'Expand section' : 'Collapse section'}
+                    aria-expanded={!isCollapsed}
                   >
                     <span>{t(navLabelKey[section.id] ?? 'nav.overview')}</span>
                     <ChevronDown
