@@ -49,7 +49,7 @@ export interface IProviderRouter {
   getRankedProviders(strategy: string, prompt: string, priority?: string, agentId?: string, probeResults?: Map<string, ProbeResult>, sessionId?: string): RankedProvider[];
   getRaceCandidates(prompt: string): unknown[];
   getFallbackChain(strategy: string): Array<{ provider: string; model?: string }>;
-  resolveWithFallback(strategy: string, excludeProvider?: string, excludeKeyId?: string): { key: unknown; provider: string } | null;
+  resolveWithFallback(strategy: string, excludeProviders?: Set<string> | string, excludeKeyId?: string): { key: unknown; provider: string } | null;
   getProviderAvgLatency(provider: string): number;
   getRouterCapabilities(): { supportedStrategies: string[]; maxRaceCandidates: number; fallbackDepth: number };
   trySelectProvider?(prompt: string): Result<RouterDecision, RoutingError>;

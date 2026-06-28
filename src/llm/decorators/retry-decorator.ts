@@ -24,7 +24,9 @@ export class RetryDecorator extends BaseDecorator {
     if (error instanceof RetryableError && error.retryAfter !== undefined) {
       return error.retryAfter;
     }
-    return Math.min(this.#baseDelayMs * Math.pow(2, attempt - 1), 30_000);
+    const base = this.#baseDelayMs * Math.pow(2, attempt - 1);
+    const jitter = base * (0.5 + Math.random());
+    return Math.min(jitter, 30_000);
   }
 
   private shouldRetry(e: unknown, currentSignal?: AbortSignal): boolean {

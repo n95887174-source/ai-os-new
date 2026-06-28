@@ -308,9 +308,10 @@ class CrossTabStateSync {
       parts.push(`${id}:${v.updatedAt}:${v.phase}:${v.round}`);
     }
     parts.sort();
+    const fullString = parts.join('|');
     let hash = 0;
-    for (const p of parts) {
-      hash = ((hash << 5) - hash + p.charCodeAt(0)) | 0;
+    for (let i = 0; i < fullString.length; i++) {
+      hash = ((hash << 5) - hash + fullString.charCodeAt(i)) | 0;
     }
     return hash.toString(16);
   }

@@ -12,13 +12,15 @@ const SpeechRecognitionAPI = typeof window !== 'undefined'
   ? (window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition
   : null;
 
-export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language = 'en-US', disabled = false }) => {
+export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language = 'en-US', disabled = false, onError }) => {
   const [isListening, setIsListening] = useState(false);
   const [isSupported] = useState(!!SpeechRecognitionAPI);
   const recognitionRef = useRef<unknown>(null);
   const onTranscriptRef = useRef(onTranscript);
+  const onErrorRef = useRef(onError);
   const isMountedRef = useRef(true);
   onTranscriptRef.current = onTranscript;
+  onErrorRef.current = onError;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -88,8 +90,8 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language
         'aborted': '',
         'audio-capture': 'Microphone not found or busy.',
       };
-      if (messages[err.error] && onTranscriptRef.current) {
-        onTranscriptRef.current(messages[err.error]);
+      if (messages[err.error] && onErrorRef.current) {
+        onErrorRef.current(messages[err.error]);
       }
     };
 

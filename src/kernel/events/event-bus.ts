@@ -46,6 +46,7 @@ export class EventBus implements IEventBus {
   private listenerMap = new Map<string, Callback<unknown>[]>();
   private validatorMap = new Map<string, Validator>();
   private emitDepth = 0;
+  private hotEmitDepth = 0;
   private staticValidators = new Set<string>(); // N-18: track which validators are static (from EventValidators)
   private logger?: ILogger;
   private emitCount = 0;
@@ -278,9 +279,15 @@ private registerAllValidators(): void {
     // P0-3: hot events (stream chunks, cognitive traces) bypass emitDepth deferral
     // to prevent perpetual "streaming" state during high-throughput LLM streaming.
     if (EventBus.HOT_EVENTS.has(event)) {
+      // H9: separate hot-event depth guard to prevent unbounded recursion
+      if (this.hotEmitDepth > 1000) {
+        this.logger?.error('EventBus', `Hot event recursion limit reached for ${event} — dropping`);
+        this.emit(EVENTS.EVENTBUS_BACKPRESSURE, { event, depth: this.hotEmitDepth, pending: 1 });
+        return;
+      }
+      this.hotEmitDepth++;
       const handlers = this.listenerMap.get(event);
       const globalHandlers = this.listenerMap.get('*');
-      this.emitDepth++;
       try {
         if (handlers) {
           for (const cb of handlers) {
@@ -292,7 +299,7 @@ private registerAllValidators(): void {
             try { (cb as Callback)({ event, data }); } catch (e) { this.logger?.error('EventBus', `Error in global handler for ${event}`, { error: e }); }
           }
         }
-      } finally { this.emitDepth--; }
+      } finally { this.hotEmitDepth--; }
       return;
     }
 

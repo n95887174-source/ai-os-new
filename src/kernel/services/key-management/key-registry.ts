@@ -356,7 +356,6 @@ export class KeyRegistry {
       return this.keys.length;
     } finally {
       if (import.meta.env.DEV) console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
-      console.groupEnd();
     }
   }
 
@@ -589,25 +588,38 @@ export class KeyRegistry {
   }
 
   async importKeys(jsonData: string): Promise<number> {
-    const imported = JSON.parse(jsonData);
+    let imported: unknown[];
+    try {
+      imported = JSON.parse(jsonData);
+    } catch {
+      throw new Error('Invalid JSON data');
+    }
     if (!Array.isArray(imported)) throw new Error('Invalid data format');
     let count = 0;
     const now = Date.now();
     const newKeys = [...this.keys];
     for (const item of imported) {
-      if (!item.id || !item.provider || !item.label) continue;
-      const exists = newKeys.some(k => k.id === item.id);
+      if (typeof item !== 'object' || item === null) continue;
+      const id = (item as Record<string, unknown>).id;
+      const provider = (item as Record<string, unknown>).provider;
+      const label = (item as Record<string, unknown>).label;
+      if (!id || !provider || !label) continue;
+      const exists = newKeys.some(k => k.id === id);
       if (!exists) {
+        const rawHistory = ((item as Record<string, unknown>).history as Array<unknown>) || [];
+        const cappedHistory = rawHistory.slice(-100);
         newKeys.push({
-          ...item,
-          key: item.key || '',
-          isEncrypted: item.isEncrypted ?? false,
-          stats: item.stats || this.initStats(),
+          id: id as string,
+          provider: provider as string,
+          label: label as string,
+          key: ((item as Record<string, unknown>).key as string) || '',
+          isEncrypted: ((item as Record<string, unknown>).isEncrypted as boolean) ?? false,
+          stats: ((item as Record<string, unknown>).stats as Record<string, unknown>) || this.initStats(),
           history: [
-            ...(item.history || []),
-            { id: crypto.randomUUID(), timestamp: now, action: 'added' as const, detail: `Imported key for ${item.provider}` },
+            ...cappedHistory as KeyHistoryEntry[],
+            { id: crypto.randomUUID(), timestamp: now, action: 'added' as const, detail: `Imported key for ${provider as string}` },
           ],
-        });
+        } as ApiKey);
         count++;
       }
     }

@@ -217,14 +217,14 @@ self.onmessage = async (event: MessageEvent) => {
     // "use strict" is still on but Function = {} is a var hoisting trick (var is not
     // blocked by strict-mode's non-writable global), and async functions created inside
     // this scope inherit the local var shadow.
-    const fn = new Function('data', 'os', 'proxySelf', `
-      var Function = Object.freeze(function(){});
-      var AsyncFunction = Object.freeze(function(){return async function(){}}());
-      var GeneratorFunction = Object.freeze(function(){return function*(){}}());
-      var Object = Object.freeze({});
+    const fn = new Function('data', 'os', 'proxySelf', 'freeze', 'func', `
+      var Function = freeze(func(function(){}));
+      var AsyncFunction = freeze(func("return async function(){}")());
+      var GeneratorFunction = freeze(func("return function*(){}")());
+      var Object = freeze({});
       // eval removed — AST validation already blocks it in user code
       const { fetch, eval, XMLHttpRequest, WebSocket, importScripts, indexedDB, postMessage, addEventListener, removeEventListener, Worker, MessageChannel, BroadcastChannel, EventSource, Notification, requestAnimationFrame, cancelAnimationFrame } = {};
-      const self = Object.freeze(proxySelf);
+      const self = _freeze(proxySelf);
       const globalThis = self;
       return (async () => {
         try {
@@ -235,7 +235,7 @@ self.onmessage = async (event: MessageEvent) => {
       })();
     `);
 
-    const execPromise = fn(data, os, sandboxProxy);
+    const execPromise = fn(data, os, sandboxProxy, Object.freeze, Function);
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error(`Execution timed out after ${EXEC_TIMEOUT}ms`)), EXEC_TIMEOUT);
     });

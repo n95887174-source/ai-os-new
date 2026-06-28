@@ -38,7 +38,7 @@ export interface ChatServiceDeps {
     getRaceCandidateDetails: (prompt: string) => Array<{ provider: string; model: string; keyId: string }>;
     getDeepDowngradedModel: (model: string, levels: number) => string | null;
     getDowngradedModel: (model: string) => string | null;
-    resolveWithFallback: (strategy: string, excludeProvider?: string, excludeKeyId?: string) => { provider: string; key: { id: string } } | null;
+    resolveWithFallback: (strategy: string, excludeProviders?: Set<string> | string, excludeKeyId?: string) => { provider: string; key: { id: string } } | null;
   };
   raceExecutor?: RaceExecutor;
   routingPolicyService?: {
@@ -216,9 +216,12 @@ export class ChatService {
         }
       }
 
+      const avgLatency = this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? keyObj.latency ?? 0;
       const smartMetrics: ProviderMetrics = {
-        avgLatency: this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? keyObj.latency ?? 0,
-        p95Latency: (this.deps.getProviderState?.(provider)?.avgTTFT ?? keyObj.stats?.avgLatency ?? 0) * 1.25,
+        avgLatency,
+        // H13: p95 is estimated as avg * 2 (conservative heuristic for long-tail latency).
+        // A ring-buffer of actual latencies per provider would give real p95 values.
+        p95Latency: avgLatency * 2,
         costPerRequest: (keyObj.stats?.extended?.usageToday?.estimatedCost ?? 0)
           / Math.max(1, keyObj.stats?.extended?.usageToday?.requests ?? 1),
         quotaUsed: usageToday,
@@ -489,14 +492,8 @@ export class ChatService {
           || errMsg.toLowerCase().includes('forbidden');
         if (isProviderError) {
           excludedProviders.add(provider);
-          let excludedProvider = provider;
-          let fallback = this.deps.routerService.resolveWithFallback('auto', excludedProvider, keyObj.id);
-          for (let i = 0; i < 5 && fallback && excludedProviders.has(fallback.provider); i++) {
-            excludedProviders.add(fallback.provider);
-            excludedProvider = fallback.provider;
-            fallback = this.deps.routerService.resolveWithFallback('auto', excludedProvider, keyObj.id);
-          }
-          if (fallback && !excludedProviders.has(fallback.provider)) {
+          const fallback = this.deps.routerService.resolveWithFallback('auto', excludedProviders, keyObj.id);
+          if (fallback) {
             const activeKeyId = keyObj.id;
             if (activeKeyId) {
               this.deps.keyService.handleProviderError(activeKeyId, errMsg);
@@ -554,9 +551,9 @@ export class ChatService {
     }
 
     try {
-      const existing = this.activeRequests.get(requestId);
-      if (existing) existing.abort();
-      this.activeRequests.set(requestId, controller);
+      // H4: Don't overwrite activeRequests — the parent sessionController
+      // stays in the map so cancelRequest can still abort the session.
+      // controller is wired to sessionController via parentSignal listener.
       // LLM-6: Filter out policy-blocked candidates instead of aborting entire race
       let allowedCandidates = candidates;
       if (agentId) {
@@ -617,7 +614,9 @@ export class ChatService {
       this.deps.logger.warn('ChatService', `Provider race failed: ${errMsg}`, { error: errMsg });
       return false;
     } finally {
-      this.activeRequests.delete(requestId);
+      // H4: Don't delete from activeRequests — leave the sessionController
+      // in place so cancelRequest can still abort the session.
+      controller.abort();
     }
   }
 

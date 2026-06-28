@@ -1,9 +1,9 @@
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
-import { LLMError } from '../core/errors';
+import { LLMError, RetryableError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
-import { sanitizeError } from '../http/llm-http-client';
+import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
 import { estimateTokenCount } from '../utils/token-counter';
 import type { OpenRouterUsage } from './openrouter-types'
 import { OpenRouterResponseSchema } from './openrouter-types';
@@ -139,6 +139,10 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       console.warn(`[OpenRouter] doSendMessage full error (${res.status}):`, errorText);
+      if (res.status === 429 || res.status >= 500) {
+        const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+        throw new RetryableError(`OpenRouter Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status, undefined, retryAfter);
+      }
       throw new LLMError(`OpenRouter Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status);
     }
 
@@ -167,6 +171,10 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       console.warn(`[OpenRouter] doStreamMessage full error (${res.status}):`, errorText);
+      if (res.status === 429 || res.status >= 500) {
+        const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+        throw new RetryableError(`OpenRouter Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status, undefined, retryAfter);
+      }
       throw new LLMError(`OpenRouter Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`, 'openrouter', res.status);
     }
 

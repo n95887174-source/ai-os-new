@@ -79,20 +79,23 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         console.warn('[ChatStore] sendMessage ignored — lock held');
         return;
       }
-      _sendLock = true;
-      const govOp = executionGovernor.start({
-        type: 'send-message',
-        timeoutMs: 120_000,
-        metadata: { textPreview: text.slice(0, 80) },
-      });
       const requestId = `chat-${crypto.randomUUID()}`;
       const entryId = crypto.randomUUID();
       const sessionId = get().activeSessionId;
-      const currentHistory = (get().sessions.find(s => s.id === sessionId)?.history ?? []).slice(0, MAX_HISTORY);
-      const requestIdsToTrack: string[] = targets.length > 1
+      let requestIdsToTrack: string[] = [];
+      let govOp;
+      let currentHistory: ChatEntry[];
+      try {
+      _sendLock = true;
+      currentHistory = (get().sessions.find(s => s.id === sessionId)?.history ?? []).slice(-MAX_HISTORY);
+      requestIdsToTrack = targets.length > 1
         ? targets.map((_, idx) => `${requestId}-${idx}`)
         : [requestId];
-      try {
+        govOp = executionGovernor.start({
+          type: 'send-message',
+          timeoutMs: 120_000,
+          metadata: { textPreview: text.slice(0, 80) },
+        });
       if (get().isAnySending()) {
         console.warn('[ChatStore] sendMessage already in progress, ignored');
         govOp.complete();
@@ -151,10 +154,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       const messages: ChatMessage[] = [
         ...(systemPromptArg ? [{ role: 'system' as const, content: sanitize(systemPromptArg) }] : []),
         ...(workspaceContext ? [{ role: 'system' as const, content: sanitize(`[WORKSPACE FILES]\n${workspaceContext}\n\nYou can read any file by asking me to use the read_file tool.`) }] : []),
-        ...currentHistory.flatMap(h => [
-          { role: 'user' as const, content: sanitize(h.text) },
-          ...h.responses.filter(r => r.status === 'done').map(r => ({ role: 'assistant' as const, content: sanitize(r.content) })),
-        ]),
+        ...currentHistory.flatMap<ChatMessage>(h => {
+          if (h.role === 'system') return [{ role: 'system' as const, content: sanitize(h.text) }];
+          return [
+            { role: 'user' as const, content: sanitize(h.text) },
+            ...h.responses.filter(r => r.status === 'done').map(r => ({ role: 'assistant' as const, content: sanitize(r.content) })),
+          ];
+        }),
         { role: 'user' as const, content: sanitize(contextPrefix + text) },
       ];
 
@@ -224,15 +230,15 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
       });
       govOp.complete();
     } catch (e) {
-      requestIdsToTrack.forEach(rid => get().removeActiveRequestId(rid));
+      requestIdsToTrack?.forEach(rid => get().removeActiveRequestId(rid));
       if (e instanceof Error && e.message === 'CANCELLED') {
-        govOp.complete();
+        govOp?.complete();
         return;
       }
-      govOp.fail(e instanceof Error ? e : new Error(String(e)));
+      govOp?.fail(e instanceof Error ? e : new Error(String(e)));
       throw e;
     } finally {
-      requestIdsToTrack.forEach(rid => get().removeActiveRequestId(rid));
+      requestIdsToTrack?.forEach(rid => get().removeActiveRequestId(rid));
       _sendLock = false;
     }
     },

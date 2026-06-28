@@ -89,7 +89,7 @@ export class CacheService implements ICacheService {
 
   private async flush(): Promise<void> {
     if (this.cache.size === 0) return;
-    const entries = Array.from(this.cache.values()).slice(0, 500);
+    const entries = Array.from(this.cache.values()).slice(-500);
     try {
       await this.deps.database.setKv('super_agents_llm_cache', entries);
     } catch (e) {
@@ -114,7 +114,7 @@ export class CacheService implements ICacheService {
       this.persistTimer = null;
       if (!this.dirty) return;
       this.dirty = false;
-      const entries = Array.from(this.cache.values()).slice(0, 500).map(e => ({ ...e }));
+      const entries = Array.from(this.cache.values()).slice(-500).map(e => ({ ...e }));
       this.deps.database.setKv('super_agents_llm_cache', entries).catch((e: unknown) => {
         LOGGER.warn('CacheService', 'Persist failed', { error: e instanceof Error ? e.message : String(e) });
         this.dirty = true;
@@ -125,7 +125,7 @@ export class CacheService implements ICacheService {
   async generateKey(messages: Array<{ role: string; content: string }>, model: string): Promise<string> {
     const systemMsg = messages.find(m => m.role === 'system')?.content || '';
     const userMsg = messages.find(m => m.role === 'user')?.content || '';
-    const combined = `${model}|${systemMsg.slice(0, 200)}|${userMsg.slice(0, 500)}`;
+    const combined = `${model}|${systemMsg}|${userMsg}`;
     const encoder = new TextEncoder();
     const data = encoder.encode(combined);
     const hash = await crypto.subtle.digest('SHA-256', data);

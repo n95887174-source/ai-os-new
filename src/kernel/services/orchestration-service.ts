@@ -95,8 +95,9 @@ export class OrchestrationService {
     else this.disabledNodes.delete(nodeId);
     const lifecycle: AgentLifecycleState = disabled ? 'paused' : 'ready';
     this.lifecycleStates.set(nodeId, lifecycle);
-    const node = this.activeTopology?.nodes.find(n => n.id === nodeId);
-    if (node) node.lifecycle = lifecycle;
+    if (this.activeTopology) {
+      this.activeTopology = { ...this.activeTopology, nodes: this.activeTopology.nodes.map(n => n.id === nodeId ? { ...n, lifecycle } : n) };
+    }
   }
 
   isNodeDisabled(nodeId: string) { return this.disabledNodes.has(nodeId); }
@@ -458,7 +459,9 @@ export class OrchestrationService {
     const from = this.lifecycleStates.get(node.id) || node.lifecycle || 'ready';
     if (from === to) return;
     this.lifecycleStates.set(node.id, to);
-    node.lifecycle = to;
+    if (this.activeTopology) {
+      this.activeTopology = { ...this.activeTopology, nodes: this.activeTopology.nodes.map(n => n.id === node.id ? { ...n, lifecycle: to } : n) };
+    }
     this.deps.eventBus.emit(EVENTS.AGENT_LIFECYCLE_CHANGE, { id: node.id, from, to });
   }
 

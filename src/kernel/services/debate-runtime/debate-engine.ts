@@ -461,6 +461,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             });
 
             let allErrored = true;
+            let anyBudgetSkipped = false;
             for (const nodeId of event.nodes) {
               if (session.phase === 'cancelled' || session.phase === 'failed' || session.phase === 'paused') break;
 
@@ -483,6 +484,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     this.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_PRESSURE_CHANGED, {
                       sessionId, level: budget.getPressure(), action,
                     });
+                    anyBudgetSkipped = true;
                     continue;
                   }
                 }
@@ -552,9 +554,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
               }
             }
             if (allErrored) {
-              const msg = 'All providers unavailable — debate cannot proceed';
+              const msg = anyBudgetSkipped
+                ? 'Budget exceeded — debate paused'
+                : 'All providers unavailable — debate cannot proceed';
               LOGGER.warn('DebateEngine', msg, { sessionId });
-              session.transition('failed');
+              session.transition(anyBudgetSkipped ? 'paused' : 'failed');
               this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
                 sessionId, error: msg,
               });
@@ -876,7 +880,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     const models = new Set([...priority, ...available]);
     if (models.size === 0) {
       // Fallback: only use priority models (known working chat models)
-      models.add(...priority);
+      for (const m of priority) models.add(m);
     }
     return [...models];
   }
@@ -1047,7 +1051,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CANCELLED, { sessionId });
     // Destroy budget — releases any queued lock promises
     const budget = this.budgets.get(sessionId);
-    (budget as DebateBudget).destroy();
+    if (budget) (budget as DebateBudget).destroy();
     this.budgets.delete(sessionId);
     // Destroy memory
     const mem = this.memories.get(sessionId);

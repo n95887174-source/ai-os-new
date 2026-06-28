@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { FocusScope } from '@react-aria/focus';
 
 interface ConfirmOptions {
@@ -29,8 +29,6 @@ export function useConfirm() {
   });
 
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
-  const stateRef = useRef(state);
-  useEffect(() => { stateRef.current = state; }, [state]);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -62,34 +60,33 @@ export function useConfirm() {
   }, [handleCancel]);
 
   const ConfirmDialog = useCallback(() => {
-    const s = stateRef.current;
-    if (!s.open) return null;
+    if (!state.open) return null;
     const dialogId = 'confirm-dialog-title';
     return (
       <div className="modal-overlay" onClick={handleCancel} onKeyDown={handleKeyDown} role="presentation">
         <FocusScope contain restoreFocus autoFocus>
           <div
-            className={`modal-content ${s.variant === 'danger' ? 'confirm-danger' : ''}`}
+            className={`modal-content ${state.variant === 'danger' ? 'confirm-danger' : ''}`}
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby={dialogId}
           >
-            <h3 id={dialogId}>{s.title}</h3>
-            <p>{s.message}</p>
+            <h3 id={dialogId}>{state.title}</h3>
+            <p>{state.message}</p>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={handleCancel}>
-                {s.cancelLabel || 'Cancel'}
+                {state.cancelLabel || 'Cancel'}
               </button>
               <button className="btn btn-primary" onClick={handleConfirm}>
-                {s.confirmLabel || 'Confirm'}
+                {state.confirmLabel || 'Confirm'}
               </button>
             </div>
           </div>
         </FocusScope>
       </div>
     );
-  }, [handleConfirm, handleCancel, handleKeyDown]);
+  }, [state, handleConfirm, handleCancel, handleKeyDown]);
 
   return { confirm, ConfirmDialog };
 }

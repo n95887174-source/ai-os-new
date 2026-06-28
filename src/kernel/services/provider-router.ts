@@ -292,11 +292,12 @@ export class RouterService {
     return this.deps.routingPolicyService.getFallbackChain(strategy);
   }
 
-  resolveWithFallback(strategy: RoutingStrategy, excludeProvider?: string, excludeKeyId?: string): { key: ApiKey; provider: string } | null {
+  resolveWithFallback(strategy: RoutingStrategy, excludeProviders?: Set<string> | string, excludeKeyId?: string): { key: ApiKey; provider: string } | null {
+    const excludedSet = typeof excludeProviders === 'string' ? new Set([excludeProviders]) : (excludeProviders ?? new Set());
     const chain = this.getFallbackChain(strategy);
     const skipped: SkippedKeyEntry[] = [];
     for (const link of chain) {
-      if (excludeProvider && link.provider.toLowerCase() === excludeProvider.toLowerCase()) {
+      if (excludedSet.has(link.provider.toLowerCase())) {
         // Try another key from the same provider before skipping the entire provider
         const pool = this.deps.keyService.getPoolKeys(link.provider);
         const usable = pool.filter(k => {
