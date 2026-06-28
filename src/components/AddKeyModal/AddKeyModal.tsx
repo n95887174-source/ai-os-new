@@ -200,7 +200,6 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             const extractedAccountId = keyService.extractAccountId(provider, apiKey.trim());
             setAccountId(extractedAccountId);
 
-            const { adapterRegistry } = await import('../../kernel/instances');
             const adapter = adapterRegistry.getAdapter(provider);
             let models: string[] = [];
             if (adapter) {

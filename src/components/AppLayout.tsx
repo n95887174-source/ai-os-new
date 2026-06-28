@@ -36,8 +36,8 @@ export const AppLayout: React.FC = () => {
     const [runtimeStatus, setRuntimeStatus] = useState<'online' | 'degraded' | 'offline'>('online');
     const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
     const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
-    const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(() =>
-        JSON.parse(JSON.stringify(CONFIG.featureFlags)),
+    const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
+        () => structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
     );
 
     const [userLevel, setUserLevel] = useState<UserLevel>(() => {
@@ -105,7 +105,9 @@ export const AppLayout: React.FC = () => {
 
     useEffect(() => {
         const unsub = eventBus.on(EVENTS.SETTINGS_UPDATED, () =>
-            setFeatureFlags(JSON.parse(JSON.stringify(CONFIG.featureFlags))),
+            setFeatureFlags(
+                structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
+            ),
         );
         return () => unsub();
     }, []);

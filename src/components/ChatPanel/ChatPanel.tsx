@@ -267,17 +267,20 @@ const ChatPanel: React.FC = () => {
 
     // Search within active chat
     useEffect(() => {
-        if (!searchWithinQuery.trim() || !historyEntries) {
-            setSearchWithinResults([]);
-            return;
-        }
-        const q = searchWithinQuery.toLowerCase();
-        const indices: number[] = [];
-        historyEntries.forEach((entry, idx) => {
-            if (entry.text.toLowerCase().includes(q)) indices.push(idx);
-        });
-        setSearchWithinResults(indices);
-        setSearchWithinIndex(0);
+        const timer = setTimeout(() => {
+            if (!searchWithinQuery.trim() || !historyEntries) {
+                setSearchWithinResults([]);
+                return;
+            }
+            const q = searchWithinQuery.toLowerCase();
+            const indices: number[] = [];
+            historyEntries.forEach((entry, idx) => {
+                if (entry.text.toLowerCase().includes(q)) indices.push(idx);
+            });
+            setSearchWithinResults(indices);
+            setSearchWithinIndex(0);
+        }, 200);
+        return () => clearTimeout(timer);
     }, [searchWithinQuery, historyEntries]);
 
     return (
@@ -955,7 +958,7 @@ const ChatPanel: React.FC = () => {
                                     <div style={{ display: 'flex', gap: '0.35rem' }}>
                                         {entry.responses.map((res, j) => (
                                             <span
-                                                key={j}
+                                                key={res.provider + ':' + res.model + ':' + j}
                                                 style={{
                                                     fontSize: '0.7rem',
                                                     padding: '2px 6px',
