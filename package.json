@@ -22,6 +22,8 @@
     "dev:shared": "node server/run-dev.mjs",
     "preview": "vite preview",
     "check:circular-kernel": "madge --circular --extensions ts --ts-config tsconfig.json src/kernel/ 2>&1 | node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{console.log(d);if(/Found \\\\d+ circular/.test(d))process.exit(1)})\"",
+    "check:deps": "depcruise --config .dependency-cruiser.cjs src",
+    "check:deps:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot src | dot -T svg > dependency-graph.svg",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -63,6 +65,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/ui": "^4.1.5",
+    "dependency-cruiser": "18.0.0",
     "esbuild": "0.28.1",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",

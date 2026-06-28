@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, X, PanelRightOpen, PanelRightClose, Star, History, ChevronDown } from 'lucide-react'
 import { motion } from 'framer-motion';
 import type { TranslationKey } from '../i18n/translations';
-import { NAV_SECTIONS, type UserLevel } from '../route-registry'
+import { NAV_SECTIONS, type UserLevel } from '../routes'
 
 const RECENT_KEY = 'mavis:palette:recent';
 function getRecent(): string[] {

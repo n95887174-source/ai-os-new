@@ -25,10 +25,25 @@ export default defineConfig([
       'react-refresh/only-export-components': 'warn',
       'react-hooks/set-state-in-effect': 'warn',
       'no-restricted-imports': ['warn', {
-        patterns: [{
-          group: ['**/database-service'],
-          importNames: ['dexieDb'],
-          message: 'Direct dexieDb access is reserved for DAL (src/kernel/dal/), storage layer (src/kernel/services/storage/), and database-service.ts itself. Use DataAccessLayer (DAL) repository instead.'
+        patterns: [
+          {
+            group: ['**/database-service'],
+            importNames: ['dexieDb'],
+            message: 'Direct dexieDb access is reserved for DAL (src/kernel/dal/), storage layer (src/kernel/services/storage/), and database-service.ts itself. Use DataAccessLayer (DAL) repository instead.'
+          },
+          {
+            group: ['react', 'react-dom', 'react-router-dom', 'zustand', 'lucide-react', 'framer-motion'],
+            message: 'UI/React dependencies are forbidden in kernel (src/kernel/) — kernel is platform-agnostic.'
+          },
+          {
+            group: ['src/components/*', 'src/stores/*', 'src/llm/*'],
+            message: 'UI/store/LLM layers must not be imported by kernel.'
+          },
+        ],
+        paths: [{
+          name: '..',
+          importNames: ['eventBus', 'EVENTS'],
+          message: 'Import EventBus from kernel/events/event-bus, not from parent modules.'
         }],
       }],
     }
@@ -41,6 +56,23 @@ export default defineConfig([
     ],
     rules: {
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    files: ['src/kernel/**'],
+    rules: {
+      'no-restricted-imports': ['warn', {
+        patterns: [
+          {
+            group: ['react', 'react-dom', 'react-router-dom', 'zustand', 'lucide-react', 'framer-motion'],
+            message: 'UI/React dependencies are forbidden in kernel (src/kernel/) — kernel is platform-agnostic.'
+          },
+          {
+            group: ['src/components/*', 'src/stores/*', 'src/llm/*'],
+            message: 'UI/store/LLM layers must not be imported by kernel.'
+          },
+        ],
+      }],
     },
   },
 ])

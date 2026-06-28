@@ -72,6 +72,15 @@ export default defineConfig({
     },
   },
   server: {
+    headers: {
+      'Content-Security-Policy':
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "connect-src 'self' https://api.allorigins.win https://generativelanguage.googleapis.com https://openrouter.ai https://integrate.api.nvidia.com https://api.groq.com https://api.cerebras.ai https://api.cloudflare.com https://api.openai.com; " +
+        "worker-src 'self' blob:; " +
+        "img-src 'self' data: blob:;",
+    },
     proxy: {
       '/proxy/gemini': withProxyErrorHandler({
         target: process.env.VITE_PROXY_GEMINI || 'https://generativelanguage.googleapis.com',

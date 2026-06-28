@@ -16,7 +16,7 @@ import { settingsService, groupManager } from '../kernel/instances';
 import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
-import { NAV_SECTIONS, type UserLevel } from '../route-registry';
+import { NAV_SECTIONS, type UserLevel } from '../routes';
 
 const navLabelKey: Record<string, TranslationKey> = {};
 for (const section of NAV_SECTIONS) {

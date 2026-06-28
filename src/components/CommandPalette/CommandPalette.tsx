@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, ArrowRight, Clock, X } from 'lucide-react';
-import { NAV_SECTIONS } from '../../route-registry';
+import { NAV_SECTIONS } from '../../routes';
 import type { TranslationKey } from '../../i18n/translations';
 
 // ─── Fuzzy match helper ───────────────────────────────────────────────────────

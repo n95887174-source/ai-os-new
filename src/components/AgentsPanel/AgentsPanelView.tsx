@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
-import { useAgentsPanel } from './AgentsPanelContext';
+import { useAgentsPanel, type UiAgentTemplate } from './AgentsPanelContext';
 import {
   Bot, Settings, Shield, Zap, Activity, Plus, Search,
   Play, Pause, X, LayoutGrid, List, Cpu, Layout,
@@ -35,7 +35,7 @@ import {
   textXxsSecondary,
 } from '../../styles/common';
 
-export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions' | 'handoffs' | 'history';
+import type { TabId } from './AgentsPanelContext';
 
 export const sidebarTabs = [
   { id: 'config' as TabId, label: 'Identity & Routing', icon: <Settings size={18} /> },
@@ -46,48 +46,6 @@ export const sidebarTabs = [
   { id: 'handoffs' as TabId, label: 'Handoffs', icon: <BookOpen size={18} /> },
   { id: 'history' as TabId, label: 'History', icon: <RefreshCw size={18} /> },
 ];
-
-export type ViewMode = 'grid' | 'list';
-export type StatusFilter = 'all' | 'active' | 'paused';
-
-export interface Agent {
-  id: string;
-  name: string;
-  role: string;
-  roleId?: string;
-  description: string;
-  providerId: string;
-  model: string;
-  status: 'active' | 'paused' | 'error';
-  temperature: number;
-  tools: string[];
-  skills: string[];
-  systemPrompt: string;
-  hilEnabled: boolean;
-  vpcEnabled: boolean;
-  stats: {
-    calls: number;
-    tokens: number;
-    latency: number;
-    errors?: number;
-    avgTokensPerCall?: number;
-    lastActive?: number;
-  };
-}
-
-export interface UiAgentTemplate {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  config: {
-    roleName: string;
-    prompt: string;
-    tools: string[];
-    temperature: number;
-  };
-}
 
 export const AGENT_TEMPLATES: UiAgentTemplate[] = [
   {

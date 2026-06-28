@@ -7,7 +7,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import AgentsPanelView from './AgentsPanelView';
 import { AgentsPanelContext } from './AgentsPanelContext';
-import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
+import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelContext';
 
 const getAgentsFromTopology = (): Agent[] => {
   const top = orchestrator.getActiveTopology();

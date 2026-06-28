@@ -1,7 +1,7 @@
 /**
  * check-route-sync.ts — CI validation for Epic 8
  *
- * Since primary routes are generated from route-registry.tsx at runtime,
+ * Since primary routes are generated from NAV_SECTIONS in routes.tsx at runtime,
  * this script validates:
  * 1. No duplicate nav IDs in the registry
  * 2. All nav IDs use valid URL-safe characters
@@ -41,7 +41,7 @@ const KNOWN_OVERRIDES = new Set([
 let exitCode = 0;
 
 // ---- 1. Extract nav IDs from registry ----
-const registry = read('src/route-registry.tsx');
+const registry = read('src/routes.tsx');
 const rawIds = [...registry.matchAll(/id:\s*'([^']+)'/g)].map(m => m[1]);
 const navIds = rawIds.filter(id => !id.startsWith('section-'));
 const navPaths = new Set(navIds.map(id => `/${id}`));

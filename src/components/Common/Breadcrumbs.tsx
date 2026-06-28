@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
-import { NAV_SECTIONS } from '../../route-registry';
+import { NAV_SECTIONS } from '../../routes';
 import type { TranslationKey } from '../../i18n/translations';
 
 interface BreadcrumbsProps {

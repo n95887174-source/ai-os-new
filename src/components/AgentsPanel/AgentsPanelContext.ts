@@ -1,5 +1,47 @@
 import React, { createContext, useContext } from 'react';
-import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelView';
+
+export type TabId = 'config' | 'capabilities' | 'infra' | 'observability' | 'permissions' | 'handoffs' | 'history';
+export type ViewMode = 'grid' | 'list';
+export type StatusFilter = 'all' | 'active' | 'paused';
+
+export interface Agent {
+  id: string;
+  name: string;
+  role: string;
+  roleId?: string;
+  description: string;
+  providerId: string;
+  model: string;
+  status: 'active' | 'paused' | 'error';
+  temperature: number;
+  tools: string[];
+  skills: string[];
+  systemPrompt: string;
+  hilEnabled: boolean;
+  vpcEnabled: boolean;
+  stats: {
+    calls: number;
+    tokens: number;
+    latency: number;
+    errors?: number;
+    avgTokensPerCall?: number;
+    lastActive?: number;
+  };
+}
+
+export interface UiAgentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  config: {
+    roleName: string;
+    prompt: string;
+    tools: string[];
+    temperature: number;
+  };
+}
 
 export interface AgentsPanelContextValue {
   agents: Agent[];
