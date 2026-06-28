@@ -42,17 +42,8 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 function escapeForSrcdoc(s: string): string {
-    // Strip HTML comments (can hide malicious content)
-    s = s.replace(/<!--[\s\S]*?-->/g, '');
-    // Strip CDATA sections
-    s = s.replace(/<!\[CDATA\[[\s\S]*?\]\]>/gi, '');
-    // Escape the 5 chars that break out of text content in HTML
-    s = s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    return s;
+    // Inside a <script> tag only </script> and <!-- can break out
+    return s.replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '<\\!--');
 }
 
 // C-6: Strip all event handlers and dangerous attributes from allowed HTML.
