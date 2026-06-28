@@ -5,33 +5,33 @@ import { rawConfig, deepFreeze } from './config-registry';
 
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
 export function replaceConfig(next: ConfigRegistry): void {
-  const mutableRaw = rawConfig as unknown as Record<string, unknown>;
-  const mutableNext = next as unknown as Record<string, unknown>;
-  for (const key of Object.keys(rawConfig)) delete mutableRaw[key];
-  for (const key of Object.keys(next)) mutableRaw[key] = mutableNext[key];
-  deepFreeze(rawConfig);
-  eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
+    const mutableRaw = rawConfig as unknown as Record<string, unknown>;
+    const mutableNext = next as unknown as Record<string, unknown>;
+    for (const key of Object.keys(rawConfig)) delete mutableRaw[key];
+    for (const key of Object.keys(next)) mutableRaw[key] = mutableNext[key];
+    deepFreeze(rawConfig);
+    eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
 }
 
 /** Update a single top-level section in rawConfig (used by config-service). */
 export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
-  (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
-  deepFreeze(rawConfig);
-  eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
+    (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
+    deepFreeze(rawConfig);
+    eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
 }
 
 /** Update a feature flag value in rawConfig. Clones the section, mutates, and replaces via setConfig. */
 export function setFeatureFlag(path: string, enabled: boolean): void {
-  const section = JSON.parse(JSON.stringify(rawConfig.featureFlags));
-  const parts = path.replace(/^featureFlags\./, '').split('.');
-  let target: Record<string, unknown> = section;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const next = target[parts[i]];
-    if (!next || typeof next !== 'object') return;
-    target = next as Record<string, unknown>;
-  }
-  const flagKey = parts[parts.length - 1];
-  if (target[flagKey] === enabled) return;
-  target[flagKey] = enabled;
-  setConfig('featureFlags', section);
+    const section = structuredClone(rawConfig.featureFlags);
+    const parts = path.replace(/^featureFlags\./, '').split('.');
+    let target: Record<string, unknown> = section;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const next = target[parts[i]];
+        if (!next || typeof next !== 'object') return;
+        target = next as Record<string, unknown>;
+    }
+    const flagKey = parts[parts.length - 1];
+    if (target[flagKey] === enabled) return;
+    target[flagKey] = enabled;
+    setConfig('featureFlags', section);
 }
