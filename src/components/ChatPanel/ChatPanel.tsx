@@ -57,8 +57,8 @@ const ChatPanel: React.FC = () => {
     const systemPrompt = useChatStore((s) => s.systemPrompt);
     const setSystemPrompt = useChatStore((s) => s.setSystemPrompt);
     const isSending = useChatStore((s) => s.activeRequestIds.size > 0);
-    const history = useActiveSessionHistory();
-    const historyMap = useMemo(() => new Map(history.map((h) => [h.id, h])), [history]);
+    const activeSessionHistory = useActiveSessionHistory();
+    const sessionMap = useMemo(() => new Map(sessions.map((s) => [s.id, s])), [sessions]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [mode, setMode] = useState<ExecutionMode>('single');
@@ -138,9 +138,19 @@ const ChatPanel: React.FC = () => {
         storageAdapter.setItem('chat-split-view', String(isSplitView));
     }, [isSplitView]);
 
-    // C2: Auto-scroll to bottom on new messages
-    const historyLen = history?.length;
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const userScrolledUpRef = useRef(false);
+
+    const handleScroll = useCallback(() => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        userScrolledUpRef.current = distFromBottom > 100;
+    }, []);
+
+    const historyLen = activeSessionHistory?.length;
     useEffect(() => {
+        if (userScrolledUpRef.current) return;
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, [historyLen]);
 
@@ -207,16 +217,16 @@ const ChatPanel: React.FC = () => {
         return sessions.filter(
             (s) =>
                 s.title.toLowerCase().includes(q) ||
-                (historyMap.get(s.id)?.entries || []).some((e: ChatEntry) =>
+                (sessionMap.get(s.id)?.history || []).some((e: ChatEntry) =>
                     e.text.toLowerCase().includes(q),
                 ),
         );
-    }, [sessions, searchQuery, historyMap]);
+    }, [sessions, searchQuery, sessionMap]);
 
     const sessionGroups = useMemo(() => groupSessions(filteredSessions, t), [filteredSessions, t]);
 
     const activeSession = sessions.find((s) => s.id === activeSessionId);
-    const historyEntries = activeSessionId && historyMap.get(activeSessionId)?.entries;
+    const historyEntries = activeSessionHistory;
 
     // retrieve config for active session
     const activeConfig = activeSessionId ? getSessionConfig(activeSessionId) : undefined;
@@ -234,12 +244,13 @@ const ChatPanel: React.FC = () => {
         async (id: string) => {
             const confirmed = await confirmDelete(t('chat.confirm_delete'));
             if (!confirmed) return;
+            const nextSession = sessions.find((s) => s.id !== id);
             deleteSession(id);
             if (id === activeSessionId) {
-                setActiveSessionId(history.length > 0 ? history[history.length - 1].id : '');
+                setActiveSessionId(nextSession?.id || '');
             }
         },
-        [confirmDelete, deleteSession, activeSessionId, history, setActiveSessionId, t],
+        [confirmDelete, deleteSession, activeSessionId, sessions, setActiveSessionId, t],
     );
 
     const handleClearHistory = useCallback(async () => {
@@ -832,11 +843,14 @@ const ChatPanel: React.FC = () => {
                 )}
 
                 {/* Messages */}
-                <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
+                <div
+                    ref={messagesContainerRef}
+                    onScroll={handleScroll}
+                    style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}
+                >
                     {historyEntries && historyEntries.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <div id="chat-messages-container">
-                                <div ref={messagesEndRef} />
                                 {historyEntries.map((entry, entryIdx) => {
                                     const isEditing = editingEntryId === entry.id;
                                     const isSearchMatch = searchWithinResults.includes(entryIdx);
@@ -869,6 +883,7 @@ const ChatPanel: React.FC = () => {
                                         </div>
                                     );
                                 })}
+                                <div ref={messagesEndRef} />
                             </div>
                         </div>
                     ) : (
