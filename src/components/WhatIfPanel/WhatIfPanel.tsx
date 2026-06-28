@@ -49,7 +49,7 @@ const TOPOLOGIES = ['linear', 'roundtable', 'judge', 'tree-of-thought', 'red-blu
 const STRATEGIES = ['latency', 'reliability', 'balanced', 'cost', 'race', 'broadcast'];
 
 const WhatIfPanel: React.FC = () => {
-  const {} = useTranslation();
+  useTranslation();
   const [sessions, setSessions] = useState<Array<{ id: string; topic: string }>>([]);
   const [results, setResults] = useState<SimResult[]>([]);
   const [running, setRunning] = useState<string | null>(null);

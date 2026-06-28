@@ -98,7 +98,7 @@ const WorkspacePanel: React.FC = () => {
         <div key={node.path}>
           <div
             onClick={() => isDir ? handleToggleDir(node.path) : handleSelectFile(node.path)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); isDir ? handleToggleDir(node.path) : handleSelectFile(node.path); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (isDir) { handleToggleDir(node.path); } else { handleSelectFile(node.path); } } }}
             role="button"
             tabIndex={0}
             aria-expanded={isDir ? isExpanded : undefined}

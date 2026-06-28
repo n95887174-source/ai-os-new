@@ -24,6 +24,9 @@ export default defineConfig([
       'react-hooks/exhaustive-deps': 'error',
       'react-refresh/only-export-components': 'warn',
       'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/immutability': 'warn',
       'no-restricted-imports': ['warn', {
         patterns: [
           {

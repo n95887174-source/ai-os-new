@@ -15,6 +15,7 @@ function normalize(combo: Combo): { key: string; ctrl: boolean; shift: boolean; 
 
 export function useKeyboardShortcut(combo: Combo, handler: (e: KeyboardEvent) => void, enabled = true): void {
   const handlerRef = useRef(handler);
+  // eslint-disable-next-line react-hooks/refs
   handlerRef.current = handler;
   useEffect(() => {
     if (!enabled) return;

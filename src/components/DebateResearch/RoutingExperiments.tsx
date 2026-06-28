@@ -8,7 +8,7 @@ import type { RoutingExperimentResult, RoutingExperimentRun } from '../../kernel
 const STRATEGIES = ['round-robin', 'latency-first', 'cost-first', 'random'];
 
 const RoutingExperiments: React.FC = () => {
-  const {} = useTranslation();
+  useTranslation();
   const navigate = useNavigate();
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);

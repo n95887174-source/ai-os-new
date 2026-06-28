@@ -12,7 +12,7 @@ interface RoleSandboxProps {
 }
 
 export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => {
-  const {} = useTranslation();
+  useTranslation();
   const [roles, setRoles] = useState(() => roleService.getAllRoles());
   useEffect(() => {
     setRoles(roleService.getAllRoles());
