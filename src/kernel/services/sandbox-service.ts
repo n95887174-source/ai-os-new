@@ -1,180 +1,214 @@
 import { CONFIG } from './config-registry';
 import { rootLogger } from './logger-service';
+import { isPrivateIP } from '../utils/network';
 
 const LOGGER = rootLogger.child('SandboxService');
 
 export interface SandboxServiceDeps {
-  toolService: {
-    execute: (toolId: string, input: unknown) => Promise<unknown>;
-  };
+    toolService: {
+        execute: (toolId: string, input: unknown) => Promise<unknown>;
+    };
 }
 
 export class SandboxService {
-  private deps: SandboxServiceDeps;
-  private activeWorkers = new Set<Worker>();
-  private readonly codeExecutionEnabled = import.meta.env.DEV || import.meta.env.VITE_SANDBOX_ENABLED === 'true';
-  private proxyUrl = (() => {
-    const env = import.meta.env.VITE_PROXY_URL;
-    if (env) return env.includes('?url=') ? env : `${env}?url=`;
-    // BLD-12: Fail explicitly in production instead of silently wrong fallback.
-    // The /proxy/fetch fallback only works via Vite dev proxy, not in Docker.
-    if (import.meta.env.PROD) {
-      LOGGER.error('SandboxService', 'VITE_PROXY_URL is not set in production Docker. Sandbox fetch will fail.');
+    private deps: SandboxServiceDeps;
+    private activeWorkers = new Set<Worker>();
+    private readonly codeExecutionEnabled =
+        import.meta.env.DEV || import.meta.env.VITE_SANDBOX_ENABLED === 'true';
+    private proxyUrl = (() => {
+        const env = import.meta.env.VITE_PROXY_URL;
+        if (env) return env.includes('?url=') ? env : `${env}?url=`;
+        // BLD-12: Fail explicitly in production instead of silently wrong fallback.
+        // The /proxy/fetch fallback only works via Vite dev proxy, not in Docker.
+        if (import.meta.env.PROD) {
+            LOGGER.error(
+                'SandboxService',
+                'VITE_PROXY_URL is not set in production Docker. Sandbox fetch will fail.',
+            );
+        }
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const base = `${origin}/proxy/fetch`;
+        return base.includes('?url=') ? base : `${base}?url=`;
+    })();
+
+    constructor(deps: SandboxServiceDeps) {
+        this.deps = deps;
     }
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const base = `${origin}/proxy/fetch`;
-    return base.includes('?url=') ? base : `${base}?url=`;
-  })();
 
-  constructor(deps: SandboxServiceDeps) {
-    this.deps = deps;
-  }
+    async init(): Promise<void> {}
 
-  async init(): Promise<void> {}
-
-  destroy() {
-    for (const worker of this.activeWorkers) {
-      worker.terminate();
+    destroy() {
+        for (const worker of this.activeWorkers) {
+            worker.terminate();
+        }
+        this.activeWorkers.clear();
     }
-    this.activeWorkers.clear();
-  }
 
-  private isAllowedUrl(url: string): boolean {
-    try {
-      const parsed = new URL(url);
-      // B10-74: Only allow HTTPS, reject HTTP and other protocols
-      if (parsed.protocol !== 'https:') return false;
-      const host = parsed.hostname;
-      // B10-74: Comprehensive SSRF check — reject all private/loopback/link-local/metadata IPs
-      if (
-        host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '[::1]' ||
-        host.startsWith('169.254.') || host.startsWith('10.') || host.startsWith('172.16.') ||
-        host.startsWith('192.168.') || host.startsWith('fc00:') || host.startsWith('fe80:') ||
-        /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) // reject all bare IPv4
-      ) return false;
-      return true;
-    } catch { return false; }
-  }
-
-  async fetchUrl(url: string, options?: { timeoutMs?: number }): Promise<string> {
-    if (!this.isAllowedUrl(url)) throw new Error(`URL rejected: ${url.slice(0, 80)}`);
-    const timeoutMs = options?.timeoutMs ?? CONFIG?.services?.sandbox?.fetchTimeoutMs ?? 10000;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.text();
-    } catch (e) {
-      clearTimeout(timer);
-      // B10-75: Proxy fallback also needs timeout protection
-      LOGGER.warn('SandboxService', 'Direct fetch failed, trying proxy', { error: e });
-      const proxyController = new AbortController();
-      const proxyTimer = setTimeout(() => proxyController.abort(), timeoutMs);
-      try {
-        const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`, { signal: proxyController.signal });
-        clearTimeout(proxyTimer);
-        if (!proxyRes.ok) throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
-        const text = await proxyRes.text();
+    private isAllowedUrl(url: string): boolean {
         try {
-          const err = JSON.parse(text);
-          if (err.error) throw new Error(err.error, { cause: e });
+            const parsed = new URL(url);
+            // B10-74: Only allow HTTPS, reject HTTP and other protocols
+            if (parsed.protocol !== 'https:') return false;
+            const host = parsed.hostname;
+            if (isPrivateIP(host)) return false;
+            return true;
         } catch {
-          if (import.meta.env.DEV) {
-            LOGGER.debug('SandboxService', 'Proxy response not JSON, returning raw text');
-          }
+            return false;
         }
-        return text;
-      } catch (proxyErr) {
-        clearTimeout(proxyTimer);
-        throw proxyErr;
-      }
-    }
-  }
-
-  async execute(code: string, data: unknown = {}, timeoutMs: number = CONFIG?.services?.sandbox?.codeExecutionTimeoutMs ?? 5000, allowedTools: string[] = []): Promise<unknown> {
-    if (!this.codeExecutionEnabled) {
-      throw new Error(
-        'Sandbox code execution is disabled in production because the current worker runner requires unsafe-eval. ' +
-        'Enable VITE_SANDBOX_ENABLED=true only for deployments with a CSP that intentionally permits it.'
-      );
     }
 
-    return new Promise((resolve, reject) => {
-      const worker = new Worker(new URL('../../services/sandbox.worker.ts', import.meta.url), {
-        type: 'module'
-      });
-      this.activeWorkers.add(worker);
+    async fetchUrl(url: string, options?: { timeoutMs?: number }): Promise<string> {
+        if (!this.isAllowedUrl(url)) throw new Error(`URL rejected: ${url.slice(0, 80)}`);
+        const timeoutMs = options?.timeoutMs ?? CONFIG?.services?.sandbox?.fetchTimeoutMs ?? 10000;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-      const cleanup = () => {
-        worker.terminate();
-        this.activeWorkers.delete(worker);
-      };
-
-      let timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error(`Execution timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-
-      const resetTimeout = () => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          cleanup();
-          reject(new Error(`Execution timed out after ${timeoutMs}ms`));
-        }, timeoutMs);
-      };
-
-      let toolExecutionCount = 0;
-      const MAX_TOOL_EXECUTIONS = 10;
-
-      worker.onmessage = async (event) => {
-        if (event.data.type === 'cap_request') {
-          resetTimeout();
-          const { requestId, method, params } = event.data;
-          
-          if (method === 'executeTool') {
-            if (allowedTools.length > 0 && !allowedTools.includes('*') && !allowedTools.includes(params.toolId)) {
-              worker.postMessage({ type: 'cap_response', requestId, error: `Tool execution denied: ${params.toolId} is not in allowedTools` });
-              return;
-            }
-
-            toolExecutionCount++;
-            if (toolExecutionCount > MAX_TOOL_EXECUTIONS) {
-              worker.postMessage({ type: 'cap_response', requestId, error: `Rate limit exceeded: Sandbox allows maximum ${MAX_TOOL_EXECUTIONS} tool calls` });
-              return;
-            }
-
+        try {
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.text();
+        } catch (e) {
+            clearTimeout(timer);
+            // B10-75: Proxy fallback also needs timeout protection
+            LOGGER.warn('SandboxService', 'Direct fetch failed, trying proxy', { error: e });
+            const proxyController = new AbortController();
+            const proxyTimer = setTimeout(() => proxyController.abort(), timeoutMs);
             try {
-              if (typeof params.toolId !== 'string') {
-                throw new Error('toolId must be a string');
-              }
-              const result = await this.deps.toolService.execute(params.toolId, params.input);
-              worker.postMessage({ type: 'cap_response', requestId, result });
-            } catch (error: unknown) {
-              worker.postMessage({ type: 'cap_response', requestId, error: error instanceof Error ? error.message : String(error) });
+                const proxyRes = await fetch(`${this.proxyUrl}${encodeURIComponent(url)}`, {
+                    signal: proxyController.signal,
+                });
+                clearTimeout(proxyTimer);
+                if (!proxyRes.ok)
+                    throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
+                const text = await proxyRes.text();
+                try {
+                    const err = JSON.parse(text);
+                    if (err.error) throw new Error(err.error, { cause: e });
+                } catch {
+                    if (import.meta.env.DEV) {
+                        LOGGER.debug(
+                            'SandboxService',
+                            'Proxy response not JSON, returning raw text',
+                        );
+                    }
+                }
+                return text;
+            } catch (proxyErr) {
+                clearTimeout(proxyTimer);
+                throw proxyErr;
             }
-          }
-          return;
+        }
+    }
+
+    async execute(
+        code: string,
+        data: unknown = {},
+        timeoutMs: number = CONFIG?.services?.sandbox?.codeExecutionTimeoutMs ?? 5000,
+        allowedTools: string[] = [],
+    ): Promise<unknown> {
+        if (!this.codeExecutionEnabled) {
+            throw new Error(
+                'Sandbox code execution is disabled in production because the current worker runner requires unsafe-eval. ' +
+                    'Enable VITE_SANDBOX_ENABLED=true only for deployments with a CSP that intentionally permits it.',
+            );
         }
 
-        clearTimeout(timeout);
-        cleanup();
-        if (event.data.error) {
-          reject(new Error(event.data.error));
-        } else {
-          resolve(event.data.result);
-        }
-      };
+        return new Promise((resolve, reject) => {
+            const worker = new Worker(
+                new URL('../../services/sandbox.worker.ts', import.meta.url),
+                {
+                    type: 'module',
+                },
+            );
+            this.activeWorkers.add(worker);
 
-      worker.onerror = (e: ErrorEvent) => {
-        clearTimeout(timeout);
-        cleanup();
-        reject(new Error(e.message || 'Worker error'));
-      };
+            const cleanup = () => {
+                worker.terminate();
+                this.activeWorkers.delete(worker);
+            };
 
-      worker.postMessage({ code, data, timeout: timeoutMs });
-    });
-  }
+            let timeout = setTimeout(() => {
+                cleanup();
+                reject(new Error(`Execution timed out after ${timeoutMs}ms`));
+            }, timeoutMs);
+
+            const resetTimeout = () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    cleanup();
+                    reject(new Error(`Execution timed out after ${timeoutMs}ms`));
+                }, timeoutMs);
+            };
+
+            let toolExecutionCount = 0;
+            const MAX_TOOL_EXECUTIONS = 10;
+
+            worker.onmessage = async (event) => {
+                if (event.data.type === 'cap_request') {
+                    resetTimeout();
+                    const { requestId, method, params } = event.data;
+
+                    if (method === 'executeTool') {
+                        if (
+                            allowedTools.length > 0 &&
+                            !allowedTools.includes('*') &&
+                            !allowedTools.includes(params.toolId)
+                        ) {
+                            worker.postMessage({
+                                type: 'cap_response',
+                                requestId,
+                                error: `Tool execution denied: ${params.toolId} is not in allowedTools`,
+                            });
+                            return;
+                        }
+
+                        toolExecutionCount++;
+                        if (toolExecutionCount > MAX_TOOL_EXECUTIONS) {
+                            worker.postMessage({
+                                type: 'cap_response',
+                                requestId,
+                                error: `Rate limit exceeded: Sandbox allows maximum ${MAX_TOOL_EXECUTIONS} tool calls`,
+                            });
+                            return;
+                        }
+
+                        try {
+                            if (typeof params.toolId !== 'string') {
+                                throw new Error('toolId must be a string');
+                            }
+                            const result = await this.deps.toolService.execute(
+                                params.toolId,
+                                params.input,
+                            );
+                            worker.postMessage({ type: 'cap_response', requestId, result });
+                        } catch (error: unknown) {
+                            worker.postMessage({
+                                type: 'cap_response',
+                                requestId,
+                                error: error instanceof Error ? error.message : String(error),
+                            });
+                        }
+                    }
+                    return;
+                }
+
+                clearTimeout(timeout);
+                cleanup();
+                if (event.data.error) {
+                    reject(new Error(event.data.error));
+                } else {
+                    resolve(event.data.result);
+                }
+            };
+
+            worker.onerror = (e: ErrorEvent) => {
+                clearTimeout(timeout);
+                cleanup();
+                reject(new Error(e.message || 'Worker error'));
+            };
+
+            worker.postMessage({ code, data, timeout: timeoutMs });
+        });
+    }
 }

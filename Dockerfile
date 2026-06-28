@@ -48,4 +48,4 @@ COPY --chown=nginx:nginx docker/${NGINX_CONFIG} /etc/nginx/conf.d/default.conf.t
 COPY --chmod=755 docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8080
-EXPOSE 8443
+EXPOSE 8443  # 8443 because nginx-unprivileged can't bind 443; docker-compose maps 443:8443

@@ -12,7 +12,9 @@
     "build:no-tsc": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
     "lint:staged": "lint-staged",
-    "fix:unused": "npx tsx scripts/fix-unused.ts",
+    "typecheck": "tsc -b --noEmit",
+    "typecheck:watch": "tsc -b --noEmit --watch",
+    "fix:unused": "tsx scripts/fix-unused.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -29,6 +31,9 @@
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix"
+    ],
+    "*.{ts,tsx,json,md,css}": [
+      "prettier --write"
     ]
   },
   "dependencies": {
@@ -70,6 +75,7 @@
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "prettier": "^3.4.2",
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.5.0",
     "husky": "9.1.7",
