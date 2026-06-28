@@ -2,7 +2,7 @@ import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
 import { LLMError, RetryableError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
-import { sanitizeError } from '../http/llm-http-client';
+import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
 
 const CLOUDFLARE_FREE_TIER = { requestsPerDay: 14400, tokensPerDay: 1000000 };
 const DEFAULT_BASE_URL = 'https://api.cloudflare.com/client/v4/accounts';
@@ -73,8 +73,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        const retryAfter = res.headers.get('Retry-After');
-        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+        const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
         throw new RetryableError(
           `Cloudflare Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
           'cloudflare',
@@ -132,8 +131,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        const retryAfter = res.headers.get('Retry-After');
-        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+        const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
         throw new RetryableError(
           `Cloudflare Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
           'cloudflare',
@@ -218,12 +216,13 @@ export class CloudflareAdapter extends BaseLLMAdapter {
       }
       this._lastModelFetchFail = 0;
       return [];
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') throw e;
       this._lastModelFetchFail = Date.now();
       return [];
     }
   }
- 
+  
   getFreeTier() {
     return CLOUDFLARE_FREE_TIER;
   }

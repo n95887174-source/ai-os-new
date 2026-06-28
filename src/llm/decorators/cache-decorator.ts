@@ -208,6 +208,106 @@ export class CacheDecorator extends BaseDecorator {
     }
   }
 
+  async streamMessage(
+    messages: ChatMessage[],
+    model: string,
+    apiKey: string,
+    onChunk: (chunk: string, meta?: unknown) => void,
+    signal?: AbortSignal,
+    options?: SendMessageOptions,
+  ): Promise<void> {
+    if (this.#destroyed) {
+      if (!this.inner.streamMessage) throw new Error('CacheDecorator: inner adapter does not support streaming');
+      return this.inner.streamMessage(messages, model, apiKey, onChunk, signal, options);
+    }
+    const now = Date.now();
+    const userMsg = messages.filter(m => m.role === 'user').slice(-1)[0];
+    const systemParts = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
+    const apiKeyHash = await this.hashKey(apiKey);
+
+    // Check semantic cache for streaming (same logic as sendMessage)
+    if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
+      const targetText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
+      const targetEmbed = this.getEmbedding(targetText);
+      const indexKey = `${apiKeyHash}:${model}`;
+      const bucket = this.approximateTextIndex.get(indexKey);
+      if (bucket) {
+        for (const [key, entry] of bucket) {
+          if (now - entry.timestamp >= this.#ttlMs) {
+            bucket.delete(key);
+            this.cache.delete(key);
+            continue;
+          }
+          if (entry.embedding) {
+            const score = this.cosineSimilarity(targetEmbed, entry.embedding);
+            if (score >= this.#similarityThreshold) {
+              if (entry.model !== model || entry.apiKeyHash !== apiKeyHash) continue;
+              if (options) {
+                if (options.temperature !== undefined && entry.temperature !== options.temperature) continue;
+                if (options.toolChoice !== undefined && entry.toolChoice !== options.toolChoice) continue;
+              }
+              this.cache.delete(key);
+              this.cache.set(key, entry);
+              onChunk(entry.response.content);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // Check exact cache
+    const key = await this.hash(messages, model, apiKey, options);
+    const existing = this.cache.get(key);
+    if (existing && now - existing.timestamp < this.#ttlMs) {
+      this.cache.delete(key);
+      this.cache.set(key, existing);
+      onChunk(existing.response.content);
+      return;
+    }
+
+    // Stream fresh, buffer chunks, cache on completion
+    const chunks: string[] = [];
+    const wrapped: typeof onChunk = (chunk, meta) => {
+      chunks.push(chunk);
+      onChunk(chunk, meta);
+    };
+
+    if (!this.inner.streamMessage) throw new Error('CacheDecorator: inner adapter does not support streaming');
+    await this.inner.streamMessage(messages, model, apiKey, wrapped, signal, options);
+
+    if (chunks.length > 0) {
+      const content = chunks.join('');
+      const response: ProviderResponse = { content, tokens: 0, latency: 0 };
+      const entry: { response: ProviderResponse; timestamp: number; embedding?: number[]; promptText?: string; apiKeyHash: string; model: string; temperature?: number; toolChoice?: string } = {
+        response,
+        timestamp: now,
+        apiKeyHash,
+        model,
+        temperature: options?.temperature,
+        toolChoice: typeof options?.toolChoice === 'string' ? options.toolChoice : JSON.stringify(options?.toolChoice),
+      };
+
+      if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
+        const cacheText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
+        entry.embedding = this.getEmbedding(cacheText);
+        entry.promptText = cacheText;
+      }
+
+      this.cache.set(key, entry);
+      const indexKey = `${apiKeyHash}:${model}`;
+      if (!this.approximateTextIndex.has(indexKey)) this.approximateTextIndex.set(indexKey, new Map());
+      this.approximateTextIndex.get(indexKey)!.set(key, entry);
+      if (this.cache.size > this.#maxEntries) {
+        const lruEntry = this.cache.entries().next().value;
+        if (lruEntry) {
+          this.cache.delete(lruEntry[0]);
+          for (const [, bucket] of this.approximateTextIndex) bucket.delete(lruEntry[0]);
+        }
+      }
+    }
+  }
+
   private modelCache = new Map<string, { models: string[]; timestamp: number }>();
   private static readonly MODEL_CACHE_TTL = 120_000;
 

@@ -52,6 +52,7 @@ export class CostManagerDecorator extends BaseDecorator {
   private cumulativeCost = 0;
   private config: CostManagerConfig;
   private budgetExceeded = false;
+  private static readonly MAX_OUTPUT_ESTIMATE = 4096;
 
   constructor(
     inner: import('../core/types').LLMProviderAdapter,
@@ -117,17 +118,6 @@ export class CostManagerDecorator extends BaseDecorator {
     return { model, blocked: true };
   }
 
-  private record(model: string, inputTokens: number, outputTokens: number, cost: number): void {
-    this.cumulativeCost += cost;
-    this.records.push({ timestamp: Date.now(), model, inputTokens, outputTokens, cost });
-    if (this.records.length > 100000) {
-      this.records = this.records.slice(-50000);
-    }
-    if (this.records.length > 1000) {
-      this.evictOldRecords();
-    }
-  }
-
   private evictOldRecords(): void {
     const cutoff = Date.now() - 31 * 24 * 60 * 60 * 1000;
     const idx = this.records.findIndex(r => r.timestamp >= cutoff);
@@ -173,14 +163,31 @@ export class CostManagerDecorator extends BaseDecorator {
     if (blocked) throw new LLMError(`Budget exceeded for ${this.id}. Request blocked.`, this.id, 429);
 
     const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
+    // H-04: Pre-reserve estimated max cost BEFORE await to prevent concurrent request races.
+    // Two concurrent calls could both pass checkBudget() before either calls record().
+    const estimatedOutput = options?.maxOutputTokens ?? CostManagerDecorator.MAX_OUTPUT_ESTIMATE;
+    const estimatedCost = this.calculateCost(resolvedModel, inputTokens, estimatedOutput);
+    this.cumulativeCost += estimatedCost;
 
-    const res = await this.inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
-    const outputTokens = Math.max(0, (res.tokens ?? 0) - inputTokens);
-    const cost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
-    this.record(resolvedModel, inputTokens, outputTokens, cost);
-    if (this.config.logCosts) LOGGER.debug('CostManagerDecorator', `${resolvedModel}: $${cost.toFixed(6)} (${inputTokens}+${outputTokens}t)`);
-    this.checkBudget();
-    return res;
+    try {
+      const res = await this.inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
+      const outputTokens = Math.max(0, (res.tokens ?? 0) - inputTokens);
+      const actualCost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
+      this.cumulativeCost += actualCost - estimatedCost;
+      this.records.push({ timestamp: Date.now(), model: resolvedModel, inputTokens, outputTokens, cost: actualCost });
+      if (this.records.length > 100000) {
+        this.records = this.records.slice(-50000);
+      }
+      if (this.records.length > 1000) {
+        this.evictOldRecords();
+      }
+      if (this.config.logCosts) LOGGER.debug('CostManagerDecorator', `${resolvedModel}: $${actualCost.toFixed(6)} (${inputTokens}+${outputTokens}t)`);
+      this.checkBudget();
+      return res;
+    } catch (e) {
+      this.cumulativeCost -= estimatedCost;
+      throw e;
+    }
   }
 
   async streamMessage(
@@ -196,6 +203,11 @@ export class CostManagerDecorator extends BaseDecorator {
     if (blocked) throw new LLMError(`Budget exceeded for ${this.id}. Request blocked.`, this.id, 429);
 
     const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
+    // H-04: Pre-reserve estimated max cost BEFORE await to prevent concurrent request races.
+    const estimatedOutput = options?.maxOutputTokens ?? CostManagerDecorator.MAX_OUTPUT_ESTIMATE;
+    const estimatedCost = this.calculateCost(resolvedModel, inputTokens, estimatedOutput);
+    this.cumulativeCost += estimatedCost;
+
     let outputTokens = 0;
     let finalMeta: Record<string, unknown> | undefined;
 
@@ -205,14 +217,26 @@ export class CostManagerDecorator extends BaseDecorator {
       onChunk(chunk, meta);
     };
 
-    if (!this.inner.streamMessage) throw new Error('CostManager: inner adapter does not support streaming');
-    await this.inner.streamMessage(messages, resolvedModel, apiKey, wrapped, signal, options);
-    const totalTokens = (finalMeta?.usage as { total_tokens?: number })?.total_tokens ?? outputTokens;
-    const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
-    const cost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
-    this.record(resolvedModel, inputTokens, streamOutputTokens, cost);
-    if (this.config.logCosts) LOGGER.debug('CostManagerDecorator', `${resolvedModel} stream: $${cost.toFixed(6)} (${inputTokens}+${streamOutputTokens}t)`);
-    this.checkBudget();
+    try {
+      if (!this.inner.streamMessage) throw new Error('CostManager: inner adapter does not support streaming');
+      await this.inner.streamMessage(messages, resolvedModel, apiKey, wrapped, signal, options);
+      const totalTokens = (finalMeta?.usage as { total_tokens?: number })?.total_tokens ?? outputTokens;
+      const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
+      const actualCost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
+      this.cumulativeCost += actualCost - estimatedCost;
+      this.records.push({ timestamp: Date.now(), model: resolvedModel, inputTokens, outputTokens: streamOutputTokens, cost: actualCost });
+      if (this.records.length > 100000) {
+        this.records = this.records.slice(-50000);
+      }
+      if (this.records.length > 1000) {
+        this.evictOldRecords();
+      }
+      if (this.config.logCosts) LOGGER.debug('CostManagerDecorator', `${resolvedModel} stream: $${actualCost.toFixed(6)} (${inputTokens}+${streamOutputTokens}t)`);
+      this.checkBudget();
+    } catch (e) {
+      this.cumulativeCost -= estimatedCost;
+      throw e;
+    }
   }
 
   destroy(): void {

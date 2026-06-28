@@ -2,7 +2,7 @@ import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult, ToolCall } from '../core/types';
 import { LLMError, RetryableError, AuthError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
-import { sanitizeError } from '../http/llm-http-client';
+import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
 import { OpenAiCompatibleResponseSchema } from './openai-compatible-types';
 
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
@@ -72,8 +72,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
   private async handleNonOk(res: Response, id: string): Promise<never> {
     const errorText = await res.text();
     if (res.status === 429) {
-      const retryAfter = res.headers.get('Retry-After');
-      const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+      const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
       throw new RetryableError(
         `${id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
         id,
@@ -154,8 +153,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       if (res.status === 429) {
-        const retryAfter = res.headers.get('Retry-After');
-        const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+        const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
         throw new RetryableError(
           `${this.id} Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
           this.id,
@@ -244,7 +242,8 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
       const data = await res.json();
       this._lastModelFetchFail = 0;
       return data.data?.map((m: { id: string }) => m.id) || [];
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') throw e;
       this._lastModelFetchFail = Date.now();
       return [];
     }
