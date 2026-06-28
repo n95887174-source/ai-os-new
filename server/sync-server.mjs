@@ -116,6 +116,10 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.method === 'PUT') {
+      if (req.headers['content-type'] !== 'application/octet-stream') {
+        writeJson(res, 400, { error: 'Content-Type must be application/octet-stream' });
+        return;
+      }
       let contentLength = 0;
       req.on('data', (chunk) => {
         contentLength += chunk.length;
