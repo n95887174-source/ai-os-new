@@ -48,7 +48,7 @@ import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state'
 void false;
 
 // Feature flags — toggle subsystems independently for memory profiling
-const ENABLE_EVENT_BRIDGE = true;      // EventBridge + projections (RingEventLog, ProjectionRegistry)
+const ENABLE_EVENT_BRIDGE = true;      // EventBridge + projections
 const ENABLE_CAUSAL_DEBUGGER = true;   // CausalScopeManager + CausalTimelineService
 const ENABLE_COUNTERFACTUAL = true;    // CounterfactualEngine + Explanation + Narrative
 const ENABLE_TEMPORAL_REPLAY = true;   // TemporalReplayService (needs EventBridge)
@@ -248,29 +248,6 @@ export class SystemBootstrap implements IBootstrap {
           snapshotSource = 'dexie';
         }
       } catch { /* non-critical */ }
-    }
-
-    // Auto-inject keys from api-keys-backup.json (DEV only)
-    if (import.meta.env.DEV) {
-      let backupKeys: { key?: string; provider?: string; label?: string }[] = [];
-      try {
-        const mod = await import('../../api-keys-backup.json');
-        const raw = (mod?.default ?? mod) as Record<string, unknown>[];
-        backupKeys = raw.map((k: Record<string, unknown>) => ({ key: String(k.key ?? ''), provider: String(k.provider ?? ''), label: String(k.label ?? '') }));
-      } catch { /* backup file optional */ }
-
-      for (const bk of backupKeys) {
-        if (!snapshotKeys.some(k => k.key === bk.key)) {
-          snapshotKeys.push({
-            id: 'k_' + Math.random().toString(36).substring(2, 11),
-            provider: bk.provider || 'unknown',
-            label: bk.label || 'Imported Key',
-            key: bk.key,
-            status: 'pending',
-            createdAt: Date.now()
-          } as unknown as ApiKey);
-        }
-      }
     }
 
     if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);

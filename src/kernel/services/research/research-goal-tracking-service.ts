@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter';
 
@@ -276,19 +276,3 @@ class ResearchGoalTrackingService {
 // Singleton
 export const researchGoalTrackingService = new ResearchGoalTrackingService();
 
-// Add events
-if (!EVENTS.RESEARCH_GOAL_CREATED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_GOAL_CREATED = 'research:goal:created';
-}
-if (!EVENTS.RESEARCH_GOAL_PROGRESS_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_GOAL_PROGRESS_UPDATED = 'research:goal:progress:updated';
-}
-if (!EVENTS.RESEARCH_KEY_RESULT_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_KEY_RESULT_UPDATED = 'research:key:result:updated';
-}
-if (!EVENTS.RESEARCH_GOAL_PAUSED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_GOAL_PAUSED = 'research:goal:paused';
-}
-if (!EVENTS.RESEARCH_GOAL_RESUMED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_GOAL_RESUMED = 'research:goal:resumed';
-}

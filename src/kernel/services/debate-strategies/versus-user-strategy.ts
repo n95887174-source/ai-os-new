@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 
 const LOGGER = rootLogger.child('VersusUserStrategy');
@@ -241,13 +241,3 @@ class VersusUserStrategy {
 // Singleton
 export const versusUserStrategy = new VersusUserStrategy();
 
-// Add events
-if (!EVENTS.VERSUS_USER_STARTED) {
-  (EVENTS as unknown as Record<string, string>).VERSUS_USER_STARTED = 'versus:user:started';
-}
-if (!EVENTS.VERSUS_USER_ROUND_COMPLETE) {
-  (EVENTS as unknown as Record<string, string>).VERSUS_USER_ROUND_COMPLETE = 'versus:user:round:complete';
-}
-if (!EVENTS.VERSUS_USER_COMPLETED) {
-  (EVENTS as unknown as Record<string, string>).VERSUS_USER_COMPLETED = 'versus:user:completed';
-}

@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../logger-service';
-import { eventBus } from '../../event-bus';
+import { eventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import type { ILocalStorageAdapter } from '../../contracts/storage-adapter';
 import { LocalStorageAdapter } from '../storage/local-storage-adapter';

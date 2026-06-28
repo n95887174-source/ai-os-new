@@ -28,7 +28,7 @@ function formatDate(ts: number | undefined): string {
 
 function escapeMarkdown(text: string): string {
   return text
-    .replace(/\\(?=[`*_{}\[\]()#+\-.!>])/g, '\\\\')
+    .replace(/\\(?=[`*_{}()#+\-.!>[\]])/g, '\\\\')
     // B10-159: Replace lookbehind (?<=^|\n) with simpler pattern — compatible with older browsers
     .replace(/(^|\n)(#+)(?=\s)/g, '$1\\$2');
 }

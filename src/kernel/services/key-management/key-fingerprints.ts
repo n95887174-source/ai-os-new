@@ -72,11 +72,11 @@ export class KeyFingerprints {
 
   suggestModel(provider: string): string | null {
     const suggestions: Record<string, string> = {
-      gemini: 'gemini-1.5-flash',
+      gemini: 'gemini-2.0-flash',
       groq: 'llama-3.1-8b-instant',
       openai: 'gpt-4o-mini',
       anthropic: 'claude-3-5-sonnet',
-      nvidia: 'meta/llama-3.1-8b-instruct',
+      nvidia: 'meta/llama-3.3-70b-instruct',
       openrouter: 'openai/gpt-4o-mini',
       deepseek: 'deepseek-chat',
       mistral: 'mistral-small',

@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import type { ILLMClientService } from '../contracts/provider-adapter';
 

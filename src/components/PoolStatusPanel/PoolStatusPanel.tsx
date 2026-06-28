@@ -39,7 +39,7 @@ const PoolStatusPanel: React.FC = () => {
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [editLimit, setEditLimit] = useState({ requestsPerDay: 0, tokensPerDay: 0 });
   const [viewMode, setViewMode] = useState<'pools' | 'providers'>('pools');
-  const [_refresh, setRefresh] = useState(0);
+  const [, setRefresh] = useState(0);
 
   const handleSaveQuota = () => {
     if (editingProvider) {

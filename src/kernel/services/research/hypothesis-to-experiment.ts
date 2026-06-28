@@ -4,7 +4,7 @@
  */
 
 import { genId } from '../../../utils/gen-id';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
 
@@ -384,13 +384,3 @@ class HypothesisToExperimentPipeline {
 // Singleton instance
 export const hypothesisToExperimentPipeline = new HypothesisToExperimentPipeline();
 
-// Add missing events
-if (!EVENTS.HYPOTHESIS_VALIDATED) {
-  (EVENTS as unknown as Record<string, string>).HYPOTHESIS_VALIDATED = 'hypothesis:validated';
-}
-if (!EVENTS.EXPERIMENT_CREATED_FROM_HYPOTHESIS) {
-  (EVENTS as unknown as Record<string, string>).EXPERIMENT_CREATED_FROM_HYPOTHESIS = 'experiment:created-from-hypothesis';
-}
-if (!EVENTS.HYPOTHESIS_EXPERIMENT_RESULT) {
-  (EVENTS as unknown as Record<string, string>).HYPOTHESIS_EXPERIMENT_RESULT = 'hypothesis:experiment:result';
-}

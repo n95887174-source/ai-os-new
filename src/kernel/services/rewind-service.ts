@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -258,13 +258,3 @@ export class RewindService {
 // Singleton
 export const rewindService = new RewindService();
 
-// Add missing events
-if (!EVENTS.CHAT_REWOUND) {
-  (EVENTS as unknown as Record<string, string>).CHAT_REWOUND = 'chat:rewound';
-}
-if (!EVENTS.CHAT_UNDO_REWIND) {
-  (EVENTS as unknown as Record<string, string>).CHAT_UNDO_REWIND = 'chat:undo:rewind';
-}
-if (!EVENTS.CHAT_RESTORED_FROM_SNAPSHOT) {
-  (EVENTS as unknown as Record<string, string>).CHAT_RESTORED_FROM_SNAPSHOT = 'chat:restored:snapshot';
-}

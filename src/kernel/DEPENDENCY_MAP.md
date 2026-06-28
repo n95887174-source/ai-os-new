@@ -191,7 +191,7 @@ Legend:
 
 | Service | Old Location | Kernel Location | DI Converted | Consumers Updated |
 |---------|-------------|-----------------|-------------|-------------------|
-| EventBus | `src/core/events.ts` | `src/kernel/event-bus.ts` | ✅ | ✅ |
+| EventBus | `src/core/events.ts` | `src/kernel/events/event-bus.ts` | ✅ | ✅ |
 | Container | `src/core/Container.ts` | `src/kernel/container.ts` | ✅ | ✅ |
 | Database | `src/core/DatabaseService.ts` | `src/kernel/db.ts` | ✅ | ✅ |
 | Security | `src/core/SecurityService.ts` | `src/kernel/security.ts` | ✅ | ✅ |

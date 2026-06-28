@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -74,7 +74,7 @@ const DEFAULT_CATALOG: ProviderCatalogEntry[] = [
     baseURL: 'https://generativelanguage.googleapis.com/v1beta',
     authType: 'api-key',
     capabilities: ['chat', 'vision', 'embeddings'],
-    models: ['gemini-1.5-flash', 'gemini-1.5-flash', 'gemini-2.5-pro'],
+    models: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
     features: { streaming: true, tools: true, vision: true, embeddings: true },
     pricing: { inputPer1M: 0.1, outputPer1M: 0.4, currency: 'USD' },
     autoDetected: false,

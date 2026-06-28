@@ -101,7 +101,7 @@ export class OptimizationEngine implements IOptimizationEngine {
   triggerAnalysis() {
     const keys = this.deps.keyService.getKeys();
     for (const key of keys) {
-      const limit = this.deps.freeTierLimits[key.provider]?.requestsPerDay;
+      const limit = this.deps.freeTierLimits[key.provider.toLowerCase()]?.requestsPerDay;
       if (!limit) continue;
       const usage = key.stats?.extended?.usageToday?.requests || 0;
 

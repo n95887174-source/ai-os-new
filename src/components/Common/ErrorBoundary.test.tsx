@@ -4,6 +4,10 @@ import ErrorBoundary from './ErrorBoundary';
 
 vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
+  EVENTS: {
+    ERROR_BOUNDARY_CAUGHT: 'error:boundary:caught',
+    NOTIFICATION: 'system:notification',
+  },
 }));
 
 const CrashChild = () => { throw new Error('Test crash'); };

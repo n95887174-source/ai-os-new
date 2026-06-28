@@ -84,7 +84,11 @@ export class BudgetService implements IBudgetService {
   private async loadProviderBudgets() {
     try {
       const saved = await this.deps.database.getKv<Record<string, number>>('provider_budgets');
-      if (saved) this.providerBudgets = saved;
+      if (saved) {
+        this.providerBudgets = Object.fromEntries(
+          Object.entries(saved).map(([provider, budget]) => [provider.toLowerCase(), budget]),
+        );
+      }
     } catch (e) { LOGGER.warn('BudgetService', 'Failed to load provider budgets', { error: e }); }
   }
 
@@ -127,7 +131,7 @@ export class BudgetService implements IBudgetService {
         const input = d.inputTokens ?? Math.round((d.tokens || 0) * 0.3);
         const output = d.outputTokens ?? Math.round((d.tokens || 0) * 0.7);
         const cost = cc.calculateCost(d.model, input, output);
-        const provider = d.provider || (d.model.includes('/') ? d.model.split('/')[0] : d.model);
+        const provider = (d.provider || (d.model.includes('/') ? d.model.split('/')[0] : d.model)).toLowerCase();
         const dedupKey = `stream:${d.requestId}`;
         if (this._costDedupSet?.has(dedupKey)) return;
         if (!this._costDedupSet) this._costDedupSet = new Set<string>();
@@ -146,7 +150,7 @@ export class BudgetService implements IBudgetService {
         this.budgetInfoCache = null;
         this.checkThresholds('global', 'global', this.computeCurrentSpend(), this.monthlyBudget);
         if (provider) {
-          const pBudget = this.providerBudgets[provider] || 0;
+          const pBudget = this.providerBudgets[provider.toLowerCase()] || 0;
           if (pBudget > 0) {
             const pSpent = this.computeProviderSpend(provider);
             this.checkThresholds('provider', provider, pSpent, pBudget);
@@ -164,7 +168,10 @@ export class BudgetService implements IBudgetService {
 
   private computeProviderSpend(provider: string): number {
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-    return this.costHistory.filter(c => c.timestamp >= startOfMonth && c.provider === provider).reduce((s, c) => s + c.totalCost, 0);
+    const normalized = provider.toLowerCase();
+    return this.costHistory
+      .filter(c => c.timestamp >= startOfMonth && c.provider.toLowerCase() === normalized)
+      .reduce((s, c) => s + c.totalCost, 0);
   }
 
   private checkThresholds(type: 'global' | 'provider' | 'agent', entity: string, current: number, limit: number) {
@@ -240,7 +247,7 @@ export class BudgetService implements IBudgetService {
   }
 
   canUseProvider(provider: string, estimatedCost: number = 0): boolean {
-    const providerBudget = this.providerBudgets[provider];
+    const providerBudget = this.providerBudgets[provider.toLowerCase()];
     if (!providerBudget || providerBudget <= 0) return true;
     const pSpent = this.computeProviderSpend(provider);
     return (pSpent + estimatedCost) <= providerBudget;
@@ -258,20 +265,26 @@ export class BudgetService implements IBudgetService {
       if (budget > 0) {
         this.checkThresholds('agent', agentId, this.agentSpend[agentId], budget);
       }
+      this.budgetInfoCache = null;
       this.persistAgentConfig();
     }
   }
 
   getAgentBudget(agentId: string): number | undefined { return this.agentBudgets[agentId] || undefined; }
-  setAgentBudget(agentId: string, budget: number) { this.agentBudgets[agentId] = budget; this.persistAgentConfig(); }
+  setAgentBudget(agentId: string, budget: number) {
+    this.agentBudgets[agentId] = budget;
+    this.budgetInfoCache = null;
+    this.persistAgentConfig();
+  }
   getAllAgentBudgets(): Record<string, number> { return { ...this.agentBudgets }; }
 
   getProviderBudget(provider: string): number | undefined {
-    return this.providerBudgets[provider] || undefined;
+    return this.providerBudgets[provider.toLowerCase()] || undefined;
   }
 
   setProviderBudget(provider: string, budget: number): void {
     this.providerBudgets[provider.toLowerCase()] = budget;
+    this.budgetInfoCache = null;
     this.saveProviderBudgets();
   }
 

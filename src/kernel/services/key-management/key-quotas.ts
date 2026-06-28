@@ -25,7 +25,7 @@ export class KeyQuotas {
   }
 
   setFreeTierLimit(provider: string, limit: FreeTierLimit): void {
-    this.freeTierLimits[provider] = limit;
+    this.freeTierLimits[provider.toLowerCase()] = limit;
   }
 
   syncFreeTierLimits(limits: Record<string, FreeTierLimit>): void {
@@ -33,7 +33,7 @@ export class KeyQuotas {
   }
 
   applyFreeTierQuota(key: ApiKey): void {
-    const limits = this.freeTierLimits[key.provider];
+    const limits = this.freeTierLimits[key.provider.toLowerCase()];
     if (!limits || limits.requestsPerDay === 0) return;
     if (!key.stats?.extended) return;
     const tags = key.tags ?? [];

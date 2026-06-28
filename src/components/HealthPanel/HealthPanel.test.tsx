@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
+const mockKeys = [
+  { id: '1', provider: 'OpenRouter', key: '', label: 'Main', status: 'active', stats: {} },
+  { id: '2', provider: 'Groq', key: '', label: 'Cloud', status: 'inactive', stats: {} },
+];
+
 vi.mock('../../stores/useKeyStore', () => ({
   useKeyStore: () => ({
-    keys: [
-      { id: '1', provider: 'OpenRouter', key: '', label: 'Main', status: 'active', stats: {} },
-      { id: '2', provider: 'Groq', key: '', label: 'Cloud', status: 'inactive', stats: {} },
-    ],
+    keys: mockKeys,
   }),
 }));
 
@@ -102,8 +104,8 @@ describe('HealthPanel', () => {
   it('renders provider nodes from store', async () => {
     const HealthPanel = (await import('./HealthPanel')).default;
     render(<HealthPanel />);
-    expect(screen.getByText('OpenRouter')).toBeDefined();
-    expect(screen.getByText('Groq')).toBeDefined();
+    expect(screen.getAllByText('OpenRouter').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Groq').length).toBeGreaterThan(0);
   });
 
   it('shows offline status for inactive key', async () => {

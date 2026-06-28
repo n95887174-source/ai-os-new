@@ -14,10 +14,10 @@ import type { ApiKey } from '../../types/metrics-types';
  * First match in availableModels wins.
  */
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-  gemini: ['gemini-1.5-flash', 'gemini-2.0-flash-exp'],
+  gemini: ['gemini-2.0-flash', 'gemini-2.5-flash'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
 openrouter: ['openrouter/auto', 'openrouter/free'],
-nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
+  nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
 };
 
 /**
@@ -93,6 +93,7 @@ function makeParticipantId(): string {
 }
 
 const ROLES: DebateRole[] = ['pro', 'con', 'neutral'];
+const TERMINAL_SESSION_STATUSES = new Set(['completed', 'failed', 'cancelled', 'paused']);
 
 export interface AutoDebateServiceDeps {
   keyService: {
@@ -101,6 +102,12 @@ export interface AutoDebateServiceDeps {
     getUniqueProviders: () => string[];
     recordUsage: (keyId: string, latency: number, tokens: number, model: string, extra?: Record<string, unknown>) => void;
   };
+  getKeyStateStore?: () => {
+    get: (keyId: string) => { flags?: { authFailed?: boolean; rateLimited?: boolean; circuitOpen?: boolean } } | undefined;
+  } | undefined;
+  getAdapterRegistry?: () => {
+    getProviderRuntimeStatus(provider: string): { circuitOpen: boolean; rateLimited: boolean };
+  } | undefined;
   debateService: {
     startDebate: (
       topic: string,
@@ -109,6 +116,7 @@ export interface AutoDebateServiceDeps {
       maxRounds?: number,
       config?: Partial<{ roundDelayMs: number; maxTokens: number; temperature: number; useModerator: boolean; timeoutMs: number; language: string }>
     ) => Promise<DebateSession>;
+    getSessionById?: (sessionId: string) => DebateSession | null;
   };
 }
 
@@ -122,9 +130,23 @@ export class AutoDebateService implements IAutoDebateService {
     this.deps = deps;
   }
 
+  private isKeyHealthy(key: ApiKey): boolean {
+    const keyState = this.deps.getKeyStateStore?.()?.get(key.id);
+    if (keyState?.flags?.authFailed || keyState?.flags?.rateLimited || keyState?.flags?.circuitOpen) {
+      return false;
+    }
+
+    const runtimeStatus = this.deps.getAdapterRegistry?.()?.getProviderRuntimeStatus(key.provider);
+    if (runtimeStatus?.circuitOpen || runtimeStatus?.rateLimited) {
+      return false;
+    }
+
+    return true;
+  }
+
   /** Create debate participants from active API keys */
   createParticipants(max?: number): DebateParticipant[] {
-    const keys = this.deps.keyService.getActiveKeys();
+    const keys = this.deps.keyService.getActiveKeys().filter(key => this.isKeyHealthy(key));
     if (!keys.length) return [];
 
     const selected = max && max < keys.length ? keys.slice(0, max) : keys;
@@ -165,6 +187,22 @@ export class AutoDebateService implements IAutoDebateService {
     return pickRandom(ALL_TOPICS);
   }
 
+  private async waitForSessionCompletion(
+    session: DebateSession,
+    timeoutMs = 60_000,
+    pollMs = 250,
+  ): Promise<DebateSession> {
+    const startedAt = Date.now();
+    const getCurrentSession = this.deps.debateService.getSessionById;
+    while (true) {
+      const current = getCurrentSession ? getCurrentSession(session.id) ?? session : session;
+      if (TERMINAL_SESSION_STATUSES.has(current.status)) return current;
+      if (Date.now() - startedAt >= timeoutMs) break;
+      await new Promise(resolve => setTimeout(resolve, pollMs));
+    }
+    return session;
+  }
+
   async runAutoDebate(options: AutoDebateOptions = {}): Promise<AutoDebateResult> {
     const start = Date.now();
     const topic = options.topic ?? this.pickTopic(options.category);
@@ -187,6 +225,7 @@ export class AutoDebateService implements IAutoDebateService {
         options.maxRounds ?? 3,
         { temperature: 0.7, maxTokens: 1024, roundDelayMs: 100, useModerator: true, timeoutMs: 30000, language: 'ru' },
       );
+      await this.waitForSessionCompletion(session);
 
       const result: AutoDebateResult = {
         id: makeParticipantId(), timestamp: start, topic,
@@ -263,11 +302,12 @@ export class AutoDebateService implements IAutoDebateService {
       const pro = { ...pA, role: 'pro' as const, systemPrompt: `You are "Pro-${pA.name}". Argue FOR the topic. Use evidence and logic.` };
       const con = { ...pB, role: 'con' as const, systemPrompt: `You are "Con-${pB.name}". Argue AGAINST the topic. Use evidence and logic.` };
 
-      try {
+        try {
         const session = await this.deps.debateService.startDebate(
           topic, [pro, con], 'round_robin', 2,
           { temperature: 0.7, maxTokens: 512, roundDelayMs: 50, useModerator: true, timeoutMs: 20000, language: 'ru' },
         );
+        await this.waitForSessionCompletion(session);
 
         const consensusText = (session.consensus ?? '').toLowerCase();
         const proWon = consensusText.includes(pA.name.toLowerCase());

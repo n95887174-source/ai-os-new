@@ -40,7 +40,7 @@
 |------|---------|--------|
 | `src/kernel/services/key-reset.ts` | clear, bulkPut | GREEN — удаляется в E1-C4 |
 | `src/kernel/services/key-reconciler.ts` | bulkPut | GREEN — удаляется в E1-C4 |
-| `src/kernel/services/key-management/key-registry.ts` | delete, saveKeys path | **YELLOW** — требует миграции на KeyRepository в E1-C2 |
+| `src/kernel/services/key-management/key-registry.ts` | delete, saveKeys path | **YELLOW** — migration still planned, but current registry is the active path |
 | `src/kernel/services/storage/dexie-storage.ts` | put, delete, bulkPut, clear | GREEN — storage adapter, допустимо |
 | `src/kernel/services/database-service.ts` | proxy pass-through | GREEN — DAL |
 
@@ -73,8 +73,8 @@
 
 | Зависимость | Статус | Комментарий |
 |------------|--------|------------|
-| `key-service.ts:clearSeedCache` | **KNOWN** | Используется в `resetUsageStats()` — перенести в KeyRepository |
-| `key-registry.ts:dexieDb.apiKeys` | **KNOWN** | Миграция на KeyRepository в E1-C2 |
+| `key-service.ts:clearSeedCache` | **KNOWN** | Используется в `resetUsageStats()` |
+| `key-registry.ts:dexieDb.apiKeys` | **KNOWN** | Current active storage path for apiKeys |
 | `bootstrap.ts:resetKeyStorageToCanonical` | **KNOWN** | Удаление canonicalization в E1-C3 |
 | `bootstrap.ts:reconcileAndSync` | **KNOWN** | Переход на key-migration.ts в E1-C3 |
 | `bootstrap.ts:routeStorage` | **KNOWN** | Удаление вместе с файлом в E1-C4 |

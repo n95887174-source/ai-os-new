@@ -4,7 +4,7 @@
  */
 
 import { genId } from '../../../utils/gen-id';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
 import { BucketStorageAdapter } from '../storage-adapter';
@@ -462,19 +462,3 @@ void this.saveResults(); // B10-67: Fire-and-forget; saveResults() is async
 // Singleton instance
 export const researchSchedulerService = new ResearchSchedulerService();
 
-// Add missing events
-if (!EVENTS.RESEARCH_SCHEDULE_CREATED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_SCHEDULE_CREATED = 'research:schedule:created';
-}
-if (!EVENTS.RESEARCH_SCHEDULE_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_SCHEDULE_UPDATED = 'research:schedule:updated';
-}
-if (!EVENTS.RESEARCH_SCHEDULE_DELETED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_SCHEDULE_DELETED = 'research:schedule:deleted';
-}
-if (!EVENTS.RESEARCH_TRIGGERED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_TRIGGERED = 'research:triggered';
-}
-if (!EVENTS.RESEARCH_FINDINGS_AVAILABLE) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_FINDINGS_AVAILABLE = 'research:findings:available';
-}

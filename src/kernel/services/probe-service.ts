@@ -16,10 +16,10 @@ const PROBE_MESSAGES = [
 ];
 
 const PROVDER_DEFAULTS: Record<string, string> = {
-  gemini: 'gemini-1.5-flash',
+  gemini: 'gemini-2.0-flash',
   groq: 'llama-3.3-70b-versatile',
   openrouter: 'openrouter/auto',
-  nvidia: 'meta/llama-3.1-8b-instruct',
+  nvidia: 'meta/llama-3.3-70b-instruct',
   deepseek: 'deepseek-chat',
   cohere: 'command-r-plus',
 };

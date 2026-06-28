@@ -39,7 +39,7 @@ export class RoleTestService {
     if (!apiKey) throw new Error('No API key available');
 
     const provider = this.deps.getApiKey('groq') ? 'groq' : this.deps.getApiKey('gemini') ? 'gemini' : 'openrouter';
-    const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-1.5-flash' : 'meta-llama/llama-3.1-8b-instruct';
+    const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-2.0-flash' : 'meta-llama/llama-3.3-70b-instruct';
 
     const messages = [
       { role: 'system', content: role.systemPrompt || '' },

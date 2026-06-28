@@ -18,6 +18,7 @@ vi.mock('../../kernel/instances', () => ({
 
 vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+  EVENTS: { MEMORY_UPDATED: 'memory:updated' },
 }));
 
 describe('KnowledgePanel', () => {

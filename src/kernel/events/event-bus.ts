@@ -8,8 +8,28 @@ import { sanitizeObject } from '../../llm/http/llm-http-client';
 import { EVENTS } from './event-names';
 export { EVENTS };
 
+const NOOP_LOGGER: ILogger = {
+  debug() {},
+  info() {},
+  warn() {},
+  error() {},
+  child() { return this; },
+  getBuffer() { return []; },
+  query() { return []; },
+  clear() {},
+  setTraceContext() {},
+};
+
+let cachedLogger: ILogger | null = null;
+
 function getLogger(): ILogger {
-  return (rootLogger?.child('EventBus') ?? { debug() {}, info() {}, warn() {}, error() {}, child() { return this as unknown as ILogger; }, getBuffer() { return []; }, query() { return []; }, clear() {}, setTraceContext() {} }) as ILogger;
+  if (cachedLogger) return cachedLogger;
+  try {
+    cachedLogger = rootLogger.child('EventBus');
+    return cachedLogger;
+  } catch {
+    return NOOP_LOGGER;
+  }
 }
 export type { EventMap };
 

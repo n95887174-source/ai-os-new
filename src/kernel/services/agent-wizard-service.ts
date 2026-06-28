@@ -5,7 +5,7 @@
 
 import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 
 const LOGGER = rootLogger.child('AgentWizard');
@@ -281,9 +281,4 @@ Respond ONLY with the JSON object, no markdown or explanation.`;
       };
     }
   }
-}
-
-// Add missing events
-if (!EVENTS.AGENT_WIZARD_CONFIG_GENERATED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_WIZARD_CONFIG_GENERATED = 'agent:wizard:config:generated';
 }

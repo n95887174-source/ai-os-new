@@ -80,11 +80,12 @@ export class KeyPoolSelector implements IPoolSelectorService {
   }
 
   getPoolStatus(provider: string): { total: number; active: number; used: number; limit: number } {
-    const pool = this.deps.getPoolKeys(provider);
-    const limit = this.deps.freeTierLimits[provider]?.requestsPerDay || 0;
+    const normalized = provider.toLowerCase();
+    const pool = this.deps.getPoolKeys(normalized);
+    const limit = this.deps.freeTierLimits[normalized]?.requestsPerDay || 0;
     const used = pool.reduce((sum, k) => sum + (k.stats?.extended?.usageToday?.requests || 0), 0);
     return {
-      total: this.deps.getKeysByProvider(provider).length,
+      total: this.deps.getKeysByProvider(normalized).length,
       active: pool.length,
       used,
       limit,
@@ -92,8 +93,9 @@ export class KeyPoolSelector implements IPoolSelectorService {
   }
 
   getPoolKeyDistribution(provider: string): Array<{ id: string; label: string; used: number; limit: number; pct: number; status: string; isUnlimited: boolean }> {
+    const normalized = provider.toLowerCase();
     return this.deps
-      .getKeysByProvider(provider)
+      .getKeysByProvider(normalized)
       .map(k => {
         const used = k.stats?.extended?.usageToday?.requests || 0;
         const limit = k.stats?.extended?.rules?.quota?.requestsPerDay || 0;
@@ -141,7 +143,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
   }
 
   getBurstCapacity(provider: string): { totalQuota: number; usedQuota: number; availableBurst: number; keys: number } {
-    const pool = this.deps.getPoolKeys(provider);
+    const pool = this.deps.getPoolKeys(provider.toLowerCase());
     let totalQuota = 0;
     let usedQuota = 0;
     for (const k of pool) {
@@ -172,7 +174,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
   }
 
   getQuotaShare(provider: string): { total: number; used: number; available: number; sharedPool: number } {
-    const pool = this.deps.getPoolKeys(provider);
+    const pool = this.deps.getPoolKeys(provider.toLowerCase());
     let total = 0;
     let used = 0;
     for (const k of pool) {

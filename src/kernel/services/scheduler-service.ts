@@ -3,7 +3,7 @@
  * Cron-like scheduling for agent tasks
  */
 
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { BucketStorageAdapter } from './storage-adapter';
@@ -440,19 +440,3 @@ class SchedulerService {
 // Singleton instance
 export const schedulerService = new SchedulerService();
 
-// Add missing events
-if (!EVENTS.SCHEDULE_CREATED) {
-  (EVENTS as unknown as Record<string, string>).SCHEDULE_CREATED = 'schedule:created';
-}
-if (!EVENTS.SCHEDULE_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).SCHEDULE_UPDATED = 'schedule:updated';
-}
-if (!EVENTS.SCHEDULE_DELETED) {
-  (EVENTS as unknown as Record<string, string>).SCHEDULE_DELETED = 'schedule:deleted';
-}
-if (!EVENTS.SCHEDULE_TRIGGERED) {
-  (EVENTS as unknown as Record<string, string>).SCHEDULE_TRIGGERED = 'schedule:triggered';
-}
-if (!EVENTS.SCHEDULE_COMPLETED) {
-  (EVENTS as unknown as Record<string, string>).SCHEDULE_COMPLETED = 'schedule:completed';
-}

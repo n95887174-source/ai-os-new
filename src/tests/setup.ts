@@ -32,6 +32,7 @@ if (!globalCrypto.crypto.randomUUID) {
 
 // Mock scrollIntoView for jsdom
 Element.prototype.scrollIntoView = vi.fn();
+window.scrollTo = vi.fn();
 
 // Initialize the unified runtime so that all resolved services are registered in the DI container
 import { runtime } from '../kernel/runtime';

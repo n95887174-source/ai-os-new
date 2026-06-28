@@ -212,7 +212,3 @@ class AquariumAchievementsService {
 // Singleton
 export const aquariumAchievementsService = new AquariumAchievementsService();
 
-// Add event
-if (!EVENTS.ACHIEVEMENT_UNLOCKED) {
-  (EVENTS as unknown as Record<string, string>).ACHIEVEMENT_UNLOCKED = 'achievement:unlocked';
-}

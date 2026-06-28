@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter';
 
@@ -252,22 +252,3 @@ class CollaborativeResearchService {
 // Singleton
 export const collaborativeResearchService = new CollaborativeResearchService();
 
-// Add events
-if (!EVENTS.COLLAB_RESEARCH_SESSION_CREATED) {
-  (EVENTS as unknown as Record<string, string>).COLLAB_RESEARCH_SESSION_CREATED = 'collab:research:session:created';
-}
-if (!EVENTS.COLLAB_RESEARCH_USER_JOINED) {
-  (EVENTS as unknown as Record<string, string>).COLLAB_RESEARCH_USER_JOINED = 'collab:research:user:joined';
-}
-if (!EVENTS.COLLAB_RESEARCH_USER_LEFT) {
-  (EVENTS as unknown as Record<string, string>).COLLAB_RESEARCH_USER_LEFT = 'collab:research:user:left';
-}
-if (!EVENTS.COLLAB_RESEARCH_CONTRIBUTION_ADDED) {
-  (EVENTS as unknown as Record<string, string>).COLLAB_RESEARCH_CONTRIBUTION_ADDED = 'collab:research:contribution:added';
-}
-if (!EVENTS.COLLAB_RESEARCH_FINDING_ADDED) {
-  (EVENTS as unknown as Record<string, string>).COLLAB_RESEARCH_FINDING_ADDED = 'collab:research:finding:added';
-}
-if (!EVENTS.COLLAB_RESEARCH_SESSION_COMPLETED) {
-  (EVENTS as unknown as Record<string, string>).COLLAB_RESEARCH_SESSION_COMPLETED = 'collab:research:session:completed';
-}

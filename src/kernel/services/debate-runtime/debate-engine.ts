@@ -142,10 +142,10 @@ const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 
 /** Models to try per provider, in priority order. First working model wins. */
 const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-  gemini: ['gemini-1.5-flash', 'gemini-2.0-flash'],
+  gemini: ['gemini-2.0-flash', 'gemini-2.5-flash'],
   groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
   openrouter: ['openrouter/auto', 'openrouter/free'],
-  nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
+  nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
 };
 
 export class DebateEngine implements IDebateEngine, ILifecycle {
@@ -408,6 +408,24 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     if (!isResume) {
       this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_STARTED, { sessionId });
       await this.runProviderPreflight(sessionId);
+
+      // After preflight, check if any providers survived. If all are dead,
+      // bail immediately instead of running 22 agents that will all fail.
+      const keyService = this.deps.getKeyService();
+      const allKeys = keyService.getKeys();
+      const hasWorkingProvider = allKeys.some(k =>
+        k.status === 'active' &&
+        !session.hasProviderFailed(k.provider) &&
+        !this.isKeyAuthFailed(k.id)
+      );
+      if (!hasWorkingProvider) {
+        const msg = 'All LLM providers failed preflight — no working keys available';
+        LOGGER.warn('DebateEngine', msg, { sessionId });
+        session.transition('failed');
+        this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, { sessionId, error: msg });
+        this.runningSessions.delete(sessionId);
+        return;
+      }
     }
 
     let earlyExit = false;
@@ -487,6 +505,32 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_ERROR, {
                   sessionId, agentId: participant.agentId, error,
                 });
+
+                // Early bailout: if this agent failed because NO providers are available,
+                // the remaining agents will fail identically. Bail now instead of running
+                // them all to avoid OOM from cumulative event emissions and per-agent overhead.
+                const noProvidersAvailable =
+                  error.includes('No available API keys') ||
+                  error.includes('No adapter for provider');
+                if (noProvidersAvailable) {
+                  const keyService = this.deps.getKeyService();
+                  const allKeys = keyService.getKeys();
+                  const anyWorking = allKeys.some(k =>
+                    k.status === 'active' &&
+                    !session.hasProviderFailed(k.provider) &&
+                    !this.isKeyAuthFailed(k.id)
+                  );
+                  if (!anyWorking) {
+                    const msg = 'All LLM providers unavailable — debate cannot proceed';
+                    LOGGER.warn('DebateEngine', msg, { sessionId });
+                    session.transition('failed');
+                    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
+                      sessionId, error: msg,
+                    });
+                    earlyExit = true;
+                    break;
+                  }
+                }
               }
             }
             if (allErrored) {
@@ -565,8 +609,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     if (session.hasProviderFailed(provider)) return false;
     try {
       const registry = this.deps.getAdapterRegistry() as unknown as IAdapterRegistry;
-      const status = registry.getProviderRuntimeStatus(provider);
-      if (status.circuitOpen) return false;
+      const cb = (registry as unknown as { getCircuitBreakerState?: (p: string) => string }).getCircuitBreakerState?.(provider);
+      // Block only hard OPEN; allow HALF-OPEN so recovery probes can succeed
+      if (cb === 'open') return false;
     } catch { /* best-effort check */ }
     return true;
   }
@@ -636,7 +681,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
           if (anyAvailable) resolvedKey = anyAvailable;
         }
 
-        if (!resolvedKey) throw new Error('No available API keys for debate');
+        if (!resolvedKey) {
+          // No key found after all provider checks — do NOT retry, just fail fast.
+          // Retrying would hit the same dead providers 3×30s each = 90s wasted per agent.
+          throw new Error('No available API keys for debate');
+        }
 
         const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
         if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
@@ -779,12 +828,38 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     throw new Error('LLM call failed after max retries');
   }
 
+  /** Models that are NOT chat/instruct models and should be skipped. */
+  private static readonly NON_CHAT_PREFIXES = [
+    'imagen-', 'veo-', 'gemma-', 'embed-', 'embedding-',
+    'text-', 'code-', 'aqa-', 'vision-', 'chirp-',
+  ];
+  private static readonly NON_CHAT_PATTERNS = [
+    /-(generate|embed|embedding|speech|tts|audio|video|image|vision)$/i,
+    /^(01-ai\/yi-|adept\/|ai21labs\/|abacusai\/)/,
+    /\/imagen-/, /\/veo-/, /\/gemma-/, /\/embedding-/,
+  ];
+
+  private isChatModel(model: string): boolean {
+    const m = model.toLowerCase();
+    // Skip known non-chat model prefixes and patterns
+    for (const p of DebateEngine.NON_CHAT_PREFIXES) {
+      if (m.startsWith(p)) return false;
+    }
+    for (const re of DebateEngine.NON_CHAT_PATTERNS) {
+      if (re.test(model)) return false;
+    }
+    return true;
+  }
+
   private getAllModelsForProvider(key: { provider: string; availableModels?: string[] }): string[] {
     const provider = key.provider.toLowerCase();
-    const priority = DEBATE_MODEL_PRIORITY[provider] ?? [];
-    const available = key.availableModels ?? [];
+    const priority = (DEBATE_MODEL_PRIORITY[provider] ?? []).filter(m => this.isChatModel(m));
+    const available = (key.availableModels ?? []).filter(m => this.isChatModel(m));
     const models = new Set([...priority, ...available]);
-    if (models.size === 0) models.add('auto');
+    if (models.size === 0) {
+      // Fallback: only use priority models (known working chat models)
+      models.add(...priority);
+    }
     return [...models];
   }
 
@@ -819,19 +894,62 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
   private buildConclusionLlmCall(): ((prompt: string) => Promise<string>) | undefined {
     return async (prompt: string): Promise<string> => {
-      const adapterRegistry = this.deps.getAdapterRegistry();
+      const adapterRegistry = this.deps.getAdapterRegistry() as unknown as import('../../contracts/provider-adapter').IAdapterRegistry;
       const keyService = this.deps.getKeyService();
       const keys = keyService.getKeys();
-      const activeKey = keys.find(k => k.status === 'active');
-      if (!activeKey) throw new Error('No active key for conclusion LLM');
-      const adapter = adapterRegistry.getAdapter(activeKey.provider);
-      if (!adapter) throw new Error(`No adapter for ${activeKey.provider}`);
-      const model = activeKey.model && activeKey.model !== 'auto'
-        ? activeKey.model
-        : (DEBATE_MODEL_PRIORITY[activeKey.provider.toLowerCase()] ?? [])[0] || 'auto';
+      const preferredProviders = ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare'];
       const messages = [{ role: 'user' as const, content: prompt }];
-      const result = await adapter.sendMessage(messages, model, activeKey.key);
-      return typeof result.content === 'string' ? result.content : String(result.content);
+      const stateStore = this.deps.getKeyStateStore?.();
+      const candidateKeys = [
+        ...preferredProviders.flatMap(provider =>
+          keys.filter(k => k.provider.toLowerCase() === provider && k.status === 'active' && !this.isKeyAuthFailed(k.id))
+        ),
+        ...keys.filter(k => k.status === 'active' && !this.isKeyAuthFailed(k.id)),
+      ];
+
+      for (const activeKey of candidateKeys) {
+        const keyState = stateStore?.get(activeKey.id);
+        if (keyState?.flags.authFailed || keyState?.flags.circuitOpen || keyState?.flags.rateLimited) continue;
+        const providerStatus = adapterRegistry.getProviderRuntimeStatus(activeKey.provider);
+        if (providerStatus.circuitOpen || providerStatus.rateLimited) continue;
+
+        const adapter = adapterRegistry.getAdapter(activeKey.provider);
+        if (!adapter) continue;
+
+        const model = activeKey.model && activeKey.model !== 'auto'
+          ? activeKey.model
+          : (DEBATE_MODEL_PRIORITY[activeKey.provider.toLowerCase()] ?? [])[0] || 'auto';
+
+        try {
+          const result = await adapter.sendMessage(messages, model, activeKey.key);
+          return typeof result.content === 'string' ? result.content : String(result.content);
+        } catch (error) {
+          const sc = (error as { statusCode?: number }).statusCode;
+          const msg = String(error);
+          const isProviderAuthError = sc === 401 || sc === 402 || sc === 403 ||
+            msg.includes('401') || msg.includes('402') || msg.includes('403') ||
+            msg.includes('Unauthorized') || msg.includes('Forbidden') || msg.includes('Payment Required');
+          const isProviderThrottle = sc === 429 || msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('Rate limit');
+          if (isProviderAuthError || isProviderThrottle) {
+            const kss = this.deps.getKeyStateStore?.();
+            if (kss) {
+              try {
+                kss.update(activeKey.id, {
+                  flags: {
+                    ...(keyState?.flags ?? { circuitOpen: false, rateLimited: false, authFailed: false }),
+                    authFailed: (keyState?.flags.authFailed ?? false) || isProviderAuthError,
+                    rateLimited: (keyState?.flags.rateLimited ?? false) || isProviderThrottle,
+                  },
+                });
+              } catch { /* best-effort */ }
+            }
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw new Error('No usable key for conclusion LLM');
     };
   }
 
@@ -1076,7 +1194,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                   totalTokens: verdict.totalTokens,
               }).catch(e => LOGGER.warn('DebateEngine', 'verdict persist failed', { error: e }));
               }
-              this.deps.eventBus.emit('debate:verdict:generated', { sessionId: record.id, verdict });
+              this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, { sessionId: record.id, verdict });
           }).catch(e => LOGGER.warn('DebateEngine', 'LLM-enhanced verdict failed, using heuristic', { error: e }));
           }
           this.saveSnapshot(record.id).catch(e => LOGGER.warn('DebateEngine', 'auto-checkpoint failed', { error: e }));

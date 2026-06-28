@@ -7,7 +7,7 @@ export { Container } from './container';
 export type { IContainer } from './container';
 export type { ServiceIdentifier } from './container';
 
-export { EventBus } from './event-bus';
+export { EventBus } from './events/event-bus';
 export { DatabaseService, dexieDb } from './services/database-service';
 export { DataAccessLayerImpl } from './dal';
 export type { DataAccessLayer } from './dal';

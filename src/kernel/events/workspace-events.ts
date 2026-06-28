@@ -9,6 +9,7 @@ export interface WorkspaceAttachedPayload {
   fileCount: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface WorkspaceDetachedPayload {}
 
 export interface WorkspaceFileReadPayload {

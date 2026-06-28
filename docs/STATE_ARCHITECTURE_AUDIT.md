@@ -112,7 +112,7 @@
 
 ### S6: Event Bus
 - **Storage Type:** In-memory only
-- **File:** `src/kernel/event-bus.ts:22-26`
+- **File:** `src/kernel/events/event-bus.ts:22-26`
 - **Data Stored:** listenerMap, validatorMap, emitCount, strictMode
 - **Read Operations:** Every service reads via `.on()` / `.off()`
 - **Write Operations:** `.emit()` from all services
@@ -545,7 +545,7 @@ User Input → DebatePanel → debateService.startDebate()
 | **Workspace** | File System Access API + Dexie handle | None | None |
 | **Metrics** | `MetricsService` (IndexedDB) | None | None |
 | **Logs** | `LoggerService` ring buffer (in-memory) | None | None — lost on reload |
-| **Events** | `RingEventLog` (in-memory) | None | None — lost on reload |
+| **Events** | `EventRecorder` + `ReplayEngine` (in-memory) | None | None — lost on reload |
 | **Blackboard** | `BlackboardService` (in-memory) | None | None — lost on reload |
 | **Session Affinity** | `SessionAffinityStore` (in-memory) | None | None — lost on reload |
 | **Agent Schedules** | `SchedulerService` (StorageAdapter → localStorage) | None | **INCONSISTENCY** — not in SQLite |
@@ -607,7 +607,7 @@ User Input → DebatePanel → debateService.startDebate()
 **Impact:** Fewer false-positive blocking events.
 
 ### L3: Consolidate Ring Buffers
-**Current:** LoggerService (500), RingEventLog (10,000), SystemKernel.eventLog (10,000), MetricsService (CONFIG.maxEntries).
+**Current:** LoggerService (500), EventRecorder (10,000), SystemKernel.eventLog (10,000), MetricsService (CONFIG.maxEntries).
 **Opportunity:** Consider shared buffer infrastructure.
 **Impact:** Minor memory savings.
 

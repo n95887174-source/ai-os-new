@@ -126,7 +126,7 @@ export class DiagnosticsEngine implements IDiagnosticsEngine {
     }
 
     const usageToday = ext?.usageToday?.requests || 0;
-    const limit = this.deps.freeTierLimits[key.provider]?.requestsPerDay;
+    const limit = this.deps.freeTierLimits[key.provider.toLowerCase()]?.requestsPerDay;
     if (limit && usageToday > 0) {
       const pct = (usageToday / limit) * 100;
       if (pct >= this.config.quotaCriticalPct) {

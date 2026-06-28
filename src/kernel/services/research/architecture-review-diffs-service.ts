@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter';
 
@@ -287,10 +287,3 @@ class ArchitectureReviewDiffsService {
 // Singleton
 export const architectureReviewDiffsService = new ArchitectureReviewDiffsService();
 
-// Add events
-if (!EVENTS.ARCH_REVIEW_SNAPSHOT_CREATED) {
-  (EVENTS as unknown as Record<string, string>).ARCH_REVIEW_SNAPSHOT_CREATED = 'arch:review:snapshot:created';
-}
-if (!EVENTS.ARCH_REVIEW_DIFF_CREATED) {
-  (EVENTS as unknown as Record<string, string>).ARCH_REVIEW_DIFF_CREATED = 'arch:review:diff:created';
-}

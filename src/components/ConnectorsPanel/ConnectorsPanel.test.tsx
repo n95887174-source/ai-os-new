@@ -4,6 +4,7 @@ import ConnectorsPanel from './ConnectorsPanel';
 
 vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
+  EVENTS: { NOTIFICATION: 'system:notification' },
 }));
 
 vi.mock('../../kernel/services/database-service', () => ({

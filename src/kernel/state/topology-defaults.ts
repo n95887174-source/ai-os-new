@@ -9,10 +9,10 @@ const SEARCH_TOOLS = ['web_search', 'summarize', 'document_query'];
 // ── Model distribution ──
 
 const PROVIDER_MODEL_MAP: Record<string, string[]> = {
-  gemini: ['gemini-1.5-flash', 'gemini-2.5-flash'],
+  gemini: ['gemini-2.0-flash', 'gemini-2.5-flash'],
   groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
 openrouter: ['openrouter/auto', 'openrouter/free'],
-nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
+  nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
 };
 
 function assignModelsToAgents(nodes: ISNode[], autoCount = 3): ISNode[] {

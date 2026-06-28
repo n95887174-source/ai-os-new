@@ -88,6 +88,8 @@ export const registerPhase6: Phase = (helpers, ctx) => {
 
   register('autoDebateService', new AutoDebateService({
     keyService: get<KeyService>('keyService'),
+    getKeyStateStore: () => get<KeyStateStore>('keyStateStore'),
+    getAdapterRegistry: () => get<ProviderAdapterRegistry>('providerAdapterRegistry'),
     debateService: {
       startDebate: (topic, participants, strategy, maxRounds, config) =>
         _container.get<DebateService>('debateService').startDebate(

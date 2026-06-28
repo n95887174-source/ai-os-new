@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -223,10 +223,3 @@ class ProviderPersonalityService {
 // Singleton
 export const providerPersonalityService = new ProviderPersonalityService();
 
-// Add events
-if (!EVENTS.PROVIDER_PERSONALITY_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).PROVIDER_PERSONALITY_UPDATED = 'provider:personality:updated';
-}
-if (!EVENTS.PROVIDER_PERSONALITY_CALIBRATED) {
-  (EVENTS as unknown as Record<string, string>).PROVIDER_PERSONALITY_CALIBRATED = 'provider:personality:calibrated';
-}

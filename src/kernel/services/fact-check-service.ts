@@ -142,7 +142,7 @@ export class FactCheckService {
         return { claim, verdict: 'no_evidence', confidence: 0, reasoning: 'No API key available', checkedAt: Date.now() };
       }
       const { key: apiKey, provider } = cached;
-      const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-1.5-flash' : 'meta-llama/llama-3.1-8b-instruct';
+      const model = provider === 'groq' ? 'llama-3.1-8b-instant' : provider === 'gemini' ? 'gemini-2.0-flash' : 'meta-llama/llama-3.3-70b-instruct';
 
       const response = await this.deps.sendMessage(
         [{ role: 'user', content: `${VERIFICATION_PROMPT}\n\n- ${claim}` }],

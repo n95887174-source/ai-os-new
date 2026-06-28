@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 
 const LOGGER = rootLogger.child('AgentDelegation');
@@ -170,20 +170,3 @@ class AgentDelegationService {
 
 // Singleton
 export const agentDelegationService = new AgentDelegationService();
-
-// Add events
-if (!EVENTS.AGENT_DELEGATION_CREATED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_DELEGATION_CREATED = 'agent:delegation:created';
-}
-if (!EVENTS.AGENT_DELEGATION_STARTED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_DELEGATION_STARTED = 'agent:delegation:started';
-}
-if (!EVENTS.AGENT_DELEGATION_COMPLETED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_DELEGATION_COMPLETED = 'agent:delegation:completed';
-}
-if (!EVENTS.AGENT_DELEGATION_FAILED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_DELEGATION_FAILED = 'agent:delegation:failed';
-}
-if (!EVENTS.AGENT_DELEGATION_CANCELLED) {
-  (EVENTS as unknown as Record<string, string>).AGENT_DELEGATION_CANCELLED = 'agent:delegation:cancelled';
-}

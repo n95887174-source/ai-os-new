@@ -190,7 +190,7 @@ export class ChatService {
       let resolvedModel = model;
 
       const usageToday = keyObj.stats?.extended?.usageToday?.requests || 0;
-      const limit = this.deps.freeTierLimits[provider]?.requestsPerDay || 0;
+      const limit = this.deps.freeTierLimits[provider.toLowerCase()]?.requestsPerDay || 0;
       if (limit > 0) {
         const usagePct = usageToday / limit;
         const rps = this.deps.routingPolicyService;

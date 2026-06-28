@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -158,7 +158,3 @@ class RoleModelPreferencesService {
 // Singleton
 export const roleModelPreferencesService = new RoleModelPreferencesService();
 
-// Add event
-if (!EVENTS.ROLE_MODEL_PREFERENCES_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).ROLE_MODEL_PREFERENCES_UPDATED = 'role:model:preferences:updated';
-}

@@ -207,7 +207,7 @@ const DebateRuntimePanel: React.FC = () => {
     } catch { /* container not ready */ }
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     try {
       const top = orchestrator.getActiveTopology();
       const nodes = (top?.nodes || []).filter((n: { type: string }) => n.type === 'agent').map((n: { id: string; label: string; config: Record<string, unknown> }) => ({
@@ -217,18 +217,19 @@ const DebateRuntimePanel: React.FC = () => {
         model: n.config?.model as string | undefined,
         prompt: n.config?.prompt as string | undefined,
       }));
-      setAvailableNodes(nodes);
-      if (nodes.length > 0) {
-        setSelectedAgentIds(nodes.map(n => n.id));
-      }
+      queueMicrotask(() => {
+        setAvailableNodes(nodes);
+        if (nodes.length > 0) {
+          setSelectedAgentIds(nodes.map(n => n.id));
+        }
+      });
     } catch { /* container not ready */ }
-     
+      
   }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
-    refreshSessions();
-    refreshCognitive();
+    queueMicrotask(() => { refreshSessions(); refreshCognitive(); });
     const intTimer = setInterval(() => { if (isMountedRef.current) refreshCognitive(); }, 5000);
     const unsubs = [
       eventBus.on(EVENTS.DEBATE_SESSION_CREATED, refreshSessions),
@@ -236,7 +237,7 @@ const DebateRuntimePanel: React.FC = () => {
       eventBus.on(EVENTS.DEBATE_SESSION_COMPLETED, () => { refreshSessions(); refreshCognitive(); }),
       eventBus.on(EVENTS.DEBATE_SESSION_FAILED, () => { refreshSessions(); refreshCognitive(); }),
       eventBus.on(EVENTS.DEBATE_SESSION_CANCELLED, refreshSessions),
-      eventBus.on('debate-runtime:phase:changed', refreshSessions),
+      eventBus.on(EVENTS.DEBATE_PHASE_CHANGED, refreshSessions),
       eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>(DebateRuntimeEvents.AGENT_CHUNK, (d) => {
         const streamKey = `streaming-${d.agentId}`;
         const existing = argsRef.current.get(d.sessionId) || [];
@@ -376,11 +377,11 @@ const DebateRuntimePanel: React.FC = () => {
   const selected = sessions.find(s => s.id === selectedId) || null;
 
   useEffect(() => {
-    if (!selectedId) { setLinkedChatIds([]); return; }
+    if (!selectedId) { queueMicrotask(() => setLinkedChatIds([])); return; }
     let cancelled = false;
     sessionManager.getLinked(selectedId).then(links => {
-      if (!cancelled) setLinkedChatIds(links.map(l => l.fromId === selectedId ? l.toId : l.fromId));
-    }).catch(() => { if (!cancelled) setLinkedChatIds([]); });
+      if (!cancelled) queueMicrotask(() => setLinkedChatIds(links.map(l => l.fromId === selectedId ? l.toId : l.fromId)));
+    }).catch(() => { if (!cancelled) queueMicrotask(() => setLinkedChatIds([])); });
     return () => { cancelled = true; };
   }, [selectedId]);
 

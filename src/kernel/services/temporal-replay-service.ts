@@ -5,7 +5,9 @@ import type { RouterService, RoutingStrategy } from './provider-router';
 import type { SystemState } from '../types/metrics-types';
 import { rootLogger } from './logger-service';
 
-const LOGGER = rootLogger.child('TemporalReplayService');
+function getLogger() {
+  return rootLogger.child('TemporalReplayService');
+}
 
 type EventName = string;
 
@@ -224,7 +226,7 @@ export class TemporalReplayService implements ITemporalReplayService {
     const providerIds = new Set(scope?.providerIds ?? []);
     const decisionWinner = String((trace.decision as Record<string, unknown>).selected ?? '');
 
-    // Step 1: get all events from RingEventLog within time window
+    // Step 1: get all events from EventRecorder within time window
     const allEvents = this.recorder.getAll();
     const windowStart = trace.before?.keyState?.takenAt ?? 0;
     const windowEnd = trace.after?.keyState?.takenAt ?? Infinity;
@@ -276,7 +278,7 @@ export class TemporalReplayService implements ITemporalReplayService {
           scoreState = rescore(this.routerService, providerMetrics, trace);
           rescored = true;
         } catch (e) {
-          LOGGER.warn('TemporalReplayService', 'Rescore failed at frame', { frame: frames.length, error: e });
+          getLogger().warn('TemporalReplayService', 'Rescore failed at frame', { frame: frames.length, error: e });
         }
       }
 

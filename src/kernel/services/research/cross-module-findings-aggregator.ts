@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter';
 
@@ -432,7 +432,3 @@ class CrossModuleFindingsAggregator {
 // Singleton
 export const crossModuleFindingsAggregator = new CrossModuleFindingsAggregator();
 
-// Add missing event
-if (!EVENTS.FINDINGS_AGGREGATED) {
-  (EVENTS as unknown as Record<string, string>).FINDINGS_AGGREGATED = 'findings:aggregated';
-}

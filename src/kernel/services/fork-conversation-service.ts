@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -144,7 +144,3 @@ class ForkConversationService {
 // Singleton
 export const forkConversationService = new ForkConversationService();
 
-// Add missing event
-if (!EVENTS.CHAT_FORKED) {
-  (EVENTS as unknown as Record<string, string>).CHAT_FORKED = 'chat:forked';
-}

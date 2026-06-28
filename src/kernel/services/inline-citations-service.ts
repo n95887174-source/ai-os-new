@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -267,7 +267,3 @@ class InlineCitationsService {
 // Singleton
 export const inlineCitationsService = new InlineCitationsService();
 
-// Add missing event
-if (!EVENTS.CITATIONS_ADDED) {
-  (EVENTS as unknown as Record<string, string>).CITATIONS_ADDED = 'citations:added';
-}

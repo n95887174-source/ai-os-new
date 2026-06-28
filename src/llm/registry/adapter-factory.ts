@@ -181,6 +181,12 @@ export class AdapterFactory {
     };
   }
 
+  getCircuitBreakerState(provider: string): string {
+    const normalized = provider.toLowerCase();
+    const cb = this.#circuitBreakers.get(normalized);
+    return cb ? cb.peekState() : 'closed';
+  }
+
   resetCircuitBreaker(provider: string): void {
     const normalized = provider.toLowerCase();
     const cb = this.#circuitBreakers.get(normalized);

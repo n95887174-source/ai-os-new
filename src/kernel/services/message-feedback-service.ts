@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -178,6 +178,3 @@ class MessageFeedbackService {
 export const messageFeedbackService = new MessageFeedbackService();
 
 // Add event
-if (!EVENTS.MESSAGE_FEEDBACK_SUBMITTED) {
-  (EVENTS as unknown as Record<string, string>).MESSAGE_FEEDBACK_SUBMITTED = 'message:feedback:submitted';
-}

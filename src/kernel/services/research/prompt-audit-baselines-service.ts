@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter';
 
@@ -335,10 +335,3 @@ class PromptAuditBaselinesService {
 // Singleton
 export const promptAuditBaselinesService = new PromptAuditBaselinesService();
 
-// Add events
-if (!EVENTS.PROMPT_AUDIT_BASELINE_SET) {
-  (EVENTS as unknown as Record<string, string>).PROMPT_AUDIT_BASELINE_SET = 'prompt:audit:baseline:set';
-}
-if (!EVENTS.PROMPT_AUDIT_COMPARISON_CREATED) {
-  (EVENTS as unknown as Record<string, string>).PROMPT_AUDIT_COMPARISON_CREATED = 'prompt:audit:comparison:created';
-}

@@ -34,6 +34,9 @@ vi.mock('../../kernel/instances', () => ({
   pricingService: {
     getBudgetInfo: vi.fn(() => ({ spentThisMonth: 0.05 })),
   },
+  budgetService: {
+    getBudgetInfo: vi.fn(() => ({ spentThisMonth: 0.05 })),
+  },
   settingsService: {
     getSettings: vi.fn(() => ({
       notifications: true,
@@ -53,6 +56,9 @@ vi.mock('../../kernel/instances', () => ({
   routerService: {
     getDecisionHistory: vi.fn(() => []),
     getRawConfig: vi.fn(() => ({ fallbackChains: {}, modelDowngradeChains: {} })),
+  },
+  monitoringService: {
+    getSystemHealthIndicators: vi.fn(() => null),
   },
   FREE_TIER_LIMITS: { groq: { requestsPerDay: 1000 }, openrouter: { requestsPerDay: 500 } },
   cognitiveService: {

@@ -48,6 +48,7 @@ vi.mock('../../kernel/instances', () => ({
 
 vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+  EVENTS: { TRACE_UPDATED: 'trace:updated' },
 }));
 
 describe('TasksPanel', () => {

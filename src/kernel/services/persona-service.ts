@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { BucketStorageAdapter } from './storage-adapter';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 
@@ -403,11 +403,6 @@ export const personaService = new PersonaService();
 
 // Initialize on module load
 personaService.init().catch(e => LOGGER.error('PersonaService', 'Init failed', { error: e }));
-
-// Add new events for personas
-if (!EVENTS.PERSONA_CHANGED) {
-  // Events will be added via EVENTS object extension in event-names.ts
-}
 
 // Export tone presets for UI
 export const TONE_PRESETS = Object.keys(TONE_PROMPTS) as TonePreset[];

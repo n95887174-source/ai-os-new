@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter';
 
@@ -259,10 +259,3 @@ ${entry.suggestedFix ? `### Suggested Fix\n${entry.suggestedFix}` : ''}
 // Singleton
 export const researchDocsSyncService = new ResearchDocsSyncService();
 
-// Add events
-if (!EVENTS.RESEARCH_FINDING_SYNCED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_FINDING_SYNCED = 'research:finding:synced';
-}
-if (!EVENTS.RESEARCH_FINDING_RESOLVED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_FINDING_RESOLVED = 'research:finding:resolved';
-}

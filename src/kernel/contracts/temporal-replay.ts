@@ -14,7 +14,7 @@ export interface ScoreSnapshot {
 export interface TemporalFrame {
   /** Position in the replay sequence */
   index: number;
-  /** Log position in RingEventLog */
+  /** Log position in EventRecorder */
   logPos: number;
   /** Original event reference */
   event: EventRef;

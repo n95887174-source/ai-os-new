@@ -7,7 +7,7 @@
  */
 
 import { genId } from '../../utils/gen-id';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { BucketStorageAdapter } from './storage-adapter';

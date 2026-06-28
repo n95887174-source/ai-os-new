@@ -64,7 +64,6 @@ const FILE_ENTRIES: CodeManifestEntry[] = [
   { name: 'src/kernel/services/routing-policy/routing-policy-service.ts', type: 'file_path', location: 'services/routing-policy/' },
   { name: 'src/kernel/services/session-affinity-store.ts', type: 'file_path', location: 'services/session-affinity-store.ts' },
   { name: 'src/kernel/services/event-sourcing/event-sourcing-service.ts', type: 'file_path', location: 'services/event-sourcing/' },
-  { name: 'src/kernel/services/event-bridge/ring-event-log.ts', type: 'file_path', location: 'services/event-bridge/' },
   { name: 'src/kernel/services/event-bridge/projection-registry.ts', type: 'file_path', location: 'services/event-bridge/' },
   { name: 'src/kernel/services/event-bridge/event-bridge.ts', type: 'file_path', location: 'services/event-bridge/' },
   { name: 'src/kernel/services/projections/key-state-projection.ts', type: 'file_path', location: 'services/projections/' },

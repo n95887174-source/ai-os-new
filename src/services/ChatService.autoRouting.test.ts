@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EVENTS } from '../kernel/events/event-bus';
 
 vi.mock('../kernel/utils/tokenEstimate', () => ({ estimateTokens: vi.fn(() => 100) }));
 
@@ -117,6 +118,7 @@ describe('ChatService auto-routing', () => {
       llmClient: mockLLMClient,
       logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     chatService = new ChatService(deps as any);
     await chatService.init();
   });
@@ -125,10 +127,11 @@ describe('ChatService auto-routing', () => {
     if (chatService) chatService.destroy();
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function waitForResponse(timeoutMs = 3000): Promise<any> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Timed out waiting for chat:response')), timeoutMs);
-      const unsub = mockEventBus.on('chat:response', (res: unknown) => {
+      const unsub = mockEventBus.on(EVENTS.MESSAGE_RESPONSE, (res: unknown) => {
         clearTimeout(timer);
         unsub();
         resolve(res);
@@ -138,7 +141,7 @@ describe('ChatService auto-routing', () => {
 
   it('should call getRankedProviders with content strategy when provider is auto', async () => {
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'auto',
       model: 'gemini-3.1-flash-lite',
       messages: [{ role: 'user', content: 'Hello, how are you?' }],
@@ -152,7 +155,7 @@ describe('ChatService auto-routing', () => {
 
   it('should call getRankedProviders when provider is undefined', async () => {
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       model: 'gemini-3.1-flash-lite',
       messages: [{ role: 'user', content: 'Write a poem' }],
       requestId: 'test-undefined-1',
@@ -164,7 +167,7 @@ describe('ChatService auto-routing', () => {
 
   it('should pass priority to getRankedProviders', async () => {
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'auto',
       model: 'gemini-3.1-flash-lite',
       messages: [{ role: 'user', content: 'Urgent request' }],
@@ -177,9 +180,10 @@ describe('ChatService auto-routing', () => {
 
   it('should use top-ranked provider for routing', async () => {
     const secondKey = { ...mockKeyObj, id: 'key-2', provider: 'Groq' };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockRouterService.getRankedProviders as any).mockReturnValue([mockKeyObj, secondKey]);
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'auto',
       model: 'llama-3.3-70b',
       messages: [{ role: 'user', content: 'Test' }],
@@ -190,9 +194,10 @@ describe('ChatService auto-routing', () => {
   });
 
   it('should emit error when getRankedProviders returns empty', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockRouterService.getRankedProviders as any).mockReturnValue([]);
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'auto',
       model: 'gpt-4',
       messages: [{ role: 'user', content: 'Hello?' }],
@@ -205,7 +210,7 @@ describe('ChatService auto-routing', () => {
 
   it('should NOT call getRankedProviders when provider is explicitly set', async () => {
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'Groq',
       model: 'llama-3.3-70b',
       messages: [{ role: 'user', content: 'Hello' }],
@@ -217,7 +222,7 @@ describe('ChatService auto-routing', () => {
 
   it('should route to explicitly provided provider without auto-routing', async () => {
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'OpenRouter',
       model: 'anthropic/claude-3.5-sonnet',
       messages: [{ role: 'user', content: 'Hello' }],
@@ -229,7 +234,7 @@ describe('ChatService auto-routing', () => {
 
   it('should concatenate all message contents for prompt text', async () => {
     const resPromise = waitForResponse();
-    mockEventBus.emit('chat:send', {
+    mockEventBus.emit(EVENTS.SEND_MESSAGE, {
       provider: 'auto',
       model: 'gpt-4',
       messages: [

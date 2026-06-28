@@ -152,7 +152,3 @@ class AquariumScreenshotsService {
 // Singleton
 export const aquariumScreenshotsService = new AquariumScreenshotsService();
 
-// Add event
-if (!EVENTS.AQUARIUM_SCREENSHOT_CAPTURED) {
-  (EVENTS as unknown as Record<string, string>).AQUARIUM_SCREENSHOT_CAPTURED = 'aquarium:screenshot:captured';
-}

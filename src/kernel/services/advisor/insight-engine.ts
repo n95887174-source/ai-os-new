@@ -153,7 +153,7 @@ Focus on actionable, specific improvements.`;
           { role: 'user' as const, content: prompt },
         ];
         const PROVDER_DEFAULTS: Record<string, string> = {
-          gemini: 'gemini-1.5-flash',
+          gemini: 'gemini-2.0-flash',
           groq: 'llama-3.3-70b-versatile',
           openrouter: 'openrouter/auto',
           nvidia: 'meta/llama-3.3-70b-instruct',

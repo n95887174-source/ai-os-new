@@ -94,7 +94,7 @@ export class DebateApiService {
     if (typeof window === 'undefined' || this.fetchPatched) return;
     this.fetchPatched = true;
     const native = window.fetch.bind(window);
-    const service = this;
+    const { handleHttp } = this;
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(
         typeof input === 'string' ? input : input instanceof Request ? input.url : input.href,
@@ -102,7 +102,7 @@ export class DebateApiService {
       );
       if (url.pathname.startsWith('/api/debates')) {
         const req = input instanceof Request ? input : new Request(url.toString(), init);
-        return service.handleHttp(req);
+        return handleHttp(req);
       }
       return native(input, init);
     };

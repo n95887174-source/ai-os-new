@@ -119,7 +119,7 @@ export class GeminiRequestBuilder {
 
     const body: GeminiRequestBody = { contents };
     if (systemParts.length > 0) {
-      // streamGenerateContent rejects systemInstruction for some models (e.g. gemini-1.5-flash),
+      // streamGenerateContent rejects systemInstruction for some models,
       // so merge system prompt into first user message (avoids consecutive user turns which Gemini rejects)
       const firstUserIdx = contents.findIndex(c => c.role === 'user');
       if (firstUserIdx >= 0) {

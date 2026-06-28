@@ -288,8 +288,12 @@ class ResearchConfidenceService {
     return 1 - front;
   }
 
+  // Lanczos approximation — known constants from Numerical Recipes
+   
   private logGamma(x: number): number {
+     
     const c = [
+      // eslint-disable-next-line no-loss-of-precision
       76.18009172947146, -86.50532032941677,
       24.67009865792417, -1.239165838684812e1,
       1.07769380319057e-2, 9.999999999999999e-1,
@@ -301,6 +305,7 @@ class ResearchConfidenceService {
     for (let j = 0; j < 6; j++) {
       ser += c[j] / ++y;
     }
+    // eslint-disable-next-line no-loss-of-precision
     return -tmp + Math.log(2.5066282746310005 * ser / x);
   }
 }

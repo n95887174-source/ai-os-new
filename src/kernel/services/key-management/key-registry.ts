@@ -384,13 +384,9 @@ export class KeyRegistry {
       if (typeof this.deps.keyStore?.bulkPut === 'function') {
         await this.deps.keyStore.bulkPut(keysToSave);
       }
-      // TODO: remove the localStorage mirror entirely. Dexie is the source
-      // of truth — keys are encrypted with AES-GCM at rest (vault) and
-      // stored in IndexedDB.  localStorage.super_agents_api_keys is only
-      // read once during bootstrap migration; subsequent saves skip it
-      // to avoid XSS-readable key material.  After one full migration
-      // cycle (read → copy to Dexie → removeItem), this block can be
-      // deleted.  See bootstrap.ts:280-292 for the read path.
+      // Dexie is the source of truth. This keeps the IndexedDB mirror in
+      // sync by deleting stale records that are no longer present in the
+      // current snapshot.
       if (typeof this.deps.keyStore?.listKeys === 'function' && typeof this.deps.keyStore?.deleteKey === 'function') {
         const allStored = await this.deps.keyStore.listKeys();
         const currentIds = new Set(snapshot.map(k => k.id));

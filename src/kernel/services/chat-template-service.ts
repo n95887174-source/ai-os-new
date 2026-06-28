@@ -5,7 +5,7 @@
 
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from './storage-adapter';
 
@@ -39,7 +39,7 @@ const BUILT_IN_TEMPLATES: ChatTemplate[] = [
 5. Test coverage
 
 Provide specific, actionable feedback with code examples.`,
-    defaultModel: 'gemini-1.5-flash',
+    defaultModel: 'gemini-2.0-flash',
     suggestedProviders: ['groq', 'gemini'],
     tags: ['coding', 'development', 'quality'],
     isBuiltIn: true,
@@ -59,7 +59,7 @@ Provide specific, actionable feedback with code examples.`,
 5. Organize ideas into actionable categories
 
 Encourage wild ideas � they often lead to innovative solutions.`,
-    defaultModel: 'gemini-1.5-flash',
+    defaultModel: 'gemini-2.0-flash',
     suggestedProviders: ['gemini', 'openrouter'],
     tags: ['creative', 'ideation', 'planning'],
     isBuiltIn: true,
@@ -118,7 +118,7 @@ Keep summaries focused � aim for 10-20% of original length.`,
 6. Present with appropriate caveats
 
 Be objective and cite sources. Distinguish facts from interpretations.`,
-    defaultModel: 'gemini-1.5-flash',
+    defaultModel: 'gemini-2.0-flash',
     suggestedProviders: ['gemini', 'openrouter'],
     tags: ['research', 'analysis', 'information'],
     isBuiltIn: true,
@@ -138,7 +138,7 @@ Be objective and cite sources. Distinguish facts from interpretations.`,
 5. Document the bug and solution
 
 Be methodical. Question assumptions. The first solution is rarely right.`,
-    defaultModel: 'gemini-1.5-flash',
+    defaultModel: 'gemini-2.0-flash',
     suggestedProviders: ['groq', 'gemini'],
     tags: ['debugging', 'troubleshooting', 'development'],
     isBuiltIn: true,
@@ -398,13 +398,3 @@ class ChatTemplateService {
 // Singleton
 export const chatTemplateService = new ChatTemplateService();
 
-// Add events
-if (!EVENTS.CHAT_TEMPLATE_CREATED) {
-  (EVENTS as unknown as Record<string, string>).CHAT_TEMPLATE_CREATED = 'chat:template:created';
-}
-if (!EVENTS.CHAT_TEMPLATE_UPDATED) {
-  (EVENTS as unknown as Record<string, string>).CHAT_TEMPLATE_UPDATED = 'chat:template:updated';
-}
-if (!EVENTS.CHAT_TEMPLATE_DELETED) {
-  (EVENTS as unknown as Record<string, string>).CHAT_TEMPLATE_DELETED = 'chat:template:deleted';
-}

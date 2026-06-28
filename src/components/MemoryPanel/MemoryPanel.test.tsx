@@ -38,6 +38,7 @@ vi.mock('../../kernel/instances', () => ({
 
 vi.mock('../../kernel/events/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn(), onSafe: vi.fn(() => vi.fn()) },
+  EVENTS: { NOTIFICATION: 'system:notification' },
 }));
 
 vi.mock('../../kernel/services/config-registry', () => ({

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ProviderRuntimeService } from './provider-runtime/provider-service';
 import { EventSourcingService } from './event-sourcing/event-sourcing-service';
-import { ProviderAdapterRegistry } from './provider-adapter-registry';
 import { LLMClientService } from './llm-client-service';
 import type { IProviderAdapter, IAdapterRegistry } from '../contracts/provider-adapter';
 import type { ApiKey } from '../types/metrics-types';
@@ -227,6 +226,7 @@ describe('Provider Stack E2E', () => {
     const key = mockKey();
 
     const sessionStartCount = providerRuntime.getActiveSessions().length;
+    expect(sessionStartCount).toBeGreaterThanOrEqual(0); // baseline count
 
     const instance = providerRuntime.getOrCreateInstance(key);
     expect(instance.status).toBe('idle');

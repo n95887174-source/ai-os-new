@@ -3,11 +3,14 @@ import type { DebateVerdict, ConclusionType, StanceResult, VerdictKeyArgument, V
 import { rootLogger } from '../logger-service';
 
 const LOGGER = rootLogger.child('DebateConclusionEngine');
+let sharedEnhancementInFlight = false;
+let sharedEnhancementRetryAfter = 0;
 
 export type LlmCallFn = (prompt: string) => Promise<string>;
 
 export class DebateConclusionEngine {
   private feedbackLog: VerdictFeedback[] = [];
+  private enhancedSessions = new Set<string>();
 
   constructor(private llmCall?: LlmCallFn) {}
 
@@ -155,15 +158,28 @@ export class DebateConclusionEngine {
   ): Promise<DebateVerdict> {
     const base = this.generateVerdict(snapshot, timeline);
     if (!this.llmCall) return base;
+    if (this.enhancedSessions.has(snapshot.id)) return base;
+    if (sharedEnhancementInFlight) return base;
 
+    const now = Date.now();
+    if (now < sharedEnhancementRetryAfter) {
+      return base;
+    }
+
+    sharedEnhancementInFlight = true;
     try {
       const prompt = this.buildLLMPrompt(base, snapshot);
       const response = await this.llmCall(prompt);
       const enhanced = this.parseLLMResponse(response, base);
+      this.enhancedSessions.add(snapshot.id);
       return enhanced;
     } catch (e) {
+      this.enhancedSessions.add(snapshot.id);
+      sharedEnhancementRetryAfter = Date.now() + 10 * 60 * 1000;
       LOGGER.warn('DebateConclusionEngine', 'LLM verdict enhancement failed, using heuristic base', { error: e });
       return base;
+    } finally {
+      sharedEnhancementInFlight = false;
     }
   }
 
@@ -206,6 +222,7 @@ Respond ONLY with valid JSON, no markdown.`;
   destroy(): void {
     this.feedbackLog = [];
     this.llmCall = undefined;
+    this.enhancedSessions.clear();
   }
 
   recordFeedback(sessionId: string, vote: VerdictFeedbackVote, comment?: string): void {

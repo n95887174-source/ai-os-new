@@ -23,7 +23,8 @@ const DEFAULT_CONFIG: CircuitConfig = {
   halfOpenMaxRequests: CONFIG?.llm?.circuitBreaker?.halfOpenMaxRequests ?? 1,
 };
 
-const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 403, 405, 422]);
+// 402 = Payment Required (no credits). Fail fast — don't retry, don't accumulate circuit failures.
+const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 402, 403, 405, 422]);
 // P1-6: server errors (5xx) open circuit after 2 failures instead of waiting for default threshold (5)
 const SERVER_ERROR_STATUSES = new Set([500, 502, 503, 504]);
 
@@ -220,17 +221,13 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     let isServerError = false;
 
     if (statusCode !== undefined) {
-      if (statusCode === 429 || statusCode === 402) {
+      if (statusCode === 429) {
         isRateLimit = true;
         const retryAfter = e && typeof e === 'object'
           ? (e as Record<string, unknown>).retryAfter
           : undefined;
         if (typeof retryAfter === 'number' && retryAfter > 0) {
           customTimeoutMs = retryAfter;
-        }
-        // 402 (Payment Required) — open circuit for longer
-        if (statusCode === 402) {
-          customTimeoutMs = Math.max(customTimeoutMs ?? 0, 5 * 60 * 1000);
         }
       }
       // P1-6: server errors (5xx) open circuit after 2 failures only
@@ -255,13 +252,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         lastFailure: this.state.lastFailureTime
       });
 
-      if (statusCode === 402) {
-        eventBus.emit(EVENTS.NOTIFICATION, {
-          message: `Provider ${this.getProviderId()} key ${this.inner.id.slice(0, 8)}...: Payment Required — circuit opened for 5min`,
-          type: 'error',
-        });
       }
-    }
   }
 
   private getStatusCode(e: unknown): number | undefined {

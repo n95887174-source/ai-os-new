@@ -5,7 +5,7 @@
 
 import { genId } from '../../../utils/gen-id';
 import { rootLogger } from '../logger-service';
-import { EventBus } from '../../event-bus';
+import { EventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 
 const LOGGER = rootLogger.child('ResearchAgentCreation');
@@ -374,14 +374,3 @@ Good observability enables debugging without reproduction.`,
 
 // Singleton
 export const researchRecommendationService = new ResearchRecommendationService();
-
-// Add events
-if (!EVENTS.RESEARCH_RECOMMENDATION_CREATED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_RECOMMENDATION_CREATED = 'research:recommendation:created';
-}
-if (!EVENTS.RESEARCH_RECOMMENDATION_APPLIED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_RECOMMENDATION_APPLIED = 'research:recommendation:applied';
-}
-if (!EVENTS.RESEARCH_RECOMMENDATION_DISMISSED) {
-  (EVENTS as unknown as Record<string, string>).RESEARCH_RECOMMENDATION_DISMISSED = 'research:recommendation:dismissed';
-}

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RouterService as KernelRouter } from '../kernel/services/provider-router';
 import type { SystemState } from '../types/metrics';
@@ -71,7 +72,10 @@ async function createRouterService() {
     keyService: mockKeyService as any,
     pricingService: mockPricingService as any,
     eventBus: mockEventBus as any,
-    budgetService: { canUseProvider: vi.fn(() => true) } as any,
+    budgetService: {
+      canUseProvider: vi.fn(() => true),
+      getBudgetInfo: vi.fn(() => ({ providerBudgets: [] })),
+    } as any,
     policyService: { checkAgentPolicy: vi.fn(() => ({ allowed: true })) } as any,
     routingPolicyService: {
       calculateLatencyPenalty: vi.fn(() => 0),
@@ -249,7 +253,7 @@ describe('RouterService latency balancing', () => {
 
   describe('key:latency-burst handler', () => {
     it('should recalculate weights on burst (reads from state)', async () => {
-      const { router, mockKernel, triggerBurst, setProviderState } = await createRouterService();
+      const { mockKernel, triggerBurst, setProviderState } = await createRouterService();
       setProviderState({
         groq: { avgTTFT: 500 },
         gemini: { avgTTFT: 100 },

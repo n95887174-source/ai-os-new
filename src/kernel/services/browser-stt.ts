@@ -45,7 +45,7 @@ declare global {
   }
 }
 
-import { EventBus } from '../event-bus';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 
@@ -411,10 +411,3 @@ if (import.meta.hot) {
 }
 
 
-// Add missing events
-if (!EVENTS.STT_STATE_CHANGED) {
-  (EVENTS as unknown as Record<string, string>).STT_STATE_CHANGED = 'stt:state:changed';
-}
-if (!EVENTS.STT_ERROR) {
-  (EVENTS as unknown as Record<string, string>).STT_ERROR = 'stt:error';
-}
