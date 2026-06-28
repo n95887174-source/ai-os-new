@@ -6,7 +6,7 @@ import type { DebateSessionRecord, DebateStore } from '../contracts/storage/deba
 import type { ChatSession } from '../contracts/storage/session-store';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
-import { debateEngine } from '../instances';
+
 
 const LOGGER = rootLogger.child('SessionManagerService');
 
@@ -223,7 +223,7 @@ export class SessionManagerService implements ISessionManager {
 
     // P0-12: cancel any running debate BEFORE deleting records
     // Prevents zombie debates that continue generating tokens after session deletion
-    try { debateEngine.cancelSession(id); } catch { /* ignore — session may not be managed by debate engine */ }
+    try { (await import('../instances')).debateEngine.cancelSession(id); } catch { /* ignore — session may not be managed by debate engine */ }
 
     await Promise.all([
       this.debateStore.deleteSession(id).catch(() => {}),

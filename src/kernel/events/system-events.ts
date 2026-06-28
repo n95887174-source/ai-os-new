@@ -1,42 +1,35 @@
+import { EVENT_REGISTRY, type EventMap } from './event-registry';
 import type { ScoringComponents } from '../types/metrics-types';
 export type { ScoringComponents };
 
 export const SystemEvents = {
-  NAVIGATE: 'system:navigate',
-  NOTIFICATION: 'system:notification',
-  DECISION: 'system:decision',
-  KERNEL_UPDATED: 'kernel:updated',
-  KERNEL_HEARTBEAT: 'kernel:heartbeat', // lightweight heartbeat without full state
-  KERNEL_STATE_RESET: 'kernel:state:reset',
-  BOOTSTRAP_PHASE: 'kernel:bootstrap:phase',
-  RUNTIME_READY: 'system:runtime:ready',
-  RUNTIME_FAILED: 'system:runtime:failed',
-  SHUTDOWN: 'system:shutdown',
-  EVENTBUS_BACKPRESSURE: 'system:eventbus:backpressure',
-  CLEAR_DATA: 'system:data:clear',
-  RELOAD: 'system:reload',
-  COMMAND: 'system:command',
-  KERNEL_LOAD_FAILED: 'kernel:load-failed',
-  KERNEL_PERSIST_FAILED: 'kernel:persist-failed',
-  SYSTEM_RUNTIME_METRICS: 'system:runtime:metrics',
+  NAVIGATE: EVENT_REGISTRY.NAVIGATE.name,
+  NOTIFICATION: EVENT_REGISTRY.NOTIFICATION.name,
+  DECISION: EVENT_REGISTRY.DECISION.name,
+  KERNEL_UPDATED: EVENT_REGISTRY.KERNEL_UPDATED.name,
+  KERNEL_HEARTBEAT: EVENT_REGISTRY.KERNEL_HEARTBEAT.name,
+  KERNEL_STATE_RESET: EVENT_REGISTRY.KERNEL_STATE_RESET.name,
+  BOOTSTRAP_PHASE: EVENT_REGISTRY.BOOTSTRAP_PHASE.name,
+  RUNTIME_READY: EVENT_REGISTRY.RUNTIME_READY.name,
+  RUNTIME_FAILED: EVENT_REGISTRY.RUNTIME_FAILED.name,
+  SHUTDOWN: EVENT_REGISTRY.SHUTDOWN.name,
+  EVENTBUS_BACKPRESSURE: EVENT_REGISTRY.EVENTBUS_BACKPRESSURE.name,
+  CLEAR_DATA: EVENT_REGISTRY.CLEAR_DATA.name,
+  RELOAD: EVENT_REGISTRY.RELOAD.name,
+  COMMAND: EVENT_REGISTRY.COMMAND.name,
+  KERNEL_LOAD_FAILED: EVENT_REGISTRY.KERNEL_LOAD_FAILED.name,
+  KERNEL_PERSIST_FAILED: EVENT_REGISTRY.KERNEL_PERSIST_FAILED.name,
+  SYSTEM_RUNTIME_METRICS: EVENT_REGISTRY.SYSTEM_RUNTIME_METRICS.name,
 } as const;
 
-export type SystemEventMap = {
-  'system:navigate': string;
-  'system:notification': NotificationPayload;
-  'system:decision': DecisionPayload;
-  'kernel:updated': unknown; // full state — emitted on actual state changes
-  'kernel:heartbeat': { phase: string; uptime: number }; // lightweight periodic ping
-  'kernel:state:reset': { reason: string };
-  'kernel:bootstrap:phase': { bootstrapPhase: number; totalPhases: number; phase: string };
-  'system:runtime:ready': { timestamp: number } | void;
-  'system:runtime:failed': { error: string; phase?: string; failedServices?: string[] };
-  'system:shutdown': { reason?: string } | void;
-  'system:eventbus:backpressure': { event: string; depth: number; pending: number };
-  'system:data:clear': void;
-  'system:reload': { timestamp: number };
-  'system:command': unknown;
-};
+export type SystemEventMap = Pick<EventMap,
+  'system:navigate' | 'system:notification' | 'system:decision' |
+  'kernel:updated' | 'kernel:heartbeat' | 'kernel:state:reset' |
+  'kernel:bootstrap:phase' | 'system:runtime:ready' | 'system:runtime:failed' |
+  'system:shutdown' | 'system:eventbus:backpressure' | 'system:data:clear' |
+  'system:reload' | 'system:command' | 'kernel:load-failed' | 'kernel:persist-failed' |
+  'system:runtime:metrics'
+>;
 
 export interface NotificationPayload {
   message: string;

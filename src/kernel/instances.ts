@@ -221,9 +221,6 @@ export const agentVersionService = lazyService<AgentVersionService>('agentVersio
 import type { MetricsService } from './services/metrics-service';
 export const metricsService = lazyService<MetricsService>('metricsService');
 
-// ── Runtime Manager ──────────────────────────────────────────────
-export { runtime } from './runtime';
-
 import type { WorkforceFederation } from './services/workforce-federation';
 export const workforceFederation = lazyService<WorkforceFederation>('workforceFederation');
 

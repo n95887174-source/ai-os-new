@@ -1,11 +1,11 @@
-import type { TopologyType, DebatePhase } from '../debate-runtime';
-import type { ConclusionType, StanceResult } from '../debate-types';
+export type ConclusionType = 'consensus' | 'dominance' | 'stalemate' | 'partial_agreement' | 'inconclusive';
+export type StanceResult = 'pro_wins' | 'con_wins' | 'balanced' | 'no_clear_winner';
 
 export interface DebateSessionRecord {
   id: string;
   topic: string;
-  topologyType: TopologyType;
-  phase: DebatePhase;
+  topologyType: 'linear' | 'roundtable' | 'judge' | 'tree-of-thought' | 'red-blue';
+  phase: 'created' | 'queued' | 'initializing' | 'active' | 'deliberating' | 'consensus' | 'summarizing' | 'paused' | 'completed' | 'failed' | 'cancelled';
   round: number;
   totalTokens: number;
   totalCost: number;

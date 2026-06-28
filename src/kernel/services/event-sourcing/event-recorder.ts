@@ -1,14 +1,8 @@
 export type { Checkpoint } from './checkpoint-store';
 
-export interface RecordedEvent {
-  readonly sequence: number;
-  readonly event: string;
-  readonly data: unknown;
-  readonly timestamp: number;
-  readonly checksum: string;
-}
+import type { RecordedEvent, EventFilter } from './event-types';
 
-export type EventFilter = (event: RecordedEvent) => boolean;
+export type { RecordedEvent, EventFilter };
 
 export interface RecorderConfig {
   maxEvents: number;
@@ -26,7 +20,7 @@ import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
 import { ReplayEngine, type ReplayConfig } from './replay-engine';
 import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
-import type { KvRepository } from '../../dal';
+import type { KvRepository } from '../../dal/repository-types';
 
 const LOGGER = rootLogger.child('EventRecorder');
 

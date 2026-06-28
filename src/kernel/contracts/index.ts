@@ -56,9 +56,9 @@ export type { ConfigRegistry, RouterConfigSection, MonitoringConfigSection, Metr
 
 // ── Debate Runtime ─────────────────────────────────────────────────────
 export type {
-  TopologyType, TopologyNode, TopologyEdge, DebateTopology,
+  TopologyNode, TopologyEdge, DebateTopology,
   ITopologyService,
-  DebatePhase, AgentPhase, AgentStateEntry,
+  AgentStateEntry,
   IDebateSession, DebateSessionSnapshot,
   DebateBudgetLimits, PressureLevel, PressureAction,
   IDebateBudget, BudgetSnapshot,
@@ -66,11 +66,12 @@ export type {
   ReasoningStep, ReasoningChain, IDebateMemory, MemorySnapshot,
   AgentScore, IDebateEvaluator,
   OrchestratorEvent, IDebateOrchestrator,
-  TimelineEntry, IDebateTimeline,
+  IDebateTimeline,
   ParticipantConfig, IDebateEngine,
 } from './debate-runtime';
 
 export type {
+  TopologyType, DebatePhase, AgentPhase, TimelineEntry, IDebateQueryEngine,
   DebateRole, DebateSession, DebateSessionStrategy, DebateParticipant, DebateArgument, DebateConfig,
   DebateConstraint, ArgumentStrategy,
   DebateVerdict, VerdictKeyArgument, ConclusionType, StanceResult,

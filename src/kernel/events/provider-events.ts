@@ -1,52 +1,41 @@
+import { EVENT_REGISTRY, type EventMap } from './event-registry';
+
 export const ProviderEvents = {
-  KEYS_LOADED: 'key:loaded',
-  KEY_ADDED: 'key:added',
-  KEY_REMOVED: 'key:removed',
-  KEY_UPDATED: 'key:updated',
-  KEY_STATE_CHANGED: 'key:state:changed',
-  KEY_COMPROMISED: 'key:compromised',
-  KEY_HEALTH_CHECK_STARTED: 'key:health:check:started',
-  KEY_HEALTH_CHECK_COMPLETED: 'key:health:check:completed',
-  KEY_HEALTH_CHECK_FAILED: 'key:health:check:failed',
-  KEY_LATENCY_BURST: 'key:latency:burst',
-  KEY_QUOTA_EXCEEDED: 'key:quota:exceeded',
-  KEY_REPUTATION_THRESHOLD_CROSSED: 'key:reputation:threshold:crossed',
-  COMPROMISE_SIGNAL: 'key:compromise:signal',
-  GROUP_SYNC: 'key:group:sync',
-  CHECK_HEALTH: 'key:health:check',
-  CHECK_ALL_HEALTH: 'key:health:check:all',
-  KEY_PROBE_RESULT: 'key:probe:result',
-  PROVIDER_STATE_CHANGED: 'provider:state-changed',
-  PROVIDER_CIRCUIT_BREAKER_SYNCED: 'provider:circuit-breaker:synced',
-  PROVIDER_RATE_LIMIT_SYNCED: 'provider:rate-limit:synced',
-  PROVIDER_ERROR_SYNCED: 'provider:error:synced',
-  PROVIDER_STATE_DESYNC: 'provider:state:desync',
-  KEY_ALERT_RESOLVED: 'key:alert:resolved',
+  KEYS_LOADED: EVENT_REGISTRY.KEYS_LOADED.name,
+  KEY_ADDED: EVENT_REGISTRY.KEY_ADDED.name,
+  KEY_REMOVED: EVENT_REGISTRY.KEY_REMOVED.name,
+  KEY_UPDATED: EVENT_REGISTRY.KEY_UPDATED.name,
+  KEY_STATE_CHANGED: EVENT_REGISTRY.KEY_STATE_CHANGED.name,
+  KEY_COMPROMISED: EVENT_REGISTRY.KEY_COMPROMISED.name,
+  KEY_HEALTH_CHECK_STARTED: EVENT_REGISTRY.KEY_HEALTH_CHECK_STARTED.name,
+  KEY_HEALTH_CHECK_COMPLETED: EVENT_REGISTRY.KEY_HEALTH_CHECK_COMPLETED.name,
+  KEY_HEALTH_CHECK_FAILED: EVENT_REGISTRY.KEY_HEALTH_CHECK_FAILED.name,
+  KEY_LATENCY_BURST: EVENT_REGISTRY.KEY_LATENCY_BURST.name,
+  KEY_QUOTA_EXCEEDED: EVENT_REGISTRY.KEY_QUOTA_EXCEEDED.name,
+  KEY_REPUTATION_THRESHOLD_CROSSED: EVENT_REGISTRY.KEY_REPUTATION_THRESHOLD_CROSSED.name,
+  COMPROMISE_SIGNAL: EVENT_REGISTRY.COMPROMISE_SIGNAL.name,
+  GROUP_SYNC: EVENT_REGISTRY.GROUP_SYNC.name,
+  CHECK_HEALTH: EVENT_REGISTRY.CHECK_HEALTH.name,
+  CHECK_ALL_HEALTH: EVENT_REGISTRY.CHECK_ALL_HEALTH.name,
+  KEY_PROBE_RESULT: EVENT_REGISTRY.KEY_PROBE_RESULT.name,
+  PROVIDER_STATE_CHANGED: EVENT_REGISTRY.PROVIDER_STATE_CHANGED.name,
+  PROVIDER_CIRCUIT_BREAKER_SYNCED: EVENT_REGISTRY.PROVIDER_CIRCUIT_BREAKER_SYNCED.name,
+  PROVIDER_RATE_LIMIT_SYNCED: EVENT_REGISTRY.PROVIDER_RATE_LIMIT_SYNCED.name,
+  PROVIDER_ERROR_SYNCED: EVENT_REGISTRY.PROVIDER_ERROR_SYNCED.name,
+  PROVIDER_STATE_DESYNC: EVENT_REGISTRY.PROVIDER_STATE_DESYNC.name,
+  KEY_ALERT_RESOLVED: EVENT_REGISTRY.KEY_ALERT_RESOLVED.name,
 } as const;
 
-export type ProviderEventMap = {
-  'key:loaded': ApiKeyPayload[];
-  'key:added': ApiKeyPayload;
-  'key:removed': string;
-  'key:updated': ApiKeyPayload[];
-  'key:state:changed': { id: string; provider: string; state: string; previousState: string };
-  'key:compromised': { id: string; provider: string; source: string };
-  'key:health:check:started': string | void;
-  'key:health:check:completed': { id?: string; provider?: string; status?: string };
-  'key:health:check:failed': { id: string; provider: string; error: string };
-  'key:latency:burst': { id: string; provider: string; latency: number };
-  'key:quota:exceeded': QuotaExceededPayload;
-  'key:reputation:threshold:crossed': { id: string; provider: string; score: number };
-  'key:compromise:signal': { id?: string; fingerprint?: string; source?: string };
-  'key:group:sync': { passportAdded?: number; assigned?: number; reassigned?: number };
-  'key:health:check': string;
-  'key:health:check:all': void;
-  'key:probe:result': ProbeResultPayload;
-  'provider:circuit-breaker:synced': { provider: string; keyId: string; status: string; failureCount: number; lastFailure: number };
-  'provider:rate-limit:synced': { provider: string; keyId: string; remaining: number; resetAt: number };
-  'provider:error:synced': { provider: string; keyId: string; error: string; timestamp: number; statusCode?: number };
-  'provider:state:desync': { localHash: string; remoteHash: string; mismatches: number };
-};
+export type ProviderEventMap = Pick<EventMap,
+  'key:loaded' | 'key:added' | 'key:removed' | 'key:updated' |
+  'key:state:changed' | 'key:compromised' |
+  'key:health:check:started' | 'key:health:check:completed' | 'key:health:check:failed' |
+  'key:latency:burst' | 'key:quota:exceeded' | 'key:reputation:threshold:crossed' |
+  'key:compromise:signal' | 'key:group:sync' | 'key:health:check' | 'key:health:check:all' |
+  'key:probe:result' |
+  'provider:circuit-breaker:synced' | 'provider:rate-limit:synced' |
+  'provider:error:synced' | 'provider:state:desync'
+>;
 
 import type { KeyStatus } from '../contracts/key-state';
 

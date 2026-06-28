@@ -1,8 +1,7 @@
 import type { ITransaction } from './transaction';
+import type { TopologyType, DebatePhase, AgentPhase, TimelineEntry } from './debate-types';
 
 // ── Topology ────────────────────────────────────────────────────────────
-
-export type TopologyType = 'linear' | 'roundtable' | 'judge' | 'tree-of-thought' | 'red-blue';
 
 export interface TopologyNode {
   readonly id: string;
@@ -35,30 +34,6 @@ export interface ITopologyService {
 }
 
 // ── Session Lifecycle ───────────────────────────────────────────────────
-
-export type DebatePhase =
-  | 'created'
-  | 'queued'
-  | 'initializing'
-  | 'active'
-  | 'deliberating'
-  | 'consensus'
-  | 'summarizing'
-  | 'paused'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
-
-export type AgentPhase =
-  | 'idle'
-  | 'thinking'
-  | 'waiting'
-  | 'streaming'
-  | 'errored'
-  | 'rate-limited'
-  | 'fallback'
-  | 'timed-out'
-  | 'completed';
 
 export interface AgentStateEntry {
   readonly agentId: string;
@@ -279,14 +254,6 @@ export interface IDebateOrchestrator {
 
 // ── Timeline ────────────────────────────────────────────────────────────
 
-export interface TimelineEntry {
-  readonly id: string;
-  readonly sessionId: string;
-  readonly timestamp: number;
-  readonly type: string;
-  readonly payload: unknown;
-}
-
 export interface ReasoningTrace {
   readonly agentId: string;
   readonly round: number;
@@ -313,18 +280,6 @@ export interface ParticipantConfig {
   readonly modelId?: string;
   readonly provider?: string;
   readonly systemPrompt?: string;
-}
-
-export interface IDebateQueryEngine {
-  query(
-    session: { id: string; topic: string; arguments: ReadonlyArray<{ agentId: string; agentName: string; content: string; round: number }> },
-    criteria: {
-      agentId?: string;
-      round?: number;
-      type?: string;
-      confidenceMin?: number;
-    }
-  ): TimelineEntry[];
 }
 
 export interface IDebateEngine {

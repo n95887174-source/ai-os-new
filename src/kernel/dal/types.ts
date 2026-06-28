@@ -112,14 +112,9 @@ export interface WorkspaceRepository {
   deleteHandle(): Promise<void>;
 }
 
-/** Key-Value store — generic key-value persistence */
-export interface KvRepository {
-  get<T>(id: string): Promise<T | null>;
-  set<T>(id: string, value: T): Promise<void>;
-  delete(id: string): Promise<void>;
-  list(prefix?: string): Promise<Array<{ id: string; value: unknown }>>;
-  clear(): Promise<void>;
-}
+import type { KvRepository } from './repository-types';
+
+export type { KvRepository };
 
 // =============================================================================
 // DAL Interface — единая точка входа

@@ -1,28 +1,23 @@
+import { EVENT_REGISTRY, type EventMap } from './event-registry';
+
 export const ChatEvents = {
-  SEND: 'chat:send',
-  CANCEL: 'chat:cancel',
-  RESPONSE: 'chat:response',
-  STREAM_START: 'chat:stream:start',
-  STREAM_CHUNK: 'chat:stream:chunk',
-  STREAM_END: 'chat:stream:end',
-  STREAM_ERROR: 'chat:stream:error',
-  SELECT_MODEL: 'chat:model:select',
-  START_WITH_TARGET: 'chat:target:start',
-  SUMMARY_CREATED: 'chat:summary:created',
+  SEND: EVENT_REGISTRY.SEND_MESSAGE.name,
+  CANCEL: EVENT_REGISTRY.CANCEL_MESSAGE.name,
+  RESPONSE: EVENT_REGISTRY.MESSAGE_RESPONSE.name,
+  STREAM_START: EVENT_REGISTRY.STREAM_START.name,
+  STREAM_CHUNK: EVENT_REGISTRY.STREAM_CHUNK.name,
+  STREAM_END: EVENT_REGISTRY.STREAM_END.name,
+  STREAM_ERROR: EVENT_REGISTRY.STREAM_ERROR.name,
+  SELECT_MODEL: EVENT_REGISTRY.SELECT_MODEL.name,
+  START_WITH_TARGET: EVENT_REGISTRY.START_CHAT_WITH_TARGET.name,
+  SUMMARY_CREATED: EVENT_REGISTRY.CHAT_SUMMARY_CREATED.name,
 } as const;
 
-export type ChatEventMap = {
-  'chat:send': ChatSendPayload;
-  'chat:cancel': { requestId: string };
-  'chat:response': unknown;
-  'chat:stream:start': StreamLifecyclePayload;
-  'chat:stream:chunk': StreamChunkPayload;
-  'chat:stream:end': StreamEndPayload;
-  'chat:stream:error': StreamErrorPayload;
-  'chat:model:select': { provider: string; model: string };
-  'chat:target:start': { provider: string; model: string; keyId: string };
-  'chat:summary:created': { sessionId: string; messageCount: number; keyFactsCount: number };
-};
+export type ChatEventMap = Pick<EventMap,
+  'chat:send' | 'chat:cancel' | 'chat:response' |
+  'chat:stream:start' | 'chat:stream:chunk' | 'chat:stream:end' | 'chat:stream:error' |
+  'chat:model:select' | 'chat:target:start' | 'chat:summary:created'
+>;
 
 export interface ChatSendPayload {
   provider: string;

@@ -1,23 +1,5 @@
-﻿import type { RequestIntent, RequestLanguage } from '../contracts/provider';
+﻿import type { SemanticRouteRule } from '../types/routing-types';
 import type { RequestClassification } from './router-types';
-
-export interface SemanticRouteRule {
-  id: string;
-  label?: string;
-  condition: {
-    intents?: RequestIntent[];
-    languages?: RequestLanguage[];
-    complexities?: Array<'simple' | 'medium' | 'complex'>;
-    isCode?: boolean;
-    isLong?: boolean;
-    isMultimodal?: boolean;
-  };
-  target: {
-    provider: string;
-    model?: string;
-  };
-  priority: number;
-}
 
 export function matchSemanticRule(rules: SemanticRouteRule[], cls: RequestClassification): SemanticRouteRule | null {
   const sorted = [...rules].sort((a, b) => b.priority - a.priority);

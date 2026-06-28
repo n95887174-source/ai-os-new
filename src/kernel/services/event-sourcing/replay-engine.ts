@@ -1,4 +1,4 @@
-import type { RecordedEvent } from './event-recorder';
+import type { RecordedEvent } from './event-types';
 import type { Checkpoint } from './checkpoint-store';
 import { rootLogger } from '../logger-service';
 

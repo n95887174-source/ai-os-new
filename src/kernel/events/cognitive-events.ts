@@ -1,17 +1,16 @@
+import { EVENT_REGISTRY, type EventMap } from './event-registry';
+
 export const CognitiveEvents = {
-  TRACE_UPDATED: 'cognitive:trace:updated',
-  STEP_ACTIVE: 'cognitive:step:active',
-  STEP_COMPLETED: 'cognitive:step:completed',
-  DECISION_MADE: 'cognitive:decision:made',
-  REQUEST_INCOMING: 'request:incoming',
-  REQUEST_COMPLETED: 'request:completed',
+  TRACE_UPDATED: EVENT_REGISTRY.COGNITIVE_TRACE_UPDATED.name,
+  STEP_ACTIVE: EVENT_REGISTRY.COGNITIVE_STEP_ACTIVE.name,
+  STEP_COMPLETED: EVENT_REGISTRY.COGNITIVE_STEP_COMPLETED.name,
+  DECISION_MADE: EVENT_REGISTRY.COGNITIVE_DECISION_MADE.name,
+  REQUEST_INCOMING: EVENT_REGISTRY.REQUEST_INCOMING.name,
+  REQUEST_COMPLETED: EVENT_REGISTRY.REQUEST_COMPLETED.name,
 } as const;
 
-export type CognitiveEventMap = {
-  'cognitive:trace:updated': Array<{ id: string; startTime: number; endTime?: number; input: string; output?: string; status: string; steps: unknown[]; provider?: string; model?: string; totalTokens?: number; latency?: number; error?: string }>;
-  'cognitive:step:active': { traceId: string; nodeId: string; metadata?: Record<string, unknown> };
-  'cognitive:step:completed': { traceId: string; nodeId: string; status: 'done' | 'error'; duration: number; output: string; fullContent?: string; provider?: string; model?: string };
-  'cognitive:decision:made': { traceId: string; decision: string; confidence: number };
-  'request:incoming': { requestId: string; messages: unknown[] };
-  'request:completed': { final_data: { traceId: string; output: string } };
-};
+export type CognitiveEventMap = Pick<EventMap,
+  'cognitive:trace:updated' | 'cognitive:step:active' |
+  'cognitive:step:completed' | 'cognitive:decision:made' |
+  'request:incoming' | 'request:completed'
+>;

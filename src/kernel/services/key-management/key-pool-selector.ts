@@ -1,6 +1,6 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { PoolStrategy, IPoolSelectorService } from '../../contracts/pool-selector';
-import type { FreeTierLimit } from './key-service';
+import type { FreeTierLimit } from './key-types';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
 

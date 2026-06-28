@@ -21,7 +21,7 @@
     "sync-server": "node server/sync-server.mjs",
     "dev:shared": "node server/run-dev.mjs",
     "preview": "vite preview",
-    "check:circular-kernel": "madge --circular --extensions ts --ts-config tsconfig.json src/kernel/ --exit-code 1",
+    "check:circular-kernel": "madge --circular --extensions ts --ts-config tsconfig.json src/kernel/ 2>&1 | node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{console.log(d);if(/Found \\\\d+ circular/.test(d))process.exit(1)})\"",
     "prepare": "husky"
   },
   "lint-staged": {

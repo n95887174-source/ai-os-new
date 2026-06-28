@@ -22,10 +22,7 @@ import type { KeyStore } from '../../contracts/storage/key-store';
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
 
-export interface FreeTierLimit {
-  requestsPerDay: number;
-  tokensPerDay: number;
-}
+import type { FreeTierLimit } from './key-types';
 
 const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
   ...CONFIG.keys.freeTierLimits,

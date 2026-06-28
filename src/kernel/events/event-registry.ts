@@ -1,0 +1,447 @@
+import { z } from 'zod';
+import {
+  ApiKeySchema, SystemStateSchema, ChatResponseSchema, MemoryEntrySchema,
+  CognitiveSkillSchema, RoleSchema, ToolDefinitionSchema,
+  MCPServerConfigSchema, BudgetStateSnapshotSchema, PolicyViolationSchema,
+  CognitiveDecisionSchema, OptimizationSuggestionSchema, AdapterMessageSchema,
+} from '../types/schema-types';
+
+function event<N extends string, S extends z.ZodType>(name: N, schema: S) {
+  return { name, schema } as const;
+}
+
+/**
+ * EVENT_REGISTRY — single source of truth for all events.
+ * Each entry defines the event's string name and its Zod schema.
+ * DO NOT add events directly to event-names.ts, event-map.ts, or EventValidators;
+ * add them here, and all 3 derived exports will include them automatically.
+ */
+
+// ── Provider / Key Events ──────────────────────────────────────────────────
+export const EVENT_REGISTRY = {
+  KEYS_LOADED: event('key:loaded', z.array(ApiKeySchema)),
+  KEY_ADDED: event('key:added', ApiKeySchema),
+  KEY_REMOVED: event('key:removed', z.string()),
+  KEY_UPDATED: event('key:updated', z.array(ApiKeySchema)),
+  KEY_STATE_CHANGED: event('key:state:changed', z.object({ id: z.string(), provider: z.string(), state: z.string(), previousState: z.string() })),
+  KEY_COMPROMISED: event('key:compromised', z.object({ id: z.string(), provider: z.string(), source: z.string() })),
+  COMPROMISE_SIGNAL: event('key:compromise:signal', z.object({ id: z.string().optional(), fingerprint: z.string().optional(), source: z.string().optional() })),
+  GROUP_SYNC: event('key:group:sync', z.object({ passportAdded: z.number().optional(), assigned: z.number().optional(), reassigned: z.number().optional() })),
+  KEY_HEALTH_CHECK_STARTED: event('key:health:check:started', z.union([z.string(), z.void(), z.undefined()]).optional()),
+  KEY_HEALTH_CHECK_COMPLETED: event('key:health:check:completed', z.object({ id: z.string().optional(), provider: z.string().optional(), status: z.string().optional() }).optional()),
+  KEY_HEALTH_CHECK_FAILED: event('key:health:check:failed', z.object({ id: z.string(), provider: z.string(), error: z.string() })),
+  KEY_LATENCY_BURST: event('key:latency:burst', z.object({ id: z.string(), provider: z.string(), latency: z.number() })),
+  KEY_QUOTA_EXCEEDED: event('key:quota:exceeded', z.object({ id: z.string(), provider: z.string(), quotaType: z.enum(['tokens', 'requests']), limit: z.number().optional(), current: z.number().optional(), resetAt: z.number().optional() })),
+  KEY_REPUTATION_THRESHOLD_CROSSED: event('key:reputation:threshold:crossed', z.object({ id: z.string(), provider: z.string(), score: z.number() })),
+  CHECK_HEALTH: event('key:health:check', z.string()),
+  CHECK_ALL_HEALTH: event('key:health:check:all', z.void().or(z.undefined())),
+  KEY_PROBE_RESULT: event('key:probe:result', z.object({
+    status: z.string(), provider: z.string(), keyId: z.string(), keyLabel: z.string(),
+    model: z.string(), latency: z.number(), quotaRemaining: z.number().optional(),
+    quotaLimit: z.number().optional(), rateLimited: z.boolean(), circuitOpen: z.boolean(),
+    error: z.string().optional(), statusCode: z.number().optional(), timestamp: z.number(),
+  })),
+  PROVIDER_STATE_CHANGED: event('provider:state-changed', z.object({ provider: z.string(), status: z.string() })),
+  PROVIDER_CIRCUIT_BREAKER_SYNCED: event('provider:circuit-breaker:synced', z.object({ provider: z.string(), keyId: z.string(), status: z.string(), failureCount: z.number(), lastFailure: z.number() })),
+  PROVIDER_RATE_LIMIT_SYNCED: event('provider:rate-limit:synced', z.object({ provider: z.string(), keyId: z.string(), remaining: z.number(), resetAt: z.number() })),
+  PROVIDER_ERROR_SYNCED: event('provider:error:synced', z.object({ provider: z.string(), keyId: z.string(), error: z.string(), timestamp: z.number(), statusCode: z.number().optional() })),
+  PROVIDER_STATE_DESYNC: event('provider:state:desync', z.object({ localHash: z.string(), remoteHash: z.string(), mismatches: z.number() })),
+  KEY_ALERT_RESOLVED: event('key:alert:resolved', z.object({ alertId: z.string(), keyId: z.string(), type: z.string(), severity: z.string(), resolvedAt: z.number() })),
+
+  // ── Session / Binding ──────────────────────────────────────────────────
+  SESSION_BINDING_EXPIRED: event('session:binding:expired', z.object({
+    sessionId: z.string(), keyId: z.string(), provider: z.string(),
+    participantId: z.string().optional(), boundAt: z.number(), evictedAt: z.number(), reason: z.string(),
+  })),
+
+  // ── Chat Events ────────────────────────────────────────────────────────
+  SEND_MESSAGE: event('chat:send', z.object({
+    provider: z.string(), model: z.string(), messages: z.array(z.unknown()),
+    requestId: z.string().optional(), strategy: z.string().optional(),
+    keyId: z.string().optional(), options: z.unknown().optional(),
+  })),
+  CANCEL_MESSAGE: event('chat:cancel', z.object({ requestId: z.string() })),
+  MESSAGE_RESPONSE: event('chat:response', ChatResponseSchema),
+  SELECT_MODEL: event('chat:model:select', z.object({ provider: z.string(), model: z.string() })),
+  START_CHAT_WITH_TARGET: event('chat:target:start', z.object({ provider: z.string(), model: z.string(), keyId: z.string() })),
+  STREAM_START: event('chat:stream:start', z.object({ requestId: z.string(), provider: z.string(), model: z.string(), keyId: z.string().optional() })),
+  STREAM_CHUNK: event('chat:stream:chunk', z.object({ requestId: z.string(), provider: z.string(), chunk: z.string(), keyId: z.string().optional() })),
+  STREAM_END: event('chat:stream:end', z.object({
+    requestId: z.string(), fullContent: z.string(), latency: z.number(), tokens: z.number().optional(),
+    provider: z.string().optional(), model: z.string().optional(), keyId: z.string().optional(),
+    ttft: z.number().optional(), tps: z.number().optional(), status: z.enum(['timeout', 'done', 'cancelled']).optional(),
+  })),
+  STREAM_COMPLETED: event('chat:stream:end', z.object({
+    requestId: z.string(), fullContent: z.string(), latency: z.number(), tokens: z.number().optional(),
+    provider: z.string().optional(), model: z.string().optional(), keyId: z.string().optional(),
+    ttft: z.number().optional(), tps: z.number().optional(), status: z.enum(['timeout', 'done', 'cancelled']).optional(),
+  })),
+  STREAM_RECONNECTING: event('chat:stream:reconnecting', z.object({ streamId: z.string(), retry: z.number(), maxRetries: z.number().optional(), lastIndex: z.number() })),
+  STREAM_PROVIDER_SWITCH: event('chat:stream:provider-switch', z.object({ streamId: z.string(), fromProvider: z.string(), toProvider: z.string(), prependTag: z.boolean().optional() })),
+  STREAM_ERROR: event('chat:stream:error', z.object({ requestId: z.string(), provider: z.string(), error: z.string(), keyId: z.string().optional() })),
+  CHAT_SUMMARY_CREATED: event('chat:summary:created', z.object({ sessionId: z.string(), messageCount: z.number(), keyFactsCount: z.number() })),
+
+  // ── System Events ──────────────────────────────────────────────────────
+  NAVIGATE: event('system:navigate', z.string()),
+  NOTIFICATION: event('system:notification', z.object({
+    message: z.string(), type: z.enum(['success', 'error', 'info', 'warning']),
+    source: z.string().optional(), savings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional(),
+  })),
+  DECISION: event('system:decision', z.object({
+    requestId: z.string(), strategy: z.string(),
+    classification: z.object({
+      complexity: z.enum(['simple', 'medium', 'complex']), isCode: z.boolean(), isLong: z.boolean(), isMultimodal: z.boolean(),
+    }).optional(),
+    weights: z.unknown(), selected: z.string(), secondBest: z.string().nullable(),
+    scores: z.array(z.object({
+      p: z.string(), s: z.string(),
+      c: z.object({
+        raw: z.number(), stabilityBonus: z.number(), reputationBonus: z.number(),
+        explorationBonus: z.number(), keyReputationBonus: z.number(), affinityBonus: z.number(),
+        priorityBonus: z.number(), costPenalty: z.number(), latencyPenalty: z.number(), budgetPenalty: z.number(),
+      }).optional(),
+    })),
+    skipped: z.array(z.object({
+      provider: z.string(), keyLabel: z.string(), keyId: z.string().optional(),
+      reason: z.string(), stage: z.enum(['status', 'policy', 'quota', 'score', 'budget', 'unavailable', 'circuit', 'ratelimit', 'backoff', 'normalization', 'exclusion']),
+    })).optional(),
+    timestamp: z.number(), profile: z.string().optional(), isExperiment: z.boolean().optional(),
+  })),
+  KERNEL_UPDATED: event('kernel:updated', SystemStateSchema),
+  KERNEL_HEARTBEAT: event('kernel:heartbeat', z.object({ phase: z.string(), uptime: z.number() })),
+  KERNEL_STATE_RESET: event('kernel:state:reset', z.object({ reason: z.string() })),
+  BOOTSTRAP_PHASE: event('kernel:bootstrap:phase', z.object({ bootstrapPhase: z.number(), totalPhases: z.number(), phase: z.string() })),
+  RUNTIME_READY: event('system:runtime:ready', z.object({ timestamp: z.number() }).optional()),
+  RUNTIME_FAILED: event('system:runtime:failed', z.object({ error: z.string(), phase: z.string().optional(), failedServices: z.array(z.string()).optional() })),
+  SHUTDOWN: event('system:shutdown', z.object({ reason: z.string().optional() }).optional()),
+  CLEAR_DATA: event('system:data:clear', z.void().or(z.undefined())),
+  EVENTBUS_BACKPRESSURE: event('system:eventbus:backpressure', z.object({ event: z.string(), depth: z.number(), pending: z.number() })),
+  RELOAD: event('system:reload', z.object({ timestamp: z.number() })),
+  COMMAND: event('system:command', z.unknown()),
+  KERNEL_LOAD_FAILED: event('kernel:load-failed', z.object({ error: z.string() })),
+  KERNEL_PERSIST_FAILED: event('kernel:persist-failed', z.object({ error: z.string() })),
+  SYSTEM_RUNTIME_METRICS: event('system:runtime:metrics', z.record(z.string(), z.unknown())),
+
+  // ── Provider Runtime ──────────────────────────────────────────────────
+  PROVIDER_RUNTIME_STATE: event('provider-runtime:state', z.object({
+    providers: z.array(z.unknown()), updatedAt: z.number(),
+    totalActive: z.number(), totalDegraded: z.number(), totalOffline: z.number(), avgSuccessRate: z.number(),
+  })),
+  PROVIDER_RUNTIME_BUDGET: event('provider-runtime:budget', BudgetStateSnapshotSchema),
+
+  // ── Debate Runtime Events ──────────────────────────────────────────────
+  DEBATE_SESSION_CREATED: event('debate-runtime:session:created', z.object({ sessionId: z.string(), topic: z.string(), topologyType: z.string() })),
+  DEBATE_SESSION_STARTED: event('debate-runtime:session:started', z.object({ sessionId: z.string() })),
+  DEBATE_SESSION_PAUSED: event('debate-runtime:session:paused', z.object({ sessionId: z.string() })),
+  DEBATE_SESSION_RESUMED: event('debate-runtime:session:resumed', z.object({ sessionId: z.string() })),
+  DEBATE_SESSION_CANCELLED: event('debate-runtime:session:cancelled', z.object({ sessionId: z.string() })),
+  DEBATE_SESSION_COMPLETED: event('debate-runtime:session:completed', z.object({ sessionId: z.string(), error: z.string().optional() })),
+  DEBATE_SESSION_FAILED: event('debate-runtime:session:failed', z.object({ sessionId: z.string(), error: z.string() })),
+  DEBATE_PHASE_CHANGED: event('debate-runtime:phase:changed', z.object({ sessionId: z.string(), from: z.string(), to: z.string() })),
+  DEBATE_AGENT_PHASE_CHANGED: event('debate-runtime:agent:phase:changed', z.object({ sessionId: z.string(), agentId: z.string(), from: z.string(), to: z.string() })),
+  DEBATE_ROUND_STARTED: event('debate-runtime:round:started', z.object({ sessionId: z.string(), round: z.number(), nodes: z.array(z.string()) })),
+  DEBATE_ROUND_ENDED: event('debate-runtime:round:ended', z.object({ sessionId: z.string(), round: z.number() })),
+  DEBATE_ROUND_EARLY_EXIT: event('debate-runtime:round:early-exit', z.object({ sessionId: z.string(), confidence: z.number(), round: z.number() })),
+  DEBATE_AGENT_THINKING: event('debate-runtime:agent:thinking', z.object({ sessionId: z.string(), agentId: z.string() })),
+  DEBATE_AGENT_CHUNK: event('debate-runtime:agent:chunk', z.object({ sessionId: z.string(), agentId: z.string(), chunk: z.string() })),
+  DEBATE_AGENT_RESPONDED: event('debate-runtime:agent:responded', z.object({ sessionId: z.string(), agentId: z.string(), content: z.string() })),
+  DEBATE_AGENT_ERROR: event('debate-runtime:agent:error', z.object({ sessionId: z.string(), agentId: z.string(), error: z.string() })),
+  DEBATE_AGENT_FALLBACK: event('debate-runtime:agent:fallback', z.object({ sessionId: z.string(), agentId: z.string(), fromProvider: z.string(), toProvider: z.string() })),
+  DEBATE_AGENT_TIMEOUT: event('debate-runtime:agent:timeout', z.object({ sessionId: z.string(), agentId: z.string(), timeoutMs: z.number() })),
+  DEBATE_BUDGET_UPDATED: event('debate-runtime:budget:updated', z.object({ sessionId: z.string(), pressure: z.string(), used: z.number(), limit: z.number() })),
+  DEBATE_BUDGET_EXCEEDED: event('debate-runtime:budget:exceeded', z.object({ sessionId: z.string(), reason: z.string(), limit: z.number(), used: z.number() })),
+  DEBATE_BUDGET_PRESSURE_CHANGED: event('debate-runtime:budget:pressure', z.object({ sessionId: z.string(), level: z.string(), action: z.unknown() })),
+  DEBATE_CONSENSUS_REACHED: event('debate-runtime:consensus:reached', z.object({ sessionId: z.string(), confidence: z.number(), agreements: z.number(), conflicts: z.number() })),
+  DEBATE_CONFLICT_DETECTED: event('debate-runtime:consensus:conflict', z.object({ sessionId: z.string(), claimA: z.string(), claimB: z.string() })),
+  DEBATE_CONFIDENCE_UPDATED: event('debate-runtime:consensus:confidence', z.object({ sessionId: z.string(), confidence: z.number() })),
+  DEBATE_CLAIM_RECORDED: event('debate-runtime:memory:claim', z.object({ sessionId: z.string(), agentId: z.string(), claim: z.string() })),
+  DEBATE_CHAIN_UPDATED: event('debate-runtime:memory:chain', z.object({ sessionId: z.string(), agentId: z.string(), steps: z.number() })),
+
+  // ── Observability Events ──────────────────────────────────────────────
+  TIMELINE_EVENT_ADDED: event('observability:timeline:event:added', z.object({ eventId: z.string(), type: z.string(), category: z.string(), timestamp: z.number(), title: z.string() })),
+  TIMELINE_CLEARED: event('observability:timeline:cleared', z.object({ count: z.number(), timestamp: z.number() })),
+  METRICS_SNAPSHOT: event('observability:metrics:snapshot', z.object({ timestamp: z.number(), totalRequests: z.number(), totalTokens: z.number(), estimatedCost: z.number(), avgLatency: z.number(), successRate: z.number() })),
+  METRICS_ALERT: event('observability:metrics:alert', z.object({ id: z.string(), metric: z.string(), value: z.number(), severity: z.enum(['warning', 'critical']), timestamp: z.number() })),
+  METRICS_ALERT_RESOLVED: event('observability:metrics:alert:resolved', z.object({ id: z.string(), timestamp: z.number() })),
+  METRICS_ALERT_FIRED: event('metrics:alert-fired', z.object({ type: z.string(), title: z.string(), message: z.string(), timestamp: z.number() })),
+  TRACE_CREATED: event('observability:trace:created', z.object({ traceId: z.string(), timestamp: z.number() })),
+  TRACE_UPDATED: event('observability:trace:updated', z.object({ traceId: z.string(), status: z.string(), timestamp: z.number() })),
+  TRACE_COMPLETED: event('observability:trace:completed', z.object({ traceId: z.string(), duration: z.number(), status: z.string(), timestamp: z.number() })),
+  SYSTEM_HEALTH_CHANGED: event('observability:health:changed', z.object({ status: z.string(), score: z.number(), timestamp: z.number() })),
+  ERROR_BOUNDARY_CAUGHT: event('observability:error-boundary:caught', z.object({ name: z.string().optional(), message: z.string(), componentStack: z.string().optional(), stack: z.string().optional(), timestamp: z.number() })),
+
+  // ── Workspace Events ──────────────────────────────────────────────────
+  WORKSPACE_ATTACHED: event('workspace:attached', z.object({ name: z.string(), fileCount: z.number() })),
+  WORKSPACE_DETACHED: event('workspace:detached', z.object({}).optional()),
+  WORKSPACE_FILE_READ: event('workspace:file:read', z.object({ path: z.string() })),
+
+  // ── Cognitive Events ──────────────────────────────────────────────────
+  COGNITIVE_TRACE_UPDATED: event('cognitive:trace:updated', z.array(z.object({
+    id: z.string(), startTime: z.number(), endTime: z.number().optional(),
+    input: z.string(), output: z.string().optional(), status: z.string(),
+    steps: z.array(z.unknown()), provider: z.string().optional(), model: z.string().optional(),
+    totalTokens: z.number().optional(), latency: z.number().optional(), error: z.string().optional(),
+  }))),
+  COGNITIVE_STEP_ACTIVE: event('cognitive:step:active', z.object({ nodeId: z.string(), traceId: z.string(), metadata: z.record(z.string(), z.unknown()).optional() })),
+  COGNITIVE_STEP_COMPLETED: event('cognitive:step:completed', z.object({ nodeId: z.string(), traceId: z.string(), status: z.enum(['done', 'error']), duration: z.number(), output: z.string(), fullContent: z.string().optional(), provider: z.string().optional(), model: z.string().optional() })),
+  COGNITIVE_DECISION_MADE: event('cognitive:decision:made', CognitiveDecisionSchema),
+  REQUEST_INCOMING: event('request:incoming', z.object({ requestId: z.string(), messages: z.array(AdapterMessageSchema) })),
+  REQUEST_COMPLETED: event('request:completed', z.object({ final_data: z.object({ traceId: z.string(), output: z.string() }) })),
+
+  // ── Domain Events ─────────────────────────────────────────────────────
+  DEBATE_UPDATED: event('debate:updated', z.unknown()),
+  DEBATE_STARTED: event('debate:started', z.unknown()),
+  DEBATE_ARGUMENT: event('debate:argument', z.object({ sessionId: z.string(), argument: z.unknown() })),
+  DEBATE_CONSENSUS: event('debate:consensus', z.object({ sessionId: z.string(), topic: z.string(), consensus: z.string(), convergenceScore: z.number(), synthesis: z.object({ consensus: z.string(), coreDisagreement: z.string(), resolvedPoints: z.array(z.string()), unresolvedPoints: z.array(z.string()), phase: z.string() }).optional() })),
+  DEBATE_ENDED: event('debate:ended', z.object({ sessionId: z.string(), topic: z.string(), rounds: z.number(), durationMs: z.number(), consensus: z.string().optional() })),
+  DEBATE_FACT_CHECKED: event('debate:fact:checked', z.object({ argumentId: z.string(), factCheck: z.unknown() })),
+  DEBATE_VERDICT_GENERATED: event('debate:verdict:generated', z.object({ sessionId: z.string(), verdict: z.unknown() })),
+  DEBATE_SESSION_CONFLICT: event('debate:session:conflict', z.object({ sessionId: z.string(), currentVersion: z.number(), attemptedVersion: z.number(), tabId: z.string().optional() })),
+  MEMORY_UPDATED: event('memory:updated', z.array(MemoryEntrySchema)),
+  TOOLS_UPDATED: event('tools:updated', z.array(ToolDefinitionSchema)),
+  TOOL_EXECUTION_START: event('tool:execution:start', z.object({ toolId: z.string(), input: z.unknown() })),
+  TOOL_EXECUTION_SUCCESS: event('tool:execution:success', z.object({ toolId: z.string(), output: z.unknown() })),
+  TOOL_EXECUTION_ERROR: event('tool:execution:error', z.object({ toolId: z.string(), error: z.string() })),
+  ROLES_UPDATED: event('roles:updated', z.array(RoleSchema)),
+  ROLE_ASSIGNED: event('role:assigned', z.object({ roleId: z.string(), agentId: z.string() })),
+  ROLE_UNASSIGNED: event('role:unassigned', z.object({ roleId: z.string(), agentId: z.string() })),
+  MCP_UPDATED: event('mcp:updated', z.array(MCPServerConfigSchema)),
+  SETTINGS_UPDATED: event('settings:updated', z.object({ settings: z.record(z.string(), z.unknown()), changes: z.record(z.string(), z.unknown()) })),
+  SETTINGS_LATENCY_THRESHOLD: event('settings:latency-threshold', z.object({ keyId: z.string().optional(), threshold: z.number().optional() }).optional()),
+  POLICY_VIOLATION: event('policy:violation', PolicyViolationSchema),
+  SKILLS_UPDATED: event('skills:updated', z.array(CognitiveSkillSchema)),
+  PRICING_UPDATED: event('pricing:updated', z.unknown()),
+  BUDGET_ALERT: event('budget:alert', z.union([
+    z.object({ type: z.enum(['global', 'provider', 'agent']), level: z.number(), entity: z.string(), current: z.number(), limit: z.number(), message: z.string(), timestamp: z.number() }),
+    z.object({ type: z.literal('spend_updated'), summary: z.unknown() }),
+  ])),
+  KEYSTATE_UPDATED: event('keystate:updated', z.object({ id: z.string(), state: z.record(z.string(), z.unknown()) })),
+  KEYSTATE_REMOVED: event('keystate:removed', z.object({ id: z.string() })),
+  SNAPSHOT_CAPTURED: event('snapshot:captured', z.object({ id: z.string(), traceId: z.string(), stepId: z.string(), timestamp: z.number(), label: z.string().optional(), tags: z.array(z.string()).optional(), runtime: z.unknown(), metadata: z.record(z.string(), z.unknown()).optional() })),
+  SNAPSHOT_RESTORED: event('snapshot:restored', z.object({ snapshotId: z.string(), timestamp: z.number() })),
+  AGENT_CONFIG_UPDATED: event('agent:config:updated', z.object({ id: z.string(), config: z.unknown() })),
+  AGENT_LIFECYCLE_CHANGE: event('agent:lifecycle:change', z.object({ id: z.string(), from: z.enum(['initializing', 'ready', 'busy', 'idle', 'paused', 'degraded', 'terminated']), to: z.enum(['initializing', 'ready', 'busy', 'idle', 'paused', 'degraded', 'terminated']) })),
+  AGENT_HEALTH_CHANGE: event('agent:health:change', z.object({ id: z.string(), from: z.enum(['healthy', 'degraded', 'unhealthy', 'unknown']), to: z.enum(['healthy', 'degraded', 'unhealthy', 'unknown']), errorRate: z.number(), consecutiveErrors: z.number() })),
+  AGENT_RESTARTED: event('agent:restarted', z.object({ id: z.string() })),
+  AGENT_RATE_LIMITED: event('agent:rate:limited', z.object({ nodeId: z.string(), label: z.string(), reason: z.string(), provider: z.string().optional(), retryAfterMs: z.number().optional() })),
+  AGENT_BLACKBOARD_UPDATED: event('agent:blackboard:updated', z.object({ agentId: z.string(), key: z.string(), value: z.unknown() })),
+  AGENT_HANDOFF_INITIATED: event('agent:handoff:initiated', z.object({ id: z.string(), fromAgent: z.string(), toAgent: z.string(), description: z.string().optional(), priority: z.string().optional() })),
+  ROUTER_SIGNAL: event('router:signal', z.object({ provider: z.string(), success: z.boolean(), wasRaceWinner: z.boolean(), wasFallback: z.boolean(), ttft: z.number().optional() })),
+  ADVISOR_SUGGESTION: event('advisor:suggestion', OptimizationSuggestionSchema),
+  ADVISOR_SUGGESTION_EXECUTED: event('advisor:suggestion:executed', z.object({ id: z.string(), estimatedSavings: z.object({ latency: z.number().optional(), cost: z.number().optional() }).optional() })),
+  ADVISOR_SUGGESTION_DISMISSED: event('advisor:suggestion:dismissed', z.object({ id: z.string() })),
+  ADVISOR_SUGGESTION_EFFECTIVENESS: event('advisor:suggestion:effectiveness', z.object({ improved: z.boolean(), measuredAt: z.number(), metricBefore: z.number(), metricAfter: z.number() })),
+  DIAGNOSTIC_COMPLETE: event('diagnostic:complete', z.object({ id: z.string(), scope: z.string(), health: z.string(), score: z.number(), issueCount: z.number(), timestamp: z.number() })),
+  SYSTEM_TOPOLOGY_MOUNTED: event('system:topology:mounted', z.object({ topologyId: z.string() })),
+  SYSTEM_NODE_SPAWN: event('system:node:spawn', z.object({ nodeId: z.string(), type: z.string() })),
+  SYSTEM_NODE_REMOVED: event('system:node:removed', z.object({ id: z.string() })),
+  VIRTUAL_KEY_CREATED: event('virtual:key:created', z.object({ virtualKey: z.unknown() })),
+  VIRTUAL_KEY_RESOLVED: event('virtual:key:resolved', z.object({ virtualKeyId: z.string() })),
+  VIRTUAL_KEY_REVOKED: event('virtual:key:revoked', z.object({ virtualKeyId: z.string() })),
+  ELO_RATING_UPDATED: event('elo:rating:updated', z.object({ agentId: z.string(), newRating: z.number(), change: z.number() })),
+  CACHE_INVALIDATED: event('cache:invalidated', z.object({ reason: z.string(), section: z.string().optional() })),
+  SESSION_DELETED: event('session:deleted', z.object({ id: z.string(), type: z.string() })),
+  DB_ROW_INSERTED: event('db:row-inserted', z.object({ table: z.string(), id: z.union([z.string(), z.number()]) })),
+
+  // ── Persona Events ────────────────────────────────────────────────────
+  PERSONA_CHANGED: event('persona:changed', z.unknown()),
+  PERSONA_TONE_CHANGED: event('persona:tone:changed', z.unknown()),
+  PERSONA_CREATED: event('persona:created', z.unknown()),
+  PERSONA_UPDATED: event('persona:updated', z.unknown()),
+  PERSONA_DELETED: event('persona:deleted', z.unknown()),
+
+  // ── Achievement / Agent Delegation ────────────────────────────────────
+  ACHIEVEMENT_UNLOCKED: event('achievement:unlocked', z.unknown()),
+  AGENT_DELEGATION_CANCELLED: event('agent:delegation:cancelled', z.unknown()),
+  AGENT_DELEGATION_COMPLETED: event('agent:delegation:completed', z.unknown()),
+  AGENT_DELEGATION_CREATED: event('agent:delegation:created', z.unknown()),
+  AGENT_DELEGATION_FAILED: event('agent:delegation:failed', z.unknown()),
+  AGENT_DELEGATION_STARTED: event('agent:delegation:started', z.unknown()),
+  AGENT_MEMORY_STORED: event('agent:memory:stored', z.unknown()),
+  AGENT_TRIGGER_CREATED: event('agent:trigger:created', z.unknown()),
+  AGENT_TRIGGER_FIRED: event('agent:trigger:fired', z.unknown()),
+  AGENT_WIZARD_CONFIG_GENERATED: event('agent:wizard:config-generated', z.unknown()),
+  AGENT_TASK_COMPLETED: event('agent:task:completed', z.unknown()),
+  AGENT_JOURNAL_ADDED: event('agent:journal:added', z.unknown()),
+  AGENT_JOURNAL_REMOVED: event('agent:journal:removed', z.unknown()),
+  AGENT_JOURNAL_CLEARED: event('agent:journal:cleared', z.unknown()),
+
+  // ── Aquarium / Arch Review ────────────────────────────────────────────
+  AQUARIUM_SCREENSHOT_CAPTURED: event('aquarium:screenshot:captured', z.unknown()),
+  ARCH_REVIEW_DIFF_CREATED: event('arch-review:diff:created', z.unknown()),
+  ARCH_REVIEW_SNAPSHOT_CREATED: event('arch-review:snapshot:created', z.unknown()),
+
+  // ── Chat Lifecycle ────────────────────────────────────────────────────
+  CHAT_FORKED: event('chat:forked', z.unknown()),
+  CHAT_RESTORED_FROM_SNAPSHOT: event('chat:restored-from-snapshot', z.unknown()),
+  CHAT_REWOUND: event('chat:rewound', z.unknown()),
+  CHAT_UNDO_REWIND: event('chat:undo-rewind', z.unknown()),
+  CHAT_BOOKMARK_ADDED: event('chat:bookmark:added', z.unknown()),
+  CHAT_BOOKMARK_REMOVED: event('chat:bookmark:removed', z.unknown()),
+  CHAT_BOOKMARK_CLEARED: event('chat:bookmark:cleared', z.unknown()),
+  CHAT_BOOKMARK_REQUEST: event('chat:bookmark:request', z.unknown()),
+  CHAT_BOOKMARK_SAVE: event('chat:bookmark:save', z.unknown()),
+  CHAT_TEMPLATE_CREATED: event('chat:template:created', z.unknown()),
+  CHAT_TEMPLATE_DELETED: event('chat:template:deleted', z.unknown()),
+  CHAT_TEMPLATE_UPDATED: event('chat:template:updated', z.unknown()),
+  CITATIONS_ADDED: event('citations:added', z.unknown()),
+
+  // ── Collab Research ───────────────────────────────────────────────────
+  COLLAB_RESEARCH_CONTRIBUTION_ADDED: event('collab-research:contribution:added', z.unknown()),
+  COLLAB_RESEARCH_FINDING_ADDED: event('collab-research:finding:added', z.object({ sessionId: z.string(), findingId: z.string() })),
+  COLLAB_RESEARCH_SESSION_COMPLETED: event('collab-research:session:completed', z.unknown()),
+  COLLAB_RESEARCH_SESSION_CREATED: event('collab-research:session:created', z.unknown()),
+  COLLAB_RESEARCH_USER_JOINED: event('collab-research:user:joined', z.object({ sessionId: z.string(), userId: z.string() })),
+  COLLAB_RESEARCH_USER_LEFT: event('collab-research:user:left', z.object({ sessionId: z.string(), userId: z.string() })),
+
+  // ── Experiment / Hypothesis ───────────────────────────────────────────
+  EXPERIMENT_CREATED_FROM_HYPOTHESIS: event('experiment:created-from-hypothesis', z.unknown()),
+  FINDINGS_AGGREGATED: event('findings:aggregated', z.unknown()),
+  HYPOTHESIS_EXPERIMENT_RESULT: event('hypothesis:experiment:result', z.unknown()),
+  HYPOTHESIS_VALIDATED: event('hypothesis:validated', z.unknown()),
+  HYPOTHESES_UPDATED: event('hypotheses:updated', z.unknown()),
+
+  // ── Key Rotation ──────────────────────────────────────────────────────
+  KEY_ROTATION_NOTIFICATION: event('key:rotation:notification', z.object({ keyId: z.string(), message: z.string(), provider: z.string().optional(), interval: z.number().optional(), notifyBefore: z.number().optional(), nextRotation: z.number().optional() })),
+  KEY_ROTATION_POLICY_CREATED: event('key:rotation-policy:created', z.unknown()),
+  KEY_ROTATION_POLICY_DELETED: event('key:rotation-policy:deleted', z.object({ keyId: z.string() })),
+  KEY_ROTATION_POLICY_UPDATED: event('key:rotation-policy:updated', z.unknown()),
+  KEY_ROTATION_TRIGGERED: event('key:rotation:triggered', z.object({ keyId: z.string(), provider: z.string().optional(), trigger: z.string().optional(), reason: z.string().optional(), timestamp: z.number().optional(), autoRotate: z.boolean().optional(), metadata: z.object({ error: z.string() }).optional() })),
+
+  // ── Intelligence / Local ──────────────────────────────────────────────
+  KEY_INTELLIGENCE_PIPELINE_ERROR: event('key-intelligence:pipeline-error', z.unknown()),
+  LOCAL_PROVIDER_DETECTED: event('local-provider:detected', z.unknown()),
+
+  // ── Memory ────────────────────────────────────────────────────────────
+  MEMORY_CHUNK_ADDED: event('memory:chunk:added', z.unknown()),
+  MEMORY_CHUNK_DELETED: event('memory:chunk:deleted', z.unknown()),
+  MEMORY_CHUNK_UPDATED: event('memory:chunk:updated', z.unknown()),
+
+  // ── Message / Prompt ──────────────────────────────────────────────────
+  MESSAGE_FEEDBACK_SUBMITTED: event('message:feedback:submitted', z.unknown()),
+  PROMPT_AUDIT_BASELINE_SET: event('prompt-audit:baseline:set', z.unknown()),
+  PROMPT_AUDIT_COMPARISON_CREATED: event('prompt-audit:comparison:created', z.unknown()),
+
+  // ── Provider Catalog / Personality ────────────────────────────────────
+  PROVIDER_CATALOG_ADDED: event('provider:catalog:added', z.unknown()),
+  PROVIDER_CATALOG_PROBED: event('provider:catalog:probed', z.unknown()),
+  PROVIDER_PERSONALITY_CALIBRATED: event('provider:personality:calibrated', z.unknown()),
+  PROVIDER_PERSONALITY_UPDATED: event('provider:personality:updated', z.unknown()),
+
+  // ── Proxy ─────────────────────────────────────────────────────────────
+  PROXY_DOWN: event('proxy:down', z.object({ url: z.string(), error: z.string().optional() })),
+  PROXY_UP: event('proxy:up', z.object({ url: z.string(), latencyMs: z.number().optional() })),
+
+  // ── Research ──────────────────────────────────────────────────────────
+  RESEARCH_FINDINGS_AVAILABLE: event('research:findings:available', z.unknown()),
+  RESEARCH_FINDING_RESOLVED: event('research:finding:resolved', z.unknown()),
+  RESEARCH_FINDING_SYNCED: event('research:finding:synced', z.unknown()),
+  RESEARCH_GOAL_CREATED: event('research:goal:created', z.unknown()),
+  RESEARCH_GOAL_PAUSED: event('research:goal:paused', z.unknown()),
+  RESEARCH_GOAL_PROGRESS_UPDATED: event('research:goal:progress-updated', z.unknown()),
+  RESEARCH_GOAL_RESUMED: event('research:goal:resumed', z.unknown()),
+  RESEARCH_KEY_RESULT_UPDATED: event('research:key-result:updated', z.object({ goalId: z.string(), keyResultId: z.string(), value: z.number() })),
+  RESEARCH_RECOMMENDATION_APPLIED: event('research:recommendation:applied', z.unknown()),
+  RESEARCH_RECOMMENDATION_CREATED: event('research:recommendation:created', z.unknown()),
+  RESEARCH_RECOMMENDATION_DISMISSED: event('research:recommendation:dismissed', z.object({ id: z.string() })),
+  RESEARCH_SCHEDULE_CREATED: event('research:schedule:created', z.unknown()),
+  RESEARCH_SCHEDULE_DELETED: event('research:schedule:deleted', z.unknown()),
+  RESEARCH_SCHEDULE_UPDATED: event('research:schedule:updated', z.unknown()),
+  RESEARCH_TRIGGERED: event('research:triggered', z.unknown()),
+
+  // ── Roles ─────────────────────────────────────────────────────────────
+  ROLE_CREATED: event('role:created', z.unknown()),
+  ROLE_DELETED: event('role:deleted', z.unknown()),
+  ROLE_LIBRARY_INSTALLED: event('role:library:installed', z.unknown()),
+  ROLE_LIBRARY_UNINSTALLED: event('role:library:uninstalled', z.unknown()),
+  ROLE_MODEL_PREFERENCES_UPDATED: event('role:model-preferences:updated', z.unknown()),
+  ROLE_SANDBOX_TEST_COMPLETED: event('role:sandbox-test:completed', z.unknown()),
+  ROLE_SANDBOX_TEST_FAILED: event('role:sandbox-test:failed', z.unknown()),
+  ROLE_UPDATED: event('role:updated', z.unknown()),
+
+  // ── Scheduler ─────────────────────────────────────────────────────────
+  SCHEDULE_COMPLETED: event('schedule:completed', z.unknown()),
+  SCHEDULE_CREATED: event('schedule:created', z.unknown()),
+  SCHEDULE_DELETED: event('schedule:deleted', z.unknown()),
+  SCHEDULE_TRIGGERED: event('schedule:triggered', z.unknown()),
+  SCHEDULE_UPDATED: event('schedule:updated', z.unknown()),
+  SCHEDULER_HEARTBEAT: event('scheduler:heartbeat', z.object({ lastCheckTime: z.number() })),
+
+  // ── Versus User ───────────────────────────────────────────────────────
+  VERSUS_USER_COMPLETED: event('versus-user:completed', z.unknown()),
+  VERSUS_USER_ROUND_COMPLETE: event('versus-user:round-complete', z.unknown()),
+  VERSUS_USER_STARTED: event('versus-user:started', z.object({ topic: z.string(), opponents: z.number() })),
+
+  // ── STT ───────────────────────────────────────────────────────────────
+  STT_STATE_CHANGED: event('stt:state:changed', z.object({ state: z.string(), error: z.string().optional() })),
+  STT_ERROR: event('stt:error', z.object({ error: z.string() })),
+
+  // ── Metrics ───────────────────────────────────────────────────────────
+  KEY_STORE_GAUGES: event('metrics:key-store-gauges', z.object({ activeCount: z.number(), errorCount: z.number(), alertCount: z.number(), totalCount: z.number().optional() })),
+
+  // ── WhatIf / Pressure ────────────────────────────────────────────────
+  WHATIF_SIMULATION_COMPLETED: event('whatif:simulation:completed', z.object({
+    type: z.string(), sessionId: z.string().optional(), proposedType: z.string().optional(),
+    additionalAgents: z.number().optional(), proposedBudget: z.number().optional(),
+    currentBudget: z.number().optional(), ratio: z.number().optional(),
+    currentProvider: z.string().optional(), proposedProvider: z.string().optional(),
+    latencyImpact: z.number().optional(), costImpact: z.number().optional(),
+    reliabilityImpact: z.number().optional(),
+  })),
+  PRESSURE_MAP_UPDATED: event('pressure:map:updated', z.object({
+    global: z.object({ level: z.string(), score: z.number() }),
+    providers: z.array(z.unknown()), sessions: z.array(z.unknown()),
+    alertCount: z.number(), timestamp: z.number(),
+  })),
+  PRESSURE_ALERT_RAISED: event('pressure:alert:raised', z.object({ scope: z.string(), id: z.string(), level: z.string(), message: z.string(), timestamp: z.number(), acknowledged: z.boolean() })),
+
+  // ── Webhook / Secrets / Compromise ────────────────────────────────────
+  WEBHOOK_DELIVERY_FAILED: event('webhook:delivery:failed', z.unknown()),
+  SECRETS_LOOKUP_FAILED: event('secrets:lookup:failed', z.unknown()),
+  COMPROMISE_SIGNAL_REJECTED: event('compromise:signal:rejected', z.unknown()),
+
+  // ── Topology / Queue ──────────────────────────────────────────────────
+  TOPOLOGY_EVALUATED: event('topology:evaluated', z.unknown()),
+  QUEUE_TASK_FAILED: event('queue:task:failed', z.object({ taskId: z.string(), priority: z.string(), error: z.string(), timestamp: z.number() })),
+
+  // ── Debate (extras) ──────────────────────────────────────────────────
+  DEBATE_HUMAN_VOTE: event('debate:human:vote', z.unknown()),
+  CONSISTENCY_DRIFT_DETECTED: event('consistency:drift-detected', z.unknown()),
+  SHADOW_DRIFT: event('shadow:drift', z.unknown()),
+  DEBATE_INJECT_MESSAGE: event('debate:inject:message', z.unknown()),
+} as const;
+
+type Registry = typeof EVENT_REGISTRY;
+
+// ── Derived: EVENTS (runtime string constants) ────────────────────────────
+type EventsType = { [K in keyof Registry]: Registry[K]['name'] & string };
+
+function buildEvents(): EventsType {
+  const result: Record<string, string> = {};
+  for (const key of Object.keys(EVENT_REGISTRY) as Array<keyof Registry>) {
+    result[key as string] = EVENT_REGISTRY[key].name;
+  }
+  Object.freeze(result);
+  return result as unknown as EventsType;
+}
+
+export const EVENTS: EventsType = buildEvents();
+
+// ── Derived: EventMap (type-level: event name → payload type) ─────────────
+export type EventMap = {
+  [K in keyof Registry as Registry[K]['name']]: z.infer<Registry[K]['schema']>
+} & { '*': { event: string; data: Record<string, unknown> } };
+
+// ── Derived: EventValidators (runtime Zod schema lookup) ──────────────────
+type EventValidatorsType = Record<string, z.ZodType<unknown>>;
+
+function buildValidators(): EventValidatorsType {
+  const result: EventValidatorsType = {};
+  for (const key of Object.keys(EVENT_REGISTRY) as Array<keyof Registry>) {
+    const entry = EVENT_REGISTRY[key];
+    result[entry.name] = entry.schema;
+  }
+  return result;
+}
+
+export const EventValidators: EventValidatorsType = buildValidators();

@@ -1,7 +1,7 @@
 import type { ProviderState } from '../types/metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
 import type { IKeyStateStore, KeyState } from '../contracts/key-state';
-import type { IEventBus } from '../types/interfaces';
+import type { IEventBus, HealthEvent } from '../types/interfaces';
 
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
@@ -39,15 +39,6 @@ export interface ProviderTrackerDeps {
     setKv: <T>(id: string, value: T) => Promise<void>;
   };
   eventBus?: IEventBus;
-}
-
-export type HealthEventType = 'latency_spike' | 'error_burst' | 'status_change' | 'rate_limit' | 'recovery';
-
-export interface HealthEvent {
-  provider: string;
-  type: HealthEventType;
-  detail: string;
-  timestamp: number;
 }
 
 export interface ProviderRanking {

@@ -1,7 +1,53 @@
 import type { ApiKey } from '../types/metrics-types';
-import type { IDebateQueryEngine } from './debate-runtime';
-import type { DebateStore } from './storage/debate-store';
-import type { DebatePhase } from './debate-runtime';
+import type { DebateStore, ConclusionType, StanceResult } from './storage/debate-store';
+
+export type { ConclusionType, StanceResult };
+
+export interface TimelineEntry {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly timestamp: number;
+  readonly type: string;
+  readonly payload: unknown;
+}
+
+export type TopologyType = 'linear' | 'roundtable' | 'judge' | 'tree-of-thought' | 'red-blue';
+
+export type DebatePhase =
+  | 'created'
+  | 'queued'
+  | 'initializing'
+  | 'active'
+  | 'deliberating'
+  | 'consensus'
+  | 'summarizing'
+  | 'paused'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export type AgentPhase =
+  | 'idle'
+  | 'thinking'
+  | 'waiting'
+  | 'streaming'
+  | 'errored'
+  | 'rate-limited'
+  | 'fallback'
+  | 'timed-out'
+  | 'completed';
+
+export interface IDebateQueryEngine {
+  query(
+    session: { id: string; topic: string; arguments: ReadonlyArray<{ agentId: string; agentName: string; content: string; round: number }> },
+    criteria: {
+      agentId?: string;
+      round?: number;
+      type?: string;
+      confidenceMin?: number;
+    }
+  ): TimelineEntry[];
+}
 
 export type DebateRole = 'pro' | 'con' | 'neutral' | 'judge' | 'attacker' | 'defender';
 export type DebateSessionStrategy = 'round_robin' | 'sequential' | 'judge' | 'tree-of-thought' | 'red-blue' | 'cross-examination' | 'socratic' | 'tournament' | 'argument_tree' | 'constrained' | 'moderated' | 'free_for_all' | 'jury_trial';
@@ -133,9 +179,6 @@ export interface HumanVote {
   score: number;
   timestamp: number;
 }
-
-export type ConclusionType = 'consensus' | 'dominance' | 'stalemate' | 'partial_agreement' | 'inconclusive';
-export type StanceResult = 'pro_wins' | 'con_wins' | 'balanced' | 'no_clear_winner';
 
 export interface VerdictKeyArgument {
   agentId: string;

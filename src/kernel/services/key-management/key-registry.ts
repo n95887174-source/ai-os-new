@@ -1,7 +1,7 @@
 import { genId } from '../../../utils/gen-id';
 import type { ApiKey, KeyExtendedStats, KeyHistoryEntry, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
-import type { FreeTierLimit } from './key-service';
+import type { FreeTierLimit } from './key-types';
 import { CONFIG } from '../config-registry';
 import type { KeyStore } from '../../contracts/storage/key-store';
 import { dexieDb } from '../database-service';
@@ -424,18 +424,13 @@ export class KeyRegistry {
 
     const enc = await this.deps.vault.encryptKey(trimmedKey);
     if (!enc) {
-      if (this.deps.vault.isLocked()) {
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-          message: 'Vault is locked — key stored without encryption.',
-          type: 'warning',
-        });
-      } else {
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-          message: 'Encryption failed. Key was not added.',
-          type: 'error',
-        });
-        return null;
-      }
+      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+        message: this.deps.vault.isLocked()
+          ? 'Vault is locked. Unlock vault to add keys.'
+          : 'Encryption failed. Key was not added.',
+        type: 'error',
+      });
+      return null;
     }
 
     // KD9-02: Second duplicate check after async gap prevents race condition

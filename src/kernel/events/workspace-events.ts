@@ -1,7 +1,9 @@
+import { EVENT_REGISTRY, type EventMap } from './event-registry';
+
 export const WorkspaceEvents = {
-  ATTACHED: 'workspace:attached',
-  DETACHED: 'workspace:detached',
-  FILE_READ: 'workspace:file:read',
+  ATTACHED: EVENT_REGISTRY.WORKSPACE_ATTACHED.name,
+  DETACHED: EVENT_REGISTRY.WORKSPACE_DETACHED.name,
+  FILE_READ: EVENT_REGISTRY.WORKSPACE_FILE_READ.name,
 } as const;
 
 export interface WorkspaceAttachedPayload {
@@ -16,8 +18,6 @@ export interface WorkspaceFileReadPayload {
   path: string;
 }
 
-export type WorkspaceEventMap = {
-  'workspace:attached': WorkspaceAttachedPayload;
-  'workspace:detached': WorkspaceDetachedPayload;
-  'workspace:file:read': WorkspaceFileReadPayload;
-};
+export type WorkspaceEventMap = Pick<EventMap,
+  'workspace:attached' | 'workspace:detached' | 'workspace:file:read'
+>;

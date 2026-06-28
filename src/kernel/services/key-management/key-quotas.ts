@@ -1,5 +1,5 @@
 import type { ApiKey } from '../../types/metrics-types';
-import type { FreeTierLimit } from './key-service';
+import type { FreeTierLimit } from './key-types';
 
 export interface KeyQuotasDeps {
   eventBus: {

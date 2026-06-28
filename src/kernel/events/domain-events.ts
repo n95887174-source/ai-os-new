@@ -1,135 +1,105 @@
-import type { AgentLifecycleState } from '../contracts/topology';
-import type { AgentHealth } from '../contracts/agent-health';
-import type { VirtualKey } from '../contracts/virtual-key';
-import type { ToolDefinition } from '../contracts/tool-types';
-import type { MemoryEntry } from '../types/memory-types';
-import type { Role } from '../types/role-types';
-import type { KeyState } from '../contracts/key-state';
-import type { CognitiveSkill } from '../types/domain-types';
-import type { DebateVerdict } from '../contracts/debate-types';
+import { EVENT_REGISTRY, type EventMap } from './event-registry';
 
 export const DomainEvents = {
-  DEBATE_UPDATED: 'debate:updated',
-  DEBATE_STARTED: 'debate:started',
-  DEBATE_ARGUMENT: 'debate:argument',
-  DEBATE_CONSENSUS: 'debate:consensus',
-  MEMORY_UPDATED: 'memory:updated',
-  TOOLS_UPDATED: 'tools:updated',
-  TOOL_EXECUTION_START: 'tool:execution:start',
-  TOOL_EXECUTION_SUCCESS: 'tool:execution:success',
-  TOOL_EXECUTION_ERROR: 'tool:execution:error',
-  ROLES_UPDATED: 'roles:updated',
-  ROLE_ASSIGNED: 'role:assigned',
-  ROLE_UNASSIGNED: 'role:unassigned',
-  MCP_UPDATED: 'mcp:updated',
-  SETTINGS_UPDATED: 'settings:updated',
-  POLICY_VIOLATION: 'policy:violation',
-  SKILLS_UPDATED: 'skills:updated',
-  PRICING_UPDATED: 'pricing:updated',
-  BUDGET_ALERT: 'budget:alert',
-  KEYSTATE_UPDATED: 'keystate:updated',
-  KEYSTATE_REMOVED: 'keystate:removed',
-  SNAPSHOT_CAPTURED: 'snapshot:captured',
-  SNAPSHOT_RESTORED: 'snapshot:restored',
-  AGENT_CONFIG_UPDATED: 'agent:config:updated',
-  AGENT_LIFECYCLE_CHANGE: 'agent:lifecycle:change',
-  AGENT_HEALTH_CHANGE: 'agent:health:change',
-  AGENT_RESTARTED: 'agent:restarted',
-  AGENT_RATE_LIMITED: 'agent:rate:limited',
-  AGENT_BLACKBOARD_UPDATED: 'agent:blackboard:updated',
-  AGENT_HANDOFF_INITIATED: 'agent:handoff:initiated',
-  ROUTER_SIGNAL: 'router:signal',
-  ADVISOR_SUGGESTION: 'advisor:suggestion',
-  ADVISOR_SUGGESTION_EXECUTED: 'advisor:suggestion:executed',
-  ADVISOR_SUGGESTION_DISMISSED: 'advisor:suggestion:dismissed',
-  DIAGNOSTIC_COMPLETE: 'diagnostic:complete',
-  SYSTEM_TOPOLOGY_MOUNTED: 'system:topology:mounted',
-  SYSTEM_NODE_SPAWN: 'system:node:spawn',
-  SYSTEM_NODE_REMOVED: 'system:node:removed',
-  SETTINGS_LATENCY_THRESHOLD: 'settings:latency-threshold',
-  VIRTUAL_KEY_CREATED: 'virtual:key:created',
-  VIRTUAL_KEY_RESOLVED: 'virtual:key:resolved',
-  VIRTUAL_KEY_REVOKED: 'virtual:key:revoked',
-  DEBATE_ENDED: 'debate:ended',
-  DEBATE_FACT_CHECKED: 'debate:fact:checked',
-  ELO_RATING_UPDATED: 'elo:rating:updated',
-  CACHE_INVALIDATED: 'cache:invalidated',
-  DEBATE_VERDICT_GENERATED: 'debate:verdict:generated',
-  DEBATE_SESSION_CONFLICT: 'debate:session:conflict',
-  SESSION_DELETED: 'session:deleted',
-  CHAT_BOOKMARK_ADDED: 'chat:bookmark:added',
-  CHAT_BOOKMARK_REMOVED: 'chat:bookmark:removed',
-  CHAT_BOOKMARK_CLEARED: 'chat:bookmark:cleared',
-  CHAT_BOOKMARK_REQUEST: 'chat:bookmark:request',
-  CHAT_BOOKMARK_SAVE: 'chat:bookmark:save',
-  AGENT_JOURNAL_ADDED: 'agent:journal:added',
-  AGENT_JOURNAL_REMOVED: 'agent:journal:removed',
-  AGENT_JOURNAL_CLEARED: 'agent:journal:cleared',
-  AGENT_TASK_COMPLETED: 'agent:task:completed',
-  WHATIF_SIMULATION_COMPLETED: 'whatif:simulation:completed',
-  PRESSURE_MAP_UPDATED: 'pressure:map:updated',
-  PRESSURE_ALERT_RAISED: 'pressure:alert:raised',
-  WEBHOOK_DELIVERY_FAILED: 'webhook:delivery:failed',
-  SECRETS_LOOKUP_FAILED: 'secrets:lookup:failed',
-  COMPROMISE_SIGNAL_REJECTED: 'compromise:signal:rejected',
-  TOPOLOGY_EVALUATED: 'topology:evaluated',
-  QUEUE_TASK_FAILED: 'queue:task:failed',
-  DEBATE_HUMAN_VOTE: 'debate:human:vote',
-  HYPOTHESES_UPDATED: 'hypotheses:updated',
-  CONSISTENCY_DRIFT_DETECTED: 'consistency:drift-detected',
-  SHADOW_DRIFT: 'shadow:drift',
-  DEBATE_INJECT_MESSAGE: 'debate:inject:message',
-  KEY_INTELLIGENCE_PIPELINE_ERROR: 'key-intelligence:pipeline-error',
+  DEBATE_UPDATED: EVENT_REGISTRY.DEBATE_UPDATED.name,
+  DEBATE_STARTED: EVENT_REGISTRY.DEBATE_STARTED.name,
+  DEBATE_ARGUMENT: EVENT_REGISTRY.DEBATE_ARGUMENT.name,
+  DEBATE_CONSENSUS: EVENT_REGISTRY.DEBATE_CONSENSUS.name,
+  MEMORY_UPDATED: EVENT_REGISTRY.MEMORY_UPDATED.name,
+  TOOLS_UPDATED: EVENT_REGISTRY.TOOLS_UPDATED.name,
+  TOOL_EXECUTION_START: EVENT_REGISTRY.TOOL_EXECUTION_START.name,
+  TOOL_EXECUTION_SUCCESS: EVENT_REGISTRY.TOOL_EXECUTION_SUCCESS.name,
+  TOOL_EXECUTION_ERROR: EVENT_REGISTRY.TOOL_EXECUTION_ERROR.name,
+  ROLES_UPDATED: EVENT_REGISTRY.ROLES_UPDATED.name,
+  ROLE_ASSIGNED: EVENT_REGISTRY.ROLE_ASSIGNED.name,
+  ROLE_UNASSIGNED: EVENT_REGISTRY.ROLE_UNASSIGNED.name,
+  MCP_UPDATED: EVENT_REGISTRY.MCP_UPDATED.name,
+  SETTINGS_UPDATED: EVENT_REGISTRY.SETTINGS_UPDATED.name,
+  POLICY_VIOLATION: EVENT_REGISTRY.POLICY_VIOLATION.name,
+  SKILLS_UPDATED: EVENT_REGISTRY.SKILLS_UPDATED.name,
+  PRICING_UPDATED: EVENT_REGISTRY.PRICING_UPDATED.name,
+  BUDGET_ALERT: EVENT_REGISTRY.BUDGET_ALERT.name,
+  KEYSTATE_UPDATED: EVENT_REGISTRY.KEYSTATE_UPDATED.name,
+  KEYSTATE_REMOVED: EVENT_REGISTRY.KEYSTATE_REMOVED.name,
+  SNAPSHOT_CAPTURED: EVENT_REGISTRY.SNAPSHOT_CAPTURED.name,
+  SNAPSHOT_RESTORED: EVENT_REGISTRY.SNAPSHOT_RESTORED.name,
+  AGENT_CONFIG_UPDATED: EVENT_REGISTRY.AGENT_CONFIG_UPDATED.name,
+  AGENT_LIFECYCLE_CHANGE: EVENT_REGISTRY.AGENT_LIFECYCLE_CHANGE.name,
+  AGENT_HEALTH_CHANGE: EVENT_REGISTRY.AGENT_HEALTH_CHANGE.name,
+  AGENT_RESTARTED: EVENT_REGISTRY.AGENT_RESTARTED.name,
+  AGENT_RATE_LIMITED: EVENT_REGISTRY.AGENT_RATE_LIMITED.name,
+  AGENT_BLACKBOARD_UPDATED: EVENT_REGISTRY.AGENT_BLACKBOARD_UPDATED.name,
+  AGENT_HANDOFF_INITIATED: EVENT_REGISTRY.AGENT_HANDOFF_INITIATED.name,
+  ROUTER_SIGNAL: EVENT_REGISTRY.ROUTER_SIGNAL.name,
+  ADVISOR_SUGGESTION: EVENT_REGISTRY.ADVISOR_SUGGESTION.name,
+  ADVISOR_SUGGESTION_EXECUTED: EVENT_REGISTRY.ADVISOR_SUGGESTION_EXECUTED.name,
+  ADVISOR_SUGGESTION_DISMISSED: EVENT_REGISTRY.ADVISOR_SUGGESTION_DISMISSED.name,
+  DIAGNOSTIC_COMPLETE: EVENT_REGISTRY.DIAGNOSTIC_COMPLETE.name,
+  SYSTEM_TOPOLOGY_MOUNTED: EVENT_REGISTRY.SYSTEM_TOPOLOGY_MOUNTED.name,
+  SYSTEM_NODE_SPAWN: EVENT_REGISTRY.SYSTEM_NODE_SPAWN.name,
+  SYSTEM_NODE_REMOVED: EVENT_REGISTRY.SYSTEM_NODE_REMOVED.name,
+  SETTINGS_LATENCY_THRESHOLD: EVENT_REGISTRY.SETTINGS_LATENCY_THRESHOLD.name,
+  VIRTUAL_KEY_CREATED: EVENT_REGISTRY.VIRTUAL_KEY_CREATED.name,
+  VIRTUAL_KEY_RESOLVED: EVENT_REGISTRY.VIRTUAL_KEY_RESOLVED.name,
+  VIRTUAL_KEY_REVOKED: EVENT_REGISTRY.VIRTUAL_KEY_REVOKED.name,
+  DEBATE_ENDED: EVENT_REGISTRY.DEBATE_ENDED.name,
+  DEBATE_FACT_CHECKED: EVENT_REGISTRY.DEBATE_FACT_CHECKED.name,
+  ELO_RATING_UPDATED: EVENT_REGISTRY.ELO_RATING_UPDATED.name,
+  CACHE_INVALIDATED: EVENT_REGISTRY.CACHE_INVALIDATED.name,
+  DEBATE_VERDICT_GENERATED: EVENT_REGISTRY.DEBATE_VERDICT_GENERATED.name,
+  DEBATE_SESSION_CONFLICT: EVENT_REGISTRY.DEBATE_SESSION_CONFLICT.name,
+  SESSION_DELETED: EVENT_REGISTRY.SESSION_DELETED.name,
+  CHAT_BOOKMARK_ADDED: EVENT_REGISTRY.CHAT_BOOKMARK_ADDED.name,
+  CHAT_BOOKMARK_REMOVED: EVENT_REGISTRY.CHAT_BOOKMARK_REMOVED.name,
+  CHAT_BOOKMARK_CLEARED: EVENT_REGISTRY.CHAT_BOOKMARK_CLEARED.name,
+  CHAT_BOOKMARK_REQUEST: EVENT_REGISTRY.CHAT_BOOKMARK_REQUEST.name,
+  CHAT_BOOKMARK_SAVE: EVENT_REGISTRY.CHAT_BOOKMARK_SAVE.name,
+  AGENT_JOURNAL_ADDED: EVENT_REGISTRY.AGENT_JOURNAL_ADDED.name,
+  AGENT_JOURNAL_REMOVED: EVENT_REGISTRY.AGENT_JOURNAL_REMOVED.name,
+  AGENT_JOURNAL_CLEARED: EVENT_REGISTRY.AGENT_JOURNAL_CLEARED.name,
+  AGENT_TASK_COMPLETED: EVENT_REGISTRY.AGENT_TASK_COMPLETED.name,
+  WHATIF_SIMULATION_COMPLETED: EVENT_REGISTRY.WHATIF_SIMULATION_COMPLETED.name,
+  PRESSURE_MAP_UPDATED: EVENT_REGISTRY.PRESSURE_MAP_UPDATED.name,
+  PRESSURE_ALERT_RAISED: EVENT_REGISTRY.PRESSURE_ALERT_RAISED.name,
+  WEBHOOK_DELIVERY_FAILED: EVENT_REGISTRY.WEBHOOK_DELIVERY_FAILED.name,
+  SECRETS_LOOKUP_FAILED: EVENT_REGISTRY.SECRETS_LOOKUP_FAILED.name,
+  COMPROMISE_SIGNAL_REJECTED: EVENT_REGISTRY.COMPROMISE_SIGNAL_REJECTED.name,
+  TOPOLOGY_EVALUATED: EVENT_REGISTRY.TOPOLOGY_EVALUATED.name,
+  QUEUE_TASK_FAILED: EVENT_REGISTRY.QUEUE_TASK_FAILED.name,
+  DEBATE_HUMAN_VOTE: EVENT_REGISTRY.DEBATE_HUMAN_VOTE.name,
+  HYPOTHESES_UPDATED: EVENT_REGISTRY.HYPOTHESES_UPDATED.name,
+  CONSISTENCY_DRIFT_DETECTED: EVENT_REGISTRY.CONSISTENCY_DRIFT_DETECTED.name,
+  SHADOW_DRIFT: EVENT_REGISTRY.SHADOW_DRIFT.name,
+  DEBATE_INJECT_MESSAGE: EVENT_REGISTRY.DEBATE_INJECT_MESSAGE.name,
+  KEY_INTELLIGENCE_PIPELINE_ERROR: EVENT_REGISTRY.KEY_INTELLIGENCE_PIPELINE_ERROR.name,
 } as const;
 
-export type DomainEventMap = {
-  // ... (add entry)
-  'debate:verdict:generated': { sessionId: string; verdict: DebateVerdict };
-  'debate:updated': { sessionId: string; type: string; override?: unknown; event?: unknown };
-  'debate:started': { sessionId: string; topic: string };
-  'debate:argument': { sessionId: string; argument: unknown };
-  'debate:consensus': { sessionId: string; topic: string; consensus: string; convergenceScore: number; synthesis?: { consensus: string; coreDisagreement: string; resolvedPoints: string[]; unresolvedPoints: string[]; phase: string } };
-  'memory:updated': MemoryEntry[];
-  'tools:updated': ToolDefinition[];
-  'tool:execution:start': { toolId: string; input: unknown };
-  'tool:execution:success': { toolId: string; output: unknown };
-  'tool:execution:error': { toolId: string; error: string };
-  'roles:updated': Role[];
-  'role:assigned': { roleId: string; agentId: string };
-  'role:unassigned': { roleId: string; agentId: string };
-  'mcp:updated': Record<string, unknown>[];
-  'settings:updated': { settings: Record<string, unknown>; changes: Record<string, unknown> };
-  'policy:violation': { policyId: string; provider: string; reason: string };
-  'skills:updated': CognitiveSkill[];
-  'pricing:updated': void;
-  'budget:alert': { type: 'global' | 'provider' | 'agent'; level: number; entity: string; current: number; limit: number; message: string; timestamp: number };
-  'keystate:updated': { id: string; state: KeyState };
-  'keystate:removed': { id: string };
-  'snapshot:captured': { snapshotId: string; label: string };
-  'snapshot:restored': { snapshotId: string; timestamp: number };
-  'agent:config:updated': { id: string; config: unknown };
-  'agent:lifecycle:change': { id: string; from: AgentLifecycleState; to: AgentLifecycleState };
-  'agent:health:change': { id: string; from: AgentHealth; to: AgentHealth; errorRate: number; consecutiveErrors: number };
-  'agent:restarted': { id: string };
-  'agent:rate:limited': { nodeId: string; label: string; reason: string; provider?: string; retryAfterMs?: number };
-  'agent:blackboard:updated': { agentId: string; key: string; value: unknown };
-  'agent:handoff:initiated': { id: string; fromAgent: string; toAgent: string; description?: string; priority?: string };
-  'router:signal': { provider: string; success: boolean; wasRaceWinner: boolean; wasFallback: boolean; ttft?: number };
-  'advisor:suggestion': { id: string; type: string; description: string };
-  'advisor:suggestion:executed': { id: string; estimatedSavings?: { latency?: number; cost?: number } };
-  'advisor:suggestion:dismissed': { id: string };
-  'diagnostic:complete': { id: string; scope: string; health: string; score: number; issueCount: number; timestamp: number };
-  'system:topology:mounted': { topologyId: string };
-  'system:node:spawn': { nodeId: string; type: string };
-  'system:node:removed': { id: string };
-  'settings:latency-threshold': { keyId?: string; threshold?: number };
-  'virtual:key:created': { virtualKey: VirtualKey };
-  'virtual:key:resolved': { virtualKeyId: string };
-  'virtual:key:revoked': { virtualKeyId: string };
-  'debate:ended': { sessionId: string; topic: string; rounds: number; durationMs: number; consensus?: string };
-  'debate:fact:checked': { argumentId: string; factCheck: unknown };
-  'elo:rating:updated': { agentId: string; newRating: number; change: number };
-  'cache:invalidated': { reason: string; section?: string };
-  'debate:session:conflict': { sessionId: string; currentVersion: number; attemptedVersion: number; tabId?: string };
-  'session:deleted': { id: string; type: import('../contracts/session-manager').SessionType };
-};
+export type DomainEventMap = Pick<EventMap,
+  'debate:updated' | 'debate:started' | 'debate:argument' | 'debate:consensus' |
+  'debate:ended' | 'debate:fact:checked' | 'debate:verdict:generated' | 'debate:session:conflict' |
+  'debate:human:vote' | 'debate:inject:message' |
+  'memory:updated' | 'tools:updated' | 'tool:execution:start' |
+  'tool:execution:success' | 'tool:execution:error' |
+  'roles:updated' | 'role:assigned' | 'role:unassigned' |
+  'mcp:updated' | 'settings:updated' | 'settings:latency-threshold' |
+  'policy:violation' | 'skills:updated' | 'pricing:updated' | 'budget:alert' |
+  'keystate:updated' | 'keystate:removed' |
+  'snapshot:captured' | 'snapshot:restored' |
+  'agent:config:updated' | 'agent:lifecycle:change' | 'agent:health:change' |
+  'agent:restarted' | 'agent:rate:limited' | 'agent:blackboard:updated' |
+  'agent:handoff:initiated' | 'agent:task:completed' |
+  'router:signal' | 'advisor:suggestion' | 'advisor:suggestion:executed' |
+  'advisor:suggestion:dismissed' |
+  'diagnostic:complete' | 'system:topology:mounted' | 'system:node:spawn' |
+  'system:node:removed' | 'virtual:key:created' | 'virtual:key:resolved' |
+  'virtual:key:revoked' | 'elo:rating:updated' | 'cache:invalidated' |
+  'session:deleted' |
+  'chat:bookmark:added' | 'chat:bookmark:removed' | 'chat:bookmark:cleared' |
+  'chat:bookmark:request' | 'chat:bookmark:save' |
+  'agent:journal:added' | 'agent:journal:removed' | 'agent:journal:cleared' |
+  'whatif:simulation:completed' | 'pressure:map:updated' | 'pressure:alert:raised' |
+  'webhook:delivery:failed' | 'secrets:lookup:failed' | 'compromise:signal:rejected' |
+  'topology:evaluated' | 'queue:task:failed' |
+  'hypotheses:updated' | 'consistency:drift-detected' | 'shadow:drift' |
+  'key-intelligence:pipeline-error'
+>;

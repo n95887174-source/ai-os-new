@@ -23,6 +23,7 @@ export interface ILogger {
   getBuffer(): ReadonlyArray<LogEntry>;
   query(filter?: Partial<{ service: string; level: LogLevel; traceId: string }>): LogEntry[];
   clear(): void;
+  setTraceContext(tc?: ITraceContext): void;
 }
 
 export interface ITraceContext {

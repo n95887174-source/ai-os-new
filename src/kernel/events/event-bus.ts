@@ -1,7 +1,7 @@
 import type { ILogger } from '../contracts/logger';
 import type { IEventBus } from '../types/interfaces';
 import type { EventMap } from '../types/event-map';
-import { EventValidators } from '../types/schema-types';
+import { EventValidators } from './event-registry';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
 import { sanitizeObject } from '../../llm/http/llm-http-client';

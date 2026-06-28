@@ -132,7 +132,14 @@ export type KernelDeps = {
   providerTracker: IProviderTracker;
 };
 
-import type { HealthEvent } from '../services/provider-tracker';
+export type HealthEventType = 'latency_spike' | 'error_burst' | 'status_change' | 'rate_limit' | 'recovery';
+
+export interface HealthEvent {
+  provider: string;
+  type: HealthEventType;
+  detail: string;
+  timestamp: number;
+}
 
 export type ProviderRanking = {
   provider: string;

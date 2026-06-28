@@ -103,7 +103,25 @@ export interface ABTestConfig {
   getAvgScore?: undefined;
 }
 
-import type { SemanticRouteRule } from '../services/route-rules';
+import type { RequestIntent, RequestLanguage } from '../contracts/provider';
+
+export interface SemanticRouteRule {
+  id: string;
+  label?: string;
+  condition: {
+    intents?: RequestIntent[];
+    languages?: RequestLanguage[];
+    complexities?: Array<'simple' | 'medium' | 'complex'>;
+    isCode?: boolean;
+    isLong?: boolean;
+    isMultimodal?: boolean;
+  };
+  target: {
+    provider: string;
+    model?: string;
+  };
+  priority: number;
+}
 
 export interface RouterConfig {
   history: { maxDecisions: number };

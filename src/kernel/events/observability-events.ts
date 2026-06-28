@@ -1,53 +1,23 @@
-import type { CanonicalHealthStatus } from '../contracts/health';
+import { EVENT_REGISTRY, type EventMap } from './event-registry';
 
 export const ObservabilityEvents = {
-  TIMELINE_EVENT_ADDED: 'observability:timeline:event:added',
-  TIMELINE_CLEARED: 'observability:timeline:cleared',
-  METRICS_SNAPSHOT: 'observability:metrics:snapshot',
-  METRICS_ALERT: 'observability:metrics:alert',
-  METRICS_ALERT_RESOLVED: 'observability:metrics:alert:resolved',
-  TRACE_CREATED: 'observability:trace:created',
-  TRACE_UPDATED: 'observability:trace:updated',
-  TRACE_COMPLETED: 'observability:trace:completed',
-  SYSTEM_HEALTH_CHANGED: 'observability:health:changed',
-  ERROR_BOUNDARY_CAUGHT: 'observability:error-boundary:caught',
-  METRICS_ALERT_FIRED: 'metrics:alert-fired',
+  TIMELINE_EVENT_ADDED: EVENT_REGISTRY.TIMELINE_EVENT_ADDED.name,
+  TIMELINE_CLEARED: EVENT_REGISTRY.TIMELINE_CLEARED.name,
+  METRICS_SNAPSHOT: EVENT_REGISTRY.METRICS_SNAPSHOT.name,
+  METRICS_ALERT: EVENT_REGISTRY.METRICS_ALERT.name,
+  METRICS_ALERT_RESOLVED: EVENT_REGISTRY.METRICS_ALERT_RESOLVED.name,
+  TRACE_CREATED: EVENT_REGISTRY.TRACE_CREATED.name,
+  TRACE_UPDATED: EVENT_REGISTRY.TRACE_UPDATED.name,
+  TRACE_COMPLETED: EVENT_REGISTRY.TRACE_COMPLETED.name,
+  SYSTEM_HEALTH_CHANGED: EVENT_REGISTRY.SYSTEM_HEALTH_CHANGED.name,
+  ERROR_BOUNDARY_CAUGHT: EVENT_REGISTRY.ERROR_BOUNDARY_CAUGHT.name,
+  METRICS_ALERT_FIRED: EVENT_REGISTRY.METRICS_ALERT_FIRED.name,
 } as const;
 
-export type ObservabilityEventMap = {
-  'observability:timeline:event:added': {
-    eventId: string;
-    type: string;
-    category: string;
-    timestamp: number;
-    title: string;
-  };
-  'observability:timeline:cleared': { count: number; timestamp: number };
-  'observability:metrics:snapshot': {
-    timestamp: number;
-    totalRequests: number;
-    totalTokens: number;
-    estimatedCost: number;
-    avgLatency: number;
-    successRate: number;
-  };
-  'observability:metrics:alert': {
-    id: string;
-    metric: string;
-    value: number;
-    severity: 'warning' | 'critical';
-    timestamp: number;
-  };
-  'observability:metrics:alert:resolved': { id: string; timestamp: number };
-  'observability:trace:created': { traceId: string; timestamp: number };
-  'observability:trace:updated': { traceId: string; status: string; timestamp: number };
-  'observability:trace:completed': { traceId: string; duration: number; status: string; timestamp: number };
-  'observability:health:changed': { status: CanonicalHealthStatus; score: number; timestamp: number };
-  'observability:error-boundary:caught': {
-    name?: string;
-    message: string;
-    componentStack?: string;
-    stack?: string;
-    timestamp: number;
-  };
-};
+export type ObservabilityEventMap = Pick<EventMap,
+  'observability:timeline:event:added' | 'observability:timeline:cleared' |
+  'observability:metrics:snapshot' | 'observability:metrics:alert' | 'observability:metrics:alert:resolved' |
+  'observability:trace:created' | 'observability:trace:updated' | 'observability:trace:completed' |
+  'observability:health:changed' | 'observability:error-boundary:caught' |
+  'metrics:alert-fired'
+>;

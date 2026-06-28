@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, MessageCircle, Trash2, Play, Bot, Activity, Clock, Loader2 } from 'lucide-react';
-import { debateWorkspace, runtime } from '../../kernel/instances';
+import { runtime } from '../../kernel/runtime';
+import { debateWorkspace } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { WorkspaceRoomEntry } from '../../kernel/services/debate-runtime/debate-workspace';
 import { useNavigate } from 'react-router-dom';
