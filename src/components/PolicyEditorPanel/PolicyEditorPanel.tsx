@@ -291,7 +291,7 @@ const s = {
 };
 
 function genId(): string {
-    return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    return `rule-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 function createDefaultCondition(): PolicyCondition {

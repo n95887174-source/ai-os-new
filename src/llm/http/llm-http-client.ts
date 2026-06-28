@@ -38,6 +38,19 @@ export function sanitizeObject(obj: unknown): unknown {
     if (Array.isArray(obj)) {
         return obj.map(sanitizeObject);
     }
+    if (obj instanceof Map) {
+        const result: Record<string, unknown> = {};
+        for (const [key, value] of obj) {
+            result[String(key)] = sanitizeObject(value);
+        }
+        return result;
+    }
+    if (obj instanceof Set) {
+        return [...obj].map(sanitizeObject);
+    }
+    if (obj instanceof Date || obj instanceof RegExp) {
+        return obj;
+    }
     if (typeof obj === 'object') {
         const result: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(obj)) {
