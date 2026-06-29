@@ -1,6 +1,7 @@
 import { CONFIG } from './config-registry';
 import { rootLogger } from './logger-service';
 import { isPrivateIP } from '../utils/network';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('SandboxService');
 
@@ -83,7 +84,7 @@ export class SandboxService {
                     throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
                 const text = await proxyRes.text();
                 try {
-                    const err = JSON.parse(text);
+                    const err = safeJsonParse(text);
                     if (err.error) throw new Error(err.error, { cause: e });
                 } catch {
                     if (import.meta.env.DEV) {

@@ -21,6 +21,7 @@ import { rootLogger } from '../logger-service';
 import { ReplayEngine, type ReplayConfig } from './replay-engine';
 import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
 import type { KvRepository } from '../../dal/repository-types';
+import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('EventRecorder');
 
@@ -264,7 +265,7 @@ export class EventRecorder {
 
     importSession(json: string): { events: number; checkpoints: number } {
         try {
-            const data = JSON.parse(json);
+            const data = safeJsonParse(json);
             const events = this.importLog(data.events ?? '{}');
             const checkpoints = this.checkpoints.importCheckpoints(data.checkpoints ?? '{}');
             return { events, checkpoints };
@@ -307,7 +308,7 @@ export class EventRecorder {
 
     importLog(json: string): number {
         try {
-            const data = JSON.parse(json);
+            const data = safeJsonParse(json);
             const imported: RecordedEvent[] = data.events ?? [];
             const hex32 = /^[0-9a-f]{32}$/;
             let valid = 0;

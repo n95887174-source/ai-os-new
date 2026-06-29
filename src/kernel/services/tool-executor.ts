@@ -103,6 +103,7 @@ export interface ToolExecution {
 }
 
 import { CONFIG } from './config-registry';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const TOOLS_KEY = 'super_agents_tools';
 const MAX_EXECUTION_HISTORY = CONFIG?.services?.toolExecutor?.maxHistory ?? 200;
@@ -578,7 +579,7 @@ export class ToolService {
                 }
                 const text = await proxyRes.text();
                 try {
-                    const err = JSON.parse(text) as { error?: string };
+                    const err = safeJsonParse(text) as { error?: string };
                     if (err.error) throw toolError(toolId, err.error, 'PROXY_ERROR');
                 } catch (parseErr) {
                     if (parseErr instanceof Error && 'toolId' in parseErr) throw parseErr;
@@ -631,7 +632,7 @@ export class ToolService {
 
     importTools(jsonData: string): number {
         try {
-            const data = JSON.parse(jsonData);
+            const data = safeJsonParse(jsonData);
             const imported = data.tools || [];
             if (!Array.isArray(imported))
                 throw toolError('tools', 'Invalid format', 'INVALID_FORMAT');

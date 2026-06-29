@@ -25,6 +25,7 @@ import { FocusScope } from '@react-aria/focus';
 import { useChatStore } from '../../stores/useChatStore';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 import {
     flexColGap4,
     flexWrapGap4,
@@ -90,7 +91,7 @@ const ChatAdminPanel: React.FC = () => {
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const imported = JSON.parse(event.target?.result as string);
+                const imported = safeJsonParse(event.target?.result as string);
                 if (!Array.isArray(imported)) throw new Error('Expected an array of sessions');
                 for (const item of imported) {
                     if (

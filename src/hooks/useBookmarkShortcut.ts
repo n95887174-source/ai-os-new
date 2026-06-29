@@ -4,6 +4,7 @@ import { BucketStorageAdapter } from '../kernel/instances';
 import { EVENTS } from '../kernel/events/event-names';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
 import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
+import { safeJsonParse } from '../kernel/utils/safe-json';
 
 const service = new ChatBookmarksService({
     eventBus: {
@@ -17,7 +18,7 @@ const service = new ChatBookmarksService({
             const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
             if (!raw) return [];
             try {
-                const parsed: unknown = JSON.parse(raw);
+                const parsed: unknown = safeJsonParse(raw);
                 return Array.isArray(parsed) ? (parsed as ChatBookmark[]) : [];
             } catch {
                 return [];
@@ -26,7 +27,7 @@ const service = new ChatBookmarksService({
         save: async (b) => {
             try {
                 const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
-                const list: ChatBookmark[] = JSON.parse(raw ?? '[]') as ChatBookmark[];
+                const list: ChatBookmark[] = safeJsonParse(raw ?? '[]') as ChatBookmark[];
                 const updated = [b, ...list.filter((x) => x.id !== b.id)].slice(0, 500);
                 BucketStorageAdapter.setItem('chat_bookmarks_v1', JSON.stringify(updated));
             } catch {
@@ -36,7 +37,7 @@ const service = new ChatBookmarksService({
         delete: async (id) => {
             try {
                 const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
-                const list: ChatBookmark[] = JSON.parse(raw ?? '[]') as ChatBookmark[];
+                const list: ChatBookmark[] = safeJsonParse(raw ?? '[]') as ChatBookmark[];
                 BucketStorageAdapter.setItem(
                     'chat_bookmarks_v1',
                     JSON.stringify(list.filter((x) => x.id !== id)),

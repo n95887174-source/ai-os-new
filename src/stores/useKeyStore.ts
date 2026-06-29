@@ -2,6 +2,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
 import type { ApiKey, KeyNote, ProviderAlert } from '../types/metrics';
+import { safeJsonParse } from '../kernel/utils/safe-json';
 
 export interface KeyMeta {
     backoff: boolean;
@@ -88,7 +89,7 @@ function parseNotes(value: unknown): KeyNote[] | undefined {
     }
     if (typeof value === 'string') {
         try {
-            const parsed = JSON.parse(value);
+            const parsed = safeJsonParse(value);
             return parseNotes(parsed);
         } catch {
             return undefined;
@@ -513,11 +514,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     const exportKeys = useCallback(() => keyService.exportKeys(), []);
 
     const importKeys = useCallback(async (jsonData: string) => {
-        const imported = JSON.parse(jsonData, (key, value) => {
-            if (key === '__proto__' || key === 'constructor' || key === 'prototype')
-                return undefined;
-            return value;
-        });
+        const imported = safeJsonParse(jsonData);
         if (!Array.isArray(imported)) throw new Error('Invalid data format');
         let count = 0;
         const makeFingerprint = (provider: string, label: string, key: string) => {

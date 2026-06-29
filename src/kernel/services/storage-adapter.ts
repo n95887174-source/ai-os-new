@@ -12,6 +12,7 @@
 import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 import {
     createObfuscation,
     OBFUSCATION_PREFIX,
@@ -80,7 +81,7 @@ export class BucketStorageAdapter {
     async get<T>(key: string): Promise<T | undefined> {
         try {
             const raw = readRaw(this.prefix + key);
-            return raw ? (JSON.parse(raw) as T) : undefined;
+            return raw ? (safeJsonParse(raw) as T) : undefined;
         } catch (e) {
             LOGGER.warn('BucketStorageAdapter', 'get failed', {
                 bucket: this.bucket,
@@ -139,7 +140,7 @@ export class BucketStorageAdapter {
     getSync<T>(key: string): T | undefined {
         try {
             const raw = readRaw(this.prefix + key);
-            return raw ? (JSON.parse(raw) as T) : undefined;
+            return raw ? (safeJsonParse(raw) as T) : undefined;
         } catch (e) {
             LOGGER.warn('BucketStorageAdapter', 'getSync failed', {
                 bucket: this.bucket,

@@ -1,5 +1,6 @@
 ﻿import type { ChatMessage, SendMessageOptions } from '../core/types';
 import type { GeminiRequestBody, GeminiPart } from './gemini-types';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 interface OpenAISchema {
     type?: string;
@@ -71,7 +72,7 @@ export class GeminiRequestBuilder {
                         try {
                             args =
                                 typeof tc.function.arguments === 'string'
-                                    ? JSON.parse(tc.function.arguments)
+                                    ? safeJsonParse(tc.function.arguments)
                                     : tc.function.arguments;
                         } catch {
                             args = {
@@ -91,7 +92,7 @@ export class GeminiRequestBuilder {
                     try {
                         responseJson =
                             typeof m.content === 'string' && m.content.startsWith('{')
-                                ? JSON.parse(m.content)
+                                ? safeJsonParse(m.content)
                                 : { result: m.content };
                     } catch {
                         responseJson = { result: m.content };

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { strategyRegistry } from '../../kernel/instances';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 import type {
     StrategyPrimitive,
     StrategyDefinition,
@@ -639,7 +640,7 @@ const DebateStrategyBuilder: React.FC = () => {
     const handleImport = useCallback(() => {
         if (!jsonOutput) return;
         try {
-            JSON.parse(jsonOutput);
+            safeJsonParse(jsonOutput);
             const result = strategyRegistry.importJson(jsonOutput);
             if (result.success) {
                 setValidation({ valid: true, errors: [], warnings: [] });

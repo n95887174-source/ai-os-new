@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
 import { EVENTS } from '../kernel/events/event-names';
+import { safeJsonParse } from '../kernel/utils/safe-json';
 
 const LIVE_STORAGE_KEY = 'debate_live_state';
 const LIVE_STORAGE_DEBOUNCE = 500;
@@ -257,7 +258,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         try {
             const saved = sessionStorage.getItem(LIVE_STORAGE_KEY);
             if (saved) {
-                const parsed = JSON.parse(saved);
+                const parsed = safeJsonParse(saved);
                 return {
                     agentEvents: Array.isArray(parsed.agentEvents)
                         ? parsed.agentEvents.filter(isValidAgentEvent)

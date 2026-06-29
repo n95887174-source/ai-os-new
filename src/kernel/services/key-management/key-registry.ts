@@ -8,6 +8,7 @@ import { dexieDb } from '../database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
 import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';
 import { rootLogger } from '../logger-service';
+import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('KeyRegistry');
 
@@ -717,7 +718,7 @@ export class KeyRegistry {
     async importKeys(jsonData: string): Promise<number> {
         let imported: unknown[];
         try {
-            imported = JSON.parse(jsonData);
+            imported = safeJsonParse(jsonData);
         } catch {
             throw new Error('Invalid JSON data');
         }

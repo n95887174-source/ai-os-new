@@ -7,6 +7,7 @@ import { estimateTokenCount } from '../../llm/utils/token-counter';
 import type { QueuePriority } from './execution-queue';
 
 import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('Orchestrator');
 
@@ -340,7 +341,7 @@ export class OrchestrationService {
         let updatedBlackboard = { ...data.blackboard };
         try {
             if (output.trim().startsWith('{')) {
-                const parsed = JSON.parse(output);
+                const parsed = safeJsonParse(output);
                 if (parsed._blackboard) {
                     updatedBlackboard = { ...updatedBlackboard, ...parsed._blackboard };
                 }

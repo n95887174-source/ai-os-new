@@ -42,6 +42,7 @@ import type { ApiKey } from './types/metrics-types';
 import type { StorageLayer } from './contracts/storage/storage-layer';
 import { MemoryWatchdog } from './utils/memory-watchdog';
 import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state';
+import { safeJsonParse } from '../kernel/utils/safe-json';
 
 // Services whose failure should abort bootstrap entirely
 // Debug flag: disable all intervals to find OOM cause
@@ -235,7 +236,7 @@ export class SystemBootstrap implements IBootstrap {
                 try {
                     const raw = localStorage.getItem('super_agents_api_keys');
                     if (raw) {
-                        const parsed = JSON.parse(raw);
+                        const parsed = safeJsonParse(raw);
                         if (Array.isArray(parsed) && parsed.length > 0) {
                             snapshotKeys = parsed;
                             snapshotSource = 'localStorage';

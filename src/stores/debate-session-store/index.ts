@@ -7,6 +7,7 @@ import type { DebateParticipant, DebateSession } from '../../kernel/contracts/de
 import type { DebateSessionMeta, DebateSessionStoreShape } from './types';
 import type { ISessionManager } from '../../kernel/contracts/session-manager';
 import type { DatabaseService } from '../../kernel/services/database-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 interface DebateRecord {
     id: string;
@@ -66,7 +67,7 @@ async function getLinkedIds(id: string): Promise<string[]> {
 function toMeta(r: DebateRecord, linkedIds?: string[]): DebateSessionMeta {
     let p: DebateParticipant[];
     try {
-        p = JSON.parse(r.participants || '[]');
+        p = safeJsonParse(r.participants || '[]');
     } catch {
         p = [];
     }
@@ -96,18 +97,18 @@ async function loadFull(id: string): Promise<DebateSession | null> {
         let args: unknown[] = [];
         let parts: unknown[] = [];
         try {
-            args = JSON.parse(r.arguments || '[]');
+            args = safeJsonParse(r.arguments || '[]');
         } catch {
             args = [];
         }
         try {
-            parts = JSON.parse(r.participants || '[]');
+            parts = safeJsonParse(r.participants || '[]');
         } catch {
             parts = [];
         }
         let storedConfig: Record<string, unknown> = {};
         try {
-            const topology = JSON.parse(r.topology || '{}');
+            const topology = safeJsonParse(r.topology || '{}');
             storedConfig = (topology.config || topology) as Record<string, unknown>;
         } catch {
             /* ignore parse errors */

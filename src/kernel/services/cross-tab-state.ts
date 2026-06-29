@@ -1,6 +1,7 @@
 import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const CHANNEL_NAME = 'provider-state-sync';
 const LOGGER = rootLogger.child('CrossTabStateSync');
@@ -171,7 +172,7 @@ class CrossTabStateSync {
         this.storageHandler = (event: StorageEvent) => {
             if (event.key?.startsWith('provider-state-sync:')) {
                 try {
-                    const data = JSON.parse(event.newValue || '{}') as CrossTabStateMessage;
+                    const data = safeJsonParse(event.newValue || '{}') as CrossTabStateMessage;
                     this.handleMessage(data);
                 } catch (e) {
                     LOGGER.warn('CrossTabStateSync', 'Failed to parse localStorage sync message', {

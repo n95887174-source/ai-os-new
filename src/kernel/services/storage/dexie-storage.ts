@@ -12,9 +12,7 @@ import type {
     SkillsStore,
 } from '../../contracts/storage/storage-layer';
 
-const safeReviver = (k: string, v: unknown) =>
-    k === '__proto__' || k === 'constructor' || k === 'prototype' ? undefined : v;
-const safeParse = <T>(payload: string): T => JSON.parse(payload, safeReviver) as T;
+const safeParse = <T>(payload: string): T => safeJsonParse(payload) as T;
 
 import type {
     DebateStore,
@@ -27,6 +25,7 @@ import type { CognitiveTrace } from '../../types/domain-types';
 import type { ChatSession } from '../../contracts/storage/session-store';
 import type { Role } from '../../contracts/storage/roles-store';
 import type { Skill } from '../../contracts/storage/skills-store';
+import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
 class DexieKeyStore implements KeyStore {
     async saveKey(key: ApiKey): Promise<void> {

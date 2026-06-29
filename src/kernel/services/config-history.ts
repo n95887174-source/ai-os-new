@@ -4,6 +4,7 @@ import { CONFIG } from './config-registry';
 import { replaceConfig } from './config-mutations';
 import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('ConfigHistory');
 
@@ -41,7 +42,7 @@ export class ConfigHistoryService {
         try {
             const stored = BucketStorageAdapter.getItem(CONFIG_HISTORY_KEY);
             if (stored) {
-                const parsed = JSON.parse(stored) as { history: ConfigVersion[]; seq: number };
+                const parsed = safeJsonParse(stored) as { history: ConfigVersion[]; seq: number };
                 this.history = parsed.history ?? [];
                 this.currentVersionSeq = parsed.seq ?? this.history.length + 1;
             }

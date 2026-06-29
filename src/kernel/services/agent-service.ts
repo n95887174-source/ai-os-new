@@ -3,6 +3,7 @@ import type { NodeContext } from '../types/domain-types';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
 import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('AgentService');
 
@@ -401,7 +402,7 @@ export class AgentService {
 
     importAgents(jsonData: string) {
         try {
-            const imported = JSON.parse(jsonData);
+            const imported = safeJsonParse(jsonData);
             if (!Array.isArray(imported)) throw new Error('Invalid format');
             const top = this.deps.orchestrator.getActiveTopology();
             if (!top) return 0;

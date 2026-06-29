@@ -11,11 +11,12 @@ import {
 import { motion } from 'framer-motion';
 import type { TranslationKey } from '../i18n/translations';
 import { NAV_SECTIONS, type UserLevel } from '../routes';
+import { safeJsonParse } from '../kernel/utils/safe-json';
 
 const RECENT_KEY = 'mavis:palette:recent';
 function getRecent(): string[] {
     try {
-        return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+        return safeJsonParse(localStorage.getItem(RECENT_KEY) || '[]');
     } catch {
         return [];
     }
@@ -40,7 +41,7 @@ interface SidebarProps {
 const PINNED_KEY = 'mavis:sidebar:pinned';
 function getPinned(): string[] {
     try {
-        return JSON.parse(localStorage.getItem(PINNED_KEY) || '[]');
+        return safeJsonParse(localStorage.getItem(PINNED_KEY) || '[]');
     } catch {
         return [];
     }
@@ -74,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => {
         try {
             return new Set<string>(
-                JSON.parse(localStorage.getItem('mavis:collapsedSections') || '[]'),
+                safeJsonParse(localStorage.getItem('mavis:collapsedSections') || '[]'),
             );
         } catch {
             return new Set<string>();

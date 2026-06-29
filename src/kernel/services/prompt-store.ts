@@ -1,4 +1,5 @@
 import { BucketStorageAdapter } from '../storage-adapter-instance';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const STORAGE_KEY = 'superagents_prompt_overrides';
 
@@ -18,7 +19,7 @@ const DEFAULT_PROMPTS: Record<PromptRole, string> = {
 function loadOverrides(): Partial<Record<PromptRole, string>> {
     try {
         const raw = BucketStorageAdapter.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) return safeJsonParse(raw);
     } catch (e) {
         console.warn('[PromptStore] loadOverrides failed', e);
     }

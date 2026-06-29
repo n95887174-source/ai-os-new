@@ -23,6 +23,7 @@ import {
     textWhiteXs,
 } from '../styles/common';
 import { useConfirm } from '../hooks/useConfirm';
+import { safeJsonParse } from '../kernel/utils/safe-json';
 
 const STORAGE_KEY = 'provider_decisions_v1';
 const MAX_DECISIONS = 500;
@@ -48,7 +49,7 @@ function loadFromStorage(): ProviderDecisionEntry[] {
     try {
         const raw = storageAdapter.getItem(STORAGE_KEY);
         if (!raw) return [];
-        const parsed: unknown = JSON.parse(raw);
+        const parsed: unknown = safeJsonParse(raw);
         return Array.isArray(parsed) ? (parsed as ProviderDecisionEntry[]) : [];
     } catch {
         return [];

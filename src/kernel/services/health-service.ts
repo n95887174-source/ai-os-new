@@ -2,6 +2,7 @@ import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import type { KeyHealthCheckResult, KeyHealthSummary, IHealthService } from '../contracts/health';
 import type { IKeyStateStore } from '../contracts/key-state';
+import type { ProbeResult } from '../contracts/probe';
 export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health';
 
 const LOGGER = rootLogger.child('HealthService');
@@ -161,16 +162,19 @@ export class HealthService implements IHealthService {
         error?: string,
     ): void {
         try {
-            this.deps.keyStateStore.update(id, {
+            const result: ProbeResult = {
                 status: status === 'active' ? 'ready' : 'broken',
-                lastProbe: {
-                    status: status === 'active' ? 'ready' : 'broken',
-                    latency,
-                    error,
-                    timestamp: Date.now(),
-                },
-                flags: { circuitOpen: false, rateLimited: false, authFailed: status !== 'active' },
-            });
+                provider,
+                keyId: id,
+                keyLabel: '',
+                model: '',
+                latency,
+                rateLimited: false,
+                circuitOpen: false,
+                error,
+                timestamp: Date.now(),
+            };
+            this.deps.keyStateStore.ingestProbe(id, result);
         } catch (e) {
             LOGGER.warn('HealthService', 'Failed to update keyStateStore after probe', {
                 keyId: id,

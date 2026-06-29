@@ -22,6 +22,7 @@ import { useKeyIntelligence } from '../../stores/useKeyIntelligence';
 import type { ParsedKeyResult } from '../../kernel/contracts/key-intelligence';
 import { PROVIDER_META, type BulkImportReport } from './add-key-constants';
 import BulkImportStep from './BulkImportStep';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 interface Props {
     onClose: () => void;
@@ -357,7 +358,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
                 let rawKeys: string[];
                 if (trimmedInput.startsWith('[') || trimmedInput.startsWith('{')) {
                     try {
-                        const jsonParsed = JSON.parse(trimmedInput);
+                        const jsonParsed = safeJsonParse(trimmedInput);
                         const items = Array.isArray(jsonParsed) ? jsonParsed : [jsonParsed];
                         rawKeys = [];
                         for (const item of items) {

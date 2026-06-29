@@ -12,6 +12,7 @@ import type { RolesStore } from '../contracts/storage/roles-store';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 const LOGGER = rootLogger.child('RoleService');
 
 export interface RoleUsageStats {
@@ -346,7 +347,7 @@ export class RoleService {
                 const stored = BucketStorageAdapter.getItem('super_agents_roles');
                 if (stored) {
                     try {
-                        this.roles = JSON.parse(stored);
+                        this.roles = safeJsonParse(stored);
                         await this.deps.rolesStore.bulkAdd(this.roles);
                         BucketStorageAdapter.removeItem('super_agents_roles');
                     } catch (e) {

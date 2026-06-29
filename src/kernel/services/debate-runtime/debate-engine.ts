@@ -19,6 +19,7 @@ import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
+import { safeJsonParse } from '../../../kernel/utils/safe-json';
 const LOGGER = rootLogger.child('DebateEngine');
 
 interface SnapshotBridgeContext {
@@ -1541,9 +1542,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         // restored session is visible to all engine operations (startSession,
         // pauseSession, cancelSession, etc.)
         try {
-            const topology: DebateTopology = JSON.parse(record.topology);
-            const agentStates: AgentStateEntry[] = JSON.parse(record.agentStates);
-            const participants: ParticipantConfig[] = JSON.parse(record.participants || '[]');
+            const topology: DebateTopology = safeJsonParse(record.topology);
+            const agentStates: AgentStateEntry[] = safeJsonParse(record.agentStates);
+            const participants: ParticipantConfig[] = safeJsonParse(record.participants || '[]');
 
             const session = new DebateSessionInstance(
                 record.id,
@@ -1572,7 +1573,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             // S4-11: Restore reasoning chains / memory
             try {
                 const mem = this.getMemory(record.id);
-                const memData = JSON.parse(record.memory || '{}');
+                const memData = safeJsonParse(record.memory || '{}');
                 mem.restoreFrom(memData);
             } catch {
                 /* memory is optional — fresh start if parse fails */

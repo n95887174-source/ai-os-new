@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Search, ArrowRight, Clock, X } from 'lucide-react';
 import { NAV_SECTIONS } from '../../routes';
 import type { TranslationKey } from '../../i18n/translations';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 // ─── Fuzzy match helper ───────────────────────────────────────────────────────
 function fuzzyScore(pattern: string, text: string): number {
@@ -41,7 +42,7 @@ const MAX_RECENT = 8;
 
 function getRecent(): string[] {
     try {
-        return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+        return safeJsonParse(localStorage.getItem(RECENT_KEY) || '[]');
     } catch {
         return [];
     }

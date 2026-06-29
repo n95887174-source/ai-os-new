@@ -1,6 +1,7 @@
 import type { DebateSession } from '../../contracts/debate-types';
 import type { DebateStore, DebateSessionRecord } from '../../contracts/storage/debate-store';
 import { rootLogger } from '../logger-service';
+import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('DebateSessionPersistence');
 
@@ -69,7 +70,9 @@ function toBool(v: unknown, fallback: boolean): boolean {
 }
 
 function recordToSession(record: DebateSessionRecord): DebateSession {
-    const savedExtra: Record<string, unknown> = record.topology ? JSON.parse(record.topology) : {};
+    const savedExtra: Record<string, unknown> = record.topology
+        ? safeJsonParse(record.topology)
+        : {};
     const savedConfig =
         typeof savedExtra.config === 'object' && savedExtra.config
             ? (savedExtra.config as Record<string, unknown>)
@@ -77,20 +80,20 @@ function recordToSession(record: DebateSessionRecord): DebateSession {
     let parsedParticipants: unknown;
     let parsedArgs: unknown;
     try {
-        parsedParticipants = JSON.parse(record.participants);
+        parsedParticipants = safeJsonParse(record.participants);
     } catch {
         parsedParticipants = null;
     }
     if (record.arguments) {
         try {
-            parsedArgs = JSON.parse(record.arguments);
+            parsedArgs = safeJsonParse(record.arguments);
         } catch {
             parsedArgs = null;
         }
     }
     if (!parsedArgs) {
         try {
-            parsedArgs = JSON.parse(record.agentStates || '[]');
+            parsedArgs = safeJsonParse(record.agentStates || '[]');
         } catch {
             parsedArgs = null;
         }

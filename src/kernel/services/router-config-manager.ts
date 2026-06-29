@@ -18,11 +18,46 @@ export function getRouterConfigManager(): RouterConfigManager | null {
 export function getRouterConfig(): RouterConfigSection {
     if (_instance) {
         const c = _instance.getConfig();
+        const profile = _instance.getActiveProfile();
         return {
-            ...CONFIG.router,
+            history: c.history,
+            latency: c.latency,
             activeProfile: c.activeProfile,
             weightProfiles: c.weightProfiles as RouterConfigSection['weightProfiles'],
             abTest: c.abTest as RouterConfigSection['abTest'],
+            classification: {
+                ...c.classification,
+                shortThreshold: CONFIG.router.classification.shortThreshold,
+            },
+            scoring: {
+                ttftMaxMs: profile.scoring.ttft.maxMs,
+                tpsMax: profile.scoring.tps.max,
+                reliabilityFloor: profile.scoring.reliability.floor,
+                stabilityBonus: profile.scoring.stabilityBonus,
+                reputationBonus: profile.scoring.reputationBonus,
+                keyReputationBonus: profile.scoring.keyReputationBonus,
+                latencyPenalty: { ...profile.scoring.latencyPenalty },
+                costPenalty: { ...profile.scoring.costPenalty },
+            },
+            defaultWeights: { ...profile.defaultWeights },
+            strategyWeights: {
+                ...profile.strategyWeights,
+            } as RouterConfigSection['strategyWeights'],
+            autoDynamicAdjustment: {
+                short: { ...profile.autoDynamicAdjustment.short },
+                long: { ...profile.autoDynamicAdjustment.long },
+            },
+            latencyVarianceBands: profile.latencyVarianceBands.map((b) => ({ ...b })),
+            weights: Object.fromEntries(
+                Object.entries(profile.strategyWeights).map(([k, v]) => [k, { ...v }]),
+            ) as RouterConfigSection['weights'],
+            decisionHistoryDefaultLimit: CONFIG.router.decisionHistoryDefaultLimit,
+            raceCandidateCount: CONFIG.router.raceCandidateCount,
+            budgetPenalty: { ...CONFIG.router.budgetPenalty },
+            costEstimate: { ...CONFIG.router.costEstimate },
+            affinity: c.affinity,
+            priority: c.priority,
+            providerByComplexity: c.providerByComplexity,
         };
     }
     return CONFIG.router;

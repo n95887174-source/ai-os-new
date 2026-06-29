@@ -1,7 +1,5 @@
 import { CONFIG_DEFAULTS } from './config-registry';
 import { setConfig } from './config-mutations';
-import { getRouterConfig } from './router-config-manager';
-import type { RouterConfigSection, RouterWeightTriple } from '../contracts/config-registry';
 import type {
     MonitoringConfigSection,
     MetricsConfigSection,
@@ -102,10 +100,6 @@ export class ConfigService {
         this.overlays = {};
     }
 
-    getRouter(): RouterConfigSection {
-        return getRouterConfig();
-    }
-
     getMonitoring(): MonitoringConfigSection {
         return deepMerge(CONFIG_DEFAULTS.monitoring, this.overlays.monitoring);
     }
@@ -140,30 +134,6 @@ export class ConfigService {
 
     getServices(): ServicesConfigSection {
         return deepMerge(CONFIG_DEFAULTS.services, this.overlays.services);
-    }
-
-    async updateRouter(partial: Partial<RouterConfigSection>) {
-        const { getRouterConfigManager } = await import('./router-config-manager');
-        const mgr = getRouterConfigManager();
-        if (!mgr) {
-            throw new Error('[ConfigService] RouterConfigManager not initialized');
-        }
-
-        // Check for unsupported fields
-        const supportedKeys = ['weights', 'activeProfile'];
-        const unsupportedKeys = Object.keys(partial).filter((k) => !supportedKeys.includes(k));
-        if (unsupportedKeys.length > 0) {
-            throw new Error(
-                `[ConfigService] updateRouter: fields [${unsupportedKeys.join(', ')}] are not supported through this method. Use RouterConfigManager directly for complex configuration updates.`,
-            );
-        }
-
-        if (partial.weights) {
-            const w = partial.weights as unknown as RouterWeightTriple;
-            await mgr.updateActiveProfileWeights(w);
-        }
-        if (partial.activeProfile) await mgr.setActiveProfile(partial.activeProfile);
-        await this.persist();
     }
 
     private notifySettingsUpdated(section: string, changes: unknown) {

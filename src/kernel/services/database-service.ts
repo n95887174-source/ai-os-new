@@ -25,6 +25,7 @@ import type {
 } from '../contracts/session-manager';
 
 import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
 const LOGGER = rootLogger.child('DatabaseService');
 
 export interface QueryResult<T> {
@@ -207,7 +208,7 @@ export class SuperAgentsDB extends Dexie {
                 const oldHistory = await debateTable.get(HISTORY_LIST_ID);
                 if (oldHistory) {
                     try {
-                        const sessions = JSON.parse(oldHistory.arguments || '[]');
+                        const sessions = safeJsonParse(oldHistory.arguments || '[]');
                         if (Array.isArray(sessions)) {
                             for (const s of sessions) {
                                 const record: Record<string, unknown> = {
@@ -324,7 +325,7 @@ export class SuperAgentsDB extends Dexie {
                 if (oldActive) {
                     try {
                         const parsedArgs = oldActive.arguments
-                            ? JSON.parse(oldActive.arguments)
+                            ? safeJsonParse(oldActive.arguments)
                             : null;
                         const realId =
                             parsedArgs && Array.isArray(parsedArgs)
