@@ -130,6 +130,36 @@ export function useChatStoreHydration(): void {
                         useChatStore.setState({ sessions: cleaned });
                     }
                     useChatStore.setState({ isLoaded: true, activeRequestIds: new Set() });
+
+                    // Restore backup from beforeunload — catches data that async flush
+                    // didn't persist before tab close.
+                    const backupData = BucketStorageAdapter.getItem(
+                        'super_agents_chat_sessions_backup',
+                    );
+                    if (backupData) {
+                        BucketStorageAdapter.removeItem('super_agents_chat_sessions_backup');
+                        try {
+                            const parsed = JSON.parse(backupData) as ChatSession[];
+                            if (parsed.length > 0) {
+                                const sStore = resolveSessionStore();
+                                if (sStore) {
+                                    for (const session of parsed) {
+                                        const existing = await sStore.getSession(session.id);
+                                        if (!existing) {
+                                            await sStore.put(session);
+                                        }
+                                    }
+                                    const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
+                                    useChatStore.setState({
+                                        sessions: batch,
+                                        hasMoreSessions: false,
+                                    });
+                                }
+                            }
+                        } catch {
+                            /* ignore corrupt backup */
+                        }
+                    }
                 }
             }
         };
@@ -161,12 +191,11 @@ export function useChatStoreHydration(): void {
 
         const handleBeforeUnload = () => {
             const state = useChatStore.getState();
-            if (state.activeSessionId) {
-                const payload = JSON.stringify({
-                    sessionId: state.activeSessionId,
-                    sessions: state.sessions,
-                });
-                navigator.sendBeacon('/api/persist', payload);
+            if (state.activeSessionId && state.sessions.length > 0) {
+                BucketStorageAdapter.setItem(
+                    'super_agents_chat_sessions_backup',
+                    JSON.stringify(state.sessions),
+                );
             }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);

@@ -113,6 +113,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
         setProvider(newProvider);
         setStep(2);
         setError('');
+        setBulkMode(false);
+        setBulkReport(null);
+        setBulkInput('');
         setLabel(generateAlias(newProvider));
     };
 
@@ -162,6 +165,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
         if (step === 3) {
             setStep(2);
             setError('');
+            setBulkMode(false);
+            setBulkReport(null);
+            setBulkInput('');
             return;
         }
         if (step === 0) {
@@ -171,6 +177,9 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
         if (step === 2) {
             setStep(1);
             setError('');
+            setBulkMode(false);
+            setBulkReport(null);
+            setBulkInput('');
             return;
         }
         if (step === 1) {
@@ -572,7 +581,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
                                           ? t('add_key.title_provider')
                                           : step === 3
                                             ? 'Select Default Model'
-                                            : bulkMode
+                                            : step === 2 && bulkMode
                                               ? t('add_key.title_bulk')
                                               : t('add_key.title_configure').replace(
                                                     '{0}',

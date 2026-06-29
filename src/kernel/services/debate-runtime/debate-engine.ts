@@ -114,9 +114,7 @@ interface KeyServiceLike {
 }
 
 interface RouterServiceLike {
-    getDebateProviders(
-        count: number,
-    ): Array<{
+    getDebateProviders(count: number): Array<{
         provider: string;
         key: { id: string; provider: string; key: string; availableModels?: string[] };
     }>;
@@ -976,6 +974,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     ) ||
                     'auto';
 
+                // Build participant display name map — avoids leaking internal agentId to LLM.
+                const participantNameMap = new Map<string, string>(
+                    session.participants.map((p) => [
+                        p.agentId,
+                        p.role || p.nodeId || `Agent ${p.agentId.slice(0, 8)}`,
+                    ]),
+                );
+                const currentName =
+                    participantNameMap.get(participant.agentId) || participant.agentId;
+
                 const allSteps = this.getMemory(sessionId).getAllSteps();
                 const recentSteps = allSteps.slice(-8);
                 const historyMessages: Array<{
@@ -991,7 +999,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                             : i % 2 === 0
                               ? ('user' as const)
                               : ('assistant' as const),
-                    content: `[${s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${s.content.slice(0, 2000)}`,
+                    content: `[${participantNameMap.get(s.agentId) || s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${s.content.slice(0, 2000)}`,
                 }));
 
                 const personaBlock = this.buildPersonaMemory(sessionId, participant.agentId);
@@ -1000,7 +1008,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     [
                         {
                             role: 'system',
-                            content: `You are ${participant.agentId}. ${participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session)}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`,
+                            content: `You are ${currentName}. ${participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session)}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`,
                         },
                         ...historyMessages,
                         {

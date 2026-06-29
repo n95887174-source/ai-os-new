@@ -182,19 +182,23 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
         if (normLang === 'css') {
             setOutput('CSS applied to sandbox (visual output in iframe)');
             const iframe = document.createElement('iframe');
-            iframe.sandbox.add('allow-same-origin');
+            iframe.sandbox.add('allow-scripts');
             iframe.style.display = 'none';
             document.body.appendChild(iframe);
             iframeRef.current = iframe;
-            const doc = iframe.contentDocument;
-            if (doc) {
-                doc.open();
-                doc.write(
-                    `<html><head><style>${escapeForStyle(code)}</style></head><body><div class="test">Preview</div></body></html>`,
-                );
-                doc.close();
-            }
-            setIsRunning(false);
+
+            iframe.srcdoc = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>${escapeForStyle(code)}</style></head><body><div class="test">Preview</div></body></html>`;
+            const capturedIframe = iframe;
+            timeoutRef.current = setTimeout(() => {
+                try {
+                    const doc = capturedIframe.contentDocument;
+                    const bodyText = doc?.body?.innerText || '(no output)';
+                    setOutput(bodyText.slice(0, 5000));
+                } catch {
+                    setOutput('(rendered — check iframe for visual output)');
+                }
+                setIsRunning(false);
+            }, 1000);
             return;
         }
 

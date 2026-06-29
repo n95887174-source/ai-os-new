@@ -1,26 +1,26 @@
 import { lazyService } from './service-helper';
-import { rootLogger } from './services/logger-service'
+import { rootLogger } from './services/logger-service';
 export { rootLogger };
 import { BucketStorageAdapter } from './storage-adapter-instance';
 export { BucketStorageAdapter };
 export const storageAdapter = BucketStorageAdapter;
-import type { SettingsService } from './services/settings-service'
-import type { KeyService } from './services/key-vault';
+import type { SettingsService } from './services/settings-service';
+import type { KeyService } from './services/key-management/key-service';
 import type { MemoryService } from './services/memory-engine';
 import type { MCPService } from './services/mcp-service';
-import { FREE_TIER_LIMITS } from './services/key-vault';
+import { FREE_TIER_LIMITS } from './services/key-management/key-service';
 import type { ChatService } from './services/chat-service';
 import type { OrchestrationService } from './services/orchestration-service';
 import type { CognitiveService } from './services/cognitive-service';
-import type { RouterService } from './services/provider-router'
-import type { PricingService } from './services/pricing-service'
-import type { PolicyService } from './services/policy-service'
-import type { AgentService } from './services/agent-service'
-import type { ToolService } from './services/tool-executor'
-import type { RoleService } from './services/role-service'
-import type { AdminService } from './services/admin-service'
+import type { RouterService } from './services/provider-router';
+import type { PricingService } from './services/pricing-service';
+import type { PolicyService } from './services/policy-service';
+import type { AgentService } from './services/agent-service';
+import type { ToolService } from './services/tool-executor';
+import type { RoleService } from './services/role-service';
+import type { AdminService } from './services/admin-service';
 import type { MonitoringService } from './services/monitoring-service';
-import type { SnapshotService } from './services/snapshot-service'
+import type { SnapshotService } from './services/snapshot-service';
 import type { AdvisorService } from './services/advisor-service';
 import type { AutoDebateService } from './services/auto-debate/auto-debate-service';
 import type { DebateService } from './services/debate-service';
@@ -31,7 +31,7 @@ import type { DiagnosticService } from './services/runtime-intelligence/diagnost
 import type { WhatIfService } from './services/runtime-intelligence/whatif-service';
 import type { ConfigService } from './services/config-service';
 import type { NotificationWebhookService } from './services/notification-webhook-service';
-import type { ExternalSecretsService } from './services/external-secrets-service'
+import type { ExternalSecretsService } from './services/external-secrets-service';
 import type { CompromiseWebhookService } from './services/compromise-webhook-service';
 import type { SkillService } from './services/skill-service';
 import type { WorkspaceService } from './services/workspace-service';
@@ -46,20 +46,25 @@ export { FREE_TIER_LIMITS };
 export * from './types/service-exports';
 
 export const settingsService = lazyService<SettingsService>('settingsService', {
-  getSettings: () => ({ theme: 'dark', language: 'en', notifications: true, themeConfig: { mode: 'dark', primaryColor: '#3b82f6' } }),
-  subscribe: () => () => {},
+    getSettings: () => ({
+        theme: 'dark',
+        language: 'en',
+        notifications: true,
+        themeConfig: { mode: 'dark', primaryColor: '#3b82f6' },
+    }),
+    subscribe: () => () => {},
 });
 
 export const keyService = lazyService<KeyService>('keyService', {
-  getKeys: () => [],
-  getAlerts: () => [],
-  getPools: () => [],
-  getFreeTierLimits: () => ({}),
-  getPoolStrategy: () => 'round-robin' as const,
-  getPoolKeyDistribution: () => [],
-  verifyKey: async () => false,
-  detectProvider: () => null,
-  getRoutingPolicy: () => ({ globalSLAMode: 'BALANCED' as const, latencyThreshold: 1500 }),
+    getKeys: () => [],
+    getAlerts: () => [],
+    getPools: () => [],
+    getFreeTierLimits: () => ({}),
+    getPoolStrategy: () => 'round-robin' as const,
+    getPoolKeyDistribution: () => [],
+    verifyKey: async () => false,
+    detectProvider: () => null,
+    getRoutingPolicy: () => ({ globalSLAMode: 'BALANCED' as const, latencyThreshold: 1500 }),
 });
 
 export const memoryService = lazyService<MemoryService>('memoryService');
@@ -86,14 +91,20 @@ export const debateWorkspace = lazyService<DebateWorkspace>('debateWorkspace');
 import type { DebatePolicyEngine } from './services/debate-runtime/debate-policy-engine';
 export const debatePolicyEngine = lazyService<DebatePolicyEngine>('debatePolicyEngine');
 export const debateEngine = lazyService<DebateEngine>('debateEngine');
-export const cognitiveIntelligenceService = lazyService<CognitiveIntelligenceService>('cognitiveIntelligenceService');
+export const cognitiveIntelligenceService = lazyService<CognitiveIntelligenceService>(
+    'cognitiveIntelligenceService',
+);
 export const diagnosticService = lazyService<DiagnosticService>('diagnosticService');
 export const whatIfService = lazyService<WhatIfService>('whatIfService');
-export const notificationWebhookService = lazyService<NotificationWebhookService>('notificationWebhookService');
+export const notificationWebhookService = lazyService<NotificationWebhookService>(
+    'notificationWebhookService',
+);
 export const externalSecretsService = lazyService<ExternalSecretsService>('externalSecretsService');
 export const configService = lazyService<ConfigService>('configService');
 export const skillService = lazyService<SkillService>('skillService');
-export const compromiseWebhookService = lazyService<CompromiseWebhookService>('compromiseWebhookService');
+export const compromiseWebhookService = lazyService<CompromiseWebhookService>(
+    'compromiseWebhookService',
+);
 export const monitoringService = lazyService<MonitoringService>('monitoringService');
 export const chatService = lazyService<ChatService>('chatService');
 export const adapterRegistry = lazyService<IAdapterRegistry>('providerAdapterRegistry');
@@ -105,14 +116,20 @@ export const sessionAffinityStore = lazyService<SessionAffinityStore>('sessionAf
 export const executionGovernor = lazyService<IExecutionGovernor>('executionGovernor');
 import type { PersonaService as PersonaServiceType } from './services/persona-service';
 export const personaService = lazyService<PersonaServiceType>('personaService');
-export const roleVersionService = lazyService<import('../kernel/services/role-version-service').RoleVersionService>('roleVersionService');
+export const roleVersionService =
+    lazyService<import('../kernel/services/role-version-service').RoleVersionService>(
+        'roleVersionService',
+    );
 
 // ── Cache Service (for CachePanel) ─────────────────────────────────────────
 import type { CacheService } from './services/cache-service';
 export const cacheService = lazyService<CacheService>('cacheService');
 
 // ── Event Bridge (shadow mode projections) ──────────────────────
-import type { KeyStateProjection, ProjectedKeyState } from './services/projections/key-state-projection';
+import type {
+    KeyStateProjection,
+    ProjectedKeyState,
+} from './services/projections/key-state-projection';
 export type { ProjectedKeyState };
 export const keyStateProjection = lazyService<KeyStateProjection>('keyStateProjection');
 import type { RouterProjection, ProjectedDecision } from './services/projections/router-projection';
@@ -137,11 +154,15 @@ export const counterfactualEngine = lazyService<ICounterfactualEngine>('counterf
 
 // ── Counterfactual Explanation Service ───────────────────────────
 import type { ICounterfactualExplanationService } from './contracts/counterfactual-explanation';
-export const counterfactualExplanationService = lazyService<ICounterfactualExplanationService>('counterfactualExplanationService');
+export const counterfactualExplanationService = lazyService<ICounterfactualExplanationService>(
+    'counterfactualExplanationService',
+);
 
 // ── Counterfactual Narrative Service ────────────────────────────
 import type { ICounterfactualNarrativeService } from './contracts/counterfactual-narrative';
-export const counterfactualNarrativeService = lazyService<ICounterfactualNarrativeService>('counterfactualNarrativeService');
+export const counterfactualNarrativeService = lazyService<ICounterfactualNarrativeService>(
+    'counterfactualNarrativeService',
+);
 
 // ── Temporal Replay Service ─────────────────────────────────────
 import type { ITemporalReplayService } from './contracts/temporal-replay';
@@ -149,7 +170,8 @@ export const temporalReplayService = lazyService<ITemporalReplayService>('tempor
 
 // ── Truth Consistency Monitor ──────────────────────────────────
 import type { ITruthConsistencyMonitor } from './contracts/truth-consistency';
-export const truthConsistencyMonitor = lazyService<ITruthConsistencyMonitor>('truthConsistencyMonitor');
+export const truthConsistencyMonitor =
+    lazyService<ITruthConsistencyMonitor>('truthConsistencyMonitor');
 
 // ── Group Manager ──────────────────────────────────────────────
 import type { IGroupManager } from './contracts/group-manager';
@@ -164,22 +186,28 @@ import type { SystemState } from './types/metrics-types';
 import type { HealthEvent, ProviderTracker } from './services/provider-tracker';
 import type { ProviderRanking } from './types/interfaces';
 export const kernel = lazyService<{
-  getStateSnapshot(): SystemState;
-  getState(): SystemState;
-  getHealthEvents(provider?: string, limit?: number): HealthEvent[];
-  getProviderRankings(catalogProviders?: string[]): ProviderRanking[];
-  getCollaborativeSuggestions(installedProviders?: string[]): Array<{ provider: string; reason: string; matchScore: number }>;
+    getStateSnapshot(): SystemState;
+    getState(): SystemState;
+    getHealthEvents(provider?: string, limit?: number): HealthEvent[];
+    getProviderRankings(catalogProviders?: string[]): ProviderRanking[];
+    getCollaborativeSuggestions(
+        installedProviders?: string[],
+    ): Array<{ provider: string; reason: string; matchScore: number }>;
 }>('kernel');
 export const providerTracker = lazyService<ProviderTracker>('providerTracker');
 
 import type { IArchitectureReviewService } from './contracts/architecture-review';
-export const architectureReviewService = lazyService<IArchitectureReviewService>('architectureReviewService');
+export const architectureReviewService = lazyService<IArchitectureReviewService>(
+    'architectureReviewService',
+);
 
 import type { IPromptAuditService } from './contracts/prompt-audit';
 export const promptAuditService = lazyService<IPromptAuditService>('promptAuditService');
 
 import type { IRoutingExperimentsService } from './contracts/routing-experiments';
-export const routingExperimentsService = lazyService<IRoutingExperimentsService>('routingExperimentsService');
+export const routingExperimentsService = lazyService<IRoutingExperimentsService>(
+    'routingExperimentsService',
+);
 
 import type { IGovStressTestService } from './contracts/gov-stress-test';
 export const govStressTestService = lazyService<IGovStressTestService>('govStressTestService');
@@ -188,14 +216,26 @@ import type { IObsGapsService } from './contracts/obs-gaps';
 export const obsGapsService = lazyService<IObsGapsService>('obsGapsService');
 
 // ── Consistency Checker ─────────────────────────────────────────
-import type { IConsistencyChecker, ConsistencyReport, ConsistencyCheckItem, CodeManifest } from './contracts/consistency-checker';
+import type {
+    IConsistencyChecker,
+    ConsistencyReport,
+    ConsistencyCheckItem,
+    CodeManifest,
+} from './contracts/consistency-checker';
 export type { ConsistencyReport, ConsistencyCheckItem, CodeManifest };
 export const consistencyChecker = lazyService<IConsistencyChecker>('consistencyChecker');
 
 // ── Consistency Healing Pipeline ────────────────────────────────
-import type { IConsistencyHealingPipeline, HealingPlan, HealingTask, HealingFixSuggestion } from './contracts/consistency-healing';
+import type {
+    IConsistencyHealingPipeline,
+    HealingPlan,
+    HealingTask,
+    HealingFixSuggestion,
+} from './contracts/consistency-healing';
 export type { HealingPlan, HealingTask, HealingFixSuggestion };
-export const consistencyHealingPipeline = lazyService<IConsistencyHealingPipeline>('consistencyHealingPipeline');
+export const consistencyHealingPipeline = lazyService<IConsistencyHealingPipeline>(
+    'consistencyHealingPipeline',
+);
 
 // ── Rotation Service (for RotationsPanel) ──────────────────────
 import type { IRotationService } from './contracts/key-rotation';
@@ -255,6 +295,5 @@ export const eloService = lazyService<EloRatingService>('eloService');
 
 // ── Chat Summarizer Service ─────────────────────────────────────
 import type { ChatSummarizerService as ChatSummarizerServiceType } from './services/chat-summarizer-service';
-export const chatSummarizerService = lazyService<ChatSummarizerServiceType>('chatSummarizerService');
-
-
+export const chatSummarizerService =
+    lazyService<ChatSummarizerServiceType>('chatSummarizerService');

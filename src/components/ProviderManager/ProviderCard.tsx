@@ -88,7 +88,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 
     const cardIsMountedRef = useRef(true);
     const cardTestInitiatedRef = useRef(false);
-    const testPromptRef = React.useRef(testPrompt);
+    const testPromptRef = useRef(testPrompt);
     useEffect(() => {
         testPromptRef.current = testPrompt;
     }, [testPrompt]);
@@ -128,7 +128,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         }
     }, [testStatus]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (testStatus !== 'loading') return;
         if (cardTestInitiatedRef.current) return;
         cardTestInitiatedRef.current = true;
