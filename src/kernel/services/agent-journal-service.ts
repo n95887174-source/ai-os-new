@@ -4,229 +4,250 @@ import { BucketStorageAdapter } from './storage-adapter';
 import { EVENTS } from '../events/event-names';
 
 export interface JournalEntry {
-  id: string;
-  agentId: string;
-  agentName: string;
-  taskType: string;
-  taskDescription: string;
-  outcome: 'success' | 'failure' | 'partial' | 'in_progress';
-  durationMs: number;
-  tokensUsed: number;
-  notes?: string;
-  tags: string[];
-  timestamp: number;
+    id: string;
+    agentId: string;
+    agentName: string;
+    taskType: string;
+    taskDescription: string;
+    outcome: 'success' | 'failure' | 'partial' | 'in_progress';
+    durationMs: number;
+    tokensUsed: number;
+    notes?: string;
+    tags: string[];
+    timestamp: number;
 }
 
 export interface AgentJournalServiceDeps {
-  eventBus: {
-    on: (event: string, cb: (...args: unknown[]) => void) => () => void;
-    emit: (event: string, data?: unknown) => void;
-  };
-  logger?: ILogger;
-  storage?: {
-    list: () => Promise<JournalEntry[]>;
-    save: (entry: JournalEntry) => Promise<void>;
-    delete: (id: string) => Promise<void>;
-    clear: () => Promise<void>;
-  };
+    eventBus: {
+        on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+        emit: (event: string, data?: unknown) => void;
+    };
+    logger?: ILogger;
+    storage?: {
+        list: () => Promise<JournalEntry[]>;
+        save: (entry: JournalEntry) => Promise<void>;
+        delete: (id: string) => Promise<void>;
+        clear: () => Promise<void>;
+    };
 }
 
 const STORAGE_KEY = 'agent_journal_v1';
 const MAX_ENTRIES = 1000;
 
 const defaultStorage = {
-  async list(): Promise<JournalEntry[]> {
-    const raw = await BucketStorageAdapter.AGENTS.get<JournalEntry[]>(STORAGE_KEY);
-    if (!raw) return [];
-    return Array.isArray(raw) ? raw : [];
-  },
-  async save(entry: JournalEntry): Promise<void> {
-    const list = await defaultStorage.list();
-    const filtered = list.filter(e => e.id !== entry.id);
-    filtered.unshift(entry);
-    await BucketStorageAdapter.AGENTS.set(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES));
-  },
-  async delete(id: string): Promise<void> {
-    const list = await defaultStorage.list();
-    await BucketStorageAdapter.AGENTS.set(STORAGE_KEY, list.filter(e => e.id !== id));
-  },
-  async clear(): Promise<void> {
-    await BucketStorageAdapter.AGENTS.remove(STORAGE_KEY);
-  },
+    async list(): Promise<JournalEntry[]> {
+        const raw = await BucketStorageAdapter.AGENTS.get<JournalEntry[]>(STORAGE_KEY);
+        if (!raw) return [];
+        return Array.isArray(raw) ? raw : [];
+    },
+    async save(entry: JournalEntry): Promise<void> {
+        const list = await defaultStorage.list();
+        const filtered = list.filter((e) => e.id !== entry.id);
+        filtered.unshift(entry);
+        await BucketStorageAdapter.AGENTS.set(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES));
+    },
+    async delete(id: string): Promise<void> {
+        const list = await defaultStorage.list();
+        await BucketStorageAdapter.AGENTS.set(
+            STORAGE_KEY,
+            list.filter((e) => e.id !== id),
+        );
+    },
+    async clear(): Promise<void> {
+        await BucketStorageAdapter.AGENTS.remove(STORAGE_KEY);
+    },
 };
 
 export class AgentJournalService {
-  private deps: AgentJournalServiceDeps;
-  private storage: NonNullable<AgentJournalServiceDeps['storage']>;
-  private cache: Map<string, JournalEntry> = new Map();
-  private initialized = false;
-  private unsubs: Array<() => void> = [];
+    private deps: AgentJournalServiceDeps;
+    private storage: NonNullable<AgentJournalServiceDeps['storage']>;
+    private cache: Map<string, JournalEntry> = new Map();
+    private initialized = false;
+    private unsubs: Array<() => void> = [];
 
-  constructor(deps: AgentJournalServiceDeps) {
-    this.deps = deps;
-    this.storage = deps.storage ?? defaultStorage;
-  }
-
-  async init(): Promise<void> {
-    if (this.initialized) return;
-    try {
-      const all = await this.storage.list();
-      this.cache.clear();
-      for (const e of all) this.cache.set(e.id, e);
-    } catch (err) {
-      this.deps.logger?.error('AgentJournal', 'init failed', { error: String(err) });
+    constructor(deps: AgentJournalServiceDeps) {
+        this.deps = deps;
+        this.storage = deps.storage ?? defaultStorage;
     }
-    this.initialized = true;
-    this.subscribe();
-  }
 
-  private subscribe(): void {
-    const off1 = this.deps.eventBus.on(EVENTS.AGENT_TASK_COMPLETED, (raw: unknown) => {
-      if (typeof raw !== 'object' || raw === null) return;
-      const e = raw as Partial<JournalEntry> & { agentId: string; taskType: string };
-      this.record({
-        agentId: e.agentId,
-        agentName: e.agentName ?? e.agentId,
-        taskType: e.taskType,
-        taskDescription: e.taskDescription ?? '',
-        outcome: e.outcome ?? 'success',
-        durationMs: e.durationMs ?? 0,
-        tokensUsed: e.tokensUsed ?? 0,
-        notes: e.notes,
-        tags: e.tags ?? [],
-      });
-    });
-    this.unsubs.push(off1);
-  }
-
-  destroy(): void {
-    for (const off of this.unsubs) {
-      try { off(); } catch { /* noop */ }
+    async init(): Promise<void> {
+        if (this.initialized) return;
+        try {
+            const all = await this.storage.list();
+            this.cache.clear();
+            for (const e of all) this.cache.set(e.id, e);
+        } catch (err) {
+            this.deps.logger?.error('AgentJournal', 'init failed', { error: String(err) });
+        }
+        this.initialized = true;
+        this.subscribe();
     }
-    this.unsubs = [];
-    this.cache.clear();
-  }
 
-  async record(input: Omit<JournalEntry, 'id' | 'timestamp'>): Promise<JournalEntry> {
-    const entry: JournalEntry = {
-      ...input,
-      id: genId('je'),
-      timestamp: Date.now(),
-    };
-    this.cache.set(entry.id, entry);
-    try {
-      await this.storage.save(entry);
-    } catch (err) {
-      this.deps.logger?.warn('AgentJournal', 'persist failed', { error: String(err) });
+    private subscribe(): void {
+        const off1 = this.deps.eventBus.on(EVENTS.AGENT_TASK_COMPLETED, (raw: unknown) => {
+            if (typeof raw !== 'object' || raw === null) return;
+            const e = raw as Partial<JournalEntry> & { agentId: string; taskType: string };
+            this.record({
+                agentId: e.agentId,
+                agentName: e.agentName ?? e.agentId,
+                taskType: e.taskType,
+                taskDescription: e.taskDescription ?? '',
+                outcome: e.outcome ?? 'success',
+                durationMs: e.durationMs ?? 0,
+                tokensUsed: e.tokensUsed ?? 0,
+                notes: e.notes,
+                tags: e.tags ?? [],
+            }).catch((err) =>
+                this.deps.logger?.error('AgentJournal', 'record failed', { error: String(err) }),
+            );
+        });
+        this.unsubs.push(off1);
     }
-    this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_ADDED, entry);
-    return entry;
-  }
 
-  async remove(id: string): Promise<void> {
-    this.cache.delete(id);
-    try {
-      await this.storage.delete(id);
-    } catch { /* noop */ }
-    this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_REMOVED, { id });
-  }
-
-  async clear(): Promise<void> {
-    this.cache.clear();
-    try {
-      await this.storage.clear();
-    } catch { /* noop */ }
-    this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_CLEARED, undefined);
-  }
-
-  listAll(): JournalEntry[] {
-    return Array.from(this.cache.values()).sort((a, b) => b.timestamp - a.timestamp);
-  }
-
-  listByAgent(agentId: string): JournalEntry[] {
-    return this.listAll().filter(e => e.agentId === agentId);
-  }
-
-  listByTag(tag: string): JournalEntry[] {
-    const lc = tag.toLowerCase();
-    return this.listAll().filter(e => e.tags.some(t => t.toLowerCase() === lc));
-  }
-
-  search(query: string): JournalEntry[] {
-    if (!query.trim()) return this.listAll();
-    const q = query.toLowerCase();
-    return this.listAll().filter(e =>
-      e.agentName.toLowerCase().includes(q) ||
-      e.taskType.toLowerCase().includes(q) ||
-      e.taskDescription.toLowerCase().includes(q) ||
-      e.notes?.toLowerCase().includes(q) ||
-      e.tags.some(t => t.toLowerCase().includes(q))
-    );
-  }
-
-  getByDateRange(from: number, to: number): JournalEntry[] {
-    return this.listAll().filter(e => e.timestamp >= from && e.timestamp <= to);
-  }
-
-  count(): number {
-    return this.cache.size;
-  }
-
-  countByAgent(agentId: string): number {
-    return this.listByAgent(agentId).length;
-  }
-
-  getAllTags(): string[] {
-    const set = new Set<string>();
-    for (const e of this.cache.values()) for (const t of e.tags) set.add(t);
-    return Array.from(set).sort();
-  }
-
-  getAllAgents(): string[] {
-    const set = new Set<string>();
-    for (const e of this.cache.values()) set.add(e.agentId);
-    return Array.from(set).sort();
-  }
-
-  getAgentStats(agentId: string): {
-    totalTasks: number;
-    successRate: number;
-    totalDurationMs: number;
-    avgDurationMs: number;
-    totalTokens: number;
-    lastActive: number;
-  } {
-    const entries = this.listByAgent(agentId);
-    if (entries.length === 0) {
-      return { totalTasks: 0, successRate: 0, totalDurationMs: 0, avgDurationMs: 0, totalTokens: 0, lastActive: 0 };
+    destroy(): void {
+        for (const off of this.unsubs) {
+            try {
+                off();
+            } catch {
+                /* noop */
+            }
+        }
+        this.unsubs = [];
+        this.cache.clear();
     }
-    const success = entries.filter(e => e.outcome === 'success').length;
-    const totalDuration = entries.reduce((s, e) => s + e.durationMs, 0);
-    const totalTokens = entries.reduce((s, e) => s + e.tokensUsed, 0);
-    const lastActive = Math.max(...entries.map(e => e.timestamp));
-    return {
-      totalTasks: entries.length,
-      successRate: success / entries.length,
-      totalDurationMs: totalDuration,
-      avgDurationMs: totalDuration / entries.length,
-      totalTokens,
-      lastActive,
-    };
-  }
+
+    async record(input: Omit<JournalEntry, 'id' | 'timestamp'>): Promise<JournalEntry> {
+        const entry: JournalEntry = {
+            ...input,
+            id: genId('je'),
+            timestamp: Date.now(),
+        };
+        this.cache.set(entry.id, entry);
+        try {
+            await this.storage.save(entry);
+        } catch (err) {
+            this.deps.logger?.warn('AgentJournal', 'persist failed', { error: String(err) });
+        }
+        this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_ADDED, entry);
+        return entry;
+    }
+
+    async remove(id: string): Promise<void> {
+        this.cache.delete(id);
+        try {
+            await this.storage.delete(id);
+        } catch (e) {
+            this.deps.logger?.warn('AgentJournal', 'remove failed', { id, error: String(e) });
+        }
+        this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_REMOVED, { id });
+    }
+
+    async clear(): Promise<void> {
+        this.cache.clear();
+        try {
+            await this.storage.clear();
+        } catch (e) {
+            this.deps.logger?.warn('AgentJournal', 'clear failed', { error: String(e) });
+        }
+        this.deps.eventBus.emit(EVENTS.AGENT_JOURNAL_CLEARED, undefined);
+    }
+
+    listAll(): JournalEntry[] {
+        return Array.from(this.cache.values()).sort((a, b) => b.timestamp - a.timestamp);
+    }
+
+    listByAgent(agentId: string): JournalEntry[] {
+        return this.listAll().filter((e) => e.agentId === agentId);
+    }
+
+    listByTag(tag: string): JournalEntry[] {
+        const lc = tag.toLowerCase();
+        return this.listAll().filter((e) => e.tags.some((t) => t.toLowerCase() === lc));
+    }
+
+    search(query: string): JournalEntry[] {
+        if (!query.trim()) return this.listAll();
+        const q = query.toLowerCase();
+        return this.listAll().filter(
+            (e) =>
+                e.agentName.toLowerCase().includes(q) ||
+                e.taskType.toLowerCase().includes(q) ||
+                e.taskDescription.toLowerCase().includes(q) ||
+                e.notes?.toLowerCase().includes(q) ||
+                e.tags.some((t) => t.toLowerCase().includes(q)),
+        );
+    }
+
+    getByDateRange(from: number, to: number): JournalEntry[] {
+        return this.listAll().filter((e) => e.timestamp >= from && e.timestamp <= to);
+    }
+
+    count(): number {
+        return this.cache.size;
+    }
+
+    countByAgent(agentId: string): number {
+        return this.listByAgent(agentId).length;
+    }
+
+    getAllTags(): string[] {
+        const set = new Set<string>();
+        for (const e of this.cache.values()) for (const t of e.tags) set.add(t);
+        return Array.from(set).sort();
+    }
+
+    getAllAgents(): string[] {
+        const set = new Set<string>();
+        for (const e of this.cache.values()) set.add(e.agentId);
+        return Array.from(set).sort();
+    }
+
+    getAgentStats(agentId: string): {
+        totalTasks: number;
+        successRate: number;
+        totalDurationMs: number;
+        avgDurationMs: number;
+        totalTokens: number;
+        lastActive: number;
+    } {
+        const entries = this.listByAgent(agentId);
+        if (entries.length === 0) {
+            return {
+                totalTasks: 0,
+                successRate: 0,
+                totalDurationMs: 0,
+                avgDurationMs: 0,
+                totalTokens: 0,
+                lastActive: 0,
+            };
+        }
+        const success = entries.filter((e) => e.outcome === 'success').length;
+        const totalDuration = entries.reduce((s, e) => s + e.durationMs, 0);
+        const totalTokens = entries.reduce((s, e) => s + e.tokensUsed, 0);
+        const lastActive = Math.max(...entries.map((e) => e.timestamp));
+        return {
+            totalTasks: entries.length,
+            successRate: success / entries.length,
+            totalDurationMs: totalDuration,
+            avgDurationMs: totalDuration / entries.length,
+            totalTokens,
+            lastActive,
+        };
+    }
 }
 
 let _instance: AgentJournalService | null = null;
 
 export function getAgentJournalService(deps?: AgentJournalServiceDeps): AgentJournalService {
-  if (!_instance && deps) {
-    _instance = new AgentJournalService(deps);
-  }
-  if (!_instance) {
-    throw new Error('AgentJournalService not initialized');
-  }
-  return _instance;
+    if (!_instance && deps) {
+        _instance = new AgentJournalService(deps);
+    }
+    if (!_instance) {
+        throw new Error('AgentJournalService not initialized');
+    }
+    return _instance;
 }
 
 export function resetAgentJournalService(): void {
-  _instance = null;
+    _instance = null;
 }

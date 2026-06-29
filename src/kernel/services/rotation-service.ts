@@ -101,11 +101,10 @@ export class RotationService implements IRotationService {
 
             if (msLeft <= 0) {
                 this.handleExpiry(keyId).catch((e) =>
-                    this.deps.logger?.warn(
-                        'RotationService',
-                        `Expiry handler failed for ${keyId}`,
-                        { error: String(e), action: 'handleExpiry' },
-                    ),
+                    LOGGER.warn('RotationService', `Expiry handler failed for ${keyId}`, {
+                        error: String(e),
+                        action: 'handleExpiry',
+                    }),
                 );
             }
         }

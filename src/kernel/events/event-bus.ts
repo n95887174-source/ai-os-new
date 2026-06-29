@@ -232,9 +232,11 @@ export class EventBus implements IEventBus {
             const deltaMB = Math.round((heapAfter - heapBefore) / 1024 / 1024);
             if (deltaMB > 2) {
                 const usedMB = Math.round(heapAfter / 1024 / 1024);
-                console.warn(
-                    `[HEAP:EventBus] COGNITIVE_TRACE_UPDATED emit #${this.emitCount} — +${deltaMB}MB (${usedMB}MB total)`,
-                );
+                this.logger?.warn('EventBus', 'COGNITIVE_TRACE_UPDATED heap', {
+                    emitCount: this.emitCount,
+                    deltaMB,
+                    usedMB,
+                });
             }
         }
 

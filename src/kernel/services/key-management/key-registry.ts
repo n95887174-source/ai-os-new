@@ -327,16 +327,17 @@ export class KeyRegistry {
             // Most likely a race during init where another service cleared dexie
             // before the snapshot was mirrored back.
             if (this.keys.length > 0 && final.length === 0) {
-                console.warn(
-                    '[KeyRegistry] loadKeys() BLOCKED: registry has',
-                    this.keys.length,
-                    'keys but dexie source is empty — refusing to overwrite. Trace the',
-                    'caller that emptied dexie.',
+                LOGGER.warn(
+                    'KeyRegistry',
+                    'loadKeys() BLOCKED: registry has keys but dexie source is empty',
+                    { current: this.keys.length, incoming: 0 },
                 );
                 if (import.meta.env.DEV)
-                    console.log(
-                        `[KEY_DROP_TRACE] run=${_dropRun} stage=guard-blocked current=${this.keys.length} incoming=0`,
-                    );
+                    LOGGER.debug('KeyRegistry', 'KEY_DROP_TRACE guard-blocked', {
+                        run: _dropRun,
+                        current: this.keys.length,
+                        incoming: 0,
+                    });
                 return;
             }
 
@@ -347,11 +348,12 @@ export class KeyRegistry {
             if (import.meta.env.DEV)
                 console.log('[KEY_SYNC] final committed count:', this.keys.length);
         } catch (e) {
-            console.warn('[KeyRegistry] Failed to load API keys:', e);
+            LOGGER.error('KeyRegistry', 'Failed to load API keys', { error: String(e) });
             if (import.meta.env.DEV)
-                console.log(
-                    `[KEY_DROP_TRACE] run=${_dropRun} stage=EXCEPTION error=${e instanceof Error ? e.message : String(e)}`,
-                );
+                LOGGER.debug('KeyRegistry', 'KEY_DROP_TRACE EXCEPTION', {
+                    run: _dropRun,
+                    error: e instanceof Error ? e.message : String(e),
+                });
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                 message: 'Failed to load API keys, using defaults',
                 type: 'error',

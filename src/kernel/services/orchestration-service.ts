@@ -17,7 +17,7 @@ function heapLog(label: string): void {
     if (mem) {
         const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
         const limitMB = Math.round(mem.jsHeapSizeLimit / 1024 / 1024);
-        console.warn(`[HEAP:Orchestrator] ${label} — ${usedMB}MB / ${limitMB}MB`);
+        LOGGER.warn('Heap', label, { usedMB, limitMB });
     }
 }
 

@@ -33,7 +33,8 @@ function readRaw(key: string): string | null {
             return deobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
         }
         return raw;
-    } catch {
+    } catch (e) {
+        LOGGER.warn('StorageAdapter', 'readRaw failed', { key, error: String(e) });
         return null;
     }
 }

@@ -101,7 +101,11 @@ export class MemoryRepository {
                 : ({ ...entry, id } as MemoryEntry);
             await dexieDb.memories.put(m);
         });
-        const merged = (await dexieDb.memories.get(id))!;
+        const merged = await dexieDb.memories.get(id);
+        if (!merged) {
+            LOGGER.error('MemoryRepository', 'upsert: record vanished after write', { id });
+            return entry as MemoryEntry;
+        }
         this.cache.set(merged.id, merged);
         if (!existed) await this.enforceLimit();
 

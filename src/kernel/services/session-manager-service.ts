@@ -1,378 +1,458 @@
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { DatabaseService } from './database-service';
-import type { ISessionManager, SessionMeta, DebateCreateData, SessionType, SessionStatus, SessionFilters, SessionLink, DebateTimelineEntry, DebateOverride } from '../contracts/session-manager';
+import type {
+    ISessionManager,
+    SessionMeta,
+    DebateCreateData,
+    SessionType,
+    SessionStatus,
+    SessionFilters,
+    SessionLink,
+    DebateTimelineEntry,
+    DebateOverride,
+} from '../contracts/session-manager';
 import type { DebateSessionRecord, DebateStore } from '../contracts/storage/debate-store';
 import type { ChatSession } from '../contracts/storage/session-store';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 
-
 const LOGGER = rootLogger.child('SessionManagerService');
 
 export class SessionManagerService implements ISessionManager {
-  private db: DatabaseService;
-  private eventBus: IEventBus;
-  private debateStore: DebateStore;
-  constructor(db: DatabaseService, eventBus: IEventBus, debateStore: DebateStore) {
-    this.db = db;
-    this.eventBus = eventBus;
-    this.debateStore = debateStore;
-  }
-
-  async create(type: SessionType, meta: Partial<SessionMeta>, debateData?: DebateCreateData): Promise<string> {
-    const id = meta.id || genId();
-    const now = Date.now();
-    const base: SessionMeta = {
-      id,
-      type,
-      title: meta.title || 'Untitled',
-      status: 'active',
-      tags: meta.tags || [],
-      folder: meta.folder || '',
-      isArchived: false,
-      isPinned: false,
-      createdAt: now,
-      updatedAt: now,
-      linkedSessionIds: [],
-    };
-
-    if (type === 'debate') {
-      const record: DebateSessionRecord = {
-        id,
-        topic: base.title,
-        topologyType: (debateData?.topologyType as DebateSessionRecord['topologyType']) ?? 'roundtable',
-        phase: 'created',
-        round: 0,
-        totalTokens: 0,
-        totalCost: 0,
-        agentStates: '[]',
-        arguments: '[]',
-        topology: debateData?.topology ?? '{}',
-        participants: debateData?.participants ?? '[]',
-        memory: '{}',
-        startedAt: now,
-        updatedAt: now,
-        createdAt: now,
-        version: 1,
-        tags: debateData?.tags ?? base.tags,
-        folder: debateData?.folder ?? base.folder,
-        isArchived: false,
-      };
-      await this.debateStore.saveSnapshot(record);
-    } else {
-      const session: ChatSession = {
-        id,
-        title: base.title,
-        history: [],
-        createdAt: now,
-        updatedAt: now,
-        tags: base.tags,
-        folder: base.folder,
-        isArchived: false,
-        isPinned: false,
-      };
-      await this.db.sessions.put(session as ChatSession);
+    private db: DatabaseService;
+    private eventBus: IEventBus;
+    private debateStore: DebateStore;
+    constructor(db: DatabaseService, eventBus: IEventBus, debateStore: DebateStore) {
+        this.db = db;
+        this.eventBus = eventBus;
+        this.debateStore = debateStore;
     }
 
-    return id;
-  }
+    async create(
+        type: SessionType,
+        meta: Partial<SessionMeta>,
+        debateData?: DebateCreateData,
+    ): Promise<string> {
+        const id = meta.id || genId();
+        const now = Date.now();
+        const base: SessionMeta = {
+            id,
+            type,
+            title: meta.title || 'Untitled',
+            status: 'active',
+            tags: meta.tags || [],
+            folder: meta.folder || '',
+            isArchived: false,
+            isPinned: false,
+            createdAt: now,
+            updatedAt: now,
+            linkedSessionIds: [],
+        };
 
-  async load(id: string): Promise<SessionMeta | null> {
-    const debate = await this.db.debateSessions.get(id);
-    if (debate) {
-      const meta = this.recordToMeta(debate, 'debate');
-      const links = await this.getLinked(id);
-      meta.linkedSessionIds = links.map(l => l.fromId === id ? l.toId : l.fromId);
-      return meta;
-    }
-    const chat = await this.db.sessions.get(id);
-    if (chat) {
-      const meta = this.chatToMeta(chat);
-      const links = await this.getLinked(id);
-      meta.linkedSessionIds = links.map(l => l.fromId === id ? l.toId : l.fromId);
-      return meta;
-    }
-    return null;
-  }
+        if (type === 'debate') {
+            const record: DebateSessionRecord = {
+                id,
+                topic: base.title,
+                topologyType:
+                    (debateData?.topologyType as DebateSessionRecord['topologyType']) ??
+                    'roundtable',
+                phase: 'created',
+                round: 0,
+                totalTokens: 0,
+                totalCost: 0,
+                agentStates: '[]',
+                arguments: '[]',
+                topology: debateData?.topology ?? '{}',
+                participants: debateData?.participants ?? '[]',
+                memory: '{}',
+                startedAt: now,
+                updatedAt: now,
+                createdAt: now,
+                version: 1,
+                tags: debateData?.tags ?? base.tags,
+                folder: debateData?.folder ?? base.folder,
+                isArchived: false,
+            };
+            await this.debateStore.saveSnapshot(record);
+        } else {
+            const session: ChatSession = {
+                id,
+                title: base.title,
+                history: [],
+                createdAt: now,
+                updatedAt: now,
+                tags: base.tags,
+                folder: base.folder,
+                isArchived: false,
+                isPinned: false,
+            };
+            await this.db.sessions.put(session as ChatSession);
+        }
 
-  async save(id: string): Promise<void> {
-    // Save is a no-op at the SessionManager level — individual services
-    // (DebateEngine, ChatService) handle their own persistence.
-    // This method exists for future bulk-save coordination.
-    const existing = await this.load(id);
-    if (!existing) {
-      LOGGER.warn('SessionManagerService', `save: session ${id} not found`);
-    }
-  }
-
-  async pause(id: string): Promise<void> {
-    const debate = await this.db.debateSessions.get(id);
-    if (debate) {
-      await this.debateStore.saveSnapshot({ ...debate, phase: 'paused', updatedAt: Date.now() });
-      return;
-    }
-    throw new Error(`Session ${id} not found or is not a debate`);
-  }
-
-  async resume(id: string): Promise<void> {
-    const debate = await this.db.debateSessions.get(id);
-    if (debate) {
-      await this.debateStore.saveSnapshot({ ...debate, phase: 'active', updatedAt: Date.now() });
-      return;
-    }
-    throw new Error(`Session ${id} not found or is not a debate`);
-  }
-
-  async list(filters: SessionFilters): Promise<SessionMeta[]> {
-    const results: SessionMeta[] = [];
-
-    const shouldIncludeDebates = !filters.type || filters.type === 'debate';
-    const shouldIncludeChats = !filters.type || filters.type === 'chat';
-
-    if (shouldIncludeDebates) {
-      const collection = this.db.debateSessions.orderBy('updatedAt').reverse();
-      let records = await collection.toArray();
-
-      if (filters.status) {
-        records = records.filter(r => r.phase === filters.status);
-      }
-      if (filters.folder) {
-        records = records.filter(r => r.folder === filters.folder);
-      }
-      if (filters.isArchived !== undefined) {
-        records = records.filter(r => (r.isArchived ?? false) === filters.isArchived);
-      }
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        records = records.filter(r => r.topic.toLowerCase().includes(q));
-      }
-      if (filters.tags && filters.tags.length > 0) {
-        records = records.filter(r => {
-          const tags = r.tags ?? [];
-          return filters.tags!.some(t => tags.includes(t));
-        });
-      }
-
-      results.push(...records.map(r => this.recordToMeta(r, 'debate')));
+        return id;
     }
 
-    if (shouldIncludeChats) {
-      const collection = this.db.sessions.orderBy('updatedAt').reverse();
-      let records = await collection.toArray();
-
-      if (filters.status) {
-        records = records.filter(r => this.mapChatStatus(r) === filters.status);
-      }
-      if (filters.folder) {
-        records = records.filter(r => r.folder === filters.folder);
-      }
-      if (filters.isArchived !== undefined) {
-        records = records.filter(r => (r.isArchived ?? false) === filters.isArchived);
-      }
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        records = records.filter(r => r.title.toLowerCase().includes(q));
-      }
-      if (filters.tags && filters.tags.length > 0) {
-        records = records.filter(r => {
-          const tags = r.tags ?? [];
-          return filters.tags!.some(t => tags.includes(t));
-        });
-      }
-
-      results.push(...records.map(r => this.chatToMeta(r)));
+    async load(id: string): Promise<SessionMeta | null> {
+        const debate = await this.db.debateSessions.get(id);
+        if (debate) {
+            const meta = this.recordToMeta(debate, 'debate');
+            const links = await this.getLinked(id);
+            meta.linkedSessionIds = links.map((l) => (l.fromId === id ? l.toId : l.fromId));
+            return meta;
+        }
+        const chat = await this.db.sessions.get(id);
+        if (chat) {
+            const meta = this.chatToMeta(chat);
+            const links = await this.getLinked(id);
+            meta.linkedSessionIds = links.map((l) => (l.fromId === id ? l.toId : l.fromId));
+            return meta;
+        }
+        return null;
     }
 
-    results.sort((a, b) => b.updatedAt - a.updatedAt);
-    return results;
-  }
-
-  async archive(id: string): Promise<void> {
-    const debate = await this.db.debateSessions.get(id);
-    if (debate) {
-      await this.debateStore.saveSnapshot({ ...debate, isArchived: true, updatedAt: Date.now() });
-      return;
+    async save(id: string): Promise<void> {
+        // Save is a no-op at the SessionManager level — individual services
+        // (DebateEngine, ChatService) handle their own persistence.
+        // This method exists for future bulk-save coordination.
+        const existing = await this.load(id);
+        if (!existing) {
+            LOGGER.warn('SessionManagerService', `save: session ${id} not found`);
+        }
     }
-    const chat = await this.db.sessions.get(id);
-    if (chat) {
-      await this.db.sessions.update(id, { isArchived: true, updatedAt: Date.now() } as Partial<ChatSession>);
-      return;
+
+    async pause(id: string): Promise<void> {
+        const debate = await this.db.debateSessions.get(id);
+        if (debate) {
+            await this.debateStore.saveSnapshot({
+                ...debate,
+                phase: 'paused',
+                updatedAt: Date.now(),
+            });
+            return;
+        }
+        throw new Error(`Session ${id} not found or is not a debate`);
     }
-    throw new Error(`Session ${id} not found`);
-  }
 
-  async unarchive(id: string): Promise<void> {
-    const debate = await this.db.debateSessions.get(id);
-    if (debate) {
-      await this.debateStore.saveSnapshot({ ...debate, isArchived: false, updatedAt: Date.now() });
-      return;
+    async resume(id: string): Promise<void> {
+        const debate = await this.db.debateSessions.get(id);
+        if (debate) {
+            await this.debateStore.saveSnapshot({
+                ...debate,
+                phase: 'active',
+                updatedAt: Date.now(),
+            });
+            return;
+        }
+        throw new Error(`Session ${id} not found or is not a debate`);
     }
-    const chat = await this.db.sessions.get(id);
-    if (chat) {
-      await this.db.sessions.update(id, { isArchived: false, updatedAt: Date.now() } as Partial<ChatSession>);
-      return;
+
+    async list(filters: SessionFilters): Promise<SessionMeta[]> {
+        const results: SessionMeta[] = [];
+
+        const shouldIncludeDebates = !filters.type || filters.type === 'debate';
+        const shouldIncludeChats = !filters.type || filters.type === 'chat';
+
+        if (shouldIncludeDebates) {
+            const collection = this.db.debateSessions.orderBy('updatedAt').reverse();
+            let records = await collection.toArray();
+
+            if (filters.status) {
+                records = records.filter((r) => r.phase === filters.status);
+            }
+            if (filters.folder) {
+                records = records.filter((r) => r.folder === filters.folder);
+            }
+            if (filters.isArchived !== undefined) {
+                records = records.filter((r) => (r.isArchived ?? false) === filters.isArchived);
+            }
+            if (filters.search) {
+                const q = filters.search.toLowerCase();
+                records = records.filter((r) => r.topic.toLowerCase().includes(q));
+            }
+            if (filters.tags && filters.tags.length > 0) {
+                records = records.filter((r) => {
+                    const tags = r.tags ?? [];
+                    return filters.tags!.some((t) => tags.includes(t));
+                });
+            }
+
+            results.push(...records.map((r) => this.recordToMeta(r, 'debate')));
+        }
+
+        if (shouldIncludeChats) {
+            const collection = this.db.sessions.orderBy('updatedAt').reverse();
+            let records = await collection.toArray();
+
+            if (filters.status) {
+                records = records.filter((r) => this.mapChatStatus(r) === filters.status);
+            }
+            if (filters.folder) {
+                records = records.filter((r) => r.folder === filters.folder);
+            }
+            if (filters.isArchived !== undefined) {
+                records = records.filter((r) => (r.isArchived ?? false) === filters.isArchived);
+            }
+            if (filters.search) {
+                const q = filters.search.toLowerCase();
+                records = records.filter((r) => r.title.toLowerCase().includes(q));
+            }
+            if (filters.tags && filters.tags.length > 0) {
+                records = records.filter((r) => {
+                    const tags = r.tags ?? [];
+                    return filters.tags!.some((t) => tags.includes(t));
+                });
+            }
+
+            results.push(...records.map((r) => this.chatToMeta(r)));
+        }
+
+        results.sort((a, b) => b.updatedAt - a.updatedAt);
+        return results;
     }
-    throw new Error(`Session ${id} not found`);
-  }
 
-  async delete(id: string): Promise<void> {
-    const debate = await this.db.debateSessions.get(id);
-    const chat = debate ? null : await this.db.sessions.get(id);
-    const type: SessionType = debate ? 'debate' : chat ? 'chat' : 'chat';
-
-    // P0-12: cancel any running debate BEFORE deleting records
-    // Prevents zombie debates that continue generating tokens after session deletion
-    try { (await import('../instances')).debateEngine.cancelSession(id); } catch { /* ignore — session may not be managed by debate engine */ }
-
-    await Promise.all([
-      this.debateStore.deleteSession(id).catch(() => {}),
-      this.db.sessions.delete(id).catch(() => {}),
-      this.db.debateTimeline.where('sessionId').equals(id).delete().catch(() => {}),
-      this.db.debateOverrides.where('sessionId').equals(id).delete().catch(() => {}),
-      this.db.sessionLinks.where('fromId').equals(id).delete().catch(() => {}),
-      this.db.sessionLinks.where('toId').equals(id).delete().catch(() => {}),
-    ]);
-
-    this.eventBus.emit(EVENTS.SESSION_DELETED, { id, type });
-  }
-
-  async link(fromId: string, toId: string, linkType: SessionLink['linkType'], context = ''): Promise<void> {
-    const link: SessionLink = {
-      id: genId(),
-      fromId,
-      toId,
-      linkType,
-      context,
-      createdAt: Date.now(),
-    };
-    await this.db.sessionLinks.put(link);
-  }
-
-  async getLinked(id: string): Promise<SessionLink[]> {
-    const fromLinks = this.db.sessionLinks.where('fromId').equals(id).toArray();
-    const toLinks = this.db.sessionLinks.where('toId').equals(id).toArray();
-    const [from, to] = await Promise.all([fromLinks, toLinks]);
-    return [...from, ...to];
-  }
-
-  async updateMeta(id: string, updates: Partial<SessionMeta>): Promise<void> {
-    const now = Date.now();
-    const debate = await this.db.debateSessions.get(id);
-    if (debate) {
-      const updated = { ...debate, updatedAt: now };
-      if (updates.title !== undefined) updated.topic = updates.title;
-      if (updates.tags !== undefined) updated.tags = updates.tags;
-      if (updates.folder !== undefined) updated.folder = updates.folder;
-      if (updates.isArchived !== undefined) updated.isArchived = updates.isArchived;
-      if (updates.isPinned !== undefined) updated.isPinned = updates.isPinned;
-      await this.debateStore.saveSnapshot(updated);
-      return;
+    async archive(id: string): Promise<void> {
+        const debate = await this.db.debateSessions.get(id);
+        if (debate) {
+            await this.debateStore.saveSnapshot({
+                ...debate,
+                isArchived: true,
+                updatedAt: Date.now(),
+            });
+            return;
+        }
+        const chat = await this.db.sessions.get(id);
+        if (chat) {
+            await this.db.sessions.update(id, {
+                isArchived: true,
+                updatedAt: Date.now(),
+            } as Partial<ChatSession>);
+            return;
+        }
+        throw new Error(`Session ${id} not found`);
     }
-    const chat = await this.db.sessions.get(id);
-    if (chat) {
-      const patch: Partial<ChatSession> = { updatedAt: now };
-      if (updates.title !== undefined) patch.title = updates.title;
-      if (updates.tags !== undefined) patch.tags = updates.tags;
-      if (updates.folder !== undefined) patch.folder = updates.folder;
-      if (updates.isArchived !== undefined) patch.isArchived = updates.isArchived;
-      if (updates.isPinned !== undefined) patch.isPinned = updates.isPinned;
-      if (updates.linkedDebateId !== undefined) patch.linkedDebateId = updates.linkedDebateId;
-      await this.db.sessions.update(id, patch);
-      return;
+
+    async unarchive(id: string): Promise<void> {
+        const debate = await this.db.debateSessions.get(id);
+        if (debate) {
+            await this.debateStore.saveSnapshot({
+                ...debate,
+                isArchived: false,
+                updatedAt: Date.now(),
+            });
+            return;
+        }
+        const chat = await this.db.sessions.get(id);
+        if (chat) {
+            await this.db.sessions.update(id, {
+                isArchived: false,
+                updatedAt: Date.now(),
+            } as Partial<ChatSession>);
+            return;
+        }
+        throw new Error(`Session ${id} not found`);
     }
-    throw new Error(`Session ${id} not found`);
-  }
 
-  async addTimelineEntry(sessionId: string, type: string, payload: string): Promise<void> {
-    const entry: DebateTimelineEntry = {
-      id: genId(),
-      sessionId,
-      timestamp: Date.now(),
-      type,
-      payload,
-    };
-    await this.db.debateTimeline.put(entry);
-  }
+    async delete(id: string): Promise<void> {
+        const debate = await this.db.debateSessions.get(id);
+        const chat = debate ? null : await this.db.sessions.get(id);
+        const type: SessionType = debate ? 'debate' : chat ? 'chat' : 'chat';
 
-  async getTimeline(sessionId: string): Promise<DebateTimelineEntry[]> {
-    return this.db.debateTimeline
-      .where('sessionId')
-      .equals(sessionId)
-      .sortBy('timestamp');
-  }
+        // P0-12: cancel any running debate BEFORE deleting records
+        // Prevents zombie debates that continue generating tokens after session deletion
+        try {
+            (await import('../instances')).debateEngine.cancelSession(id);
+        } catch {
+            /* ignore — session may not be managed by debate engine */
+        }
 
-  async addOverride(sessionId: string, type: string, payload: string): Promise<void> {
-    const override: DebateOverride = {
-      id: genId(),
-      sessionId,
-      type,
-      payload,
-      appliedAt: Date.now(),
-    };
-    await this.db.debateOverrides.put(override);
-  }
+        await Promise.allSettled([
+            this.debateStore.deleteSession(id).catch((e) => {
+                LOGGER.error('SessionManager', 'delete debateStore failed', { id, error: e });
+            }),
+            this.db.sessions.delete(id).catch((e) => {
+                LOGGER.error('SessionManager', 'delete sessions failed', { id, error: e });
+            }),
+            this.db.debateTimeline
+                .where('sessionId')
+                .equals(id)
+                .delete()
+                .catch((e) => {
+                    LOGGER.error('SessionManager', 'delete debateTimeline failed', {
+                        id,
+                        error: e,
+                    });
+                }),
+            this.db.debateOverrides
+                .where('sessionId')
+                .equals(id)
+                .delete()
+                .catch((e) => {
+                    LOGGER.error('SessionManager', 'delete debateOverrides failed', {
+                        id,
+                        error: e,
+                    });
+                }),
+            this.db.sessionLinks
+                .where('fromId')
+                .equals(id)
+                .delete()
+                .catch((e) => {
+                    LOGGER.error('SessionManager', 'delete sessionLinks(from) failed', {
+                        id,
+                        error: e,
+                    });
+                }),
+            this.db.sessionLinks
+                .where('toId')
+                .equals(id)
+                .delete()
+                .catch((e) => {
+                    LOGGER.error('SessionManager', 'delete sessionLinks(to) failed', {
+                        id,
+                        error: e,
+                    });
+                }),
+        ]);
 
-  async getOverrides(sessionId: string): Promise<DebateOverride[]> {
-    return this.db.debateOverrides
-      .where('sessionId')
-      .equals(sessionId)
-      .sortBy('appliedAt');
-  }
+        this.eventBus.emit(EVENTS.SESSION_DELETED, { id, type });
+    }
 
-  private recordToMeta(record: DebateSessionRecord, type: SessionType): SessionMeta {
-    return {
-      id: record.id,
-      type,
-      title: record.topic || '(untitled)',
-      status: this.mapPhaseToStatus(record.phase),
-      tags: record.tags ?? [],
-      folder: record.folder ?? '',
-      isArchived: record.isArchived ?? false,
-      isPinned: record.isPinned ?? false,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
-      linkedSessionIds: [],
-    };
-  }
+    async link(
+        fromId: string,
+        toId: string,
+        linkType: SessionLink['linkType'],
+        context = '',
+    ): Promise<void> {
+        const link: SessionLink = {
+            id: genId(),
+            fromId,
+            toId,
+            linkType,
+            context,
+            createdAt: Date.now(),
+        };
+        await this.db.sessionLinks.put(link);
+    }
 
-  private chatToMeta(chat: ChatSession): SessionMeta {
-    return {
-      id: chat.id,
-      type: 'chat',
-      title: chat.title,
-      status: chat.isArchived ? 'archived' : 'active',
-      tags: chat.tags ?? [],
-      folder: chat.folder ?? '',
-      isArchived: chat.isArchived ?? false,
-      isPinned: chat.isPinned ?? false,
-      createdAt: chat.createdAt,
-      updatedAt: chat.updatedAt,
-      linkedSessionIds: chat.linkedDebateId ? [chat.linkedDebateId] : [],
-    };
-  }
+    async getLinked(id: string): Promise<SessionLink[]> {
+        const fromLinks = this.db.sessionLinks.where('fromId').equals(id).toArray();
+        const toLinks = this.db.sessionLinks.where('toId').equals(id).toArray();
+        const [from, to] = await Promise.all([fromLinks, toLinks]);
+        return [...from, ...to];
+    }
 
-  private mapPhaseToStatus(phase: string): SessionStatus {
-    switch (phase) {
-      case 'active':
-      case 'deliberating':
-      case 'consensus':
-      case 'summarizing':
+    async updateMeta(id: string, updates: Partial<SessionMeta>): Promise<void> {
+        const now = Date.now();
+        const debate = await this.db.debateSessions.get(id);
+        if (debate) {
+            const updated = { ...debate, updatedAt: now };
+            if (updates.title !== undefined) updated.topic = updates.title;
+            if (updates.tags !== undefined) updated.tags = updates.tags;
+            if (updates.folder !== undefined) updated.folder = updates.folder;
+            if (updates.isArchived !== undefined) updated.isArchived = updates.isArchived;
+            if (updates.isPinned !== undefined) updated.isPinned = updates.isPinned;
+            await this.debateStore.saveSnapshot(updated);
+            return;
+        }
+        const chat = await this.db.sessions.get(id);
+        if (chat) {
+            const patch: Partial<ChatSession> = { updatedAt: now };
+            if (updates.title !== undefined) patch.title = updates.title;
+            if (updates.tags !== undefined) patch.tags = updates.tags;
+            if (updates.folder !== undefined) patch.folder = updates.folder;
+            if (updates.isArchived !== undefined) patch.isArchived = updates.isArchived;
+            if (updates.isPinned !== undefined) patch.isPinned = updates.isPinned;
+            if (updates.linkedDebateId !== undefined) patch.linkedDebateId = updates.linkedDebateId;
+            await this.db.sessions.update(id, patch);
+            return;
+        }
+        throw new Error(`Session ${id} not found`);
+    }
+
+    async addTimelineEntry(sessionId: string, type: string, payload: string): Promise<void> {
+        const entry: DebateTimelineEntry = {
+            id: genId(),
+            sessionId,
+            timestamp: Date.now(),
+            type,
+            payload,
+        };
+        await this.db.debateTimeline.put(entry);
+    }
+
+    async getTimeline(sessionId: string): Promise<DebateTimelineEntry[]> {
+        return this.db.debateTimeline.where('sessionId').equals(sessionId).sortBy('timestamp');
+    }
+
+    async addOverride(sessionId: string, type: string, payload: string): Promise<void> {
+        const override: DebateOverride = {
+            id: genId(),
+            sessionId,
+            type,
+            payload,
+            appliedAt: Date.now(),
+        };
+        await this.db.debateOverrides.put(override);
+    }
+
+    async getOverrides(sessionId: string): Promise<DebateOverride[]> {
+        return this.db.debateOverrides.where('sessionId').equals(sessionId).sortBy('appliedAt');
+    }
+
+    private recordToMeta(record: DebateSessionRecord, type: SessionType): SessionMeta {
+        return {
+            id: record.id,
+            type,
+            title: record.topic || '(untitled)',
+            status: this.mapPhaseToStatus(record.phase),
+            tags: record.tags ?? [],
+            folder: record.folder ?? '',
+            isArchived: record.isArchived ?? false,
+            isPinned: record.isPinned ?? false,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt,
+            linkedSessionIds: [],
+        };
+    }
+
+    private chatToMeta(chat: ChatSession): SessionMeta {
+        return {
+            id: chat.id,
+            type: 'chat',
+            title: chat.title,
+            status: chat.isArchived ? 'archived' : 'active',
+            tags: chat.tags ?? [],
+            folder: chat.folder ?? '',
+            isArchived: chat.isArchived ?? false,
+            isPinned: chat.isPinned ?? false,
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+            linkedSessionIds: chat.linkedDebateId ? [chat.linkedDebateId] : [],
+        };
+    }
+
+    private mapPhaseToStatus(phase: string): SessionStatus {
+        switch (phase) {
+            case 'active':
+            case 'deliberating':
+            case 'consensus':
+            case 'summarizing':
+                return 'active';
+            case 'paused':
+                return 'paused';
+            case 'completed':
+                return 'completed';
+            case 'failed':
+            case 'cancelled':
+                return 'failed';
+            default:
+                return 'active';
+        }
+    }
+
+    private mapChatStatus(chat: ChatSession): SessionStatus {
+        if (chat.isArchived) return 'archived';
         return 'active';
-      case 'paused':
-        return 'paused';
-      case 'completed':
-        return 'completed';
-      case 'failed':
-      case 'cancelled':
-        return 'failed';
-      default:
-        return 'active';
     }
-  }
-
-  private mapChatStatus(chat: ChatSession): SessionStatus {
-    if (chat.isArchived) return 'archived';
-    return 'active';
-  }
 }
