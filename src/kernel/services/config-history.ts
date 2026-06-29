@@ -73,7 +73,8 @@ export class ConfigHistoryService {
 
     commit(config: ConfigRegistry, author: string, comment: string): ConfigVersion {
         // Clone config deeply to preserve immutability
-        const snapshot = structuredClone(config);
+        // JSON round-trip (not structuredClone) because CONFIG is a Proxy that throws DATA_CLONE_ERR
+        const snapshot = JSON.parse(JSON.stringify(config)) as ConfigRegistry;
         const versionString = `1.0.${this.currentVersionSeq++}`;
         const newVersion: ConfigVersion = {
             id: genId('cfg'),
