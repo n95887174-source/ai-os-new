@@ -1,7 +1,11 @@
 import type { ILocalStorageAdapter } from '../../contracts/storage-adapter';
-import { createObfuscation, OBFUSCATION_PREFIX } from '../../utils/obfuscation';
+import {
+    createObfuscation,
+    OBFUSCATION_PREFIX,
+    DEFAULT_OBFUSCATION_SALT,
+} from '../../utils/obfuscation';
 
-const { obfuscate, deobfuscate } = createObfuscation('a1b2c3d4e5f6g7h8');
+const { obfuscate, deobfuscate } = createObfuscation(DEFAULT_OBFUSCATION_SALT);
 
 export class LocalStorageAdapter implements ILocalStorageAdapter {
     getItem(key: string): string | null {

@@ -12,14 +12,18 @@
 import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import { createObfuscation, OBFUSCATION_PREFIX } from '../utils/obfuscation';
+import {
+    createObfuscation,
+    OBFUSCATION_PREFIX,
+    DEFAULT_OBFUSCATION_SALT,
+} from '../utils/obfuscation';
 
 const LOGGER = rootLogger.child('BucketStorageAdapter');
 
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
 export type StorageBucket = (typeof KNOWN_BUCKETS)[number];
 
-const { obfuscate, deobfuscate } = createObfuscation('b2c3d4e5f6g7h8a1');
+const { obfuscate, deobfuscate } = createObfuscation(DEFAULT_OBFUSCATION_SALT);
 
 function readRaw(key: string): string | null {
     try {

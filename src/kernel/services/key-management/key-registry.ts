@@ -734,7 +734,8 @@ export class KeyRegistry {
             const id = (item as Record<string, unknown>).id;
             const provider = (item as Record<string, unknown>).provider;
             const label = (item as Record<string, unknown>).label;
-            if (!id || !provider || !label) continue;
+            if (typeof id !== 'string' || typeof provider !== 'string' || typeof label !== 'string')
+                continue;
             const exists = newKeys.some((k) => k.id === id);
             if (!exists) {
                 const rawHistory =

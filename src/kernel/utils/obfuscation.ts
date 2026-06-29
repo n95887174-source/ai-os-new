@@ -1,4 +1,5 @@
 export const OBFUSCATION_PREFIX = 'xob:';
+export const DEFAULT_OBFUSCATION_SALT = 'a1b2c3d4e5f6g7h8';
 
 export function createObfuscation(salt: string) {
     function obfuscate(text: string): string {
