@@ -298,7 +298,7 @@ function ensureInitialized() {
             queueMicrotask(() => setStore({ alerts: keyService.getAlerts() }));
     };
     unsubs.push(eventBus.on(EVENTS.KEY_LATENCY_BURST, refreshAlerts));
-    unsubs.push(eventBus.on(EVENTS.KEY_HEALTH_FAILED, refreshAlerts));
+    unsubs.push(eventBus.on(EVENTS.KEY_HEALTH_CHECK_FAILED, refreshAlerts));
     unsubs.push(eventBus.on(EVENTS.KEY_QUOTA_EXCEEDED, refreshAlerts));
     unsubs.push(eventBus.on(EVENTS.NOTIFICATION, refreshAlerts));
 
@@ -372,7 +372,7 @@ function ensureInitialized() {
     );
 
     unsubs.push(
-        eventBus.on(EVENTS.KEY_HEALTH_STARTED, (data) => {
+        eventBus.on(EVENTS.KEY_HEALTH_CHECK_STARTED, (data) => {
             if (typeof data === 'string') {
                 // Defer — may fire during render
                 queueMicrotask(() =>
@@ -383,7 +383,7 @@ function ensureInitialized() {
     );
 
     unsubs.push(
-        eventBus.onSafe<{ id: string }>(EVENTS.KEY_HEALTH_COMPLETED, (data) => {
+        eventBus.onSafe<{ id: string }>(EVENTS.KEY_HEALTH_CHECK_COMPLETED, (data) => {
             const id = data.id;
             if (id) {
                 // Defer — may fire during render

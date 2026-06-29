@@ -7,297 +7,416 @@ export type { KeyHealthCheckResult, KeyHealthSummary } from '../contracts/health
 const LOGGER = rootLogger.child('HealthService');
 
 export interface HealthServiceDeps {
-  eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; onSafe: <T>(event: string, cb: (data: T) => void) => () => void; emit: (event: string, data?: unknown) => void };
-  keyService: {
-    getKeys: () => { id: string; provider: string; key: string; status: string }[];
-    getKey: (id: string) => { id: string; provider: string; key: string; status: string } | undefined;
-    updateKeyStatus: (id: string, status: string, latency?: number) => void;
-    handleProviderError: (id: string, error: string) => void;
-    updateAvailableModels: (id: string, models?: string[]) => void;
-  };
-  adapterRegistry: {
-    getAdapter: (provider: string) => { checkHealth: (key: string) => Promise<{ status: string; error?: string; models?: string[] }> } | undefined;
-  };
-  keyStateStore: IKeyStateStore;
+    eventBus: {
+        on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+        onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
+        emit: (event: string, data?: unknown) => void;
+    };
+    keyService: {
+        getKeys: () => { id: string; provider: string; key: string; status: string }[];
+        getKey: (
+            id: string,
+        ) => { id: string; provider: string; key: string; status: string } | undefined;
+        updateKeyStatus: (id: string, status: string, latency?: number) => void;
+        handleProviderError: (id: string, error: string) => void;
+        updateAvailableModels: (id: string, models?: string[]) => void;
+    };
+    adapterRegistry: {
+        getAdapter: (provider: string) =>
+            | {
+                  checkHealth: (
+                      key: string,
+                  ) => Promise<{ status: string; error?: string; models?: string[] }>;
+              }
+            | undefined;
+    };
+    keyStateStore: IKeyStateStore;
 }
 
 export class HealthService implements IHealthService {
+    private unsubs: Array<() => void> = [];
+    private lastRun = 0;
+    private isRunning = false;
+    private checkingKeys = new Set<string>();
+    private scheduleInterval: ReturnType<typeof setInterval> | null = null;
+    private checkIntervalMs: number;
+    private deps: HealthServiceDeps;
+    private visibilityHandler: (() => void) | null = null;
+    private _initialized = false;
 
-  private unsubs: Array<() => void> = [];
-  private lastRun = 0;
-  private isRunning = false;
-  private checkingKeys = new Set<string>();
-  private scheduleInterval: ReturnType<typeof setInterval> | null = null;
-  private checkIntervalMs: number;
-  private deps: HealthServiceDeps;
-  private visibilityHandler: (() => void) | null = null;
-  private _initialized = false;
+    constructor(deps: HealthServiceDeps, intervalMs: number = 300000) {
+        this.deps = deps;
+        this.checkIntervalMs = intervalMs;
+    }
 
-  constructor(deps: HealthServiceDeps, intervalMs: number = 300000) {
-    this.deps = deps;
-    this.checkIntervalMs = intervalMs;
-  }
-
-  async init() {
-    if (this._initialized) return;
-    this._initialized = true;
-    this.setupListeners();
-    this.startScheduledChecks();
-    if (typeof document !== 'undefined') {
-      this.visibilityHandler = () => {
-        if (document.hidden) {
-          this.pauseScheduledChecks();
-        } else {
-          this.startScheduledChecks();
+    async init() {
+        if (this._initialized) return;
+        this._initialized = true;
+        this.setupListeners();
+        this.startScheduledChecks();
+        if (typeof document !== 'undefined') {
+            this.visibilityHandler = () => {
+                if (document.hidden) {
+                    this.pauseScheduledChecks();
+                } else {
+                    this.startScheduledChecks();
+                }
+            };
+            document.addEventListener('visibilitychange', this.visibilityHandler);
+            this.unsubs.push(() => {
+                if (this.visibilityHandler)
+                    document.removeEventListener('visibilitychange', this.visibilityHandler);
+            });
         }
-      };
-      document.addEventListener('visibilitychange', this.visibilityHandler);
-      this.unsubs.push(() => {
-        if (this.visibilityHandler) document.removeEventListener('visibilitychange', this.visibilityHandler);
-      });
     }
-  }
 
-  setCheckInterval(ms: number) {
-    this.checkIntervalMs = ms;
-    this.pauseScheduledChecks();
-    this.startScheduledChecks();
-  }
-
-  destroy() {
-    this._initialized = false;
-    this.unsubs.forEach(u => u());
-    this.unsubs = [];
-    this.pauseScheduledChecks();
-    this.visibilityHandler = null;
-  }
-
-  private setupListeners() {
-    this.unsubs.push(
-      this.deps.eventBus.on(EVENTS.CHECK_HEALTH, (id: unknown) => { if (typeof id === 'string') this.checkKey(id); }),
-      this.deps.eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.checkAll()),
-      this.deps.eventBus.onSafe<{ key: { id: string; status: string } }>(EVENTS.KEY_UPDATED, (payload) => {
-        if (payload?.key?.status === 'active') this.checkKey(payload.key.id);
-      }),
-    );
-  }
-
-  startScheduledChecks() {
-    if (this.scheduleInterval) return;
-    this.scheduleInterval = setInterval(() => {
-      this.checkAll();
-    }, this.checkIntervalMs);
-  }
-
-  stopScheduledChecks() {
-    this.pauseScheduledChecks();
-  }
-
-  private pauseScheduledChecks() {
-    if (this.scheduleInterval) {
-      clearInterval(this.scheduleInterval);
-      this.scheduleInterval = null;
+    setCheckInterval(ms: number) {
+        this.checkIntervalMs = ms;
+        this.pauseScheduledChecks();
+        this.startScheduledChecks();
     }
-  }
 
-  getResult(keyId: string): KeyHealthCheckResult | undefined {
-    const state = this.deps.keyStateStore.get(keyId);
-    if (!state) {
-      const key = this.deps.keyService.getKey(keyId);
-      if (!key) return;
-      return {
-        keyId,
-        provider: key.provider,
-        status: 'unknown',
-        latency: 0,
-        timestamp: Date.now(),
-        error: 'Key not found in KeyStateStore',
-      };
+    destroy() {
+        this._initialized = false;
+        this.unsubs.forEach((u) => u());
+        this.unsubs = [];
+        this.pauseScheduledChecks();
+        this.visibilityHandler = null;
     }
-    return {
-      keyId: state.id,
-      provider: state.provider,
-      status: state.status === 'ready' ? 'active' : state.status === 'unknown' ? 'unknown' : 'error',
-      latency: state.lastProbe.latency,
-      timestamp: state.lastProbe.timestamp,
-      error: state.lastProbe.error,
-    };
-  }
 
-  getAllResults(): KeyHealthCheckResult[] {
-    const keys = this.deps.keyService.getKeys();
-    return keys.map(k => this.getResult(k.id)).filter((r): r is KeyHealthCheckResult => r !== undefined);
-  }
+    private setupListeners() {
+        this.unsubs.push(
+            this.deps.eventBus.on(EVENTS.CHECK_HEALTH, (id: unknown) => {
+                if (typeof id === 'string') this.checkKey(id);
+            }),
+            this.deps.eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => this.checkAll()),
+            this.deps.eventBus.onSafe<{ key: { id: string; status: string } }>(
+                EVENTS.KEY_UPDATED,
+                (payload) => {
+                    if (payload?.key?.status === 'active') this.checkKey(payload.key.id);
+                },
+            ),
+        );
+    }
 
-  private writeToKeyStateStore(id: string, provider: string, status: string, latency: number, error?: string): void {
-    try {
-      this.deps.keyStateStore.update(id, {
-        status: status === 'active' ? 'ready' : 'broken',
-        lastProbe: { status: status === 'active' ? 'ready' : 'broken', latency, error, timestamp: Date.now() },
-        flags: { circuitOpen: false, rateLimited: false, authFailed: status !== 'active' },
-      });
-    } catch (e) { LOGGER.warn('HealthService', 'Failed to update keyStateStore after probe', { keyId: id, provider, error: e }); }
-  }
+    startScheduledChecks() {
+        if (this.scheduleInterval) return;
+        this.scheduleInterval = setInterval(() => {
+            this.checkAll();
+        }, this.checkIntervalMs);
+    }
 
-  getSummary(): KeyHealthSummary {
-    const states = this.deps.keyStateStore.getAll();
-    return {
-      total: states.length,
-      active: states.filter(s => s.status === 'ready').length,
-      error: states.filter(s => s.status === 'broken').length,
-      unknown: states.filter(s => s.status === 'unknown').length,
-      checking: this.deps.keyService.getKeys().filter(k => k.status === 'checking').length,
-      inactive: this.deps.keyService.getKeys().filter(k => k.status === 'inactive').length,
-      avgLatency: states.filter(s => s.status === 'ready').reduce((sum, s) => sum + s.lastProbe.latency, 0) /
-        Math.max(1, states.filter(s => s.status === 'ready').length),
-      lastRun: this.lastRun,
-      results: states.map(s => ({
-        keyId: s.id,
-        provider: s.provider,
-        status: s.status === 'ready' ? 'active' : s.status === 'unknown' ? 'unknown' : 'error',
-        latency: s.lastProbe.latency,
-        timestamp: s.lastProbe.timestamp,
-        error: s.lastProbe.error,
-      })),
-    };
-  }
+    stopScheduledChecks() {
+        this.pauseScheduledChecks();
+    }
 
-  async checkAll(): Promise<void> {
-    if (this.isRunning) return;
-    this.isRunning = true;
-
-    try {
-      const keys = this.deps.keyService.getKeys();
-      const activeKeys = keys.filter(k => {
-        if (k.status !== 'active' && k.status !== 'checking') return false;
-        const state = this.deps.keyStateStore.get(k.id);
-        if (state?.flags.authFailed) return false;
-        return true;
-      });
-
-      const concurrency = 4;
-      const results: (KeyHealthCheckResult | null)[] = [];
-      const pool = activeKeys.map(key => () => this.checkKey(key.id).catch((e) => { LOGGER.error('HealthService', 'checkKey failed', { keyId: key.id, error: (e as Error).message }); return null; }));
-
-      let idx = 0;
-      async function worker(): Promise<void> {
-        while (idx < pool.length) {
-          const i = idx++;
-          results[i] = await pool[i]();
+    private pauseScheduledChecks() {
+        if (this.scheduleInterval) {
+            clearInterval(this.scheduleInterval);
+            this.scheduleInterval = null;
         }
-      }
-
-      await Promise.all(Array.from({ length: Math.min(concurrency, pool.length) }, () => worker()));
-
-      const validResults = results.filter((r): r is KeyHealthCheckResult => r !== null);
-
-      this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-        message: `Health check complete: ${validResults.filter(r => r.status === 'active').length}/${validResults.length} active`,
-        type: 'info',
-      });
-
-    } finally {
-      this.isRunning = false;
-    }
-  }
-
-  async checkKey(id: string): Promise<KeyHealthCheckResult | null> {
-    if (this.checkingKeys.has(id)) return null;
-    this.checkingKeys.add(id);
-    try {
-      return await this.checkKeyImpl(id);
-    } finally {
-      this.checkingKeys.delete(id);
-    }
-  }
-
-  private async checkKeyImpl(id: string): Promise<KeyHealthCheckResult | null> {
-    const key = this.deps.keyService.getKey(id);
-    if (!key) return null;
-
-    const state = this.deps.keyStateStore.get(id);
-    if (state?.flags.authFailed) {
-      return {
-        keyId: id, provider: key.provider, status: 'error',
-        latency: 0, timestamp: Date.now(), error: 'Skipped — auth failed on previous check',
-      };
     }
 
-    this.deps.keyService.updateKeyStatus(id, 'checking');
-    this.deps.eventBus.emit(EVENTS.KEY_HEALTH_STARTED, id);
-
-    const adapter = this.deps.adapterRegistry.getAdapter(key.provider.toLowerCase());
-    if (!adapter) {
-      const errorMsg = `Adapter for ${key.provider} not found`;
-      this.deps.keyService.handleProviderError(id, errorMsg);
-      const result: KeyHealthCheckResult = {
-        keyId: id, provider: key.provider, status: 'error',
-        latency: 0, timestamp: Date.now(), error: errorMsg,
-      };
-      this.deps.eventBus.emit(EVENTS.KEY_HEALTH_FAILED, { id, provider: key.provider, error: errorMsg });
-      this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id });
-      this.writeToKeyStateStore(id, key.provider, 'error', 0, errorMsg);
-      return result;
-    }
-
-    const startTime = performance.now();
-    const TIMEOUT_MS = 15000;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    try {
-      const result = await Promise.race([
-        adapter.checkHealth(key.key),
-        new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error(`Health check timed out after ${TIMEOUT_MS}ms for ${key.provider}`)), TIMEOUT_MS);
-        }),
-      ]);
-      const latency = Math.round(performance.now() - startTime);
-
-      if (result.status === 'active') {
-        this.deps.keyService.updateKeyStatus(id, 'active', latency);
-        this.deps.keyService.updateAvailableModels(id, result.models);
-
-        const checkResult: KeyHealthCheckResult = {
-          keyId: id, provider: key.provider, status: 'active',
-          latency, timestamp: Date.now(), models: result.models,
+    getResult(keyId: string): KeyHealthCheckResult | undefined {
+        const state = this.deps.keyStateStore.get(keyId);
+        if (!state) {
+            const key = this.deps.keyService.getKey(keyId);
+            if (!key) return;
+            return {
+                keyId,
+                provider: key.provider,
+                status: 'unknown',
+                latency: 0,
+                timestamp: Date.now(),
+                error: 'Key not found in KeyStateStore',
+            };
+        }
+        return {
+            keyId: state.id,
+            provider: state.provider,
+            status:
+                state.status === 'ready'
+                    ? 'active'
+                    : state.status === 'unknown'
+                      ? 'unknown'
+                      : 'error',
+            latency: state.lastProbe.latency,
+            timestamp: state.lastProbe.timestamp,
+            error: state.lastProbe.error,
         };
-        // SI-53: Include models in payload so catalog can update
-        this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id, provider: key.provider, status: 'active', models: result.models });
-        this.writeToKeyStateStore(id, key.provider, 'active', latency);
-        return checkResult;
-      } else {
-        this.deps.keyService.handleProviderError(id, result.error || 'Health check failed');
-        const checkResult: KeyHealthCheckResult = {
-          keyId: id, provider: key.provider, status: 'error',
-          latency, timestamp: Date.now(), error: result.error,
-        };
-        this.deps.eventBus.emit(EVENTS.KEY_HEALTH_FAILED, { id, provider: key.provider, error: result.error || 'Health check failed' });
-        this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id, provider: key.provider, status: 'error', error: result.error });
-        this.writeToKeyStateStore(id, key.provider, 'error', latency, result.error);
-        return checkResult;
-      }
-    } catch (e: unknown) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      this.deps.keyService.handleProviderError(id, errorMsg);
-      const checkResult: KeyHealthCheckResult = {
-        keyId: id, provider: key.provider, status: 'error',
-        latency: Math.round(performance.now() - startTime),
-        timestamp: Date.now(), error: errorMsg,
-      };
-      this.deps.eventBus.emit(EVENTS.KEY_HEALTH_FAILED, { id, provider: key.provider, error: errorMsg });
-      this.deps.eventBus.emit(EVENTS.KEY_HEALTH_COMPLETED, { id, provider: key.provider, status: 'error', error: errorMsg });
-      this.writeToKeyStateStore(id, key.provider, 'error', checkResult.latency, errorMsg);
-      return checkResult;
-    } finally {
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-      }
     }
-  }
 
-  async checkProvider(provider: string): Promise<KeyHealthCheckResult[]> {
-    const keys = this.deps.keyService.getKeys().filter(k => k.provider.toLowerCase() === provider.toLowerCase());
-    return Promise.all(
-      keys.map(key => this.checkKey(key.id).catch((e) => { LOGGER.error('HealthService', 'checkProvider key failed', { keyId: key.id, error: (e as Error).message }); return undefined; }))
-    ).then(r => r.filter((x): x is KeyHealthCheckResult => x != null));
-  }
+    getAllResults(): KeyHealthCheckResult[] {
+        const keys = this.deps.keyService.getKeys();
+        return keys
+            .map((k) => this.getResult(k.id))
+            .filter((r): r is KeyHealthCheckResult => r !== undefined);
+    }
+
+    private writeToKeyStateStore(
+        id: string,
+        provider: string,
+        status: string,
+        latency: number,
+        error?: string,
+    ): void {
+        try {
+            this.deps.keyStateStore.update(id, {
+                status: status === 'active' ? 'ready' : 'broken',
+                lastProbe: {
+                    status: status === 'active' ? 'ready' : 'broken',
+                    latency,
+                    error,
+                    timestamp: Date.now(),
+                },
+                flags: { circuitOpen: false, rateLimited: false, authFailed: status !== 'active' },
+            });
+        } catch (e) {
+            LOGGER.warn('HealthService', 'Failed to update keyStateStore after probe', {
+                keyId: id,
+                provider,
+                error: e,
+            });
+        }
+    }
+
+    getSummary(): KeyHealthSummary {
+        const states = this.deps.keyStateStore.getAll();
+        return {
+            total: states.length,
+            active: states.filter((s) => s.status === 'ready').length,
+            error: states.filter((s) => s.status === 'broken').length,
+            unknown: states.filter((s) => s.status === 'unknown').length,
+            checking: this.deps.keyService.getKeys().filter((k) => k.status === 'checking').length,
+            inactive: this.deps.keyService.getKeys().filter((k) => k.status === 'inactive').length,
+            avgLatency:
+                states
+                    .filter((s) => s.status === 'ready')
+                    .reduce((sum, s) => sum + s.lastProbe.latency, 0) /
+                Math.max(1, states.filter((s) => s.status === 'ready').length),
+            lastRun: this.lastRun,
+            results: states.map((s) => ({
+                keyId: s.id,
+                provider: s.provider,
+                status:
+                    s.status === 'ready' ? 'active' : s.status === 'unknown' ? 'unknown' : 'error',
+                latency: s.lastProbe.latency,
+                timestamp: s.lastProbe.timestamp,
+                error: s.lastProbe.error,
+            })),
+        };
+    }
+
+    async checkAll(): Promise<void> {
+        if (this.isRunning) return;
+        this.isRunning = true;
+
+        try {
+            const keys = this.deps.keyService.getKeys();
+            const activeKeys = keys.filter((k) => {
+                if (k.status !== 'active' && k.status !== 'checking') return false;
+                const state = this.deps.keyStateStore.get(k.id);
+                if (state?.flags.authFailed) return false;
+                return true;
+            });
+
+            const concurrency = 4;
+            const results: (KeyHealthCheckResult | null)[] = [];
+            const pool = activeKeys.map(
+                (key) => () =>
+                    this.checkKey(key.id).catch((e) => {
+                        LOGGER.error('HealthService', 'checkKey failed', {
+                            keyId: key.id,
+                            error: (e as Error).message,
+                        });
+                        return null;
+                    }),
+            );
+
+            let idx = 0;
+            async function worker(): Promise<void> {
+                while (idx < pool.length) {
+                    const i = idx++;
+                    results[i] = await pool[i]();
+                }
+            }
+
+            await Promise.all(
+                Array.from({ length: Math.min(concurrency, pool.length) }, () => worker()),
+            );
+
+            const validResults = results.filter((r): r is KeyHealthCheckResult => r !== null);
+
+            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+                message: `Health check complete: ${validResults.filter((r) => r.status === 'active').length}/${validResults.length} active`,
+                type: 'info',
+            });
+        } finally {
+            this.isRunning = false;
+        }
+    }
+
+    async checkKey(id: string): Promise<KeyHealthCheckResult | null> {
+        if (this.checkingKeys.has(id)) return null;
+        this.checkingKeys.add(id);
+        try {
+            return await this.checkKeyImpl(id);
+        } finally {
+            this.checkingKeys.delete(id);
+        }
+    }
+
+    private async checkKeyImpl(id: string): Promise<KeyHealthCheckResult | null> {
+        const key = this.deps.keyService.getKey(id);
+        if (!key) return null;
+
+        const state = this.deps.keyStateStore.get(id);
+        if (state?.flags.authFailed) {
+            return {
+                keyId: id,
+                provider: key.provider,
+                status: 'error',
+                latency: 0,
+                timestamp: Date.now(),
+                error: 'Skipped — auth failed on previous check',
+            };
+        }
+
+        this.deps.keyService.updateKeyStatus(id, 'checking');
+        this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_STARTED, id);
+
+        const adapter = this.deps.adapterRegistry.getAdapter(key.provider.toLowerCase());
+        if (!adapter) {
+            const errorMsg = `Adapter for ${key.provider} not found`;
+            this.deps.keyService.handleProviderError(id, errorMsg);
+            const result: KeyHealthCheckResult = {
+                keyId: id,
+                provider: key.provider,
+                status: 'error',
+                latency: 0,
+                timestamp: Date.now(),
+                error: errorMsg,
+            };
+            this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
+                id,
+                provider: key.provider,
+                error: errorMsg,
+            });
+            this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_COMPLETED, { id });
+            this.writeToKeyStateStore(id, key.provider, 'error', 0, errorMsg);
+            return result;
+        }
+
+        const startTime = performance.now();
+        const TIMEOUT_MS = 15000;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        try {
+            const result = await Promise.race([
+                adapter.checkHealth(key.key),
+                new Promise<never>((_, reject) => {
+                    timeoutId = setTimeout(
+                        () =>
+                            reject(
+                                new Error(
+                                    `Health check timed out after ${TIMEOUT_MS}ms for ${key.provider}`,
+                                ),
+                            ),
+                        TIMEOUT_MS,
+                    );
+                }),
+            ]);
+            const latency = Math.round(performance.now() - startTime);
+
+            if (result.status === 'active') {
+                this.deps.keyService.updateKeyStatus(id, 'active', latency);
+                this.deps.keyService.updateAvailableModels(id, result.models);
+
+                const checkResult: KeyHealthCheckResult = {
+                    keyId: id,
+                    provider: key.provider,
+                    status: 'active',
+                    latency,
+                    timestamp: Date.now(),
+                    models: result.models,
+                };
+                // SI-53: Include models in payload so catalog can update
+                this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_COMPLETED, {
+                    id,
+                    provider: key.provider,
+                    status: 'active',
+                    models: result.models,
+                });
+                this.writeToKeyStateStore(id, key.provider, 'active', latency);
+                return checkResult;
+            } else {
+                this.deps.keyService.handleProviderError(id, result.error || 'Health check failed');
+                const checkResult: KeyHealthCheckResult = {
+                    keyId: id,
+                    provider: key.provider,
+                    status: 'error',
+                    latency,
+                    timestamp: Date.now(),
+                    error: result.error,
+                };
+                this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
+                    id,
+                    provider: key.provider,
+                    error: result.error || 'Health check failed',
+                });
+                this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_COMPLETED, {
+                    id,
+                    provider: key.provider,
+                    status: 'error',
+                    error: result.error,
+                });
+                this.writeToKeyStateStore(id, key.provider, 'error', latency, result.error);
+                return checkResult;
+            }
+        } catch (e: unknown) {
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            this.deps.keyService.handleProviderError(id, errorMsg);
+            const checkResult: KeyHealthCheckResult = {
+                keyId: id,
+                provider: key.provider,
+                status: 'error',
+                latency: Math.round(performance.now() - startTime),
+                timestamp: Date.now(),
+                error: errorMsg,
+            };
+            this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
+                id,
+                provider: key.provider,
+                error: errorMsg,
+            });
+            this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_COMPLETED, {
+                id,
+                provider: key.provider,
+                status: 'error',
+                error: errorMsg,
+            });
+            this.writeToKeyStateStore(id, key.provider, 'error', checkResult.latency, errorMsg);
+            return checkResult;
+        } finally {
+            if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+            }
+        }
+    }
+
+    async checkProvider(provider: string): Promise<KeyHealthCheckResult[]> {
+        const keys = this.deps.keyService
+            .getKeys()
+            .filter((k) => k.provider.toLowerCase() === provider.toLowerCase());
+        return Promise.all(
+            keys.map((key) =>
+                this.checkKey(key.id).catch((e) => {
+                    LOGGER.error('HealthService', 'checkProvider key failed', {
+                        keyId: key.id,
+                        error: (e as Error).message,
+                    });
+                    return undefined;
+                }),
+            ),
+        ).then((r) => r.filter((x): x is KeyHealthCheckResult => x != null));
+    }
 }
