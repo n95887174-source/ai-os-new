@@ -2099,6 +2099,12 @@ const ru = {
     'logs.col_service': 'Сервис',
     'logs.col_trace_id': 'ID Трассы',
     'logs.col_message': 'Сообщение',
+
+    // ── Debate Live Panel ───────────────────────────────────────────
+    'debate_live.no_active': 'Нет активных дебатов',
+    'debate_live.empty':
+        'Нет активных сессий дебатов. Запустите дебаты, чтобы увидеть live-представление.',
+    'debate_live.round_label': 'Раунд {n}',
 };
 
 export { ru };

@@ -2105,6 +2105,11 @@ const en = {
     'logs.col_service': 'Service',
     'logs.col_trace_id': 'Trace ID',
     'logs.col_message': 'Message',
+
+    // ── Debate Live Panel ───────────────────────────────────────────
+    'debate_live.no_active': 'No active debates',
+    'debate_live.empty': 'No active debate sessions. Start a debate to see the live view.',
+    'debate_live.round_label': 'Round {n}',
 };
 
 export { en };
