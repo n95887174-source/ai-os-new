@@ -160,16 +160,15 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 }
 
                 const workspaceContext = workspaceService.isAttached()
-                    ? await workspaceService.getFileTreeSnapshot()
+                    ? (await workspaceService.getFileTreeSnapshot()).slice(0, 5000)
                     : null;
                 cancelGuard();
 
                 const sanitize = (content: string): string =>
                     content
-                        .replace(/```[\s\S]*?```/g, '[code removed]')
-                        .replace(/\b(system|SYSTEM|System)\s*:/g, '[filtered]:')
+                        .replace(/^(system|SYSTEM|System)\s*:/gm, '[filtered]:')
                         .replace(
-                            /^.*?(IMPORTANT NEW|IGNORE ALL|OVERRIDE|DISREGARD|You are now|From now on|New instructions)/gim,
+                            /^(IMPORTANT NEW|IGNORE ALL|OVERRIDE|DISREGARD|You are now|From now on|New instructions)/gim,
                             '[filtered]',
                         );
 

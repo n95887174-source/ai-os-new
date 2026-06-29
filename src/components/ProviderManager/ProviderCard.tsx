@@ -92,6 +92,10 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
     useEffect(() => {
         testPromptRef.current = testPrompt;
     }, [testPrompt]);
+    const availableModelsRef = useRef(apiKey.availableModels);
+    useEffect(() => {
+        availableModelsRef.current = apiKey.availableModels;
+    }, [apiKey.availableModels]);
 
     const handleTest = (e: React.SyntheticEvent) => {
         e.stopPropagation();
@@ -118,6 +122,12 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         [apiKey.id, apiKey.provider, apiKey.model],
     );
 
+    useEffect(() => {
+        if (testStatus !== 'loading') {
+            cardTestInitiatedRef.current = false;
+        }
+    }, [testStatus]);
+
     React.useEffect(() => {
         if (testStatus !== 'loading') return;
         if (cardTestInitiatedRef.current) return;
@@ -139,7 +149,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
         else if (p === 'openai') defaultModel = 'gpt-4o-mini';
 
-        const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
+        const resolvedModel = testModel || availableModelsRef.current?.[0] || defaultModel;
 
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,
@@ -198,7 +208,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
             clearTimeout(timeout);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [testStatus, apiKey.id, apiKey.availableModels, testModel]);
+    }, [testStatus, apiKey.id, testModel]);
 
     return (
         <motion.div
