@@ -2105,6 +2105,14 @@ const ru = {
     'debate_live.empty':
         'Нет активных сессий дебатов. Запустите дебаты, чтобы увидеть live-представление.',
     'debate_live.round_label': 'Раунд {n}',
+
+    // ── Error Boundary ──────────────────────────────────────────────
+    'error_boundary.panel_crashed': 'Панель упала',
+    'error_boundary.unexpected_error': 'Неожиданная ошибка',
+    'error_boundary.reload': 'Перезагрузить',
+    'error_boundary.page_title': 'Что-то пошло не так',
+    'error_boundary.page_desc': 'Произошла неожиданная ошибка в приложении.',
+    'error_boundary.go_home': 'На Главную',
 };
 
 export { ru };

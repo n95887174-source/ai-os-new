@@ -2110,6 +2110,14 @@ const en = {
     'debate_live.no_active': 'No active debates',
     'debate_live.empty': 'No active debate sessions. Start a debate to see the live view.',
     'debate_live.round_label': 'Round {n}',
+
+    // ── Error Boundary ──────────────────────────────────────────────
+    'error_boundary.panel_crashed': 'Panel crashed',
+    'error_boundary.unexpected_error': 'Unexpected error',
+    'error_boundary.reload': 'Reload',
+    'error_boundary.page_title': 'Something went wrong',
+    'error_boundary.page_desc': 'An unexpected error occurred in the application.',
+    'error_boundary.go_home': 'Go Home',
 };
 
 export { en };
