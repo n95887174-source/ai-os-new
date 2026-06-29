@@ -181,10 +181,7 @@ export class SystemBootstrap implements IBootstrap {
         // ════════════════════════════════════════════════════════════════════
         // DEXIE_IDENTITY: verify the bootstrap module sees the same Dexie
         // instance as the hydration + KeyRegistry layers.
-        const bootstrapDexie = verifyDexieInstance(
-            'bootstrap:step3',
-            dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1],
-        );
+        const bootstrapDexie = verifyDexieInstance('bootstrap:step3', dexieDb);
         await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
 
         // Primary source: storageLayer.keys (KeyStore)

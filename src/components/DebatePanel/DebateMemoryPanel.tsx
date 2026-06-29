@@ -565,9 +565,9 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
                                     >
                                         Key Arguments ({Math.min(5, argCount)} of {argCount})
                                     </div>
-                                    {(session.arguments ?? []).slice(-5).map((arg, i) => (
+                                    {(session.arguments ?? []).slice(-5).map((arg, _i) => (
                                         <div
-                                            key={i}
+                                            key={arg.id}
                                             style={{
                                                 padding: '0.35rem 0.5rem',
                                                 marginBottom: 4,

@@ -701,10 +701,7 @@ export function getDexieDb(): SuperAgentsDB {
         // `await import(...)` from useKeyStore.ts) resolves to the same identity.
         import('./dexie-identity')
             .then((mod) => {
-                void mod.anchorDexieInstance(
-                    'database-service:singleton',
-                    _dexieDb! as unknown as Parameters<typeof mod.anchorDexieInstance>[1],
-                );
+                void mod.anchorDexieInstance('database-service:singleton', _dexieDb!);
             })
             .catch((e) => {
                 LOGGER.warn('DatabaseService', 'failed to anchor dexie singleton', { error: e });

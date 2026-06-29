@@ -1,22 +1,19 @@
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
 import { eventBus } from '../events/event-bus';
-import { rawConfig, deepFreeze } from './config-registry';
+import { rawConfig } from './config-registry';
 
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
 export function replaceConfig(next: ConfigRegistry): void {
-    const mutableRaw = rawConfig as unknown as Record<string, unknown>;
-    const mutableNext = next as unknown as Record<string, unknown>;
-    for (const key of Object.keys(rawConfig)) delete mutableRaw[key];
-    for (const key of Object.keys(next)) mutableRaw[key] = mutableNext[key];
-    deepFreeze(rawConfig);
+    for (const key of Object.keys(rawConfig)) delete (rawConfig as Record<string, unknown>)[key];
+    for (const key of Object.keys(next))
+        (rawConfig as Record<string, unknown>)[key] = (next as Record<string, unknown>)[key];
     eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
 }
 
 /** Update a single top-level section in rawConfig (used by config-service). */
 export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
-    (rawConfig as unknown as Record<string, unknown>)[key as string] = value;
-    deepFreeze(rawConfig);
+    (rawConfig as Record<string, unknown>)[key as string] = value;
     eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
 }
 

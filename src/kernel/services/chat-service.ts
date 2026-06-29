@@ -73,9 +73,7 @@ export interface ChatServiceDeps {
             messages: Array<{ role: string; content: string }>,
             model: string,
         ) => Promise<string>;
-        get: (
-            key: string,
-        ) => {
+        get: (key: string) => {
             response: string;
             model: string;
             promptTokens: number;
@@ -695,6 +693,16 @@ export class ChatService {
                     return;
                 }
                 if (error instanceof Error && error.name === 'AbortError') {
+                    if (settings.streamingEnabled) {
+                        this.deps.eventBus.emit(EVENTS.STREAM_END, {
+                            requestId,
+                            provider,
+                            model: resolvedModel,
+                            keyId: keyObj.id,
+                            fullContent,
+                            status: 'cancelled',
+                        });
+                    }
                     this.emitStatus(req, 'cancelled');
                     return;
                 }

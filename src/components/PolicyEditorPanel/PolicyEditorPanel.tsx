@@ -523,7 +523,7 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
             {isLogical &&
                 (condition as { conditions: PolicyCondition[] }).conditions.map((sub, i) => (
                     <ConditionEditor
-                        key={i}
+                        key={`${sub.type}-${i}`}
                         condition={sub}
                         depth={depth + 1}
                         onChange={(c) => {
@@ -1166,7 +1166,7 @@ const PolicyEditorPanel: React.FC = () => {
                                 </div>
                                 {editing.actions.map((action, i) => (
                                     <ActionEditor
-                                        key={i}
+                                        key={`${action.type}-${i}`}
                                         action={action}
                                         onChange={(a) => {
                                             const aa = [...editing.actions];

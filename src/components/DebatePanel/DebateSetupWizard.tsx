@@ -951,7 +951,7 @@ const DebateSetupWizard: React.FC<DebateSetupWizardProps> = ({
                     <div style={{ display: 'flex', gap: 4 }}>
                         {STEPS.map((_, i) => (
                             <div
-                                key={i}
+                                key={`step-${i}`}
                                 style={{
                                     width: 8,
                                     height: 8,

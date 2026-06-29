@@ -175,10 +175,14 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             return;
         }
         if (step === 2) {
+            if (bulkMode) {
+                setBulkMode(false);
+                setBulkReport(null);
+                setBulkInput('');
+                return;
+            }
             setStep(1);
             setError('');
-            setBulkMode(false);
-            setBulkReport(null);
             setBulkInput('');
             return;
         }
@@ -186,11 +190,6 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             onClose();
             return;
         }
-        setStep(1);
-        setError('');
-        setBulkMode(false);
-        setBulkReport(null);
-        setBulkInput('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {

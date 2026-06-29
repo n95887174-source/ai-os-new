@@ -405,7 +405,7 @@ const AgentEditor: React.FC<AgentEditorProps> = ({ agents, onChange }) => (
     <div>
         <div style={s.fieldLabel}>Agents</div>
         {agents.map((a, i) => (
-            <div key={i} style={s.agentRow}>
+            <div key={a.nodeId} style={s.agentRow}>
                 <input
                     value={a.nodeId}
                     onChange={(e) => {
@@ -478,7 +478,7 @@ const EdgeEditor: React.FC<EdgeEditorProps> = ({ edges, agents, onChange }) => (
     <div>
         <div style={s.fieldLabel}>Edges</div>
         {edges.map((e, i) => (
-            <div key={i} style={s.agentRow}>
+            <div key={`${e.from}-${e.to}`} style={s.agentRow}>
                 <select
                     value={e.from}
                     onChange={(v) => {
@@ -1321,9 +1321,9 @@ const DebateStrategyBuilder: React.FC = () => {
                             <div style={s.json}>{jsonOutput}</div>
                             {validation && validation.errors.length > 0 && (
                                 <div style={{ marginTop: 4 }}>
-                                    {validation.errors.map((e, i) => (
+                                    {validation.errors.map((e, _i) => (
                                         <div
-                                            key={i}
+                                            key={e.path}
                                             style={{
                                                 fontSize: 9,
                                                 color: '#ef4444',

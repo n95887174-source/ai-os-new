@@ -187,9 +187,9 @@ export class MemoryService implements IMemoryEngine {
 
     private async backfillVector(id: string, vector: number[]) {
         try {
-            await this.deps.database.db.memories.update(id, { vector } as Partial<MemoryEntry>);
+            await this.deps.database.db.memories.update(id, { vector });
             const mem = this.memories.find((m) => m.id === id);
-            if (mem) (mem as unknown as { vector: number[] }).vector = vector;
+            if (mem) mem.vector = vector;
         } catch (e) {
             LOGGER.warn('MemoryEngine', 'Failed to persist embedding vector', { error: e });
         }

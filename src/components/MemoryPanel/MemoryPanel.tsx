@@ -971,7 +971,7 @@ const MemoryPanel: React.FC = () => {
 
                                 return (
                                     <div
-                                        key={i}
+                                        key={dayIndex}
                                         style={{
                                             width: 14,
                                             height: 14,

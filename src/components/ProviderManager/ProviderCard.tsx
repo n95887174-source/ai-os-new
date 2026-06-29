@@ -96,6 +96,14 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
     useEffect(() => {
         availableModelsRef.current = apiKey.availableModels;
     }, [apiKey.availableModels]);
+    const testModelRef = useRef(testModel);
+    useEffect(() => {
+        testModelRef.current = testModel;
+    }, [testModel]);
+    const apiKeyIdRef = useRef(apiKey.id);
+    useEffect(() => {
+        apiKeyIdRef.current = apiKey.id;
+    }, [apiKey.id]);
 
     const handleTest = (e: React.SyntheticEvent) => {
         e.stopPropagation();
@@ -129,15 +137,17 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
     }, [testStatus]);
 
     useEffect(() => {
+        cardIsMountedRef.current = true;
         if (testStatus !== 'loading') return;
         if (cardTestInitiatedRef.current) return;
         cardTestInitiatedRef.current = true;
-        cardIsMountedRef.current = true;
 
         const prompt = testPromptRef.current;
         if (!prompt.trim()) return;
 
-        const reqId = `quick-test-${apiKey.id}-${crypto.randomUUID().slice(0, 6)}`;
+        const keyId = apiKeyIdRef.current;
+        const resolvedTestModel = testModelRef.current;
+        const reqId = `quick-test-${keyId}-${crypto.randomUUID().slice(0, 6)}`;
         const start = Date.now();
         let isDone = false;
 
@@ -149,14 +159,14 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
         else if (p === 'openai') defaultModel = 'gpt-4o-mini';
 
-        const resolvedModel = testModel || availableModelsRef.current?.[0] || defaultModel;
+        const resolvedModel = resolvedTestModel || availableModelsRef.current?.[0] || defaultModel;
 
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,
             model: resolvedModel,
             messages: [{ role: 'user', content: prompt }],
             requestId: reqId,
-            keyId: apiKey.id,
+            keyId,
             options: { temperature: testTemperature, maxTokens: testMaxTokens },
         });
 
@@ -208,7 +218,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
             clearTimeout(timeout);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [testStatus, apiKey.id, testModel]);
+    }, [testStatus]);
 
     return (
         <motion.div

@@ -1354,7 +1354,7 @@ const RoutingIntelligence: React.FC = () => {
                                             const breakdown = scoreBreakdown(s);
                                             return (
                                                 <tr
-                                                    key={i}
+                                                    key={s.provider}
                                                     style={{
                                                         borderBottom:
                                                             '1px solid rgba(255,255,255,0.03)',
@@ -1448,8 +1448,8 @@ const RoutingIntelligence: React.FC = () => {
                                             lineHeight: 1.8,
                                         }}
                                     >
-                                        {getExplanation(selected).map((line, i) => (
-                                            <li key={i}>{line}</li>
+                                        {getExplanation(selected).map((line, _i) => (
+                                            <li key={`${line}-${i}`}>{line}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -1949,7 +1949,7 @@ const RoutingIntelligence: React.FC = () => {
                                                 >
                                                     {chain.map((item, i) => (
                                                         <div
-                                                            key={i}
+                                                            key={`${item}-${i}`}
                                                             style={{
                                                                 display: 'grid',
                                                                 gridTemplateColumns:

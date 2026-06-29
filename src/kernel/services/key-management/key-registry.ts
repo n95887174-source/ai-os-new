@@ -149,10 +149,7 @@ export class KeyRegistry {
         if (this.keys.length > 0) {
             try {
                 // DEXIE_IDENTITY: log identity on every reload peek
-                await logDexieIdentityWithCount(
-                    'KeyRegistry.reload:peek',
-                    dexieDb as unknown as Parameters<typeof logDexieIdentityWithCount>[1],
-                );
+                await logDexieIdentityWithCount('KeyRegistry.reload:peek', dexieDb);
                 const dexieKeys = await this.deps.keyStore.listKeys();
                 if (dexieKeys.length === 0) {
                     LOGGER.warn(
@@ -180,10 +177,7 @@ export class KeyRegistry {
         try {
             // DEXIE_IDENTITY: verify KeyRegistry sees the same Dexie instance as
             // the hydration layer. Throws [DEXIE MISMATCH] on split.
-            const verifiedInstance = verifyDexieInstance(
-                'KeyRegistry.loadKeys',
-                dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1],
-            );
+            const verifiedInstance = verifyDexieInstance('KeyRegistry.loadKeys', dexieDb);
             await logDexieIdentityWithCount('KeyRegistry.loadKeys', verifiedInstance);
             // ── Bootstrap snapshot fast path ─────────────────────────────
             // During bootstrap phase, the snapshot is the ONLY source. We do not
@@ -428,7 +422,7 @@ export class KeyRegistry {
             // DEXIE_IDENTITY: verify same instance.
             const verifiedInstance = verifyDexieInstance(
                 'KeyRegistry.forceResyncFromDexie',
-                dexieDb as unknown as Parameters<typeof verifyDexieInstance>[1],
+                dexieDb,
             );
             await logDexieIdentityWithCount('KeyRegistry.forceResyncFromDexie', verifiedInstance);
 

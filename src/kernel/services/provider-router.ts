@@ -15,6 +15,7 @@ import { matchSemanticRule, DEFAULT_SEMANTIC_RULES } from './route-rules';
 import type { SemanticRouteRule } from './route-rules';
 import type { Result } from '../contracts/results';
 import { classifyRequest as classifyRequestPrompt } from './router-request-classifier';
+import type { DowngradeCandidate, ProviderMetrics } from './downgrade-strategy';
 import {
     calculateProviderScore,
     estimateRequestCost,
@@ -105,6 +106,12 @@ export interface RouterServiceDeps {
             monthlyBudget: number,
         ) => number;
         recordPenalty: (provider: string, type: string, amount: number) => void;
+        smartDowngrade?: (model: string, metrics: ProviderMetrics) => DowngradeCandidate | null;
+        smartDowngradeDeep?: (
+            model: string,
+            metrics: ProviderMetrics,
+            maxSteps?: number,
+        ) => DowngradeCandidate | null;
     };
     keyStateStore?: IKeyStateStore;
 }
@@ -293,61 +300,13 @@ export class RouterService {
         return this.deps.routingPolicyService.getDeepDowngradedModel(model, steps);
     }
 
-    smartDowngrade(
-        model: string,
-        metrics: {
-            avgLatency: number;
-            p95Latency: number;
-            costPerRequest: number;
-            quotaUsed: number;
-            quotaLimit: number;
-        },
-    ) {
-        return (
-            (
-                this.deps.routingPolicyService as unknown as {
-                    smartDowngrade?: (
-                        m: string,
-                        mt: {
-                            avgLatency: number;
-                            p95Latency: number;
-                            costPerRequest: number;
-                            quotaUsed: number;
-                            quotaLimit: number;
-                        },
-                    ) => string | null;
-                }
-            ).smartDowngrade?.(model, metrics) ?? null
-        );
+    smartDowngrade(model: string, metrics: ProviderMetrics) {
+        return this.deps.routingPolicyService.smartDowngrade?.(model, metrics) ?? null;
     }
 
-    smartDowngradeDeep(
-        model: string,
-        metrics: {
-            avgLatency: number;
-            p95Latency: number;
-            costPerRequest: number;
-            quotaUsed: number;
-            quotaLimit: number;
-        },
-        maxSteps = 3,
-    ) {
+    smartDowngradeDeep(model: string, metrics: ProviderMetrics, maxSteps = 3) {
         return (
-            (
-                this.deps.routingPolicyService as unknown as {
-                    smartDowngradeDeep?: (
-                        m: string,
-                        mt: {
-                            avgLatency: number;
-                            p95Latency: number;
-                            costPerRequest: number;
-                            quotaUsed: number;
-                            quotaLimit: number;
-                        },
-                        s: number,
-                    ) => string | null;
-                }
-            ).smartDowngradeDeep?.(model, metrics, maxSteps) ?? null
+            this.deps.routingPolicyService.smartDowngradeDeep?.(model, metrics, maxSteps) ?? null
         );
     }
 
@@ -563,14 +522,12 @@ export class RouterService {
             skipped: opts.skipped,
             steps:
                 opts.skipped.length > 0
-                    ? opts.skipped
-                          .slice(0, 5)
-                          .map((s) => ({
-                              name: `${s.stage}:check` as const,
-                              status: 'blocked' as const,
-                              provider: s.provider,
-                              detail: s.reason,
-                          }))
+                    ? opts.skipped.slice(0, 5).map((s) => ({
+                          name: `${s.stage}:check` as const,
+                          status: 'blocked' as const,
+                          provider: s.provider,
+                          detail: s.reason,
+                      }))
                     : [{ name: 'scoring', status: 'passed', detail: 'Auto-selected (free-tier)' }],
             timestamp: Date.now(),
             promptLength: opts.prompt.length,
