@@ -459,7 +459,7 @@ class CrossTabStateSync {
         } else {
             this.pruneLocalStorage();
             localStorage.setItem(
-                `${this.STORAGE_PREFIX}${message.type}:${Date.now()}`,
+                `${this.STORAGE_PREFIX}${message.type}:${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                 JSON.stringify(message),
             );
         }

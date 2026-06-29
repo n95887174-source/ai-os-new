@@ -309,15 +309,25 @@ export class EventRecorder {
         try {
             const data = JSON.parse(json);
             const imported: RecordedEvent[] = data.events ?? [];
+            const hex32 = /^[0-9a-f]{32}$/;
+            let valid = 0;
             for (const ev of imported) {
+                if (!ev.checksum || !hex32.test(ev.checksum)) {
+                    LOGGER.warn('EventRecorder', 'Import skipping event with invalid checksum', {
+                        event: ev.event,
+                        seq: ev.sequence,
+                    });
+                    continue;
+                }
                 if (!this.events.some((e) => e.sequence === ev.sequence)) {
                     this.events.push(ev);
+                    valid++;
                 }
             }
             this.events.sort((a, b) => a.sequence - b.sequence);
             this.sequence = Math.max(this.sequence, data.sequence ?? 0);
             this.schedulePersist();
-            return imported.length;
+            return valid;
         } catch (e) {
             LOGGER.warn('EventRecorder', 'Import log failed', { error: e });
             return 0;
