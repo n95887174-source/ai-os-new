@@ -22,8 +22,8 @@ import type { AdminService } from './services/admin-service';
 import type { MonitoringService } from './services/monitoring-service';
 import type { SnapshotService } from './services/snapshot-service';
 import type { AdvisorService } from './services/advisor-service';
-import type { AutoDebateService } from './services/auto-debate/auto-debate-service';
-import type { DebateService } from './services/debate-service';
+import type { AutoDebateService } from './services/debate-runtime/auto-debate/auto-debate-service';
+import type { DebateService } from './services/debate-runtime/debate-service';
 import type { DebateEngine } from './services/debate-runtime/debate-engine';
 import type { CognitiveIntelligenceService } from './services/cognitive-intelligence/cognitive-intelligence-service';
 import type { PressureMapService } from './services/runtime-intelligence/pressure-map-service';
@@ -273,10 +273,10 @@ export const topologyManager = lazyService<TopologyManager>('topologyManager');
 import type { CollaborativeService } from './services/collaborative-service';
 export const collaborativeService = lazyService<CollaborativeService>('collaborativeService');
 
-import type { DebateApiService } from './services/debate-api';
+import type { DebateApiService } from './services/debate-runtime/debate-api';
 export const debateApiService = lazyService<DebateApiService>('debateApiService');
 
-import type { DebateKnowledgeSyncService } from './services/debate-knowledge-sync';
+import type { DebateKnowledgeSyncService } from './services/debate-runtime/debate-knowledge-sync';
 export const debateKnowledgeSync = lazyService<DebateKnowledgeSyncService>('debateKnowledgeSync');
 
 import type { IHypothesisService } from './contracts/hypothesis';
@@ -285,8 +285,8 @@ export { ResearchRunService, type ResearchRun } from './services/research-run-se
 import type { ResearchRunService as ResearchRunServiceType } from './services/research-run-service';
 export const researchRunService = lazyService<ResearchRunServiceType>('researchRunService');
 
-export { DEBATE_TEMPLATES, getDebateTemplate } from './services/debate-templates';
-export type { DebateTemplate } from './services/debate-templates';
+export { DEBATE_TEMPLATES, getDebateTemplate } from './services/debate-runtime/debate-templates';
+export type { DebateTemplate } from './services/debate-runtime/debate-templates';
 
 // ── ELO Rating Service ──────────────────────────────────────────
 import type { EloRatingService, AgentElo } from './services/elo/elo-service';

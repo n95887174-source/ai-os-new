@@ -3,7 +3,7 @@ import type {
     DebateArgument,
     DebateConstraint,
     ArgumentStrategy,
-} from '../contracts/debate-types';
+} from '../../contracts/debate-types';
 import { buildDebateState, buildDebateStatePrompt } from './debate-state-builder';
 
 export const DEFAULT_LANGUAGE = 'Russian';

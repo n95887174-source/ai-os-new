@@ -12,10 +12,12 @@ import type {
     DebateTimelineEntry,
     DebateOverride,
 } from '../contracts/session-manager';
+import type { DebateSession } from '../contracts/debate-types';
 import type { DebateSessionRecord, DebateStore } from '../contracts/storage/debate-store';
 import type { ChatSession } from '../contracts/storage/session-store';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
+import { loadHistoryList, persistHistoryList } from './debate-runtime/debate-session-persistence';
 
 const LOGGER = rootLogger.child('SessionManagerService');
 
@@ -23,6 +25,10 @@ export class SessionManagerService implements ISessionManager {
     private db: DatabaseService;
     private eventBus: IEventBus;
     private debateStore: DebateStore;
+    private completedSessions: DebateSession[] = [];
+    private readonly MAX_HISTORY = 20;
+    private _historyLoaded = false;
+
     constructor(db: DatabaseService, eventBus: IEventBus, debateStore: DebateStore) {
         this.db = db;
         this.eventBus = eventBus;
@@ -368,6 +374,72 @@ export class SessionManagerService implements ISessionManager {
             return;
         }
         throw new Error(`Session ${id} not found`);
+    }
+
+    // ── Debate History ────────────────────────────────────────────────
+
+    private async ensureHistoryLoaded(): Promise<void> {
+        if (this._historyLoaded) return;
+        this._historyLoaded = true;
+        try {
+            this.completedSessions = await loadHistoryList(this.debateStore, this.MAX_HISTORY);
+        } catch (e) {
+            LOGGER.warn('SessionManagerService', 'Failed to load debate history', {
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
+    }
+
+    private persistDebateHistory(): void {
+        void persistHistoryList(this.debateStore, this.completedSessions);
+    }
+
+    getDebateHistory(): DebateSession[] {
+        void this.ensureHistoryLoaded();
+        return [...this.completedSessions];
+    }
+
+    saveToDebateHistory(session: DebateSession): void {
+        if (session.status !== 'completed') return;
+        if (this.completedSessions.some((s) => s.id === session.id)) return;
+        const snapshot = structuredClone(session);
+        this.completedSessions.unshift(snapshot);
+        if (this.completedSessions.length > this.MAX_HISTORY) {
+            this.completedSessions = this.completedSessions.slice(0, this.MAX_HISTORY);
+        }
+        this.persistDebateHistory();
+    }
+
+    restoreDebateSession(id: string): DebateSession | null {
+        const idx = this.completedSessions.findIndex((s) => s.id === id);
+        if (idx === -1) return null;
+        const restored = structuredClone(this.completedSessions[idx]);
+        restored.status = 'active';
+        restored.currentRound = 1;
+        this.completedSessions.splice(idx, 1);
+        this.persistDebateHistory();
+        return restored;
+    }
+
+    archiveDebateSession(id: string): boolean {
+        const session = this.completedSessions.find((s) => s.id === id);
+        if (!session) return false;
+        session.status = 'completed';
+        this.persistDebateHistory();
+        return true;
+    }
+
+    deleteDebateHistory(id: string): boolean {
+        const idx = this.completedSessions.findIndex((s) => s.id === id);
+        if (idx === -1) return false;
+        this.completedSessions.splice(idx, 1);
+        this.persistDebateHistory();
+        return true;
+    }
+
+    clearDebateHistory(): void {
+        this.completedSessions = [];
+        this.persistDebateHistory();
     }
 
     async addTimelineEntry(sessionId: string, type: string, payload: string): Promise<void> {

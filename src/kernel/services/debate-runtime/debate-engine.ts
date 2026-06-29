@@ -124,42 +124,11 @@ interface RouterServiceLike {
     ): Array<{ id: string; provider: string; key: string; availableModels?: string[] }>;
 }
 
-interface AdapterLike {
-    sendMessage(
-        messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-        model: string,
-        apiKey: string,
-        signal?: AbortSignal,
-        options?: import('../../types/llm-types').SendMessageOptions,
-    ): Promise<{ content: string }>;
-    streamMessage?(
-        messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-        model: string,
-        apiKey: string,
-        onChunk: (chunk: string) => void,
-        signal?: AbortSignal,
-        options?: import('../../types/llm-types').SendMessageOptions,
-    ): Promise<void>;
-}
-import { DebateBudget } from './debate-budget';
-import { DebateMemory } from './debate-memory';
-import { DebateSessionContext } from './debate-session-context';
-import type {
-    DebateSession as LegacyDebateSession,
-    DebateParticipant as LegacyDebateParticipant,
-    DebateArgument as LegacyDebateArgument,
-    DebateConfig as LegacyDebateConfig,
-} from '../../contracts/debate-types';
-import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
-import { DebateSession as DebateSessionInstance } from './debate-session';
-import type { DebateStore, DebateVerdictRecord } from '../../contracts/storage/debate-store';
-import { DebateSessionRecordSchema, DebateVerdictRecordSchema } from '../../types/schema-types';
-
 interface DebateEngineDeps {
     eventBus: IEventBus;
     getRouterService: () => RouterServiceLike;
     getKeyService: () => KeyServiceLike;
-    getAdapterRegistry: () => { getAdapter(provider: string): AdapterLike | undefined };
+    getAdapterRegistry: () => IAdapterRegistry;
     getKeyStateStore?: () =>
         | {
               get: (id: string) => { flags: { authFailed: boolean } } | undefined;
@@ -842,10 +811,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private providerCanBeUsed(provider: string, session: IDebateSession): boolean {
         if (session.hasProviderFailed(provider)) return false;
         try {
-            const registry = this.deps.getAdapterRegistry() as unknown as IAdapterRegistry;
-            const cb = (
-                registry as unknown as { getCircuitBreakerState?: (p: string) => string }
-            ).getCircuitBreakerState?.(provider);
+            const registry = this.deps.getAdapterRegistry();
+            const cb = registry.getCircuitBreakerState?.(provider);
             // Block only hard OPEN; allow HALF-OPEN so recovery probes can succeed
             if (cb === 'open') return false;
         } catch {
@@ -1017,7 +984,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                         },
                     ];
 
-                let govOp: { complete(): void; fail(e: Error): void } | undefined;
+                let govOp:
+                    { complete(): void; fail(e: Error): void; signal: AbortSignal } | undefined;
                 const gov = this.deps.getExecutionGovernor?.();
                 if (gov && resolvedKey) {
                     govOp = gov.start({
@@ -1033,11 +1001,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     const onGovAbort = () => {
                         if (!controller.signal.aborted) controller.abort();
                     };
-                    (govOp as unknown as { signal: AbortSignal }).signal.addEventListener(
-                        'abort',
-                        onGovAbort,
-                        { once: true },
-                    );
+                    govOp.signal.addEventListener('abort', onGovAbort, { once: true });
                 }
 
                 let response: { content: string };
@@ -1268,8 +1232,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     private buildConclusionLlmCall(): ((prompt: string) => Promise<string>) | undefined {
         return async (prompt: string): Promise<string> => {
-            const adapterRegistry =
-                this.deps.getAdapterRegistry() as unknown as import('../../contracts/provider-adapter').IAdapterRegistry;
+            const adapterRegistry = this.deps.getAdapterRegistry();
             const keyService = this.deps.getKeyService();
             const keys = keyService.getKeys();
             const preferredProviders = [

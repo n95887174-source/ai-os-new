@@ -86,7 +86,7 @@ export type {
 export { RoleService } from './services/role-service';
 export type { RoleServiceDeps, RoleUsageStats } from './services/role-service';
 
-export { DebateService } from './services/debate-service';
+export { DebateService } from './services/debate-runtime/debate-service';
 export type {
     DebateServiceDeps,
     DebateSession,
@@ -94,7 +94,7 @@ export type {
     DebateArgument,
     DebateConfig,
     HumanVote,
-} from './services/debate-service';
+} from './services/debate-runtime/debate-service';
 
 export { SkillService } from './services/skill-service';
 export type { SkillServiceDeps } from './services/skill-service';

@@ -23,7 +23,7 @@ import DebateSidebar from './DebateSidebar';
 import DebateChat from './DebateChat';
 import ErrorBoundary from '../Common/ErrorBoundary';
 import type { DebateSession, DebateVerdict, HumanVote } from '../../kernel/contracts';
-import type { DebateArchetypeId } from '../../kernel/services/debate-archetypes';
+import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AutoDebateResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import {

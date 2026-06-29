@@ -103,4 +103,4 @@ export type {
     HealingFixSuggestion,
 } from '../contracts/consistency-healing';
 export type { AgentElo } from '../services/elo/elo-service';
-export type { DebateTemplate } from '../services/debate-templates';
+export type { DebateTemplate } from '../services/debate-runtime/debate-templates';

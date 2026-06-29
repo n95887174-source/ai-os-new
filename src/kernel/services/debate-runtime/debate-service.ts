@@ -1,8 +1,9 @@
-import { EVENTS } from '../events/event-names';
-import { CONFIG } from './config-registry';
+import { EVENTS } from '../../events/event-names';
+import { CONFIG } from '../config-registry';
 
 import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
+import { DebatePostProcessor } from './debate-post-processor';
 import type {
     DebateStrategy,
     DebateGraphMetrics,
@@ -13,153 +14,27 @@ import type {
     DebateServiceDeps,
     HumanVote,
     DebateVerdict,
-} from '../contracts/debate-types';
+} from '../../contracts/debate-types';
 import type {
     IDebateEngine,
     DebateTopology,
     TimelineEntry,
     ParticipantConfig,
-} from '../contracts/debate-runtime';
-import type { DebateSessionSnapshot } from '../contracts/debate-runtime';
-import { DebateRuntimeEvents } from '../events/debate-runtime-events';
-import { jaccardSimilarity } from '../contracts/debate-types';
+} from '../../contracts/debate-runtime';
+import type { DebateSessionSnapshot } from '../../contracts/debate-runtime';
+import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
 import {
     computeGraphMetrics,
     computeActivityMetrics,
     computeQualityMetrics,
     getConstraintCompliance,
 } from './debate-metrics';
-import { updateConvergenceScore } from './debate-stop-conditions';
-import { isDuplicateArgument } from './debate-duplicate-detection';
-import { FactCheckService, type FactCheckLevel } from './fact-check-service';
-import {
-    loadActiveSession,
-    persistActiveSession,
-    loadHistoryList,
-    persistHistoryList,
-} from './debate-session-persistence';
-import { rootLogger } from './logger-service';
+import { FactCheckService, type FactCheckLevel } from '../fact-check-service';
+import { DebateHumanService } from './debate-human-service';
+import { loadActiveSession, persistActiveSession } from './debate-session-persistence';
+import { rootLogger } from '../logger-service';
 
 const LOGGER = rootLogger.child('DebateService');
-
-// ── Socratic Quality Gate ──────────────────────────────────────────────
-const TRIVIAL_QUESTION_PATTERNS = [
-    /\bcan you elaborate\b/i,
-    /\bcan you explain\b/i,
-    /\bwhat do you mean\b/i,
-    /\bcould you clarify\b/i,
-    /\bcould you expand\b/i,
-    /\btell me more\b/i,
-    /\bcan you provide more\b/i,
-    /\bcan you give an example\b/i,
-    /\bwhat are your thoughts\b/i,
-    /\bwhat is your opinion\b/i,
-    /\bhow do you feel\b/i,
-    /\bwould you like to\b/i,
-    /\bany other\s+(points|thoughts|ideas)\b/i,
-    /\bis there anything else\b/i,
-    // Russian trivial question patterns
-    /\bможете уточнить\b/i,
-    /\bможете пояснить\b/i,
-    /\bрасскажите подробнее\b/i,
-    /\bчто вы имеете в виду\b/i,
-    /\bчто вы думаете\b/i,
-    /\bкак вы относитесь\b/i,
-    /\bесть ли ещё\b/i,
-    /\bчто ещё\b/i,
-    /\bпоясните\b/i,
-];
-
-const DEEP_QUESTION_PATTERNS = [
-    /\b(why|how)\s+(does|is|are|can|would|could|should|must)\b/i,
-    /\bwhat (evidence|proof|data|basis|justification)\b/i,
-    /\bhow do you (know|justify|support)\b/i,
-    /\bwhat (assumption|premise|presupposition)\b/i,
-    /\bwhat (follows|implies|entails)\b/i,
-    /\bcontradict/i,
-    /\binconsistent\b/i,
-    /\b(flaw|gap|weakness|fallacy)\b/i,
-    /\bwhat would it take\b/i,
-    /\bunder what conditions\b/i,
-    /\bis it always true\b/i,
-    /\bcould there be\b/i,
-    /\bwhat about.*(case|scenario|exception)\b/i,
-    /\bhow (would|could) you (distinguish|differentiate|reconcile)\b/i,
-    /\bwhat is the (counterargument|alternative|trade-off)\b/i,
-];
-
-function scoreSocraticQuestion(
-    content: string,
-    previousArgs: DebateArgument[],
-): { score: number; reasons: string[] } {
-    const reasons: string[] = [];
-    let score = 0;
-
-    // Must be a question
-    const trimmed = content.trim();
-    if (!trimmed.endsWith('?')) {
-        reasons.push('Not a question');
-        return { score: 0, reasons };
-    }
-    score += 10;
-    reasons.push('Is a question');
-
-    // Penalize trivial/syntactic questions
-    for (const pat of TRIVIAL_QUESTION_PATTERNS) {
-        if (pat.test(trimmed)) {
-            reasons.push('Trivial/syntactic question pattern');
-            score -= 30;
-            break;
-        }
-    }
-
-    // Reward deep probing patterns
-    for (const pat of DEEP_QUESTION_PATTERNS) {
-        if (pat.test(trimmed)) {
-            score += 20;
-            reasons.push('Deep probing pattern');
-            break;
-        }
-    }
-
-    // Reward questions that reference previous argument content
-    if (previousArgs.length > 0) {
-        const lowerContent = trimmed.toLowerCase();
-        const allPrevText = previousArgs.map((a) => a.content.toLowerCase()).join(' ');
-        const words = lowerContent.split(/\s+/).filter((w) => w.length > 3);
-        // Check if question shares significant unigram overlap with previous arguments
-        let overlapCount = 0;
-        for (const word of words) {
-            if (allPrevText.includes(word)) overlapCount++;
-        }
-        const overlapRatio = words.length > 0 ? overlapCount / words.length : 0;
-        if (overlapRatio > 0.3) {
-            score += 15;
-            reasons.push('References previous argument content');
-        }
-    }
-
-    // Reward questions targeting causality, evidence, or contradictions
-    if (/\b(because|cause|lead|result|effect|impact)\b/i.test(trimmed)) {
-        score += 15;
-        reasons.push('Targets causality');
-    }
-    if (/\b(evidence|proof|data|study|research|statistic|source)\b/i.test(trimmed)) {
-        score += 15;
-        reasons.push('Asks for evidence');
-    }
-
-    // Reward question length (short questions tend to be lazy)
-    if (trimmed.split(/\s+/).length >= 10) {
-        score += 10;
-        reasons.push('Sufficient question depth');
-    } else if (trimmed.split(/\s+/).length < 5) {
-        score -= 10;
-        reasons.push('Too short/terse');
-    }
-
-    return { score: Math.max(0, score), reasons };
-}
 
 interface SnapshotBridgeContext {
     participants: DebateParticipant[];
@@ -279,14 +154,13 @@ export class DebateService {
         maxDurationMs: 1_800_000,
         language: 'ru',
     };
-    private completedSessions: DebateSession[] = [];
-    private readonly MAX_HISTORY = 20;
     private interpreter = new DebateInterpreter();
     private factCheckService: FactCheckService;
+    private postProcessor: DebatePostProcessor;
     private verdictMap = new Map<string, DebateVerdict>();
     private unsubVerdict: (() => void) | null = null;
-    private processedArgIds = new Set<string>();
     private engineOnly = false;
+    private humanService: DebateHumanService;
 
     constructor(deps: DebateServiceDeps) {
         this.deps = deps;
@@ -316,6 +190,10 @@ export class DebateService {
                 return { content: res.content };
             },
         });
+        this.postProcessor = new DebatePostProcessor({ factCheckService: this.factCheckService });
+        this.humanService = new DebateHumanService(deps.eventBus, deps.debateStore, {
+            updateConvergenceScore: (session) => this.postProcessor.updateConvergenceScore(session),
+        });
     }
 
     setEngine(engine: IDebateEngine): void {
@@ -324,7 +202,6 @@ export class DebateService {
 
     async init() {
         this.activeSession = await loadActiveSession(this.deps.debateStore);
-        this.completedSessions = await loadHistoryList(this.deps.debateStore, this.MAX_HISTORY);
         this.unsubVerdict = this.deps.eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
             const payload = data as { sessionId: string; verdict: DebateVerdict };
             this.verdictMap.set(payload.sessionId, payload.verdict);
@@ -408,6 +285,7 @@ export class DebateService {
         this.clearTimeout();
         this.clearListeners();
         if (this.defaultConfig.useGovernor !== false) this.governor = new DebateGovernor();
+        this.postProcessor.clearProcessedIds();
         for (const p of ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare']) {
             try {
                 this.deps.adapterRegistry.resetCircuitBreaker(p);
@@ -497,6 +375,7 @@ export class DebateService {
         this.clearTimeout();
         this.clearListeners();
         if (this.defaultConfig.useGovernor !== false) this.governor = new DebateGovernor();
+        this.postProcessor.clearProcessedIds();
 
         const sessionConfig = config
             ? { ...this.defaultConfig, ...config }
@@ -559,7 +438,7 @@ export class DebateService {
 
     private updateConvergenceScore(): void {
         if (!this.activeSession) return;
-        updateConvergenceScore(this.activeSession, jaccardSimilarity);
+        this.postProcessor.updateConvergenceScore(this.activeSession);
     }
 
     pauseDebate(): void {
@@ -644,7 +523,7 @@ export class DebateService {
             }
         }
         this.clearListeners();
-        this.saveToHistory();
+        if (this.activeSession) this.deps.sessionManager.saveToDebateHistory(this.activeSession);
         this.activeSession = null;
         this.engine = null;
         this.runtimeSessionId = null;
@@ -703,15 +582,13 @@ export class DebateService {
         }
 
         // ── Post-processing pipeline (core debate behavior) ────────────────
-        this.processArgumentTree(bridged);
-        this.processDuplicates(bridged);
-        this.processSocraticQuality(bridged);
+        this.postProcessor.process(bridged);
 
         const newArgs = bridged.arguments.filter((a) => !prevIds.has(a.id));
 
-        this.processGovernorFeeding(newArgs);
-        this.processFactCheck(newArgs);
-        updateConvergenceScore(bridged, jaccardSimilarity);
+        this.postProcessor.processGovernorFeeding(newArgs, this.governor);
+        this.postProcessor.processFactCheck(newArgs);
+        this.postProcessor.updateConvergenceScore(bridged);
         // ────────────────────────────────────────────────────────────────────
 
         this.activeSession = bridged;
@@ -729,98 +606,6 @@ export class DebateService {
                 this.engine.cancelSession(this.runtimeSessionId);
             }
             this.stopDebate();
-        }
-    }
-
-    private processArgumentTree(session: DebateSession): void {
-        if (session.strategy !== 'argument_tree') return;
-        for (const arg of session.arguments) {
-            if (arg.parentId !== undefined) continue;
-            const parentMatch = arg.content.match(/\[parent:([^\]]+)\]/);
-            if (parentMatch) {
-                arg.rawParentRef = parentMatch[1];
-                arg.content = arg.content.replace(/\[parent:[^\]]+\]/, '').trim();
-                const refExists = session.arguments.some((a) => a.id === arg.rawParentRef);
-                if (refExists) {
-                    arg.parentId = arg.rawParentRef;
-                    arg.parentResolution = 'explicit';
-                } else {
-                    const latest = [...session.arguments]
-                        .reverse()
-                        .find((a) => a.round < arg.round);
-                    arg.parentId = latest?.id;
-                    arg.parentResolution = 'invalid_reference';
-                }
-            } else {
-                const latest = [...session.arguments].reverse().find((a) => a.round < arg.round);
-                arg.parentId = latest?.id;
-                arg.parentResolution = latest ? 'fallback_latest' : 'orphan';
-            }
-        }
-    }
-
-    private processDuplicates(session: DebateSession): void {
-        for (const arg of session.arguments) {
-            if (arg.duplicateOf) continue;
-            const { isDuplicate, match } = isDuplicateArgument(arg.content, session.arguments);
-            if (isDuplicate && match && match.id !== arg.id) {
-                arg.duplicateOf = match.id;
-            }
-        }
-    }
-
-    private processSocraticQuality(session: DebateSession): void {
-        if (session.strategy !== 'socratic') return;
-        const questionerIndex = session.socraticQuestioner ?? 0;
-        for (const arg of session.arguments) {
-            if (arg.duplicateOf) continue;
-            if (session.participants[questionerIndex]?.id === arg.agentId) {
-                const result = scoreSocraticQuestion(arg.content, session.arguments);
-                (
-                    arg as unknown as {
-                        socraticQuality?: number;
-                        socraticQualityReasons?: string[];
-                    }
-                ).socraticQuality = result.score || undefined;
-                (
-                    arg as unknown as {
-                        socraticQuality?: number;
-                        socraticQualityReasons?: string[];
-                    }
-                ).socraticQualityReasons = result.reasons.length > 0 ? result.reasons : undefined;
-            }
-        }
-    }
-
-    private processGovernorFeeding(newArgs: DebateArgument[]): void {
-        if (!this.governor) return;
-        for (const arg of newArgs) {
-            if (this.processedArgIds.has(arg.id)) continue;
-            if (arg.duplicateOf) continue;
-            this.processedArgIds.add(arg.id);
-            this.governor.ingestArgument(
-                arg.content,
-                arg.id,
-                arg.agentName,
-                arg.position,
-                arg.round,
-                arg.agentId,
-                arg.confidence,
-            );
-            this.governor.updateContradictions();
-            this.governor.computeConvergence();
-            this.governor.computeNovelty();
-            this.governor.updateDiversity();
-        }
-    }
-
-    private processFactCheck(newArgs: DebateArgument[]): void {
-        for (const arg of newArgs) {
-            if (this.processedArgIds.has(arg.id)) continue;
-            this.processedArgIds.add(arg.id);
-            void this.factCheckService
-                .checkArgument(arg)
-                .catch((e) => LOGGER.warn('DebateService', 'Fact-check failed', { error: e }));
         }
     }
 
@@ -860,7 +645,7 @@ export class DebateService {
         const quality = computeQualityMetrics(session.arguments, session.topic);
         if (quality) session.qualityMetrics = quality;
         session.interpretation = this.interpreter.interpret(session);
-        this.saveToHistory();
+        this.deps.sessionManager.saveToDebateHistory(session);
         this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
         this.deps.eventBus.emit(EVENTS.DEBATE_ENDED, {
             sessionId: session.id,
@@ -880,29 +665,13 @@ export class DebateService {
         confidence: number = 1.0,
         opts?: { position?: 'pro' | 'con' | 'neutral' },
     ): Promise<void> {
-        if (!this.activeSession || this.activeSession.status === 'completed') return;
-
-        const arg = {
-            id: crypto.randomUUID(),
-            agentId: 'human',
+        return this.humanService.addArgument(
+            this.activeSession,
             agentName,
             content,
             confidence,
-            timestamp: Date.now(),
-            round: this.activeSession.currentRound,
-            source: 'human' as const,
-            position: opts?.position ?? ('neutral' as const),
-        };
-
-        this.activeSession.arguments.push(arg);
-        this.updateConvergenceScore();
-        if (this.activeSession) {
-            this.deps.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
-                sessionId: this.activeSession.id,
-                argument: arg,
-            });
-            this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
-        }
+            opts,
+        );
     }
 
     getSession(): DebateSession | null {
@@ -912,44 +681,15 @@ export class DebateService {
 
     getSessionById(id: string): DebateSession | null {
         if (this.activeSession?.id === id) return this.activeSession;
-        return this.completedSessions.find((s) => s.id === id) ?? null;
+        return this.deps.sessionManager.getDebateHistory().find((s) => s.id === id) ?? null;
     }
 
     recordHumanVote(vote: HumanVote): void {
-        if (!this.activeSession) return;
-        if (!this.activeSession.roundVotes) this.activeSession.roundVotes = {};
-        const list = [...(this.activeSession.roundVotes[vote.round] || [])];
-        const idx = list.findIndex(
-            (v) => v.voter === vote.voter && v.votedAgentId === vote.votedAgentId,
-        );
-        if (vote.score <= 0) {
-            if (idx >= 0) list.splice(idx, 1);
-        } else if (idx >= 0) {
-            list[idx] = vote;
-        } else {
-            list.push(vote);
-        }
-        this.activeSession.roundVotes[vote.round] = list;
-        this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
-        this.persistSession();
+        return this.humanService.recordHumanVote(this.activeSession, vote);
     }
 
     getHumanVotes(): HumanVote[] {
-        if (!this.activeSession?.roundVotes) return [];
-        return Object.values(this.activeSession.roundVotes).flat();
-    }
-
-    private getAiRoundWinner(round: number): string | null {
-        const args =
-            this.activeSession?.arguments.filter(
-                (a) => a.round === round && a.agentId !== 'human',
-            ) ?? [];
-        if (args.length === 0) return null;
-        let best = args[0];
-        for (const arg of args) {
-            if (arg.confidence > best.confidence) best = arg;
-        }
-        return best.agentId;
+        return this.humanService.getHumanVotes(this.activeSession);
     }
 
     getVoteAlignmentSummary(): Array<{
@@ -958,16 +698,7 @@ export class DebateService {
         aiPick: string | null;
         aligned: boolean;
     }> {
-        if (!this.activeSession?.roundVotes) return [];
-        return Object.entries(this.activeSession.roundVotes)
-            .map(([roundStr, votes]) => {
-                const round = Number(roundStr);
-                const humanPicks = votes.filter((v) => v.score >= 5).map((v) => v.votedAgentId);
-                const aiPick = this.getAiRoundWinner(round);
-                const aligned = aiPick !== null && humanPicks.includes(aiPick);
-                return { round, humanPicks, aiPick, aligned };
-            })
-            .sort((a, b) => a.round - b.round);
+        return this.humanService.getVoteAlignmentSummary(this.activeSession);
     }
 
     getGovernorState(): import('./debate-governor/types').GovernorState | null {
@@ -976,60 +707,6 @@ export class DebateService {
 
     getArguments(): DebateArgument[] {
         return [...(this.activeSession?.arguments || [])];
-    }
-
-    private persistHistory(): void {
-        void persistHistoryList(this.deps.debateStore, this.completedSessions);
-    }
-
-    private saveToHistory(): void {
-        if (!this.activeSession || this.activeSession.status !== 'completed') return;
-        if (this.completedSessions.some((s) => s.id === this.activeSession!.id)) return;
-        const snapshot = structuredClone(this.activeSession);
-        this.completedSessions.unshift(snapshot);
-        if (this.completedSessions.length > this.MAX_HISTORY) {
-            this.completedSessions = this.completedSessions.slice(0, this.MAX_HISTORY);
-        }
-        this.persistHistory();
-    }
-
-    getHistory(): DebateSession[] {
-        return [...this.completedSessions];
-    }
-
-    restoreSession(id: string): DebateSession | null {
-        const idx = this.completedSessions.findIndex((s) => s.id === id);
-        if (idx === -1) return null;
-        const restored = structuredClone(this.completedSessions[idx]);
-        restored.status = 'active';
-        restored.currentRound = 1;
-        this.activeSession = restored;
-        this.completedSessions.splice(idx, 1);
-        this.persistSession();
-        this.persistHistory();
-        this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, this.activeSession);
-        return this.activeSession;
-    }
-
-    archiveSession(id: string): boolean {
-        const session = this.completedSessions.find((s) => s.id === id);
-        if (!session) return false;
-        session.status = 'completed';
-        this.persistHistory();
-        return true;
-    }
-
-    deleteSession(id: string): boolean {
-        const idx = this.completedSessions.findIndex((s) => s.id === id);
-        if (idx === -1) return false;
-        this.completedSessions.splice(idx, 1);
-        this.persistHistory();
-        return true;
-    }
-
-    clearHistory(): void {
-        this.completedSessions = [];
-        this.persistHistory();
     }
 
     // ── Governor integration ──────────────────────────────────────────
@@ -1061,7 +738,8 @@ export class DebateService {
     // ── Graph metrics ────────────────────────────────────────────────
 
     getGraphMetrics(): DebateGraphMetrics | undefined {
-        return this.activeSession?.graphMetrics ?? this.completedSessions[0]?.graphMetrics;
+        const history = this.deps.sessionManager.getDebateHistory();
+        return this.activeSession?.graphMetrics ?? history[0]?.graphMetrics;
     }
 
     getVerdict(sessionId: string): DebateVerdict | undefined {
@@ -1136,5 +814,5 @@ export type {
     DebateSession,
     DebateServiceDeps,
     HumanVote,
-} from '../contracts/debate-types';
-export { jaccardSimilarity } from '../contracts/debate-types';
+} from '../../contracts/debate-types';
+export { jaccardSimilarity } from '../../contracts/debate-types';
