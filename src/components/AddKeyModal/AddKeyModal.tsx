@@ -173,6 +173,10 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             setError('');
             return;
         }
+        if (step === 1) {
+            onClose();
+            return;
+        }
         setStep(1);
         setError('');
         setBulkMode(false);

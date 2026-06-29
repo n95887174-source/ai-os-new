@@ -244,6 +244,18 @@ export class AdapterFactory {
         return cb ? cb.peekState() : 'closed';
     }
 
+    invalidateCache(provider?: string): void {
+        if (provider) {
+            this.adapters.delete(provider.toLowerCase());
+            this.#rateLimiters.delete(provider.toLowerCase());
+            this.#circuitBreakers.delete(provider.toLowerCase());
+        } else {
+            this.adapters.clear();
+            this.#rateLimiters.clear();
+            this.#circuitBreakers.clear();
+        }
+    }
+
     resetCircuitBreaker(provider: string): void {
         const normalized = provider.toLowerCase();
         const cb = this.#circuitBreakers.get(normalized);

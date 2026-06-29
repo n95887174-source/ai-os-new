@@ -93,28 +93,9 @@ export class PriorityQueueDecorator extends BaseDecorator {
             const availableItems = this.sendQueue.filter((q) => q.priority === p);
             if (availableItems.length === 0) continue;
 
-            if (this.inner.batchSendMessage && availableItems.length > 1) {
-                // Dynamic Batching
-                const batchSize = Math.min(
-                    availableItems.length,
-                    this.config.maxConcurrency - this.activeSends,
-                );
-                if (batchSize === 0) return;
-                const queue = this.sendQueue;
-                const batch: QueueItem[] = [];
-                for (let i = 0; i < queue.length && batch.length < batchSize; i++) {
-                    if (availableItems.includes(queue[i])) {
-                        batch.push(queue.splice(i, 1)[0]);
-                        i--;
-                    }
-                }
-                this.activeSends += batch.length;
-                this.sendProcessed += 1;
-                if (p === 'high') this.highPriorityStreak += 1;
-                else this.highPriorityStreak = 0;
-                this.executeSendBatch(batch);
-                return;
-            }
+            // Batch path disabled: decorator chain always reports batchSendMessage as supported
+            // (BaseDecorator delegates to inner), but no concrete adapter implements it.
+            // The path always throws, causing all queued items to reject with a confusing error.
 
             // Single item sending
             const idx = this.sendQueue.indexOf(availableItems[0]);
@@ -147,22 +128,6 @@ export class PriorityQueueDecorator extends BaseDecorator {
         }
     }
 
-    private async executeSendBatch(batch: QueueItem[]): Promise<void> {
-        if (batch.length === 0) {
-            this.processSendQueue();
-            return;
-        }
-        try {
-            const results = await this.inner.batchSendMessage!(batch);
-            batch.forEach((item, index) => item.resolve(results[index]));
-        } catch (e) {
-            batch.forEach((item) => item.reject(e));
-        } finally {
-            this.activeSends -= batch.length;
-            this.processSendQueue();
-        }
-    }
-
     private processStreamQueue(): void {
         if (this.activeStreams >= this.config.maxConcurrency || this.streamQueue.length === 0)
             return;
@@ -180,22 +145,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
             const availableItems = this.streamQueue.filter((q) => q.priority === p);
             if (availableItems.length === 0) continue;
 
-            if (this.inner.batchStreamMessage && availableItems.length > 1) {
-                // Dynamic Batching
-                const batchSize = Math.min(
-                    availableItems.length,
-                    this.config.maxConcurrency - this.activeStreams,
-                );
-                const batch = [];
-                for (let i = 0; i < batchSize; i++) {
-                    const idx = this.streamQueue.indexOf(availableItems[i]);
-                    batch.push(this.streamQueue.splice(idx, 1)[0]);
-                }
-                this.activeStreams += batch.length;
-                this.streamProcessed += batch.length;
-                this.executeStreamBatch(batch);
-                return;
-            }
+            // Batch path disabled: same reason as send batch path above.
 
             // Single item stream
             const idx = this.streamQueue.indexOf(availableItems[0]);
@@ -227,22 +177,6 @@ export class PriorityQueueDecorator extends BaseDecorator {
             item.reject(e);
         } finally {
             this.activeStreams--;
-            this.processStreamQueue();
-        }
-    }
-
-    private async executeStreamBatch(batch: StreamQueueItem[]): Promise<void> {
-        if (batch.length === 0) {
-            this.processStreamQueue();
-            return;
-        }
-        try {
-            await this.inner.batchStreamMessage!(batch);
-            batch.forEach((item) => item.resolve());
-        } catch (e) {
-            batch.forEach((item) => item.reject(e));
-        } finally {
-            this.activeStreams -= batch.length;
             this.processStreamQueue();
         }
     }
