@@ -102,9 +102,10 @@ export class PriorityQueueDecorator extends BaseDecorator {
                 if (batchSize === 0) return;
                 const queue = this.sendQueue;
                 const batch: QueueItem[] = [];
-                for (let i = queue.length - 1; i >= 0 && batch.length < batchSize; i--) {
+                for (let i = 0; i < queue.length && batch.length < batchSize; i++) {
                     if (availableItems.includes(queue[i])) {
                         batch.push(queue.splice(i, 1)[0]);
+                        i--;
                     }
                 }
                 this.activeSends += batch.length;

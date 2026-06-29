@@ -248,14 +248,23 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         }, LIVE_STORAGE_DEBOUNCE);
     };
 
+    const isValidAgentEvent = (e: unknown): boolean =>
+        !!e && typeof e === 'object' && 'sessionId' in e && 'agentId' in e && 'status' in e;
+    const isValidRoundEvent = (e: unknown): boolean =>
+        !!e && typeof e === 'object' && 'sessionId' in e && 'round' in e;
+
     const initialState = (() => {
         try {
             const saved = sessionStorage.getItem(LIVE_STORAGE_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 return {
-                    agentEvents: Array.isArray(parsed.agentEvents) ? parsed.agentEvents : [],
-                    roundEvents: Array.isArray(parsed.roundEvents) ? parsed.roundEvents : [],
+                    agentEvents: Array.isArray(parsed.agentEvents)
+                        ? parsed.agentEvents.filter(isValidAgentEvent)
+                        : [],
+                    roundEvents: Array.isArray(parsed.roundEvents)
+                        ? parsed.roundEvents.filter(isValidRoundEvent)
+                        : [],
                 };
             }
         } catch {
