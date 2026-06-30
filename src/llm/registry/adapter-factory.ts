@@ -45,8 +45,35 @@ export class AdapterFactory {
 
     #config: AdapterFactoryConfig;
 
+    static readonly SUPPORTED_PROVIDERS: readonly string[] = [
+        'gemini',
+        'openrouter',
+        'nvidia',
+        'groq',
+        'openai',
+        'together',
+        'fireworks',
+        'deepseek',
+        'mistral',
+        'cohere',
+        'azure',
+        'huggingface',
+        'cerebras',
+        'cloudflare',
+        'blackbox',
+        'scaleway',
+        'cometapi',
+        'github',
+        'ollama',
+        'lmstudio',
+    ];
+
     constructor(config: AdapterFactoryConfig = {}) {
         this.#config = config;
+    }
+
+    getSupportedProviders(): string[] {
+        return [...AdapterFactory.SUPPORTED_PROVIDERS];
     }
 
     isSupported(provider: string): boolean {
