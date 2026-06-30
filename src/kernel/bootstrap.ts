@@ -1,15 +1,10 @@
-import type { IBootstrap, IEventBus, IDatabaseService } from './types/interfaces';
+import type { IBootstrap, IEventBus } from './types/interfaces';
 import { type IContainer } from './container';
 import type { ILifecycle } from './contracts/lifecycle';
 import { LifecycleManager } from './services/lifecycle-manager';
-import { LoggerService, rootLogger } from './services/logger-service';
-
-function getLogger() {
-    return rootLogger?.child('Bootstrap');
-}
+import { LoggerService } from './services/logger-service';
 import { EVENTS } from './events/event-names';
 import { dexieDb } from './services/database-service';
-import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie-identity';
 import { AuditorTopology } from './state/topology-defaults';
 import { SystemKernel } from './kernel';
 import { ConfigService } from './services/config-service';
@@ -25,7 +20,6 @@ import { OrchestrationService as Orchestrator } from './services/orchestration-s
 import { registerServices } from './service-registration/index';
 import { ProjectionRegistry } from './services/event-bridge/projection-registry';
 import { EventBridge } from './services/event-bridge/event-bridge';
-import { KeyStateProjection } from './services/projections/key-state-projection';
 import { RouterProjection } from './services/projections/router-projection';
 import { CausalScopeManager } from './services/causal-scope-manager';
 import { CausalTimelineService } from './services/causal-timeline-service';
@@ -37,42 +31,21 @@ import { TruthConsistencyMonitor } from './services/truth-consistency-monitor';
 import { GroupManagerService } from './services/group-manager';
 import type { RouterService } from './services/provider-router';
 import type { ICausalScopeManager } from './contracts/causal-debugger';
-import type { DebatePhase } from './contracts/debate-runtime';
 import type { ApiKey } from './types/metrics-types';
-import type { StorageLayer } from './contracts/storage/storage-layer';
 import { MemoryWatchdog } from './utils/memory-watchdog';
-import { setBootstrapSnapshot, clearBootstrapSnapshot } from './bootstrap-state';
-import { safeJsonParse } from '../kernel/utils/safe-json';
-
-// Services whose failure should abort bootstrap entirely
-// Debug flag: disable all intervals to find OOM cause
-void false;
-
-// Feature flags — toggle subsystems independently for memory profiling
-const ENABLE_EVENT_BRIDGE = true; // EventBridge + projections
-const ENABLE_CAUSAL_DEBUGGER = true; // CausalScopeManager + CausalTimelineService
-const ENABLE_COUNTERFACTUAL = true; // CounterfactualEngine + Explanation + Narrative
-const ENABLE_TEMPORAL_REPLAY = true; // TemporalReplayService (needs EventBridge)
-const ENABLE_TRUTH_MONITOR = true; // TruthConsistencyMonitor
+import { clearBootstrapSnapshot } from './bootstrap-state';
+import {
+    SERVICE_PHASES,
+    CRITICAL_SERVICES,
+    RUNNING_DEBATE_PHASES,
+    type InitPhase,
+    type BootstrapReport,
+} from './bootstrap-phases';
+import { runKeyMigration, hydrateKeyStorage, loadBootstrapSnapshot } from './bootstrap-key-init';
 
 function getHeapMB(): number {
     const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
     return mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
-}
-
-// Patch setInterval to track all intervals
-
-const CRITICAL_SERVICES = new Set(['configService', 'keyService', 'pricingService']);
-
-export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
-
-export interface BootstrapReport {
-    phase: InitPhase;
-    started: number;
-    completed: number;
-    duration: number;
-    error: string | null;
-    services: { name: string; status: 'ok' | 'error' | 'skipped'; error?: string }[];
 }
 
 export class SystemBootstrap implements IBootstrap {
@@ -121,18 +94,15 @@ export class SystemBootstrap implements IBootstrap {
         this.registerMigratedServices();
 
         // ── EventBridge (must start BEFORE any events are emitted) ──────────
-        if (ENABLE_EVENT_BRIDGE) {
+        if (true) {
             try {
                 const registry = new ProjectionRegistry();
-                const keyStateProjection = new KeyStateProjection();
                 const routerProjection = new RouterProjection();
-                registry.register(keyStateProjection);
                 registry.register(routerProjection);
                 const bridge = new EventBridge(this.eventBus, registry);
                 bridge.start();
                 this.eventBridge = bridge;
                 this.container.register('projectionRegistry', registry);
-                this.container.register('keyStateProjection', keyStateProjection);
                 this.container.register('routerProjection', routerProjection);
             } catch (e) {
                 this.logger.warn('Bootstrap', 'EventBridge init failed (non-critical)', {
@@ -144,156 +114,19 @@ export class SystemBootstrap implements IBootstrap {
         const kernel = this.container.get<SystemKernel>('kernel');
         await this.lifecycle.tryInit('kernel', () => kernel.init());
 
-        // Boot configService immediately to restore configuration overlays from database
         const configService = this.container.get<ConfigService>('configService');
         await this.lifecycle.tryInit('configService', () => configService.init());
 
         // ── Key Migration (one-shot) ───────────────────────────────────────
-        // Reads all old sources (localStorage, existing Dexie), deduplicates,
-        // writes to KeyStore. Idempotent — checks flag.
-        try {
-            const { runOnce } = await import('./dal/key-migration');
-            const db = this.container.get<IDatabaseService>('database');
-            const storageMig = this.container.get<StorageLayer>('storageLayer');
-            await runOnce({ db, keyStore: storageMig.keys });
-        } catch (e) {
-            this.logger.warn('Bootstrap', 'Key migration failed (non-critical)', { error: e });
-        }
+        await runKeyMigration(this.container, this.logger);
 
         // Hydrate: read KeyStore and push to KeyRegistry.
-        // No merge, no SQLite blob, no cross-source combination.
-        try {
-            const { hydrateKeyStorage } = await import('./services/key-storage-hydrator');
-            const keyService = this.container.get<KeyService>('keyService');
-            const storageHyd = this.container.get<StorageLayer>('storageLayer');
-            await hydrateKeyStorage({
-                eventBus: this.eventBus,
-                keyService,
-                keyStore: storageHyd.keys,
-            });
-        } catch (e) {
-            this.logger.warn('Bootstrap', 'Key storage hydration failed (non-critical)', {
-                error: e,
-            });
-        }
+        await hydrateKeyStorage(this.container, this.eventBus, this.logger);
 
         // ════════════════════════════════════════════════════════════════════
         //   BOOTSTRAP SNAPSHOT — read from KeyStore
         // ════════════════════════════════════════════════════════════════════
-        // DEXIE_IDENTITY: verify the bootstrap module sees the same Dexie
-        // instance as the hydration + KeyRegistry layers.
-        const bootstrapDexie = verifyDexieInstance('bootstrap:step3', dexieDb);
-        await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
-
-        // Primary source: storageLayer.keys (KeyStore)
-        const storage = this.container.get<StorageLayer>('storageLayer');
-        const repoKeys = await storage.keys.listKeys();
-        if (import.meta.env.DEV)
-            getLogger()?.info('Bootstrap', 'Snapshot repo count', { count: repoKeys.length });
-
-        let snapshotKeys: ApiKey[] = repoKeys;
-        let snapshotSource = repoKeys.length > 0 ? 'keystore' : 'unknown';
-
-        // Fallback: if KeyStore returned empty, try alternative sources
-        if (snapshotKeys.length === 0) {
-            const dexieRaw = await dexieDb.apiKeys.toArray();
-            if (import.meta.env.DEV)
-                console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);
-
-            // Priority 1: dexieDb.apiKeys (hydration output)
-            if (dexieRaw.length > 0) {
-                snapshotKeys = [...dexieRaw];
-                snapshotSource = 'dexie';
-            }
-
-            // Priority 2: sqlite blob (for forward compat with sql.js re-enable)
-            if (snapshotKeys.length === 0) {
-                try {
-                    const blob = await dexieDb.keyValue.get('sqlite_db_blob');
-                    if (blob?.value && Array.isArray(blob.value)) {
-                        const bytes = new Uint8Array(blob.value as number[]);
-                        const SQLITE_MAGIC = new Uint8Array([
-                            83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0,
-                        ]);
-                        let validMagic = bytes.length >= 100;
-                        for (let i = 0; validMagic && i < 16; i++) {
-                            if (bytes[i] !== SQLITE_MAGIC[i]) validMagic = false;
-                        }
-                        if (validMagic) {
-                            // sql.js is disabled (ENABLE_SQLJS=false) so actual row extraction
-                            // requires WASM runtime. Currently returns 0 — falls through to
-                            // localStorage. For forward-compat: if extraction ever succeeds,
-                            // the source attribution is preserved.
-                        }
-                    }
-                } catch {
-                    /* non-critical */
-                }
-            }
-
-            // Priority 3: localStorage (the canonical store)
-            if (snapshotKeys.length === 0) {
-                try {
-                    const raw = localStorage.getItem('super_agents_api_keys');
-                    if (raw) {
-                        const parsed = safeJsonParse(raw);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            snapshotKeys = parsed;
-                            snapshotSource = 'localStorage';
-                        }
-                    }
-                } catch {
-                    /* non-critical */
-                }
-            }
-        }
-
-        // C-01: Always clear localStorage immediately after reading
-        try {
-            localStorage.removeItem('super_agents_api_keys');
-            localStorage.removeItem('superagents:providers:super_agents_api_keys');
-            localStorage.removeItem('superagents:providers:super_agents_kernel_state');
-        } catch (e) {
-            getLogger()?.warn('Bootstrap', 'Failed to remove legacy state', { error: String(e) });
-        }
-
-        // GUARD: if snapshot ended up 0 but dexie has data, force re-read
-        if (snapshotKeys.length === 0) {
-            try {
-                const dexieGuard = await dexieDb.apiKeys.toArray();
-                if (dexieGuard.length > 0) {
-                    getLogger()?.warn(
-                        'Bootstrap',
-                        'Snapshot guard: snapshot is 0 but dexie has entries',
-                        { dexieCount: dexieGuard.length },
-                    );
-                    snapshotKeys = [...dexieGuard];
-                    snapshotSource = 'dexie';
-                }
-            } catch {
-                /* non-critical */
-            }
-        }
-
-        if (import.meta.env.DEV)
-            console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
-        if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
-
-        // Diagnostic-only globals (counts + flags, NO actual key material).
-        interface BootstrapGlobals {
-            __BOOTSTRAP_PHASE__?: boolean;
-            __BOOTSTRAP_KEYS_SOURCE__?: string;
-            __BOOTSTRAP_KEY_COUNT__?: number;
-        }
-        const g = globalThis as unknown as BootstrapGlobals;
-        g.__BOOTSTRAP_PHASE__ = true;
-        g.__BOOTSTRAP_KEYS_SOURCE__ = snapshotSource;
-        g.__BOOTSTRAP_KEY_COUNT__ = snapshotKeys.length;
-
-        // Hand the actual snapshot to key-registry via module-scoped closure
-        // (NOT globalThis) — this keeps raw key material off `globalThis`
-        // where XSS / extensions / devtools could read it.
-        setBootstrapSnapshot(snapshotKeys);
+        await loadBootstrapSnapshot(this.container, this.logger);
 
         const servicesOk = await this.initServices();
         if (!servicesOk) {
@@ -301,10 +134,10 @@ export class SystemBootstrap implements IBootstrap {
             return this.getReport();
         }
 
-        // C-01: localStorage already cleared immediately after read above.
-        // No need for duplicate cleanup here.
-
-        // Clear bootstrap phase — post-init operations read from storage normally.
+        const g = globalThis as unknown as {
+            __BOOTSTRAP_PHASE__?: boolean;
+            __BOOTSTRAP_KEY_COUNT__?: number;
+        };
         g.__BOOTSTRAP_PHASE__ = false;
         g.__BOOTSTRAP_KEY_COUNT__ = 0;
         clearBootstrapSnapshot();
@@ -377,84 +210,20 @@ export class SystemBootstrap implements IBootstrap {
     private async initServices(): Promise<boolean> {
         this.phase = 'services';
 
-        const PHASES: string[][] = [
-            ['configService', 'settingsService', 'keyService', 'cacheService', 'pricingService'],
-            [
-                'keyStateStore',
-                'routerService',
-                'sessionAffinityStore',
-                'llmClientService',
-                'providerRuntimeService',
-                'virtualKeyService',
-                'raceExecutor',
-                'groupManagerService',
-            ],
-            [
-                'toolService',
-                'sandboxService',
-                'memoryService',
-                'cognitiveService',
-                'policyService',
-                'roleService',
-                'snapshotService',
-                'agentService',
-                'agentHealthMonitor',
-            ],
-            [
-                'chatService',
-                'debateService',
-                'debateApiService',
-                'debateKnowledgeSync',
-                'debateEngine',
-                'debateModeManager',
-                'debateWorkspace',
-                'hypothesisService',
-                'metricsService',
-                'advisorService',
-                'budgetService',
-                'usageTracker',
-                'timelineService',
-                'adminService',
-            ],
-            [
-                'healthCheckService',
-                'monitoringService',
-                'traceService',
-                'diagnosticService',
-                'whatIfService',
-                'pressureMapService',
-                'cognitiveIntelligenceService',
-                'blackboardService',
-                'topologyManager',
-                'workforceFederation',
-                'routingPolicyService',
-                'notificationWebhookService',
-                'compromiseWebhookService',
-                'externalSecretsService',
-                'workspaceService',
-                'skillService',
-                'mcpService',
-                'agentMarketplace',
-                'probeService',
-                'consistencyChecker',
-                'systemStatusService',
-            ],
-        ];
-
         let criticalFailed = false;
-        for (let pIdx = 0; pIdx < PHASES.length; pIdx++) {
-            const phaseServices = PHASES[pIdx];
+        for (let pIdx = 0; pIdx < SERVICE_PHASES.length; pIdx++) {
+            const phaseServices = SERVICE_PHASES[pIdx];
             const memBefore = (performance as unknown as { memory?: { usedJSHeapSize: number } })
                 .memory?.usedJSHeapSize;
             this.logger.info(
                 'Bootstrap',
-                `Phase ${pIdx + 1}/${PHASES.length} starting: ${phaseServices.join(', ')}`,
+                `Phase ${pIdx + 1}/${SERVICE_PHASES.length} starting: ${phaseServices.join(', ')}`,
                 { memMB: memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a' },
             );
             const results = await this.lifecycle.initAllSequential(phaseServices);
             const memAfter = (performance as unknown as { memory?: { usedJSHeapSize: number } })
                 .memory?.usedJSHeapSize;
-            this.logger.info('Bootstrap', `Phase ${pIdx + 1}/${PHASES.length} done`, {
+            this.logger.info('Bootstrap', `Phase ${pIdx + 1}/${SERVICE_PHASES.length} done`, {
                 memMB: memAfter ? Math.round(memAfter / 1024 / 1024) : 'n/a',
                 deltaMB:
                     memBefore && memAfter
@@ -480,7 +249,6 @@ export class SystemBootstrap implements IBootstrap {
                             'Bootstrap',
                             `Optional service ${name} failed — continuing`,
                         );
-                        // OBS-100: emit event for non-critical failures
                         this.eventBus.emit(EVENTS.NOTIFICATION, {
                             message: `Service ${name} failed to init`,
                             type: 'warning',
@@ -490,10 +258,9 @@ export class SystemBootstrap implements IBootstrap {
                 }
             }
             if (criticalFailed) break;
-            // OBS-100: emit phase complete event
             this.eventBus.emit(EVENTS.KERNEL_UPDATED, {
                 bootstrapPhase: pIdx + 1,
-                totalPhases: PHASES.length,
+                totalPhases: SERVICE_PHASES.length,
                 phase: this.phase,
             } as Record<string, unknown>);
         }
@@ -615,17 +382,16 @@ export class SystemBootstrap implements IBootstrap {
         await this.lifecycle.startAll();
 
         // ── Causal Debugger Layer ────────────────────────────────────────
-        if (ENABLE_CAUSAL_DEBUGGER) {
+        {
             const memBefore = getHeapMB();
             this.logger.info('Bootstrap', '[MODULE START] CausalTimelineService');
             try {
                 const causalScopeManager = new CausalScopeManager();
-                const keyStateProjection =
-                    this.container.get<KeyStateProjection>('keyStateProjection');
+                const kss = this.container.get<KeyStateStore>('keyStateStore');
                 const routerProjection = this.container.get<RouterProjection>('routerProjection');
                 const causalTimelineService = new CausalTimelineService(
                     causalScopeManager,
-                    keyStateProjection,
+                    kss,
                     routerProjection,
                     this.eventBus,
                     this.logger,
@@ -658,7 +424,7 @@ export class SystemBootstrap implements IBootstrap {
         }
 
         // ── Counterfactual Engine ────────────────────────────────────────
-        if (ENABLE_COUNTERFACTUAL) {
+        {
             const memBefore = getHeapMB();
             this.logger.info('Bootstrap', '[MODULE START] CounterfactualEngine');
             try {
@@ -712,7 +478,7 @@ export class SystemBootstrap implements IBootstrap {
         }
 
         // ── Temporal Replay Service (needs EventBridge) ──────────────────
-        if (ENABLE_TEMPORAL_REPLAY && ENABLE_EVENT_BRIDGE) {
+        {
             const memBefore = getHeapMB();
             this.logger.info('Bootstrap', '[MODULE START] TemporalReplayService');
             try {
@@ -738,7 +504,7 @@ export class SystemBootstrap implements IBootstrap {
         }
 
         // ── Truth Consistency Monitor ────────────────────────────────────
-        if (ENABLE_TRUTH_MONITOR) {
+        {
             const memBefore = getHeapMB();
             this.logger.info('Bootstrap', '[MODULE START] TruthConsistencyMonitor');
             try {
@@ -756,7 +522,7 @@ export class SystemBootstrap implements IBootstrap {
             }
         }
 
-        // Group Manager — wraps all key lifecycle (depends on keyService being ready)
+        // Group Manager — wraps all key lifecycle
         try {
             const gm = this.container.get<GroupManagerService>('groupManagerService');
             const keysBeforeSync = this.container.get<KeyService>('keyService').getKeys();
@@ -778,7 +544,7 @@ export class SystemBootstrap implements IBootstrap {
             });
         }
 
-        // Seed KeyStateStore with existing keys so projection is populated before first probe
+        // Seed KeyStateStore with existing keys
         try {
             const ks = this.container.get<KeyService>('keyService');
             const kss = this.container.get<KeyStateStore>('keyStateStore');
@@ -796,20 +562,12 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.warn('Bootstrap', 'KeyStateStore seed failed (non-critical)', { error: e });
         }
 
-        // P1-9: Auto-resume interrupted debates found in Dexie after page reload
-        // Mark non-terminated sessions as failed so the user sees them in UI
+        // Auto-resume interrupted debates found in Dexie after page reload
         try {
-            const RUNNING_PHASES = new Set<DebatePhase>([
-                'initializing',
-                'active',
-                'deliberating',
-                'consensus',
-                'summarizing',
-            ]);
             const allSessions = await dexieDb.debateSessions.toArray();
             let interruptedCount = 0;
             for (const s of allSessions) {
-                if (RUNNING_PHASES.has(s.phase)) {
+                if (RUNNING_DEBATE_PHASES.has(s.phase)) {
                     await dexieDb.debateSessions.put({
                         ...s,
                         phase: 'failed',
@@ -831,7 +589,6 @@ export class SystemBootstrap implements IBootstrap {
             });
         }
 
-        //    this.eventBus.emit(EVENTS.COMMAND, { action: 'run_health_checks' });
         this.eventBus.emit(EVENTS.NOTIFICATION, {
             message: 'Super-Agents OS Runtime ready',
             type: 'success',

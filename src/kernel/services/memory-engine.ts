@@ -1,4 +1,3 @@
-import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
@@ -11,7 +10,6 @@ import type {
 } from '../types/memory-types';
 import type { IMemoryEngine, MemoryCapability } from '../contracts/memory';
 import { rootLogger } from './logger-service';
-import { safeJsonParse } from '../../kernel/utils/safe-json';
 const LOGGER = rootLogger.child('MemoryEngine');
 
 const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
@@ -231,12 +229,6 @@ export class MemoryService implements IMemoryEngine {
                         .toArray()
                 ).slice(0, MAX_MEMORY_ENTRIES);
                 return;
-            }
-            const stored = BucketStorageAdapter.getItem('super_agents_os_memory');
-            if (stored) {
-                this.memories = (safeJsonParse(stored) ?? []).slice(0, MAX_MEMORY_ENTRIES);
-                await this.deps.database.db.memories.bulkAdd(this.memories);
-                BucketStorageAdapter.removeItem('super_agents_os_memory');
             }
         } catch (e) {
             LOGGER.error('MemoryEngine', 'Failed to load memory mesh', { error: e });

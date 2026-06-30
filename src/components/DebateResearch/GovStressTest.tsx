@@ -1,32 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-    Shield,
-    Play,
-    CheckCircle,
-    AlertTriangle,
-    XCircle,
-    Loader2,
-    Download,
-    Search,
-    X,
-    Filter,
-    Lightbulb,
-    BarChart3,
-    FileText,
-} from 'lucide-react';
+import { Shield, Play, Loader2, Download, Search, X, Filter, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { govStressTestService } from '../../kernel/instances';
-import type { GovScenarioResult, GovScenarioOutcome } from '../../kernel/contracts/gov-stress-test';
-
-const CATEGORY_COLORS: Record<string, string> = {
-    SLA: '#06b6d4',
-    Cost: '#f59e0b',
-    Privacy: '#a855f7',
-    'Rate Limit': '#3b82f6',
-    Safety: '#ef4444',
-    Content: '#f97316',
-    Security: '#10b981',
-};
+import type { GovScenarioResult } from '../../kernel/contracts/gov-stress-test';
+import { CATEGORY_COLORS } from './gov-stress-constants';
+import GovStatCards from './GovStatCards';
+import GovSummaryBar from './GovSummaryBar';
+import ScenarioResultCard from './ScenarioResultCard';
 
 const SCENARIO_COUNT = govStressTestService.getScenarios().length;
 
@@ -63,7 +43,6 @@ const GovStressTest: React.FC = () => {
     }, [results, categoryFilter, searchQuery]);
 
     const summary = useMemo(() => govStressTestService.summarize(results), [results]);
-
     const categoryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
         for (const r of results)
@@ -80,17 +59,6 @@ const GovStressTest: React.FC = () => {
         a.download = `gov-report-${Date.now()}.json`;
         a.click();
         URL.revokeObjectURL(url);
-    };
-
-    const iconForResult = (r: GovScenarioOutcome) => {
-        switch (r) {
-            case 'pass':
-                return <CheckCircle size={14} color="#10b981" />;
-            case 'warn':
-                return <AlertTriangle size={14} color="#f59e0b" />;
-            case 'block':
-                return <XCircle size={14} color="#ef4444" />;
-        }
     };
 
     return (
@@ -112,233 +80,42 @@ const GovStressTest: React.FC = () => {
                         Governance Stress Test
                     </span>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                        onClick={() =>
-                            navigate(
-                                `/hypothesis-gen?source=${encodeURIComponent('src/kernel/services/policy-service.ts')}&title=${encodeURIComponent('Governance stress test results')}`,
-                            )
-                        }
-                        style={{
-                            padding: '0.4rem 0.8rem',
-                            borderRadius: 6,
-                            border: '1px solid rgba(139,92,246,0.2)',
-                            background: 'rgba(139,92,246,0.08)',
-                            color: '#a855f7',
-                            cursor: 'pointer',
-                            fontSize: '0.7rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 3,
-                        }}
-                    >
-                        <Lightbulb size={11} /> Hypothesis
-                    </button>
-                </div>
+                <button
+                    onClick={() =>
+                        navigate(
+                            `/hypothesis-gen?source=${encodeURIComponent('src/kernel/services/policy-service.ts')}&title=${encodeURIComponent('Governance stress test results')}`,
+                        )
+                    }
+                    style={{
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: 6,
+                        border: '1px solid rgba(139,92,246,0.2)',
+                        background: 'rgba(139,92,246,0.08)',
+                        color: '#a855f7',
+                        cursor: 'pointer',
+                        fontSize: '0.7rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                    }}
+                >
+                    <Lightbulb size={11} /> Hypothesis
+                </button>
             </div>
 
-            <div
-                style={{
-                    padding: '0.6rem 1.25rem',
-                    display: 'flex',
-                    gap: 8,
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                }}
-            >
-                <div
-                    style={{
-                        flex: 1,
-                        padding: '0.5rem 0.7rem',
-                        borderRadius: 8,
-                        background: 'rgba(59,130,246,0.08)',
-                        border: '1px solid rgba(59,130,246,0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                    }}
-                >
-                    <Shield size={14} color="#60a5fa" />
-                    <div>
-                        <div
-                            style={{
-                                fontSize: '0.6rem',
-                                color: '#64748b',
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            Policies
-                        </div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#60a5fa' }}>
-                            {liveSnapshot.livePolicyCount}
-                        </div>
-                    </div>
-                </div>
-                <div
-                    style={{
-                        flex: 1,
-                        padding: '0.5rem 0.7rem',
-                        borderRadius: 8,
-                        background: 'rgba(245,158,11,0.08)',
-                        border: '1px solid rgba(245,158,11,0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                    }}
-                >
-                    <FileText size={14} color="#f59e0b" />
-                    <div>
-                        <div
-                            style={{
-                                fontSize: '0.6rem',
-                                color: '#64748b',
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            Violations
-                        </div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
-                            {liveSnapshot.liveViolationCount}
-                        </div>
-                    </div>
-                </div>
-                <div
-                    style={{
-                        flex: 1,
-                        padding: '0.5rem 0.7rem',
-                        borderRadius: 8,
-                        background: 'rgba(168,85,247,0.08)',
-                        border: '1px solid rgba(168,85,247,0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                    }}
-                >
-                    <Shield size={14} color="#a855f7" />
-                    <div>
-                        <div
-                            style={{
-                                fontSize: '0.6rem',
-                                color: '#64748b',
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            Roles
-                        </div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#a855f7' }}>
-                            {liveSnapshot.roleCount}
-                        </div>
-                    </div>
-                </div>
-                <div
-                    style={{
-                        flex: 1,
-                        padding: '0.5rem 0.7rem',
-                        borderRadius: 8,
-                        background: 'rgba(16,185,129,0.08)',
-                        border: '1px solid rgba(16,185,129,0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                    }}
-                >
-                    <BarChart3 size={14} color="#10b981" />
-                    <div>
-                        <div
-                            style={{
-                                fontSize: '0.6rem',
-                                color: '#64748b',
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            Scenarios
-                        </div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#10b981' }}>
-                            {SCENARIO_COUNT}
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <GovStatCards
+                livePolicyCount={liveSnapshot.livePolicyCount}
+                liveViolationCount={liveSnapshot.liveViolationCount}
+                roleCount={liveSnapshot.roleCount}
+                scenarioCount={SCENARIO_COUNT}
+            />
 
-            {results.length > 0 && (
-                <div
-                    style={{
-                        padding: '0.6rem 1.25rem',
-                        borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    }}
-                >
-                    <div style={{ display: 'flex', gap: 4, height: 24 }}>
-                        {summary.passed > 0 && (
-                            <div
-                                style={{
-                                    flex: summary.passed,
-                                    background: '#10b98125',
-                                    borderRadius: 6,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: '1px solid #10b98130',
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        fontSize: '0.6rem',
-                                        color: '#34d399',
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {Math.round((summary.passed / summary.total) * 100)}% Pass
-                                </span>
-                            </div>
-                        )}
-                        {summary.warned > 0 && (
-                            <div
-                                style={{
-                                    flex: summary.warned,
-                                    background: '#f59e0b25',
-                                    borderRadius: 6,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: '1px solid #f59e0b30',
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        fontSize: '0.6rem',
-                                        color: '#fbbf24',
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {Math.round((summary.warned / summary.total) * 100)}% Warn
-                                </span>
-                            </div>
-                        )}
-                        {summary.blocked > 0 && (
-                            <div
-                                style={{
-                                    flex: summary.blocked,
-                                    background: '#ef444425',
-                                    borderRadius: 6,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: '1px solid #ef444430',
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        fontSize: '0.6rem',
-                                        color: '#f87171',
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    {Math.round((summary.blocked / summary.total) * 100)}% Block
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+            <GovSummaryBar
+                passed={summary.passed}
+                warned={summary.warned}
+                blocked={summary.blocked}
+                total={summary.total}
+            />
 
             <div
                 style={{
@@ -522,94 +299,7 @@ const GovStressTest: React.FC = () => {
                         )}
                     </div>
                 ) : (
-                    filtered.map((r, i) => (
-                        <div
-                            key={`result-${i}`}
-                            style={{
-                                marginBottom: '0.4rem',
-                                padding: '0.55rem 0.75rem',
-                                borderRadius: 8,
-                                background: 'rgba(0,0,0,0.2)',
-                                border: `1px solid ${r.result === 'block' ? 'rgba(239,68,68,0.12)' : r.result === 'warn' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.08)'}`,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    marginBottom: 3,
-                                }}
-                            >
-                                {iconForResult(r.result)}
-                                <span
-                                    style={{
-                                        fontSize: '0.78rem',
-                                        fontWeight: 600,
-                                        color: '#e2e8f0',
-                                    }}
-                                >
-                                    {r.scenario.name}
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: '0.62rem',
-                                        color: CATEGORY_COLORS[r.scenario.category] || '#64748b',
-                                        padding: '0.1rem 0.35rem',
-                                        borderRadius: 3,
-                                        background: `${CATEGORY_COLORS[r.scenario.category] || '#64748b'}15`,
-                                    }}
-                                >
-                                    {r.scenario.category}
-                                </span>
-                            </div>
-                            <p
-                                style={{
-                                    margin: 0,
-                                    fontSize: '0.7rem',
-                                    color: '#94a3b8',
-                                    lineHeight: 1.4,
-                                }}
-                            >
-                                {r.scenario.description}
-                            </p>
-                            {r.violatedRules.length > 0 && (
-                                <div
-                                    style={{
-                                        marginTop: 4,
-                                        display: 'flex',
-                                        gap: 3,
-                                        flexWrap: 'wrap',
-                                    }}
-                                >
-                                    {r.violatedRules.map((rule, j) => (
-                                        <span
-                                            key={j}
-                                            style={{
-                                                fontSize: '0.62rem',
-                                                padding: '0.1rem 0.35rem',
-                                                borderRadius: 3,
-                                                background: 'rgba(239,68,68,0.06)',
-                                                color: '#ef4444',
-                                            }}
-                                        >
-                                            {rule}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                            <div
-                                style={{
-                                    marginTop: 4,
-                                    fontSize: '0.65rem',
-                                    color: '#64748b',
-                                    fontStyle: 'italic',
-                                }}
-                            >
-                                → {r.suggestedMitigation}
-                            </div>
-                        </div>
-                    ))
+                    filtered.map((r, i) => <ScenarioResultCard key={`result-${i}`} result={r} />)
                 )}
             </div>
         </div>

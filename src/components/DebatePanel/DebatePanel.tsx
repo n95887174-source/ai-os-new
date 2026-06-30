@@ -10,8 +10,11 @@ import {
     X,
     Download,
 } from 'lucide-react';
+import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';
 import {
     debateService,
+    debateEngine,
+    debateHumanService,
     sessionManager,
     hypothesisService,
     debateWorkspace,
@@ -33,6 +36,7 @@ import {
 } from '../../kernel/services/debate-runtime/debate-archetypes';
 import { orchestrator } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { getCachedVerdict } from '../../kernel/verdict-cache';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -63,7 +67,7 @@ const DebatePanel: React.FC = () => {
     const isMobile = useMediaQuery('(max-width: 767px)');
     const [session, setSession] = useState<DebateSession | null>(() => {
         try {
-            return debateService.getSession();
+            return getActiveDebateSession();
         } catch {
             return null;
         }
@@ -75,7 +79,7 @@ const DebatePanel: React.FC = () => {
     const [userInjection, setUserInjection] = useState('');
     const [isLoading, setIsLoading] = useState(() => {
         try {
-            return !debateService.getSession();
+            return !getActiveDebateSession();
         } catch {
             return true;
         }
@@ -134,7 +138,9 @@ const DebatePanel: React.FC = () => {
 
     const prevRoundRef = useRef(0);
     const lastSessionRef = useRef<DebateSession | null>(null);
-    const [humanVotes, setHumanVotes] = useState<HumanVote[]>(() => debateService.getHumanVotes());
+    const [humanVotes, setHumanVotes] = useState<HumanVote[]>(() =>
+        debateHumanService.getHumanVotes(getActiveDebateSession()),
+    );
     const [showVotePanel, setShowVotePanel] = useState<number | null>(null);
 
     const syncHumanVotesFromSession = useCallback((data: DebateSession) => {
@@ -239,7 +245,7 @@ const DebatePanel: React.FC = () => {
             setVerdict(payload.verdict);
         });
         if (session?.id && session.status === 'completed') {
-            const cached = debateService.getVerdict(session.id);
+            const cached = getCachedVerdict(session.id);
             // eslint-disable-next-line react-hooks/set-state-in-effect
             if (cached) setVerdict(cached);
         }
@@ -363,7 +369,12 @@ const DebatePanel: React.FC = () => {
         setActionLoading('inject');
         setError(null);
         try {
-            await debateService.addArgument('User (Human-in-loop)', userInjection, 1.0);
+            await debateHumanService.addArgument(
+                getActiveDebateSession(),
+                'User (Human-in-loop)',
+                userInjection,
+                1.0,
+            );
             if (isMountedRef.current) {
                 setUserInjection('');
                 setActionLoading(null);
@@ -448,7 +459,7 @@ const DebatePanel: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         try {
-                                            debateService.pauseDebate();
+                                            debateEngine.pauseSession(session.id);
                                             setError(null);
                                         } catch {
                                             if (isMountedRef.current) {
@@ -473,7 +484,7 @@ const DebatePanel: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         try {
-                                            debateService.resumeDebate();
+                                            debateEngine.resumeSession(session.id);
                                             setError(null);
                                         } catch {
                                             if (isMountedRef.current) {
@@ -499,11 +510,11 @@ const DebatePanel: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         try {
-                                            debateService.stopDebate();
+                                            debateEngine.cancelSession(session.id);
                                             setError(null);
                                         } catch (e) {
                                             if (isMountedRef.current) {
-                                                console.error('stopDebate failed:', e);
+                                                console.error('cancelSession failed:', e);
                                                 setError(t('debate.error_stop'));
                                                 clearError();
                                             }
@@ -528,7 +539,7 @@ const DebatePanel: React.FC = () => {
                                     onChange={(e) => {
                                         const v = e.target.value as 'off' | 'sampled' | 'all';
                                         setFactCheckLevel(v);
-                                        debateService.setFactCheckLevel(v);
+                                        debateService.factCheckService.setLevel(v);
                                     }}
                                     style={{
                                         padding: '4px 8px',

@@ -3,7 +3,7 @@ import type { DiversityState } from '../agent-diversity/types';
 import { createClaimGraph, addClaimsToGraph } from './claim-graph';
 import { detectContradictions, hasOpenContradictions } from './contradiction-detector';
 import { extractClaims } from './claim-extractor';
-import { DiversityScorer } from '../agent-diversity/diversity-scorer';
+import { DiversityScorer } from '../../agent-diversity/diversity-scorer';
 
 export class DebateGovernor {
     private state: GovernorState;

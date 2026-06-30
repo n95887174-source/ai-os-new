@@ -25,7 +25,8 @@ import type { VirtualKeyService } from '../services/virtual-key-service';
 import type { ProviderRuntimeService } from '../services/provider-runtime/provider-service';
 import type { LLMClientService } from '../services/llm-client-service';
 import type { SystemKernel } from '../kernel';
-import type { DebateService } from '../services/debate-runtime/debate-service';
+import { debateService as debateServiceSingleton } from '../services/debate-runtime/debate-service';
+type DebateService = typeof debateServiceSingleton;
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { AgentService } from '../services/agent-service';
 import type { MetricsService } from '../services/metrics-service';
@@ -132,7 +133,6 @@ export const registerPhase6: Phase = (helpers, ctx) => {
             undefined,
             get<DataAccessLayer>('dal').eventLog,
             undefined,
-            undefined,
             get<DataAccessLayer>('dal').kv,
         ),
     );
@@ -202,5 +202,6 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         'roleTestingSandboxService',
         new RoleTestingSandboxService(get<LLMClientService>('llmClientService')),
     );
+    personaService.setDatabase(get<IDatabaseService>('database'));
     register('personaService', personaService);
 };

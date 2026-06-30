@@ -570,7 +570,11 @@ export class SystemKernel implements IKernel {
         try {
             cloned = structuredClone(this.state);
         } catch {
-            cloned = JSON.parse(JSON.stringify(this.state));
+            try {
+                cloned = JSON.parse(JSON.stringify(this.state)) as SystemState;
+            } catch {
+                cloned = { ...this.state } as SystemState;
+            }
         }
         this.cachedFrozenState = this.deepFreeze(cloned);
         return this.cachedFrozenState;

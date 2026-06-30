@@ -49,3 +49,5 @@ export { getHistoricalFigure, HISTORICAL_FIGURES } from './debate-historical-fig
 // Subdirectory modules
 export { DebateGovernor } from './debate-governor';
 export { AutoDebateService } from './auto-debate/auto-debate-service';
+export { StrategyManager } from './debate-strategy-manager';
+export type { StrategyVersion } from './debate-strategy-manager';

@@ -72,8 +72,6 @@ export class AdvisorService {
             kernel: deps.kernel satisfies PressureEngineDeps['kernel'],
             routerService: deps.routerService satisfies PressureEngineDeps['routerService'],
             budgetService: deps.budgetService satisfies PressureEngineDeps['budgetService'],
-            healthCheckService:
-                deps.healthCheckService satisfies PressureEngineDeps['healthCheckService'],
             metricsService: deps.metricsService satisfies PressureEngineDeps['metricsService'],
         });
 

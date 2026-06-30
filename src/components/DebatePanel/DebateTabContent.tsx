@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
-import {
-    MessageSquare,
-    Clock,
-    Brain,
-    Eye,
-    ThumbsUp,
-    Loader2,
-    Send,
-    BarChart3,
-    Swords,
-    Play,
-    Download,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import DebateSetupWizard from './DebateSetupWizard';
 import DebateHistoryPanel from './DebateHistoryPanel';
 import DebateAnalytics from './DebateAnalytics';
@@ -22,31 +10,20 @@ import { DebateMemoryPanel } from './DebateMemoryPanel';
 import DebateSidebar from './DebateSidebar';
 import DebateChat from './DebateChat';
 import ErrorBoundary from '../Common/ErrorBoundary';
+import { TabBarSection } from './TabBarSection';
+import { InjectBarSection } from './InjectBarSection';
+import VotePanelSection from './VotePanelSection';
+import VerdictActionButtons from './VerdictActionButtons';
 import type { DebateSession, DebateVerdict, HumanVote } from '../../kernel/contracts';
 import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AutoDebateResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
-import {
-    probeService,
-    autoDebateService as autoDebate,
-    debateService,
-} from '../../kernel/instances';
+import { probeService, autoDebateService as autoDebate } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import {
     debateArenaPanel,
-    debateHistoryCountBadge,
-    debateInjectButton,
     debateLoadingState,
     debateLogArea,
-    debateReturnActiveBtn,
-    debateTabBar,
-    debateTabButton,
-    debateVoteChoices,
-    debateVoteDismissBtn,
-    debateVoteHeader,
-    debateVotePanel,
-    debateVoteStatusRow,
-    debateVoteStatusText,
     textWeight600,
 } from '../../styles/common';
 
@@ -196,88 +173,13 @@ export function DebateTabContent({
         <div style={containerStyle}>
             {showSidebar && <DebateSidebar />}
             <div style={flexColumn}>
-                {/* Tab Bar */}
-                <div style={debateTabBar}>
-                    <button
-                        onClick={() => setViewTab('active')}
-                        className={`debate-tab ${viewTab === 'active' ? 'active' : ''}`}
-                        style={{
-                            ...debateTabButton,
-                            background:
-                                viewTab === 'active' ? 'rgba(168,85,247,0.15)' : 'transparent',
-                            color: viewTab === 'active' ? '#a855f7' : '#64748b',
-                        }}
-                    >
-                        <MessageSquare size={16} /> Active
-                    </button>
-                    <button
-                        onClick={() => {
-                            setViewTab('history');
-                            refreshHistory();
-                        }}
-                        className={`debate-tab ${viewTab === 'history' ? 'active' : ''}`}
-                        style={{
-                            ...debateTabButton,
-                            background:
-                                viewTab === 'history' ? 'rgba(59,130,246,0.15)' : 'transparent',
-                            color: viewTab === 'history' ? '#3b82f6' : '#64748b',
-                        }}
-                    >
-                        <Clock size={16} /> History{' '}
-                        {history.length > 0 && (
-                            <span style={debateHistoryCountBadge}>{history.length}</span>
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setViewTab('tournament')}
-                        className={`debate-tab ${viewTab === 'tournament' ? 'active' : ''}`}
-                        style={{
-                            ...debateTabButton,
-                            background:
-                                viewTab === 'tournament' ? 'rgba(239,68,68,0.15)' : 'transparent',
-                            color: viewTab === 'tournament' ? '#ef4444' : '#64748b',
-                        }}
-                    >
-                        <Swords size={16} /> Tournament
-                    </button>
-                    <button
-                        onClick={() => setViewTab('memory')}
-                        className={`debate-tab ${viewTab === 'memory' ? 'active' : ''}`}
-                        style={{
-                            ...debateTabButton,
-                            background:
-                                viewTab === 'memory' ? 'rgba(139,92,246,0.15)' : 'transparent',
-                            color: viewTab === 'memory' ? '#8b5cf6' : '#64748b',
-                        }}
-                    >
-                        <Brain size={16} /> Memory
-                    </button>
-                    {session?.status === 'completed' && (
-                        <button
-                            onClick={() => setViewTab('verdict')}
-                            className={`debate-tab ${viewTab === 'verdict' ? 'active' : ''}`}
-                            style={{
-                                ...debateTabButton,
-                                background:
-                                    viewTab === 'verdict' ? 'rgba(16,185,129,0.15)' : 'transparent',
-                                color: viewTab === 'verdict' ? '#10b981' : '#64748b',
-                            }}
-                        >
-                            <ThumbsUp size={16} /> Verdict
-                        </button>
-                    )}
-                    {session &&
-                        (viewTab === 'history' ||
-                            viewTab === 'verdict' ||
-                            viewTab === 'memory') && (
-                            <button
-                                onClick={() => setViewTab('active')}
-                                style={debateReturnActiveBtn}
-                            >
-                                <Eye size={16} /> Return to Active
-                            </button>
-                        )}
-                </div>
+                <TabBarSection
+                    viewTab={viewTab}
+                    setViewTab={setViewTab}
+                    historyLength={history.length}
+                    sessionStatus={session?.status}
+                    refreshHistory={refreshHistory}
+                />
 
                 {viewTab === 'tournament' ? (
                     <div style={{ flex: 1, overflow: 'auto' }}>
@@ -305,111 +207,12 @@ export function DebateTabContent({
                 ) : viewTab === 'verdict' && verdict ? (
                     <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
                         <DebateVerdictPanel verdict={verdict} sessionId={session?.id ?? ''} />
-                        <div
-                            style={{
-                                display: 'flex',
-                                gap: 10,
-                                marginTop: '1rem',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <button
-                                onClick={() => setViewTab('active')}
-                                style={{
-                                    padding: '10px 20px',
-                                    borderRadius: 10,
-                                    border: '1px solid rgba(59,130,246,0.3)',
-                                    background: 'rgba(59,130,246,0.1)',
-                                    color: '#60a5fa',
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 600,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                }}
-                            >
-                                <BarChart3 size={16} /> {t('debate.verdict.view_analysis')}
-                            </button>
-                            {replay && (
-                                <button
-                                    onClick={replay}
-                                    style={{
-                                        padding: '10px 20px',
-                                        borderRadius: 10,
-                                        border: '1px solid rgba(16,185,129,0.3)',
-                                        background: 'rgba(16,185,129,0.1)',
-                                        color: '#34d399',
-                                        cursor: 'pointer',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                    }}
-                                >
-                                    <Play size={16} /> {t('debate.verdict.replay')}
-                                </button>
-                            )}
-                            {session?.status === 'completed' && (
-                                <button
-                                    onClick={() => {
-                                        const exportData = {
-                                            topic: session.topic,
-                                            strategy: session.strategy,
-                                            status: session.status,
-                                            maxRounds: session.maxRounds,
-                                            currentRound: session.currentRound,
-                                            participants: (session.participants ?? []).map((p) => ({
-                                                id: p.id,
-                                                name: p.name,
-                                                role: p.role,
-                                                model: p.modelId,
-                                            })),
-                                            arguments: (session.arguments ?? []).map((a) => ({
-                                                id: a.id,
-                                                agentId: a.agentId,
-                                                content: a.content,
-                                                round: a.round,
-                                                timestamp: a.timestamp,
-                                                confidence: a.confidence,
-                                            })),
-                                            graphMetrics: (
-                                                session as unknown as Record<string, unknown>
-                                            ).graphMetrics,
-                                            interpretation: (
-                                                session as unknown as Record<string, unknown>
-                                            ).interpretation,
-                                        };
-                                        const blob = new Blob(
-                                            [JSON.stringify(exportData, null, 2)],
-                                            { type: 'application/json' },
-                                        );
-                                        const url = URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = `debate-${(session.topic ?? '').slice(0, 50).replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().slice(0, 10)}.json`;
-                                        a.click();
-                                        URL.revokeObjectURL(url);
-                                    }}
-                                    style={{
-                                        padding: '10px 20px',
-                                        borderRadius: 10,
-                                        border: '1px solid rgba(139,92,246,0.3)',
-                                        background: 'rgba(139,92,246,0.1)',
-                                        color: '#a78bfa',
-                                        cursor: 'pointer',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                    }}
-                                >
-                                    <Download size={16} /> {t('debate.verdict.export')}
-                                </button>
-                            )}
-                        </div>
+                        <VerdictActionButtons
+                            session={session}
+                            t={t}
+                            onViewAnalysis={() => setViewTab('active')}
+                            onReplay={replay}
+                        />
                     </div>
                 ) : (
                     <div
@@ -546,97 +349,15 @@ export function DebateTabContent({
                                         </ErrorBoundary>
                                     </div>
 
-                                    {/* Voting Panel */}
-                                    {showVotePanel !== null && session.status === 'active' && (
-                                        <div style={debateVotePanel}>
-                                            <div style={debateVoteHeader}>
-                                                <ThumbsUp size={18} color="#a855f7" />
-                                                <span style={debateVoteStatusText}>
-                                                    Round {showVotePanel} — Who made the best
-                                                    argument?
-                                                </span>
-                                            </div>
-                                            <div style={debateVoteChoices}>
-                                                {getRoundParticipants(showVotePanel).map(
-                                                    (agentId) => {
-                                                        const isBest = humanVotes.some(
-                                                            (v) =>
-                                                                v.round === showVotePanel &&
-                                                                v.votedAgentId === agentId &&
-                                                                v.score === 5,
-                                                        );
-                                                        return (
-                                                            <button
-                                                                key={agentId}
-                                                                onClick={() => {
-                                                                    const wasBest = humanVotes.some(
-                                                                        (v) =>
-                                                                            v.round ===
-                                                                                showVotePanel &&
-                                                                            v.votedAgentId ===
-                                                                                agentId &&
-                                                                            v.score === 5,
-                                                                    );
-                                                                    // CRIT-7 fix: use typed debateService instead of globalThis bypass
-                                                                    debateService.recordHumanVote({
-                                                                        round: showVotePanel,
-                                                                        voter: 'human',
-                                                                        votedAgentId: agentId,
-                                                                        score: wasBest ? 0 : 5,
-                                                                        timestamp: Date.now(),
-                                                                    });
-                                                                    setHumanVotes(
-                                                                        debateService.getHumanVotes(),
-                                                                    );
-                                                                }}
-                                                                style={{
-                                                                    padding: '0.5rem 1rem',
-                                                                    borderRadius: 10,
-                                                                    border: '1px solid rgba(255,255,255,0.1)',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '0.85rem',
-                                                                    fontWeight: 600,
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: 6,
-                                                                    background: isBest
-                                                                        ? 'rgba(250,204,21,0.15)'
-                                                                        : 'rgba(255,255,255,0.03)',
-                                                                    color: isBest
-                                                                        ? '#facc15'
-                                                                        : '#cbd5e1',
-                                                                }}
-                                                            >
-                                                                {isBest ? '★' : '☆'}{' '}
-                                                                {getAgentLabel(agentId)}
-                                                            </button>
-                                                        );
-                                                    },
-                                                )}
-                                            </div>
-                                            {humanVotes.filter((v) => v.round === showVotePanel)
-                                                .length > 0 && (
-                                                <div style={debateVoteStatusRow}>
-                                                    <BarChart3 size={14} color="#10b981" />
-                                                    <span style={debateVoteStatusText}>
-                                                        Vote recorded —{' '}
-                                                        {
-                                                            humanVotes.filter(
-                                                                (v) => v.round === showVotePanel,
-                                                            ).length
-                                                        }{' '}
-                                                        agent(s) marked as best
-                                                    </span>
-                                                    <button
-                                                        onClick={() => setShowVotePanel(null)}
-                                                        style={debateVoteDismissBtn}
-                                                    >
-                                                        Dismiss
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                    <VotePanelSection
+                                        showVotePanel={showVotePanel}
+                                        sessionStatus={session.status}
+                                        getRoundParticipants={getRoundParticipants}
+                                        getAgentLabel={getAgentLabel}
+                                        humanVotes={humanVotes}
+                                        setHumanVotes={setHumanVotes}
+                                        setShowVotePanel={setShowVotePanel}
+                                    />
 
                                     {session.status !== 'completed' && (
                                         <ErrorBoundary name="CollabDebatePanel" variant="panel">
@@ -648,36 +369,13 @@ export function DebateTabContent({
                                     )}
 
                                     {session.status !== 'completed' && (
-                                        <div className="debate-inject-bar">
-                                            <input
-                                                type="text"
-                                                placeholder={t('debate.inject_placeholder')}
-                                                aria-label="Human argument input"
-                                                value={userInjection}
-                                                onChange={(e) => setUserInjection(e.target.value)}
-                                                onKeyDown={(e) =>
-                                                    e.key === 'Enter' &&
-                                                    !actionLoading &&
-                                                    handleInject()
-                                                }
-                                                className="debate-inject-input"
-                                                disabled={actionLoading === 'inject'}
-                                            />
-                                            <button
-                                                onClick={handleInject}
-                                                className="btn-primary"
-                                                aria-label={t('debate.inject')}
-                                                style={debateInjectButton}
-                                                disabled={actionLoading === 'inject'}
-                                            >
-                                                {actionLoading === 'inject' ? (
-                                                    <Loader2 size={20} className="spinning" />
-                                                ) : (
-                                                    <Send size={20} aria-hidden="true" />
-                                                )}{' '}
-                                                {t('debate.inject')}
-                                            </button>
-                                        </div>
+                                        <InjectBarSection
+                                            userInjection={userInjection}
+                                            setUserInjection={setUserInjection}
+                                            actionLoading={actionLoading}
+                                            handleInject={handleInject}
+                                            t={t}
+                                        />
                                     )}
                                 </>
                             )}

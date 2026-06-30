@@ -2,7 +2,6 @@ import type { CognitiveSkill } from '../types/domain-types';
 import { CognitiveSkillSchema } from '../types/schema-types';
 import { EVENTS } from '../events/event-names';
 import type { SkillsStore } from '../contracts/storage/skills-store';
-import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 
@@ -14,8 +13,6 @@ export interface SkillServiceDeps {
     };
     skillsStore: SkillsStore;
 }
-
-const STORAGE_KEY = 'super_agents_skills';
 
 const DEFAULT_SKILLS: CognitiveSkill[] = [
     {
@@ -97,23 +94,8 @@ export class SkillService {
             if (count > 0) {
                 this.skills = await this.deps.skillsStore.toArray();
             } else {
-                const stored = BucketStorageAdapter.getItem(STORAGE_KEY);
-                if (stored) {
-                    try {
-                        this.skills = safeJsonParse(stored);
-                        await this.deps.skillsStore.bulkAdd(this.skills);
-                        BucketStorageAdapter.removeItem(STORAGE_KEY);
-                    } catch (e) {
-                        LOGGER.warn('SkillService', 'Failed to migrate skills from localStorage', {
-                            error: e,
-                        });
-                        this.skills = DEFAULT_SKILLS;
-                        await this.deps.skillsStore.bulkAdd(this.skills);
-                    }
-                } else {
-                    this.skills = DEFAULT_SKILLS;
-                    await this.deps.skillsStore.bulkAdd(this.skills);
-                }
+                this.skills = DEFAULT_SKILLS;
+                await this.deps.skillsStore.bulkAdd(this.skills);
             }
         } catch (e) {
             LOGGER.error('SkillService', 'Failed to load skills', { error: e });

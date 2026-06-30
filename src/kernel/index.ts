@@ -183,24 +183,12 @@ export type {
     CostCalculationError,
 } from './contracts/pricing';
 export type {
-    IProviderRouter,
-    IProviderStateManager,
     ProviderCapability,
     RequestClassification,
     RouterDecision,
 } from './contracts/provider';
-export type {
-    IMemoryEngine,
-    IToolExecutor,
-    MemoryCapability,
-    MemoryQuery,
-} from './contracts/memory';
-export type {
-    ITraceContract,
-    IMetricsContract,
-    ITimelineContract,
-    IMonitoringContract,
-} from './contracts/observability';
+export type { IMemoryEngine, MemoryCapability, MemoryQuery } from './contracts/memory';
+export type { ITimelineContract } from './contracts/observability';
 
 export type {
     AdapterMessage,
@@ -210,8 +198,6 @@ export type {
     AdapterHealthResult,
     IProviderAdapter,
     IAdapterRegistry,
-    IAdapterFactory,
-    IAdapterHealthTracker,
     ProviderAdapterEvents,
 } from './contracts/provider-adapter';
 
@@ -227,8 +213,6 @@ export type {
 } from './contracts/settings';
 
 export type { AgentBudget, SpendSummary, BudgetAlert, IBudgetService } from './contracts/budget';
-
-export type { KeyHealthCheckResult, KeyHealthSummary, IHealthService } from './contracts/health';
 
 export type {
     VirtualKey,

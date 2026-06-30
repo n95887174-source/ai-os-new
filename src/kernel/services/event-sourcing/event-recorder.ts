@@ -18,7 +18,6 @@ export interface EventRecorderStore {
 
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
-import { ReplayEngine, type ReplayConfig } from './replay-engine';
 import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
 import type { KvRepository } from '../../dal/repository-types';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
@@ -42,7 +41,6 @@ export class EventRecorder {
     private pendingChecksums = new Map<number, () => void>();
     private checksumSeq = 0;
 
-    readonly replay: ReplayEngine;
     readonly checkpoints: CheckpointStore;
     private restoreHandler: ((checkpoint: Checkpoint) => boolean) | null = null;
 
@@ -78,21 +76,11 @@ export class EventRecorder {
     constructor(
         config?: Partial<RecorderConfig>,
         store?: EventRecorderStore,
-        replayConfig?: Partial<ReplayConfig>,
         checkpointConfig?: Partial<CheckpointStoreConfig>,
         kv?: KvRepository,
     ) {
         this.config = { ...DEFAULT_CONFIG, ...config };
         this.store = store;
-
-        this.replay = new ReplayEngine({
-            onStatusChange: (status) => {
-                if (status === 'completed') {
-                    this.createAutoCheckpoint();
-                }
-            },
-            ...replayConfig,
-        });
 
         this.checkpoints = new CheckpointStore(
             checkpointConfig,
@@ -207,18 +195,6 @@ export class EventRecorder {
         return this.checkpoints.create(label, this.getSequenceRange().last, {}, options);
     }
 
-    private createAutoCheckpoint(): void {
-        const seq = this.getSequenceRange().last;
-        this.checkpoints.create(
-            `replay-end-${seq}`,
-            seq,
-            {},
-            {
-                tags: ['auto', 'replay-end'],
-            },
-        );
-    }
-
     restoreCheckpoint(checkpointId: string): boolean {
         const cp = this.checkpoints.get(checkpointId);
         if (!cp) return false;
@@ -230,23 +206,6 @@ export class EventRecorder {
         const cp = this.checkpoints.getLatest();
         if (!cp) return false;
         return this.restoreCheckpoint(cp.id);
-    }
-
-    startReplay(fromCheckpointId?: string): boolean {
-        if (fromCheckpointId) {
-            const cp = this.checkpoints.get(fromCheckpointId);
-            if (!cp) return false;
-            if (this.restoreHandler) {
-                this.restoreHandler(cp);
-            }
-            const eventsSince = this.getSince(cp.sequence);
-            this.replay.loadFromCheckpoint(cp, eventsSince);
-        } else {
-            const allEvents = this.getAll();
-            this.replay.load(allEvents);
-        }
-
-        return this.replay.play();
     }
 
     getEventsSinceCheckpoint(checkpointId: string): RecordedEvent[] {
@@ -278,7 +237,6 @@ export class EventRecorder {
     async clear(): Promise<void> {
         this.events = [];
         this.sequence = 0;
-        this.replay.clear();
         this.checkpoints.clear();
         if (this.store) {
             try {
@@ -340,7 +298,6 @@ export class EventRecorder {
         this.unsub = null;
         this.events = [];
         this.sequence = 0;
-        this.replay.destroy();
         this.checkpoints.destroy();
     }
 

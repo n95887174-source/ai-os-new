@@ -1,5 +1,5 @@
 import type { Claim, ClaimEdge, ClaimGraph } from './types';
-import { jaccardSimilarity } from '../../contracts/debate-types';
+import { jaccardSimilarity } from '../../../contracts/debate-types';
 
 export function createClaimGraph(): ClaimGraph {
     return { claims: {}, edges: [] };

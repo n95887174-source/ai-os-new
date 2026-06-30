@@ -5,8 +5,10 @@ import type {
     DebateSession,
     DebateStrategy,
 } from '../../contracts/debate-types';
-import type { DebateService } from './debate-service';
+import { debateService as _debateServiceSingleton } from './debate-service';
+type DebateService = typeof _debateServiceSingleton;
 import type { OrchestrationService } from '../orchestration-service';
+import type { ISessionManager } from '../../contracts/session-manager';
 
 export interface CreateDebateBody {
     topic: string;
@@ -34,6 +36,7 @@ export interface DebateApiServiceDeps {
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
     };
     debateService: DebateService;
+    sessionManager: ISessionManager;
     orchestrator: OrchestrationService;
 }
 
@@ -62,7 +65,9 @@ export class DebateApiService {
             this.deps.eventBus.onSafe<{ sessionId: string; argument: unknown }>(
                 EVENTS.DEBATE_ARGUMENT,
                 ({ sessionId, argument }) => {
-                    const session = this.deps.debateService.getSessionById(sessionId);
+                    const session = this.deps.sessionManager
+                        .getDebateHistory()
+                        .find((s) => s.id === sessionId);
                     if (!session) return;
                     this.broadcast(sessionId, {
                         type: 'argument',
@@ -78,7 +83,9 @@ export class DebateApiService {
                 consensus: string;
                 convergenceScore: number;
             }>(EVENTS.DEBATE_CONSENSUS, (payload) => {
-                const session = this.deps.debateService.getSessionById(payload.sessionId);
+                const session = this.deps.sessionManager
+                    .getDebateHistory()
+                    .find((s) => s.id === payload.sessionId);
                 if (!session) return;
                 this.broadcast(payload.sessionId, {
                     type: 'consensus',
@@ -148,7 +155,7 @@ export class DebateApiService {
     }
 
     getSession(id: string): DebateSession | null {
-        return this.deps.debateService.getSessionById(id);
+        return this.deps.sessionManager.getDebateHistory().find((s) => s.id === id) ?? null;
     }
 
     subscribeStream(sessionId: string, onEvent: (event: DebateApiStreamEvent) => void): () => void {

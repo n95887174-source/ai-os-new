@@ -109,6 +109,13 @@ export class LLMHttpClient {
             // Remove it for regular API calls. Use only for beacon/analytics where response doesn't matter.
         });
 
+        // MED-5: If signal was aborted just after fetch() resolved, cancel the response body
+        // to prevent a leaked ReadableStream (TOCTOU race between abort and fetch resolution).
+        if (signal?.aborted) {
+            res.body?.cancel()?.catch(() => {});
+            throw new DOMException('Aborted', 'AbortError');
+        }
+
         if (res.status === 401 || res.status === 403) {
             res.body?.cancel()?.catch(() => {});
             throw new AuthError(this.#provider);
@@ -165,6 +172,12 @@ export class LLMHttpClient {
             // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
         });
 
+        // MED-5: cancel body if signal was aborted just after fetch resolved
+        if (signal?.aborted) {
+            res.body?.cancel()?.catch(() => {});
+            throw new DOMException('Aborted', 'AbortError');
+        }
+
         if (res.status === 401 || res.status === 403) {
             res.body?.cancel()?.catch(() => {});
             throw new AuthError(this.#provider);
@@ -215,6 +228,12 @@ export class LLMHttpClient {
             signal,
             // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
         });
+
+        // MED-5: cancel body if signal was aborted just after fetch resolved
+        if (signal?.aborted) {
+            res.body?.cancel()?.catch(() => {});
+            throw new DOMException('Aborted', 'AbortError');
+        }
 
         if (res.status === 401 || res.status === 403) {
             res.body?.cancel()?.catch(() => {});

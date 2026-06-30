@@ -1,5 +1,3 @@
-import type { Result } from './results';
-import type { ProviderError } from './errors';
 import type {
     ToolCall,
     ChatMessage as AdapterMessage,
@@ -8,17 +6,13 @@ import type {
     SendMessageOptions as AdapterSendMessageOptions,
 } from '../types/llm-types';
 
-export type { ToolCall } from '../types/llm-types';
 export type { ChatMessage as AdapterMessage } from '../types/llm-types';
-export type { SafetyRating as AdapterSafetyRating } from '../types/llm-types';
 export type { ProviderResponse as AdapterResponse } from '../types/llm-types';
-export type { HealthCheckResult as AdapterHealthResult } from '../types/llm-types';
-export type { SendMessageOptions } from '../types/llm-types';
 
 export type AdapterFinishReason =
     'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
 
-export interface BatchRequest {
+interface BatchRequest {
     messages: AdapterMessage[];
     model: string;
     apiKey: string;
@@ -26,7 +20,7 @@ export interface BatchRequest {
     options?: AdapterSendMessageOptions;
 }
 
-export interface BatchStreamRequest {
+interface BatchStreamRequest {
     messages: AdapterMessage[];
     model: string;
     apiKey: string;
@@ -77,11 +71,6 @@ export interface IAdapterRegistry {
     syncRateLimitState(provider: string, remaining: number): void;
 }
 
-export interface IAdapterFactory {
-    create(provider: string): IProviderAdapter;
-    createWithFallback(primary: string, fallback: string): IProviderAdapter;
-}
-
 export interface ILLMClientConfig {
     defaultProvider?: string;
     defaultModel?: string;
@@ -116,25 +105,4 @@ export interface ILLMClientService {
         error?: string;
         finishReason?: AdapterFinishReason;
     }>;
-}
-
-export interface ProviderAdapterEvents {
-    'adapter:request': { provider: string; model: string; tokens: number; latency: number };
-    'adapter:error': { provider: string; model: string; error: string; statusCode?: number };
-    'adapter:health': { provider: string; status: 'active' | 'error'; latency: number };
-    'adapter:stream:start': { provider: string; model: string };
-    'adapter:stream:chunk': { provider: string; chunk: string };
-    'adapter:stream:end': { provider: string; totalTokens: number; latency: number };
-    'adapter:stream:error': { provider: string; error: string };
-}
-
-export interface IAdapterHealthTracker {
-    recordSuccess(provider: string, latencyMs: number): void;
-    recordFailure(provider: string, error: string): void;
-    getHealthSummary(): Record<
-        string,
-        { successRate: number; avgLatency: number; totalCalls: number; lastError?: string }
-    >;
-    tryRecordSuccess?(provider: string, latencyMs: number): Result<void, ProviderError>;
-    tryRecordFailure?(provider: string, error: string): Result<void, ProviderError>;
 }

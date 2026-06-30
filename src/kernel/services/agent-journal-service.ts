@@ -1,5 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import type { ILogger } from '../contracts/logger';
+import type { IDatabaseService } from '../types/interfaces';
 import { BucketStorageAdapter } from './storage-adapter';
 import { EVENTS } from '../events/event-names';
 
@@ -23,6 +24,7 @@ export interface AgentJournalServiceDeps {
         emit: (event: string, data?: unknown) => void;
     };
     logger?: ILogger;
+    database: IDatabaseService;
     storage?: {
         list: () => Promise<JournalEntry[]>;
         save: (entry: JournalEntry) => Promise<void>;
@@ -34,29 +36,52 @@ export interface AgentJournalServiceDeps {
 const STORAGE_KEY = 'agent_journal_v1';
 const MAX_ENTRIES = 1000;
 
-const defaultStorage = {
-    async list(): Promise<JournalEntry[]> {
+function createDbStorage(db: IDatabaseService): NonNullable<AgentJournalServiceDeps['storage']> {
+    return {
+        async list(): Promise<JournalEntry[]> {
+            // Migration read: prefer db, fall back to localStorage for existing data
+            const raw = await db.getKv<JournalEntry[]>(STORAGE_KEY);
+            const lsRaw = await migrateFromLocalStorage();
+            if (raw && raw.length > 0 && (!lsRaw || lsRaw.length === 0)) {
+                return raw;
+            }
+            if (lsRaw && lsRaw.length > 0) {
+                await db.setKv(STORAGE_KEY, lsRaw);
+                await BucketStorageAdapter.AGENTS.remove(STORAGE_KEY);
+                return lsRaw;
+            }
+            return raw && raw.length > 0 ? raw : [];
+        },
+        async save(entry: JournalEntry): Promise<void> {
+            const all = await db.getKv<JournalEntry[]>(STORAGE_KEY);
+            const list = Array.isArray(all) ? all : [];
+            const filtered = list.filter((e) => e.id !== entry.id);
+            filtered.unshift(entry);
+            await db.setKv(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES));
+        },
+        async delete(id: string): Promise<void> {
+            const all = await db.getKv<JournalEntry[]>(STORAGE_KEY);
+            const list = Array.isArray(all) ? all : [];
+            await db.setKv(
+                STORAGE_KEY,
+                list.filter((e) => e.id !== id),
+            );
+        },
+        async clear(): Promise<void> {
+            await db.setKv(STORAGE_KEY, []);
+        },
+    };
+}
+
+async function migrateFromLocalStorage(): Promise<JournalEntry[] | null> {
+    try {
         const raw = await BucketStorageAdapter.AGENTS.get<JournalEntry[]>(STORAGE_KEY);
-        if (!raw) return [];
-        return Array.isArray(raw) ? raw : [];
-    },
-    async save(entry: JournalEntry): Promise<void> {
-        const list = await defaultStorage.list();
-        const filtered = list.filter((e) => e.id !== entry.id);
-        filtered.unshift(entry);
-        await BucketStorageAdapter.AGENTS.set(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES));
-    },
-    async delete(id: string): Promise<void> {
-        const list = await defaultStorage.list();
-        await BucketStorageAdapter.AGENTS.set(
-            STORAGE_KEY,
-            list.filter((e) => e.id !== id),
-        );
-    },
-    async clear(): Promise<void> {
-        await BucketStorageAdapter.AGENTS.remove(STORAGE_KEY);
-    },
-};
+        if (raw && Array.isArray(raw) && raw.length > 0) return raw;
+    } catch {
+        /* ignore */
+    }
+    return null;
+}
 
 export class AgentJournalService {
     private deps: AgentJournalServiceDeps;
@@ -67,7 +92,7 @@ export class AgentJournalService {
 
     constructor(deps: AgentJournalServiceDeps) {
         this.deps = deps;
-        this.storage = deps.storage ?? defaultStorage;
+        this.storage = deps.storage ?? createDbStorage(deps.database);
     }
 
     async init(): Promise<void> {

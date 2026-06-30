@@ -189,7 +189,15 @@ export async function parseSSEStream(
     try {
         while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+                // MED-7: If stream ended because of abort (bodyReader.cancel from onAbort),
+                // throw AbortError so the error propagates through streamMessage → chat()
+                // and ChatService emits STREAM_END with status: 'cancelled'.
+                if (abortSignal?.aborted) {
+                    throw new DOMException('Aborted', 'AbortError');
+                }
+                break;
+            }
             if (value) onChunk(value);
         }
     } catch (e) {

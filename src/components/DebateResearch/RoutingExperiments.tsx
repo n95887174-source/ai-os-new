@@ -1,32 +1,16 @@
-﻿import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import {
-    Route,
-    Play,
-    Download,
-    ArrowUp,
-    ArrowDown,
-    Loader2,
-    Clock,
-    Trash2,
-    BarChart3,
-    Lightbulb,
-    Target,
-    CheckCircle,
-    Cpu,
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from '../../i18n/useTranslation';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Route, Play, Download, Loader2, Clock, Cpu } from 'lucide-react';
 import { adapterRegistry, routingExperimentsService } from '../../kernel/instances';
 import type {
     RoutingExperimentResult,
     RoutingExperimentRun,
 } from '../../kernel/contracts/routing-experiments';
-
-const STRATEGIES = ['round-robin', 'latency-first', 'cost-first', 'random'];
+import { STRATEGIES, MODELS, chipStyle, thStyle, tdStyle } from './routing-experiments-constants';
+import ExperimentHistoryPanel from './ExperimentHistoryPanel';
+import StrategyComparisonCard from './StrategyComparisonCard';
+import ResultsTableSection from './ResultsTableSection';
 
 const RoutingExperiments: React.FC = () => {
-    useTranslation();
-    const navigate = useNavigate();
     const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
     const [selectedModels, setSelectedModels] = useState<string[]>([]);
     const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['round-robin']);
@@ -41,22 +25,11 @@ const RoutingExperiments: React.FC = () => {
     const [realProgress, setRealProgress] = useState('');
 
     const providers = useMemo(() => adapterRegistry.getAllProviders(), []);
-    const models = useMemo(
-        () => [
-            'llama-3.3-70b',
-            'gemini-3.1-flash-lite',
-            'mixtral-8x7b',
-            'gpt-4o-mini',
-            'qwen-2.5-7b',
-            'llama-3.1-8b',
-        ],
-        [],
-    );
 
     useEffect(() => {
         setSelectedProviders([providers[0] || 'Groq']);
-        setSelectedModels([models[0]]);
-    }, [providers, models]);
+        setSelectedModels([MODELS[0]]);
+    }, [providers]);
 
     useEffect(() => {
         routingExperimentsService
@@ -85,7 +58,6 @@ const RoutingExperiments: React.FC = () => {
         () => routingExperimentsService.estimateCost(experimentConfig),
         [experimentConfig],
     );
-
     const totalRuns = useMemo(
         () => routingExperimentsService.totalRuns(experimentConfig),
         [experimentConfig],
@@ -183,38 +155,6 @@ const RoutingExperiments: React.FC = () => {
         await refreshHistory();
     };
 
-    const chipStyle = (selected: boolean, color: string): React.CSSProperties => ({
-        padding: '0.25rem 0.55rem',
-        borderRadius: 5,
-        border: `1px solid ${selected ? color : 'rgba(255,255,255,0.06)'}`,
-        background: selected ? `${color}18` : 'transparent',
-        color: selected ? color : '#64748b',
-        cursor: 'pointer',
-        fontSize: '0.72rem',
-        fontWeight: 600,
-        transition: 'all 0.15s',
-    });
-
-    const thStyle: React.CSSProperties = {
-        padding: '0.35rem 0.55rem',
-        fontSize: '0.65rem',
-        fontWeight: 700,
-        color: '#64748b',
-        textTransform: 'uppercase',
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-        textAlign: 'right',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
-    };
-
-    const tdStyle: React.CSSProperties = {
-        padding: '0.3rem 0.55rem',
-        fontSize: '0.72rem',
-        color: '#cbd5e1',
-        textAlign: 'right',
-        whiteSpace: 'nowrap',
-    };
-
     return (
         <div
             style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
@@ -259,80 +199,16 @@ const RoutingExperiments: React.FC = () => {
                 </button>
             </div>
 
-            {/* History panel */}
             {showHistory && history.length > 0 && (
-                <div
-                    style={{
-                        padding: '0.6rem 1.25rem',
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        maxHeight: 180,
-                        overflowY: 'auto',
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            color: '#64748b',
-                            marginBottom: '0.4rem',
-                        }}
-                    >
-                        Past Experiments
-                    </div>
-                    {history.map((h) => (
-                        <div
-                            key={h.id}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                padding: '0.3rem 0.5rem',
-                                borderRadius: 5,
-                                marginBottom: 2,
-                                cursor: 'pointer',
-                                background:
-                                    results === h.results ? 'rgba(245,158,11,0.08)' : 'transparent',
-                            }}
-                            onClick={() => loadExperiment(h)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') loadExperiment(h);
-                            }}
-                            role="button"
-                            tabIndex={0}
-                        >
-                            <BarChart3 size={12} color="#f59e0b" />
-                            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                                {new Date(h.timestamp).toLocaleString()}
-                            </span>
-                            <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
-                                {h.totalRuns} runs
-                            </span>
-                            {h.realMode && <Cpu size={10} color="#a855f7" />}
-                            <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
-                                ${h.estimatedCost.toFixed(2)}
-                            </span>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteExperiment(h.id);
-                                }}
-                                style={{
-                                    marginLeft: 'auto',
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#ef4444',
-                                    cursor: 'pointer',
-                                    padding: 2,
-                                }}
-                            >
-                                <Trash2 size={10} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
+                <ExperimentHistoryPanel
+                    history={history}
+                    results={results}
+                    onLoad={loadExperiment}
+                    onDelete={deleteExperiment}
+                    onClose={() => setShowHistory(false)}
+                />
             )}
 
-            {/* Config */}
             <div
                 style={{
                     padding: '0.75rem 1.25rem',
@@ -388,7 +264,7 @@ const RoutingExperiments: React.FC = () => {
                             Models
                         </div>
                         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                            {models.map((m) => (
+                            {MODELS.map((m) => (
                                 <button
                                     key={m}
                                     onClick={() =>
@@ -502,235 +378,17 @@ const RoutingExperiments: React.FC = () => {
                 </div>
             </div>
 
-            {/* Strategy comparison */}
-            {comparison.length > 1 && (
-                <div
-                    style={{
-                        padding: '0.6rem 1.25rem',
-                        borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            color: '#64748b',
-                            marginBottom: '0.4rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 5,
-                        }}
-                    >
-                        <Target size={12} /> Strategy Comparison
-                        <button
-                            onClick={() =>
-                                navigate(
-                                    `/hypothesis-gen?source=${encodeURIComponent('routing-experiments')}&title=${encodeURIComponent('Routing experiment: ' + comparison.length + ' strategies compared')}`,
-                                )
-                            }
-                            style={{
-                                marginLeft: 'auto',
-                                background: 'rgba(139,92,246,0.1)',
-                                border: '1px solid rgba(139,92,246,0.2)',
-                                color: '#a855f7',
-                                cursor: 'pointer',
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                fontSize: '0.6rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 3,
-                            }}
-                        >
-                            <Lightbulb size={10} /> Hypothesis
-                        </button>
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                        {comparison.map((c) => {
-                            const bestLatency = Math.min(...comparison.map((x) => x.avgLatency));
-                            const bestCost = Math.min(...comparison.map((x) => x.avgCost));
-                            const bestError = Math.min(...comparison.map((x) => x.avgErrorRate));
-                            const bestUniqueness = Math.max(
-                                ...comparison.map((x) => x.avgUniqueness),
-                            );
-                            const isBestLatency = c.avgLatency === bestLatency;
-                            const isBestCost = c.avgCost === bestCost;
-                            const isBestError = c.avgErrorRate === bestError;
-                            const isBestUnique = c.avgUniqueness === bestUniqueness;
-                            const score =
-                                (isBestLatency ? 1 : 0) +
-                                (isBestCost ? 1 : 0) +
-                                (isBestError ? 1 : 0) +
-                                (isBestUnique ? 1 : 0);
-                            return (
-                                <div
-                                    key={c.strategy}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.5rem 0.65rem',
-                                        borderRadius: 8,
-                                        background:
-                                            score >= 2
-                                                ? 'rgba(16,185,129,0.08)'
-                                                : 'rgba(0,0,0,0.2)',
-                                        border: `1px solid ${score >= 2 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.04)'}`,
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 4,
-                                            marginBottom: 4,
-                                        }}
-                                    >
-                                        <span
-                                            style={{
-                                                fontSize: '0.7rem',
-                                                fontWeight: 700,
-                                                color: score >= 2 ? '#34d399' : '#94a3b8',
-                                            }}
-                                        >
-                                            {c.strategy}
-                                        </span>
-                                        {score >= 2 && <CheckCircle size={10} color="#10b981" />}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '0.62rem',
-                                            color: isBestLatency ? '#10b981' : '#64748b',
-                                        }}
-                                    >
-                                        Latency: {c.avgLatency}ms{isBestLatency ? ' ✓' : ''}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '0.62rem',
-                                            color: isBestCost ? '#10b981' : '#64748b',
-                                        }}
-                                    >
-                                        Cost: ${c.avgCost.toFixed(3)}
-                                        {isBestCost ? ' ✓' : ''}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '0.62rem',
-                                            color: isBestError ? '#10b981' : '#64748b',
-                                        }}
-                                    >
-                                        Error: {(c.avgErrorRate * 100).toFixed(0)}%
-                                        {isBestError ? ' ✓' : ''}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '0.62rem',
-                                            color: isBestUnique ? '#10b981' : '#64748b',
-                                        }}
-                                    >
-                                        Unique: {c.avgUniqueness}%{isBestUnique ? ' ✓' : ''}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            <StrategyComparisonCard comparison={comparison} />
 
-            {/* Results */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem 1.25rem' }}>
-                {sortedResults.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>
-                        {running
-                            ? 'Running experiment cells...'
-                            : 'Select providers, models, and strategies, then run.'}
-                    </div>
-                ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr>
-                                <th style={{ ...thStyle, textAlign: 'left' }}>Provider</th>
-                                <th style={{ ...thStyle, textAlign: 'left' }}>Model</th>
-                                <th style={{ ...thStyle, textAlign: 'left' }}>Strategy</th>
-                                {[
-                                    'avgLatency',
-                                    'avgTokens',
-                                    'errorRate',
-                                    'cost',
-                                    'repetition',
-                                    'uniqueness',
-                                ].map((col) => (
-                                    <th key={col} onClick={() => toggleSort(col)} style={thStyle}>
-                                        {col === 'avgLatency'
-                                            ? 'Latency'
-                                            : col === 'avgTokens'
-                                              ? 'Tokens'
-                                              : col === 'errorRate'
-                                                ? 'Error%'
-                                                : col === 'cost'
-                                                  ? 'Cost'
-                                                  : col === 'repetition'
-                                                    ? 'Rep%'
-                                                    : 'Unique%'}
-                                        {sortCol === col &&
-                                            (sortDir === 'asc' ? (
-                                                <ArrowUp
-                                                    size={9}
-                                                    style={{ marginLeft: 1, display: 'inline' }}
-                                                />
-                                            ) : (
-                                                <ArrowDown
-                                                    size={9}
-                                                    style={{ marginLeft: 1, display: 'inline' }}
-                                                />
-                                            ))}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedResults.map((r, i) => (
-                                <tr
-                                    key={`${r.provider}-${r.model}`}
-                                    style={{
-                                        background:
-                                            i % 2 === 0 ? 'rgba(0,0,0,0.08)' : 'transparent',
-                                    }}
-                                >
-                                    <td style={{ ...tdStyle, textAlign: 'left', color: '#f59e0b' }}>
-                                        {r.provider}
-                                    </td>
-                                    <td style={{ ...tdStyle, textAlign: 'left', color: '#60a5fa' }}>
-                                        {r.model}
-                                    </td>
-                                    <td style={{ ...tdStyle, textAlign: 'left', color: '#94a3b8' }}>
-                                        {r.strategy}
-                                    </td>
-                                    <td style={tdStyle}>{r.avgLatency}ms</td>
-                                    <td style={tdStyle}>{r.avgTokens}</td>
-                                    <td
-                                        style={{
-                                            ...tdStyle,
-                                            color: r.errorRate > 0.2 ? '#ef4444' : '#10b981',
-                                        }}
-                                    >
-                                        {(r.errorRate * 100).toFixed(0)}%
-                                    </td>
-                                    <td style={tdStyle}>${r.cost.toFixed(3)}</td>
-                                    <td
-                                        style={{
-                                            ...tdStyle,
-                                            color: r.repetition > 0.3 ? '#ef4444' : '#10b981',
-                                        }}
-                                    >
-                                        {(r.repetition * 100).toFixed(0)}%
-                                    </td>
-                                    <td style={tdStyle}>{r.uniqueness}%</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+            <ResultsTableSection
+                sortedResults={sortedResults}
+                thStyle={thStyle}
+                tdStyle={tdStyle}
+                toggleSort={toggleSort}
+                sortCol={sortCol}
+                sortDir={sortDir}
+                running={running}
+            />
 
             {sortedResults.length > 0 && (
                 <div

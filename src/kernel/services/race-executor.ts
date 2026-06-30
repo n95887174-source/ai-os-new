@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../../llm/core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../types/llm-types';
 import type { IAdapterRegistry } from '../contracts/provider-adapter';
 import type { AdapterMessage } from '../contracts/provider-adapter';
 
@@ -15,11 +15,18 @@ export interface RaceOptions {
     keyResolver?: (keyId: string) => string | undefined;
 }
 
+export interface FirstSuccessResult {
+    candidate: RaceCandidate;
+    response: ProviderResponse;
+    winnerIndex: number;
+}
+
 export interface RaceResult {
     winner: RaceCandidate;
     response: ProviderResponse;
     latency: number;
     failures: Array<{ candidate: RaceCandidate; error: string }>;
+    aborted: RaceCandidate[];
 }
 
 export class RaceExecutor {
@@ -31,6 +38,7 @@ export class RaceExecutor {
         options?: RaceOptions,
     ): Promise<RaceResult> {
         const failures: RaceResult['failures'] = [];
+        const aborted: RaceResult['aborted'] = [];
         const controllers = new Map<number, AbortController>();
         const timeout = options?.timeoutMs ?? 15000;
         const resolveKey = options?.keyResolver;
@@ -45,8 +53,13 @@ export class RaceExecutor {
             const controller = new AbortController();
             controllers.set(idx, controller);
 
+            let signalCleanup: (() => void) | undefined;
             const combinedSignal = options?.signal
-                ? combineSignals(options.signal, controller.signal)
+                ? (() => {
+                      const { signal, cleanup } = combineSignals(options.signal, controller.signal);
+                      signalCleanup = cleanup;
+                      return signal;
+                  })()
                 : controller.signal;
 
             const apiKey = resolveKey ? resolveKey(c.keyId) : undefined;
@@ -59,15 +72,19 @@ export class RaceExecutor {
                     role: m.role as AdapterMessage['role'],
                     content: typeof m.content === 'string' ? m.content : String(m.content),
                 }));
-            const response = await adapter.sendMessage(
-                adapterMessages,
-                c.model,
-                apiKey,
-                combinedSignal,
-                options?.adapterOptions,
-            );
-            response.latency = Date.now() - start;
-            return { candidate: c, response };
+            try {
+                const response = await adapter.sendMessage(
+                    adapterMessages,
+                    c.model,
+                    apiKey,
+                    combinedSignal,
+                    options?.adapterOptions,
+                );
+                response.latency = Date.now() - start;
+                return { candidate: c, response };
+            } finally {
+                signalCleanup?.();
+            }
         };
 
         let timeoutId: ReturnType<typeof setTimeout> = null as unknown as ReturnType<
@@ -96,22 +113,40 @@ export class RaceExecutor {
             }
         });
 
+        const promises = candidates.map((c, i) => makeCall(c, i));
+        let winnerIndex = -1;
+
         try {
             const result = await this.firstSuccess(
-                candidates.map((c, i) => makeCall(c, i)),
+                promises,
                 candidates,
                 timeoutPromise,
                 failures,
                 controllers,
+                aborted,
             );
+            winnerIndex = result.winnerIndex;
+            // MED-5: After firstSuccess, abort ALL remaining controllers EXCEPT the winner.
+            // Losers were already aborted in firstSuccess, but this ensures cleanup
+            // in case the abort propagation was deferred (e.g., if a loser's fetch
+            // resolved just before the abort signal fired — the response body needs
+            // to be cancelled by the adapter layer, not here).
+            controllers.forEach((ctrl, ci) => {
+                if (ci !== winnerIndex) ctrl.abort();
+            });
             return {
                 winner: result.candidate,
                 response: result.response,
                 latency: result.response.latency || 0,
                 failures,
+                aborted,
             };
         } finally {
             clearTimeout(timeoutId);
+            // In the timeout/no-winner path, abort ALL controllers
+            if (winnerIndex === -1) {
+                controllers.forEach((c) => c.abort());
+            }
             controllers.clear();
         }
     }
@@ -122,19 +157,13 @@ export class RaceExecutor {
         timeoutPromise: Promise<never>,
         failures: RaceResult['failures'],
         controllers: Map<number, AbortController>,
-    ): Promise<{ candidate: RaceCandidate; response: ProviderResponse }> {
+        aborted: RaceResult['aborted'],
+    ): Promise<FirstSuccessResult> {
         const results: Array<{ candidate: RaceCandidate; response: ProviderResponse } | Error> =
             new Array(promises.length).fill(null);
         let winnerIdx = -1;
+        let winnerFound = false;
 
-        // Abort all losers immediately when a winner is found
-        const onWinner = (idx: number) => {
-            controllers.forEach((ctrl, ci) => {
-                if (ci !== idx) ctrl.abort();
-            });
-        };
-
-        // Shared notification: resolved when any promise settles with success
         let winnerResolve!: (value: {
             candidate: RaceCandidate;
             response: ProviderResponse;
@@ -149,16 +178,23 @@ export class RaceExecutor {
             p.then(
                 (v) => {
                     results[i] = v;
-                    if (winnerIdx === -1) {
+                    if (!winnerFound) {
+                        winnerFound = true;
                         winnerIdx = i;
-                        onWinner(i);
+                        controllers.forEach((ctrl, ci) => {
+                            if (ci !== i) ctrl.abort();
+                        });
                         winnerResolve(v);
                     }
                 },
                 (err) => {
                     const error = err instanceof Error ? err : new Error(String(err));
                     results[i] = error;
-                    failures.push({ candidate: candidates[i], error: error.message });
+                    if (winnerFound) {
+                        aborted.push(candidates[i]);
+                    } else {
+                        failures.push({ candidate: candidates[i], error: error.message });
+                    }
                 },
             );
         });
@@ -169,15 +205,20 @@ export class RaceExecutor {
             // Timeout or abort — scan for any already-resolved non-error result
         }
 
-        // Return the winner
         if (winnerIdx >= 0) {
-            return results[winnerIdx] as { candidate: RaceCandidate; response: ProviderResponse };
+            return {
+                ...(results[winnerIdx] as {
+                    candidate: RaceCandidate;
+                    response: ProviderResponse;
+                }),
+                winnerIndex: winnerIdx,
+            };
         }
 
         // Timeout/winners-never-resolved path — scan for any non-error result
         for (let i = 0; i < promises.length; i++) {
             const r = results[i];
-            if (r && !(r instanceof Error)) return r;
+            if (r && !(r instanceof Error)) return { ...r, winnerIndex: i };
         }
 
         const last = failures[failures.length - 1];
@@ -189,26 +230,35 @@ export class RaceExecutor {
     }
 }
 
-function combineSignals(s1: AbortSignal, s2: AbortSignal): AbortSignal {
+function combineSignals(
+    s1: AbortSignal,
+    s2: AbortSignal,
+): { signal: AbortSignal; cleanup: () => void } {
     if (
         typeof AbortSignal !== 'undefined' &&
         typeof (AbortSignal as unknown as { any?: unknown }).any === 'function'
     ) {
         try {
-            return (AbortSignal as unknown as { any: (signals: AbortSignal[]) => AbortSignal }).any(
-                [s1, s2],
-            );
+            const signal = (
+                AbortSignal as unknown as { any: (signals: AbortSignal[]) => AbortSignal }
+            ).any([s1, s2]);
+            return { signal, cleanup: () => {} };
         } catch {
             /* fall through */
         }
     }
-    if (s1.aborted) return AbortSignal.abort(s1.reason);
-    if (s2.aborted) return AbortSignal.abort(s2.reason);
+    if (s1.aborted) return { signal: AbortSignal.abort(s1.reason), cleanup: () => {} };
+    if (s2.aborted) return { signal: AbortSignal.abort(s2.reason), cleanup: () => {} };
     const controller = new AbortController();
-    const onAbort = (reason?: unknown) => {
-        controller.abort(reason);
+    const onAbort1 = () => controller.abort(s1.reason);
+    const onAbort2 = () => controller.abort(s2.reason);
+    s1.addEventListener('abort', onAbort1, { once: true });
+    s2.addEventListener('abort', onAbort2, { once: true });
+    return {
+        signal: controller.signal,
+        cleanup: () => {
+            s1.removeEventListener('abort', onAbort1);
+            s2.removeEventListener('abort', onAbort2);
+        },
     };
-    s1.addEventListener('abort', () => onAbort(s1.reason), { once: true });
-    s2.addEventListener('abort', () => onAbort(s2.reason), { once: true });
-    return controller.signal;
 }

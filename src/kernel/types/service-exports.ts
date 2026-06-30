@@ -88,7 +88,6 @@ export type { FallbackLink, RoutingPolicySnapshot } from '../contracts/routing-p
 export type { WebhookConfig, WebhookProvider, WebhookEventType } from '../contracts/webhook';
 export type { BackendType, BackendStatus } from '../services/external-secrets-service';
 export type { BudgetInfo } from '../contracts/pricing';
-export type { ProjectedKeyState } from '../services/projections/key-state-projection';
 export type { ProjectedDecision } from '../services/projections/router-projection';
 export type { CausalScope } from '../contracts/causal-debugger';
 export type { CausalTraceEntry, CausalTrace } from '../contracts/causal-debugger';

@@ -11,12 +11,18 @@ import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { StorageLayer, DebateStore } from '../contracts/storage/storage-layer';
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
+import type { ISessionManager } from '../contracts/session-manager';
 import type { WorkspaceService } from '../services/workspace-service';
 import type { RoleService } from '../services/role-service';
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { MemoryService } from '../services/memory-engine';
-import type { ChatMessage } from '../../llm/core/types';
-import { DebateService } from '../services/debate-runtime/debate-service';
+import type { ChatMessage } from '../types/llm-types';
+import {
+    debateService as debateServiceModule,
+    setDeps,
+    isInitialized,
+} from '../services/debate-runtime/debate-service';
+import type { DebateServiceDeps } from '../services/debate-runtime/debate-service';
 import { CollaborativeService } from '../services/collaborative-service';
 import { DebateApiService } from '../services/debate-runtime/debate-api';
 import { DebateKnowledgeSyncService } from '../services/debate-runtime/debate-knowledge-sync';
@@ -27,7 +33,7 @@ import { PromptAuditService } from '../services/prompt-audit-service';
 import { RoutingExperimentsService } from '../services/routing-experiments-service';
 import { DebateEngine } from '../services/debate-runtime/debate-engine';
 import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
-import { StrategyRegistry } from '../services/debate-runtime/debate-strategy-registry';
+import { StrategyManager } from '../services/debate-runtime/debate-strategy-manager';
 import { DebateModeManagerPersistent } from '../services/debate-runtime/debate-mode-manager';
 import { DebateWorkspace } from '../services/debate-runtime/debate-workspace';
 import { DebateRoom } from '../services/debate-runtime/debate-room';
@@ -52,10 +58,9 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     const _container: IContainer = ctx.container;
     const storageLayer = get<StorageLayer>('storageLayer');
 
-    register(
-        'debateService',
-        new DebateService(
-            asDeps<ConstructorParameters<typeof DebateService>[0]>({
+    if (!isInitialized()) {
+        setDeps(
+            asDeps<DebateServiceDeps>({
                 database: get<IDatabaseService>('database'),
                 eventBus: get<IEventBus>('eventBus'),
                 get routerService() {
@@ -80,14 +85,19 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                     >('sessionManagerService');
                 },
             }),
-        ),
-    );
+        );
+    }
+    register('debateService', debateServiceModule);
 
     register(
         'collaborativeService',
         new CollaborativeService({
             eventBus: get<IEventBus>('eventBus'),
-            debateService: get<DebateService>('debateService'),
+            get humanService() {
+                return _container.get<
+                    import('../services/debate-runtime/debate-human-service').DebateHumanService
+                >('debateHumanService');
+            },
         }),
     );
 
@@ -95,9 +105,12 @@ export const registerPhase3: Phase = (helpers, ctx) => {
         'debateApiService',
         new DebateApiService({
             eventBus: get<IEventBus>('eventBus'),
-            debateService: get<DebateService>('debateService'),
+            debateService: get<typeof debateServiceModule>('debateService'),
             get orchestrator() {
                 return _container.get<OrchestrationService>('orchestrator');
+            },
+            get sessionManager() {
+                return _container.get<ISessionManager>('sessionManagerService');
             },
         }),
     );
@@ -211,10 +224,11 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     );
 
     _container
-        .get<DebateService>('debateService')
+        .get<typeof debateServiceModule>('debateService')
         .setEngine(_container.get<DebateEngine>('debateEngine'));
 
-    register('strategyRegistry', new StrategyRegistry());
+    register('debateHumanService', get<typeof debateServiceModule>('debateService').humanService);
+    register('strategyManager', new StrategyManager(storageLayer.config));
     register('debateModeManager', new DebateModeManagerPersistent(storageLayer));
 
     register(

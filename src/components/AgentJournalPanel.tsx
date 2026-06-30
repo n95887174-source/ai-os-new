@@ -15,18 +15,13 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { eventBus, EVENTS, type EventMap } from '../kernel/events/event-bus';
-import { storageAdapter } from '../kernel/instances';
+import { database } from '../kernel/instances';
 import { AgentJournalService } from '../kernel/services/agent-journal-service';
-import type { JournalEntry } from '../kernel/services/agent-journal-service';
-import {
-    errorContainer,
-    dismissBtnRed,
-    textMutedXs,
-    textSecondaryXs,
-    textWhiteXs,
-} from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs } from '../styles/common';
 import { useConfirm } from '../hooks/useConfirm';
-import { safeJsonParse } from '../kernel/utils/safe-json';
+import { StatMini } from './AgentJournalPanel/StatMini';
+import { JournalAddForm } from './AgentJournalPanel/JournalAddForm';
+import { JournalEntryCard } from './AgentJournalPanel/JournalEntryCard';
 
 const service = new AgentJournalService({
     eventBus: {
@@ -35,56 +30,14 @@ const service = new AgentJournalService({
         emit: (event: string, data?: unknown) =>
             eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
     },
-    storage: {
-        list: async () => {
-            const raw = storageAdapter.getItem('agent_journal_v1');
-            if (!raw) return [];
-            try {
-                return safeJsonParse(raw) as JournalEntry[];
-            } catch {
-                return [];
-            }
-        },
-        save: async (e) => {
-            const raw = storageAdapter.getItem('agent_journal_v1');
-            let list: JournalEntry[];
-            try {
-                list = safeJsonParse(raw ?? '[]') as JournalEntry[];
-            } catch {
-                list = [];
-            }
-            list = [e, ...list.filter((x) => x.id !== e.id)].slice(0, 1000);
-            storageAdapter.setItem('agent_journal_v1', JSON.stringify(list));
-        },
-        delete: async (id) => {
-            const raw = storageAdapter.getItem('agent_journal_v1');
-            let list: JournalEntry[];
-            try {
-                list = safeJsonParse(raw ?? '[]') as JournalEntry[];
-            } catch {
-                list = [];
-            }
-            storageAdapter.setItem(
-                'agent_journal_v1',
-                JSON.stringify(list.filter((x) => x.id !== id)),
-            );
-        },
-        clear: async () => storageAdapter.removeItem('agent_journal_v1'),
-    },
+    database,
 });
 void service.init();
-
-const OUTCOME_COLORS: Record<JournalEntry['outcome'], string> = {
-    success: '#10b981',
-    failure: '#ef4444',
-    partial: '#f59e0b',
-    in_progress: '#3b82f6',
-};
 
 const AgentJournalPanel: React.FC = () => {
     const { t } = useTranslation();
     const { confirm, ConfirmDialog } = useConfirm();
-    const [entries, setEntries] = useState<JournalEntry[]>([]);
+    const [entries, setEntries] = useState < typeof service.listAll() > [];
     const [search, setSearch] = useState('');
     const [activeTag, setActiveTag] = useState<string | null>(null);
     const [activeAgent, setActiveAgent] = useState<string | null>(null);
@@ -94,7 +47,7 @@ const AgentJournalPanel: React.FC = () => {
         agentName: '',
         taskType: 'general',
         taskDescription: '',
-        outcome: 'success' as JournalEntry['outcome'],
+        outcome: 'success' as const,
         durationMs: 0,
         tokensUsed: 0,
         notes: '',
@@ -345,240 +298,13 @@ const AgentJournalPanel: React.FC = () => {
                 </motion.div>
             )}
 
-            <AnimatePresence>
-                {showAddForm && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        style={{
-                            padding: '1rem',
-                            borderRadius: 12,
-                            border: '1px solid rgba(139,92,246,0.3)',
-                            background: 'rgba(139,92,246,0.05)',
-                        }}
-                    >
-                        <h3
-                            style={{
-                                fontSize: '0.9rem',
-                                fontWeight: 700,
-                                color: '#c4b5fd',
-                                margin: '0 0 0.75rem',
-                            }}
-                        >
-                            {t('agent_journal.add_new')}
-                        </h3>
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
-                                gap: '0.5rem',
-                            }}
-                        >
-                            <input
-                                value={newEntry.agentId}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({ ...p, agentId: e.target.value }))
-                                }
-                                placeholder={t('agent_journal.agent_id')}
-                                style={{
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            />
-                            <input
-                                value={newEntry.agentName}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({ ...p, agentName: e.target.value }))
-                                }
-                                placeholder={t('agent_journal.agent_name')}
-                                style={{
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            />
-                            <select
-                                value={newEntry.taskType}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({ ...p, taskType: e.target.value }))
-                                }
-                                style={{
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            >
-                                {[
-                                    'general',
-                                    'code',
-                                    'analysis',
-                                    'creative',
-                                    'research',
-                                    'debug',
-                                    'review',
-                                ].map((t2) => (
-                                    <option key={t2} value={t2}>
-                                        {t2}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                value={newEntry.outcome}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({
-                                        ...p,
-                                        outcome: e.target.value as JournalEntry['outcome'],
-                                    }))
-                                }
-                                style={{
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            >
-                                <option value="success">success</option>
-                                <option value="failure">failure</option>
-                                <option value="partial">partial</option>
-                                <option value="in_progress">in_progress</option>
-                            </select>
-                            <input
-                                value={newEntry.taskDescription}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({ ...p, taskDescription: e.target.value }))
-                                }
-                                placeholder={t('agent_journal.task_desc')}
-                                style={{
-                                    gridColumn: '1 / -1',
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            />
-                            <input
-                                type="number"
-                                value={newEntry.durationMs || ''}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({
-                                        ...p,
-                                        durationMs: Number(e.target.value) || 0,
-                                    }))
-                                }
-                                placeholder={t('agent_journal.duration_ms')}
-                                style={{
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            />
-                            <input
-                                type="number"
-                                value={newEntry.tokensUsed || ''}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({
-                                        ...p,
-                                        tokensUsed: Number(e.target.value) || 0,
-                                    }))
-                                }
-                                placeholder={t('agent_journal.tokens')}
-                                style={{
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            />
-                            <input
-                                value={newEntry.tags}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({ ...p, tags: e.target.value }))
-                                }
-                                placeholder={t('agent_journal.tags_csv')}
-                                style={{
-                                    gridColumn: '1 / -1',
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                }}
-                            />
-                            <textarea
-                                value={newEntry.notes}
-                                onChange={(e) =>
-                                    setNewEntry((p) => ({ ...p, notes: e.target.value }))
-                                }
-                                placeholder={t('agent_journal.notes')}
-                                style={{
-                                    gridColumn: '1 / -1',
-                                    padding: '0.4rem 0.6rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.8rem',
-                                    minHeight: 60,
-                                    resize: 'vertical',
-                                    fontFamily: 'inherit',
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, marginTop: '0.75rem' }}>
-                            <button
-                                onClick={handleAdd}
-                                style={{
-                                    padding: '0.4rem 0.8rem',
-                                    borderRadius: 6,
-                                    border: 'none',
-                                    background: '#8b5cf6',
-                                    color: '#fff',
-                                    cursor: 'pointer',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 600,
-                                }}
-                            >
-                                {t('agent_journal.save')}
-                            </button>
-                            <button
-                                onClick={() => setShowAddForm(false)}
-                                style={{
-                                    padding: '0.4rem 0.8rem',
-                                    borderRadius: 6,
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    background: 'transparent',
-                                    color: '#94a3b8',
-                                    cursor: 'pointer',
-                                    fontSize: '0.8rem',
-                                }}
-                            >
-                                {t('agent_journal.cancel')}
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <JournalAddForm
+                show={showAddForm}
+                entry={newEntry}
+                onChange={setNewEntry}
+                onSave={handleAdd}
+                onCancel={() => setShowAddForm(false)}
+            />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
                 <StatMini
@@ -671,133 +397,15 @@ const AgentJournalPanel: React.FC = () => {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
-                {entries.map((e) => {
-                    const stats2 = service.getAgentStats(e.agentId);
-                    return (
-                        <motion.div
-                            key={e.id}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            style={{
-                                padding: '0.75rem 1rem',
-                                borderRadius: 10,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                background: 'rgba(0,0,0,0.2)',
-                                display: 'grid',
-                                gridTemplateColumns: '1fr auto',
-                                gap: 8,
-                                alignItems: 'center',
-                            }}
-                        >
-                            <div style={{ minWidth: 0 }}>
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        flexWrap: 'wrap',
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            padding: '0.1rem 0.5rem',
-                                            borderRadius: 6,
-                                            background: `${OUTCOME_COLORS[e.outcome]}20`,
-                                            color: OUTCOME_COLORS[e.outcome],
-                                            fontSize: '0.65rem',
-                                            fontWeight: 700,
-                                            textTransform: 'uppercase',
-                                        }}
-                                    >
-                                        {e.outcome}
-                                    </span>
-                                    <span style={{ ...textWhiteXs, fontSize: '0.85rem' }}>
-                                        {e.agentName}
-                                    </span>
-                                    <span style={{ ...textMutedXs, fontSize: '0.7rem' }}>
-                                        · {e.taskType}
-                                    </span>
-                                    <span style={textMutedXs}>
-                                        · {new Date(e.timestamp).toLocaleString()}
-                                    </span>
-                                </div>
-                                <div
-                                    style={{ ...textSecondaryXs, marginTop: 4, fontSize: '0.8rem' }}
-                                >
-                                    {e.taskDescription}
-                                </div>
-                                {e.notes && (
-                                    <div
-                                        style={{
-                                            ...textMutedXs,
-                                            marginTop: 2,
-                                            fontStyle: 'italic',
-                                        }}
-                                    >
-                                        {e.notes}
-                                    </div>
-                                )}
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        gap: 6,
-                                        marginTop: 4,
-                                        flexWrap: 'wrap',
-                                    }}
-                                >
-                                    {e.tags.map((tag) => (
-                                        <span
-                                            key={tag}
-                                            style={{
-                                                padding: '0.05rem 0.4rem',
-                                                borderRadius: 8,
-                                                background: 'rgba(139,92,246,0.1)',
-                                                color: '#c4b5fd',
-                                                fontSize: '0.6rem',
-                                            }}
-                                        >
-                                            #{tag}
-                                        </span>
-                                    ))}
-                                    <span style={{ ...textMutedXs, fontSize: '0.65rem' }}>
-                                        ⏱ {(e.durationMs / 1000).toFixed(1)}s · {e.tokensUsed}{' '}
-                                        tokens
-                                    </span>
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                <button
-                                    onClick={() => setActiveAgent(e.agentId)}
-                                    style={{
-                                        padding: '0.2rem 0.5rem',
-                                        borderRadius: 6,
-                                        border: '1px solid rgba(59,130,246,0.3)',
-                                        background: 'rgba(59,130,246,0.1)',
-                                        color: '#93c5fd',
-                                        cursor: 'pointer',
-                                        fontSize: '0.7rem',
-                                    }}
-                                    title={t('agent_journal.filter_by_agent')}
-                                >
-                                    {stats2.totalTasks} {t('agent_journal.total_tasks')}
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(e.id)}
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#ef4444',
-                                        cursor: 'pointer',
-                                        padding: 4,
-                                    }}
-                                    aria-label="Delete journal entry"
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    );
-                })}
+                {entries.map((e) => (
+                    <JournalEntryCard
+                        key={e.id}
+                        entry={e}
+                        totalTasks={service.getAgentStats(e.agentId).totalTasks}
+                        onFilterByAgent={setActiveAgent}
+                        onDelete={handleDelete}
+                    />
+                ))}
                 {entries.length === 0 && (
                     <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
                         <BookOpen size={48} color="#475569" />
@@ -805,31 +413,10 @@ const AgentJournalPanel: React.FC = () => {
                     </div>
                 )}
             </div>
+
             <ConfirmDialog />
         </div>
     );
 };
-
-const StatMini: React.FC<{
-    icon: React.ReactNode;
-    label: string;
-    value: string | number;
-    color: string;
-}> = ({ icon, label, value, color }) => (
-    <div
-        style={{
-            padding: '0.5rem 0.75rem',
-            borderRadius: 8,
-            border: `1px solid ${color}20`,
-            background: `linear-gradient(145deg, ${color}05, rgba(0,0,0,0.2))`,
-        }}
-    >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-            {icon}
-            <span style={{ ...textMutedXs, fontSize: '0.65rem' }}>{label}</span>
-        </div>
-        <div style={{ ...textWhiteXs, fontSize: '1.1rem', fontWeight: 700, color }}>{value}</div>
-    </div>
-);
 
 export default AgentJournalPanel;

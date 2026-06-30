@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 import { eventBus, type EventMap } from '../kernel/events/event-bus';
-import { BucketStorageAdapter } from '../kernel/instances';
+import { database } from '../kernel/instances';
 import { EVENTS } from '../kernel/events/event-names';
 import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
-import type { ChatBookmark } from '../kernel/services/chat-bookmarks-service';
-import { safeJsonParse } from '../kernel/utils/safe-json';
 
 const service = new ChatBookmarksService({
     eventBus: {
@@ -13,41 +11,7 @@ const service = new ChatBookmarksService({
         emit: (event: string, data?: unknown) =>
             eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
     },
-    storage: {
-        list: async () => {
-            const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
-            if (!raw) return [];
-            try {
-                const parsed: unknown = safeJsonParse(raw);
-                return Array.isArray(parsed) ? (parsed as ChatBookmark[]) : [];
-            } catch {
-                return [];
-            }
-        },
-        save: async (b) => {
-            try {
-                const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
-                const list: ChatBookmark[] = safeJsonParse(raw ?? '[]') as ChatBookmark[];
-                const updated = [b, ...list.filter((x) => x.id !== b.id)].slice(0, 500);
-                BucketStorageAdapter.setItem('chat_bookmarks_v1', JSON.stringify(updated));
-            } catch {
-                return;
-            }
-        },
-        delete: async (id) => {
-            try {
-                const raw = BucketStorageAdapter.getItem('chat_bookmarks_v1');
-                const list: ChatBookmark[] = safeJsonParse(raw ?? '[]') as ChatBookmark[];
-                BucketStorageAdapter.setItem(
-                    'chat_bookmarks_v1',
-                    JSON.stringify(list.filter((x) => x.id !== id)),
-                );
-            } catch {
-                return;
-            }
-        },
-        clear: async () => BucketStorageAdapter.removeItem('chat_bookmarks_v1'),
-    },
+    database,
 });
 
 void service.init();

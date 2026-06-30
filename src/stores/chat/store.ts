@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ChatResponse } from '../../types/chat';
-import type { ChatMessage } from '../../llm/core/types';
+import type { ChatMessage } from '../../kernel/types/llm-types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { runtime } from '../../kernel/runtime';

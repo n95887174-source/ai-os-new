@@ -1,20 +1,12 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    Eye,
-    Play,
-    CheckCircle,
-    XCircle,
-    Loader2,
-    Download,
-    AlertTriangle,
-    Search,
-    X,
-    Lightbulb,
-    FileText,
-} from 'lucide-react';
+import { Eye, Play, Loader2, Download, Search, X, Lightbulb, FileText } from 'lucide-react';
 import { workspaceService, obsGapsService } from '../../kernel/instances';
 import type { ServiceObsInfo, DocEventCoverage } from '../../kernel/contracts/obs-gaps';
+import CoverageStatCards from './CoverageStatCards';
+import CoverageBars from './CoverageBars';
+import ObsServiceRow from './ObsServiceRow';
+import RecommendationsPanel from './RecommendationsPanel';
 
 const SERVICE_COUNT = obsGapsService.getServiceCount();
 
@@ -73,7 +65,6 @@ const ObsGaps: React.FC = () => {
     }, [wsAttached]);
 
     const services = liveServices ?? obsGapsService.getStaticInventory();
-
     const filtered = useMemo(() => {
         if (!searchQuery.trim()) return services;
         const q = searchQuery.toLowerCase();
@@ -102,23 +93,6 @@ const ObsGaps: React.FC = () => {
             ).recommendations,
         [services, docEvents],
     );
-
-    const scoreColor = (pct: number) => (pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444');
-    const barStyle: React.CSSProperties = {
-        height: 5,
-        borderRadius: 3,
-        background: 'rgba(255,255,255,0.05)',
-        overflow: 'hidden',
-        flex: 1,
-        minWidth: 60,
-    };
-    const fillBar = (pct: number, color: string): React.CSSProperties => ({
-        width: `${pct}%`,
-        height: '100%',
-        borderRadius: 3,
-        background: color,
-        transition: 'width 0.5s',
-    });
 
     return (
         <div
@@ -295,132 +269,24 @@ const ObsGaps: React.FC = () => {
                 </div>
             ) : (
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem' }}>
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 1fr',
-                            gap: '0.6rem',
-                            marginBottom: '1rem',
-                        }}
-                    >
-                        <div
-                            style={{
-                                padding: '0.75rem',
-                                borderRadius: 10,
-                                background: 'rgba(6,182,212,0.08)',
-                                border: '1px solid rgba(6,182,212,0.15)',
-                                textAlign: 'center',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    fontSize: '1.5rem',
-                                    fontWeight: 800,
-                                    color: scoreColor(coverage.overall),
-                                }}
-                            >
-                                {coverage.overall}%
-                            </div>
-                            <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Overall</div>
-                        </div>
-                        <div
-                            style={{
-                                padding: '0.75rem',
-                                borderRadius: 10,
-                                background: 'rgba(245,158,11,0.08)',
-                                border: '1px solid rgba(245,158,11,0.15)',
-                                textAlign: 'center',
-                            }}
-                        >
-                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b' }}>
-                                {coverage.gaps}
-                            </div>
-                            <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                                Services w/ gaps
-                            </div>
-                        </div>
-                        <div
-                            style={{
-                                padding: '0.75rem',
-                                borderRadius: 10,
-                                background: 'rgba(100,116,139,0.08)',
-                                border: '1px solid rgba(100,116,139,0.15)',
-                                textAlign: 'center',
-                            }}
-                        >
-                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#94a3b8' }}>
-                                {coverage.total}
-                            </div>
-                            <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                                Total services
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.4rem',
-                            marginBottom: '1rem',
-                        }}
-                    >
-                        {(
-                            [
-                                [
-                                    'Events',
-                                    coverage.eventScore,
-                                    '#a855f7',
-                                    `${coverage.withEvents}/${coverage.total}`,
-                                ],
-                                [
-                                    'Logger',
-                                    coverage.loggerScore,
-                                    '#3b82f6',
-                                    `${coverage.withLogger}/${coverage.total}`,
-                                ],
-                                [
-                                    'Health',
-                                    coverage.healthScore,
-                                    '#10b981',
-                                    `${coverage.withHealth}/${coverage.total}`,
-                                ],
-                                [
-                                    'Tracing',
-                                    coverage.tracingScore,
-                                    '#06b6d4',
-                                    `${coverage.withTracing}/${coverage.total}`,
-                                ],
-                                [
-                                    'Lifecycle',
-                                    coverage.lifecycleScore,
-                                    '#f59e0b',
-                                    `${coverage.withLifecycle}/${coverage.total}`,
-                                ],
-                            ] as const
-                        ).map(([label, score, color, count]) => (
-                            <div key={label}>
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        fontSize: '0.7rem',
-                                        marginBottom: '0.15rem',
-                                    }}
-                                >
-                                    <span style={{ color: '#94a3b8', fontWeight: 600 }}>
-                                        {label}
-                                    </span>
-                                    <span style={{ color: scoreColor(score), fontWeight: 700 }}>
-                                        {score}% ({count})
-                                    </span>
-                                </div>
-                                <div style={barStyle}>
-                                    <div style={fillBar(score, color)} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <CoverageStatCards
+                        overall={coverage.overall}
+                        gaps={coverage.gaps}
+                        total={coverage.total}
+                    />
+                    <CoverageBars
+                        eventScore={coverage.eventScore}
+                        loggerScore={coverage.loggerScore}
+                        healthScore={coverage.healthScore}
+                        tracingScore={coverage.tracingScore}
+                        lifecycleScore={coverage.lifecycleScore}
+                        withEvents={coverage.withEvents}
+                        withLogger={coverage.withLogger}
+                        withHealth={coverage.withHealth}
+                        withTracing={coverage.withTracing}
+                        withLifecycle={coverage.withLifecycle}
+                        total={coverage.total}
+                    />
 
                     {eventsLoaded && docEvents.length > 0 && (
                         <div
@@ -502,124 +368,12 @@ const ObsGaps: React.FC = () => {
                         Service Breakdown
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        {filtered.map((s) => {
-                            const checks = [
-                                s.hasEvents,
-                                s.hasLogger,
-                                s.hasLifecycle,
-                                s.hasHealthCheck,
-                                s.hasTracing,
-                            ];
-                            const passed = checks.filter(Boolean).length;
-                            const total = checks.length;
-                            return (
-                                <div
-                                    key={s.name}
-                                    style={{
-                                        padding: '0.4rem 0.65rem',
-                                        borderRadius: 7,
-                                        background: 'rgba(0,0,0,0.12)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            flex: 1,
-                                            fontSize: '0.72rem',
-                                            color: '#e2e8f0',
-                                            fontFamily: 'monospace',
-                                        }}
-                                    >
-                                        {s.name}
-                                    </span>
-                                    <div style={{ display: 'flex', gap: 2 }}>
-                                        {s.hasEvents ? (
-                                            <CheckCircle size={10} color="#10b981" />
-                                        ) : (
-                                            <XCircle size={10} color="#ef4444" />
-                                        )}
-                                        {s.hasLogger ? (
-                                            <CheckCircle size={10} color="#10b981" />
-                                        ) : (
-                                            <XCircle size={10} color="#ef4444" />
-                                        )}
-                                        {s.hasLifecycle ? (
-                                            <CheckCircle size={10} color="#10b981" />
-                                        ) : (
-                                            <XCircle size={10} color="#ef4444" />
-                                        )}
-                                        {s.hasHealthCheck ? (
-                                            <CheckCircle size={10} color="#10b981" />
-                                        ) : (
-                                            <XCircle size={10} color="#64748b" />
-                                        )}
-                                        {s.hasTracing ? (
-                                            <CheckCircle size={10} color="#10b981" />
-                                        ) : (
-                                            <XCircle size={10} color="#64748b" />
-                                        )}
-                                    </div>
-                                    <span
-                                        style={{
-                                            fontSize: '0.6rem',
-                                            color: passed === total ? '#10b981' : '#f59e0b',
-                                            minWidth: 28,
-                                            textAlign: 'right',
-                                            fontWeight: 700,
-                                        }}
-                                    >
-                                        {passed}/{total}
-                                    </span>
-                                    {s.notes && (
-                                        <span style={{ fontSize: '0.6rem', color: '#f59e0b' }}>
-                                            {s.notes}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {filtered.map((s) => (
+                            <ObsServiceRow key={s.name} service={s} />
+                        ))}
                     </div>
 
-                    <div
-                        style={{
-                            marginTop: '1.25rem',
-                            padding: '0.85rem',
-                            borderRadius: 10,
-                            background: 'rgba(245,158,11,0.05)',
-                            border: '1px solid rgba(245,158,11,0.12)',
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 5,
-                                marginBottom: '0.4rem',
-                            }}
-                        >
-                            <AlertTriangle size={13} color="#f59e0b" />
-                            <span
-                                style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b' }}
-                            >
-                                Recommendations
-                            </span>
-                        </div>
-                        <ul
-                            style={{
-                                margin: 0,
-                                paddingLeft: '1rem',
-                                fontSize: '0.7rem',
-                                color: '#94a3b8',
-                                lineHeight: 1.6,
-                            }}
-                        >
-                            {recommendations.map((rec, _i) => (
-                                <li key={rec}>{rec}</li>
-                            ))}
-                        </ul>
-                    </div>
+                    <RecommendationsPanel recommendations={recommendations} />
                 </div>
             )}
         </div>

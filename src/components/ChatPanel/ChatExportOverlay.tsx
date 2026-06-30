@@ -1,0 +1,59 @@
+import React from 'react';
+import { X } from 'lucide-react';
+import ChatExportPanel from '../ChatExportPanel';
+
+interface Props {
+    onClose: () => void;
+    t: (key: string, params?: Record<string, string | number>) => string;
+}
+
+const ChatExportOverlay: React.FC<Props> = ({ onClose, t }) => (
+    <div
+        style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(4px)',
+        }}
+        onClick={onClose}
+    >
+        <div
+            style={{
+                width: '90vw',
+                height: '85vh',
+                background: '#0f172a',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 16,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.5rem' }}>
+                <button
+                    onClick={onClose}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: 8,
+                    }}
+                    aria-label={t('common.close')}
+                >
+                    <X size={20} />
+                </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto' }}>
+                <ChatExportPanel />
+            </div>
+        </div>
+    </div>
+);
+
+export default ChatExportOverlay;

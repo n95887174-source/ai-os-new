@@ -5,6 +5,9 @@ import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
 import { adminService, kernel } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import LiveStatCard from './LiveStatCard';
+import EventLog from './EventLog';
+import ControlActions from './ControlActions';
 
 const LiveWorkspace: React.FC = () => {
     const [health, setHealth] = useState(() => {
@@ -16,7 +19,6 @@ const LiveWorkspace: React.FC = () => {
     });
     const [logs, setLogs] = useState<Array<{ time: string; event: string; type: string }>>([]);
     const [error, setError] = useState<string | null>(null);
-
     const isMountedRef = useRef(true);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,8 +32,6 @@ const LiveWorkspace: React.FC = () => {
 
     useEffect(() => {
         isMountedRef.current = true;
-
-        // P1-13: subscribe to kernel:updated instead of polling every 2s
         const unsubHealth = eventBus.on(EVENTS.KERNEL_UPDATED, () => {
             if (!isMountedRef.current) return;
             try {
@@ -45,7 +45,6 @@ const LiveWorkspace: React.FC = () => {
                 }
             }
         });
-
         let unsubscribeAll: (() => void) | undefined;
         const eventHandler = ({
             event,
@@ -56,18 +55,20 @@ const LiveWorkspace: React.FC = () => {
         }) => {
             if (!isMountedRef.current) return;
             try {
-                setLogs((prev) => {
-                    const newEntry = {
-                        time: new Date().toLocaleTimeString(),
-                        event: `${event}: ${(data?.output as string)?.substring(0, 50) || (data?.message as string) || 'Activity detected'}`,
-                        type: event.includes('error')
-                            ? 'warning'
-                            : event.includes('success')
-                              ? 'success'
-                              : 'info',
-                    };
-                    return [newEntry, ...prev].slice(0, 15);
-                });
+                setLogs((prev) =>
+                    [
+                        {
+                            time: new Date().toLocaleTimeString(),
+                            event: `${event}: ${(data?.output as string)?.substring(0, 50) || (data?.message as string) || 'Activity detected'}`,
+                            type: event.includes('error')
+                                ? 'warning'
+                                : event.includes('success')
+                                  ? 'success'
+                                  : 'info',
+                        },
+                        ...prev,
+                    ].slice(0, 15),
+                );
                 setError(null);
             } catch (e) {
                 console.warn('[LiveWorkspace] Failed to process event:', e);
@@ -77,20 +78,14 @@ const LiveWorkspace: React.FC = () => {
                 }
             }
         };
-
         const maybeUnsubscribe = eventBus.subscribeAll(eventHandler);
-        if (typeof maybeUnsubscribe === 'function') {
-            unsubscribeAll = maybeUnsubscribe;
-        } else {
+        if (typeof maybeUnsubscribe === 'function') unsubscribeAll = maybeUnsubscribe;
+        else
             console.warn(
                 '[LiveWorkspace] eventBus.subscribeAll does not return an unsubscribe function',
             );
-        }
-
-        // Capture refs at effect creation time for cleanup (avoids exhaustive-deps false positive)
         const savedIntervalRef = intervalRef;
         const savedTimeoutRef = errorTimeoutRef;
-
         return () => {
             isMountedRef.current = false;
             unsubHealth();
@@ -109,8 +104,7 @@ const LiveWorkspace: React.FC = () => {
             return latencies.length > 0
                 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
                 : 0;
-        } catch (e) {
-            console.warn('[LiveWorkspace] Failed to compute avg latency:', e);
+        } catch {
             return 0;
         }
     }, []);
@@ -142,102 +136,42 @@ const LiveWorkspace: React.FC = () => {
         },
     ];
 
-    const eventContent =
-        logs.length === 0 ? (
-            <div
-                style={{
-                    textAlign: 'center',
-                    padding: '2rem',
-                    color: 'var(--text-muted)',
-                    fontSize: '0.8rem',
-                }}
-            >
-                Waiting for system events...
-            </div>
-        ) : (
-            logs.map((log, _i) => (
-                <div
-                    key={`log-${log.time}`}
-                    style={{
-                        display: 'flex',
-                        gap: '0.75rem',
-                        padding: '0.6rem',
-                        background: 'rgba(255,255,255,0.02)',
-                        borderRadius: 8,
-                        fontSize: '0.8rem',
-                        border: '1px solid rgba(255,255,255,0.03)',
-                    }}
-                >
-                    <span
-                        style={{
-                            color: 'var(--text-muted)',
-                            fontFamily: 'monospace',
-                            fontSize: '0.7rem',
-                        }}
-                    >
-                        [{log.time}]
-                    </span>
-                    <span
-                        style={{
-                            color:
-                                log.type === 'warning'
-                                    ? '#f59e0b'
-                                    : log.type === 'success'
-                                      ? '#10b981'
-                                      : 'white',
-                            flex: 1,
-                        }}
-                    >
-                        {log.event}
-                    </span>
-                </div>
-            ))
-        );
-
     const handleInitializeRequest = useCallback(() => {
         try {
             adminService.initializeRequest();
             setError(null);
-        } catch (e) {
-            console.warn('[LiveWorkspace] Failed to initialize request:', e);
+        } catch {
             setError('Failed to initialize request');
             clearErrorAfterDelay();
         }
     }, [clearErrorAfterDelay]);
-
     const handleReloadRuntime = useCallback(() => {
         try {
             adminService.reloadRuntime();
             setError(null);
-        } catch (e) {
-            console.warn('[LiveWorkspace] Failed to reload runtime:', e);
+        } catch {
             setError('Failed to reload runtime');
             clearErrorAfterDelay();
         }
     }, [clearErrorAfterDelay]);
-
     const handleManualRoute = useCallback(() => {
         try {
             adminService.manualRoute();
             setError(null);
-        } catch (e) {
-            console.warn('[LiveWorkspace] Failed to manual route:', e);
+        } catch {
             setError('Failed to manual route');
             clearErrorAfterDelay();
         }
     }, [clearErrorAfterDelay]);
-
     const handleClearLogs = useCallback(() => {
         setLogs([]);
         setError(null);
     }, []);
-
     const handleCheckAllHealth = useCallback(() => {
         try {
             eventBus.emit(EVENTS.CHECK_ALL_HEALTH, undefined);
             setError(null);
-        } catch (e) {
-            console.warn('[LiveWorkspace] Failed to check all health:', e);
+        } catch {
             setError('Failed to check all health');
             clearErrorAfterDelay();
         }
@@ -292,51 +226,8 @@ const LiveWorkspace: React.FC = () => {
             </AnimatePresence>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                {stats.map((stat, _i) => (
-                    <div
-                        key={stat.label}
-                        style={{
-                            padding: '1rem',
-                            borderRadius: 16,
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            background: 'rgba(255,255,255,0.02)',
-                            backdropFilter: 'blur(10px)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                        }}
-                        aria-label={`${stat.label}: ${stat.value} ${stat.unit}`}
-                    >
-                        <div>
-                            <div
-                                style={{
-                                    fontSize: '0.65rem',
-                                    color: 'var(--text-muted)',
-                                    textTransform: 'uppercase',
-                                    marginBottom: '0.2rem',
-                                }}
-                            >
-                                {stat.label}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
-                                <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>
-                                    {stat.value}
-                                </span>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                    {stat.unit}
-                                </span>
-                            </div>
-                        </div>
-                        <div
-                            style={{
-                                padding: '0.5rem',
-                                background: `${stat.color}11`,
-                                borderRadius: 8,
-                            }}
-                        >
-                            <Activity size={16} color={stat.color} aria-hidden="true" />
-                        </div>
-                    </div>
+                {stats.map((stat) => (
+                    <LiveStatCard key={stat.label} {...stat} />
                 ))}
             </div>
 
@@ -414,7 +305,6 @@ const LiveWorkspace: React.FC = () => {
                             <IntelligenceGraph />
                         </div>
                     </div>
-
                     <div
                         style={{
                             height: '320px',
@@ -450,7 +340,6 @@ const LiveWorkspace: React.FC = () => {
                         <AgentLiveBoard />
                     </div>
                 </div>
-
                 <div
                     style={{
                         display: 'flex',
@@ -459,180 +348,14 @@ const LiveWorkspace: React.FC = () => {
                         minHeight: 0,
                     }}
                 >
-                    <div
-                        style={{
-                            flex: 1,
-                            padding: '1.5rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            borderRadius: 16,
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            background: 'rgba(255,255,255,0.02)',
-                            backdropFilter: 'blur(10px)',
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '1.25rem',
-                            }}
-                        >
-                            <h3
-                                style={{
-                                    fontSize: '1rem',
-                                    fontWeight: 700,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                }}
-                            >
-                                <Terminal size={18} color="#3b82f6" aria-hidden="true" /> Cognitive
-                                Event Stream
-                            </h3>
-                        </div>
-                        <div
-                            style={{
-                                flex: 1,
-                                overflowY: 'auto',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.75rem',
-                            }}
-                            role="log"
-                            aria-live="polite"
-                            aria-label="System event log"
-                        >
-                            {eventContent}
-                        </div>
-                    </div>
-
-                    <div
-                        style={{
-                            padding: '1.5rem',
-                            borderRadius: 16,
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            background: 'rgba(255,255,255,0.02)',
-                            backdropFilter: 'blur(10px)',
-                        }}
-                    >
-                        <h3
-                            style={{
-                                fontSize: '1rem',
-                                fontWeight: 700,
-                                marginBottom: '1.25rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                            }}
-                        >
-                            <Activity size={18} color="#3b82f6" aria-hidden="true" /> Control Plane
-                            Actions
-                        </h3>
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
-                                gap: '0.75rem',
-                            }}
-                        >
-                            <button
-                                onClick={handleInitializeRequest}
-                                style={{
-                                    padding: '0.75rem',
-                                    fontSize: '0.8rem',
-                                    borderRadius: 10,
-                                    background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
-                                    border: 'none',
-                                    color: 'white',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'background 0.2s',
-                                }}
-                                aria-label="Initialize a test request"
-                            >
-                                Initialize Request
-                            </button>
-                            <button
-                                onClick={handleReloadRuntime}
-                                style={{
-                                    padding: '0.75rem',
-                                    fontSize: '0.8rem',
-                                    borderRadius: 10,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'background 0.2s',
-                                }}
-                                aria-label="Reload runtime configuration"
-                            >
-                                Reload Runtime
-                            </button>
-                            <button
-                                onClick={handleManualRoute}
-                                style={{
-                                    padding: '0.75rem',
-                                    fontSize: '0.8rem',
-                                    borderRadius: 10,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'background 0.2s',
-                                }}
-                                aria-label="Manually trigger routing"
-                            >
-                                Manual Routing
-                            </button>
-                            <button
-                                onClick={handleClearLogs}
-                                style={{
-                                    padding: '0.75rem',
-                                    fontSize: '0.8rem',
-                                    borderRadius: 10,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'background 0.2s',
-                                }}
-                                aria-label="Clear event logs"
-                            >
-                                Clear Logs
-                            </button>
-                        </div>
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
-                                gap: '0.75rem',
-                                marginTop: '0.75rem',
-                            }}
-                        >
-                            <button
-                                onClick={handleCheckAllHealth}
-                                style={{
-                                    padding: '0.75rem',
-                                    fontSize: '0.8rem',
-                                    borderRadius: 10,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'background 0.2s',
-                                }}
-                                aria-label="Check health of all providers"
-                            >
-                                Check All Providers
-                            </button>
-                        </div>
-                    </div>
+                    <EventLog logs={logs} />
+                    <ControlActions
+                        onInitializeRequest={handleInitializeRequest}
+                        onReloadRuntime={handleReloadRuntime}
+                        onManualRoute={handleManualRoute}
+                        onClearLogs={handleClearLogs}
+                        onCheckAllHealth={handleCheckAllHealth}
+                    />
                 </div>
             </div>
         </div>

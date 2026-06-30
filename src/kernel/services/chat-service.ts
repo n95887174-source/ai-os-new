@@ -686,13 +686,19 @@ export class ChatService {
                             model: resolvedModel,
                             keyId: keyObj.id,
                             fullContent,
+                            latency: Date.now() - startTime,
                             status: 'timeout',
                         });
                     }
                     this.emitError(req, 'Request timed out');
                     return;
                 }
-                if (error instanceof Error && error.name === 'AbortError') {
+                const isAbort =
+                    (error instanceof Error && error.name === 'AbortError') ||
+                    (typeof DOMException !== 'undefined' &&
+                        error instanceof DOMException &&
+                        error.name === 'AbortError');
+                if (isAbort) {
                     if (settings.streamingEnabled) {
                         this.deps.eventBus.emit(EVENTS.STREAM_END, {
                             requestId,
@@ -700,6 +706,7 @@ export class ChatService {
                             model: resolvedModel,
                             keyId: keyObj.id,
                             fullContent,
+                            latency: Date.now() - startTime,
                             status: 'cancelled',
                         });
                     }
@@ -726,6 +733,17 @@ export class ChatService {
                     errMsg.toLowerCase().includes('unauthorized') ||
                     errMsg.toLowerCase().includes('forbidden');
                 if (isProviderError) {
+                    if (settings.streamingEnabled) {
+                        this.deps.eventBus.emit(EVENTS.STREAM_END, {
+                            requestId,
+                            provider,
+                            model: resolvedModel,
+                            keyId: keyObj.id,
+                            fullContent,
+                            latency: Date.now() - startTime,
+                            status: 'error',
+                        });
+                    }
                     excludedProviders.add(provider);
                     const fallback = this.deps.routerService.resolveWithFallback(
                         'auto',
@@ -771,6 +789,17 @@ export class ChatService {
                         return;
                     }
                 } else {
+                    if (settings.streamingEnabled) {
+                        this.deps.eventBus.emit(EVENTS.STREAM_END, {
+                            requestId,
+                            provider,
+                            model: resolvedModel,
+                            keyId: keyObj.id,
+                            fullContent,
+                            latency: Date.now() - startTime,
+                            status: 'error',
+                        });
+                    }
                     this.deps.logger.error('ChatService', `Error on ${provider}: ${errMsg}`, {
                         provider,
                         error: errMsg,

@@ -1298,9 +1298,14 @@ Fix remaining P2/P3 issues from audit3 worklog (`audit/audit3final/ai-os-new_aud
 
 - `cfe4a17` pushed to `origin/main`, zero TS errors
 
-### Remaining (~2 P2/P3 items)
+### Fixed This Session (2026-06-30 — fixmix.md completion)
 
-| ID  | Description                           | File               |
-| :-- | :------------------------------------ | :----------------- |
-| C5  | AddKeyModal Back button breaks wizard | `AddKeyModal.tsx`  |
-| H6  | ProviderCard test-init effect fragile | `ProviderCard.tsx` |
+| ID  | Description                           | File                           | Fix                                                                                           |
+| :-- | :------------------------------------ | :----------------------------- | :-------------------------------------------------------------------------------------------- |
+| C5  | AddKeyModal Back button breaks wizard | `AddKeyModal.tsx`              | Removed `defaultProvider` special-case that closed modal on step 2 back                       |
+| H6  | ProviderCard test-init effect fragile | `ProviderCard.tsx`             | Added `isMounted.current` guards to `setProbeResult`/`setProbeLoading`                        |
+| —   | ChatPanel split verified              | `ChatPanel.tsx` + 6 new files  | `npx tsc --noEmit` clean                                                                      |
+| —   | provider-router.ts split              | `provider-router.ts` (466 LOC) | Extracted `RouterFallbackResolver` + `RouterDebateSelector`, 639→466 LOC                      |
+| —   | H1 Router Config unified              | `config-service.ts`            | Already SOT via `getRouterConfig()`; verified no duplicate overlay                            |
+| —   | bootstrap.ts split                    | `bootstrap.ts` (668 LOC)       | Extracted `bootstrap-phases.ts` + `bootstrap-key-init.ts`, 853→668 LOC                        |
+| —   | localStorage→SQLite migration         | 3 services                     | PersonaService: localStorage write removed. ChatBookmarks + AgentJournal: `database` required |

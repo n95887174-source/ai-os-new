@@ -23,7 +23,8 @@ import type { MonitoringService } from './services/monitoring-service';
 import type { SnapshotService } from './services/snapshot-service';
 import type { AdvisorService } from './services/advisor-service';
 import type { AutoDebateService } from './services/debate-runtime/auto-debate/auto-debate-service';
-import type { DebateService } from './services/debate-runtime/debate-service';
+import { debateService as _debateServiceInstance } from './services/debate-runtime/debate-service';
+type DebateService = typeof _debateServiceInstance;
 import type { DebateEngine } from './services/debate-runtime/debate-engine';
 import type { CognitiveIntelligenceService } from './services/cognitive-intelligence/cognitive-intelligence-service';
 import type { PressureMapService } from './services/runtime-intelligence/pressure-map-service';
@@ -40,6 +41,7 @@ import type { ProbeService } from './services/probe-service';
 import type { SessionAffinityStore } from './services/session-affinity-store';
 import type { IAdapterRegistry } from './contracts/provider-adapter';
 import type { IExecutionGovernor } from './contracts/execution-governor';
+import type { IDatabaseService } from './types/interfaces';
 
 export { FREE_TIER_LIMITS };
 
@@ -82,8 +84,12 @@ export const cognitiveService = lazyService<CognitiveService>('cognitiveService'
 export const advisorService = lazyService<AdvisorService>('advisorService');
 export const pressureMapService = lazyService<PressureMapService>('pressureMapService');
 export const debateService = lazyService<DebateService>('debateService');
-import type { StrategyRegistry } from './services/debate-runtime/debate-strategy-registry';
-export const strategyRegistry = lazyService<StrategyRegistry>('strategyRegistry');
+import type { DebateHumanService } from './services/debate-runtime/debate-human-service';
+export const debateHumanService = lazyService<DebateHumanService>('debateHumanService');
+import type { StrategyManager } from './services/debate-runtime/debate-strategy-manager';
+export const strategyManager = lazyService<StrategyManager>('strategyManager');
+// backward compat: DebateStrategyBuilder imports strategyRegistry
+export const strategyRegistry = strategyManager;
 import type { DebateModeManagerPersistent } from './services/debate-runtime/debate-mode-manager';
 export const debateModeManager = lazyService<DebateModeManagerPersistent>('debateModeManager');
 import type { DebateWorkspace } from './services/debate-runtime/debate-workspace';
@@ -116,6 +122,7 @@ export const sessionAffinityStore = lazyService<SessionAffinityStore>('sessionAf
 export const executionGovernor = lazyService<IExecutionGovernor>('executionGovernor');
 import type { PersonaService as PersonaServiceType } from './services/persona-service';
 export const personaService = lazyService<PersonaServiceType>('personaService');
+export const database = lazyService<IDatabaseService>('database');
 export const roleVersionService =
     lazyService<import('../kernel/services/role-version-service').RoleVersionService>(
         'roleVersionService',
@@ -126,12 +133,6 @@ import type { CacheService } from './services/cache-service';
 export const cacheService = lazyService<CacheService>('cacheService');
 
 // ── Event Bridge (shadow mode projections) ──────────────────────
-import type {
-    KeyStateProjection,
-    ProjectedKeyState,
-} from './services/projections/key-state-projection';
-export type { ProjectedKeyState };
-export const keyStateProjection = lazyService<KeyStateProjection>('keyStateProjection');
 import type { RouterProjection, ProjectedDecision } from './services/projections/router-projection';
 export type { ProjectedDecision };
 export const routerProjection = lazyService<RouterProjection>('routerProjection');

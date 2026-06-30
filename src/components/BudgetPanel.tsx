@@ -1,26 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-    DollarSign,
-    AlertTriangle,
-    Loader2,
-    X,
-    BarChart3,
-    TrendingUp,
-    Users,
-    Shield,
-} from 'lucide-react';
+import { DollarSign, AlertTriangle, Loader2, X, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { budgetService } from '../kernel/instances';
 import type { SpendSummary, BudgetAlert } from '../kernel/contracts/budget';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, buttonSm } from '../styles/common';
-
-const fmtUSD = (v: number, locale: string): string =>
-    new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', {
-        style: 'currency',
-        currency: 'USD',
-    }).format(v);
+import { GlobalBudgetSection } from './BudgetPanel/GlobalBudgetSection';
+import { ProviderBudgetSection } from './BudgetPanel/ProviderBudgetSection';
+import { AgentBudgetSection } from './BudgetPanel/AgentBudgetSection';
+import { AlertsSection } from './BudgetPanel/AlertsSection';
 
 const BudgetPanel: React.FC = () => {
     const { t, lang } = useTranslation();
@@ -63,13 +52,6 @@ const BudgetPanel: React.FC = () => {
             setError(t('budget.error_clear'));
             clearError();
         }
-    };
-
-    const usageColor = (pct: number) => {
-        if (pct >= 90) return '#ef4444';
-        if (pct >= 75) return '#f59e0b';
-        if (pct >= 50) return '#3b82f6';
-        return '#10b981';
     };
 
     if (loading) {
@@ -177,324 +159,16 @@ const BudgetPanel: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    {/* Global Budget */}
-                    <div
-                        style={{
-                            padding: '1.5rem',
-                            borderRadius: 16,
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            background: 'rgba(0,0,0,0.15)',
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                marginBottom: '1rem',
-                            }}
-                        >
-                            <TrendingUp size={18} color="#10b981" />
-                            <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}>
-                                {t('budget.global_section')}
-                            </span>
-                        </div>
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr 1fr',
-                                gap: '1rem',
-                                marginBottom: '1rem',
-                            }}
-                        >
-                            <StatCard
-                                label={t('budget.budget')}
-                                value={fmtUSD(summary.global.budget, lang)}
-                                color="#10b981"
-                            />
-                            <StatCard
-                                label={t('budget.spent')}
-                                value={fmtUSD(summary.global.spent, lang)}
-                                color="#f59e0b"
-                            />
-                            <StatCard
-                                label={t('budget.remaining')}
-                                value={fmtUSD(summary.global.remaining, lang)}
-                                color={summary.global.remaining > 0 ? '#3b82f6' : '#ef4444'}
-                            />
-                        </div>
-                        <div style={{ marginTop: '0.5rem' }}>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    fontSize: '0.75rem',
-                                    color: '#94a3b8',
-                                    marginBottom: '0.25rem',
-                                }}
-                            >
-                                <span>{t('budget.usage')}</span>
-                                <span>{summary.global.pct.toFixed(1)}%</span>
-                            </div>
-                            <div
-                                style={{
-                                    height: 8,
-                                    borderRadius: 4,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        height: '100%',
-                                        borderRadius: 4,
-                                        width: `${Math.min(summary.global.pct, 100)}%`,
-                                        background: usageColor(summary.global.pct),
-                                        transition: 'width 0.5s ease',
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Per-Provider */}
-                    {summary.providers.length > 0 && (
-                        <div
-                            style={{
-                                padding: '1.5rem',
-                                borderRadius: 16,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                background: 'rgba(0,0,0,0.15)',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    marginBottom: '1rem',
-                                }}
-                            >
-                                <Shield size={18} color="#a855f7" />
-                                <span
-                                    style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}
-                                >
-                                    {t('budget.providers_section')}
-                                </span>
-                            </div>
-                            <div
-                                style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-                            >
-                                {summary.providers.map((p) => (
-                                    <div
-                                        key={p.provider}
-                                        style={{
-                                            padding: '0.75rem',
-                                            borderRadius: 8,
-                                            background: 'rgba(0,0,0,0.15)',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                marginBottom: '0.25rem',
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontWeight: 600,
-                                                    fontSize: '0.85rem',
-                                                    color: '#e2e8f0',
-                                                }}
-                                            >
-                                                {p.provider}
-                                            </span>
-                                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                                                {fmtUSD(p.spent, lang)} / {fmtUSD(p.budget, lang)}
-                                            </span>
-                                        </div>
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                fontSize: '0.7rem',
-                                                color: '#64748b',
-                                                marginBottom: '0.2rem',
-                                            }}
-                                        >
-                                            <span>
-                                                {t('budget.remaining')}: {fmtUSD(p.remaining, lang)}
-                                            </span>
-                                            <span>{p.pct.toFixed(1)}%</span>
-                                        </div>
-                                        <div
-                                            style={{
-                                                height: 6,
-                                                borderRadius: 3,
-                                                background: 'rgba(255,255,255,0.05)',
-                                                overflow: 'hidden',
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    height: '100%',
-                                                    borderRadius: 3,
-                                                    width: `${Math.min(p.pct, 100)}%`,
-                                                    background: usageColor(p.pct),
-                                                    transition: 'width 0.5s ease',
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Per-Agent */}
-                    {summary.agents.length > 0 && (
-                        <div
-                            style={{
-                                padding: '1.5rem',
-                                borderRadius: 16,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                background: 'rgba(0,0,0,0.15)',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    marginBottom: '1rem',
-                                }}
-                            >
-                                <Users size={18} color="#3b82f6" />
-                                <span
-                                    style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}
-                                >
-                                    {t('budget.agents_section')}
-                                </span>
-                            </div>
-                            <div
-                                style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-                            >
-                                {summary.agents.map((a) => (
-                                    <div
-                                        key={a.agentId}
-                                        style={{
-                                            padding: '0.6rem',
-                                            borderRadius: 6,
-                                            background: 'rgba(0,0,0,0.1)',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                fontSize: '0.8rem',
-                                            }}
-                                        >
-                                            <span style={{ color: '#e2e8f0' }}>
-                                                {a.name || a.agentId}
-                                            </span>
-                                            <span style={{ color: '#94a3b8' }}>
-                                                {fmtUSD(a.spent, lang)} / {fmtUSD(a.budget, lang)}
-                                            </span>
-                                        </div>
-                                        <div
-                                            style={{
-                                                height: 4,
-                                                borderRadius: 2,
-                                                background: 'rgba(255,255,255,0.05)',
-                                                marginTop: '0.3rem',
-                                                overflow: 'hidden',
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    height: '100%',
-                                                    borderRadius: 2,
-                                                    width: `${Math.min(a.pct, 100)}%`,
-                                                    background: usageColor(a.pct),
-                                                    transition: 'width 0.5s ease',
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Alerts */}
-                    {alerts.length > 0 && (
-                        <div
-                            style={{
-                                padding: '1.5rem',
-                                borderRadius: 16,
-                                border: '1px solid rgba(239,68,68,0.15)',
-                                background: 'rgba(239,68,68,0.03)',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    marginBottom: '0.75rem',
-                                }}
-                            >
-                                <AlertTriangle size={18} color="#ef4444" />
-                                <span
-                                    style={{ fontWeight: 700, color: '#fca5a5', fontSize: '1rem' }}
-                                >
-                                    {t('budget.alerts_section')} ({alerts.length})
-                                </span>
-                            </div>
-                            <div
-                                style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}
-                            >
-                                {alerts.slice(0, 20).map((alert, _i) => (
-                                    <div
-                                        key={alert.message}
-                                        style={{
-                                            fontSize: '0.8rem',
-                                            padding: '0.5rem 0.75rem',
-                                            borderRadius: 6,
-                                            background: 'rgba(239,68,68,0.05)',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <div>
-                                            <span
-                                                style={{
-                                                    padding: '0.1rem 0.3rem',
-                                                    borderRadius: 3,
-                                                    fontSize: '0.65rem',
-                                                    background: 'rgba(239,68,68,0.15)',
-                                                    color: '#ef4444',
-                                                    marginRight: 6,
-                                                }}
-                                            >
-                                                {alert.type}
-                                            </span>
-                                            <span style={{ color: '#e2e8f0' }}>
-                                                {alert.message}
-                                            </span>
-                                        </div>
-                                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                            {alert.current.toFixed(2)}/{alert.limit.toFixed(2)} (
-                                            {alert.level}%)
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <GlobalBudgetSection
+                        budget={summary.global.budget}
+                        spent={summary.global.spent}
+                        remaining={summary.global.remaining}
+                        pct={summary.global.pct}
+                        lang={lang}
+                    />
+                    <ProviderBudgetSection providers={summary.providers} lang={lang} />
+                    <AgentBudgetSection agents={summary.agents} lang={lang} />
+                    <AlertsSection alerts={alerts} />
                 </>
             )}
 
@@ -511,25 +185,5 @@ const BudgetPanel: React.FC = () => {
         </div>
     );
 };
-
-const StatCard: React.FC<{ label: string; value: string; color: string }> = ({
-    label,
-    value,
-    color,
-}) => (
-    <div
-        style={{
-            padding: '1rem',
-            borderRadius: 10,
-            background: 'rgba(0,0,0,0.2)',
-            textAlign: 'center',
-        }}
-    >
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
-            {label}
-        </div>
-        <div style={{ fontSize: '1.3rem', fontWeight: 800, color }}>{value}</div>
-    </div>
-);
 
 export default BudgetPanel;

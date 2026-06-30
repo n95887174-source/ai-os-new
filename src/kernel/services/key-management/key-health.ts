@@ -140,8 +140,22 @@ export class KeyHealth implements IHealthCheckService {
             }
             await this.deps.saveKeys();
             this.deps.notify();
+            if (!response.ok) {
+                this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
+                    id: keyRef.id,
+                    provider: keyRef.provider,
+                    error: `Health check failed: ${response.status}`,
+                });
+            } else {
+                this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_COMPLETED, {
+                    id: keyRef.id,
+                    provider: keyRef.provider,
+                    status: 'active',
+                    latency,
+                });
+            }
             return { id: keyRef.id, provider: keyRef.provider, status: keyRef.status, latency };
-        } catch {
+        } catch (e) {
             const latency = performance.now() - start;
             this._healthCache.set(keyId, Date.now());
             // Only apply status if version hasn't changed
@@ -152,6 +166,11 @@ export class KeyHealth implements IHealthCheckService {
             }
             await this.deps.saveKeys();
             this.deps.notify();
+            this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
+                id: keyRef.id,
+                provider: keyRef.provider,
+                error: e instanceof Error ? e.message : String(e),
+            });
             return { id: keyRef.id, provider: keyRef.provider, status: keyRef.status, latency: -1 };
         }
     }

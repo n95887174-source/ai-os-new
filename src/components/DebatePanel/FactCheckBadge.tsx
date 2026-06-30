@@ -86,7 +86,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
     useEffect(() => {
         if (!expanded) return;
         const check = () => {
-            const fc = debateService.getFactCheckForArgument(argumentId);
+            const fc = debateService.factCheckService.getForArgument(argumentId);
             if (fc) setResults(fc.results);
         };
         check();

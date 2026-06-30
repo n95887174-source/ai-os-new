@@ -1,44 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-    Loader2,
-    AlertTriangle,
-    Trash2,
-    Terminal,
-    RefreshCw,
-    PowerOff,
-    Power,
-    Send,
-    CheckCircle2,
-    Activity,
-    Layers,
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Loader2, Layers, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { ApiKey } from '../../types/metrics';
 import { repColor, TagPill } from '../Common/status-vocabulary';
 import { probeService, keyService, keyStateStore } from '../../kernel/instances';
-import { getHealthBand } from '../../kernel/contracts/key-state';
 import type { ProbeResult } from '../../kernel/contracts/probe';
-import {
-    errorBox,
-    flexBetweenSuccessLabel,
-    flexCenterGap6px,
-    flexWrapGap2,
-    iconBtn36,
-    infoIcon,
-    posRelative,
-    selectSmall,
-    successBox,
-    textErrorContent,
-    textErrorLabel,
-    textResultBox,
-    textSecondary,
-    textXs,
-} from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useNow } from '../../hooks/useNow';
 import { statusBadge, highlightText } from './provider-utils';
+import { HealthBandBadge, ProviderHealthBar } from './ProviderHealthBar';
+import { ProviderUsageBars } from './ProviderUsageBars';
+import { ProbeResultSection } from './ProbeResultSection';
+import { QuickTestSection } from './QuickTestSection';
+import { ProviderCardActions, ConfirmRemoveBanner } from './ProviderCardActions';
+import { posRelative, textXs, textSecondary, infoIcon } from '../../styles/common';
 
 export interface ProviderCardProps {
     apiKey: ApiKey;
@@ -61,24 +38,20 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 }) => {
     const { t } = useTranslation();
     const now = useNow();
-    const [testPrompt, setTestPrompt] = useState('');
-    const [testModel, setTestModel] = useState('');
-    const [testTemperature] = useState(0.7);
-    const [testMaxTokens] = useState(1024);
-    const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-    const [testResult, setTestResult] = useState<{
-        content: string;
-        latency?: number;
-        model?: string;
-    } | null>(null);
-    const [testError, setTestError] = useState<string | null>(null);
     const [confirmRemove, setConfirmRemove] = useState(false);
     const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
     const [probeLoading, setProbeLoading] = useState(false);
-    const [probeExpanded, setProbeExpanded] = useState(false);
     const status = statusBadge(apiKey.status);
     const reputation = apiKey.stats?.extended?.reputationScore || 0;
     const modelCount = apiKey.availableModels?.length || 0;
+    const isMounted = useRef(true);
+
+    useEffect(() => {
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (!confirmRemove) return;
@@ -86,139 +59,22 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         return () => clearTimeout(timer);
     }, [confirmRemove]);
 
-    const cardIsMountedRef = useRef(true);
-    const cardTestInitiatedRef = useRef(false);
-    const testPromptRef = useRef(testPrompt);
-    useEffect(() => {
-        testPromptRef.current = testPrompt;
-    }, [testPrompt]);
-    const availableModelsRef = useRef(apiKey.availableModels);
-    useEffect(() => {
-        availableModelsRef.current = apiKey.availableModels;
-    }, [apiKey.availableModels]);
-    const testModelRef = useRef(testModel);
-    useEffect(() => {
-        testModelRef.current = testModel;
-    }, [testModel]);
-    const apiKeyIdRef = useRef(apiKey.id);
-    useEffect(() => {
-        apiKeyIdRef.current = apiKey.id;
-    }, [apiKey.id]);
-
-    const handleTest = (e: React.SyntheticEvent) => {
+    const handleProbe = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!testPrompt.trim() || testStatus === 'loading') return;
-        setTestStatus('loading');
-        setTestResult(null);
-        setTestError(null);
+        setProbeLoading(true);
+        setProbeResult(null);
+        try {
+            const results = await probeService.probeForDebate([
+                { id: apiKey.id, provider: apiKey.provider, modelId: apiKey.model },
+            ]);
+            if (isMounted.current) setProbeResult(results.get(apiKey.id) || null);
+        } finally {
+            if (isMounted.current) setProbeLoading(false);
+        }
     };
 
-    const handleProbe = useCallback(
-        async (e: React.MouseEvent) => {
-            e.stopPropagation();
-            setProbeLoading(true);
-            setProbeResult(null);
-            try {
-                const results = await probeService.probeForDebate([
-                    { id: apiKey.id, provider: apiKey.provider, modelId: apiKey.model },
-                ]);
-                setProbeResult(results.get(apiKey.id) || null);
-            } finally {
-                setProbeLoading(false);
-            }
-        },
-        [apiKey.id, apiKey.provider, apiKey.model],
-    );
-
-    useEffect(() => {
-        if (testStatus !== 'loading') {
-            cardTestInitiatedRef.current = false;
-        }
-    }, [testStatus]);
-
-    useEffect(() => {
-        cardIsMountedRef.current = true;
-        if (testStatus !== 'loading') return;
-        if (cardTestInitiatedRef.current) return;
-        cardTestInitiatedRef.current = true;
-
-        const prompt = testPromptRef.current;
-        if (!prompt.trim()) return;
-
-        const keyId = apiKeyIdRef.current;
-        const resolvedTestModel = testModelRef.current;
-        const reqId = `quick-test-${keyId}-${crypto.randomUUID().slice(0, 6)}`;
-        const start = Date.now();
-        let isDone = false;
-
-        let defaultModel = 'auto';
-        const p = apiKey.provider.toLowerCase();
-        if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
-        else if (p === 'openrouter') defaultModel = 'openrouter/auto';
-        else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
-        else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
-        else if (p === 'openai') defaultModel = 'gpt-4o-mini';
-
-        const resolvedModel = resolvedTestModel || availableModelsRef.current?.[0] || defaultModel;
-
-        eventBus.emit(EVENTS.SEND_MESSAGE, {
-            provider: p,
-            model: resolvedModel,
-            messages: [{ role: 'user', content: prompt }],
-            requestId: reqId,
-            keyId,
-            options: { temperature: testTemperature, maxTokens: testMaxTokens },
-        });
-
-        const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
-            if (!cardIsMountedRef.current) return;
-            if (res.requestId === reqId && !isDone) {
-                isDone = true;
-                if (res.status === 'error') {
-                    setTestStatus('error');
-                    setTestError(res.error || 'Unknown error');
-                } else {
-                    setTestStatus('success');
-                    setTestResult({
-                        content: res.content,
-                        latency: Date.now() - start,
-                        model: resolvedModel,
-                    });
-                }
-            }
-        });
-
-        const subStreamEnd = eventBus.on(EVENTS.STREAM_END, ({ requestId, fullContent }) => {
-            if (!cardIsMountedRef.current) return;
-            if (requestId === reqId && !isDone) {
-                isDone = true;
-                setTestStatus('success');
-                setTestResult({
-                    content: fullContent,
-                    latency: Date.now() - start,
-                    model: resolvedModel,
-                });
-            }
-        });
-
-        const timeout = setTimeout(() => {
-            if (!cardIsMountedRef.current) return;
-            if (!isDone) {
-                isDone = true;
-                setTestStatus('error');
-                setTestError('Request timed out');
-            }
-        }, 15000);
-
-        return () => {
-            cardIsMountedRef.current = false;
-            cardTestInitiatedRef.current = false;
-            subResp();
-            subStreamEnd();
-            clearTimeout(timeout);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [testStatus]);
+    const ks = keyStateStore?.get?.(apiKey.id);
+    const alerts = keyService.getAlerts().filter((a) => a.keyId === apiKey.id);
 
     return (
         <motion.div
@@ -244,6 +100,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                     <Loader2 size={20} className="provider-spin" color="#3b82f6" />
                 </div>
             )}
+
             <div
                 className="provider-inline-flex"
                 style={{
@@ -282,36 +139,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                             </span>
                         )}
                     </span>
-                    {(() => {
-                        const ks = keyStateStore?.get?.(apiKey.id);
-                        if (!ks) return null;
-                        const band = getHealthBand(ks.healthScore);
-                        const bandColors: Record<string, string> = {
-                            healthy: '#10b981',
-                            warm: '#f59e0b',
-                            degraded: '#f97316',
-                            cooling: '#ef4444',
-                            dead: '#dc2626',
-                        };
-                        const c = bandColors[band] || '#64748b';
-                        return (
-                            <span
-                                style={{
-                                    marginLeft: 4,
-                                    padding: '1px 6px',
-                                    borderRadius: 8,
-                                    fontSize: '0.6rem',
-                                    fontWeight: 700,
-                                    color: c,
-                                    background: `${c}18`,
-                                    textTransform: 'uppercase',
-                                }}
-                                title={`Health score: ${ks.healthScore}/100 — ${band}`}
-                            >
-                                {band} {ks.healthScore}
-                            </span>
-                        );
-                    })()}
+                    {ks && <HealthBandBadge healthScore={ks.healthScore} />}
                     {apiKey.expiresAt && (
                         <span
                             style={{
@@ -354,23 +182,19 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                             ))}
                         </div>
                     )}
-                    {(() => {
-                        const alerts = keyService.getAlerts().filter((a) => a.keyId === apiKey.id);
-                        if (alerts.length === 0) return null;
-                        return (
-                            <span
-                                style={{
-                                    marginLeft: 8,
-                                    fontSize: '0.65rem',
-                                    color: '#f59e0b',
-                                    fontWeight: 700,
-                                }}
-                                title={alerts.map((a) => a.message).join('; ')}
-                            >
-                                ⚠ {alerts.length}
-                            </span>
-                        );
-                    })()}
+                    {alerts.length > 0 && (
+                        <span
+                            style={{
+                                marginLeft: 8,
+                                fontSize: '0.65rem',
+                                color: '#f59e0b',
+                                fontWeight: 700,
+                            }}
+                            title={alerts.map((a) => a.message).join('; ')}
+                        >
+                            ⚠ {alerts.length}
+                        </span>
+                    )}
                     <div
                         className="provider-inline-flex"
                         style={{ gap: '0.4rem', marginTop: '0.25rem' }}
@@ -429,153 +253,8 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                 </div>
             </div>
 
-            {(() => {
-                const ks = keyStateStore?.get?.(apiKey.id);
-                if (!ks) return null;
-                const band = getHealthBand(ks.healthScore);
-                const bandColors: Record<string, string> = {
-                    healthy: '#10b981',
-                    warm: '#f59e0b',
-                    degraded: '#f97316',
-                    cooling: '#ef4444',
-                    dead: '#dc2626',
-                };
-                const c = bandColors[band] || '#64748b';
-                return (
-                    <div
-                        style={{
-                            marginTop: '0.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                        }}
-                    >
-                        <span
-                            style={{
-                                fontSize: '0.6rem',
-                                color: '#64748b',
-                                minWidth: 48,
-                                fontWeight: 700,
-                            }}
-                        >
-                            HEALTH
-                        </span>
-                        <div
-                            style={{
-                                flex: 1,
-                                height: 6,
-                                borderRadius: 3,
-                                background: 'rgba(255,255,255,0.06)',
-                                overflow: 'hidden',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: `${Math.min(100, ks.healthScore)}%`,
-                                    height: '100%',
-                                    borderRadius: 3,
-                                    background: c,
-                                }}
-                            />
-                        </div>
-                        <span
-                            style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 800,
-                                color: c,
-                                minWidth: 28,
-                                textAlign: 'right',
-                            }}
-                        >
-                            {ks.healthScore}
-                        </span>
-                    </div>
-                );
-            })()}
-
-            {(() => {
-                const stats = apiKey.stats?.extended;
-                const usage = stats?.usageToday;
-                if (!usage?.requests && !usage?.tokens) return null;
-                const reqLimit = stats?.rules?.quota?.requestsPerDay;
-                const tokLimit = stats?.rules?.quota?.tokensPerDay;
-                return (
-                    <div
-                        style={{
-                            marginTop: '0.5rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.25rem',
-                        }}
-                    >
-                        {reqLimit && reqLimit > 0 && (
-                            <div style={flexCenterGap6px}>
-                                <span
-                                    style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}
-                                >
-                                    {usage.requests}/{reqLimit}
-                                </span>
-                                <div
-                                    style={{
-                                        flex: 1,
-                                        height: 4,
-                                        borderRadius: 2,
-                                        background: 'rgba(255,255,255,0.06)',
-                                        overflow: 'hidden',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            width: `${Math.min(100, (usage.requests / reqLimit) * 100)}%`,
-                                            height: '100%',
-                                            borderRadius: 2,
-                                            background:
-                                                usage.requests / reqLimit > 0.8
-                                                    ? '#ef4444'
-                                                    : usage.requests / reqLimit > 0.5
-                                                      ? '#f59e0b'
-                                                      : '#3b82f6',
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                        {tokLimit && tokLimit > 0 && (
-                            <div style={flexCenterGap6px}>
-                                <span
-                                    style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}
-                                >
-                                    {(usage.tokens / 1000).toFixed(0)}k/
-                                    {(tokLimit / 1000).toFixed(0)}k
-                                </span>
-                                <div
-                                    style={{
-                                        flex: 1,
-                                        height: 4,
-                                        borderRadius: 2,
-                                        background: 'rgba(255,255,255,0.06)',
-                                        overflow: 'hidden',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            width: `${Math.min(100, (usage.tokens / tokLimit) * 100)}%`,
-                                            height: '100%',
-                                            borderRadius: 2,
-                                            background:
-                                                usage.tokens / tokLimit > 0.8
-                                                    ? '#ef4444'
-                                                    : usage.tokens / tokLimit > 0.5
-                                                      ? '#f59e0b'
-                                                      : '#10b981',
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                );
-            })()}
+            {ks && <ProviderHealthBar healthScore={ks.healthScore} />}
+            <ProviderUsageBars apiKey={apiKey} />
 
             <div
                 className="provider-inline-flex"
@@ -586,316 +265,29 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                         <Layers size={12} /> {modelCount} model{modelCount > 1 ? 's' : ''}
                     </span>
                 )}
-                <div className="provider-action-group" style={{ marginLeft: 'auto' }}>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleStatus(apiKey.id);
-                        }}
-                        className={`provider-action-btn ${apiKey.status === 'active' ? 'provider-action-btn--active' : 'provider-action-btn--inactive'}`}
-                        title={
-                            apiKey.status === 'active'
-                                ? t('provider.disable')
-                                : t('provider.enable')
-                        }
-                    >
-                        {apiKey.status === 'active' ? <PowerOff size={14} /> : <Power size={14} />}
-                    </button>
-                    <button
-                        onClick={handleProbe}
-                        className="provider-action-btn"
-                        disabled={probeLoading}
-                        title={t('provider.tooltip_probe')}
-                    >
-                        {probeLoading ? (
-                            <Loader2 size={14} className="provider-spin" />
-                        ) : (
-                            <Activity size={14} color="#a855f7" />
-                        )}
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (!isChecking) onCheckHealth(apiKey.id);
-                        }}
-                        className={`provider-action-btn${isChecking ? ' provider-action-btn--checking' : ''}`}
-                        disabled={isChecking}
-                        title={
-                            isChecking ? t('provider.checking_health') : t('provider.check_health')
-                        }
-                    >
-                        <RefreshCw size={14} className={isChecking ? 'provider-spin' : ''} />
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onSelect(apiKey, 'sandbox');
-                        }}
-                        className="provider-action-btn provider-action-btn--sandbox"
-                        title={t('provider.tooltip_open_sandbox')}
-                    >
-                        <Terminal size={14} />
-                    </button>
-                    {confirmRemove ? (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onRemoveKey(apiKey.id);
-                            }}
-                            className="provider-action-btn provider-action-btn--danger"
-                            title={t('provider.tooltip_confirm_remove')}
-                        >
-                            <AlertTriangle size={14} />
-                        </button>
-                    ) : (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setConfirmRemove(true);
-                            }}
-                            className="provider-action-btn provider-action-btn--remove"
-                            title={t('provider.tooltip_remove')}
-                        >
-                            <Trash2 size={14} />
-                        </button>
-                    )}
-                </div>
+                <ProviderCardActions
+                    status={apiKey.status}
+                    probeLoading={probeLoading}
+                    isChecking={isChecking}
+                    onToggleStatus={() => onToggleStatus(apiKey.id)}
+                    onProbe={handleProbe}
+                    onCheckHealth={() => onCheckHealth(apiKey.id)}
+                    onSandbox={() => onSelect(apiKey, 'sandbox')}
+                    onRemove={() => setConfirmRemove(true)}
+                    confirmRemove={confirmRemove}
+                    onConfirmRemove={() => onRemoveKey(apiKey.id)}
+                    onCancelRemove={() => setConfirmRemove(false)}
+                />
             </div>
+
             {confirmRemove && (
-                <div
-                    style={{
-                        marginTop: '0.5rem',
-                        padding: '0.5rem 0.75rem',
-                        background: 'rgba(239,68,68,0.1)',
-                        border: '1px solid rgba(239,68,68,0.3)',
-                        borderRadius: 8,
-                        fontSize: '0.75rem',
-                        color: '#fca5a5',
-                        textAlign: 'center',
-                    }}
-                >
-                    {t('provider.confirm_remove')}{' '}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmRemove(false);
-                        }}
-                        style={{
-                            color: '#94a3b8',
-                            textDecoration: 'underline',
-                            marginLeft: 8,
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                        }}
-                    >
-                        {t('common.cancel')}
-                    </button>
-                </div>
+                <ConfirmRemoveBanner
+                    onCancel={() => setConfirmRemove(false)}
+                    onConfirm={() => onRemoveKey(apiKey.id)}
+                />
             )}
-            {probeResult && (
-                <div>
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setProbeExpanded(!probeExpanded);
-                        }}
-                        style={{
-                            marginTop: '0.5rem',
-                            padding: '0.4rem 0.6rem',
-                            borderRadius: 8,
-                            fontSize: '0.75rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            cursor: 'pointer',
-                            background:
-                                probeResult.status === 'ready'
-                                    ? 'rgba(16,185,129,0.08)'
-                                    : probeResult.status === 'broken'
-                                      ? 'rgba(239,68,68,0.08)'
-                                      : 'rgba(245,158,11,0.08)',
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background:
-                                    probeResult.status === 'ready'
-                                        ? '#10b981'
-                                        : probeResult.status === 'broken'
-                                          ? '#ef4444'
-                                          : '#f59e0b',
-                                flexShrink: 0,
-                            }}
-                        />
-                        <span
-                            style={{
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                fontSize: '0.68rem',
-                                color:
-                                    probeResult.status === 'ready'
-                                        ? '#10b981'
-                                        : probeResult.status === 'broken'
-                                          ? '#ef4444'
-                                          : '#f59e0b',
-                            }}
-                        >
-                            {probeResult.status}
-                        </span>
-                        {probeResult.latency > 0 && (
-                            <span style={textSecondary}>{probeResult.latency}ms</span>
-                        )}
-                        <span style={textSecondary}>
-                            quota: {probeResult.quotaRemaining ?? '?'}
-                        </span>
-                        {probeResult.error && (
-                            <span
-                                style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.7rem' }}
-                            >
-                                {probeResult.error.slice(0, 40)}
-                            </span>
-                        )}
-                        {probeResult.status === 'ready' && (
-                            <CheckCircle2
-                                size={12}
-                                color="#10b981"
-                                style={{ marginLeft: 'auto' }}
-                            />
-                        )}
-                        <span
-                            style={{
-                                color: '#475569',
-                                fontSize: '0.65rem',
-                                marginLeft: probeResult.error ? 4 : 'auto',
-                            }}
-                        >
-                            {probeExpanded ? '▲' : '▼'}
-                        </span>
-                    </div>
-                    {probeExpanded && probeResult.responseContent && (
-                        <div
-                            style={{
-                                marginTop: '0.25rem',
-                                padding: '0.5rem 0.7rem',
-                                borderRadius: 8,
-                                background: 'rgba(0,0,0,0.15)',
-                                fontSize: '0.78rem',
-                                color: '#cbd5e1',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                maxHeight: 150,
-                                overflowY: 'auto',
-                                lineHeight: 1.4,
-                            }}
-                        >
-                            {probeResult.responseContent}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            <div
-                style={{
-                    marginTop: '1rem',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid rgba(255,255,255,0.05)',
-                }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div
-                    style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: '#94a3b8',
-                        marginBottom: '0.5rem',
-                        textTransform: 'uppercase',
-                    }}
-                >
-                    {t('provider.quick_test')}
-                </div>
-                <div style={flexWrapGap2}>
-                    <textarea
-                        value={testPrompt}
-                        onChange={(e) => setTestPrompt(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleTest(e);
-                            }
-                        }}
-                        placeholder={t('provider.enter_prompt')}
-                        rows={1}
-                        style={{
-                            flex: 1,
-                            minWidth: 120,
-                            padding: '0.5rem 0.75rem',
-                            background: 'rgba(0,0,0,0.2)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '8px',
-                            color: '#fff',
-                            resize: 'none',
-                            fontSize: '0.85rem',
-                            outline: 'none',
-                        }}
-                    />
-                    {apiKey.availableModels && apiKey.availableModels.length > 0 && (
-                        <select
-                            value={testModel}
-                            onChange={(e) => setTestModel(e.target.value)}
-                            style={selectSmall}
-                            aria-label={t('provider.select_model')}
-                        >
-                            <option value="">{t('provider.default_model')}</option>
-                            {apiKey.availableModels.map((m) => (
-                                <option key={m} value={m}>
-                                    {m}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-                    <button
-                        onClick={handleTest}
-                        disabled={!testPrompt.trim() || testStatus === 'loading'}
-                        className="btn-primary"
-                        style={iconBtn36}
-                    >
-                        {testStatus === 'loading' ? (
-                            <Loader2 size={16} className="provider-spin" />
-                        ) : (
-                            <Send size={16} />
-                        )}
-                    </button>
-                </div>
-
-                {testStatus === 'success' && testResult && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        style={successBox}
-                    >
-                        <div style={flexBetweenSuccessLabel}>
-                            <span>{testResult.model}</span>
-                            <span>{testResult.latency}ms</span>
-                        </div>
-                        <div style={textResultBox}>{testResult.content}</div>
-                    </motion.div>
-                )}
-                {testStatus === 'error' && testError && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        style={errorBox}
-                    >
-                        <div style={textErrorLabel}>{t('common.error').toUpperCase()}</div>
-                        <div style={textErrorContent}>{testError}</div>
-                    </motion.div>
-                )}
-            </div>
+            {probeResult && <ProbeResultSection probeResult={probeResult} />}
+            <QuickTestSection apiKey={apiKey} />
         </motion.div>
     );
 };

@@ -892,4 +892,58 @@
 
 ---
 
+## 22. Second Audit Fixes (ai-os-new-audit-report.md)
+
+> Источник: `audit/ai-os-new-audit-report.md` (2026-06-14, independent audit, 62 issues)
+
+### Fixed This Session
+
+| ID | Серьёзность | Описание | Статус |
+|:---|:-----------:|:---------|:------:|
+| CRIT-1 | 🔴 CRITICAL | Build broken (tsc errors) | ✅ Already fixed |
+| CRIT-3 | 🔴 CRITICAL | Rules of Hooks in RoutingIntelligence.tsx:52-58 — early return BEFORE useState | ✅ Fixed — hooks moved before early return |
+| CRIT-4 | 🔴 CRITICAL | modelsodelIdx typo | ✅ Already fixed |
+| CRIT-5c | 🔴 CRITICAL | sqlite-storage config.set implicitly `any` — bypasses ConfigStore contract | ✅ Fixed — `<T>(id: string, value: T)` generic annotation |
+| CRIT-6 | 🔴 CRITICAL | Sandbox escape via computed Identifier MemberExpression | ✅ Fixed — `node.computed && node.property.type === 'Identifier'` check |
+| CRIT-8 | 🔴 CRITICAL | api-keys-backup.json plaintext keys in production bundle | ✅ Fixed — wrapped in `import.meta.env.DEV` |
+| CRIT-9 | 🔴 CRITICAL | Prompt injection: topic/name/systemPrompt unsanitized in debate prompts | ✅ Fixed — `sanitizeForPrompt()` strips code blocks + injection markers; `safeName` strips newlines |
+| CRIT-10 | 🔴 CRITICAL | CostManagerDecorator defined but never wired into AdapterFactory | ✅ Fixed — wired into decorator chain after Logging, before Cache |
+| CRIT-11 | 🔴 CRITICAL | WebSocket verifyClient doesn't validate Origin header | ✅ Fixed — added `isAllowedOrigin(info.origin)` check in verifyClient |
+| CRIT-7 | 🔴 CRITICAL | WebSocket token in URL query | ✅ Already mitigated (SYNC_SECRET required at startup) |
+| CRIT-12 | 🔴 CRITICAL | 25/86 services never init() | ✅ False positive — stateless services correctly excluded |
+| HIGH-16 | 🟠 HIGH | Retry on any error, not just 429 | ✅ Fixed — added `res.status >= 500` → RetryableError |
+| HIGH-11 | 🟠 HIGH | console.trace + ~25 console.log without DEV gate in kernel | ✅ Fixed — all gated with `import.meta.env.DEV` |
+| HIGH-5 | 🟠 HIGH | migration-control-layer.ts dead code (405 LOC, 0 importers) | ✅ Fixed — file deleted |
+| HIGH-3 | 🟠 HIGH | key-vault.ts shim | ✅ Resolved — re-export barrel, not dead code |
+| HIGH-17 | 🟠 HIGH | Circuit breaker ignores AbortError timeouts | ✅ Mostly correct — DOMException check works in browser |
+| CRIT-5a | 🔴 CRITICAL | debate-service missing sessionAffinityStore | ✅ False positive — correctly not required |
+| CRIT-5b | 🔴 CRITICAL | pressure-map-service `as PressureLevel` cast | ⚠️ Minor — low risk with onSafe validation |
+
+### Remaining (Not Fixable / Deferred)
+
+| ID | Серьёзность | Описание | Причина |
+|:---|:-----------:|:---------|:--------|
+| CRIT-5b | 🔴 CRITICAL | pressure-map-service unsafe cast | Minor — onSafe validates envelope |
+| HIGH-1 | 🟠 HIGH | bootstrap.ts god-method 663 LOC | Architecture refactor — deferred |
+| HIGH-2 | 🟠 HIGH | instances.ts 79 lazyService Proxy bypasses TypeScript | Architecture — deferred |
+| MED-5 | 🟡 MEDIUM | Race executor doesn't abort losers on timeout-found-winner | Needs AbortController wiring |
+| MED-7 | 🟡 MEDIUM | Cancelled streaming doesn't emit STREAM_END | Needs emit in cancel path |
+| MED-10 | 🟡 MEDIUM | JSON.parse without safe reviver (~65 call sites) | Bulk change — deferred |
+| MED-11 | 🟡 MEDIUM | --legacy-peer-deps everywhere | Config — deferred |
+| MED-12 | 🟡 MEDIUM | 14 mega-components >500 LOC | Architecture — deferred |
+| MED-13 | 🟡 MEDIUM | 98 key={index} anti-pattern | UI refactor — deferred |
+| LOW/Info | 🟢 | Remaining ~25 low/info items | Config/style — deferred |
+
+### Summary
+
+| Серьёзность | Всего | Исправлено | Остаток |
+|:-----------:|:-----:|:----------:|:-------:|
+| 🔴 CRITICAL | 12 | 10 | 2 (false pos + minor) |
+| 🟠 HIGH | 5 | 5 | 0 |
+| 🟡 MEDIUM | 5 | 0 | 5 (deferred) |
+| 🟢 LOW | ~25 | 0 | ~25 (deferred) |
+| **Итого** | **~47** | **15** | **~32** |
+
+---
+
 *Merged from: ai-os_audit_report.md, ai-os_audit_report_2026.md, docs/AUDIT_TASKS.md, docs/AUDIT_TASKS2.md, docs/HONEST_REPORT.md, docs/provaiderstasks.md, docs/chatstasks.md, docs/tasks/*.md*

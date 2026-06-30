@@ -12,7 +12,6 @@ import type { RolesStore } from '../contracts/storage/roles-store';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
-import { safeJsonParse } from '../../kernel/utils/safe-json';
 const LOGGER = rootLogger.child('RoleService');
 
 export interface RoleUsageStats {
@@ -344,23 +343,8 @@ export class RoleService {
             if (count > 0) {
                 this.roles = await this.deps.rolesStore.toArray();
             } else {
-                const stored = BucketStorageAdapter.getItem('super_agents_roles');
-                if (stored) {
-                    try {
-                        this.roles = safeJsonParse(stored);
-                        await this.deps.rolesStore.bulkAdd(this.roles);
-                        BucketStorageAdapter.removeItem('super_agents_roles');
-                    } catch (e) {
-                        LOGGER.error('RoleService', 'Failed to migrate roles from localStorage', {
-                            error: e,
-                        });
-                        this.roles = DEFAULT_ROLES;
-                        await this.deps.rolesStore.bulkAdd(this.roles);
-                    }
-                } else {
-                    this.roles = DEFAULT_ROLES;
-                    await this.deps.rolesStore.bulkAdd(this.roles);
-                }
+                this.roles = DEFAULT_ROLES;
+                await this.deps.rolesStore.bulkAdd(this.roles);
             }
         } catch (e) {
             LOGGER.error('RoleService', 'Failed to load roles from Dexie', { error: e });

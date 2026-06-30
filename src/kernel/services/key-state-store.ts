@@ -25,10 +25,10 @@ const DEFAULT_QUOTA: KeyQuotaSnapshot = {
 };
 
 /**
- * STATE-M9: Authoritative key state store for routing decisions.
- * KeyStateProjection (projections/) is a separate event-sourced read model
- * for UI display only. Both reduce the same events but serve different
- * purposes: this store feeds getForRouting(), Projection feeds getState().
+ * STATE-M9: Authoritative key state store for routing decisions and UI display.
+ * Single source of truth for key state — ingests probe results, health checks,
+ * and events from the EventBus. Provides getForRouting() for router decisions
+ * and getAll() for UI consumption.
  */
 export class KeyStateStore implements IKeyStateStore, ILifecycle {
     private states = new Map<string, KeyState>();
@@ -257,6 +257,34 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         );
 
         this.unsubs.push(
+            this.eventBus.onSafe<{ id: string; provider: string; status: string; latency: number }>(
+                EVENTS.KEY_HEALTH_CHECK_COMPLETED,
+                (payload) => {
+                    const prev = this.states.get(payload.id);
+                    const status: KeyStatus = payload.status === 'active' ? 'ready' : 'unknown';
+                    this.update(payload.id, {
+                        status,
+                        health: {
+                            ...(prev?.health ?? DEFAULT_HEALTH),
+                            consecutiveErrors:
+                                status === 'ready' ? 0 : (prev?.health.consecutiveErrors ?? 0),
+                            errorRate: status === 'ready' ? 0 : (prev?.health.errorRate ?? 0),
+                            successRate: status === 'ready' ? 1 : (prev?.health.successRate ?? 0),
+                            lastSuccessAt:
+                                status === 'ready' ? Date.now() : prev?.health.lastSuccessAt,
+                        },
+                        lastProbe: {
+                            status,
+                            latency: payload.latency,
+                            timestamp: Date.now(),
+                        },
+                    });
+                    this.recomputeRouting(payload.id);
+                },
+            ),
+        );
+
+        this.unsubs.push(
             this.eventBus.onSafe<{
                 id: string;
                 provider: string;
@@ -362,6 +390,21 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         let weight = hs >= 75 ? 1 : hs >= 50 ? 0.5 : hs >= 25 ? 0.25 : hs >= 10 ? 0.1 : 0;
         if (state.health.consecutiveErrors > 3) weight *= 0.5;
         if (state.flags.authFailed) weight = 0;
+
+        const lifecycleMultiplier =
+            state.lifecycleState === 'active'
+                ? 1
+                : state.lifecycleState === 'probation'
+                  ? 0.7
+                  : state.lifecycleState === 'degraded'
+                    ? 0.4
+                    : state.lifecycleState === 'recovering'
+                      ? 0.5
+                      : state.lifecycleState === 'quarantined'
+                        ? 0
+                        : 1;
+        weight *= lifecycleMultiplier;
+
         // Clear rateLimited flag after 30min (must outlast probe interval 300s to avoid
         // probing rate-limited keys every cycle). Rate limits typically reset in seconds;
         // after 30min a fresh probe will correctly re-evaluate status.
@@ -535,6 +578,21 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
         if (state.health.consecutiveErrors > 3) weight *= 0.5;
         if (state.flags.authFailed) weight = 0;
+
+        // Lifecycle state weight multiplier
+        const lifecycleMultiplier =
+            state.lifecycleState === 'active'
+                ? 1
+                : state.lifecycleState === 'probation'
+                  ? 0.7
+                  : state.lifecycleState === 'degraded'
+                    ? 0.4
+                    : state.lifecycleState === 'recovering'
+                      ? 0.5
+                      : state.lifecycleState === 'quarantined'
+                        ? 0
+                        : 1;
+        weight *= lifecycleMultiplier;
 
         // If key has at least one working model, don't block it entirely
         const hasWorkingModel =

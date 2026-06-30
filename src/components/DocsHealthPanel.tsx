@@ -5,8 +5,8 @@ import {
     XCircle,
     Loader2,
     Shield,
-    Wrench,
     Search,
+    Wrench,
     X,
     FileText,
 } from 'lucide-react';
@@ -16,51 +16,12 @@ import type { ConsistencyReport, HealingPlan } from '../kernel/instances';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import {
-    errorContainer,
-    dismissBtnRed,
-    textMutedXs,
-    textSecondaryXs,
-    textSm,
-    flexBetween,
-    button,
-} from '../styles/common';
-
-const DOC_FILES = [
-    'docs/00-overview.md',
-    'docs/01-system-architecture.md',
-    'docs/02-core-concepts.md',
-    'docs/03-cognitive-layers.md',
-    'docs/04-behavior-modifiers.md',
-    'docs/05-metrics-system.md',
-    'docs/06-interpretation-engine.md',
-    'docs/07-ui-layer.md',
-    'docs/08-data-flow.md',
-    'docs/09-design-principles.md',
-    'docs/10-experiments-framework.md',
-    'docs/events.md',
-    'docs/STRUCTURE.md',
-    'docs/SERVICES_RU.md',
-    'docs/01-system-architecture_RU.md',
-    'docs/02-core-concepts_RU.md',
-    'docs/03-cognitive-layers_RU.md',
-    'docs/04-behavior-modifiers_RU.md',
-    'docs/05-metrics-system_RU.md',
-    'docs/06-interpretation-engine_RU.md',
-    'docs/07-ui-layer_RU.md',
-    'docs/08-data-flow_RU.md',
-    'docs/09-design-principles_RU.md',
-    'docs/10-experiments-framework_RU.md',
-    'docs/00-overview_RU.md',
-    'docs/SYSTEM_MANIFEST.md',
-    'docs/SYSTEM_MANIFEST_RU.md',
-    'docs/SYSTEM_PASSPORT.md',
-    'docs/COGNITIVE_RUNTIME_SPEC.md',
-    'docs/ПОЛНЫЙ_РЕЕСТР.md',
-    'docs/ДЛЯ_ДЕДУШКИ.md',
-    'docs/DEBT_REPORT.md',
-    'docs/BACKLOG_UI.md',
-];
+import { errorContainer, dismissBtnRed, button } from '../styles/common';
+import { DOC_FILES } from './DocsHealthPanel/docs-health-constants';
+import { HealthStatCard } from './DocsHealthPanel/HealthStatCard';
+import { BrokenItemsSection } from './DocsHealthPanel/BrokenItemsSection';
+import { HealingPlanSection } from './DocsHealthPanel/HealingPlanSection';
+import { ByCategorySection } from './DocsHealthPanel/ByCategorySection';
 
 const DocsHealthPanel: React.FC = () => {
     const [report, setReport] = useState<ConsistencyReport | null>(null);
@@ -90,9 +51,7 @@ const DocsHealthPanel: React.FC = () => {
             if (signal.aborted) break;
             try {
                 const resp = await fetch(`/${file}`, { signal });
-                if (resp.ok) {
-                    contents[file] = await resp.text();
-                }
+                if (resp.ok) contents[file] = await resp.text();
             } catch {
                 /* skip unavailable docs */
             }
@@ -161,7 +120,7 @@ const DocsHealthPanel: React.FC = () => {
 
     React.useEffect(() => {
         isMountedRef.current = true;
-        loadLastReport(); // eslint-disable-line react-hooks/set-state-in-effect
+        loadLastReport();
         return () => {
             isMountedRef.current = false;
             abortRef.current?.abort();
@@ -272,379 +231,45 @@ const DocsHealthPanel: React.FC = () => {
                             gap: '1rem',
                         }}
                     >
-                        {[
-                            {
-                                label: t('docs_health.total'),
-                                value: report.total,
-                                color: '#3b82f6',
-                                icon: <FileText size={18} />,
-                            },
-                            {
-                                label: t('docs_health.passed'),
-                                value: report.passed,
-                                color: '#10b981',
-                                icon: <CheckCircle2 size={18} />,
-                            },
-                            {
-                                label: t('docs_health.failed'),
-                                value: report.failed,
-                                color: '#ef4444',
-                                icon: <XCircle size={18} />,
-                            },
-                            {
-                                label: t('docs_health.health'),
-                                value:
-                                    report.total > 0
-                                        ? `${Math.round((report.passed / report.total) * 100)}%`
-                                        : '--',
-                                color:
-                                    (report.total > 0 ? report.passed / report.total : 1) > 0.8
-                                        ? '#10b981'
-                                        : '#f59e0b',
-                                icon: <Shield size={18} />,
-                            },
-                        ].map((stat) => (
-                            <div
-                                key={stat.label}
-                                style={{
-                                    padding: '1.25rem',
-                                    borderRadius: 16,
-                                    border: `1px solid ${stat.color}20`,
-                                    background: `linear-gradient(145deg, ${stat.color}05 0%, rgba(0,0,0,0.2) 100%)`,
-                                    backdropFilter: 'blur(10px)',
-                                }}
-                            >
-                                <div style={flexBetween}>
-                                    <div
-                                        style={{
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            color: '#94a3b8',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.05em',
-                                        }}
-                                    >
-                                        {stat.label}
-                                    </div>
-                                    <div style={{ color: stat.color }}>{stat.icon}</div>
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: '2rem',
-                                        fontWeight: 800,
-                                        color: '#f8fafc',
-                                        marginTop: '0.5rem',
-                                    }}
-                                >
-                                    {stat.value}
-                                </div>
-                            </div>
-                        ))}
+                        <HealthStatCard
+                            label={t('docs_health.total')}
+                            value={report.total}
+                            color="#3b82f6"
+                            icon={<FileText size={18} />}
+                        />
+                        <HealthStatCard
+                            label={t('docs_health.passed')}
+                            value={report.passed}
+                            color="#10b981"
+                            icon={<CheckCircle2 size={18} />}
+                        />
+                        <HealthStatCard
+                            label={t('docs_health.failed')}
+                            value={report.failed}
+                            color="#ef4444"
+                            icon={<XCircle size={18} />}
+                        />
+                        <HealthStatCard
+                            label={t('docs_health.health')}
+                            value={
+                                report.total > 0
+                                    ? `${Math.round((report.passed / report.total) * 100)}%`
+                                    : '--'
+                            }
+                            color={
+                                (report.total > 0 ? report.passed / report.total : 1) > 0.8
+                                    ? '#10b981'
+                                    : '#f59e0b'
+                            }
+                            icon={<Shield size={18} />}
+                        />
                     </div>
 
-                    {brokenItems.length > 0 && (
-                        <div
-                            style={{
-                                padding: '1.5rem',
-                                borderRadius: 16,
-                                border: '1px solid rgba(239,68,68,0.2)',
-                                background: 'rgba(239,68,68,0.03)',
-                            }}
-                        >
-                            <h3
-                                style={{
-                                    fontSize: '1rem',
-                                    fontWeight: 700,
-                                    color: '#fca5a5',
-                                    margin: '0 0 1rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                }}
-                            >
-                                <XCircle size={18} color="#ef4444" /> {t('docs_health.broken')} (
-                                {brokenItems.length})
-                            </h3>
-                            <div
-                                style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-                            >
-                                {brokenItems.map((item, _idx) => (
-                                    <div
-                                        key={item.name}
-                                        style={{
-                                            padding: '0.75rem 1rem',
-                                            borderRadius: 8,
-                                            background: 'rgba(239,68,68,0.05)',
-                                            border: '1px solid rgba(239,68,68,0.1)',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            gap: '0.75rem',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.75rem',
-                                                flex: 1,
-                                                minWidth: 0,
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 700,
-                                                    color: '#64748b',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    whiteSpace: 'nowrap',
-                                                }}
-                                            >
-                                                {item.type}
-                                            </div>
-                                            <div
-                                                style={{
-                                                    fontSize: '0.85rem',
-                                                    color: '#f1f5f9',
-                                                    ...textSm,
-                                                }}
-                                            >
-                                                {item.name}
-                                            </div>
-                                            <div style={textMutedXs}>{item.docFile}</div>
-                                        </div>
-                                        {item.note && (
-                                            <div
-                                                style={{
-                                                    fontSize: '0.75rem',
-                                                    color: '#f59e0b',
-                                                    fontStyle: 'italic',
-                                                }}
-                                            >
-                                                {item.note}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <BrokenItemsSection items={report.items} />
 
-                    {plan && (
-                        <div
-                            style={{
-                                padding: '1.5rem',
-                                borderRadius: 16,
-                                border: '1px solid rgba(245,158,11,0.2)',
-                                background: 'rgba(245,158,11,0.03)',
-                            }}
-                        >
-                            <h3
-                                style={{
-                                    fontSize: '1rem',
-                                    fontWeight: 700,
-                                    color: '#fbbf24',
-                                    margin: '0 0 1rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                }}
-                            >
-                                <Wrench size={18} /> {t('docs_health.healing_plan')}
-                            </h3>
-                            <div
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(3, 1fr)',
-                                    gap: '1rem',
-                                    marginBottom: '1rem',
-                                }}
-                            >
-                                <div>
-                                    <div style={textSecondaryXs}>
-                                        {t('docs_health.total_tasks')}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '1.25rem',
-                                            fontWeight: 700,
-                                            color: '#f8fafc',
-                                        }}
-                                    >
-                                        {plan.totalTasks}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={textSecondaryXs}>
-                                        {t('docs_health.completed_tasks')}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '1.25rem',
-                                            fontWeight: 700,
-                                            color: '#10b981',
-                                        }}
-                                    >
-                                        {plan.completedTasks}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={textSecondaryXs}>
-                                        {t('docs_health.failed_tasks')}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '1.25rem',
-                                            fontWeight: 700,
-                                            color: '#ef4444',
-                                        }}
-                                    >
-                                        {plan.failedTasks}
-                                    </div>
-                                </div>
-                            </div>
-                            {plan.tasks.map((task) => (
-                                <div
-                                    key={task.id}
-                                    style={{
-                                        padding: '0.75rem 1rem',
-                                        borderRadius: 8,
-                                        background: 'rgba(0,0,0,0.2)',
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        marginBottom: '0.5rem',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            marginBottom: '0.5rem',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                fontSize: '0.85rem',
-                                                fontWeight: 600,
-                                                color: '#f1f5f9',
-                                            }}
-                                        >
-                                            {task.docFile}
-                                        </div>
-                                        <span
-                                            style={{
-                                                padding: '0.15rem 0.5rem',
-                                                borderRadius: 999,
-                                                fontSize: '0.7rem',
-                                                fontWeight: 600,
-                                                background:
-                                                    task.status === 'completed'
-                                                        ? 'rgba(16,185,129,0.15)'
-                                                        : task.status === 'failed'
-                                                          ? 'rgba(239,68,68,0.15)'
-                                                          : 'rgba(245,158,11,0.15)',
-                                                color:
-                                                    task.status === 'completed'
-                                                        ? '#10b981'
-                                                        : task.status === 'failed'
-                                                          ? '#ef4444'
-                                                          : '#f59e0b',
-                                            }}
-                                        >
-                                            {task.status}
-                                        </span>
-                                    </div>
-                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                        {task.failedItems.length} {t('docs_health.broken')} —{' '}
-                                        {task.suggestedFixes.length} {t('docs_health.fixes')}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    {plan && <HealingPlanSection plan={plan} />}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div
-                            style={{
-                                padding: '1.5rem',
-                                borderRadius: 16,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                background: 'rgba(0,0,0,0.2)',
-                            }}
-                        >
-                            <h3
-                                style={{
-                                    fontSize: '1rem',
-                                    fontWeight: 700,
-                                    color: '#f1f5f9',
-                                    margin: '0 0 1rem',
-                                }}
-                            >
-                                {t('docs_health.by_category')}
-                            </h3>
-                            {Object.entries(report.byCategory).map(([cat, stats]) => (
-                                <div
-                                    key={cat}
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        padding: '0.4rem 0',
-                                        borderBottom: '1px solid rgba(255,255,255,0.03)',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            fontSize: '0.85rem',
-                                            color: '#e2e8f0',
-                                            textTransform: 'capitalize',
-                                        }}
-                                    >
-                                        {cat}
-                                    </div>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            gap: '0.75rem',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <span style={{ fontSize: '0.75rem', color: '#10b981' }}>
-                                            {stats.passed}/{stats.total}
-                                        </span>
-                                        {stats.failed > 0 && (
-                                            <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>
-                                                -{stats.failed}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div
-                            style={{
-                                padding: '1.5rem',
-                                borderRadius: 16,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                background: 'rgba(0,0,0,0.2)',
-                            }}
-                        >
-                            <h3
-                                style={{
-                                    fontSize: '1rem',
-                                    fontWeight: 700,
-                                    color: '#f1f5f9',
-                                    margin: '0 0 1rem',
-                                }}
-                            >
-                                {t('docs_health.summary')}
-                            </h3>
-                            <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6 }}>
-                                {report.summary}
-                            </div>
-                        </div>
-                    </div>
+                    <ByCategorySection report={report} />
                 </>
             )}
         </div>

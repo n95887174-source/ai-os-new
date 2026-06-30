@@ -7,7 +7,7 @@
     TournamentResult,
     TournamentMatch,
 } from '../../contracts/auto-debate';
-import { rootLogger } from '../logger-service';
+import { rootLogger } from '../../logger-service';
 import type { DebateRole } from '../../contracts/debate-types';
 
 const LOGGER = rootLogger.child('AutoDebateService');
@@ -91,7 +91,7 @@ function pickRandom<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-import { genId } from '../../../utils/gen-id';
+import { genId } from '../../../../utils/gen-id';
 
 function makeParticipantId(): string {
     return genId('auto');
@@ -115,9 +115,7 @@ export interface AutoDebateServiceDeps {
     };
     getKeyStateStore?: () =>
         | {
-              get: (
-                  keyId: string,
-              ) =>
+              get: (keyId: string) =>
                   | {
                         flags?: {
                             authFailed?: boolean;
@@ -151,7 +149,6 @@ export interface AutoDebateServiceDeps {
                 language: string;
             }>,
         ) => Promise<DebateSession>;
-        getSessionById?: (sessionId: string) => DebateSession | null;
     };
 }
 
@@ -241,13 +238,8 @@ export class AutoDebateService implements IAutoDebateService {
         pollMs = 250,
     ): Promise<DebateSession> {
         const startedAt = Date.now();
-        const getCurrentSession = this.deps.debateService.getSessionById;
-        while (true) {
-            const current = getCurrentSession
-                ? (getCurrentSession(session.id) ?? session)
-                : session;
-            if (TERMINAL_SESSION_STATUSES.has(current.status)) return current;
-            if (Date.now() - startedAt >= timeoutMs) break;
+        if (TERMINAL_SESSION_STATUSES.has(session.status)) return session;
+        while (Date.now() - startedAt < timeoutMs) {
             await new Promise((resolve) => setTimeout(resolve, pollMs));
         }
         return session;

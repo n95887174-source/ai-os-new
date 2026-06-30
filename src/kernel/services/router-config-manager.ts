@@ -7,27 +7,20 @@ const DEFAULT_PROFILE_NAME = 'default';
 
 let _instance: RouterConfigManager | null = null;
 
-export function setRouterConfigManagerInstance(manager: RouterConfigManager): void {
+function setRouterConfigManagerInstance(manager: RouterConfigManager): void {
     _instance = manager;
-}
-
-export function getRouterConfigManager(): RouterConfigManager | null {
-    return _instance;
 }
 
 export function getRouterConfig(): RouterConfigSection {
     if (_instance) {
         const c = _instance.getConfig();
         const profile = _instance.getActiveProfile();
+        const { router: r } = CONFIG;
         return {
-            history: c.history,
-            latency: c.latency,
-            activeProfile: c.activeProfile,
-            weightProfiles: c.weightProfiles as RouterConfigSection['weightProfiles'],
-            abTest: c.abTest as RouterConfigSection['abTest'],
+            ...r,
             classification: {
                 ...c.classification,
-                shortThreshold: CONFIG.router.classification.shortThreshold,
+                shortThreshold: r.classification.shortThreshold,
             },
             scoring: {
                 ttftMaxMs: profile.scoring.ttft.maxMs,
@@ -51,10 +44,9 @@ export function getRouterConfig(): RouterConfigSection {
             weights: Object.fromEntries(
                 Object.entries(profile.strategyWeights).map(([k, v]) => [k, { ...v }]),
             ) as RouterConfigSection['weights'],
-            decisionHistoryDefaultLimit: CONFIG.router.decisionHistoryDefaultLimit,
-            raceCandidateCount: CONFIG.router.raceCandidateCount,
-            budgetPenalty: { ...CONFIG.router.budgetPenalty },
-            costEstimate: { ...CONFIG.router.costEstimate },
+            activeProfile: c.activeProfile,
+            weightProfiles: c.weightProfiles as RouterConfigSection['weightProfiles'],
+            abTest: c.abTest as RouterConfigSection['abTest'],
             affinity: c.affinity,
             priority: c.priority,
             providerByComplexity: c.providerByComplexity,

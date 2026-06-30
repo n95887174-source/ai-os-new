@@ -1,100 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    Thermometer,
-    AlertTriangle,
-    RefreshCw,
-    Server,
-    MessageCircle,
-    CheckCircle2,
-    Gauge,
-} from 'lucide-react';
+import { Thermometer, Gauge, Server, MessageCircle, RefreshCw } from 'lucide-react';
 import { pressureMapService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import { getPressureLevelColor } from '../Common/status-vocabulary';
 import type {
     PressureMapSnapshot,
     PressureTrendPoint,
     PressureAlert,
 } from '../../kernel/instances';
+import { CARD, TAB_BTN, pLevelColor } from './pressure-map-constants';
+import PressureGauge from './PressureGauge';
+import TrendChart from './TrendChart';
+import PressureAlerts from './PressureAlerts';
+import { ProviderListItem, SessionListItem, BreakdownGrid } from './BreakdownList';
+import MiniBar from './MiniBar';
 
-function pLevelColor(level: string) {
-    const t = getPressureLevelColor(level);
-    const isLow = level.toLowerCase() === 'low';
-    const r = parseInt(t.slice(1, 3), 16);
-    const g = parseInt(t.slice(3, 5), 16);
-    const b = parseInt(t.slice(5, 7), 16);
-    return {
-        bg: `rgba(${r},${g},${b},${isLow ? 0.1 : 0.12})`,
-        border: `rgba(${r},${g},${b},${isLow ? 0.4 : 0.5})`,
-        text: t,
-    };
-}
-
-const CARD: React.CSSProperties = {
-    background: 'rgba(15,23,42,0.6)',
-    border: '1px solid rgba(148,163,184,0.1)',
-    borderRadius: 12,
-    padding: '1rem',
-    backdropFilter: 'blur(12px)',
-};
-
-function MiniBar({ pct, color }: { pct: number; color: string }) {
-    return (
-        <div
-            style={{
-                width: '100%',
-                height: 4,
-                background: 'rgba(255,255,255,0.06)',
-                borderRadius: 2,
-                overflow: 'hidden',
-            }}
-        >
-            <div
-                style={{
-                    width: `${Math.min(100, pct * 100)}%`,
-                    height: '100%',
-                    background: color,
-                    borderRadius: 2,
-                    transition: 'width 0.5s ease',
-                }}
-            />
-        </div>
-    );
-}
-
-function PressureGauge({ score }: { score: number }) {
-    const level =
-        score >= 0.8 ? 'critical' : score >= 0.6 ? 'high' : score >= 0.35 ? 'normal' : 'low';
-    const c = pLevelColor(level);
-    const r = 36;
-    const circ = 2 * Math.PI * r;
-    const offset = circ - score * circ;
-    return (
-        <svg width={80} height={80} style={{ transform: 'rotate(-90deg)' }}>
-            <circle
-                cx={40}
-                cy={40}
-                r={r}
-                fill="none"
-                stroke="rgba(255,255,255,0.06)"
-                strokeWidth={6}
-            />
-            <circle
-                cx={40}
-                cy={40}
-                r={r}
-                fill="none"
-                stroke={c.text}
-                strokeWidth={6}
-                strokeDasharray={circ}
-                strokeDashoffset={offset}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-            />
-        </svg>
-    );
-}
+const tabMeta = (t: ReturnType<typeof useTranslation>['t']) => [
+    { key: 'global' as const, icon: Gauge, label: t('pressure_map.tab.global'), color: '#f97316' },
+    {
+        key: 'providers' as const,
+        icon: Server,
+        label: (count?: number) => t('pressure_map.tab.providers', { count: count ?? 0 }),
+        color: '#3b82f6',
+    },
+    {
+        key: 'sessions' as const,
+        icon: MessageCircle,
+        label: (count?: number) => t('pressure_map.tab.sessions', { count: count ?? 0 }),
+        color: '#a855f7',
+    },
+];
 
 const PressureMapPanel: React.FC = () => {
     const { t } = useTranslation();
@@ -115,16 +50,15 @@ const PressureMapPanel: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         refresh();
         const interval = setInterval(refresh, 10000);
         return () => clearInterval(interval);
     }, [refresh]);
 
-    const handleAck = (id: string) => {
+    const handleAck = useCallback((id: string) => {
         pressureMapService.acknowledgeAlert(id);
         setAlerts(pressureMapService.getAlerts());
-    };
+    }, []);
 
     if (!snapshot) {
         return (
@@ -135,6 +69,14 @@ const PressureMapPanel: React.FC = () => {
     }
 
     const gc = pLevelColor(snapshot.global.level);
+    const tabs = tabMeta(t);
+
+    const tabBtnStyle = (key: string, color: string): React.CSSProperties => ({
+        ...TAB_BTN,
+        background: activeTab === key ? `${color}26` : 'transparent',
+        color: activeTab === key ? color : '#94a3b8',
+        borderColor: activeTab === key ? `${color}66` : 'rgba(148,163,184,0.15)',
+    });
 
     return (
         <div
@@ -157,53 +99,23 @@ const PressureMapPanel: React.FC = () => {
             </p>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-                <button
-                    onClick={() => setActiveTab('global')}
-                    style={{
-                        ...TAB_BTN,
-                        background:
-                            activeTab === 'global' ? 'rgba(249,115,22,0.15)' : 'transparent',
-                        color: activeTab === 'global' ? '#f97316' : '#94a3b8',
-                        borderColor:
-                            activeTab === 'global'
-                                ? 'rgba(249,115,22,0.4)'
-                                : 'rgba(148,163,184,0.15)',
-                    }}
-                >
-                    <Gauge size={14} /> {t('pressure_map.tab.global')}
-                </button>
-                <button
-                    onClick={() => setActiveTab('providers')}
-                    style={{
-                        ...TAB_BTN,
-                        background:
-                            activeTab === 'providers' ? 'rgba(59,130,246,0.15)' : 'transparent',
-                        color: activeTab === 'providers' ? '#3b82f6' : '#94a3b8',
-                        borderColor:
-                            activeTab === 'providers'
-                                ? 'rgba(59,130,246,0.4)'
-                                : 'rgba(148,163,184,0.15)',
-                    }}
-                >
-                    <Server size={14} />{' '}
-                    {t('pressure_map.tab.providers', { count: snapshot.providers.length })}
-                </button>
-                <button
-                    onClick={() => setActiveTab('sessions')}
-                    style={{
-                        ...TAB_BTN,
-                        background:
-                            activeTab === 'sessions' ? 'rgba(168,85,247,0.15)' : 'transparent',
-                        color: activeTab === 'sessions' ? '#a855f7' : '#94a3b8',
-                        borderColor:
-                            activeTab === 'sessions'
-                                ? 'rgba(168,85,247,0.4)'
-                                : 'rgba(148,163,184,0.15)',
-                    }}
-                >
-                    <MessageCircle size={14} />{' '}
-                    {t('pressure_map.tab.sessions', { count: snapshot.sessions.length })}
-                </button>
+                {tabs.map((tab) => {
+                    const count = tab.key === 'global' ? undefined : snapshot[tab.key]?.length;
+                    return (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            style={tabBtnStyle(tab.key, tab.color)}
+                        >
+                            <tab.icon size={14} />{' '}
+                            {tab.key === 'global'
+                                ? tab.label
+                                : typeof tab.label === 'function'
+                                  ? tab.label(count)
+                                  : tab.label}
+                        </button>
+                    );
+                })}
                 <div style={{ flex: 1 }} />
                 <button
                     onClick={refresh}
@@ -271,145 +183,10 @@ const PressureMapPanel: React.FC = () => {
                         </span>
                     </div>
                 </div>
-
-                <div style={{ ...CARD }}>
-                    <div
-                        style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.08em',
-                            color: '#64748b',
-                            marginBottom: 8,
-                        }}
-                    >
-                        {t('pressure_map.trend')}
-                    </div>
-                    {trends.length === 0 ? (
-                        <div
-                            style={{
-                                color: '#64748b',
-                                fontSize: '0.75rem',
-                                textAlign: 'center',
-                                padding: 20,
-                            }}
-                        >
-                            {t('pressure_map.no_trend')}
-                        </div>
-                    ) : (
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'flex-end',
-                                gap: 2,
-                                height: 80,
-                                padding: '8px 0',
-                            }}
-                        >
-                            {trends
-                                .slice(0, 60)
-                                .reverse()
-                                .map((p, i) => {
-                                    const c = pLevelColor(p.level);
-                                    const h = Math.max(4, p.score * 80);
-                                    return (
-                                        <div
-                                            key={`trend-${i}`}
-                                            style={{
-                                                width: '100%',
-                                                height: h,
-                                                background: c.text,
-                                                borderRadius: '2px 2px 0 0',
-                                                opacity: 0.7 + (i / trends.length) * 0.3,
-                                                transition: 'height 0.3s',
-                                            }}
-                                            title={`${(p.score * 100).toFixed(0)} — ${p.level}`}
-                                        />
-                                    );
-                                })}
-                        </div>
-                    )}
-                    <div
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            fontSize: '0.6rem',
-                            color: '#475569',
-                            marginTop: 4,
-                        }}
-                    >
-                        <span>{t('pressure_map.points', { count: trends.length })}</span>
-                        <span>{t('pressure_map.now')}</span>
-                    </div>
-                </div>
+                <TrendChart trends={trends} />
             </div>
 
-            {alerts.filter((a) => !a.acknowledged).length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                        <AlertTriangle size={14} color="#ef4444" />
-                        <span
-                            style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.08em',
-                                color: '#ef4444',
-                            }}
-                        >
-                            {t('pressure_map.active_alerts', {
-                                count: alerts.filter((a) => !a.acknowledged).length,
-                            })}
-                        </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {alerts
-                            .filter((a) => !a.acknowledged)
-                            .map((a) => (
-                                <div
-                                    key={a.id}
-                                    style={{
-                                        ...CARD,
-                                        borderLeft: `3px solid ${pLevelColor(a.level)?.text || '#64748b'}`,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '0.5rem 0.75rem',
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span
-                                            style={{
-                                                fontSize: '0.65rem',
-                                                fontWeight: 600,
-                                                color: pLevelColor(a.level)?.text,
-                                            }}
-                                        >
-                                            {a.scope}
-                                        </span>
-                                        <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
-                                            {a.message}
-                                        </span>
-                                    </div>
-                                    <button
-                                        onClick={() => handleAck(a.id)}
-                                        style={{
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: 'none',
-                                            borderRadius: 6,
-                                            padding: '4px 8px',
-                                            color: '#94a3b8',
-                                            cursor: 'pointer',
-                                            fontSize: '0.7rem',
-                                        }}
-                                    >
-                                        <CheckCircle2 size={12} /> {t('pressure_map.acknowledge')}
-                                    </button>
-                                </div>
-                            ))}
-                    </div>
-                </div>
-            )}
+            <PressureAlerts alerts={alerts} onAck={handleAck} />
 
             {activeTab === 'global' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -432,36 +209,14 @@ const PressureMapPanel: React.FC = () => {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {snapshot.providers.map((p) => {
-                                    const c = pLevelColor(p.level);
-                                    return (
-                                        <div
-                                            key={p.provider}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 8,
-                                                fontSize: '0.75rem',
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    width: 8,
-                                                    height: 8,
-                                                    borderRadius: '50%',
-                                                    background: c.text,
-                                                }}
-                                            />
-                                            <span style={{ flex: 1, color: '#cbd5e1' }}>
-                                                {p.provider}
-                                            </span>
-                                            <span style={{ color: c.text, fontWeight: 600 }}>
-                                                {(p.score * 100).toFixed(0)}
-                                            </span>
-                                            <MiniBar pct={p.score} color={c.text} />
-                                        </div>
-                                    );
-                                })}
+                                {snapshot.providers.map((p) => (
+                                    <ProviderListItem
+                                        key={p.provider}
+                                        provider={p.provider}
+                                        score={p.score}
+                                        level={p.level}
+                                    />
+                                ))}
                             </div>
                         )}
                     </div>
@@ -484,43 +239,14 @@ const PressureMapPanel: React.FC = () => {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {snapshot.sessions.map((s) => {
-                                    const c = pLevelColor(s.level);
-                                    return (
-                                        <div
-                                            key={s.sessionId}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 8,
-                                                fontSize: '0.75rem',
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    width: 8,
-                                                    height: 8,
-                                                    borderRadius: '50%',
-                                                    background: c.text,
-                                                }}
-                                            />
-                                            <span
-                                                style={{
-                                                    flex: 1,
-                                                    color: '#cbd5e1',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                }}
-                                            >
-                                                {s.topic || s.sessionId.slice(0, 16)}
-                                            </span>
-                                            <span style={{ color: c.text, fontWeight: 600 }}>
-                                                {s.level}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
+                                {snapshot.sessions.map((s) => (
+                                    <SessionListItem
+                                        key={s.sessionId}
+                                        topic={s.topic}
+                                        sessionId={s.sessionId}
+                                        level={s.level}
+                                    />
+                                ))}
                             </div>
                         )}
                     </div>
@@ -578,22 +304,7 @@ const PressureMapPanel: React.FC = () => {
                                             {(p.score * 100).toFixed(0)}
                                         </span>
                                     </div>
-                                    <div
-                                        style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '1fr 1fr',
-                                            gap: '2px 12px',
-                                            fontSize: '0.7rem',
-                                            color: '#94a3b8',
-                                        }}
-                                    >
-                                        {Object.entries(p.breakdown).map(([k, v]) => (
-                                            <React.Fragment key={k}>
-                                                <span style={{ color: '#64748b' }}>{k}</span>
-                                                <span>{(v * 100).toFixed(0)}%</span>
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
+                                    <BreakdownGrid breakdown={p.breakdown} />
                                     <div style={{ marginTop: 8 }}>
                                         <MiniBar pct={p.score} color={c.text} />
                                     </div>
@@ -656,22 +367,7 @@ const PressureMapPanel: React.FC = () => {
                                             {s.level}
                                         </span>
                                     </div>
-                                    <div
-                                        style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '1fr 1fr',
-                                            gap: '2px 12px',
-                                            fontSize: '0.7rem',
-                                            color: '#94a3b8',
-                                        }}
-                                    >
-                                        {Object.entries(s.breakdown).map(([k, v]) => (
-                                            <React.Fragment key={k}>
-                                                <span style={{ color: '#64748b' }}>{k}</span>
-                                                <span>{(v * 100).toFixed(0)}%</span>
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
+                                    <BreakdownGrid breakdown={s.breakdown} />
                                 </div>
                             );
                         })
@@ -685,18 +381,6 @@ const PressureMapPanel: React.FC = () => {
             />
         </div>
     );
-};
-
-const TAB_BTN: React.CSSProperties = {
-    padding: '0.4rem 0.75rem',
-    borderRadius: 8,
-    border: '1px solid',
-    cursor: 'pointer',
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
 };
 
 export default PressureMapPanel;

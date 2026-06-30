@@ -4,73 +4,11 @@ import { motion } from 'framer-motion';
 import { useNow } from '../hooks/useNow';
 import { rootLogger } from '../kernel/instances';
 import { useTranslation } from '../i18n/useTranslation';
-import { errorContainer, dismissBtnRed, textMutedXs, textWhiteXs } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs } from '../styles/common';
 import type { LogEntry } from '../kernel/contracts/logger';
-
-interface ServiceStats {
-    service: string;
-    count: number;
-    totalLatency: number;
-    avgLatency: number;
-    p50: number;
-    p95: number;
-    p99: number;
-    max: number;
-    min: number;
-    errorCount: number;
-    warnCount: number;
-    lastSeen: number;
-}
-
-function computePercentiles(sorted: number[], p: number): number {
-    if (sorted.length === 0) return 0;
-    const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * p));
-    return sorted[idx];
-}
-
-function aggregate(entries: ReadonlyArray<LogEntry>): ServiceStats[] {
-    const byService = new Map<string, number[]>();
-    const errorCount = new Map<string, number>();
-    const warnCount = new Map<string, number>();
-    const lastSeen = new Map<string, number>();
-    for (const e of entries) {
-        if (e.service && typeof e.latency === 'number' && e.latency > 0) {
-            const list = byService.get(e.service) ?? [];
-            list.push(e.latency);
-            byService.set(e.service, list);
-            const t = e.timestamp;
-            if (!lastSeen.has(e.service) || (lastSeen.get(e.service) ?? 0) < t)
-                lastSeen.set(e.service, t);
-        }
-        if (e.level === 'error')
-            errorCount.set(
-                e.service ?? 'unknown',
-                (errorCount.get(e.service ?? 'unknown') ?? 0) + 1,
-            );
-        if (e.level === 'warn')
-            warnCount.set(e.service ?? 'unknown', (warnCount.get(e.service ?? 'unknown') ?? 0) + 1);
-    }
-    const out: ServiceStats[] = [];
-    for (const [service, lats] of byService.entries()) {
-        const sorted = [...lats].sort((a, b) => a - b);
-        const sum = sorted.reduce((s, v) => s + v, 0);
-        out.push({
-            service,
-            count: sorted.length,
-            totalLatency: sum,
-            avgLatency: sum / sorted.length,
-            p50: computePercentiles(sorted, 0.5),
-            p95: computePercentiles(sorted, 0.95),
-            p99: computePercentiles(sorted, 0.99),
-            max: sorted[sorted.length - 1] ?? 0,
-            min: sorted[0] ?? 0,
-            errorCount: errorCount.get(service) ?? 0,
-            warnCount: warnCount.get(service) ?? 0,
-            lastSeen: lastSeen.get(service) ?? 0,
-        });
-    }
-    return out.sort((a, b) => b.avgLatency - a.avgLatency);
-}
+import { aggregate } from './PerformanceProfilerPanel/profiler-utils';
+import { StatBox } from './PerformanceProfilerPanel/components';
+import { ServiceDetailPanel } from './PerformanceProfilerPanel/ServiceDetailPanel';
 
 export const PerformanceProfilerPanel: React.FC = () => {
     const { t } = useTranslation();
@@ -99,7 +37,6 @@ export const PerformanceProfilerPanel: React.FC = () => {
         totalSamples === 0 ? 0 : stats.reduce((s, x) => s + x.totalLatency, 0) / totalSamples;
     const totalErrors = entries.filter((e) => e.level === 'error').length;
     const totalWarns = entries.filter((e) => e.level === 'warn').length;
-
     const slowServices = useMemo(() => stats.filter((s) => s.p95 > 2000).slice(0, 5), [stats]);
 
     if (stats.length === 0) {
@@ -304,187 +241,18 @@ export const PerformanceProfilerPanel: React.FC = () => {
                 (() => {
                     const sel = stats.find((s) => s.service === selectedService);
                     if (!sel) return null;
-                    const recent = entries
-                        .filter(
-                            (e) => e.service === selectedService && typeof e.latency === 'number',
-                        )
-                        .slice(-20)
-                        .reverse();
-                    const all = entries.filter((e) => e.service === selectedService);
-                    const oneMinuteAgo = now - 60_000;
-                    const lastMinute = all.filter((e) => e.timestamp >= oneMinuteAgo).length;
                     return (
-                        <div
-                            style={{
-                                padding: '0.75rem',
-                                borderRadius: 8,
-                                border: '1px solid rgba(168,85,247,0.2)',
-                                background: 'rgba(168,85,247,0.05)',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: '0.5rem',
-                                }}
-                            >
-                                <h3 style={{ margin: 0, fontSize: '0.95rem', color: '#f8fafc' }}>
-                                    {selectedService}
-                                </h3>
-                                <button
-                                    onClick={() => setSelectedService(null)}
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#94a3b8',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-                            <div
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(4, 1fr)',
-                                    gap: '0.4rem',
-                                    marginBottom: '0.75rem',
-                                }}
-                            >
-                                <MiniStat
-                                    label="min"
-                                    value={`${sel.min.toFixed(0)}ms`}
-                                    color="#10b981"
-                                />
-                                <MiniStat
-                                    label="max"
-                                    value={`${sel.max.toFixed(0)}ms`}
-                                    color="#ef4444"
-                                />
-                                <MiniStat
-                                    label="total"
-                                    value={`${sel.totalLatency.toFixed(0)}ms`}
-                                    color="#f59e0b"
-                                />
-                                <MiniStat
-                                    label="last 60s"
-                                    value={lastMinute.toString()}
-                                    color="#a855f7"
-                                />
-                            </div>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-end',
-                                    gap: 2,
-                                    height: 50,
-                                    padding: '0.4rem 0',
-                                    borderTop: '1px solid rgba(255,255,255,0.05)',
-                                    borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                }}
-                            >
-                                {recent.map((e, i) => {
-                                    const lat = e.latency ?? 0;
-                                    const maxLat = Math.max(
-                                        ...recent.map((r) => r.latency ?? 0),
-                                        1,
-                                    );
-                                    const h = Math.max(2, (lat / maxLat) * 50);
-                                    const color =
-                                        lat > 2000 ? '#ef4444' : lat > 500 ? '#f59e0b' : '#10b981';
-                                    return (
-                                        <div
-                                            key={`lat-${i}`}
-                                            style={{
-                                                flex: 1,
-                                                height: h,
-                                                background: color,
-                                                borderRadius: 1,
-                                                minWidth: 2,
-                                            }}
-                                            title={`${lat}ms`}
-                                        />
-                                    );
-                                })}
-                            </div>
-                            <div
-                                style={{
-                                    marginTop: '0.4rem',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 2,
-                                }}
-                            >
-                                {recent.slice(0, 5).map((e, _i) => (
-                                    <div
-                                        key={e.timestamp}
-                                        style={{
-                                            display: 'flex',
-                                            gap: 8,
-                                            fontSize: '0.7rem',
-                                            color: '#94a3b8',
-                                            fontFamily: 'ui-monospace, monospace',
-                                        }}
-                                    >
-                                        <span style={{ minWidth: 70 }}>
-                                            {new Date(e.timestamp).toISOString().slice(11, 19)}
-                                        </span>
-                                        <span
-                                            style={{
-                                                color: '#cbd5e1',
-                                                flex: 1,
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                            }}
-                                        >
-                                            {e.message.slice(0, 80)}
-                                        </span>
-                                        <span style={{ color: '#a78bfa' }}>{e.latency}ms</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <ServiceDetailPanel
+                            service={sel}
+                            entries={entries}
+                            now={now}
+                            onClose={() => setSelectedService(null)}
+                        />
                     );
                 })()}
         </div>
     );
 };
-
-const StatBox: React.FC<{
-    icon: React.ReactNode;
-    label: string;
-    value: string | number;
-    color: string;
-}> = ({ icon, label, value, color }) => (
-    <div
-        style={{
-            padding: '0.4rem 0.6rem',
-            borderRadius: 8,
-            border: `1px solid ${color}20`,
-            background: `linear-gradient(145deg, ${color}05, rgba(0,0,0,0.2))`,
-        }}
-    >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-            {icon}
-            <span style={{ ...textMutedXs, fontSize: '0.65rem' }}>{label}</span>
-        </div>
-        <div style={{ ...textWhiteXs, fontSize: '0.95rem', fontWeight: 700, color }}>{value}</div>
-    </div>
-);
-
-const MiniStat: React.FC<{ label: string; value: string; color: string }> = ({
-    label,
-    value,
-    color,
-}) => (
-    <div style={{ padding: '0.25rem 0.4rem', borderRadius: 4, background: 'rgba(0,0,0,0.2)' }}>
-        <div style={{ ...textMutedXs, fontSize: '0.6rem' }}>{label}</div>
-        <div style={{ color, fontSize: '0.8rem', fontWeight: 600 }}>{value}</div>
-    </div>
-);
 
 const LatencyCell: React.FC<{ value: number; highlight?: boolean }> = ({ value, highlight }) => {
     const color = value > 2000 ? '#fca5a5' : value > 500 ? '#fcd34d' : '#86efac';

@@ -4,8 +4,6 @@ import {
     Search,
     Download,
     Trash2,
-    ChevronDown,
-    ChevronRight,
     X,
     Loader2,
     Clock,
@@ -14,52 +12,17 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
-import { storageAdapter } from '../kernel/instances';
-import {
-    errorContainer,
-    dismissBtnRed,
-    textMutedXs,
-    textSecondaryXs,
-    textWhiteXs,
-} from '../styles/common';
+import { errorContainer, dismissBtnRed } from '../styles/common';
 import { useConfirm } from '../hooks/useConfirm';
-import { safeJsonParse } from '../kernel/utils/safe-json';
-
-const STORAGE_KEY = 'provider_decisions_v1';
-const MAX_DECISIONS = 500;
-
-export interface ProviderDecisionEntry {
-    id: string;
-    timestamp: number;
-    requestType: string;
-    promptPreview: string;
-    chosenProvider: string;
-    chosenModel: string;
-    chosenKeyId: string;
-    reason: string;
-    rejectedKeys: Array<{ provider: string; model: string; keyId: string; reason: string }>;
-    latencyMs: number;
-    estimatedCost: number;
-    tokensEstimate: number;
-    scoring: { reliability: number; latency: number; cost: number; ttft: number; tps: number };
-    policyApplied: string[];
-}
-
-function loadFromStorage(): ProviderDecisionEntry[] {
-    try {
-        const raw = storageAdapter.getItem(STORAGE_KEY);
-        if (!raw) return [];
-        const parsed: unknown = safeJsonParse(raw);
-        return Array.isArray(parsed) ? (parsed as ProviderDecisionEntry[]) : [];
-    } catch {
-        return [];
-    }
-}
+import { STORAGE_KEY, MAX_DECISIONS, loadFromStorage } from './DecisionLogPanel/decision-log-types';
+import { StatBox } from './DecisionLogPanel/StatBox';
+import { DecisionCard } from './DecisionLogPanel/DecisionCard';
+import { storageAdapter } from '../kernel/instances';
 
 const DecisionLogPanel: React.FC = () => {
     const { t } = useTranslation();
     const { confirm, ConfirmDialog } = useConfirm();
-    const [decisions, setDecisions] = useState<ProviderDecisionEntry[]>([]);
+    const [decisions, setDecisions] = useState<ReturnType<typeof loadFromStorage>>([]);
     const [search, setSearch] = useState('');
     const [providerFilter, setProviderFilter] = useState<string>('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -122,9 +85,8 @@ const DecisionLogPanel: React.FC = () => {
                 !d.chosenModel.toLowerCase().includes(q) &&
                 !d.promptPreview.toLowerCase().includes(q) &&
                 !d.reason.toLowerCase().includes(q)
-            ) {
+            )
                 return false;
-            }
         }
         if (providerFilter && d.chosenProvider !== providerFilter) return false;
         return true;
@@ -324,298 +286,26 @@ const DecisionLogPanel: React.FC = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <AnimatePresence>
-                    {filtered.slice(0, MAX_DECISIONS).map((d) => {
-                        const isExpanded = expandedId === d.id;
-                        return (
-                            <motion.div
-                                key={d.id}
-                                initial={{ opacity: 0, y: 4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                style={{
-                                    borderRadius: 8,
-                                    border: '1px solid rgba(255,255,255,0.05)',
-                                    background: 'rgba(0,0,0,0.2)',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <div
-                                    onClick={() => setExpandedId(isExpanded ? null : d.id)}
-                                    style={{
-                                        padding: '0.5rem 0.75rem',
-                                        display: 'grid',
-                                        gridTemplateColumns: 'auto 1fr auto auto auto auto',
-                                        gap: 8,
-                                        alignItems: 'center',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    {isExpanded ? (
-                                        <ChevronDown size={14} color="#94a3b8" />
-                                    ) : (
-                                        <ChevronRight size={14} color="#94a3b8" />
-                                    )}
-                                    <div style={{ minWidth: 0 }}>
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 6,
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    padding: '0.1rem 0.5rem',
-                                                    borderRadius: 6,
-                                                    background: 'rgba(16,185,129,0.15)',
-                                                    color: '#6ee7b7',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 600,
-                                                }}
-                                            >
-                                                {d.chosenProvider}
-                                            </span>
-                                            <span style={textWhiteXs}>{d.chosenModel}</span>
-                                        </div>
-                                        <div style={{ ...textMutedXs, marginTop: 2 }}>
-                                            {d.promptPreview.slice(0, 80)}
-                                            {d.promptPreview.length > 80 ? '...' : ''}
-                                        </div>
-                                    </div>
-                                    <span style={textMutedXs}>{d.latencyMs}ms</span>
-                                    <span style={{ ...textSecondaryXs, color: '#fbbf24' }}>
-                                        ${d.estimatedCost.toFixed(4)}
-                                    </span>
-                                    <span style={textMutedXs}>
-                                        {new Date(d.timestamp).toLocaleTimeString()}
-                                    </span>
-                                </div>
-                                <AnimatePresence>
-                                    {isExpanded && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            style={{
-                                                overflow: 'hidden',
-                                                borderTop: '1px solid rgba(255,255,255,0.05)',
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    padding: '0.75rem 1rem',
-                                                    display: 'grid',
-                                                    gridTemplateColumns: '1fr 1fr',
-                                                    gap: '1rem',
-                                                }}
-                                            >
-                                                <div>
-                                                    <div style={textSecondaryXs}>
-                                                        {t('decision_log.reason')}
-                                                    </div>
-                                                    <div
-                                                        style={{
-                                                            ...textWhiteXs,
-                                                            fontSize: '0.85rem',
-                                                            marginTop: 4,
-                                                        }}
-                                                    >
-                                                        {d.reason}
-                                                    </div>
-                                                    {d.policyApplied.length > 0 && (
-                                                        <>
-                                                            <div
-                                                                style={{
-                                                                    ...textSecondaryXs,
-                                                                    marginTop: 12,
-                                                                }}
-                                                            >
-                                                                {t('decision_log.policies')}
-                                                            </div>
-                                                            <div
-                                                                style={{
-                                                                    display: 'flex',
-                                                                    gap: 4,
-                                                                    flexWrap: 'wrap',
-                                                                    marginTop: 4,
-                                                                }}
-                                                            >
-                                                                {d.policyApplied.map((p) => (
-                                                                    <span
-                                                                        key={p}
-                                                                        style={{
-                                                                            padding:
-                                                                                '0.1rem 0.4rem',
-                                                                            borderRadius: 6,
-                                                                            background:
-                                                                                'rgba(59,130,246,0.1)',
-                                                                            color: '#93c5fd',
-                                                                            fontSize: '0.7rem',
-                                                                        }}
-                                                                    >
-                                                                        {p}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                    <div
-                                                        style={{
-                                                            ...textSecondaryXs,
-                                                            marginTop: 12,
-                                                        }}
-                                                    >
-                                                        {t('decision_log.scoring')}
-                                                    </div>
-                                                    <div
-                                                        style={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: 'repeat(2, 1fr)',
-                                                            gap: 4,
-                                                            marginTop: 4,
-                                                        }}
-                                                    >
-                                                        <ScoreRow
-                                                            label="reliability"
-                                                            value={d.scoring.reliability}
-                                                        />
-                                                        <ScoreRow
-                                                            label="latency"
-                                                            value={d.scoring.latency}
-                                                        />
-                                                        <ScoreRow
-                                                            label="cost"
-                                                            value={d.scoring.cost}
-                                                        />
-                                                        <ScoreRow
-                                                            label="ttft"
-                                                            value={d.scoring.ttft}
-                                                        />
-                                                        <ScoreRow
-                                                            label="tps"
-                                                            value={d.scoring.tps}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={textSecondaryXs}>
-                                                        {t('decision_log.rejected', {
-                                                            count: d.rejectedKeys.length,
-                                                        })}
-                                                    </div>
-                                                    {d.rejectedKeys.length === 0 ? (
-                                                        <div style={textMutedXs}>
-                                                            {t('decision_log.no_rejections')}
-                                                        </div>
-                                                    ) : (
-                                                        <div
-                                                            style={{
-                                                                marginTop: 4,
-                                                                display: 'flex',
-                                                                flexDirection: 'column',
-                                                                gap: 4,
-                                                                maxHeight: 200,
-                                                                overflow: 'auto',
-                                                            }}
-                                                        >
-                                                            {d.rejectedKeys.map((r, _i) => (
-                                                                <div
-                                                                    key={`${r.provider}-${r.model}`}
-                                                                    style={{
-                                                                        padding: '0.3rem 0.5rem',
-                                                                        borderRadius: 6,
-                                                                        background:
-                                                                            'rgba(0,0,0,0.2)',
-                                                                        border: '1px solid rgba(255,255,255,0.05)',
-                                                                    }}
-                                                                >
-                                                                    <div
-                                                                        style={{
-                                                                            ...textWhiteXs,
-                                                                            fontSize: '0.75rem',
-                                                                        }}
-                                                                    >
-                                                                        {r.provider} / {r.model}
-                                                                    </div>
-                                                                    <div
-                                                                        style={{
-                                                                            ...textMutedXs,
-                                                                            fontSize: '0.7rem',
-                                                                        }}
-                                                                    >
-                                                                        {r.reason}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </motion.div>
-                        );
-                    })}
+                    {filtered.slice(0, MAX_DECISIONS).map((d) => (
+                        <DecisionCard
+                            key={d.id}
+                            entry={d}
+                            isExpanded={expandedId === d.id}
+                            onToggle={() => setExpandedId(expandedId === d.id ? null : d.id)}
+                        />
+                    ))}
                 </AnimatePresence>
                 {decisions.length === 0 && (
                     <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
                         <ClipboardList size={48} color="#475569" />
                         <p style={{ marginTop: '1rem' }}>{t('decision_log.empty')}</p>
-                        <p style={textMutedXs}>{t('decision_log.empty_hint')}</p>
                     </div>
                 )}
             </div>
+
             <ConfirmDialog />
         </div>
     );
 };
-
-const StatBox: React.FC<{
-    icon: React.ReactNode;
-    label: string;
-    value: string | number;
-    color: string;
-}> = ({ icon, label, value, color }) => (
-    <div
-        style={{
-            padding: '0.5rem 0.75rem',
-            borderRadius: 8,
-            border: `1px solid ${color}20`,
-            background: `linear-gradient(145deg, ${color}05, rgba(0,0,0,0.2))`,
-        }}
-    >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-            {icon}
-            <span style={{ ...textMutedXs, fontSize: '0.65rem' }}>{label}</span>
-        </div>
-        <div style={{ ...textWhiteXs, fontSize: '1.1rem', fontWeight: 700, color }}>{value}</div>
-    </div>
-);
-
-const ScoreRow: React.FC<{ label: string; value: number }> = ({ label, value }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem' }}>
-        <span style={{ color: '#94a3b8', minWidth: 60 }}>{label}</span>
-        <div
-            style={{
-                flex: 1,
-                height: 4,
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: 2,
-                overflow: 'hidden',
-            }}
-        >
-            <div
-                style={{
-                    height: '100%',
-                    width: `${value * 100}%`,
-                    background: value > 0.7 ? '#10b981' : value > 0.4 ? '#f59e0b' : '#ef4444',
-                }}
-            />
-        </div>
-        <span style={{ color: '#cbd5e1', minWidth: 30, textAlign: 'right' }}>
-            {(value * 100).toFixed(0)}%
-        </span>
-    </div>
-);
 
 export default DecisionLogPanel;

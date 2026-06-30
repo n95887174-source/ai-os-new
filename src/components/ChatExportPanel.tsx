@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { FileDown, FileJson, FileText, Code, Copy, Check, FileType, Loader2 } from 'lucide-react';
+import { FileDown, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import {
@@ -8,26 +8,14 @@ import {
     exportChatToJSON,
     exportChatToHtml,
 } from '../utils/chat-export';
-import {
-    errorContainer,
-    dismissBtnRed,
-    textMutedXs,
-    textSecondaryXs,
-    textWhiteXs,
-} from '../styles/common';
-import { X } from 'lucide-react';
+import { errorContainer, dismissBtnRed } from '../styles/common';
 import { useChatStore } from '../stores/chat/store';
 import { safeJsonParse } from '../kernel/utils/safe-json';
-
-interface ChatPreview {
-    id: string;
-    title: string;
-    model?: string;
-    provider?: string;
-    createdAt?: number;
-    updatedAt?: number;
-    messages: Array<{ role: 'user' | 'assistant' | 'system' | 'tool'; content: string }>;
-}
+import { SourcePanel } from './ChatExportPanel/SourcePanel';
+import { FormatPanel } from './ChatExportPanel/FormatPanel';
+import { ExportActions } from './ChatExportPanel/ExportActions';
+import { PreviewPane } from './ChatExportPanel/PreviewPane';
+import type { ChatPreview } from './ChatExportPanel/chat-export-types';
 
 const ChatExportPanel: React.FC = () => {
     const { t } = useTranslation();
@@ -40,12 +28,10 @@ const ChatExportPanel: React.FC = () => {
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const isMountedRef = useRef(true);
 
     const loadFromSession = useCallback(() => {
         try {
-            // Load from ChatStore (backed by Dexie SessionStore) instead of dead localStorage key
             const { sessions } = useChatStore.getState();
             if (!sessions || sessions.length === 0) {
                 setError(t('chat_export.no_sessions'));
@@ -63,18 +49,16 @@ const ChatExportPanel: React.FC = () => {
                 provider: last.currentProvider,
                 createdAt: last.createdAt,
                 updatedAt: last.updatedAt,
-                messages: last.history.map((m: { role?: string; text: string }) => {
-                    return {
-                        role:
-                            m.role === 'user' ||
-                            m.role === 'assistant' ||
-                            m.role === 'system' ||
-                            m.role === 'tool'
-                                ? m.role
-                                : 'user',
-                        content: typeof m.text === 'string' ? m.text : '',
-                    };
-                }),
+                messages: last.history.map((m: { role?: string; text: string }) => ({
+                    role:
+                        m.role === 'user' ||
+                        m.role === 'assistant' ||
+                        m.role === 'system' ||
+                        m.role === 'tool'
+                            ? m.role
+                            : 'user',
+                    content: typeof m.text === 'string' ? m.text : '',
+                })),
             });
             setSourceMode('session');
         } catch (err) {
@@ -176,18 +160,7 @@ const ChatExportPanel: React.FC = () => {
         if (!chat) return;
         setBusy(true);
         try {
-            exportAndDownload(
-                {
-                    id: chat.id,
-                    title: chat.title,
-                    model: chat.model,
-                    provider: chat.provider,
-                    createdAt: chat.createdAt,
-                    updatedAt: chat.updatedAt,
-                    messages: chat.messages,
-                },
-                format,
-            );
+            exportAndDownload(chat, format);
         } finally {
             setTimeout(() => {
                 if (isMountedRef.current) setBusy(false);
@@ -201,7 +174,7 @@ const ChatExportPanel: React.FC = () => {
             includeTimestamps: includeMeta,
             includeModel: includeMeta,
             includeProvider: includeMeta,
-            includeStats: includeStats,
+            includeStats,
         };
         const text =
             format === 'md'
@@ -215,9 +188,7 @@ const ChatExportPanel: React.FC = () => {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
             })
-            .catch(() => {
-                setError(t('chat_export.copy_failed'));
-            });
+            .catch(() => setError(t('chat_export.copy_failed')));
     }, [chat, format, includeMeta, includeStats, t]);
 
     const preview = React.useMemo(() => {
@@ -226,7 +197,7 @@ const ChatExportPanel: React.FC = () => {
             includeTimestamps: includeMeta,
             includeModel: includeMeta,
             includeProvider: includeMeta,
-            includeStats: includeStats,
+            includeStats,
         };
         if (format === 'md') return exportChatToMarkdown(chat, opts);
         if (format === 'json') return exportChatToJSON(chat);
@@ -279,324 +250,38 @@ const ChatExportPanel: React.FC = () => {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div
-                    style={{
-                        padding: '1rem',
-                        borderRadius: 12,
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        background: 'rgba(0,0,0,0.2)',
-                    }}
-                >
-                    <h3
-                        style={{
-                            fontSize: '0.95rem',
-                            fontWeight: 700,
-                            color: '#f1f5f9',
-                            margin: '0 0 0.75rem',
-                        }}
-                    >
-                        {t('chat_export.source')}
-                    </h3>
-                    <div style={{ display: 'flex', gap: 6, marginBottom: '0.75rem' }}>
-                        <button
-                            onClick={() => setSourceMode('paste')}
-                            style={{
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: 6,
-                                border: 'none',
-                                background:
-                                    sourceMode === 'paste' ? '#3b82f6' : 'rgba(59,130,246,0.15)',
-                                color: '#fff',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                            }}
-                        >
-                            {t('chat_export.paste')}
-                        </button>
-                        <button
-                            onClick={() => {
-                                setSourceMode('file');
-                                fileInputRef.current?.click();
-                            }}
-                            style={{
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: 6,
-                                border: 'none',
-                                background:
-                                    sourceMode === 'file' ? '#3b82f6' : 'rgba(59,130,246,0.15)',
-                                color: '#fff',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                            }}
-                        >
-                            {t('chat_export.from_file')}
-                        </button>
-                        <button
-                            onClick={() => {
-                                setSourceMode('session');
-                                loadFromSession();
-                            }}
-                            style={{
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: 6,
-                                border: 'none',
-                                background:
-                                    sourceMode === 'session' ? '#a855f7' : 'rgba(168,85,247,0.15)',
-                                color: sourceMode === 'session' ? '#fff' : '#c4b5fd',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                            }}
-                        >
-                            {t('chat_export.from_session')}
-                        </button>
-                    </div>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".json,application/json"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) loadFromFile(f);
-                        }}
-                    />
-                    {sourceMode === 'paste' && (
-                        <textarea
-                            value={pasted}
-                            onChange={(e) => setPasted(e.target.value)}
-                            placeholder='{"messages": [{"role":"user","content":"hi"}]}'
-                            style={{
-                                width: '100%',
-                                height: 140,
-                                padding: '0.5rem',
-                                borderRadius: 6,
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                background: 'rgba(0,0,0,0.3)',
-                                color: '#e2e8f0',
-                                fontFamily: 'monospace',
-                                fontSize: '0.75rem',
-                                resize: 'vertical',
-                            }}
-                        />
-                    )}
-                    {sourceMode === 'paste' && (
-                        <button
-                            onClick={loadFromPaste}
-                            style={{
-                                marginTop: '0.5rem',
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: 6,
-                                border: 'none',
-                                background: '#10b981',
-                                color: '#fff',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                            }}
-                        >
-                            {t('chat_export.load')}
-                        </button>
-                    )}
-                </div>
-
-                <div
-                    style={{
-                        padding: '1rem',
-                        borderRadius: 12,
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        background: 'rgba(0,0,0,0.2)',
-                    }}
-                >
-                    <h3
-                        style={{
-                            fontSize: '0.95rem',
-                            fontWeight: 700,
-                            color: '#f1f5f9',
-                            margin: '0 0 0.75rem',
-                        }}
-                    >
-                        {t('chat_export.format')}
-                    </h3>
-                    <div style={{ display: 'flex', gap: 6, marginBottom: '0.75rem' }}>
-                        {(['md', 'json', 'html'] as const).map((f) => (
-                            <button
-                                key={f}
-                                onClick={() => setFormat(f)}
-                                style={{
-                                    padding: '0.4rem 0.8rem',
-                                    borderRadius: 6,
-                                    border: 'none',
-                                    background: format === f ? '#10b981' : 'rgba(16,185,129,0.15)',
-                                    color: '#fff',
-                                    cursor: 'pointer',
-                                    fontSize: '0.8rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                }}
-                            >
-                                {f === 'md' ? (
-                                    <FileText size={14} />
-                                ) : f === 'json' ? (
-                                    <FileJson size={14} />
-                                ) : (
-                                    <Code size={14} />
-                                )}
-                                {f.toUpperCase()}
-                            </button>
-                        ))}
-                    </div>
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 6,
-                            fontSize: '0.8rem',
-                        }}
-                    >
-                        <label
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                color: '#cbd5e1',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={includeMeta}
-                                onChange={(e) => setIncludeMeta(e.target.checked)}
-                            />
-                            {t('chat_export.include_meta')}
-                        </label>
-                        <label
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                color: '#cbd5e1',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={includeStats}
-                                onChange={(e) => setIncludeStats(e.target.checked)}
-                            />
-                            {t('chat_export.include_stats')}
-                        </label>
-                    </div>
-                </div>
+                <SourcePanel
+                    sourceMode={sourceMode}
+                    pasted={pasted}
+                    onSourceModeChange={setSourceMode}
+                    onPasteChange={setPasted}
+                    onLoadPaste={loadFromPaste}
+                    onFileSelected={loadFromFile}
+                    onLoadSession={loadFromSession}
+                />
+                <FormatPanel
+                    format={format}
+                    includeMeta={includeMeta}
+                    includeStats={includeStats}
+                    onFormatChange={setFormat}
+                    onIncludeMetaChange={setIncludeMeta}
+                    onIncludeStatsChange={setIncludeStats}
+                />
             </div>
 
             {chat && (
-                <>
-                    <div
-                        style={{
-                            display: 'flex',
-                            gap: '0.5rem',
-                            alignItems: 'center',
-                            padding: '0.75rem 1rem',
-                            borderRadius: 10,
-                            background: 'rgba(16,185,129,0.08)',
-                            border: '1px solid rgba(16,185,129,0.2)',
-                        }}
-                    >
-                        <FileType size={16} color="#10b981" />
-                        <div style={{ flex: 1 }}>
-                            <div style={textWhiteXs}>{chat.title}</div>
-                            <div style={textMutedXs}>
-                                {chat.messages.length} {t('chat_export.messages')} ·{' '}
-                                {chat.model ? `model: ${chat.model}` : 'no model'}
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleCopyPreview}
-                            style={{
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: 6,
-                                border: 'none',
-                                background: 'rgba(255,255,255,0.1)',
-                                color: copied ? '#10b981' : '#e2e8f0',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                            }}
-                        >
-                            {copied ? <Check size={14} /> : <Copy size={14} />}{' '}
-                            {t('chat_export.copy')}
-                        </button>
-                        <button
-                            onClick={handleDownload}
-                            disabled={busy}
-                            style={{
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: 6,
-                                border: 'none',
-                                background: '#10b981',
-                                color: '#fff',
-                                cursor: busy ? 'wait' : 'pointer',
-                                fontSize: '0.8rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontWeight: 600,
-                            }}
-                        >
-                            {busy ? <Loader2 size={14} /> : <FileDown size={14} />}{' '}
-                            {t('chat_export.download')}
-                        </button>
-                    </div>
-
-                    <div
-                        style={{
-                            flex: 1,
-                            minHeight: 200,
-                            maxHeight: '50vh',
-                            overflow: 'auto',
-                            borderRadius: 10,
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            background: '#0a0e1a',
-                        }}
-                    >
-                        <pre
-                            style={{
-                                padding: '1rem',
-                                margin: 0,
-                                color: '#cbd5e1',
-                                fontFamily: 'monospace',
-                                fontSize: '0.75rem',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                            }}
-                        >
-                            {preview.slice(0, 8000)}
-                            {preview.length > 8000 ? '\n...' : ''}
-                        </pre>
-                    </div>
-                </>
+                <ExportActions
+                    title={chat.title}
+                    messageCount={chat.messages.length}
+                    model={chat.model}
+                    copied={copied}
+                    busy={busy}
+                    onCopy={handleCopyPreview}
+                    onDownload={handleDownload}
+                />
             )}
 
-            {!chat && sourceMode !== 'paste' && (
-                <div
-                    style={{
-                        padding: '1rem',
-                        borderRadius: 8,
-                        background: 'rgba(0,0,0,0.15)',
-                        color: '#94a3b8',
-                        fontSize: '0.8rem',
-                    }}
-                >
-                    <p style={{ margin: '0 0 0.5rem' }}>{t('chat_export.how_to')}</p>
-                    <ul style={{ margin: 0, paddingLeft: '1.25rem', ...textSecondaryXs }}>
-                        <li>{t('chat_export.how_1')}</li>
-                        <li>{t('chat_export.how_2')}</li>
-                        <li>{t('chat_export.how_3')}</li>
-                    </ul>
-                </div>
-            )}
+            <PreviewPane preview={preview} hasChat={!!chat} sourceMode={sourceMode} />
         </div>
     );
 };

@@ -13,6 +13,8 @@ import type {
     Claim,
     TimelineEntry,
     AgentStateEntry,
+    AgentExecutor,
+    AgentExecutionResult,
 } from '../../contracts/debate-runtime';
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
@@ -557,6 +559,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             }
         }
 
+        this.getContext(sessionId).orchestrator.setAgentExecutor(
+            this.createAgentExecutor(sessionId),
+        );
+
         let earlyExit = false;
         try {
             for await (const event of this.getContext(sessionId).orchestrator.generateRoundEvents(
@@ -580,183 +586,108 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                             round: event.round,
                             nodes: event.nodes,
                         });
+                        break;
+                    }
 
-                        let allErrored = true;
-                        let anyBudgetSkipped = false;
-                        for (const nodeId of event.nodes) {
-                            if (
-                                session.phase === 'cancelled' ||
-                                session.phase === 'failed' ||
-                                session.phase === 'paused'
-                            )
-                                break;
-
-                            const participant = session.participants.find(
-                                (p) => p.nodeId === nodeId,
-                            );
-                            if (!participant) continue;
-
-                            session.setAgentPhase(participant.agentId, 'thinking');
+                    case 'agent:thinking': {
+                        const p = session.participants.find((p) => p.nodeId === event.agentId);
+                        if (p) {
+                            session.setAgentPhase(p.agentId, 'thinking');
                             this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_THINKING, {
                                 sessionId,
-                                agentId: participant.agentId,
+                                agentId: p.agentId,
                             });
-
-                            try {
-                                const budget = this.budgets.get(sessionId);
-                                if (budget) {
-                                    const estimatedTokens = 250;
-                                    const estimatedCost = estimatedTokens * 0.000002;
-                                    const allowed = await budget.reserveAndRecord(
-                                        sessionId,
-                                        estimatedTokens,
-                                        estimatedCost,
-                                    );
-                                    if (!allowed) {
-                                        const action = budget.getPressureAction();
-                                        this.deps.eventBus.emit(
-                                            DebateRuntimeEvents.BUDGET_PRESSURE_CHANGED,
-                                            {
-                                                sessionId,
-                                                level: budget.getPressure(),
-                                                action,
-                                            },
-                                        );
-                                        anyBudgetSkipped = true;
-                                        continue;
-                                    }
-                                }
-
-                                session.setAgentPhase(participant.agentId, 'streaming');
-                                const startTime = performance.now();
-                                const content = await this.callLLM(sessionId, session, participant);
-                                const latency = performance.now() - startTime;
-
-                                if (budget) {
-                                    session.recordUsage(
-                                        participant.agentId,
-                                        0,
-                                        0,
-                                        Math.round(latency),
-                                    );
-                                    this.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_UPDATED, {
-                                        sessionId,
-                                        pressure: budget.getPressure(),
-                                        used: budget.snapshot().tokensUsed,
-                                        limit: 100_000,
-                                    });
-                                }
-
-                                const stepConfidence = estimateConfidence(content);
-                                this.getMemory(sessionId).recordStep({
-                                    agentId: participant.agentId,
-                                    content,
-                                    type: 'claim',
-                                    confidence: stepConfidence,
-                                    timestamp: Date.now(),
-                                    round: session.round,
-                                });
-
-                                this.getContext(sessionId).timeline.record({
-                                    sessionId,
-                                    type: 'agent:responded',
-                                    payload: {
-                                        agentId: participant.agentId,
-                                        content,
-                                        round: session.round,
-                                    },
-                                });
-
-                                this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_RESPONDED, {
-                                    sessionId,
-                                    agentId: participant.agentId,
-                                    content,
-                                });
-                                allErrored = false;
-                            } catch (e) {
-                                const error = String(e);
-                                this.getContext(sessionId).timeline.record({
-                                    sessionId,
-                                    type: 'agent:error',
-                                    payload: { agentId: participant.agentId, error },
-                                });
-                                session.setAgentPhase(participant.agentId, 'errored');
-                                session.setAgentError(participant.agentId, error);
-                                this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_ERROR, {
-                                    sessionId,
-                                    agentId: participant.agentId,
-                                    error,
-                                });
-
-                                // Early bailout: if this agent failed because NO providers are available,
-                                // the remaining agents will fail identically. Bail now instead of running
-                                // them all to avoid OOM from cumulative event emissions and per-agent overhead.
-                                const noProvidersAvailable =
-                                    error.includes('No available API keys') ||
-                                    error.includes('No adapter for provider');
-                                if (noProvidersAvailable) {
-                                    const keyService = this.deps.getKeyService();
-                                    const allKeys = keyService.getKeys();
-                                    const anyWorking = allKeys.some(
-                                        (k) =>
-                                            k.status === 'active' &&
-                                            !session.hasProviderFailed(k.provider) &&
-                                            !this.isKeyAuthFailed(k.id),
-                                    );
-                                    if (!anyWorking) {
-                                        const msg =
-                                            'All LLM providers unavailable — debate cannot proceed';
-                                        LOGGER.warn('DebateEngine', msg, { sessionId });
-                                        session.transition('failed');
-                                        this.deps.eventBus.emit(
-                                            DebateRuntimeEvents.SESSION_FAILED,
-                                            {
-                                                sessionId,
-                                                error: msg,
-                                            },
-                                        );
-                                        earlyExit = true;
-                                        break;
-                                    }
-                                }
-                            }
                         }
-                        if (allErrored) {
-                            const msg = anyBudgetSkipped
+                        break;
+                    }
+
+                    case 'agent:responded': {
+                        const pR = session.participants.find((p) => p.nodeId === event.agentId);
+                        if (!pR) break;
+
+                        session.setAgentPhase(pR.agentId, 'streaming');
+                        const stepConfidence = estimateConfidence(event.content);
+                        this.getMemory(sessionId).recordStep({
+                            agentId: pR.agentId,
+                            content: event.content,
+                            type: 'claim',
+                            confidence: stepConfidence,
+                            timestamp: Date.now(),
+                            round: session.round,
+                        });
+                        this.getContext(sessionId).timeline.record({
+                            sessionId,
+                            type: 'agent:responded',
+                            payload: {
+                                agentId: pR.agentId,
+                                content: event.content,
+                                round: session.round,
+                            },
+                        });
+                        this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_RESPONDED, {
+                            sessionId,
+                            agentId: pR.agentId,
+                            content: event.content,
+                        });
+                        break;
+                    }
+
+                    case 'agent:error': {
+                        const pE = session.participants.find((p) => p.nodeId === event.agentId);
+                        if (!pE) break;
+
+                        session.setAgentPhase(pE.agentId, 'errored');
+                        session.setAgentError(pE.agentId, event.error);
+                        this.getContext(sessionId).timeline.record({
+                            sessionId,
+                            type: 'agent:error',
+                            payload: { agentId: pE.agentId, error: event.error },
+                        });
+                        this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_ERROR, {
+                            sessionId,
+                            agentId: pE.agentId,
+                            error: event.error,
+                        });
+                        break;
+                    }
+
+                    case 'round:end': {
+                        // Phase 2: orchestrator now owns agent execution, so allErrored/anyBudgetSkipped
+                        // come from the orchestrator via the event payload.
+                        this.deps.eventBus.emit(DebateRuntimeEvents.ROUND_ENDED, {
+                            sessionId,
+                            round: event.round,
+                        });
+
+                        if (event.allErrored) {
+                            const msg = event.anyBudgetSkipped
                                 ? 'Budget exceeded — debate paused'
                                 : 'All providers unavailable — debate cannot proceed';
                             LOGGER.warn('DebateEngine', msg, { sessionId });
-                            session.transition(anyBudgetSkipped ? 'paused' : 'failed');
+                            session.transition(event.anyBudgetSkipped ? 'paused' : 'failed');
                             this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
                                 sessionId,
                                 error: msg,
                             });
                             earlyExit = true;
+                            break;
                         }
-                        break;
-                    }
 
-                    case 'round:end':
-                        this.deps.eventBus.emit(DebateRuntimeEvents.ROUND_ENDED, {
-                            sessionId,
-                            round: event.round,
-                        });
-                        {
-                            const interimClaims = this.gatherClaims(sessionId, session);
-                            if (interimClaims.length > 1) {
-                                const interim =
-                                    this.getContext(sessionId).consensus.evaluate(interimClaims);
-                                if (interim.confidence >= 0.85) {
-                                    this.deps.eventBus.emit(DebateRuntimeEvents.EARLY_EXIT, {
-                                        sessionId,
-                                        confidence: interim.confidence,
-                                        round: event.round,
-                                    });
-                                    earlyExit = true;
-                                }
+                        const interimClaims = this.gatherClaims(sessionId, session);
+                        if (interimClaims.length > 1) {
+                            const interim =
+                                this.getContext(sessionId).consensus.evaluate(interimClaims);
+                            if (interim.confidence >= 0.85) {
+                                this.deps.eventBus.emit(DebateRuntimeEvents.EARLY_EXIT, {
+                                    sessionId,
+                                    confidence: interim.confidence,
+                                    round: event.round,
+                                });
+                                earlyExit = true;
                             }
                         }
                         break;
+                    }
                 }
                 if (earlyExit) break;
             }
@@ -822,6 +753,88 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         return true;
     }
 
+    private createAgentExecutor(sessionId: string): AgentExecutor {
+        const engine = this;
+        return async (request) => {
+            const session = engine.getSession(sessionId) as unknown as IDebateSession;
+            if (!session) {
+                return { content: '', latency: 0, success: false, error: 'Session not found' };
+            }
+            const participant = session.participants.find(
+                (p: { nodeId: string }) => p.nodeId === request.nodeId,
+            );
+            if (!participant) {
+                return { content: '', latency: 0, success: false, error: 'Participant not found' };
+            }
+
+            const budget = engine.budgets.get(sessionId);
+            if (budget) {
+                const allowed = await budget.reserveAndRecord(sessionId, 250, 250 * 0.000002);
+                if (!allowed) {
+                    const action = budget.getPressureAction();
+                    engine.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_PRESSURE_CHANGED, {
+                        sessionId,
+                        level: budget.getPressure(),
+                        action,
+                    });
+                    return {
+                        content: '',
+                        latency: 0,
+                        success: false,
+                        budgetSkipped: true,
+                        error: 'Budget exceeded',
+                    };
+                }
+            }
+
+            const startTime = performance.now();
+            try {
+                const content = await engine.callLLM(sessionId, session, participant);
+                const latency = performance.now() - startTime;
+
+                if (budget) {
+                    session.recordUsage(participant.agentId, 0, 0, Math.round(latency));
+                    engine.deps.eventBus.emit(DebateRuntimeEvents.BUDGET_UPDATED, {
+                        sessionId,
+                        pressure: budget.getPressure(),
+                        used: budget.snapshot().tokensUsed,
+                        limit: 100_000,
+                    });
+                }
+
+                return { content, latency, success: true };
+            } catch (e) {
+                const latency = performance.now() - startTime;
+                const error = String(e);
+
+                // Check for no-providers bailout
+                const noProvidersAvailable =
+                    error.includes('No available API keys') ||
+                    error.includes('No adapter for provider');
+                if (noProvidersAvailable) {
+                    const keyService = engine.deps.getKeyService();
+                    const allKeys = keyService.getKeys();
+                    const anyWorking = allKeys.some(
+                        (k: { status: string; provider: string; id: string }) =>
+                            k.status === 'active' &&
+                            !session.hasProviderFailed(k.provider) &&
+                            !engine.isKeyAuthFailed(k.id),
+                    );
+                    if (!anyWorking) {
+                        return {
+                            content: '',
+                            latency,
+                            success: false,
+                            error: 'All LLM providers unavailable — debate cannot proceed',
+                        };
+                    }
+                }
+
+                return { content: '', latency, success: false, error };
+            }
+        };
+    }
+
     private async callLLM(
         sessionId: string,
         session: IDebateSession,
@@ -839,6 +852,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const failKey = this.providerKey(sessionId, participant.agentId);
         this.llmFailureCount.delete(failKey);
         const triedModels = new Set<string>();
+        const triedKeys = new Set<string>();
 
         while (retries < MAX_RETRIES) {
             const controller = new AbortController();
@@ -1060,9 +1074,23 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 // Try fallback models for the same provider before marking it as failed
                 if (resolvedKey) {
                     triedModels.add(modelId);
+                    triedKeys.add(resolvedKey.id);
                     const allProviderModels = this.getAllModelsForProvider(resolvedKey);
                     const untried = allProviderModels.filter((m) => !triedModels.has(m));
                     if (untried.length > 0 && !isTimeout) {
+                        continue;
+                    }
+                    // Same-provider fallback: try a different key before marking provider as failed
+                    const allKeys = keyService.getKeys();
+                    const altKey = allKeys.find(
+                        (k) =>
+                            k.provider === resolvedKey!.provider &&
+                            !triedKeys.has(k.id) &&
+                            k.status === 'active' &&
+                            !this.isKeyAuthFailed(k.id),
+                    );
+                    if (altKey) {
+                        triedModels.clear();
                         continue;
                     }
                     session.markProviderFailed(resolvedKey.provider);

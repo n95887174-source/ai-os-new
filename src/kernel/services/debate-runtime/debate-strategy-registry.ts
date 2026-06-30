@@ -417,7 +417,7 @@ function validateCompatibility(a: StrategyDefinition, b: StrategyDefinition): In
 // ── Strategy Registry ──────────────────────────────────────────────
 
 export class StrategyRegistry implements IStrategyRegistry {
-    private entries = new Map<string, StrategyRegistryEntry>();
+    protected entries = new Map<string, StrategyRegistryEntry>();
 
     constructor() {
         for (const def of BUILTIN_STRATEGIES) {

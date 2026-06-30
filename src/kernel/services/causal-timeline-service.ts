@@ -7,6 +7,7 @@ import type {
     EventRef,
     ProjectionSnapshot,
 } from '../contracts/causal-debugger';
+import type { IKeyStateStore } from '../contracts/key-state';
 import type { Projection } from '../contracts/projection';
 import type { IEventBus } from '../types/interfaces';
 import type { ILogger } from '../contracts/logger';
@@ -27,7 +28,7 @@ export class CausalTimelineService implements ICausalTraceStore {
 
     constructor(
         private scopeManager: ICausalScopeManager,
-        private keyStateProjection: Projection,
+        private keyStateStore: IKeyStateStore,
         private routerProjection: Projection,
         private eventBus: IEventBus,
         private logger: ILogger,
@@ -123,8 +124,13 @@ export class CausalTimelineService implements ICausalTraceStore {
             return { data, takenAt: Date.now() };
         };
 
+        const takeKeySnapshot = (): ProjectionSnapshot => ({
+            data: Object.fromEntries(this.keyStateStore.getAll().map((s) => [s.id, s])),
+            takenAt: Date.now(),
+        });
+
         const before = {
-            keyState: snapshot(this.keyStateProjection),
+            keyState: takeKeySnapshot(),
             routerState: snapshot(this.routerProjection),
         };
 
@@ -136,7 +142,7 @@ export class CausalTimelineService implements ICausalTraceStore {
                 before,
                 decision: { ...payload },
                 after: {
-                    keyState: snapshot(this.keyStateProjection),
+                    keyState: takeKeySnapshot(),
                     routerState: snapshot(this.routerProjection),
                 },
                 links: [],
