@@ -45,7 +45,7 @@ export default defineConfig({
         target: 'es2023',
         sourcemap: false,
         minify: 'esbuild',
-        chunkSizeWarningLimit: 800,
+        chunkSizeWarningLimit: 1000,
         rollupOptions: {
             output: {
                 manualChunks(id) {

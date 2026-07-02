@@ -81,6 +81,12 @@ export class GroupManagerService implements IGroupManager {
                 void this.persist();
             }),
         );
+        // D-06: Invalidate cache on external key add — covers keys added via KeyService directly
+        this.unsubs.push(
+            this.deps.eventBus.onSafe<ApiKey>(EVENTS.KEY_ADDED, () => {
+                this.allKeysCache = null;
+            }),
+        );
         // Re-sync passports when keys are (re)loaded — covers the case where
         // syncExistingKeys() ran before all keys were available in KeyRegistry.
         this.unsubs.push(
@@ -250,6 +256,7 @@ export class GroupManagerService implements IGroupManager {
             if (idx >= 0) g.keyIds.splice(idx, 1);
         }
         this.passports.delete(keyId);
+        this.allKeysCache = null;
         await this.persist();
         await this.deps.keyService.removeKey(keyId);
     }

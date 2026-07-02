@@ -1,0 +1,237 @@
+import type {
+    IDeployService,
+    DeployConfig,
+    Deployment,
+    DeployEnvironment,
+    DeployStatus,
+} from '../contracts/deploy';
+import { ssrSafeStorage } from '../utils/ssr-storage';
+
+const STORAGE_KEY = 'deploy_data';
+
+function id(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+interface PersistedData {
+    configs: DeployConfig[];
+    deployments: Deployment[];
+}
+
+export class DeployService implements IDeployService {
+    private configs: DeployConfig[] = [];
+    private deployments: Deployment[] = [];
+    private timers = new Map<string, ReturnType<typeof setInterval>>();
+
+    async init(): Promise<void> {
+        try {
+            const raw = ssrSafeStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const data = JSON.parse(raw) as PersistedData;
+                this.configs = data.configs ?? [];
+                this.deployments = data.deployments ?? [];
+            }
+        } catch {
+            this.configs = [];
+            this.deployments = [];
+        }
+    }
+
+    start(): Promise<void> {
+        return Promise.resolve();
+    }
+
+    destroy(): void {
+        for (const t of this.timers.values()) clearInterval(t);
+        this.timers.clear();
+        this.configs = [];
+        this.deployments = [];
+    }
+
+    private persist(): void {
+        try {
+            ssrSafeStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({ configs: this.configs, deployments: this.deployments }),
+            );
+        } catch {
+            /* silent */
+        }
+    }
+
+    getConfigs(): DeployConfig[] {
+        return this.configs;
+    }
+
+    addConfig(data: Omit<DeployConfig, 'id' | 'createdAt' | 'updatedAt'>): DeployConfig {
+        const cfg: DeployConfig = {
+            ...data,
+            id: id(),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        };
+        this.configs.push(cfg);
+        this.persist();
+        return cfg;
+    }
+
+    updateConfig(id: string, updates: Partial<DeployConfig>): void {
+        const cfg = this.configs.find((c) => c.id === id);
+        if (!cfg) return;
+        Object.assign(cfg, updates, { updatedAt: Date.now() });
+        this.persist();
+    }
+
+    removeConfig(id: string): void {
+        this.configs = this.configs.filter((c) => c.id !== id);
+        this.persist();
+    }
+
+    getDeployments(configId?: string): Deployment[] {
+        if (configId) return this.deployments.filter((d) => d.configId === configId);
+        return this.deployments;
+    }
+
+    deploy(configId: string): Deployment {
+        const cfg = this.configs.find((c) => c.id === configId);
+        if (!cfg) throw new Error(`Deploy config ${configId} not found`);
+
+        const dep: Deployment = {
+            id: id(),
+            configId,
+            environment: cfg.environment,
+            version: `v${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 10)}.0`,
+            status: 'pending',
+            progress: 0,
+            logs: [{ timestamp: Date.now(), level: 'info', message: 'Deployment queued...' }],
+            url: null,
+            commitHash: `abc${Math.random().toString(36).slice(2, 10)}`,
+            startedAt: Date.now(),
+            completedAt: null,
+            rollbackTarget: null,
+        };
+
+        this.deployments.push(dep);
+        this.persist();
+        this.simulateDeploy(dep);
+        return dep;
+    }
+
+    rollback(deploymentId: string): Deployment {
+        const dep = this.deployments.find((d) => d.id === deploymentId);
+        if (!dep || dep.status !== 'live') throw new Error('Cannot rollback: not live');
+
+        const rollbackDep: Deployment = {
+            id: id(),
+            configId: dep.configId,
+            environment: dep.environment,
+            version: `${dep.version}-rollback`,
+            status: 'pending',
+            progress: 0,
+            logs: [
+                {
+                    timestamp: Date.now(),
+                    level: 'info',
+                    message: `Rollback from ${dep.version}...`,
+                },
+            ],
+            url: dep.url,
+            commitHash: dep.commitHash,
+            startedAt: Date.now(),
+            completedAt: null,
+            rollbackTarget: dep.id,
+        };
+
+        this.deployments.push(rollbackDep);
+        this.persist();
+        this.simulateDeploy(rollbackDep, true);
+        return rollbackDep;
+    }
+
+    cancelDeploy(deploymentId: string): void {
+        const dep = this.deployments.find((d) => d.id === deploymentId);
+        if (!dep) return;
+        const timer = this.timers.get(dep.id);
+        if (timer) {
+            clearInterval(timer);
+            this.timers.delete(dep.id);
+        }
+        dep.status = 'failed';
+        dep.logs.push({ timestamp: Date.now(), level: 'warn', message: 'Deployment cancelled.' });
+        this.persist();
+    }
+
+    getEnvironments(): DeployEnvironment[] {
+        return ['development', 'staging', 'production'];
+    }
+
+    getDomains(): string[] {
+        return ['app.example.com', 'api.example.com', 'staging.example.com', 'dev.example.com'];
+    }
+
+    private simulateDeploy(dep: Deployment, isRollback = false): void {
+        const stages = isRollback
+            ? [
+                  {
+                      status: 'building' as DeployStatus,
+                      progress: 30,
+                      msg: 'Restoring previous build...',
+                  },
+                  {
+                      status: 'deploying' as DeployStatus,
+                      progress: 60,
+                      msg: 'Rolling back to previous version...',
+                  },
+                  {
+                      status: 'verifying' as DeployStatus,
+                      progress: 85,
+                      msg: 'Verifying rollback...',
+                  },
+              ]
+            : [
+                  {
+                      status: 'building' as DeployStatus,
+                      progress: 25,
+                      msg: 'Building application...',
+                  },
+                  { status: 'building' as DeployStatus, progress: 50, msg: 'Optimizing assets...' },
+                  {
+                      status: 'deploying' as DeployStatus,
+                      progress: 70,
+                      msg: 'Uploading to server...',
+                  },
+                  {
+                      status: 'verifying' as DeployStatus,
+                      progress: 90,
+                      msg: 'Running health check...',
+                  },
+              ];
+
+        let stageIndex = 0;
+        const timer = setInterval(() => {
+            if (stageIndex >= stages.length) {
+                clearInterval(timer);
+                this.timers.delete(dep.id);
+                dep.status = 'live';
+                dep.progress = 100;
+                dep.completedAt = Date.now();
+                dep.url = `https://${dep.environment === 'production' ? 'app' : dep.environment}.example.com`;
+                dep.logs.push({
+                    timestamp: Date.now(),
+                    level: 'info',
+                    message: isRollback ? 'Rollback complete.' : 'Deployment live!',
+                });
+                this.persist();
+                return;
+            }
+
+            const stage = stages[stageIndex];
+            dep.status = stage.status;
+            dep.progress = stage.progress;
+            dep.logs.push({ timestamp: Date.now(), level: 'info', message: stage.msg });
+            stageIndex++;
+        }, 2500);
+
+        this.timers.set(dep.id, timer);
+    }
+}

@@ -55,10 +55,28 @@ import {
     Wrench,
     HardDrive,
     Webhook,
+    Fish,
     RefreshCw,
     Home,
     Search,
     MessageSquare,
+    FileText,
+    ListOrdered,
+    GitPullRequest,
+    Rocket,
+    Bell,
+    Grid3X3,
+    SlidersHorizontal,
+    Trophy,
+    Mic,
+    Puzzle,
+    Store,
+    Upload,
+    Clock as ClockIcon,
+    GitCommit as GitCommitIcon,
+    Atom,
+    Route as RouteIcon,
+    Container as ContainerIcon,
 } from 'lucide-react';
 import type { TranslationKey } from './i18n/translations';
 import type { FeatureFlag } from './kernel/contracts/feature-flags';
@@ -138,10 +156,50 @@ export const NAV_SECTIONS: NavSection[] = [
                 level: 'L2',
             },
             {
+                id: 'cost-optimization',
+                labelKey: 'nav.cost_optimization',
+                icon: <DollarSign size={18} />,
+                color: '#f59e0b',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'custom-metrics',
+                labelKey: 'nav.custom_metrics',
+                icon: <BarChart3 size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'budget-alerts',
+                labelKey: 'nav.budget_alerts',
+                icon: <Bell size={18} />,
+                color: '#f97316',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'key-usage-analytics',
+                labelKey: 'nav.key_usage_analytics',
+                icon: <BarChart3 size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
                 id: 'routing',
                 labelKey: 'nav.routing_ai',
                 icon: <RoutingIcon size={18} />,
                 color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'contribution-graph',
+                labelKey: 'nav.contribution_graph',
+                icon: <GitCommitIcon size={18} />,
+                color: '#10b981',
                 lazy: true,
                 level: 'L2',
             },
@@ -261,6 +319,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 level: 'L1',
             },
             {
+                id: 'audience',
+                labelKey: 'nav.audience',
+                icon: <Users size={18} />,
+                color: '#ec4899',
+                lazy: true,
+                level: 'L1',
+            },
+            {
                 id: 'argument-graph',
                 labelKey: 'nav.argument_graph',
                 icon: <GitBranch size={18} />,
@@ -308,6 +374,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 lazy: true,
                 level: 'L1',
             },
+            {
+                id: 'debate-templates',
+                labelKey: 'nav.debate_templates',
+                icon: <FileText size={18} />,
+                color: '#06b6d4',
+                lazy: true,
+                level: 'L1',
+            },
         ],
     },
 
@@ -331,6 +405,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 icon: <Users size={18} />,
                 color: '#3b82f6',
                 level: 'L1',
+            },
+            {
+                id: 'roles-consortia',
+                labelKey: 'nav.roles_consortia',
+                icon: <Users size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
             },
             {
                 id: 'sre',
@@ -368,6 +450,30 @@ export const NAV_SECTIONS: NavSection[] = [
                 id: 'agent-marketplace',
                 labelKey: 'nav.agent_marketplace',
                 icon: <Star size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'agent-comparison',
+                labelKey: 'nav.agent_comparison',
+                icon: <GitCompare size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'agent-protocol',
+                labelKey: 'nav.agent_protocol',
+                icon: <Network size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'persona-marketplace',
+                labelKey: 'nav.persona_marketplace',
+                icon: <Store size={18} />,
                 color: '#a855f7',
                 lazy: true,
                 level: 'L2',
@@ -421,6 +527,22 @@ export const NAV_SECTIONS: NavSection[] = [
                 level: 'L2',
             },
             {
+                id: 'groq-speed',
+                labelKey: 'nav.groq_speed',
+                icon: <Zap size={18} />,
+                color: '#22c55e',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'smart-routing',
+                labelKey: 'nav.smart_routing',
+                icon: <RouteIcon size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L2',
+            },
+            {
                 id: 'provider-marketplace',
                 labelKey: 'nav.provider_marketplace',
                 icon: <Star size={18} />,
@@ -447,6 +569,30 @@ export const NAV_SECTIONS: NavSection[] = [
                 labelKey: 'nav.session_bindings',
                 icon: <Share2 size={18} />,
                 color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'guardians',
+                labelKey: 'nav.guardians',
+                icon: <Shield size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'provider-migration',
+                labelKey: 'nav.provider_migration',
+                icon: <Shuffle size={18} />,
+                color: '#f59e0b',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'nvidia-enterprise',
+                labelKey: 'nav.nvidia_enterprise',
+                icon: <HardDrive size={18} />,
+                color: '#76b900',
                 lazy: true,
                 level: 'L2',
             },
@@ -491,6 +637,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 color: '#a855f7',
                 lazy: true,
                 level: 'L1',
+            },
+            {
+                id: 'memory-palace',
+                labelKey: 'nav.memory_palace',
+                icon: <Database size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
             },
             {
                 id: 'health',
@@ -604,6 +758,54 @@ export const NAV_SECTIONS: NavSection[] = [
                 lazy: true,
                 level: 'L2',
             },
+            {
+                id: 'ecosystem',
+                labelKey: 'nav.ecosystem',
+                icon: <Fish size={18} />,
+                color: '#22c55e',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'health-sla',
+                labelKey: 'nav.health_sla',
+                icon: <SlidersHorizontal size={18} />,
+                color: '#10b981',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'leaderboard',
+                labelKey: 'nav.leaderboard',
+                icon: <Trophy size={18} />,
+                color: '#f59e0b',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'federated-memory',
+                labelKey: 'nav.federated_memory',
+                icon: <Server size={18} />,
+                color: '#3b82f6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'memory-export-import',
+                labelKey: 'nav.memory_export_import',
+                icon: <Upload size={18} />,
+                color: '#3b82f6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'aquarium-trading',
+                labelKey: 'nav.aquarium_trading',
+                icon: <Fish size={18} />,
+                color: '#06b6d4',
+                lazy: true,
+                level: 'L2',
+            },
         ],
     },
 
@@ -644,6 +846,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 level: 'L2',
             },
             {
+                id: 'eval-datasets',
+                labelKey: 'nav.eval_datasets',
+                icon: <BarChart3 size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L2',
+            },
+            {
                 id: 'project-os',
                 labelKey: 'nav.project_os_explorer',
                 icon: <SearchIcon size={18} />,
@@ -658,6 +868,22 @@ export const NAV_SECTIONS: NavSection[] = [
                 color: '#3b82f6',
                 lazy: true,
                 level: 'L2',
+            },
+            {
+                id: 'research-engine',
+                labelKey: 'nav.research_engine',
+                icon: <Layers size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'tutorials',
+                labelKey: 'nav.tutorials',
+                icon: <Sparkles size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L0',
             },
             {
                 id: 'arch-review',
@@ -707,6 +933,38 @@ export const NAV_SECTIONS: NavSection[] = [
                 lazy: true,
                 level: 'L2',
             },
+            {
+                id: 'research-reports',
+                labelKey: 'nav.research_reports',
+                icon: <BookOpen size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'research-advanced',
+                labelKey: 'nav.research_advanced',
+                icon: <Layers size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'research-gemini',
+                labelKey: 'nav.research_gemini',
+                icon: <Sparkles size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'template-sharing',
+                labelKey: 'nav.template_sharing',
+                icon: <Share2 size={18} />,
+                color: '#10b981',
+                lazy: true,
+                level: 'L2',
+            },
         ],
     },
 
@@ -729,6 +987,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 labelKey: 'nav.tools',
                 icon: <Wrench size={18} />,
                 color: '#f59e0b',
+                level: 'L1',
+            },
+            {
+                id: 'editors',
+                labelKey: 'nav.editors',
+                icon: <FileCode size={18} />,
+                color: '#06b6d4',
+                lazy: true,
                 level: 'L1',
             },
             {
@@ -760,6 +1026,166 @@ export const NAV_SECTIONS: NavSection[] = [
                 labelKey: 'nav.service_registry',
                 icon: <Box size={18} />,
                 color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'topology-templates',
+                labelKey: 'nav.topology_templates',
+                icon: <Grid3X3 size={18} />,
+                color: '#06b6d4',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'playground',
+                labelKey: 'nav.playground',
+                icon: <FlaskConical size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'prompts',
+                labelKey: 'nav.prompts',
+                icon: <FileText size={18} />,
+                color: '#06b6d4',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'prompt-versions',
+                labelKey: 'nav.prompt_version_history',
+                icon: <History size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'batch',
+                labelKey: 'nav.batch_processing',
+                icon: <ListOrdered size={18} />,
+                color: '#10b981',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'workflows',
+                labelKey: 'nav.workflows',
+                icon: <GitPullRequest size={18} />,
+                color: '#3b82f6',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'security',
+                labelKey: 'nav.security_scan',
+                icon: <Shield size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'ab-testing',
+                labelKey: 'nav.ab_testing',
+                icon: <GitCompare size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'fine-tuning',
+                labelKey: 'nav.fine_tuning',
+                icon: <Brain size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'team-collaboration',
+                labelKey: 'nav.team_collaboration',
+                icon: <Users size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'community-hub',
+                labelKey: 'nav.community_hub',
+                icon: <Share2 size={18} />,
+                color: '#f59e0b',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'google-studio',
+                labelKey: 'nav.google_studio',
+                icon: <Shield size={18} />,
+                color: '#4285F4',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'google-cache',
+                labelKey: 'nav.google_cache',
+                icon: <ContainerIcon size={18} />,
+                color: '#4285F4',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'gemini-live',
+                labelKey: 'nav.gemini_live',
+                icon: <Mic size={18} />,
+                color: '#4285F4',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'meta-learning',
+                labelKey: 'nav.meta_learning',
+                icon: <Brain size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'quantum-inspiration',
+                labelKey: 'nav.quantum_inspiration',
+                icon: <Atom size={18} />,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'model-distillation',
+                labelKey: 'nav.model_distillation',
+                icon: <Brain size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
+            {
+                id: 'deploy',
+                labelKey: 'nav.deploy',
+                icon: <Rocket size={18} />,
+                color: '#22c55e',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'voice-input',
+                labelKey: 'nav.voice_input',
+                icon: <Mic size={18} />,
+                color: '#3b82f6',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'plugin-sdk',
+                labelKey: 'nav.plugin_sdk',
+                icon: <Puzzle size={18} />,
+                color: '#a855f7',
                 lazy: true,
                 level: 'L2',
             },
@@ -808,6 +1234,22 @@ export const NAV_SECTIONS: NavSection[] = [
                 icon: <History size={18} />,
                 color: '#f59e0b',
                 level: 'L1',
+            },
+            {
+                id: 'export-import',
+                labelKey: 'nav.export_import',
+                icon: <Database size={18} />,
+                color: '#3b82f6',
+                lazy: true,
+                level: 'L1',
+            },
+            {
+                id: 'time-machine',
+                labelKey: 'nav.time_machine',
+                icon: <ClockIcon size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
             },
         ],
     },
@@ -881,6 +1323,9 @@ const PerformanceProfilerPanel = React.lazy(() => import('./components/Performan
 const ProviderDashboard = React.lazy(
     () => import('./components/ProviderDashboard/ProviderDashboard'),
 );
+const GroqSpeedDashboard = React.lazy(
+    () => import('./components/ProviderManager/GroqSpeedDashboard'),
+);
 const DebateSystemResearch = React.lazy(
     () => import('./components/DebateResearch/DebateSystemResearch'),
 );
@@ -907,6 +1352,29 @@ const DependencyMapPanel = React.lazy(
 const ServiceRegistryPanel = React.lazy(
     () => import('./components/ServiceRegistryPanel/ServiceRegistryPanel'),
 );
+const GuardiansPanel = React.lazy(() => import('./components/GuardiansPanel/GuardiansPanel'));
+const ModelComparePanel = React.lazy(
+    () => import('./components/ModelComparePanel/ModelComparePanel'),
+);
+const PromptLibraryPanel = React.lazy(
+    () => import('./components/PromptLibrary/PromptLibraryPanel'),
+);
+const BatchProcessingPanel = React.lazy(
+    () => import('./components/BatchProcessor/BatchProcessingPanel'),
+);
+const WorkflowPanel = React.lazy(() => import('./components/Workflows/WorkflowPanel'));
+const PromptSecurityPanel = React.lazy(
+    () => import('./components/SecurityScan/PromptSecurityPanel'),
+);
+const MemoryPalacePanel = React.lazy(() => import('./components/MemoryPanel/MemoryPalacePanel'));
+const EvalDatasetPanel = React.lazy(() => import('./components/EvalDatasets/EvalDatasetPanel'));
+const CustomMetricsPanel = React.lazy(
+    () => import('./components/CustomMetrics/CustomMetricsPanel'),
+);
+const CostOptimizationPanel = React.lazy(
+    () => import('./components/CostOptimization/CostOptimizationPanel'),
+);
+const ABTestPanel = React.lazy(() => import('./components/ABTest/ABTestPanel'));
 const PricingPanel = React.lazy(() => import('./components/AnalyticsPanel/PricingPanel'));
 const PressureMap = React.lazy(() => import('./components/PressureMap/PressureMap'));
 const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPanel'));
@@ -920,6 +1388,107 @@ const DebateStrategyBuilderPanel = React.lazy(
 const DebateHistoryPage = React.lazy(() => import('./components/DebatePanel/DebateHistoryPage'));
 const DebateLivePanel = React.lazy(() => import('./components/DebateLive/DebateLivePanel'));
 const PolicyEditorPanelLazy = React.lazy(() => import('./components/PolicyEditorPanel'));
+const RolesConsortiaPanel = React.lazy(() => import('./components/RolesPanel/RolesConsortiaPanel'));
+const ResearchEnginePanelLazy = React.lazy(
+    () => import('./components/ResearchPanel/ResearchEnginePanel'),
+);
+const ResearchEngineAdvancedPanelLazy = React.lazy(
+    () => import('./components/ResearchPanel/ResearchEngineAdvancedPanel'),
+);
+const EcosystemDashboardLazy = React.lazy(
+    () => import('./components/AquariumPanel/EcosystemDashboard'),
+);
+const GoogleStudioPanelLazy = React.lazy(
+    () => import('./components/GoogleStudio/GoogleStudioPanel'),
+);
+const GeminiLivePanelLazy = React.lazy(() => import('./components/GeminiLive/GeminiLivePanel'));
+const GoogleCachePanelLazy = React.lazy(() => import('./components/GoogleCache/GoogleCachePanel'));
+const MetaLearningPanelLazy = React.lazy(
+    () => import('./components/MetaLearning/MetaLearningPanel'),
+);
+const GeminiResearchLazy = React.lazy(
+    () => import('./components/GeminiResearch/GeminiResearchPanel'),
+);
+const QuantumInspirationPanelLazy = React.lazy(
+    () => import('./components/QuantumInspiration/QuantumInspirationPanel'),
+);
+const AudiencePanelLazy = React.lazy(() => import('./components/AudiencePanel/AudiencePanel'));
+const EditorsPanelLazy = React.lazy(() => import('./components/Editors/EditorsPanel'));
+const TutorialPanelLazy = React.lazy(() => import('./components/TutorialPanel/TutorialPanel'));
+const CommunityHubPanelLazy = React.lazy(
+    () => import('./components/CommunityHub/CommunityHubPanel'),
+);
+const ExportImportPanelLazy = React.lazy(
+    () => import('./components/ExportImport/ExportImportPanel'),
+);
+const CollaborationPanelLazy = React.lazy(
+    () => import('./components/TeamCollaboration/CollaborationPanel'),
+);
+const FineTuningPanelLazy = React.lazy(() => import('./components/FineTuning/FineTuningPanel'));
+const AgentComparisonPanelLazy = React.lazy(
+    () => import('./components/AgentComparison/AgentComparisonPanel'),
+);
+const DebateTemplatesPanelLazy = React.lazy(
+    () => import('./components/DebateTemplates/DebateTemplatesPanel'),
+);
+const ProviderMigrationPanelLazy = React.lazy(
+    () => import('./components/ProviderMigration/ProviderMigrationPanel'),
+);
+const SmartRoutingPanelLazy = React.lazy(
+    () => import('./components/SmartRouting/SmartRoutingPanel'),
+);
+const NvidiaEnterprisePanelLazy = React.lazy(
+    () => import('./components/NvidiaEnterprise/NvidiaEnterprisePanel'),
+);
+const HealthSlaPanelLazy = React.lazy(() => import('./components/HealthSla/HealthSlaPanel'));
+const SocialLeaderboardPanelLazy = React.lazy(
+    () => import('./components/SocialLeaderboard/SocialLeaderboardPanel'),
+);
+const ResearchReportPanelLazy = React.lazy(
+    () => import('./components/ResearchReport/ResearchReportPanel'),
+);
+const VoiceInputPanelLazy = React.lazy(() => import('./components/VoiceInput/VoiceInputPanel'));
+const AgentProtocolPanelLazy = React.lazy(
+    () => import('./components/AgentProtocol/AgentProtocolPanel'),
+);
+const DistillationPanelLazy = React.lazy(
+    () => import('./components/ModelDistillation/DistillationPanel'),
+);
+const DeployPanelLazy = React.lazy(() => import('./components/DeployToProduction/DeployPanel'));
+const BudgetAlertsPanelLazy = React.lazy(
+    () => import('./components/BudgetAlerts/BudgetAlertsPanel'),
+);
+const TopologyGalleryPanelLazy = React.lazy(
+    () => import('./components/TopologyGallery/TopologyGalleryPanel'),
+);
+const KeyUsageAnalyticsPanelLazy = React.lazy(
+    () => import('./components/KeyUsageAnalytics/KeyUsageAnalyticsPanel'),
+);
+const PromptVersionPanelLazy = React.lazy(
+    () => import('./components/PromptVersionHistory/PromptVersionPanel'),
+);
+
+// ── Section 11 P2+P3 Lazy Imports ──────────────────
+const FederatedMemoryPanelLazy = React.lazy(
+    () => import('./components/FederatedMemory/FederatedMemoryPanel'),
+);
+const PluginSdkPanelLazy = React.lazy(() => import('./components/PluginSdk/PluginSdkPanel'));
+const PersonaMarketplacePanelLazy = React.lazy(
+    () => import('./components/PersonaMarketplace/PersonaMarketplacePanel'),
+);
+const TemplateSharingPanelLazy = React.lazy(
+    () => import('./components/TemplateSharing/TemplateSharingPanel'),
+);
+const MemoryTransferPanelLazy = React.lazy(
+    () => import('./components/MemoryTransfer/MemoryTransferPanel'),
+);
+const AquariumTradingPanelLazy = React.lazy(
+    () => import('./components/AquariumTrading/AquariumTradingPanel'),
+);
+const TimeMachinePanelLazy = React.lazy(() => import('./components/TimeMachine/TimeMachinePanel'));
+const ContributionGraphPanelLazy = React.lazy(
+    () => import('./components/ContributionGraph/ContributionGraphPanel'),
+);
 
 // Direct imports (non-lazy)
 import ProviderManager from './components/ProviderManager/ProviderManager';
@@ -962,6 +1531,8 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'debate-workspace': DebateWorkspacePanel,
     'debate-replay': DebateReplayPanel,
     'debate-tournament': TournamentPanel,
+    audience: AudiencePanelLazy,
+    editors: EditorsPanelLazy,
     'argument-graph': ArgumentGraphPanel,
     'strategy-builder': DebateStrategyBuilderPanel,
     'debate-analysis': DebateAnalysisPanel,
@@ -970,6 +1541,7 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     topics: TopicSuggesterPanel,
     agents: AgentsPanel,
     roles: RolesPanel,
+    'roles-consortia': RolesConsortiaPanel,
     sre: SREAgentPanel,
     'agent-journal': AgentJournalPanel,
     mission: MissionControl,
@@ -980,14 +1552,27 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     groups: GroupsPanel,
     'key-notes': KeyNotesPanel,
     'provider-dashboard': ProviderDashboard,
+    'groq-speed': GroqSpeedDashboard,
+    'smart-routing': SmartRoutingPanelLazy,
+    'nvidia-enterprise': NvidiaEnterprisePanelLazy,
     'provider-marketplace': ProviderMarketplace,
     connectors: ConnectorsPanel,
     mcp: MCPPanel,
     'session-bindings': SessionBindingsPanel,
+    guardians: GuardiansPanel,
+    playground: ModelComparePanel,
+    prompts: PromptLibraryPanel,
+    batch: BatchProcessingPanel,
+    workflows: WorkflowPanel,
+    security: PromptSecurityPanel,
+    'cost-optimization': CostOptimizationPanel,
+    'ab-testing': ABTestPanel,
+    'custom-metrics': CustomMetricsPanel,
     logs: LogsPanel,
     debugger: TracesPanel,
     'router-trace': RouterTraceView,
     memory: MemoryPanel,
+    'memory-palace': MemoryPalacePanel,
     health: HealthPanel,
     'system-health': SystemHealthPanel,
     'docs-health': DocsHealthPanel,
@@ -1008,23 +1593,60 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'decision-log': DecisionLogPanel,
     'project-os': ProjectOsExplorer,
     'hypothesis-gen': HypothesisGenerator,
+    'research-advanced': ResearchEngineAdvancedPanelLazy,
+    'research-gemini': GeminiResearchLazy,
+    'eval-datasets': EvalDatasetPanel,
     'arch-review': ArchitectureReview,
     'prompt-audit': PromptAudit,
     'routing-experiments': RoutingExperiments,
     'gov-stress-test': GovStressTest,
     'obs-gaps': ObsGaps,
     'debate-system-research': DebateSystemResearch,
+    'research-engine': ResearchEnginePanelLazy,
+    ecosystem: EcosystemDashboardLazy,
     skills: SkillsPanel,
     tools: ToolsPanel,
     cache: CachePanel,
     webhooks: WebhooksPanel,
     rotations: RotationsPanel,
     'service-registry': ServiceRegistryPanel,
+    'google-studio': GoogleStudioPanelLazy,
+    'google-cache': GoogleCachePanelLazy,
+    'gemini-live': GeminiLivePanelLazy,
+    'meta-learning': MetaLearningPanelLazy,
+    'quantum-inspiration': QuantumInspirationPanelLazy,
+    tutorials: TutorialPanelLazy,
+    'team-collaboration': CollaborationPanelLazy,
+    'fine-tuning': FineTuningPanelLazy,
+    'model-distillation': DistillationPanelLazy,
+    deploy: DeployPanelLazy,
+    'budget-alerts': BudgetAlertsPanelLazy,
+    'topology-templates': TopologyGalleryPanelLazy,
+    'key-usage-analytics': KeyUsageAnalyticsPanelLazy,
+    'prompt-versions': PromptVersionPanelLazy,
+    'community-hub': CommunityHubPanelLazy,
+    'export-import': ExportImportPanelLazy,
+    'agent-comparison': AgentComparisonPanelLazy,
+    'debate-templates': DebateTemplatesPanelLazy,
+    'provider-migration': ProviderMigrationPanelLazy,
+    'health-sla': HealthSlaPanelLazy,
+    leaderboard: SocialLeaderboardPanelLazy,
+    'research-reports': ResearchReportPanelLazy,
+    'voice-input': VoiceInputPanelLazy,
+    'agent-protocol': AgentProtocolPanelLazy,
     settings: SettingsPanel,
     policies: PolicyPanel,
     'policy-editor': PolicyEditorPanelLazy,
     audit: AuditLogView,
     history: ConfigHistoryView,
+    'federated-memory': FederatedMemoryPanelLazy,
+    'plugin-sdk': PluginSdkPanelLazy,
+    'persona-marketplace': PersonaMarketplacePanelLazy,
+    'template-sharing': TemplateSharingPanelLazy,
+    'memory-export-import': MemoryTransferPanelLazy,
+    'aquarium-trading': AquariumTradingPanelLazy,
+    'time-machine': TimeMachinePanelLazy,
+    'contribution-graph': ContributionGraphPanelLazy,
 };
 
 const NotFound: React.FC = () => {
@@ -1309,6 +1931,22 @@ export const AppRoutes: React.FC = () => {
                 element={
                     <PanelLoader name="Tournament">
                         <TournamentPanel />
+                    </PanelLoader>
+                }
+            />
+            <Route
+                path="/audience"
+                element={
+                    <PanelLoader name="Audience">
+                        <AudiencePanelLazy />
+                    </PanelLoader>
+                }
+            />
+            <Route
+                path="/editors"
+                element={
+                    <PanelLoader name="Editors">
+                        <EditorsPanelLazy />
                     </PanelLoader>
                 }
             />

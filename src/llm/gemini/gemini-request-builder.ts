@@ -104,7 +104,19 @@ export class GeminiRequestBuilder {
                         },
                     });
                 } else {
-                    parts.push({ text: m.content || '' });
+                    // Handle multimodal inline data
+                    if (m.inlineData && m.inlineData.length > 0) {
+                        for (const d of m.inlineData) {
+                            parts.push({
+                                inlineData: { mimeType: d.mimeType, data: d.data },
+                            });
+                        }
+                    }
+                    if (m.content) {
+                        parts.push({ text: m.content });
+                    } else if (!m.inlineData || m.inlineData.length === 0) {
+                        parts.push({ text: '' });
+                    }
                 }
 
                 return { role, parts };
@@ -204,6 +216,18 @@ export class GeminiRequestBuilder {
                     category: s.category,
                     threshold: s.threshold,
                 }));
+            }
+
+            // G5: Thinking Config (Gemini 2.5 deep thinking) — Phase 3
+            if (config.thinkingConfig) {
+                body.thinkingConfig = config.thinkingConfig;
+            }
+
+            // G6: Google Search Grounding — Phase 4
+            if (config.googleSearchGrounding) {
+                body.groundingConfig = {
+                    sources: [{ type: 'WEB' }],
+                };
             }
         }
 

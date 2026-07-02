@@ -9,21 +9,11 @@
 } from '../../contracts/auto-debate';
 import { rootLogger } from '../../logger-service';
 import type { DebateRole } from '../../contracts/debate-types';
+import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
 
 const LOGGER = rootLogger.child('AutoDebateService');
 import type { DebateParticipant, DebateSession } from '../debate-service';
 import type { ApiKey } from '../../types/metrics-types';
-
-/**
- * Priority-ordered models for debate per provider.
- * First match in availableModels wins.
- */
-const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-    gemini: ['gemini-2.0-flash', 'gemini-2.5-flash'],
-    groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-    openrouter: ['openrouter/auto', 'openrouter/free'],
-    nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
-};
 
 /**
  * Select the best model for debate from available models.

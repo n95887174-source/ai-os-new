@@ -273,10 +273,16 @@ export class MemoryService implements IMemoryEngine {
 
     private _passesQualityGate(entry: {
         content: string;
-        metadata: { importance?: number; source?: string };
+        metadata: { importance?: number; source?: string; finishReason?: string; status?: string };
     }): boolean {
         const content = entry.content?.trim();
         if (!content || content.length < 5) return false;
+
+        // D-04: reject error-status or error-finishReason entries
+        if (entry.metadata.status === 'error' || entry.metadata.status === 'timeout') return false;
+        const errorFinishReasons = ['SAFETY', 'RECITATION', 'OTHER'];
+        if (entry.metadata.finishReason && errorFinishReasons.includes(entry.metadata.finishReason))
+            return false;
 
         const importance = entry.metadata.importance ?? 0;
         if (entry.metadata.source === 'system' && importance < 0.3) return false;

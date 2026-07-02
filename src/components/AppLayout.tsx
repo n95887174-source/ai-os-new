@@ -17,6 +17,9 @@ import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
 import { NAV_SECTIONS, type UserLevel } from '../routes';
+import { LayoutProvider } from './Layout/LayoutContext';
+import { LayoutSelector } from './Layout/LayoutSelector';
+import { NextActionPredictions } from './Layout/NextActionPredictions';
 
 const navLabelKey: Record<string, TranslationKey> = {};
 for (const section of NAV_SECTIONS) {
@@ -36,6 +39,19 @@ export const AppLayout: React.FC = () => {
     const [runtimeStatus, setRuntimeStatus] = useState<'online' | 'degraded' | 'offline'>('online');
     const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
     const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+    const [currentTheme, setCurrentTheme] = useState(
+        () => document.documentElement.getAttribute('data-theme') || 'dark',
+    );
+    const handleThemeChange = useCallback((newTheme: string) => {
+        setCurrentTheme(newTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
+        try {
+            localStorage.setItem('super-agents-theme', newTheme);
+            const s = settingsService.getSettings();
+            if (s.theme !== newTheme)
+                settingsService.updateSettings({ theme: newTheme as typeof s.theme });
+        } catch {}
+    }, []);
     const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
         () => structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
     );
@@ -178,174 +194,201 @@ export const AppLayout: React.FC = () => {
                 {t('nav.skip_to_content')}
             </a>
             <div id="app-wrapper" className="app-container">
-                <Sidebar
-                    isCollapsed={isSidebarCollapsed}
-                    onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
-                    mobileMenuOpen={mobileMenuOpen}
-                    onMobileMenuClose={() => setMobileMenuOpen(false)}
-                    activeTab={activeTab}
-                    onNavigate={handleNavigate}
-                    runtimeStatus={runtimeStatus}
-                    isDesktop={isDesktop}
-                    featureFlags={featureFlags}
-                    userLevel={userLevel}
-                    onUserLevelChange={handleUserLevelChange}
-                    t={t}
-                    navLabelKey={navLabelKey}
-                />
+                <LayoutProvider>
+                    <Sidebar
+                        isCollapsed={isSidebarCollapsed}
+                        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+                        mobileMenuOpen={mobileMenuOpen}
+                        onMobileMenuClose={() => setMobileMenuOpen(false)}
+                        activeTab={activeTab}
+                        onNavigate={handleNavigate}
+                        runtimeStatus={runtimeStatus}
+                        isDesktop={isDesktop}
+                        featureFlags={featureFlags}
+                        userLevel={userLevel}
+                        onUserLevelChange={handleUserLevelChange}
+                        t={t}
+                        navLabelKey={navLabelKey}
+                    />
 
-                <main id="main-content" className="main-content">
-                    <header className="content-header">
-                        {!isDesktop && (
-                            <button
-                                onClick={() => setMobileMenuOpen(true)}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#94a3b8',
-                                    cursor: 'pointer',
-                                    padding: '0.25rem',
-                                    marginRight: '0.5rem',
-                                }}
-                                aria-label={t('nav.open_menu')}
-                            >
-                                <Menu size={20} />
-                            </button>
-                        )}
-                        <button
-                            onClick={openPalette}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: 8,
-                                padding: '0.4rem 0.875rem',
-                                cursor: 'pointer',
-                                color: 'var(--text-muted)',
-                                minWidth: 220,
-                            }}
-                            aria-label={t('palette.placeholder')}
-                        >
-                            <Search size={16} />
-                            <span style={{ flex: 1, textAlign: 'left', fontSize: '0.875rem' }}>
-                                {t('palette.placeholder')}
-                            </span>
-                            <kbd
-                                style={{
-                                    padding: '0.1rem 0.35rem',
-                                    background: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.12)',
-                                    borderRadius: 4,
-                                    fontSize: '0.68rem',
-                                    fontFamily: 'monospace',
-                                }}
-                            >
-                                ⌘K
-                            </kbd>
-                        </button>
-                        <Breadcrumbs
-                            path={location.pathname}
-                            t={t as (key: TranslationKey) => string}
-                        />
-                        <div className="header-actions">
-                            <div className="session-timer">
-                                <History size={16} />
-                                <span>{t('nav.local_session')}</span>
-                            </div>
-                            <div className="user-profile">
-                                <div className="avatar" aria-hidden="true" />
-                                <span>{t('nav.operator')}</span>
-                            </div>
-                            <button
-                                onClick={() => setShortcutsOpen(true)}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#64748b',
-                                    cursor: 'pointer',
-                                    padding: '0.25rem 0.5rem',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 700,
-                                    borderRadius: 6,
-                                }}
-                                title="Keyboard shortcuts"
-                                aria-label="Keyboard shortcuts"
-                            >
-                                ?
-                            </button>
-                        </div>
-                    </header>
-
-                    <section className="content-viewport">
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '-10%',
-                                right: '-5%',
-                                width: '50vw',
-                                height: '50vw',
-                                background:
-                                    'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)',
-                                borderRadius: '50%',
-                                filter: 'blur(60px)',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                display: isDesktop ? 'block' : 'none',
-                            }}
-                        />
-                        <div
-                            style={{
-                                position: 'absolute',
-                                bottom: '-10%',
-                                left: '-5%',
-                                width: '40vw',
-                                height: '40vw',
-                                background:
-                                    'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)',
-                                borderRadius: '50%',
-                                filter: 'blur(60px)',
-                                pointerEvents: 'none',
-                                zIndex: 0,
-                                display: isDesktop ? 'block' : 'none',
-                            }}
-                        />
-
-                        <MotionConfig reducedMotion="user">
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={activeTab}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.2 }}
+                    <main id="main-content" className="main-content">
+                        <header className="content-header">
+                            {!isDesktop && (
+                                <button
+                                    onClick={() => setMobileMenuOpen(true)}
                                     style={{
-                                        flex: 1,
-                                        minHeight: 0,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        position: 'relative',
-                                        zIndex: 10,
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#94a3b8',
+                                        cursor: 'pointer',
+                                        padding: '0.25rem',
+                                        marginRight: '0.5rem',
+                                    }}
+                                    aria-label={t('nav.open_menu')}
+                                >
+                                    <Menu size={20} />
+                                </button>
+                            )}
+                            <button
+                                onClick={openPalette}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: 8,
+                                    padding: '0.4rem 0.875rem',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-muted)',
+                                    minWidth: 220,
+                                }}
+                                aria-label={t('palette.placeholder')}
+                            >
+                                <Search size={16} />
+                                <span style={{ flex: 1, textAlign: 'left', fontSize: '0.875rem' }}>
+                                    {t('palette.placeholder')}
+                                </span>
+                                <kbd
+                                    style={{
+                                        padding: '0.1rem 0.35rem',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid rgba(255,255,255,0.12)',
+                                        borderRadius: 4,
+                                        fontSize: '0.68rem',
+                                        fontFamily: 'monospace',
                                     }}
                                 >
-                                    <AppRoutes />
-                                </motion.div>
-                            </AnimatePresence>
-                        </MotionConfig>
-                    </section>
-                    <AlertLayer />
-                    <CommandPalette
-                        open={isPaletteOpen}
-                        onClose={closePalette}
-                        t={t as (key: TranslationKey) => string}
-                    />
-                    <OnboardingWizard t={t as (key: TranslationKey) => string} />
-                    <KeyboardShortcutsModal
-                        isOpen={shortcutsOpen}
-                        onClose={() => setShortcutsOpen(false)}
-                    />
-                </main>
+                                    ⌘K
+                                </kbd>
+                            </button>
+                            <Breadcrumbs
+                                path={location.pathname}
+                                t={t as (key: TranslationKey) => string}
+                            />
+                            <div className="header-actions">
+                                <LayoutSelector />
+                                <div className="session-timer">
+                                    <History size={16} />
+                                    <span>{t('nav.local_session')}</span>
+                                </div>
+                                <div className="user-profile">
+                                    <div className="avatar" aria-hidden="true" />
+                                    <span>{t('nav.operator')}</span>
+                                </div>
+                                <select
+                                    value={currentTheme}
+                                    onChange={(e) => handleThemeChange(e.target.value)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        color: '#94a3b8',
+                                        borderRadius: 6,
+                                        padding: '0.25rem 0.5rem',
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                        outline: 'none',
+                                    }}
+                                    aria-label="Theme"
+                                >
+                                    <option value="dark">Dark</option>
+                                    <option value="light">Light</option>
+                                    <option value="cyberpunk">Cyberpunk</option>
+                                    <option value="nature">Nature</option>
+                                    <option value="ocean">Ocean</option>
+                                    <option value="sunset">Sunset</option>
+                                    <option value="high-contrast">High Contrast</option>
+                                </select>
+                                <button
+                                    onClick={() => setShortcutsOpen(true)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#64748b',
+                                        cursor: 'pointer',
+                                        padding: '0.25rem 0.5rem',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        borderRadius: 6,
+                                    }}
+                                    title="Keyboard shortcuts"
+                                    aria-label="Keyboard shortcuts"
+                                >
+                                    ?
+                                </button>
+                            </div>
+                        </header>
+
+                        <section className="content-viewport">
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    top: '-10%',
+                                    right: '-5%',
+                                    width: '50vw',
+                                    height: '50vw',
+                                    background:
+                                        'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 60%)',
+                                    borderRadius: '50%',
+                                    filter: 'blur(60px)',
+                                    pointerEvents: 'none',
+                                    zIndex: 0,
+                                    display: isDesktop ? 'block' : 'none',
+                                }}
+                            />
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    bottom: '-10%',
+                                    left: '-5%',
+                                    width: '40vw',
+                                    height: '40vw',
+                                    background:
+                                        'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)',
+                                    borderRadius: '50%',
+                                    filter: 'blur(60px)',
+                                    pointerEvents: 'none',
+                                    zIndex: 0,
+                                    display: isDesktop ? 'block' : 'none',
+                                }}
+                            />
+
+                            <MotionConfig reducedMotion="user">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={activeTab}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{ duration: 0.2 }}
+                                        style={{
+                                            flex: 1,
+                                            minHeight: 0,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            position: 'relative',
+                                            zIndex: 10,
+                                        }}
+                                    >
+                                        <AppRoutes />
+                                    </motion.div>
+                                </AnimatePresence>
+                            </MotionConfig>
+                        </section>
+                        <NextActionPredictions />
+                        <AlertLayer />
+                        <CommandPalette
+                            open={isPaletteOpen}
+                            onClose={closePalette}
+                            t={t as (key: TranslationKey) => string}
+                        />
+                        <OnboardingWizard t={t as (key: TranslationKey) => string} />
+                        <KeyboardShortcutsModal
+                            isOpen={shortcutsOpen}
+                            onClose={() => setShortcutsOpen(false)}
+                        />
+                    </main>
+                </LayoutProvider>
             </div>
         </GlobalErrorBoundary>
     );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { PanelSkeleton } from '../Common/Skeleton';
 import DebateSetupWizard from './DebateSetupWizard';
 import DebateHistoryPanel from './DebateHistoryPanel';
 import DebateAnalytics from './DebateAnalytics';
@@ -20,12 +20,7 @@ import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AutoDebateResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import { probeService, autoDebateService as autoDebate } from '../../kernel/instances';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
-import {
-    debateArenaPanel,
-    debateLoadingState,
-    debateLogArea,
-    textWeight600,
-} from '../../styles/common';
+import { debateArenaPanel, debateLoadingState, debateLogArea } from '../../styles/common';
 
 // FIX (audit): extracted from duplicate mobile/desktop JSX in DebatePanel.tsx
 // Reduces ~553 lines of duplication. Mobile uses containerStyle=mobileFlex, showSidebar=false.
@@ -227,8 +222,7 @@ export function DebateTabContent({
                     >
                         {isLoading && !session && (
                             <div aria-live="polite" aria-busy="true" style={debateLoadingState}>
-                                <Loader2 size={48} className="spinning" opacity={0.3} />
-                                <span style={textWeight600}>{t('debate.loading')}</span>
+                                <PanelSkeleton />
                             </div>
                         )}
                         <div className="glass-panel" style={debateArenaPanel}>

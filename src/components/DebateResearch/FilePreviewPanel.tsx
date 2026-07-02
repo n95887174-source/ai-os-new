@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { ChevronRight, X, Target, Copy, Lightbulb } from 'lucide-react';
+import { Skeleton } from '../Common/Skeleton';
 import type { FileNode } from '../../kernel/contracts/workspace';
 import {
     getExt,
@@ -267,7 +268,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                                     width: '100%',
                                 }}
                             >
-                                Loading...
+                                <Skeleton width="40%" height={14} />
                             </div>
                         ) : previewError ? (
                             <div

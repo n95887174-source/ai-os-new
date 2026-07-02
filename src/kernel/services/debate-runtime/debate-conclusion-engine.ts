@@ -11,8 +11,13 @@ import type {
     VerdictFeedback,
     VerdictFeedbackVote,
 } from '../../contracts/debate-types';
+import type { DebateStore } from '../../contracts/storage/debate-store';
+import { DebateVerdictRecordSchema } from '../../types/schema-types';
+import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import { rootLogger } from '../logger-service';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
+import type { DebateProviderResolver } from './debate-query-engine';
+import { DEBATE_MODEL_PRIORITY } from './debate-query-engine';
 
 const LOGGER = rootLogger.child('DebateConclusionEngine');
 let sharedEnhancementInFlight = false;
@@ -302,4 +307,143 @@ Respond ONLY with valid JSON, no markdown.`;
         const total = agrees + disagrees;
         return { agrees, disagrees, ratio: total > 0 ? agrees / total : 0.5 };
     }
+}
+
+export interface ConclusionLlmDeps {
+    getAdapterRegistry(): IAdapterRegistry;
+    getKeyService(): {
+        getKeys(): Array<{
+            id: string;
+            key: string;
+            provider: string;
+            status: string;
+            model?: string;
+            availableModels?: string[];
+        }>;
+    };
+    getKeyStateStore?(): {
+        get(
+            id: string,
+        ):
+            | { flags: { authFailed: boolean; circuitOpen: boolean; rateLimited: boolean } }
+            | undefined;
+        update(id: string, patch: { flags: Record<string, boolean> }): void;
+    };
+    providerResolver: DebateProviderResolver;
+}
+
+export function buildConclusionLlmCall(
+    deps: ConclusionLlmDeps,
+): (prompt: string) => Promise<string> {
+    return async (prompt: string): Promise<string> => {
+        const adapterRegistry = deps.getAdapterRegistry();
+        const keyService = deps.getKeyService();
+        const keys = keyService.getKeys();
+        const preferredProviders = [
+            'groq',
+            'gemini',
+            'openrouter',
+            'nvidia',
+            'cerebras',
+            'cloudflare',
+        ];
+        const messages = [{ role: 'user' as const, content: prompt }];
+        const stateStore = deps.getKeyStateStore?.();
+        const candidateKeys = [
+            ...preferredProviders.flatMap((provider) =>
+                keys.filter(
+                    (k) =>
+                        k.provider.toLowerCase() === provider &&
+                        k.status === 'active' &&
+                        !deps.providerResolver.isKeyAuthFailed(k.id),
+                ),
+            ),
+            ...keys.filter(
+                (k) => k.status === 'active' && !deps.providerResolver.isKeyAuthFailed(k.id),
+            ),
+        ];
+
+        for (const activeKey of candidateKeys) {
+            const keyState = stateStore?.get(activeKey.id);
+            if (
+                keyState?.flags.authFailed ||
+                keyState?.flags.circuitOpen ||
+                keyState?.flags.rateLimited
+            )
+                continue;
+            const providerStatus = adapterRegistry.getProviderRuntimeStatus(activeKey.provider);
+            if (providerStatus.circuitOpen || providerStatus.rateLimited) continue;
+
+            const adapter = adapterRegistry.getAdapter(activeKey.provider);
+            if (!adapter) continue;
+
+            const model =
+                activeKey.model && activeKey.model !== 'auto'
+                    ? activeKey.model
+                    : (DEBATE_MODEL_PRIORITY[activeKey.provider.toLowerCase()] ?? [])[0] || 'auto';
+
+            try {
+                const result = await adapter.sendMessage(messages, model, activeKey.key);
+                return typeof result.content === 'string' ? result.content : String(result.content);
+            } catch (error) {
+                const sc = (error as { statusCode?: number }).statusCode;
+                const msg = String(error);
+                const isProviderAuthError =
+                    sc === 401 ||
+                    sc === 402 ||
+                    sc === 403 ||
+                    msg.includes('401') ||
+                    msg.includes('402') ||
+                    msg.includes('403') ||
+                    msg.includes('Unauthorized') ||
+                    msg.includes('Forbidden') ||
+                    msg.includes('Payment Required');
+                const isProviderThrottle =
+                    sc === 429 ||
+                    msg.includes('429') ||
+                    msg.includes('Too Many Requests') ||
+                    msg.includes('Rate limit');
+                if (isProviderAuthError || isProviderThrottle) {
+                    const kss = deps.getKeyStateStore?.();
+                    if (kss) {
+                        try {
+                            kss.update(activeKey.id, {
+                                flags: {
+                                    ...(keyState?.flags ?? {
+                                        circuitOpen: false,
+                                        rateLimited: false,
+                                        authFailed: false,
+                                    }),
+                                    authFailed:
+                                        (keyState?.flags.authFailed ?? false) ||
+                                        isProviderAuthError,
+                                    rateLimited:
+                                        (keyState?.flags.rateLimited ?? false) ||
+                                        isProviderThrottle,
+                                },
+                            });
+                        } catch {
+                            /* best-effort */
+                        }
+                    }
+                    continue;
+                }
+                throw error;
+            }
+        }
+
+        throw new Error('No usable key for conclusion LLM');
+    };
+}
+
+export async function validateAndSaveVerdict(
+    store: DebateStore,
+    verdict: Omit<DebateVerdict, 'keyArguments'> & { keyArguments: string },
+): Promise<void> {
+    const vp = DebateVerdictRecordSchema.safeParse(verdict);
+    if (!vp.success) {
+        LOGGER.warn('DebateEngine', 'verdict validation failed', { errors: vp.error.issues });
+        return;
+    }
+    await store.saveVerdict(verdict);
 }

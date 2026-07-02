@@ -16,6 +16,7 @@ interface MigrationDeps {
 }
 
 function readRawFromLocalStorage(key: string): string | null {
+    if (typeof localStorage === 'undefined') return null;
     try {
         return localStorage.getItem(key);
     } catch {

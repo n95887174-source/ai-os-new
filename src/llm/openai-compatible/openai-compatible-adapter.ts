@@ -205,7 +205,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
                 return delta?.content;
             },
             undefined,
-            { signal },
+            { signal, idleTimeoutMs: 30000 },
         );
 
         if (finalFinishReason || finalUsage || finalReasoning) {

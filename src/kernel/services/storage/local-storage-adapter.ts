@@ -7,10 +7,16 @@ import {
 
 const { obfuscate, deobfuscate } = createObfuscation(DEFAULT_OBFUSCATION_SALT);
 
+const hasLocalStorage = typeof localStorage !== 'undefined';
+
 export class LocalStorageAdapter implements ILocalStorageAdapter {
+    private memory = new Map<string, string>();
+
     getItem(key: string): string | null {
         try {
-            const raw = localStorage.getItem(key);
+            const raw = hasLocalStorage
+                ? localStorage.getItem(key)
+                : (this.memory.get(key) ?? null);
             if (!raw) return null;
             if (raw.startsWith(OBFUSCATION_PREFIX)) {
                 return deobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
@@ -22,7 +28,12 @@ export class LocalStorageAdapter implements ILocalStorageAdapter {
     }
     setItem(key: string, value: string): void {
         try {
-            localStorage.setItem(key, OBFUSCATION_PREFIX + obfuscate(value));
+            const data = OBFUSCATION_PREFIX + obfuscate(value);
+            if (hasLocalStorage) {
+                localStorage.setItem(key, data);
+            } else {
+                this.memory.set(key, data);
+            }
         } catch (e) {
             if (e instanceof DOMException && e.name === 'QuotaExceededError') {
                 throw e;
@@ -31,28 +42,40 @@ export class LocalStorageAdapter implements ILocalStorageAdapter {
     }
     removeItem(key: string): void {
         try {
-            localStorage.removeItem(key);
+            if (hasLocalStorage) {
+                localStorage.removeItem(key);
+            } else {
+                this.memory.delete(key);
+            }
         } catch {
             /* ignore */
         }
     }
     clear(): void {
         try {
-            localStorage.clear();
+            if (hasLocalStorage) {
+                localStorage.clear();
+            } else {
+                this.memory.clear();
+            }
         } catch {
             /* ignore */
         }
     }
     key(index: number): string | null {
         try {
-            return localStorage.key(index);
+            if (hasLocalStorage) {
+                return localStorage.key(index);
+            }
+            const keys = [...this.memory.keys()];
+            return keys[index] ?? null;
         } catch {
             return null;
         }
     }
     get length(): number {
         try {
-            return localStorage.length;
+            return hasLocalStorage ? localStorage.length : this.memory.size;
         } catch {
             return 0;
         }

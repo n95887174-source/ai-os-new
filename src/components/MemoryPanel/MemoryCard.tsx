@@ -145,6 +145,30 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
                     >
                         <Tag size={12} aria-hidden="true" /> {memory.metadata.source || 'system'}
                     </span>
+                    <span
+                        style={{
+                            fontSize: '0.7rem',
+                            padding: '0.3rem 0.6rem',
+                            borderRadius: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontWeight: 600,
+                            background:
+                                (memory.metadata.importance ?? 0) >= 8
+                                    ? 'rgba(239,68,68,0.15)'
+                                    : (memory.metadata.importance ?? 0) >= 5
+                                      ? 'rgba(245,158,11,0.15)'
+                                      : 'rgba(100,116,139,0.15)',
+                            color:
+                                (memory.metadata.importance ?? 0) >= 8
+                                    ? '#ef4444'
+                                    : (memory.metadata.importance ?? 0) >= 5
+                                      ? '#f59e0b'
+                                      : '#94a3b8',
+                        }}
+                    >
+                        ★{memory.metadata.importance ?? 0}
+                    </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button

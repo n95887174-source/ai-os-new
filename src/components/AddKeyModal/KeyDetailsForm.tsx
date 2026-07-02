@@ -182,6 +182,61 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                         )}
                     </button>
                 </div>
+                {apiKey.length > 0 &&
+                    (() => {
+                        const score = Math.min(
+                            (apiKey.length >= 40 ? 30 : apiKey.length >= 20 ? 15 : 0) +
+                                (/[a-z]/.test(apiKey) ? 15 : 0) +
+                                (/[A-Z]/.test(apiKey) ? 15 : 0) +
+                                (/\d/.test(apiKey) ? 15 : 0) +
+                                (/[^a-zA-Z0-9]/.test(apiKey) ? 15 : 0) +
+                                (/^(sk-or|gsk_|AIza|nvapi|sk-|sk-ant)/i.test(apiKey) ? 10 : 0),
+                            100,
+                        );
+                        const color = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+                        const label = score >= 80 ? 'Strong' : score >= 50 ? 'Medium' : 'Weak';
+                        return (
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    marginTop: '0.4rem',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        flex: 1,
+                                        height: 4,
+                                        borderRadius: 2,
+                                        background: 'rgba(255,255,255,0.06)',
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            width: `${score}%`,
+                                            height: '100%',
+                                            borderRadius: 2,
+                                            background: color,
+                                            transition: 'width 0.3s',
+                                        }}
+                                    />
+                                </div>
+                                <span
+                                    style={{
+                                        fontSize: '0.65rem',
+                                        fontWeight: 700,
+                                        color,
+                                        minWidth: 50,
+                                        textAlign: 'right',
+                                    }}
+                                >
+                                    {label}
+                                </span>
+                            </div>
+                        );
+                    })()}
             </div>
 
             {error && (

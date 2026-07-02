@@ -16,6 +16,7 @@ import { ProbeResultSection } from './ProbeResultSection';
 import { QuickTestSection } from './QuickTestSection';
 import { ProviderCardActions, ConfirmRemoveBanner } from './ProviderCardActions';
 import { posRelative, textXs, textSecondary, infoIcon } from '../../styles/common';
+import { PersonalityBadge } from './PersonalityBadge';
 
 export interface ProviderCardProps {
     apiKey: ApiKey;
@@ -120,6 +121,9 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                         <div className="provider-name-sub" style={textXs}>
                             {highlightText(apiKey.provider, searchQuery)}
                         </div>
+                        <div style={{ marginTop: 4 }}>
+                            <PersonalityBadge provider={apiKey.provider} compact />
+                        </div>
                     </div>
                 </div>
                 <div className="provider-card-end">
@@ -223,6 +227,124 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                             {apiKey.account || apiKey.accountId}
                         </div>
                     )}
+                    <div
+                        style={{
+                            display: 'flex',
+                            gap: '0.5rem',
+                            marginTop: '0.4rem',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                        }}
+                    >
+                        {ks?.flags?.circuitOpen && (
+                            <span
+                                className="cb-pulse"
+                                style={{
+                                    padding: '2px 8px',
+                                    borderRadius: 4,
+                                    fontSize: '0.6rem',
+                                    fontWeight: 700,
+                                    color: '#ef4444',
+                                    background: 'rgba(239,68,68,0.15)',
+                                    border: '1px solid rgba(239,68,68,0.3)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                }}
+                                title="Circuit breaker is OPEN — requests are being blocked"
+                            >
+                                <span
+                                    className="cb-dot"
+                                    style={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: '50%',
+                                        background: '#ef4444',
+                                        display: 'inline-block',
+                                    }}
+                                />
+                                CIRCUIT OPEN
+                            </span>
+                        )}
+                        {ks?.flags?.rateLimited && (
+                            <span
+                                style={{
+                                    padding: '2px 8px',
+                                    borderRadius: 4,
+                                    fontSize: '0.6rem',
+                                    fontWeight: 700,
+                                    color: '#f97316',
+                                    background: 'rgba(249,115,22,0.15)',
+                                    border: '1px solid rgba(249,115,22,0.3)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                }}
+                                title="Rate limited — requests are throttled"
+                            >
+                                <span
+                                    style={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: '50%',
+                                        background: '#f97316',
+                                        display: 'inline-block',
+                                    }}
+                                />
+                                RATE LIMITED
+                            </span>
+                        )}
+                        {ks?.flags?.authFailed && (
+                            <span
+                                style={{
+                                    padding: '2px 8px',
+                                    borderRadius: 4,
+                                    fontSize: '0.6rem',
+                                    fontWeight: 700,
+                                    color: '#64748b',
+                                    background: 'rgba(100,116,139,0.15)',
+                                    border: '1px solid rgba(100,116,139,0.3)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                }}
+                                title="Authentication failed on last probe"
+                            >
+                                AUTH FAILED
+                            </span>
+                        )}
+                        {ks &&
+                            !ks.flags.circuitOpen &&
+                            !ks.flags.rateLimited &&
+                            !ks.flags.authFailed && (
+                                <span
+                                    style={{
+                                        padding: '2px 8px',
+                                        borderRadius: 4,
+                                        fontSize: '0.6rem',
+                                        fontWeight: 600,
+                                        color: '#10b981',
+                                        background: 'rgba(16,185,129,0.1)',
+                                        border: '1px solid rgba(16,185,129,0.15)',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                    }}
+                                    title="Circuit breaker is closed — normal operation"
+                                >
+                                    <span
+                                        style={{
+                                            width: 6,
+                                            height: 6,
+                                            borderRadius: '50%',
+                                            background: '#10b981',
+                                            display: 'inline-block',
+                                        }}
+                                    />
+                                    CB OK
+                                </span>
+                            )}
+                    </div>
                 </div>
             </div>
 

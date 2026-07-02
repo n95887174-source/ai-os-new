@@ -7,9 +7,10 @@ import type {
 import { DebateTopologyService } from './debate-topology';
 
 export class DebateOrchestrator implements IDebateOrchestrator {
-    private topologyService = new DebateTopologyService();
     private aborted = new Set<string>();
     private executor: AgentExecutor | undefined;
+
+    constructor(private topologyService: DebateTopologyService) {}
 
     setAgentExecutor(executor: AgentExecutor): void {
         this.executor = executor;

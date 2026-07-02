@@ -10,6 +10,7 @@ import {
     Bell,
     BookText,
     Lock,
+    Palette,
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
 import { securityService } from '../../kernel/security';
@@ -35,6 +36,8 @@ import WritingTab from './WritingTab';
 import ReadingTab from './ReadingTab';
 import AlertsTab from './AlertsTab';
 import AdvancedTab from './AdvancedTab';
+import NotificationsTab from './NotificationsTab';
+import AppearanceTab from './AppearanceTab';
 
 import { errorBannerLg, flexJustifyBetween } from '../../styles/common';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -66,6 +69,7 @@ const SettingsPanel: React.FC = () => {
     const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
         () => structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
     );
+    const [settingsSearch, setSettingsSearch] = useState('');
 
     const isMountedRef = useRef(true);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -319,6 +323,10 @@ const SettingsPanel: React.FC = () => {
                         providerOptions={PROVIDER_OPTIONS}
                     />
                 );
+            case 'notifications':
+                return <NotificationsTab settings={settings} updateSetting={updateSetting} />;
+            case 'appearance':
+                return <AppearanceTab />;
             case 'prompts':
                 return <PromptsTab />;
             case 'advanced':
@@ -434,6 +442,25 @@ const SettingsPanel: React.FC = () => {
                     role="tablist"
                     aria-label="Settings categories"
                 >
+                    <input
+                        type="search"
+                        placeholder={t('settings.search_placeholder') || 'Search settings...'}
+                        value={settingsSearch}
+                        onChange={(e) => setSettingsSearch(e.target.value)}
+                        style={{
+                            padding: '0.6rem 0.75rem',
+                            borderRadius: 10,
+                            background: 'rgba(0,0,0,0.3)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            color: '#e2e8f0',
+                            fontSize: '0.8rem',
+                            outline: 'none',
+                            marginBottom: '0.5rem',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                        }}
+                        aria-label="Search settings"
+                    />
                     {(
                         [
                             {
@@ -457,6 +484,16 @@ const SettingsPanel: React.FC = () => {
                                 icon: <Bell size={18} aria-hidden="true" />,
                             },
                             {
+                                id: 'notifications',
+                                label: t('settings.notifications'),
+                                icon: <Bell size={18} aria-hidden="true" />,
+                            },
+                            {
+                                id: 'appearance',
+                                label: 'Design Tokens LIVE',
+                                icon: <Palette size={18} aria-hidden="true" />,
+                            },
+                            {
                                 id: 'prompts',
                                 label: t('settings.tab.prompts'),
                                 icon: <BookText size={18} aria-hidden="true" />,
@@ -467,36 +504,46 @@ const SettingsPanel: React.FC = () => {
                                 icon: <Lock size={18} aria-hidden="true" />,
                             },
                         ] as const
-                    ).map((tab) => (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => setActiveTab(tab.id)}
-                            role="tab"
-                            aria-selected={activeTab === tab.id}
-                            aria-controls={`settings-tab-${tab.id}`}
-                            style={{
-                                background:
-                                    activeTab === tab.id ? 'rgba(59,130,246,0.1)' : 'transparent',
-                                border: '1px solid',
-                                borderColor:
-                                    activeTab === tab.id ? 'rgba(59,130,246,0.2)' : 'transparent',
-                                padding: '0.8rem 1rem',
-                                cursor: 'pointer',
-                                borderRadius: 12,
-                                color: activeTab === tab.id ? '#3b82f6' : 'var(--text-muted)',
-                                fontSize: '0.9rem',
-                                fontWeight: activeTab === tab.id ? 700 : 600,
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                textAlign: 'left',
-                            }}
-                        >
-                            {tab.icon} {tab.label}
-                        </button>
-                    ))}
+                    )
+                        .filter(
+                            (tab) =>
+                                !settingsSearch ||
+                                tab.label.toLowerCase().includes(settingsSearch.toLowerCase()),
+                        )
+                        .map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setActiveTab(tab.id)}
+                                role="tab"
+                                aria-selected={activeTab === tab.id}
+                                aria-controls={`settings-tab-${tab.id}`}
+                                style={{
+                                    background:
+                                        activeTab === tab.id
+                                            ? 'rgba(59,130,246,0.1)'
+                                            : 'transparent',
+                                    border: '1px solid',
+                                    borderColor:
+                                        activeTab === tab.id
+                                            ? 'rgba(59,130,246,0.2)'
+                                            : 'transparent',
+                                    padding: '0.8rem 1rem',
+                                    cursor: 'pointer',
+                                    borderRadius: 12,
+                                    color: activeTab === tab.id ? '#3b82f6' : 'var(--text-muted)',
+                                    fontSize: '0.9rem',
+                                    fontWeight: activeTab === tab.id ? 700 : 600,
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    textAlign: 'left',
+                                }}
+                            >
+                                {tab.icon} {tab.label}
+                            </button>
+                        ))}
 
                     <div
                         style={{

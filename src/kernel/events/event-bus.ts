@@ -117,16 +117,8 @@ export class EventBus implements IEventBus {
         }
     }
 
-    private static readonly RESET_GUARD = 'shutdown-reset-42';
-    /** @internal Called only from RuntimeManager during full system shutdown. Not part of IEventBus. */
-    reset(guard?: string): void {
-        if (guard !== EventBus.RESET_GUARD) {
-            this.logger?.error(
-                'EventBus',
-                'reset() called without proper guard — use runtime.shutdown() instead',
-            );
-            return;
-        }
+    /** D-07: Public API to clear all subscriptions — calls per-subscriber destroy callbacks, then cleans up. */
+    clearAllSubscriptions(): void {
         for (const unsub of this.unsubCallbacks) {
             try {
                 unsub();
@@ -136,7 +128,6 @@ export class EventBus implements IEventBus {
         }
         this.unsubCallbacks.clear();
         this.listenerMap.clear();
-        // N-18: clear only dynamic validators, keep static ones
         for (const key of this.validatorMap.keys()) {
             if (!this.staticValidators.has(key)) this.validatorMap.delete(key);
         }
@@ -147,7 +138,12 @@ export class EventBus implements IEventBus {
         this._replayBuffer = [];
         this._replayHead = 0;
         this._replayCount = 0;
-        this.logger?.warn('EventBus', 'reset');
+        this.logger?.warn('EventBus', 'clearAllSubscriptions');
+    }
+
+    /** @deprecated Use clearAllSubscriptions() instead. Called only from RuntimeManager during full system shutdown. */
+    reset(_guard?: string): void {
+        this.clearAllSubscriptions();
     }
 
     static emit<K extends keyof EventMap>(event: K, data: EventMap[K]): void {

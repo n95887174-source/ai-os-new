@@ -61,6 +61,41 @@ export interface PolicyFireResult {
     readonly timestamp: number;
 }
 
+export interface PolicyActionExecutor {
+    pauseSession(sessionId: string): void;
+    emitEvent(eventName: string, payload: Record<string, unknown>): void;
+    skipAgent(agentId: string): void;
+    log(level: 'info' | 'warn' | 'error', message: string, meta?: Record<string, unknown>): void;
+}
+
+export function executePolicyActions(
+    actions: PolicyAction[],
+    sessionId: string,
+    executor: PolicyActionExecutor,
+): void {
+    for (const action of actions) {
+        switch (action.type) {
+            case 'pause':
+                executor.pauseSession(sessionId);
+                break;
+            case 'log':
+                executor.log(action.level, action.message);
+                break;
+            case 'emit_event':
+                executor.emitEvent(action.eventName, action.payload ?? {});
+                break;
+            case 'skip_agent':
+                executor.skipAgent(action.agentId);
+                break;
+            case 'adjust_temperature':
+            case 'reduce_rounds':
+            case 'inject_message':
+                executor.log('info', `Action ${action.type} not yet implemented`);
+                break;
+        }
+    }
+}
+
 // ── Policy Engine ──────────────────────────────────────────────────
 
 export class DebatePolicyEngine {

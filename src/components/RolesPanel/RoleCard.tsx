@@ -3,15 +3,16 @@ import { motion } from 'framer-motion';
 import {
     Copy,
     Trash2,
-    Brain,
     UserCog,
     Code,
     Wrench,
     AlertTriangle,
-    CheckCircle2,
+    ThumbsUp,
+    ThumbsDown,
 } from 'lucide-react';
 import type { Role } from '../../types/role';
 import type { RoleUsageStats } from '../../kernel/instances';
+import { ProceduralAvatar } from './ProceduralAvatar';
 
 interface RoleCardProps {
     role: Role;
@@ -25,6 +26,8 @@ interface RoleCardProps {
     onEdit: () => void;
     onDelete: (e: React.MouseEvent) => void;
     onDuplicate: (e: React.MouseEvent) => void;
+    onFeedback?: (roleId: string, positive: boolean) => void;
+    onPromote?: (roleId: string) => void;
     t: (key: string) => string;
 }
 
@@ -40,6 +43,8 @@ export const RoleCard: React.FC<RoleCardProps> = ({
     onEdit,
     onDelete,
     onDuplicate,
+    onFeedback,
+    onPromote,
     t,
 }) => (
     <motion.div
@@ -91,7 +96,15 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                         border: `1px solid ${catColor}30`,
                     }}
                 >
-                    <Brain size={24} color={catColor} aria-hidden="true" />
+                    {role.icon ? (
+                        <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{role.icon}</span>
+                    ) : (
+                        <ProceduralAvatar
+                            seed={role.id}
+                            size={32}
+                            shape={(role.metadata?.avatarShape as any) || 'circle'}
+                        />
+                    )}
                 </div>
                 <div>
                     <h3
@@ -120,7 +133,31 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                     </div>
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                {onPromote && !role.isBuiltin && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onPromote(role.id);
+                        }}
+                        style={{
+                            padding: '0.5rem',
+                            borderRadius: 10,
+                            background: 'rgba(16,185,129,0.05)',
+                            border: '1px solid rgba(16,185,129,0.2)',
+                            color: '#10b981',
+                            cursor: 'pointer',
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                        }}
+                        title="Promote to built-in"
+                    >
+                        ↑ Promote
+                    </button>
+                )}
                 <button
                     onClick={onDuplicate}
                     style={{
@@ -205,6 +242,62 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                         {stats.avgLatency.toFixed(0)}ms
                     </span>
                 </div>
+                {onFeedback && (
+                    <div
+                        style={{
+                            display: 'flex',
+                            gap: 4,
+                            marginLeft: 'auto',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onFeedback(role.id, true);
+                            }}
+                            style={{
+                                padding: '0.25rem 0.4rem',
+                                borderRadius: 6,
+                                border: '1px solid rgba(16,185,129,0.3)',
+                                background: 'rgba(16,185,129,0.08)',
+                                color: '#10b981',
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 3,
+                                lineHeight: 1,
+                            }}
+                            title="Positive feedback"
+                        >
+                            <ThumbsUp size={12} />{' '}
+                            {stats.feedbackScore > 0 ? stats.feedbackScore : ''}
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onFeedback(role.id, false);
+                            }}
+                            style={{
+                                padding: '0.25rem 0.4rem',
+                                borderRadius: 6,
+                                border: '1px solid rgba(239,68,68,0.3)',
+                                background: 'rgba(239,68,68,0.08)',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 3,
+                                lineHeight: 1,
+                            }}
+                            title="Negative feedback"
+                        >
+                            <ThumbsDown size={12} />
+                        </button>
+                    </div>
+                )}
             </div>
         )}
 

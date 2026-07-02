@@ -152,20 +152,56 @@ export const LogsPanel: React.FC = () => {
                     />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Filter size={14} color="#64748b" />
+                    <div style={{ display: 'flex', gap: 3 }}>
+                        {(['all', 'error', 'warn', 'info'] as const).map((preset) => (
+                            <button
+                                key={preset}
+                                onClick={() => setLevelFilter(preset === 'all' ? 'all' : preset)}
+                                style={{
+                                    padding: '0.3rem 0.5rem',
+                                    borderRadius: 6,
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    background:
+                                        levelFilter === preset ||
+                                        (preset === 'warn' && levelFilter === 'warn') ||
+                                        (preset === 'info' && levelFilter === 'info') ||
+                                        (preset === 'error' && levelFilter === 'error') ||
+                                        (preset === 'all' && levelFilter === 'all')
+                                            ? LEVEL_CONFIG[preset === 'all' ? 'info' : preset].bg
+                                            : 'rgba(255,255,255,0.03)',
+                                    color:
+                                        levelFilter === preset ||
+                                        (preset === 'warn' && levelFilter === 'warn') ||
+                                        (preset === 'info' && levelFilter === 'info') ||
+                                        (preset === 'error' && levelFilter === 'error') ||
+                                        (preset === 'all' && levelFilter === 'all')
+                                            ? LEVEL_CONFIG[preset === 'all' ? 'info' : preset].color
+                                            : '#64748b',
+                                }}
+                                aria-label={t('logs.filter_' + preset)}
+                            >
+                                {preset === 'all' ? t('logs.filter_all') : preset.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
                     <select
                         value={levelFilter}
                         onChange={(e) => setLevelFilter(e.target.value)}
                         style={{
-                            padding: '0.4rem 0.6rem',
-                            borderRadius: 8,
-                            fontSize: '0.8rem',
+                            padding: '0.3rem 0.5rem',
+                            borderRadius: 6,
+                            fontSize: '0.75rem',
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.06)',
                             color: '#f8fafc',
                             outline: 'none',
                             cursor: 'pointer',
+                            marginLeft: 4,
                         }}
                     >
                         <option value="all">{t('logs.filter_all_levels')}</option>

@@ -172,6 +172,7 @@ export const registerPhase4: Phase = (helpers, ctx) => {
             eventBus: get<IEventBus>('eventBus'),
             toolService: get<ToolService>('toolService'),
             orchestrator: get<OrchestrationService>('orchestrator'),
+            roleVersionService,
         }),
     );
 

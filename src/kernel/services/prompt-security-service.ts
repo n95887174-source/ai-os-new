@@ -1,0 +1,266 @@
+import { BucketStorageAdapter } from './storage-adapter';
+import type {
+    SecurityFinding,
+    PromptScanResult,
+    SecurityScanRule,
+    SecurityScanConfig,
+    SecurityScanEvent,
+    PromptSecurityService,
+} from '../contracts/prompt-security-types';
+
+const STORAGE_KEY_HISTORY = 'security_scan_history';
+const MAX_HISTORY = 100;
+const STORAGE_KEY_CONFIG = 'security_scan_config';
+
+const DEFAULT_RULES: SecurityScanRule[] = [
+    {
+        id: 'inj-1',
+        name: 'Ignore Instructions',
+        category: 'injection',
+        pattern: 'ignore\\s+(all\\s+)?(previous|above|prior)\\s+instructions',
+        severity: 'high',
+        enabled: true,
+        description: 'Attempts to override system instructions',
+    },
+    {
+        id: 'inj-2',
+        name: 'Role-Play Injection',
+        category: 'injection',
+        pattern: 'you\\s+are\\s+(now|no\\s+longer|free|a\\s+different)',
+        severity: 'high',
+        enabled: true,
+        description: 'Attempts to change agent persona',
+    },
+    {
+        id: 'inj-3',
+        name: 'Delimiter Break',
+        category: 'injection',
+        pattern: 'forget|disregard|unset|clear\\s+context',
+        severity: 'medium',
+        enabled: true,
+        description: 'Attempts to reset conversation context',
+    },
+    {
+        id: 'pii-1',
+        name: 'API Key Leak',
+        category: 'pii',
+        pattern: '(?:sk-|pk-|groq-)[a-zA-Z0-9_-]{20,}',
+        severity: 'critical',
+        enabled: true,
+        description: 'Potential API key in prompt',
+    },
+    {
+        id: 'pii-2',
+        name: 'Email Leak',
+        category: 'pii',
+        pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}',
+        severity: 'medium',
+        enabled: true,
+        description: 'Email address in prompt',
+    },
+    {
+        id: 'pii-3',
+        name: 'Phone Number',
+        category: 'pii',
+        pattern: '\\+?\\d{1,3}[-.\\s]?\\(?\\d{2,4}\\)?[-.\\s]?\\d{2,4}[-.\\s]?\\d{2,9}',
+        severity: 'low',
+        enabled: true,
+        description: 'Phone number detected',
+    },
+    {
+        id: 'ext-1',
+        name: 'Prompt Extraction',
+        category: 'extraction',
+        pattern:
+            '(?:repeat|output|show|print|display|reveal|dump|copy)\\s+(?:the\\s+)?(?:above|entire|full|complete|whole|system|initial|prompt|instruction)',
+        severity: 'high',
+        enabled: true,
+        description: 'Attempts to extract system prompt',
+    },
+    {
+        id: 'ext-2',
+        name: 'Token Dump',
+        category: 'extraction',
+        pattern:
+            '(?:from\\s+the\\s+beginning|start\\s+over|repeat\\s+everything|say\\s+everything)',
+        severity: 'medium',
+        enabled: true,
+        description: 'Attempts to dump conversation history',
+    },
+    {
+        id: 'dan-1',
+        name: 'DAN Mode',
+        category: 'jailbreak',
+        pattern:
+            '(?:dan|do\\s+anything\\s+now|jailbreak|unjail|unlocked|unlimited|no\\s+(?:rules|restrictions|limits|boundaries|filter))',
+        severity: 'critical',
+        enabled: true,
+        description: 'Jailbreak attempt',
+    },
+    {
+        id: 'dan-2',
+        name: 'Hypothetical Bypass',
+        category: 'jailbreak',
+        pattern:
+            '(?:hypothetically|for\\s*(?:a\\s*)?science|for\\s*(?:a\\s*)?fiction|in\\s*a\\s*fictional|in\\s*a\\s*hypothetical)',
+        severity: 'low',
+        enabled: true,
+        description: 'Hypothetical framing to bypass safety',
+    },
+    {
+        id: 'dan-3',
+        name: 'Encoding Bypass',
+        category: 'jailbreak',
+        pattern: '(?:base64|rot13|hex\\s+decode|caesar|cipher|encoded\\s+as)',
+        severity: 'medium',
+        enabled: true,
+        description: 'Encoded payload attempt',
+    },
+    {
+        id: 'dng-1',
+        name: 'Code Execution',
+        category: 'dangerous',
+        pattern: '(?:exec|eval|system\\(|subprocess|os\\.system|child_process|execSync|spawnSync)',
+        severity: 'critical',
+        enabled: true,
+        description: 'Code execution attempt',
+    },
+    {
+        id: 'dng-2',
+        name: 'SQL Injection',
+        category: 'dangerous',
+        pattern: '(?:DROP\\s+TABLE|DELETE\\s+FROM|INSERT\\s+INTO|OR\\s+1=1|UNION\\s+SELECT)',
+        severity: 'high',
+        enabled: true,
+        description: 'SQL injection pattern',
+    },
+    {
+        id: 'dng-3',
+        name: 'File Access',
+        category: 'dangerous',
+        pattern:
+            '(?:read\\s+(?:file|config\\.json|env\\.)|cat\\s+/etc|type\\s+[A-Z]:\\\\|fs\\.readFileSync)',
+        severity: 'medium',
+        enabled: true,
+        description: 'File system access attempt',
+    },
+];
+
+const DEFAULT_CONFIG: SecurityScanConfig = {
+    enabled: true,
+    blockOnScore: 7,
+    rules: DEFAULT_RULES,
+};
+
+export class PromptSecurityServiceImpl implements PromptSecurityService {
+    private config: SecurityScanConfig = DEFAULT_CONFIG;
+    private history: SecurityScanEvent[] = [];
+    private loaded = false;
+    private readonly store = BucketStorageAdapter.UI;
+
+    private async ensureLoaded(): Promise<void> {
+        if (this.loaded) return;
+        const [savedConfig, savedHistory] = await Promise.all([
+            this.store.get<SecurityScanConfig>(STORAGE_KEY_CONFIG),
+            this.store.get<SecurityScanEvent[]>(STORAGE_KEY_HISTORY),
+        ]);
+        if (savedConfig)
+            this.config = {
+                ...DEFAULT_CONFIG,
+                ...savedConfig,
+                rules: savedConfig.rules ?? DEFAULT_CONFIG.rules,
+            };
+        this.history = savedHistory ?? [];
+        this.loaded = true;
+    }
+
+    private async persist(): Promise<void> {
+        await Promise.all([
+            this.store.set(STORAGE_KEY_CONFIG, this.config),
+            this.store.set(STORAGE_KEY_HISTORY, this.history.slice(-MAX_HISTORY)),
+        ]);
+    }
+
+    scan(prompt: string): PromptScanResult {
+        if (!prompt) return { safe: true, score: 0, findings: [], summary: 'Empty prompt' };
+
+        const findings: SecurityFinding[] = [];
+        for (const rule of this.config.rules) {
+            if (!rule.enabled) continue;
+            const regex = new RegExp(rule.pattern, 'gi');
+            let match: RegExpExecArray | null;
+            while ((match = regex.exec(prompt)) !== null) {
+                findings.push({
+                    category: rule.category,
+                    severity: rule.severity,
+                    message: rule.description,
+                    match: match[0].slice(0, 80),
+                    position: { start: match.index, end: match.index + match[0].length },
+                });
+                // Only first match per rule to avoid spam
+                break;
+            }
+        }
+
+        const severityWeights: Record<string, number> = {
+            low: 1,
+            medium: 3,
+            high: 6,
+            critical: 10,
+        };
+        const score = Math.min(
+            10,
+            findings.reduce((sum, f) => sum + (severityWeights[f.severity] || 0), 0),
+        );
+        const safe = score < this.config.blockOnScore;
+
+        const counts = findings.reduce<Record<string, number>>(
+            (acc, f) => {
+                acc[f.category] = (acc[f.category] || 0) + 1;
+                return acc;
+            },
+            {} as Record<string, number>,
+        );
+        const details = Object.entries(counts)
+            .map(([cat, cnt]) => `${cnt} ${cat}`)
+            .join(', ');
+
+        return {
+            safe,
+            score,
+            findings,
+            summary: safe
+                ? `Safe (score: ${score}/10)`
+                : `Blocked (score: ${score}/10): ${details}`,
+        };
+    }
+
+    getConfig(): SecurityScanConfig {
+        return { ...this.config, rules: [...this.config.rules] };
+    }
+
+    updateConfig(partial: Partial<SecurityScanConfig>): void {
+        if (partial.enabled !== undefined) this.config.enabled = partial.enabled;
+        if (partial.blockOnScore !== undefined) this.config.blockOnScore = partial.blockOnScore;
+        if (partial.rules) this.config.rules = partial.rules;
+        this.persist();
+    }
+
+    async getHistory(): Promise<SecurityScanEvent[]> {
+        await this.ensureLoaded();
+        return [...this.history].reverse();
+    }
+
+    async addEvent(event: SecurityScanEvent): Promise<void> {
+        await this.ensureLoaded();
+        this.history.push(event);
+        await this.persist();
+    }
+
+    async clearHistory(): Promise<void> {
+        this.history = [];
+        await this.persist();
+    }
+}
+
+export const promptSecurityService = new PromptSecurityServiceImpl();

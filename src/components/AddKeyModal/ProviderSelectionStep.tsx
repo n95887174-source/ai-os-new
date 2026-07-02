@@ -1,5 +1,6 @@
 import React from 'react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
+import { PersonalityBadge } from '../ProviderManager/PersonalityBadge';
 
 interface ProviderItem {
     id: string;
@@ -35,6 +36,7 @@ const ProviderSelectionStep: React.FC<ProviderSelectionStepProps> = ({
                         {p.name}
                     </div>
                     <div className="modal-provider-desc">{p.desc}</div>
+                    <PersonalityBadge provider={p.id} compact />
                 </div>
             </button>
         ))}

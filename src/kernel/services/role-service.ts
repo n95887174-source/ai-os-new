@@ -11,8 +11,15 @@ import type { ISTopology } from '../contracts/topology';
 import type { RolesStore } from '../contracts/storage/roles-store';
 import { EVENTS } from '../events/event-names';
 import { BucketStorageAdapter } from '../storage-adapter-instance';
+import type { RoleVersionService } from './role-version-service';
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('RoleService');
+
+export interface DailyUsage {
+    invocations: number;
+    errors: number;
+    totalLatency: number;
+}
 
 export interface RoleUsageStats {
     invocations: number;
@@ -21,6 +28,12 @@ export interface RoleUsageStats {
     avgLatency: number;
     lastUsed: number;
     totalTokens: number;
+    feedbackScore: number;
+    feedbackCount: number;
+    dailyStats: Record<string, DailyUsage>;
+    toolUsage: Record<string, number>;
+    temperatureLog: Array<{ temp: number; success: boolean; latency: number }>;
+    hourlyDistribution: Record<number, number>;
 }
 
 export interface RoleServiceDeps {
@@ -42,6 +55,7 @@ export interface RoleServiceDeps {
         getActiveTopology: () => ISTopology | null;
         mount: (topology: ISTopology) => void;
     };
+    roleVersionService?: RoleVersionService;
 }
 
 const NOW = Date.now();
@@ -421,10 +435,12 @@ export class RoleService {
         this.roles.push(newRole);
         this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
+        this.deps.eventBus.emit(EVENTS.ROLE_CREATED, newRole);
         return newRole;
     }
 
     updateRole(id: string, updates: RoleUpdateInput) {
+        const oldRole = this.roles.find((r) => r.id === id);
         this.roles = this.roles.map((r) =>
             r.id === id
                 ? {
@@ -434,8 +450,19 @@ export class RoleService {
                   }
                 : r,
         );
+        const updated = this.roles.find((r) => r.id === id);
         this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
+        if (updated) {
+            this.deps.eventBus.emit(EVENTS.ROLE_UPDATED, updated);
+            this.deps.roleVersionService?.recordChange(updated, 'Updated via editor');
+            if (oldRole && oldRole.parentRoleId !== updated.parentRoleId) {
+                this.deps.roleVersionService?.recordChange(
+                    updated,
+                    `Parent changed to ${updated.parentRoleId || 'none'}`,
+                );
+            }
+        }
     }
 
     deleteRole(id: string) {
@@ -461,6 +488,8 @@ export class RoleService {
                 this.deps.orchestrator.mount({ ...topology, nodes: updatedNodes });
             }
         }
+        this.deps.eventBus.emit(EVENTS.ROLE_DELETED, { id, name: role?.name });
+        this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
 
         this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
@@ -551,7 +580,15 @@ export class RoleService {
         return { valid: missingTools.length === 0, missingTools };
     }
 
-    recordRoleUsage(roleId: string, success: boolean, latency: number, tokens = 0) {
+    recordRoleUsage(
+        roleId: string,
+        success: boolean,
+        latency: number,
+        tokens = 0,
+        tool?: string,
+        temperature?: number,
+    ) {
+        const now = Date.now();
         const stats = this.usageStats.get(roleId) || {
             invocations: 0,
             errors: 0,
@@ -559,15 +596,165 @@ export class RoleService {
             avgLatency: 0,
             lastUsed: 0,
             totalTokens: 0,
+            feedbackScore: 0,
+            feedbackCount: 0,
+            dailyStats: {},
+            toolUsage: {},
+            temperatureLog: [],
+            hourlyDistribution: {},
         };
         stats.invocations++;
         if (!success) stats.errors++;
         stats.totalLatency += latency;
         stats.avgLatency = stats.totalLatency / stats.invocations;
-        stats.lastUsed = Date.now();
+        stats.lastUsed = now;
         stats.totalTokens += tokens;
+
+        const dayKey = new Date(now).toISOString().slice(0, 10);
+        const day = stats.dailyStats[dayKey] || { invocations: 0, errors: 0, totalLatency: 0 };
+        day.invocations++;
+        if (!success) day.errors++;
+        day.totalLatency += latency;
+        stats.dailyStats[dayKey] = day;
+
+        if (tool) {
+            stats.toolUsage[tool] = (stats.toolUsage[tool] || 0) + 1;
+        }
+        if (temperature !== undefined) {
+            stats.temperatureLog.push({ temp: temperature, success, latency });
+            if (stats.temperatureLog.length > 500)
+                stats.temperatureLog = stats.temperatureLog.slice(-500);
+        }
+        const hour = new Date(now).getHours();
+        stats.hourlyDistribution[hour] = (stats.hourlyDistribution[hour] || 0) + 1;
+
         this.usageStats.set(roleId, stats);
         this.saveStats();
+    }
+
+    recordRoleFeedback(roleId: string, positive: boolean) {
+        const stats = this.usageStats.get(roleId);
+        if (!stats) return;
+        stats.feedbackScore += positive ? 1 : -1;
+        stats.feedbackCount++;
+        this.saveStats();
+    }
+
+    getRetirementCandidates(
+        daysThreshold = 90,
+    ): Array<{ id: string; name: string; lastUsed: number; daysInactive: number }> {
+        const now = Date.now();
+        return this.roles
+            .filter((r) => !r.isBuiltin)
+            .map((r) => {
+                const s = this.usageStats.get(r.id);
+                const lastUsed = s?.lastUsed || r.metadata.created;
+                return {
+                    id: r.id,
+                    name: r.name,
+                    lastUsed,
+                    daysInactive: Math.floor((now - lastUsed) / 86400000),
+                };
+            })
+            .filter((c) => c.daysInactive >= daysThreshold);
+    }
+
+    promoteToBuiltin(roleId: string): boolean {
+        const role = this.getRole(roleId);
+        if (!role || role.isBuiltin) return false;
+        role.isBuiltin = true;
+        role.metadata = { ...role.metadata, updated: Date.now() };
+        this.persist();
+        this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
+        return true;
+    }
+
+    getEloLeaderboard(): Array<{
+        id: string;
+        name: string;
+        category: string;
+        elo: number;
+        invocations: number;
+        successRate: number;
+    }> {
+        return this.roles
+            .map((r) => {
+                const s = this.usageStats.get(r.id);
+                if (!s || s.invocations === 0) return null;
+                const successRate =
+                    s.invocations > 0 ? (s.invocations - s.errors) / s.invocations : 0;
+                const avgLatencyWeight = Math.max(0, 1 - (s.avgLatency || 0) / 10000);
+                const feedbackScore =
+                    s.feedbackCount > 0 ? (s.feedbackScore / s.feedbackCount + 1) / 2 : 0.5;
+                const recencyWeight = Math.min(1, (Date.now() - s.lastUsed) / 86400000 / 30);
+                const elo = Math.round(
+                    successRate * 400 +
+                        avgLatencyWeight * 200 +
+                        feedbackScore * 200 +
+                        (1 - recencyWeight) * 200,
+                );
+                return {
+                    id: r.id,
+                    name: r.name,
+                    category: r.metadata.category,
+                    elo,
+                    invocations: s.invocations,
+                    successRate: Math.round(successRate * 100),
+                };
+            })
+            .filter((e): e is NonNullable<typeof e> => e !== null)
+            .sort((a, b) => b.elo - a.elo);
+    }
+
+    getFatigueAnalysis(): Array<{
+        id: string;
+        name: string;
+        recentRate: number;
+        overallRate: number;
+        decline: number;
+        status: 'healthy' | 'fatigued' | 'critical';
+    }> {
+        const now = Date.now();
+        return this.roles
+            .map((r) => {
+                const s = this.usageStats.get(r.id);
+                if (!s || s.invocations < 10) return null;
+                const overallRate =
+                    s.invocations > 0 ? (s.invocations - s.errors) / s.invocations : 0;
+                const recentDays = Object.entries(s.dailyStats)
+                    .filter(([day]) => {
+                        const diff = (now - new Date(day).getTime()) / 86400000;
+                        return diff <= 7;
+                    })
+                    .reduce(
+                        (acc, [, d]) => ({
+                            invocations: acc.invocations + d.invocations,
+                            errors: acc.errors + d.errors,
+                        }),
+                        { invocations: 0, errors: 0 },
+                    );
+                const recentRate =
+                    recentDays.invocations > 0
+                        ? (recentDays.invocations - recentDays.errors) / recentDays.invocations
+                        : overallRate;
+                const decline = overallRate - recentRate;
+                return {
+                    id: r.id,
+                    name: r.name,
+                    recentRate: Math.round(recentRate * 100),
+                    overallRate: Math.round(overallRate * 100),
+                    decline: Math.round(decline * 100),
+                    status:
+                        decline > 0.2
+                            ? ('critical' as const)
+                            : decline > 0.1
+                              ? ('fatigued' as const)
+                              : ('healthy' as const),
+                };
+            })
+            .filter((e): e is NonNullable<typeof e> => e !== null)
+            .filter((e) => e.status !== 'healthy')
+            .sort((a, b) => b.decline - a.decline);
     }
 
     getRoleStats(roleId: string): RoleUsageStats | null {

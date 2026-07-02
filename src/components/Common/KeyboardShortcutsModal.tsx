@@ -13,7 +13,23 @@ const SHORTCUTS: ShortcutEntry[] = [
     { keys: 'Ctrl+K / ⌘K', label: 'Command palette', category: 'Global', icon: <Zap size={14} /> },
     { keys: '?', label: 'Toggle this legend', category: 'Global' },
     { keys: 'Escape', label: 'Cancel / Close panel', category: 'Global' },
+    { keys: 'Ctrl+,', label: 'Open Settings', category: 'Global' },
     { keys: 'Enter', label: 'Send message', category: 'Chat', icon: <Send size={14} /> },
+    { keys: 'Ctrl+Shift+N', label: 'New chat session', category: 'Chat' },
+    { keys: 'Ctrl+Shift+F', label: 'Search messages', category: 'Chat' },
+    { keys: 'Ctrl+Shift+E', label: 'Export chat', category: 'Chat' },
+    { keys: 'Ctrl+Shift+D', label: 'Start debate', category: 'Debate' },
+    { keys: 'Ctrl+Shift+P', label: 'Pause / Resume debate', category: 'Debate' },
+    { keys: 'Ctrl+Shift+S', label: 'Save debate snapshot', category: 'Debate' },
+    { keys: 'Ctrl+Shift+H', label: 'Toggle health panel', category: 'Providers' },
+    { keys: 'Ctrl+Shift+K', label: 'Toggle key manager', category: 'Providers' },
+    { keys: 'Ctrl+Shift+T', label: 'Open traces panel', category: 'Diagnostics' },
+    { keys: 'Ctrl+Shift+L', label: 'Open logs panel', category: 'Diagnostics' },
+    { keys: 'Ctrl+Shift+M', label: 'Open memory panel', category: 'Knowledge' },
+    { keys: 'Ctrl+Shift+R', label: 'Open routing trace', category: 'Diagnostics' },
+    { keys: 'Ctrl+Shift+W', label: 'Toggle workspace explorer', category: 'Tools' },
+    { keys: 'Ctrl+Shift+C', label: 'Open cache panel', category: 'Tools' },
+    { keys: 'Ctrl+Shift+B', label: 'Toggle sidebar', category: 'Global' },
 ];
 
 interface KeyboardShortcutsModalProps {

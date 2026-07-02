@@ -42,6 +42,11 @@ import type { SessionAffinityStore } from './services/session-affinity-store';
 import type { IAdapterRegistry } from './contracts/provider-adapter';
 import type { IExecutionGovernor } from './contracts/execution-governor';
 import type { IDatabaseService } from './types/interfaces';
+import type { MemoryOrchestrator } from './services/memory-orchestrator';
+import type { IEvalDatasetService } from './contracts/eval-dataset';
+import type { ICustomMetricsService } from './contracts/custom-metrics';
+import type { IUnifiedRoleRegistry } from './contracts/unified-role';
+import type { IEcosystemEngine } from './contracts/ecosystem';
 
 export { FREE_TIER_LIMITS };
 
@@ -127,6 +132,9 @@ export const roleVersionService =
     lazyService<import('../kernel/services/role-version-service').RoleVersionService>(
         'roleVersionService',
     );
+export const roleTestingSandboxService = lazyService<
+    import('../kernel/services/role-testing-sandbox').RoleTestingSandboxService
+>('roleTestingSandboxService');
 
 // ── Cache Service (for CachePanel) ─────────────────────────────────────────
 import type { CacheService } from './services/cache-service';
@@ -298,3 +306,170 @@ export const eloService = lazyService<EloRatingService>('eloService');
 import type { ChatSummarizerService as ChatSummarizerServiceType } from './services/chat-summarizer-service';
 export const chatSummarizerService =
     lazyService<ChatSummarizerServiceType>('chatSummarizerService');
+
+// ── Bridge-Keeper Service ──────────────────────────────────────
+import type { IBridgeKeeperService } from './contracts/guardian';
+export const bridgeKeeperService = lazyService<IBridgeKeeperService>('bridgeKeeperService');
+
+// ── Memory Orchestrator ──────────────────────────────────────────
+export const memoryOrchestrator = lazyService<MemoryOrchestrator>('memoryOrchestrator');
+
+// ── Eval Dataset Service ─────────────────────────────────────────
+export const evalDatasetService = lazyService<IEvalDatasetService>('evalDatasetService');
+
+// ── Custom Metrics Service ────────────────────────────────────────
+export const customMetricsService = lazyService<ICustomMetricsService>('customMetricsService');
+
+// ── Unified Role Registry ───────────────────────────────────────
+export const unifiedRoleRegistry = lazyService<IUnifiedRoleRegistry>('unifiedRoleRegistry');
+
+// ── Ecosystem Engine ─────────────────────────────────────────
+export const ecosystemEngine = lazyService<IEcosystemEngine>('ecosystemEngine');
+
+// ── Reconnection Service ──────────────────────────────────────
+export { reconnectionService } from './services/reconnection-service';
+
+// ── Research Engine ──────────────────────────────────────────
+import type { IResearchEngine } from './contracts/research-engine';
+export const researchEngine = lazyService<IResearchEngine>('researchEngine');
+
+// ── Gemini Research Service ─────────────────────────────────
+import type { IGeminiResearchService } from './contracts/gemini-research';
+export const geminiResearchService = lazyService<IGeminiResearchService>('geminiResearchService');
+
+// ── Audience Service ─────────────────────────────────────────
+import type { IAudienceService } from './contracts/audience';
+export const audienceService = lazyService<IAudienceService>('audienceService');
+
+// ── Tutorial Service ────────────────────────────────────────
+import type { ITutorialService } from './contracts/tutorial';
+export const tutorialService = lazyService<ITutorialService>('tutorialService');
+
+// ── Team Collaboration Service ─────────────────────────────
+import type { ITeamCollaborationService } from './contracts/team-collaboration';
+export const teamCollaborationService = lazyService<ITeamCollaborationService>(
+    'teamCollaborationService',
+);
+
+// ── Fine-Tuning Service ───────────────────────────────────
+import type { IFineTuningService } from './contracts/fine-tuning';
+export const fineTuningService = lazyService<IFineTuningService>('fineTuningService');
+
+// ── Model Distillation Service ────────────────────────────
+import type { IDistillationService } from './contracts/model-distillation';
+export const distillationService = lazyService<IDistillationService>('distillationService');
+
+// ── Deploy to Production Service ─────────────────────────
+import type { IDeployService } from './contracts/deploy';
+export const deployService = lazyService<IDeployService>('deployService');
+
+// ── Budget Alert Service ──────────────────────────────
+import type { IBudgetAlertService } from './contracts/budget-alert';
+export const budgetAlertService = lazyService<IBudgetAlertService>('budgetAlertService');
+
+// ── Topology Template Service ─────────────────────────
+import type { ITopologyTemplateService } from './contracts/topology-templates';
+export const topologyTemplateService =
+    lazyService<ITopologyTemplateService>('topologyTemplateService');
+
+// ── Key Usage Analytics Service ───────────────────────
+import type { IKeyUsageAnalyticsService } from './contracts/key-usage-analytics';
+export const keyUsageAnalyticsService = lazyService<IKeyUsageAnalyticsService>(
+    'keyUsageAnalyticsService',
+);
+
+// ── Prompt Version Service ────────────────────────────
+import type { IPromptVersionService } from './contracts/prompt-version-history';
+export const promptVersionService = lazyService<IPromptVersionService>('promptVersionService');
+
+// ── Provider Migration Service ─────────────────────────
+import type { IProviderMigrationService } from './contracts/provider-migration';
+export const providerMigrationService = lazyService<IProviderMigrationService>(
+    'providerMigrationService',
+);
+
+// ── Health SLA Service ────────────────────────────────
+import type { IHealthSlaService } from './contracts/health-sla';
+export const healthSlaService = lazyService<IHealthSlaService>('healthSlaService');
+
+// ── Research Report Service ──────────────────────────
+import type { IResearchReportService } from './contracts/research-report';
+export const researchReportService = lazyService<IResearchReportService>('researchReportService');
+
+// ── Voice Input Service ──────────────────────────────
+import type { IVoiceInputService } from './contracts/voice-input';
+export const voiceInputService = lazyService<IVoiceInputService>('voiceInputService');
+
+// ── Agent Protocol Service ──────────────────────────
+import type { IAgentProtocolService } from './contracts/agent-protocol';
+export const agentProtocolService = lazyService<IAgentProtocolService>('agentProtocolService');
+
+// ── Federated Memory Service ──────────────────────
+import type { IFederatedMemoryService } from './contracts/federated-memory';
+export const federatedMemoryService =
+    lazyService<IFederatedMemoryService>('federatedMemoryService');
+
+// ── Plugin SDK Service ────────────────────────────
+import type { IPluginSdkService } from './contracts/plugin-sdk';
+export const pluginSdkService = lazyService<IPluginSdkService>('pluginSdkService');
+
+// ── Persona Marketplace Service ───────────────────
+import type { IPersonaMarketplaceService } from './contracts/persona-marketplace';
+export const personaMarketplaceService = lazyService<IPersonaMarketplaceService>(
+    'personaMarketplaceService',
+);
+
+// ── Template Sharing Service ──────────────────────
+import type { ITemplateSharingService } from './contracts/template-sharing';
+export const templateSharingService =
+    lazyService<ITemplateSharingService>('templateSharingService');
+
+// ── Memory Transfer Service ───────────────────────
+import type { IMemoryTransferService } from './contracts/memory-transfer';
+export const memoryTransferService = lazyService<IMemoryTransferService>('memoryTransferService');
+
+// ── Aquarium Trading Service ──────────────────────
+import type { IAquariumTradingService } from './contracts/aquarium-trading';
+export const aquariumTradingService =
+    lazyService<IAquariumTradingService>('aquariumTradingService');
+
+// ── Time Machine Service ──────────────────────────
+import type { ITimeMachineService } from './contracts/time-machine';
+export const timeMachineService = lazyService<ITimeMachineService>('timeMachineService');
+
+// ── Contribution Service ──────────────────────────
+import type { IContributionService } from './contracts/contribution';
+export const contributionService = lazyService<IContributionService>('contributionService');
+
+// ── Gemini Live Service ────────────────────────────
+import { GeminiLiveService } from './services/gemini-live-service';
+export const geminiLiveService = new GeminiLiveService();
+
+// ── Meta-Learning Service ──────────────────────────
+import type { IMetaLearningService } from './contracts/meta-learning';
+export const metaLearningService = lazyService<IMetaLearningService>('metaLearningService');
+
+// ── Quantum Inspiration Service ────────────────────
+import type { IQuantumInspirationService } from './contracts/quantum-inspiration';
+export const quantumInspirationService = lazyService<IQuantumInspirationService>(
+    'quantumInspirationService',
+);
+
+// ── Smart Routing Service ─────────────────────────
+import type { ISmartRoutingService } from './contracts/smart-routing';
+export const smartRoutingService = lazyService<ISmartRoutingService>('smartRoutingService');
+
+// ── NVIDIA Enterprise Service ─────────────────────
+import type { INvidiaEnterpriseService } from './contracts/nvidia-enterprise';
+export const nvidiaEnterpriseService =
+    lazyService<INvidiaEnterpriseService>('nvidiaEnterpriseService');
+
+// ── Gemini Cache Service ──────────────────────────
+import type { IGeminiCacheService } from './contracts/gemini-cache';
+export const geminiCacheService = lazyService<IGeminiCacheService>('geminiCacheService');
+
+// ── Provider Achievement Service ─────────────────
+import type { IProviderAchievementService } from './contracts/provider-achievements';
+export const providerAchievementService = lazyService<IProviderAchievementService>(
+    'providerAchievementService',
+);

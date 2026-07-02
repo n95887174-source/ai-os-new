@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Search, X, PanelRightOpen, PanelRightClose, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { TranslationKey } from '../i18n/translations';
@@ -10,8 +10,8 @@ import {
     saveCollapsedSections,
 } from './Sidebar/sidebar-utils';
 import { QuickAccess } from './Sidebar/QuickAccess';
-
-const RECENT_KEY = 'mavis:palette:recent';
+import { NavBadge } from './Sidebar/NavBadge';
+import { useNavBadgeSubscriptions } from './Sidebar/useNavBadgeSubscriptions';
 
 interface SidebarProps {
     isCollapsed: boolean;
@@ -47,6 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
     const [pinned, setPinned] = useState<string[]>(getPinned);
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(getCollapsedSections);
+
+    useNavBadgeSubscriptions();
 
     const toggleSection = (sectionId: string) => {
         setCollapsedSections((prev) => {
@@ -253,7 +255,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                                     } as React.CSSProperties
                                                 }
                                             >
-                                                <span className="nav-icon">{item.icon}</span>
+                                                <span
+                                                    className="nav-icon"
+                                                    style={{ position: 'relative' }}
+                                                >
+                                                    {item.icon}
+                                                    {!isCollapsed && <NavBadge routeId={item.id} />}
+                                                </span>
                                                 {!isCollapsed && (
                                                     <span className="nav-label">
                                                         {t(navLabelKey[item.id] ?? 'nav.overview')}

@@ -2,6 +2,7 @@ import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { ssrSafeStorage } from '../utils/ssr-storage';
 
 const CHANNEL_NAME = 'provider-state-sync';
 const LOGGER = rootLogger.child('CrossTabStateSync');
@@ -181,7 +182,9 @@ class CrossTabStateSync {
                 }
             }
         };
-        window.addEventListener('storage', this.storageHandler);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('storage', this.storageHandler);
+        }
     }
 
     private handleMessage(message: CrossTabStateMessage): void {
@@ -422,7 +425,7 @@ class CrossTabStateSync {
             for (const [tabId, ts] of this.knownTabTimestamps) {
                 data[tabId] = ts;
             }
-            localStorage.setItem(TAB_TIMESTAMP_KEY, JSON.stringify(data));
+            ssrSafeStorage.setItem(TAB_TIMESTAMP_KEY, JSON.stringify(data));
         } catch (e) {
             LOGGER.warn('CrossTabStateSync', 'Failed to persist tab timestamps', {
                 error: (e as Error).message,
@@ -435,8 +438,9 @@ class CrossTabStateSync {
 
     private pruneLocalStorage(): void {
         const keys: string[] = [];
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-            const key = localStorage.key(i);
+        const len = ssrSafeStorage.length;
+        for (let i = len - 1; i >= 0; i--) {
+            const key = ssrSafeStorage.key(i);
             if (key?.startsWith(this.STORAGE_PREFIX)) {
                 keys.push(key);
             }
@@ -449,7 +453,7 @@ class CrossTabStateSync {
                 return ta - tb;
             });
             keys.slice(0, keys.length - this.MAX_STORAGE_KEYS).forEach((k) =>
-                localStorage.removeItem(k),
+                ssrSafeStorage.removeItem(k),
             );
         }
     }
@@ -459,7 +463,7 @@ class CrossTabStateSync {
             this.channel.postMessage(message);
         } else {
             this.pruneLocalStorage();
-            localStorage.setItem(
+            ssrSafeStorage.setItem(
                 `${this.STORAGE_PREFIX}${message.type}:${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                 JSON.stringify(message),
             );
@@ -570,7 +574,7 @@ class CrossTabStateSync {
         this.channel?.close();
         this.channel = null;
 
-        if (this.storageHandler) {
+        if (this.storageHandler && typeof window !== 'undefined') {
             window.removeEventListener('storage', this.storageHandler);
             this.storageHandler = null;
         }

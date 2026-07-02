@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
 import { EVENTS } from '../kernel/events/event-names';
 import { safeJsonParse } from '../kernel/utils/safe-json';
+import type { DebateEmotion } from '../kernel/contracts/debate-emotion';
 
 const LIVE_STORAGE_KEY = 'debate_live_state';
 const LIVE_STORAGE_DEBOUNCE = 500;
@@ -34,12 +35,40 @@ export interface DebateLiveState {
     roundEvents: DebateRoundEvent[];
     currentThinking: Map<string, string>;
     streamingContent: Map<string, string>;
+    emotions: Map<string, DebateEmotion>;
     addAgentEvent: (event: DebateAgentEvent) => void;
     addRoundEvent: (event: DebateRoundEvent) => void;
     clearSession: (sessionId: string) => void;
     clearAll: () => void;
     // B10-114: Cleanup event subscriptions on unmount
     destroy: () => void;
+}
+
+function computeEmotion(
+    key: string,
+    eventType: string,
+    agentEvents: DebateAgentEvent[],
+): DebateEmotion {
+    switch (eventType) {
+        case 'thinking':
+            return 'curiosity';
+        case 'responded': {
+            const lastEvent = agentEvents
+                .slice()
+                .reverse()
+                .find((e) => `${e.sessionId}:${e.agentId}` === key);
+            if (lastEvent?.status === 'error' || lastEvent?.status === 'timeout') return 'triumph';
+            return 'confidence';
+        }
+        case 'error':
+            return 'anger';
+        case 'timeout':
+            return 'fear';
+        case 'fallback':
+            return 'surprise';
+        default:
+            return 'neutral';
+    }
 }
 
 export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
@@ -77,11 +106,16 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                         const oldest = m.keys().next().value;
                         if (oldest) m.delete(oldest);
                     }
-                    // L-CODE-02 fix: use sessionId:agentId key (consistent with streamingContent)
-                    m.set(`${d.sessionId}:${d.agentId}`, d.agentId);
+                    const ek = `${d.sessionId}:${d.agentId}`;
+                    m.set(ek, d.agentId);
+                    const em = new Map(s.emotions).set(
+                        ek,
+                        computeEmotion(ek, 'thinking', s.agentEvents),
+                    );
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         currentThinking: m,
+                        emotions: em,
                     };
                 });
             },
@@ -98,15 +132,19 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 };
                 set((s) => {
                     const m = new Map(s.currentThinking);
-                    // L-CODE-02 fix: use sessionId:agentId key (consistent with streamingContent)
-                    if (m.get(`${d.sessionId}:${d.agentId}`) === d.agentId)
-                        m.delete(`${d.sessionId}:${d.agentId}`);
+                    const ek = `${d.sessionId}:${d.agentId}`;
+                    if (m.get(ek) === d.agentId) m.delete(ek);
                     const sc = new Map(s.streamingContent);
-                    sc.delete(`${d.sessionId}:${d.agentId}`);
+                    sc.delete(ek);
+                    const em = new Map(s.emotions).set(
+                        ek,
+                        computeEmotion(ek, 'responded', s.agentEvents),
+                    );
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         currentThinking: m,
                         streamingContent: sc,
+                        emotions: em,
                     };
                 });
             },
@@ -123,15 +161,19 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 };
                 set((s) => {
                     const m = new Map(s.currentThinking);
-                    // L-CODE-02 fix: use sessionId:agentId key (consistent with streamingContent)
-                    if (m.get(`${d.sessionId}:${d.agentId}`) === d.agentId)
-                        m.delete(`${d.sessionId}:${d.agentId}`);
+                    const ek = `${d.sessionId}:${d.agentId}`;
+                    if (m.get(ek) === d.agentId) m.delete(ek);
                     const sc = new Map(s.streamingContent);
-                    sc.delete(`${d.sessionId}:${d.agentId}`);
+                    sc.delete(ek);
+                    const em = new Map(s.emotions).set(
+                        ek,
+                        computeEmotion(ek, 'error', s.agentEvents),
+                    );
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         currentThinking: m,
                         streamingContent: sc,
+                        emotions: em,
                     };
                 });
             },
@@ -147,15 +189,20 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     timeoutMs: d.timeoutMs,
                 };
                 set((s) => {
-                    // STATE-L3: Clean up orphan entries on timeout
+                    const ek = `${d.sessionId}:${d.agentId}`;
                     const sc = new Map(s.streamingContent);
-                    sc.delete(`${d.sessionId}:${d.agentId}`);
+                    sc.delete(ek);
                     const ct = new Map(s.currentThinking);
-                    ct.delete(`${d.sessionId}:${d.agentId}`);
+                    ct.delete(ek);
+                    const em = new Map(s.emotions).set(
+                        ek,
+                        computeEmotion(ek, 'timeout', s.agentEvents),
+                    );
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         streamingContent: sc,
                         currentThinking: ct,
+                        emotions: em,
                     };
                 });
             },
@@ -175,15 +222,20 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 toProvider: d.toProvider,
             };
             set((s) => {
-                // STATE-L3: Clean up orphan entries on fallback
+                const ek = `${d.sessionId}:${d.agentId}`;
                 const sc = new Map(s.streamingContent);
-                sc.delete(`${d.sessionId}:${d.agentId}`);
+                sc.delete(ek);
                 const ct = new Map(s.currentThinking);
-                ct.delete(`${d.sessionId}:${d.agentId}`);
+                ct.delete(ek);
+                const em = new Map(s.emotions).set(
+                    ek,
+                    computeEmotion(ek, 'fallback', s.agentEvents),
+                );
                 return {
                     agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                     streamingContent: sc,
                     currentThinking: ct,
+                    emotions: em,
                 };
             });
         }),
@@ -280,6 +332,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         roundEvents: initialState.roundEvents ?? [],
         currentThinking: new Map(),
         streamingContent: new Map(),
+        emotions: new Map(),
         addAgentEvent: (event) => {
             set((s) => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
             schedulePersist();
@@ -291,13 +344,18 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         clearSession: (sessionId) => {
             set((s) => {
                 const sc = new Map(s.streamingContent);
+                const em = new Map(s.emotions);
                 for (const k of sc.keys()) {
-                    if (k.startsWith(`${sessionId}:`)) sc.delete(k);
+                    if (k.startsWith(`${sessionId}:`)) {
+                        sc.delete(k);
+                        em.delete(k);
+                    }
                 }
                 return {
                     agentEvents: s.agentEvents.filter((e) => e.sessionId !== sessionId),
                     roundEvents: s.roundEvents.filter((e) => e.sessionId !== sessionId),
                     streamingContent: sc,
+                    emotions: em,
                 };
             });
             schedulePersist();
@@ -308,6 +366,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 roundEvents: [],
                 currentThinking: new Map(),
                 streamingContent: new Map(),
+                emotions: new Map(),
             });
             schedulePersist();
         },

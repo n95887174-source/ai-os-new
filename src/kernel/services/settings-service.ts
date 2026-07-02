@@ -140,7 +140,12 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
         valid.historyPersistence = updates.historyPersistence;
     if (updates.fallbackEnabled !== undefined) valid.fallbackEnabled = updates.fallbackEnabled;
     if (updates.debugMode !== undefined) valid.debugMode = updates.debugMode;
-    if (updates.theme !== undefined && ['dark', 'light'].includes(updates.theme))
+    if (
+        updates.theme !== undefined &&
+        ['dark', 'light', 'cyberpunk', 'nature', 'ocean', 'sunset', 'high-contrast'].includes(
+            updates.theme,
+        )
+    )
         valid.theme = updates.theme;
     if (updates.language !== undefined && ['en', 'ru'].includes(updates.language))
         valid.language = updates.language;
@@ -311,7 +316,7 @@ export class SettingsService implements ISettingsService {
     importSettings(jsonData: string): boolean {
         try {
             const parsed = safeJsonParse(jsonData);
-            const validated = validateSettings(parsed);
+            const validated = validateSettings(parsed as Partial<SystemSettings>);
             if (Object.keys(validated).length === 0) return false;
             this.updateSettings(validated);
             return true;

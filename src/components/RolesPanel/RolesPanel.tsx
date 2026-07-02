@@ -1,6 +1,6 @@
 import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Play, BookOpen, UserCog, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Play, BookOpen, UserCog, AlertTriangle, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roleService } from '../../kernel/instances';
 import type { Role } from '../../types/role';
@@ -36,8 +36,12 @@ const RolesPanel: React.FC = () => {
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterSource, setFilterSource] = useState<'all' | 'builtin' | 'custom'>('all');
     const [editingRole, setEditingRole] = useState<Role | null>(null);
     const [stats, setStats] = useState<Record<string, RoleUsageStats>>({});
+    const [retireCandidates, setRetireCandidates] = useState<
+        Array<{ id: string; name: string; daysInactive: number }>
+    >([]);
     const [error, setError] = useState<string | null>(null);
 
     const availableTools = (() => {
@@ -133,6 +137,25 @@ const RolesPanel: React.FC = () => {
         }
     };
 
+    const handleFeedback = useCallback((roleId: string, positive: boolean) => {
+        roleService.recordRoleFeedback(roleId, positive);
+        setStats(roleService.getAllStats() ?? {});
+    }, []);
+
+    const handlePromote = useCallback((roleId: string) => {
+        roleService.promoteToBuiltin(roleId);
+        setRoles(roleService.getAllRoles() ?? []);
+        setRetireCandidates(roleService.getRetirementCandidates(90) ?? []);
+        eventBus.emit(EVENTS.NOTIFICATION, {
+            message: 'Role promoted to built-in',
+            type: 'success',
+        });
+    }, []);
+
+    useEffect(() => {
+        setRetireCandidates(roleService.getRetirementCandidates(90) ?? []);
+    }, [stats]);
+
     const handleDuplicate = useCallback(
         (role: Role, e: React.MouseEvent) => {
             e.stopPropagation();
@@ -189,11 +212,17 @@ const RolesPanel: React.FC = () => {
         return vars;
     };
 
-    const filteredRoles = roles.filter(
-        (r) =>
-            r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (r.description || '').toLowerCase().includes(searchQuery.toLowerCase()),
-    );
+    const filteredRoles = roles
+        .filter((r) => {
+            if (filterSource === 'builtin') return r.isBuiltin;
+            if (filterSource === 'custom') return !r.isBuiltin;
+            return true;
+        })
+        .filter(
+            (r) =>
+                r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (r.description || '').toLowerCase().includes(searchQuery.toLowerCase()),
+        );
 
     const roleCategoryColor = (cat: string) => {
         switch (cat) {
@@ -379,6 +408,68 @@ const RolesPanel: React.FC = () => {
                 <>
                     {roles.length > 0 && <RoleAnalytics stats={stats} roles={roles} />}
 
+                    {retireCandidates.length > 0 && (
+                        <div
+                            style={{
+                                background: 'rgba(245,158,11,0.05)',
+                                borderRadius: 10,
+                                padding: '0.75rem',
+                                border: '1px solid rgba(245,158,11,0.15)',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    marginBottom: '0.5rem',
+                                }}
+                            >
+                                <Archive size={14} color="#f59e0b" />
+                                <span
+                                    style={{
+                                        fontSize: '0.7rem',
+                                        fontWeight: 700,
+                                        color: '#f59e0b',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                    }}
+                                >
+                                    Retirement Candidates ({retireCandidates.length})
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {retireCandidates.slice(0, 5).map((c) => (
+                                    <div
+                                        key={c.id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '0.4rem 0.5rem',
+                                            background: 'rgba(0,0,0,0.2)',
+                                            borderRadius: 8,
+                                        }}
+                                    >
+                                        <AlertTriangle size={12} color="#f59e0b" />
+                                        <span
+                                            style={{
+                                                fontSize: '0.7rem',
+                                                color: '#e2e8f0',
+                                                flex: 1,
+                                            }}
+                                        >
+                                            {c.name}
+                                        </span>
+                                        <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                            {c.daysInactive} days inactive
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {roles.length > 0 && (
                         <PermissionMatrix
                             roles={roles}
@@ -388,18 +479,54 @@ const RolesPanel: React.FC = () => {
                         />
                     )}
 
-                    <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
-                        <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
-                        <input
-                            type="text"
-                            placeholder={t('roles.search_placeholder')}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            style={searchInputLarge}
-                            onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-                            onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.05)')}
-                            aria-label="Search role blueprints"
-                        />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ position: 'relative', width: '100%', maxWidth: 450 }}>
+                            <Search size={16} style={searchIconAbsolute} aria-hidden="true" />
+                            <input
+                                type="text"
+                                placeholder={t('roles.search_placeholder')}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={searchInputLarge}
+                                onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
+                                onBlur={(e) =>
+                                    (e.target.style.borderColor = 'rgba(255,255,255,0.05)')
+                                }
+                                aria-label="Search role blueprints"
+                            />
+                        </div>
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 4,
+                                background: 'rgba(255,255,255,0.03)',
+                                borderRadius: 8,
+                                padding: 3,
+                                border: '1px solid rgba(255,255,255,0.05)',
+                            }}
+                        >
+                            {(['all', 'builtin', 'custom'] as const).map((f) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilterSource(f)}
+                                    style={{
+                                        padding: '4px 10px',
+                                        borderRadius: 6,
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        background:
+                                            filterSource === f
+                                                ? 'rgba(59,130,246,0.2)'
+                                                : 'transparent',
+                                        color: filterSource === f ? '#60a5fa' : '#94a3b8',
+                                        fontWeight: filterSource === f ? 700 : 500,
+                                        fontSize: '0.75rem',
+                                    }}
+                                >
+                                    {f === 'all' ? 'All' : f === 'builtin' ? 'Built-in' : 'Custom'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {filteredRoles.length === 0 ? (
@@ -463,6 +590,8 @@ const RolesPanel: React.FC = () => {
                                             }
                                             onDelete={(e) => handleDelete(role.id, e)}
                                             onDuplicate={(e) => handleDuplicate(role, e)}
+                                            onFeedback={handleFeedback}
+                                            onPromote={handlePromote}
                                             t={t}
                                         />
                                     );
@@ -476,6 +605,7 @@ const RolesPanel: React.FC = () => {
             {editingRole && (
                 <RoleEditorModal
                     role={editingRole}
+                    allRoles={roles}
                     availableTools={availableTools}
                     onSave={handleSave}
                     onClose={() => setEditingRole(null)}

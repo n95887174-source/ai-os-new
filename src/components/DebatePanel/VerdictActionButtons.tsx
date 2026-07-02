@@ -1,5 +1,6 @@
-import React from 'react';
-import { BarChart3, Play, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { BarChart3, Play, Download, ClipboardCopy } from 'lucide-react';
+import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import type { DebateSession } from '../../kernel/contracts/debate-types';
 
 interface ExportData {
@@ -28,8 +29,68 @@ interface Props {
     onReplay?: () => void;
 }
 
+function buildTranscript(session: DebateSession): string {
+    const lines: string[] = [];
+    lines.push(`# ${session.topic}`);
+    lines.push('');
+    lines.push(
+        `**Strategy:** ${session.strategy} | **Rounds:** ${session.currentRound}/${session.maxRounds} | **Status:** ${session.status}`,
+    );
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    if (session.consensus) {
+        lines.push('## Consensus');
+        lines.push('');
+        lines.push(session.consensus);
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+    }
+    if (session.arguments?.length) {
+        lines.push('## Arguments');
+        lines.push('');
+        for (const a of session.arguments) {
+            const agent = session.participants?.find((p) => p.id === a.agentId);
+            lines.push(`### Round ${a.round} — ${agent?.name ?? a.agentId}`);
+            lines.push('');
+            lines.push(`> ${a.content.replace(/\n/g, '\n> ')}`);
+            lines.push('');
+            if (a.confidence !== undefined) {
+                lines.push(`*Confidence: ${(a.confidence * 100).toFixed(0)}%*`);
+                lines.push('');
+            }
+        }
+    }
+    lines.push('---');
+    lines.push('');
+    lines.push(`*Exported on ${new Date().toISOString()} from SuperAgents OS*`);
+    return lines.join('\n');
+}
+
 const VerdictActionButtons: React.FC<Props> = ({ session, t, onViewAnalysis, onReplay }) => {
+    const [copying, setCopying] = useState(false);
     if (!session || session.status !== 'completed') return null;
+
+    const handleCopyTranscript = async () => {
+        if (!session) return;
+        setCopying(true);
+        try {
+            const text = buildTranscript(session);
+            await navigator.clipboard.writeText(text);
+            eventBus.emit(EVENTS.NOTIFICATION, {
+                message: t('debate.verdict.copied'),
+                type: 'success',
+            });
+        } catch {
+            eventBus.emit(EVENTS.NOTIFICATION, {
+                message: t('debate.verdict.copy_failed'),
+                type: 'error',
+            });
+        } finally {
+            setCopying(false);
+        }
+    };
 
     const handleExport = () => {
         const exportData: ExportData = {
@@ -81,6 +142,18 @@ const VerdictActionButtons: React.FC<Props> = ({ session, t, onViewAnalysis, onR
 
     return (
         <div style={{ display: 'flex', gap: 10, marginTop: '1rem', justifyContent: 'center' }}>
+            <button
+                onClick={handleCopyTranscript}
+                disabled={copying}
+                style={{
+                    ...btnBase,
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    background: 'rgba(16,185,129,0.1)',
+                    color: '#34d399',
+                }}
+            >
+                <ClipboardCopy size={16} /> {copying ? '...' : t('debate.verdict.copy_transcript')}
+            </button>
             <button
                 onClick={onViewAnalysis}
                 style={{

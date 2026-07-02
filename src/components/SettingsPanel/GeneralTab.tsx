@@ -56,6 +56,11 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                 >
                     <option value="dark">{t('settings.theme_dark')}</option>
                     <option value="light">{t('settings.theme_light')}</option>
+                    <option value="cyberpunk">{t('settings.theme_cyberpunk')}</option>
+                    <option value="nature">{t('settings.theme_nature')}</option>
+                    <option value="ocean">{t('settings.theme_ocean')}</option>
+                    <option value="sunset">{t('settings.theme_sunset')}</option>
+                    <option value="high-contrast">{t('settings.theme_high-contrast')}</option>
                 </select>
             </SettingRow>
             <SettingRow

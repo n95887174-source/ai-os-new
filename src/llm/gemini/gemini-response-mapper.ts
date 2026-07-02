@@ -29,6 +29,24 @@ export function extractCandidateMeta(candidate: GeminiCandidate | undefined): {
     return { finishReason, safetyRatings, blocked };
 }
 
+export function extractGroundingMetadata(
+    data: GeminiResponse,
+): ProviderResponse['groundingMetadata'] {
+    const gm = data.groundingMetadata;
+    if (!gm) return undefined;
+    return {
+        groundingChunks: gm.groundingChunks?.map((c) => ({
+            web: c.web ? { uri: c.web.uri, title: c.web.title } : undefined,
+        })),
+        groundingSupports: gm.groundingSupports?.map((s) => ({
+            segment: s.segment,
+            groundingChunkIndices: s.groundingChunkIndices,
+            confidenceScores: s.confidenceScores,
+        })),
+        webSearchQueries: gm.webSearchQueries,
+    };
+}
+
 export function toProviderResponse(data: GeminiResponse, latency: number): ProviderResponse {
     const candidate = data.candidates?.[0];
     const { finishReason, safetyRatings, blocked } = extractCandidateMeta(candidate);
@@ -69,6 +87,7 @@ export function toProviderResponse(data: GeminiResponse, latency: number): Provi
         error: blocked
             ? `Response blocked by Gemini. Reason: ${finishReason}. Check safetyRatings for details.`
             : undefined,
+        groundingMetadata: extractGroundingMetadata(data),
     };
 }
 

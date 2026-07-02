@@ -1,0 +1,164 @@
+import type {
+    IAgentProtocolService,
+    AgentRegistration,
+    AgentProtocolMessage,
+    AgentCapability,
+} from '../contracts/agent-protocol';
+
+let _idCounter = 0;
+const genId = () => `msg-${++_idCounter}-${Date.now()}`;
+
+const DEFAULT_CAPABILITIES: AgentCapability[] = [
+    {
+        name: 'chat',
+        version: '1.0.0',
+        endpoint: '/api/agents/chat',
+        description: 'Natural language conversation',
+        enabled: true,
+    },
+    {
+        name: 'memory',
+        version: '1.1.0',
+        endpoint: '/api/agents/memory',
+        description: 'Persistent knowledge storage',
+        enabled: true,
+    },
+    {
+        name: 'tools',
+        version: '1.0.0',
+        endpoint: '/api/agents/tools',
+        description: 'Tool execution and management',
+        enabled: true,
+    },
+    {
+        name: 'delegation',
+        version: '0.9.0',
+        endpoint: '/api/agents/delegate',
+        description: 'Task delegation to other agents',
+        enabled: true,
+    },
+    {
+        name: 'reasoning',
+        version: '2.0.0',
+        endpoint: '/api/agents/reason',
+        description: 'Multi-step logical reasoning',
+        enabled: true,
+    },
+];
+
+export class AgentProtocolService implements IAgentProtocolService {
+    private agents: AgentRegistration[] = [
+        {
+            agentId: 'analyst-1',
+            agentName: 'Analyst',
+            capabilities: DEFAULT_CAPABILITIES.map((c) => ({ ...c, enabled: true })),
+            status: 'online',
+            lastSeen: Date.now() - 60000,
+            address: 'agent://analyst-1',
+        },
+        {
+            agentId: 'debater-1',
+            agentName: 'Debater',
+            capabilities: DEFAULT_CAPABILITIES.map((c) => ({ ...c, enabled: true })),
+            status: 'online',
+            lastSeen: Date.now() - 120000,
+            address: 'agent://debater-1',
+        },
+        {
+            agentId: 'strategist-1',
+            agentName: 'Strategist',
+            capabilities: DEFAULT_CAPABILITIES.map((c) => ({ ...c, enabled: c.name !== 'tools' })),
+            status: 'busy',
+            lastSeen: Date.now() - 300000,
+            address: 'agent://strategist-1',
+        },
+        {
+            agentId: 'researcher-1',
+            agentName: 'Researcher',
+            capabilities: DEFAULT_CAPABILITIES,
+            status: 'online',
+            lastSeen: Date.now() - 5000,
+            address: 'agent://researcher-1',
+        },
+    ];
+    private messages: AgentProtocolMessage[] = [
+        {
+            id: genId(),
+            type: 'request',
+            sourceAgentId: 'analyst-1',
+            targetAgentId: 'researcher-1',
+            capability: 'memory',
+            payload: { query: 'Find relevant papers on AI safety' },
+            timestamp: Date.now() - 3600000,
+            ttl: 30000,
+            traceId: 'trace-001',
+        },
+        {
+            id: genId(),
+            type: 'response',
+            sourceAgentId: 'researcher-1',
+            targetAgentId: 'analyst-1',
+            capability: 'memory',
+            payload: { results: ['Paper 1: Alignment Research', 'Paper 2: Robustness'] },
+            timestamp: Date.now() - 3590000,
+            ttl: 30000,
+            traceId: 'trace-001',
+        },
+        {
+            id: genId(),
+            type: 'broadcast',
+            sourceAgentId: 'debater-1',
+            capability: 'chat',
+            payload: { message: 'New debate round starting' },
+            timestamp: Date.now() - 1800000,
+            ttl: 60000,
+            traceId: 'trace-002',
+        },
+    ];
+
+    getRegisteredAgents(): AgentRegistration[] {
+        return [...this.agents];
+    }
+
+    registerAgent(agentId: string, name: string): AgentRegistration {
+        const existing = this.agents.find((a) => a.agentId === agentId);
+        if (existing) {
+            existing.status = 'online';
+            existing.lastSeen = Date.now();
+            return { ...existing };
+        }
+        const agent: AgentRegistration = {
+            agentId,
+            agentName: name,
+            capabilities: DEFAULT_CAPABILITIES.map((c) => ({ ...c })),
+            status: 'online',
+            lastSeen: Date.now(),
+            address: `agent://${agentId}`,
+        };
+        this.agents.push(agent);
+        return agent;
+    }
+
+    unregisterAgent(agentId: string): void {
+        this.agents = this.agents.filter((a) => a.agentId !== agentId);
+    }
+
+    sendMessage(message: Omit<AgentProtocolMessage, 'id' | 'timestamp'>): AgentProtocolMessage {
+        const msg: AgentProtocolMessage = { ...message, id: genId(), timestamp: Date.now() };
+        this.messages.push(msg);
+        return msg;
+    }
+
+    getMessageHistory(agentId?: string): AgentProtocolMessage[] {
+        return agentId
+            ? this.messages.filter(
+                  (m) => m.sourceAgentId === agentId || m.targetAgentId === agentId,
+              )
+            : [...this.messages];
+    }
+
+    getCapabilities(agentId: string): AgentCapability[] {
+        const agent = this.agents.find((a) => a.agentId === agentId);
+        return agent ? [...agent.capabilities] : [];
+    }
+}

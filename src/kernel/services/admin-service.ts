@@ -1,6 +1,9 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import type { CanonicalHealthStatus } from '../contracts/health';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('AdminService');
 
 export interface AdminAuditEntry {
     id: string;
@@ -181,6 +184,11 @@ export class AdminService {
             ...entry,
             id: `audit-${Date.now()}-${crypto.randomUUID()}`,
             timestamp: Date.now(),
+        });
+        LOGGER.info('AdminService', `Audit: ${entry.action}`, {
+            actor: entry.actor,
+            target: entry.target,
+            severity: entry.severity,
         });
         if (this.auditLog.length > (CONFIG?.services?.admin?.maxAuditEntries ?? 5000))
             this.auditLog.shift();

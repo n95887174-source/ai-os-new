@@ -30,6 +30,8 @@ export interface RoleMetadata {
     author?: string;
     tags?: string[];
     avatar?: string;
+    avatarShape?: string;
+    avatarColor?: string;
 }
 
 export interface Role {

@@ -431,3 +431,201 @@ export type { ToolDefinition, ToolCategory } from './tool-types';
 
 // ── Debate Human ──────────────────────────────────────────────
 export type { IDebateHumanService } from './debate-human';
+
+// ── Audience ──────────────────────────────────────────────────
+export type {
+    AudienceArchetype,
+    AudienceMember,
+    AudienceReaction,
+    AudienceReactionEvent,
+    AudiencePoll,
+    AudienceSideChatMessage,
+    AudienceState,
+    IAudienceService,
+} from './audience';
+
+export type { TutorialStep, Tutorial, TutorialProgress, ITutorialService } from './tutorial';
+
+export type {
+    CollaborationPermission,
+    TeamMember,
+    Team,
+    InviteLink,
+    SharedSession,
+    ITeamCollaborationService,
+} from './team-collaboration';
+
+export type {
+    FineTuningMethod,
+    FineTuningStatus,
+    FineTuningHyperparams,
+    FineTuningDataset,
+    FineTuningJob,
+    IFineTuningService,
+} from './fine-tuning';
+
+export type {
+    DistillationMethod,
+    DistillationStatus,
+    DistillationConfig,
+    DistillationJob,
+    IDistillationService,
+} from './model-distillation';
+
+export type {
+    DeployTarget,
+    DeployEnvironment,
+    DeployStatus,
+    DeployConfig,
+    DeployLog,
+    Deployment,
+    IDeployService,
+} from './deploy';
+
+export type {
+    BudgetAlertRule,
+    BudgetAlertEvent,
+    BudgetAlertCondition,
+    BudgetAlertAction,
+    IBudgetAlertService,
+} from './budget-alert';
+export type {
+    TopologyTemplate,
+    TopologyTemplateNode,
+    TopologyTemplateEdge,
+    ITopologyTemplateService,
+} from './topology-templates';
+export type {
+    KeyUsageSummary,
+    ProviderUsageBreakdown,
+    UsageTrend,
+    IKeyUsageAnalyticsService,
+} from './key-usage-analytics';
+export type { PromptVersion, PromptMeta, IPromptVersionService } from './prompt-version-history';
+export type { MigrationPlan, MigrationStep, IProviderMigrationService } from './provider-migration';
+export type { SlaRule, SlaProfile, IHealthSlaService } from './health-sla';
+export type {
+    ResearchReport,
+    ReportSection,
+    ReportFormat,
+    ReportStatus,
+    IResearchReportService,
+} from './research-report';
+export type {
+    VoiceInputSession,
+    VoiceInputSource,
+    InputStatus,
+    MultimodalType,
+    MultimodalAttachment,
+    IVoiceInputService,
+} from './voice-input';
+export type {
+    ProtocolMessageType,
+    ProtocolCapability,
+    AgentProtocolMessage,
+    AgentCapability,
+    AgentRegistration,
+    IAgentProtocolService,
+} from './agent-protocol';
+
+export type {
+    IFederatedMemoryService,
+    FederatedNode,
+    FederationConfig,
+    SyncSession,
+    FederationRole,
+} from './federated-memory';
+export type {
+    IPluginSdkService,
+    PluginManifest,
+    PluginInstance,
+    PluginHook,
+    PluginType,
+    PluginStatus,
+    PluginPermission,
+} from './plugin-sdk';
+export type {
+    IPersonaMarketplaceService,
+    PersonaListing,
+    PersonaCategory,
+} from './persona-marketplace';
+export type { ITemplateSharingService, SharedTemplate, TemplateCategory } from './template-sharing';
+export type {
+    IMemoryTransferService,
+    MemoryExport,
+    MemoryImport,
+    ExportFormat,
+} from './memory-transfer';
+export type { IAquariumTradingService, TradeOffer, TradeStatus } from './aquarium-trading';
+export type { ITimeMachineService, TimeSnapshot, SnapshotScope } from './time-machine';
+export type {
+    IContributionService,
+    ContributionGraph,
+    ContributionDay,
+    ContributionWeek,
+} from './contribution';
+export type {
+    IGeminiLiveService,
+    GeminiLiveSession,
+    GeminiLiveMessage,
+    LiveStatus,
+} from './gemini-live';
+export type {
+    IMetaLearningService,
+    MetaLearningState,
+    LearningSignal,
+    LearnedPattern,
+} from './meta-learning';
+export type {
+    IQuantumInspirationService,
+    QuantumOptimizationProblem,
+    QuantumSolution,
+    QuantumSolverType,
+} from './quantum-inspiration';
+
+// ── Gemini Research ─────────────────────────────────────────────
+export type {
+    IGeminiResearchService,
+    GeminiEnhancedSearchResult,
+    GeminiResearchSource,
+    GeminiClaimAnalysis,
+    GeminiEnhancedSummary,
+    GeminiPeerReviewOutput,
+    GeminiAnomalyResult,
+} from './gemini-research';
+
+export type {
+    SmartRoutingConfig,
+    RoutingRule,
+    RoutingCondition,
+    FallbackStep,
+    RoutingDecision,
+    ISmartRoutingService,
+} from './smart-routing';
+
+export type {
+    NvidiaEnterpriseConfig,
+    ComplianceStatus,
+    SLARecord,
+    RegionStatus,
+    EnterpriseFeature,
+    INvidiaEnterpriseService,
+} from './nvidia-enterprise';
+
+export type { CachedContent, FreeTierUsage, IGeminiCacheService } from './gemini-cache';
+
+export type {
+    ProviderAchievement,
+    AchievementProgress,
+    IProviderAchievementService,
+} from './provider-achievements';
+
+export type {
+    RoleTeam,
+    TeamTemplate,
+    TeamStrategy,
+    TeamDomain,
+    TeamExecutionConfig,
+    IRoleTeamService,
+} from './role-team';
+export { DEFAULT_TEAM_TEMPLATES } from './role-team';

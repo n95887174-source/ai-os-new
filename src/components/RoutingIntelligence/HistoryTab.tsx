@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight, Info, TrendingUp, Zap, DollarSign, Shield } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { RouterDecision } from '../../kernel/services/provider-router';
 import { STRATEGY_LABELS, providerColor, scoreBreakdown, getExplanation } from './routing-utils';
@@ -34,6 +35,114 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
         >
             <div>
                 <div style={textMutedSm}>Last {decisions.length} routing decisions</div>
+                {decisions.length > 0 &&
+                    (() => {
+                        const dist = new Map<string, number>();
+                        for (const d of decisions) {
+                            const p = d.selected || 'unknown';
+                            dist.set(p, (dist.get(p) || 0) + 1);
+                        }
+                        const chartData = Array.from(dist.entries())
+                            .map(([provider, count]) => ({
+                                name: provider,
+                                value: count,
+                                color: providerColor(provider) || '#64748b',
+                            }))
+                            .sort((a, b) => b.value - a.value);
+                        return (
+                            <div
+                                style={{
+                                    margin: '0.75rem 0',
+                                    padding: '0.75rem',
+                                    borderRadius: 12,
+                                    background: 'rgba(0,0,0,0.15)',
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        fontSize: '0.7rem',
+                                        color: '#64748b',
+                                        fontWeight: 700,
+                                        marginBottom: '0.25rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                    }}
+                                >
+                                    Provider Distribution
+                                </div>
+                                <ResponsiveContainer width="100%" height={160}>
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={40}
+                                            outerRadius={65}
+                                            dataKey="value"
+                                            paddingAngle={3}
+                                        >
+                                            {chartData.map((entry, idx) => (
+                                                <Cell
+                                                    key={idx}
+                                                    fill={entry.color}
+                                                    stroke="rgba(0,0,0,0.3)"
+                                                    strokeWidth={1}
+                                                />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{
+                                                background: '#1e293b',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: 8,
+                                                fontSize: '0.75rem',
+                                            }}
+                                            labelStyle={{ color: '#94a3b8' }}
+                                            formatter={(value: number, name: string) => [
+                                                `${value} (${Math.round((value / decisions.length) * 100)}%)`,
+                                                name,
+                                            ]}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        gap: '0.5rem',
+                                        flexWrap: 'wrap',
+                                        justifyContent: 'center',
+                                        marginTop: '0.25rem',
+                                    }}
+                                >
+                                    {chartData.map((entry) => (
+                                        <span
+                                            key={entry.name}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 3,
+                                                fontSize: '0.65rem',
+                                                color: '#94a3b8',
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    background: entry.color,
+                                                    display: 'inline-block',
+                                                }}
+                                            />
+                                            {entry.name} (
+                                            {Math.round((entry.value / decisions.length) * 100)}%)
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
                 <div style={flexColGap2}>
                     {decisions.map((d, i) => {
                         const top = d.scores[0];

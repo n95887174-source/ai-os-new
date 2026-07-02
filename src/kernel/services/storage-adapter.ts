@@ -26,9 +26,14 @@ export type StorageBucket = (typeof KNOWN_BUCKETS)[number];
 
 const { obfuscate, deobfuscate } = createObfuscation(DEFAULT_OBFUSCATION_SALT);
 
+const ssrFallback = new Map<string, string>();
+
 function readRaw(key: string): string | null {
     try {
-        const raw = localStorage.getItem(key);
+        const raw =
+            typeof localStorage !== 'undefined'
+                ? localStorage.getItem(key)
+                : (ssrFallback.get(key) ?? null);
         if (!raw) return null;
         if (raw.startsWith(OBFUSCATION_PREFIX)) {
             return deobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
@@ -41,7 +46,12 @@ function readRaw(key: string): string | null {
 }
 
 function writeRaw(key: string, value: string): void {
-    localStorage.setItem(key, OBFUSCATION_PREFIX + obfuscate(value));
+    const data = OBFUSCATION_PREFIX + obfuscate(value);
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, data);
+    } else {
+        ssrFallback.set(key, data);
+    }
 }
 
 export class BucketStorageAdapter {
@@ -114,7 +124,11 @@ export class BucketStorageAdapter {
 
     async remove(key: string): Promise<void> {
         try {
-            localStorage.removeItem(this.prefix + key);
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem(this.prefix + key);
+            } else {
+                ssrFallback.delete(this.prefix + key);
+            }
         } catch (e) {
             LOGGER.warn('BucketStorageAdapter', 'remove failed', {
                 bucket: this.bucket,
@@ -126,12 +140,18 @@ export class BucketStorageAdapter {
 
     async clear(): Promise<void> {
         try {
-            const toRemove: string[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith(this.prefix)) toRemove.push(key);
+            if (typeof localStorage !== 'undefined') {
+                const toRemove: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(this.prefix)) toRemove.push(key);
+                }
+                toRemove.forEach((key) => localStorage.removeItem(key));
+            } else {
+                for (const key of ssrFallback.keys()) {
+                    if (key.startsWith(this.prefix)) ssrFallback.delete(key);
+                }
             }
-            toRemove.forEach((key) => localStorage.removeItem(key));
         } catch (e) {
             LOGGER.warn('BucketStorageAdapter', 'clear failed', { bucket: this.bucket, error: e });
         }

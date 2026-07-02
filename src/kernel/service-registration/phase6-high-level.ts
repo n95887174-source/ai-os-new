@@ -11,6 +11,35 @@ import type { IContainer } from '../container';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { LoggerService } from '../services/logger-service';
 import type { DataAccessLayer } from '../dal';
+import { AudienceService } from '../services/audience-service';
+import { TutorialService } from '../services/tutorial-service';
+import { TeamCollaborationService } from '../services/team-collaboration-service';
+import { FineTuningService } from '../services/fine-tuning-service';
+import { DistillationService } from '../services/model-distillation-service';
+import { DeployService } from '../services/deploy-service';
+import { BudgetAlertService } from '../services/budget-alert-service';
+import { TopologyTemplateService } from '../services/topology-template-service';
+import { KeyUsageAnalyticsService } from '../services/key-usage-analytics-service';
+import { PromptVersionService } from '../services/prompt-version-service';
+import { ProviderMigrationService } from '../services/provider-migration-service';
+import { HealthSlaService } from '../services/health-sla-service';
+import { ResearchReportService } from '../services/research-report-service';
+import { VoiceInputService } from '../services/voice-input-service';
+import { AgentProtocolService } from '../services/agent-protocol-service';
+import { FederatedMemoryService } from '../services/federated-memory-service';
+import { PluginSdkService } from '../services/plugin-sdk-service';
+import { PersonaMarketplaceService } from '../services/persona-marketplace-service';
+import { TemplateSharingService } from '../services/template-sharing-service';
+import { MemoryTransferService } from '../services/memory-transfer-service';
+import { AquariumTradingService } from '../services/aquarium-trading-service';
+import { TimeMachineService } from '../services/time-machine-service';
+import { ContributionService } from '../services/contribution-service';
+import { MetaLearningService } from '../services/meta-learning-service';
+import { QuantumInspirationService } from '../services/quantum-inspiration-service';
+import { SmartRoutingService } from '../services/smart-routing-service';
+import { NvidiaEnterpriseService } from '../services/nvidia-enterprise-service';
+import { GeminiCacheService } from '../services/gemini-cache-service';
+import { ProviderAchievementService } from '../services/provider-achievement-service';
 
 import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
@@ -47,6 +76,8 @@ import { ChatSummarizerService } from '../services/chat-summarizer-service';
 import { AgentWizardService } from '../services/agent-wizard-service';
 import { RoleTestingSandboxService } from '../services/role-testing-sandbox';
 import { personaService } from '../services/persona-service';
+import { BridgeKeeperService } from '../services/guardian-registry';
+import { reconnectionService } from '../services/reconnection-service';
 
 export const registerPhase6: Phase = (helpers, ctx) => {
     const { register, get, asDeps } = helpers;
@@ -204,4 +235,97 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     );
     personaService.setDatabase(get<IDatabaseService>('database'));
     register('personaService', personaService);
+
+    // ── Bridge-Keeper System ─────────────────────────────────────
+    register('bridgeKeeperService', new BridgeKeeperService());
+
+    // ── Reconnection Service ─────────────────────────────────────
+    register('reconnectionService', reconnectionService);
+
+    // ── Audience Service ──────────────────────────────────────────
+    register('audienceService', new AudienceService());
+
+    // ── Tutorial Service ─────────────────────────────────────────
+    register('tutorialService', new TutorialService());
+
+    // ── Team Collaboration Service ──────────────────────────────
+    register('teamCollaborationService', new TeamCollaborationService());
+
+    // ── Fine-Tuning Service ───────────────────────────────────
+    register('fineTuningService', new FineTuningService());
+
+    // ── Distillation Service ─────────────────────────────────
+    register('distillationService', new DistillationService());
+
+    // ── Deploy to Production Service ─────────────────────────
+    register('deployService', new DeployService());
+
+    // ── Budget Alert Service ────────────────────────────
+    register('budgetAlertService', new BudgetAlertService());
+
+    // ── Topology Template Service ─────────────────────────
+    register('topologyTemplateService', new TopologyTemplateService());
+
+    // ── Key Usage Analytics Service ───────────────────────
+    register('keyUsageAnalyticsService', new KeyUsageAnalyticsService());
+
+    // ── Prompt Version Service ──────────────────────────
+    register('promptVersionService', new PromptVersionService());
+
+    // ── Provider Migration Service ──────────────────────
+    register('providerMigrationService', new ProviderMigrationService());
+
+    // ── Health SLA Service ──────────────────────────────
+    register('healthSlaService', new HealthSlaService());
+
+    // ── Research Report Service ─────────────────────────
+    register('researchReportService', new ResearchReportService());
+
+    // ── Voice Input Service ─────────────────────────────
+    register('voiceInputService', new VoiceInputService());
+
+    // ── Agent Protocol Service ─────────────────────────
+    register('agentProtocolService', new AgentProtocolService());
+
+    // ── Federated Memory Service ──────────────────────
+    register('federatedMemoryService', new FederatedMemoryService());
+
+    // ── Plugin SDK Service ────────────────────────────
+    register('pluginSdkService', new PluginSdkService());
+
+    // ── Persona Marketplace Service ───────────────────
+    register('personaMarketplaceService', new PersonaMarketplaceService());
+
+    // ── Template Sharing Service ──────────────────────
+    register('templateSharingService', new TemplateSharingService());
+
+    // ── Memory Transfer Service ───────────────────────
+    register('memoryTransferService', new MemoryTransferService());
+
+    // ── Aquarium Trading Service ──────────────────────
+    register('aquariumTradingService', new AquariumTradingService());
+
+    // ── Time Machine Service ──────────────────────────
+    register('timeMachineService', new TimeMachineService());
+
+    // ── Contribution Service ──────────────────────────
+    register('contributionService', new ContributionService());
+
+    // ── Meta-Learning / Self-Improvement Service ─────
+    register('metaLearningService', new MetaLearningService());
+
+    // ── Quantum Inspiration Service ─────────────────
+    register('quantumInspirationService', new QuantumInspirationService());
+
+    // ── Smart Routing Service ─────────────────────
+    register('smartRoutingService', new SmartRoutingService());
+
+    // ── NVIDIA Enterprise Service ─────────────────
+    register('nvidiaEnterpriseService', new NvidiaEnterpriseService());
+
+    // ── Gemini Cache Service ─────────────────────
+    register('geminiCacheService', new GeminiCacheService());
+
+    // ── Provider Achievement Service ──────────────
+    register('providerAchievementService', new ProviderAchievementService());
 };

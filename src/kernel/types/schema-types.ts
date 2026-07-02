@@ -276,6 +276,9 @@ export const RoleSchema = z.object({
     description: z.string().optional(),
     systemPrompt: z.string().optional(),
     baseTemperature: z.number().optional(),
+    icon: z.string().optional(),
+    priority: z.number().optional(),
+    parentRoleId: z.string().optional(),
     capabilities: z.array(z.string()).optional().default([]),
     permissions: z.array(z.string()).optional(),
     metadata: z
@@ -285,6 +288,10 @@ export const RoleSchema = z.object({
             updated: z.number().optional(),
             tags: z.array(z.string()).optional(),
             author: z.string().optional(),
+            version: z.string().optional(),
+            avatar: z.string().optional(),
+            avatarShape: z.string().optional(),
+            avatarColor: z.string().optional(),
         })
         .optional()
         .default({}),

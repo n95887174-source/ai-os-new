@@ -87,7 +87,7 @@ export async function loadBootstrapSnapshot(
             }
         }
 
-        if (snapshotKeys.length === 0) {
+        if (snapshotKeys.length === 0 && typeof localStorage !== 'undefined') {
             try {
                 const raw = localStorage.getItem('super_agents_api_keys');
                 if (raw) {
@@ -103,12 +103,14 @@ export async function loadBootstrapSnapshot(
         }
     }
 
-    try {
-        localStorage.removeItem('super_agents_api_keys');
-        localStorage.removeItem('superagents:providers:super_agents_api_keys');
-        localStorage.removeItem('superagents:providers:super_agents_kernel_state');
-    } catch (e) {
-        logger.warn('Bootstrap', 'Failed to remove legacy state', { error: String(e) });
+    if (typeof localStorage !== 'undefined') {
+        try {
+            localStorage.removeItem('super_agents_api_keys');
+            localStorage.removeItem('superagents:providers:super_agents_api_keys');
+            localStorage.removeItem('superagents:providers:super_agents_kernel_state');
+        } catch (e) {
+            logger.warn('Bootstrap', 'Failed to remove legacy state', { error: String(e) });
+        }
     }
 
     if (snapshotKeys.length === 0) {

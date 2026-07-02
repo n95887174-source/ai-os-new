@@ -14,6 +14,7 @@ import { rootLogger } from '../logger-service';
 import { participantsToConfig, mergeAndProcessSession } from './debate-session-bridge';
 import type { SnapshotBridgeContext } from './debate-session-bridge';
 import { finalizeDebate } from './debate-finalizer';
+import { persistActiveSession } from './debate-session-persistence';
 import {
     setActiveDebateSession,
     setDebateGovernorState,
@@ -92,6 +93,7 @@ export class DebateSyncManager {
         this.runtimeSessionId = runtimeId;
         this.bridgeCtx = bridgeCtx;
         this.setupListeners(runtimeId);
+        this.startHeartbeat();
         this.syncSession();
         const session = this.activeSession;
         if (!session) throw new Error('No active session after sync');
@@ -267,6 +269,15 @@ export class DebateSyncManager {
             });
         }
         return true;
+    }
+
+    private startHeartbeat(): void {
+        this.stopHeartbeat();
+        this._heartbeatTimer = setInterval(() => {
+            if (this.activeSession && this.deps) {
+                persistActiveSession(this.deps.debateStore, this.activeSession);
+            }
+        }, 30_000);
     }
 
     private stopHeartbeat(): void {

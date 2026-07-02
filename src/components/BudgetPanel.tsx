@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { DollarSign, AlertTriangle, Loader2, X, BarChart3 } from 'lucide-react';
+import { DollarSign, AlertTriangle, X, BarChart3 } from 'lucide-react';
+import { PanelSkeleton } from './Common/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { budgetService } from '../kernel/instances';
 import type { SpendSummary, BudgetAlert } from '../kernel/contracts/budget';
@@ -62,16 +63,9 @@ const BudgetPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
                 }}
             >
-                <motion.div
-                    animate={{ opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-                >
-                    <Loader2 size={20} /> {t('common.loading')}
-                </motion.div>
+                <PanelSkeleton />
             </div>
         );
     }

@@ -222,7 +222,7 @@ if (typeof document !== 'undefined') {
 moduleUnsubs.push(
     eventBus.on(
         EVENTS.STREAM_END,
-        ({ requestId, provider, fullContent, latency, ttft, tps, status }) => {
+        ({ requestId, provider, fullContent, latency, ttft, tps, status, finishReason }) => {
             flushAllForRequest(requestId);
             useChatStore.setState((s) => ({
                 sessions: updateSessionsForRequest(s.sessions, requestId, (entry) => {
@@ -248,12 +248,14 @@ moduleUnsubs.push(
             }));
             useChatStore.getState().removeActiveRequestId(requestId);
 
-            // P0-6: don't store error/timeout/empty responses into RAG memory — avoids index pollution
+            // D-04: skip error/timeout/empty/safety-blocked responses in RAG memory
+            const errorFinishReasons = ['SAFETY', 'RECITATION', 'OTHER'];
             if (
                 CONFIG.featureFlags.memory.autoStore &&
                 status !== 'error' &&
                 status !== 'timeout' &&
-                fullContent
+                fullContent &&
+                (!finishReason || !errorFinishReasons.includes(finishReason))
             ) {
                 memoryService
                     .store({
@@ -265,6 +267,7 @@ moduleUnsubs.push(
                             importance: 0.7,
                             chatId: useChatStore.getState().activeSessionId,
                             requestId,
+                            finishReason,
                         },
                     })
                     .catch((e) =>

@@ -22,23 +22,31 @@ import { registerPhase3 } from './phase3-debate-runtime';
 import { registerPhase4 } from './phase4-agents-roles';
 import { registerPhase5 } from './phase5-routing-llm';
 import { registerPhase6 } from './phase6-high-level';
+import { registerPhase7 } from './phase7-memory-eval-metrics';
+import { registerPhase8 } from './phase8-roles-consortia';
+import { registerPhase9 } from './phase9-research-engine';
+import { registerPhase10 } from './phase10-ecosystem';
 import type { IContainer } from '../container';
 import type { IEventBus } from '../types/interfaces';
 
 export function registerServices(
-  container: IContainer,
-  eventBus: IEventBus,
-  registerWithLifecycle: (name: string, instance: unknown) => void,
+    container: IContainer,
+    eventBus: IEventBus,
+    registerWithLifecycle: (name: string, instance: unknown) => void,
 ): void {
-  const ctx = { container, eventBus, registerWithLifecycle };
-  const helpers = makeHelpers(ctx);
+    const ctx = { container, eventBus, registerWithLifecycle };
+    const helpers = makeHelpers(ctx);
 
-  registerPhase1(helpers, ctx);
-  registerPhase2(helpers, ctx);
-  registerPhase3(helpers, ctx);
-  registerPhase4(helpers, ctx);
-  registerPhase5(helpers, ctx);
-  registerPhase6(helpers, ctx);
+    registerPhase1(helpers, ctx);
+    registerPhase2(helpers, ctx);
+    registerPhase3(helpers, ctx);
+    registerPhase4(helpers, ctx);
+    registerPhase5(helpers, ctx);
+    registerPhase6(helpers, ctx);
+    registerPhase7(helpers, ctx);
+    registerPhase8(helpers, ctx);
+    registerPhase9(helpers, ctx);
+    registerPhase10(helpers, ctx);
 }
 
 export type { PhaseContext, Phase } from './helpers';

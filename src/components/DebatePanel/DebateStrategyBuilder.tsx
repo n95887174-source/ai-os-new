@@ -8,6 +8,7 @@ import type {
     SequencePrimitive,
 } from '../../kernel/contracts/debate-strategy-dsl';
 import { Save, Upload, Play, CheckCircle, AlertCircle, FileCode } from 'lucide-react';
+import { Skeleton } from '../Common/Skeleton';
 import { s } from './debate-strategy-styles';
 import { PRIMITIVE_META, createDefaultPrimitive, clonePrimitive } from './debate-strategy-utils';
 import { PrimitiveCard } from './PrimitiveCard';
@@ -264,9 +265,7 @@ const DebateStrategyBuilder: React.FC = () => {
                 >
                     Templates:
                 </span>
-                {loadingBuiltins && (
-                    <span style={{ fontSize: 9, color: '#94a3b8' }}>Loading...</span>
-                )}
+                {loadingBuiltins && <Skeleton width={60} height={12} />}
                 {builtinList.map((entry) => (
                     <button
                         key={entry.definition.id}

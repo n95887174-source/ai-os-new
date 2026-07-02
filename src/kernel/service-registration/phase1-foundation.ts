@@ -22,6 +22,7 @@ import { KeyService } from '../services/key-management/key-service';
 import { GroupManagerService } from '../services/group-manager';
 import { SessionManagerService } from '../services/session-manager-service';
 import { ExecutionGovernorService } from '../services/execution-governor';
+import { initCostOptimization } from '../services/cost-optimization-service';
 import type { AdvisorService } from '../services/advisor-service';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from '../services/logger-service';
@@ -193,4 +194,9 @@ export const registerPhase1: Phase = (helpers, ctx) => {
     );
 
     register('executionGovernor', new ExecutionGovernorService());
+
+    initCostOptimization(
+        get<ProviderTracker>('providerTracker'),
+        get<PricingService>('pricingService'),
+    );
 };

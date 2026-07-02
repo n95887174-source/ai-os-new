@@ -73,6 +73,7 @@ export const SERVICE_PHASES: string[][] = [
         'probeService',
         'consistencyChecker',
         'systemStatusService',
+        'memoryOrchestrator',
     ],
 ];
 

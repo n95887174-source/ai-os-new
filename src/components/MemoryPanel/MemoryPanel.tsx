@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { memoryService } from '../../kernel/instances';
 import type { MemoryEntry } from '../../types/memory';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
@@ -17,6 +17,8 @@ import MemoryEmptyState from './MemoryEmptyState';
 import MemoryCard from './MemoryCard';
 import IndexStatsPanel from './IndexStatsPanel';
 import KnowledgeGrowthPanel from './KnowledgeGrowthPanel';
+import ForgettingCurvePanel from './ForgettingCurvePanel';
+import MemoryTimeline from './MemoryTimeline';
 
 const MemoryPanel: React.FC = () => {
     const { confirm, ConfirmDialog } = useConfirm();
@@ -27,6 +29,8 @@ const MemoryPanel: React.FC = () => {
         'long_term' | 'ephemeral' | 'rag_sources'
     >('long_term');
     const [semanticMode, setSemanticMode] = useState(!!CONFIG?.services?.memory?.semanticEnabled);
+    const [importanceFilter, setImportanceFilter] = useState(0);
+    const [viewMode, setViewMode] = useState<'cards' | 'timeline'>('cards');
     const [currentTime, setCurrentTime] = useState(() => Date.now());
     const [isLoading, setIsLoading] = useState(memories.length === 0);
     const { t } = useTranslation();
@@ -213,8 +217,13 @@ const MemoryPanel: React.FC = () => {
     };
 
     const filteredMemories = useMemo(
-        () => memories.filter((m) => (m.metadata.collection ?? 'long_term') === activeCollection),
-        [memories, activeCollection],
+        () =>
+            memories.filter(
+                (m) =>
+                    (m.metadata.collection ?? 'long_term') === activeCollection &&
+                    (m.metadata.importance ?? 0) >= importanceFilter,
+            ),
+        [memories, activeCollection, importanceFilter],
     );
     const totalEntries = filteredMemories.length;
 
@@ -284,6 +293,94 @@ const MemoryPanel: React.FC = () => {
                             semanticMode={semanticMode}
                             onToggleSemantic={toggleSemantic}
                         />
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    background: 'rgba(255,255,255,0.04)',
+                                    borderRadius: 8,
+                                    padding: 2,
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <button
+                                    onClick={() => setViewMode('cards')}
+                                    style={{
+                                        padding: '0.3rem 0.6rem',
+                                        borderRadius: 6,
+                                        border: 'none',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        background:
+                                            viewMode === 'cards'
+                                                ? 'rgba(168,85,247,0.25)'
+                                                : 'transparent',
+                                        color: viewMode === 'cards' ? '#a855f7' : '#64748b',
+                                        transition: 'all 0.15s',
+                                    }}
+                                    aria-label="Card view"
+                                >
+                                    Cards
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('timeline')}
+                                    style={{
+                                        padding: '0.3rem 0.6rem',
+                                        borderRadius: 6,
+                                        border: 'none',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        background:
+                                            viewMode === 'timeline'
+                                                ? 'rgba(168,85,247,0.25)'
+                                                : 'transparent',
+                                        color: viewMode === 'timeline' ? '#a855f7' : '#64748b',
+                                        transition: 'all 0.15s',
+                                    }}
+                                    aria-label="Timeline view"
+                                >
+                                    Timeline
+                                </button>
+                            </div>
+                            <span
+                                style={{
+                                    fontSize: '0.7rem',
+                                    color: '#94a3b8',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {t('memory.importance_min')}: {importanceFilter}
+                            </span>
+                            <input
+                                type="range"
+                                min={0}
+                                max={10}
+                                step={1}
+                                value={importanceFilter}
+                                onChange={(e) => setImportanceFilter(parseInt(e.target.value))}
+                                style={{ flex: 1, accentColor: '#a855f7' }}
+                                aria-label={t('memory.importance_min')}
+                            />
+                            <span
+                                style={{
+                                    fontSize: '0.65rem',
+                                    color: '#64748b',
+                                    minWidth: 24,
+                                    textAlign: 'right',
+                                }}
+                            >
+                                {importanceFilter === 0 ? t('memory.any') : ''}
+                            </span>
+                        </div>
                     </div>
 
                     <div
@@ -298,22 +395,39 @@ const MemoryPanel: React.FC = () => {
                         role="list"
                         aria-label={t('memory.title')}
                     >
-                        <AnimatePresence mode="popLayout">
-                            {isLoading || filteredMemories.length === 0 ? (
-                                <MemoryEmptyState isLoading={isLoading} hasSearch={!!searchQuery} />
-                            ) : (
-                                filteredMemories.map((memory, index) => (
-                                    <MemoryCard
-                                        key={memory.id}
-                                        memory={memory}
-                                        index={index}
-                                        searchQuery={searchQuery}
-                                        isSearching={isSearching}
-                                        onDelete={handleDeleteMemory}
+                        {viewMode === 'cards' ? (
+                            <AnimatePresence mode="popLayout">
+                                {isLoading || filteredMemories.length === 0 ? (
+                                    <MemoryEmptyState
+                                        isLoading={isLoading}
+                                        hasSearch={!!searchQuery}
                                     />
-                                ))
-                            )}
-                        </AnimatePresence>
+                                ) : (
+                                    filteredMemories.map((memory, index) => (
+                                        <MemoryCard
+                                            key={memory.id}
+                                            memory={memory}
+                                            index={index}
+                                            searchQuery={searchQuery}
+                                            isSearching={isSearching}
+                                            onDelete={handleDeleteMemory}
+                                        />
+                                    ))
+                                )}
+                            </AnimatePresence>
+                        ) : (
+                            <motion.div
+                                key="timeline"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <MemoryTimeline
+                                    entries={filteredMemories}
+                                    onDelete={handleDeleteMemory}
+                                />
+                            </motion.div>
+                        )}
                     </div>
                 </div>
 
@@ -332,6 +446,7 @@ const MemoryPanel: React.FC = () => {
                         avgRetrievalMs={avgRetrievalMs}
                     />
                     <KnowledgeGrowthPanel activityMap={activityMap} totalEntries={totalEntries} />
+                    <ForgettingCurvePanel memories={memories} />
                 </div>
             </div>
 

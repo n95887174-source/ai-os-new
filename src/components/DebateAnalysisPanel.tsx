@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Brain, AlertTriangle, TrendingUp, Activity, BarChart3, Loader2, X } from 'lucide-react';
+import { Brain, AlertTriangle, TrendingUp, Activity, BarChart3, X } from 'lucide-react';
+import { PanelSkeleton } from './Common/Skeleton';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { getActiveDebateSession } from '../kernel/services/debate-runtime/active-debate-store';
@@ -72,16 +73,9 @@ const DebateAnalysisPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
                 }}
             >
-                <motion.div
-                    animate={{ opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-                >
-                    <Loader2 size={20} /> {t('common.loading')}
-                </motion.div>
+                <PanelSkeleton />
             </div>
         );
     }

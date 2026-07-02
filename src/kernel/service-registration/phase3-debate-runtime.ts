@@ -38,10 +38,31 @@ import { DebateModeManagerPersistent } from '../services/debate-runtime/debate-m
 import { DebateWorkspace } from '../services/debate-runtime/debate-workspace';
 import { DebateRoom } from '../services/debate-runtime/debate-room';
 import { DebatePolicyEngine } from '../services/debate-runtime/debate-policy-engine';
+import { DebateRAGRetriever } from '../services/debate-runtime/debate-rag-retriever';
+import { DebateEmbeddingPipeline } from '../services/debate-runtime/debate-embedding-pipeline';
+import { DebateMemoryExtractor } from '../services/debate-runtime/debate-memory-extractor';
+import { DebateEvaluator } from '../services/debate-runtime/debate-evaluator';
 import { CognitiveIntelligenceService } from '../services/cognitive-intelligence/cognitive-intelligence-service';
 import { WhatIfService } from '../services/runtime-intelligence/whatif-service';
 import { PressureMapService } from '../services/runtime-intelligence/pressure-map-service';
 import { DiagnosticService } from '../services/runtime-intelligence/diagnostic-service';
+
+/** Simple hash-based embedding for keyword overlap without an external embedding API. */
+function simpleEmbedText(text: string): Promise<Float32Array> {
+    const words = text
+        .toLowerCase()
+        .split(/[^a-zа-яё0-9]+/)
+        .filter(Boolean);
+    const freq = new Map<string, number>();
+    for (const w of words) freq.set(w, (freq.get(w) || 0) + 1);
+    const vocab = Array.from(freq.keys());
+    const dim = 64;
+    const vec = new Float32Array(dim);
+    for (let i = 0; i < vocab.length && i < dim; i++) {
+        vec[i] = (freq.get(vocab[i]) || 0) / words.length;
+    }
+    return Promise.resolve(vec);
+}
 
 const EMPTY_DEBATE_STORE: DebateStore = {
     saveSnapshot: async () => 1,
@@ -220,6 +241,10 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                 return () => _container.get<IExecutionGovernor>('executionGovernor');
             },
             debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
+            policyEngine: get<DebatePolicyEngine>('debatePolicyEngine'),
+            ragRetriever: _container.get<DebateRAGRetriever>('debateRAGRetriever'),
+            memoryExtractor: _container.get<DebateMemoryExtractor>('debateMemoryExtractor'),
+            evaluator: _container.get<DebateEvaluator>('debateEvaluator'),
         }),
     );
 
@@ -248,6 +273,15 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     );
 
     register('debatePolicyEngine', new DebatePolicyEngine());
+
+    const embedPipeline = new DebateEmbeddingPipeline({ embedText: simpleEmbedText });
+    register('debateEmbeddingPipeline', embedPipeline);
+
+    register('debateRAGRetriever', new DebateRAGRetriever({ embeddingPipeline: embedPipeline }));
+
+    register('debateMemoryExtractor', new DebateMemoryExtractor());
+
+    register('debateEvaluator', new DebateEvaluator());
 
     register(
         'cognitiveIntelligenceService',

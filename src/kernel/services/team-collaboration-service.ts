@@ -1,0 +1,204 @@
+import type {
+    ITeamCollaborationService,
+    Team,
+    TeamMember,
+    InviteLink,
+    SharedSession,
+    CollaborationPermission,
+} from '../contracts/team-collaboration';
+import { ssrSafeStorage } from '../utils/ssr-storage';
+
+const STORAGE_KEY = 'team_collaboration';
+const INVITE_PREFIX = 'tc_';
+
+function generateCode(): string {
+    return INVITE_PREFIX + Array.from({ length: 8 }, () => Math.random().toString(36)[2]).join('');
+}
+
+function generateId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+interface PersistedData {
+    teams: Team[];
+    invites: InviteLink[];
+    sharedSessions: SharedSession[];
+}
+
+export class TeamCollaborationService implements ITeamCollaborationService {
+    private teams: Team[] = [];
+    private invites: InviteLink[] = [];
+    private sharedSessions: SharedSession[] = [];
+
+    async init(): Promise<void> {
+        try {
+            const raw = ssrSafeStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const data = JSON.parse(raw) as PersistedData;
+                this.teams = data.teams ?? [];
+                this.invites = data.invites ?? [];
+                this.sharedSessions = data.sharedSessions ?? [];
+            }
+        } catch {
+            this.teams = [];
+            this.invites = [];
+            this.sharedSessions = [];
+        }
+    }
+
+    start(): Promise<void> {
+        return Promise.resolve();
+    }
+
+    destroy(): void {
+        this.teams = [];
+        this.invites = [];
+        this.sharedSessions = [];
+    }
+
+    private persist(): void {
+        try {
+            ssrSafeStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    teams: this.teams,
+                    invites: this.invites,
+                    sharedSessions: this.sharedSessions,
+                } as PersistedData),
+            );
+        } catch {
+            /* silently fail */
+        }
+    }
+
+    getTeams(): Team[] {
+        return this.teams;
+    }
+
+    getTeam(id: string): Team | undefined {
+        return this.teams.find((t) => t.id === id);
+    }
+
+    createTeam(name: string, description: string, createdBy: string): Team {
+        const team: Team = {
+            id: generateId(),
+            name,
+            description,
+            members: [{ id: createdBy, name: createdBy, role: 'admin', joinedAt: Date.now() }],
+            createdAt: Date.now(),
+            createdBy,
+        };
+        this.teams.push(team);
+        this.persist();
+        return team;
+    }
+
+    deleteTeam(id: string): void {
+        this.teams = this.teams.filter((t) => t.id !== id);
+        this.invites = this.invites.filter((i) => i.teamId !== id);
+        this.sharedSessions = this.sharedSessions.filter((s) => s.teamId !== id);
+        this.persist();
+    }
+
+    addMember(teamId: string, member: Omit<TeamMember, 'joinedAt'>): boolean {
+        const team = this.getTeam(teamId);
+        if (!team) return false;
+        if (team.members.some((m) => m.id === member.id)) return false;
+        team.members.push({ ...member, joinedAt: Date.now() });
+        this.persist();
+        return true;
+    }
+
+    removeMember(teamId: string, memberId: string): void {
+        const team = this.getTeam(teamId);
+        if (!team) return;
+        team.members = team.members.filter((m) => m.id !== memberId);
+        this.persist();
+    }
+
+    updateMemberRole(teamId: string, memberId: string, role: CollaborationPermission): void {
+        const team = this.getTeam(teamId);
+        if (!team) return;
+        const member = team.members.find((m) => m.id === memberId);
+        if (member) member.role = role;
+        this.persist();
+    }
+
+    getInvites(teamId: string): InviteLink[] {
+        return this.invites.filter((i) => i.teamId === teamId);
+    }
+
+    createInvite(
+        teamId: string,
+        permission: CollaborationPermission,
+        maxUses: number,
+        createdBy: string,
+    ): InviteLink {
+        const invite: InviteLink = {
+            code: generateCode(),
+            teamId,
+            maxUses,
+            useCount: 0,
+            expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+            permission,
+            createdBy,
+            createdAt: Date.now(),
+        };
+        this.invites.push(invite);
+        this.persist();
+        return invite;
+    }
+
+    useInvite(code: string, userName: string): Team | null {
+        const invite = this.invites.find((i) => i.code === code);
+        if (!invite) return null;
+        if (invite.useCount >= invite.maxUses) return null;
+        if (Date.now() > invite.expiresAt) return null;
+        const team = this.getTeam(invite.teamId);
+        if (!team) return null;
+        if (team.members.some((m) => m.id === userName)) return team;
+        this.addMember(invite.teamId, { id: userName, name: userName, role: invite.permission });
+        invite.useCount++;
+        this.persist();
+        return team;
+    }
+
+    revokeInvite(teamId: string, code: string): void {
+        this.invites = this.invites.filter((i) => !(i.teamId === teamId && i.code === code));
+        this.persist();
+    }
+
+    getSharedSessions(teamId: string): SharedSession[] {
+        return this.sharedSessions.filter((s) => s.teamId === teamId);
+    }
+
+    shareSession(
+        teamId: string,
+        type: SharedSession['type'],
+        title: string,
+        resourceId: string,
+        sharedBy: string,
+        permission: CollaborationPermission,
+    ): SharedSession {
+        const session: SharedSession = {
+            id: generateId(),
+            teamId,
+            type,
+            title,
+            sharedBy,
+            sharedAt: Date.now(),
+            resourceId,
+            permission,
+        };
+        this.sharedSessions.push(session);
+        this.persist();
+        return session;
+    }
+
+    unshareSession(teamId: string, sessionId: string): void {
+        this.sharedSessions = this.sharedSessions.filter(
+            (s) => !(s.teamId === teamId && s.id === sessionId),
+        );
+        this.persist();
+    }
+}

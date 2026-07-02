@@ -1,6 +1,7 @@
 import React from 'react';
 import { agentVersionService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { PanelSkeleton } from '../Common/Skeleton';
 
 export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
     const [versions, setVersions] = React.useState<
@@ -19,10 +20,7 @@ export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
                 setLoading(false);
             });
     }, [agentId]);
-    if (loading)
-        return (
-            <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>Loading...</div>
-        );
+    if (loading) return <PanelSkeleton title={false} />;
     if (versions.length === 0)
         return (
             <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>

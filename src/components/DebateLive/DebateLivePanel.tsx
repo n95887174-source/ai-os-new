@@ -3,6 +3,8 @@ import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import { CircularLayout } from './CircularLayout';
 import { JudgeCenter } from './JudgeCenter';
 import { debateEngine } from '../../kernel/instances';
+import { ARENA_LAYOUTS } from '../../kernel/contracts/debate-emotion';
+import type { ArenaLayout } from '../../kernel/contracts/debate-emotion';
 import { useTranslation } from '../../i18n/useTranslation';
 
 const containerStyle: React.CSSProperties = {
@@ -20,21 +22,18 @@ export const DebateLivePanel: React.FC = () => {
     const agentEvents = useDebateLiveStore((s) => s.agentEvents);
     const streamingContent = useDebateLiveStore((s) => s.streamingContent);
     const currentThinking = useDebateLiveStore((s) => s.currentThinking);
-    void agentEvents; // keep subscription alive
+    void agentEvents;
 
-    // CRIT-8 fix: useMemo prevents creating a new array on every render,
-    // which previously triggered the useEffect and could cause an infinite loop.
     const sessions = React.useMemo(() => debateEngine.getAllSessions(), []);
     const [activeSessionId, setActiveSessionId] = React.useState<string | null>(() =>
         sessions.length > 0 ? sessions[sessions.length - 1].id : null,
     );
+    const [layout, setLayout] = React.useState<ArenaLayout>('circle');
 
     React.useEffect(() => {
         if (activeSessionId === null && sessions.length > 0) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setActiveSessionId(sessions[sessions.length - 1].id);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeSessionId, sessions.length]);
 
     const sessionIndex = useMemo(
@@ -74,6 +73,7 @@ export const DebateLivePanel: React.FC = () => {
                     display: 'flex',
                     gap: 8,
                     alignItems: 'center',
+                    flexWrap: 'wrap',
                 }}
             >
                 <select
@@ -97,6 +97,26 @@ export const DebateLivePanel: React.FC = () => {
                         </option>
                     ))}
                 </select>
+
+                <select
+                    value={layout}
+                    onChange={(e) => setLayout(e.target.value as ArenaLayout)}
+                    style={{
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        background: 'rgba(0,0,0,0.4)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#e2e8f0',
+                        fontSize: '0.85rem',
+                    }}
+                >
+                    {ARENA_LAYOUTS.map((l) => (
+                        <option key={l.id} value={l.id}>
+                            {l.icon} {l.label}
+                        </option>
+                    ))}
+                </select>
+
                 {session && (
                     <span
                         style={{
@@ -117,6 +137,7 @@ export const DebateLivePanel: React.FC = () => {
                         participants={participants}
                         activeSpeakerId={activeSpeakerId}
                         sessionId={session.id}
+                        layout={layout}
                     />
                     {judge && (
                         <JudgeCenter judge={judge} sessionId={session.id} phase={session.phase} />

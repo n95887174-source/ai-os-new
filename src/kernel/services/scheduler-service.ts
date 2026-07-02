@@ -73,9 +73,17 @@ class SchedulerService {
         if (this.db) {
             const raw = await this.db.getKv<Schedule[]>('schedules');
             if (raw) saved = raw;
-        } else {
+        }
+        if (!saved) {
             const raw = await BucketStorageAdapter.AGENTS.get<Schedule[]>('schedules');
-            if (raw) saved = raw;
+            if (raw) {
+                saved = raw;
+                // Migrate from localStorage to DB
+                if (this.db) {
+                    await this.db.setKv('schedules', raw);
+                    await BucketStorageAdapter.AGENTS.remove('schedules');
+                }
+            }
         }
         if (saved) {
             for (const schedule of saved) {
