@@ -262,6 +262,8 @@ if (typeof window !== 'undefined') {
     // Expose for Vite HMR dispose hook in main.tsx.
     (window as unknown as { __cleanupKeyStore?: () => void }).__cleanupKeyStore = cleanupKeyStore;
 }
+const safeKeys = () => groupManager?.getAllKeys?.() || [];
+
 function ensureInitialized() {
     if (initialized) return;
     initialized = true;
@@ -269,7 +271,7 @@ function ensureInitialized() {
     unsubs.push(
         eventBus.on(EVENTS.KEYS_LOADED, () => {
             queueMicrotask(() => {
-                const next = [...groupManager.getAllKeys()];
+                const next = safeKeys();
                 if (
                     next.length !== store.keys.length ||
                     next.some((k, i) => k.id !== store.keys[i]?.id)
@@ -283,7 +285,7 @@ function ensureInitialized() {
     unsubs.push(
         eventBus.on(EVENTS.KEY_UPDATED, () => {
             queueMicrotask(() => {
-                const next = [...groupManager.getAllKeys()];
+                const next = safeKeys();
                 if (
                     next.length !== store.keys.length ||
                     next.some((k, i) => k.id !== store.keys[i]?.id)
@@ -307,7 +309,7 @@ function ensureInitialized() {
         eventBus.onSafe<{ id: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
             queueMicrotask(() => {
                 // RC-04: Batch keys + keyMeta into a single setStore to avoid race
-                const next = [...groupManager.getAllKeys()];
+                const next = safeKeys();
                 const keysChanged =
                     next.length !== store.keys.length ||
                     next.some((k, i) => k.id !== store.keys[i]?.id);
@@ -339,7 +341,7 @@ function ensureInitialized() {
     unsubs.push(
         eventBus.on(EVENTS.KEY_ADDED, () => {
             queueMicrotask(() => {
-                const next = [...groupManager.getAllKeys()];
+                const next = safeKeys();
                 if (
                     next.length !== store.keys.length ||
                     next.some((k, i) => k.id !== store.keys[i]?.id)
@@ -353,7 +355,7 @@ function ensureInitialized() {
     unsubs.push(
         eventBus.on(EVENTS.KEY_REMOVED, () => {
             queueMicrotask(() => {
-                const next = [...groupManager.getAllKeys()];
+                const next = safeKeys();
                 if (
                     next.length !== store.keys.length ||
                     next.some((k, i) => k.id !== store.keys[i]?.id)
@@ -368,7 +370,7 @@ function ensureInitialized() {
     unsubs.push(
         eventBus.on(EVENTS.GROUP_SYNC, () => {
             // Defer to avoid setState-during-render in React strict mode
-            queueMicrotask(() => setStore({ keys: [...groupManager.getAllKeys()] }));
+            queueMicrotask(() => setStore({ keys: safeKeys() }));
         }),
     );
 
@@ -398,9 +400,9 @@ function ensureInitialized() {
     );
 
     // Defer sync setStore to avoid "Cannot update while rendering" warning
-    const latestKeys = groupManager?.getAllKeys?.() || [];
-    if (latestKeys && latestKeys.length > 0) {
-        queueMicrotask(() => setStore({ keys: [...latestKeys] }));
+    const latestKeys = safeKeys();
+    if (latestKeys.length > 0) {
+        queueMicrotask(() => setStore({ keys: latestKeys }));
     }
 
     if (pollTimer !== null) {
@@ -410,14 +412,14 @@ function ensureInitialized() {
     let pollAttempts = 0;
     pollTimer = setInterval(() => {
         pollAttempts++;
-        const nextKeys = groupManager?.getAllKeys?.() || [];
-        if ((nextKeys && nextKeys.length > 0) || pollAttempts >= 10) {
+        const nextKeys = safeKeys();
+        if (nextKeys.length > 0 || pollAttempts >= 10) {
             // STATE-M1: Only overwrite if data actually changed to avoid stale event-driven updates
-            if (nextKeys && nextKeys.length > 0) {
+            if (nextKeys.length > 0) {
                 const nextIds = nextKeys.map((k) => k.id).join(',');
                 const currentIds = store.keys.map((k) => k.id).join(',');
                 if (nextIds !== currentIds) {
-                    setStore({ keys: [...nextKeys] });
+                    setStore({ keys: nextKeys });
                 }
             }
             if (pollTimer !== null) {
@@ -442,12 +444,12 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
 
     const removeKey = useCallback(async (id: string) => {
         await groupManager.deleteKey(id);
-        setStore({ keys: [...groupManager.getAllKeys()] });
+        setStore({ keys: safeKeys() });
     }, []);
 
     const updateKey = useCallback(async (id: string, data: Partial<ApiKey>) => {
         await groupManager.updateKey(id, data);
-        setStore({ keys: [...groupManager.getAllKeys()] });
+        setStore({ keys: safeKeys() });
     }, []);
 
     const checkHealth = useCallback((id: string) => {
@@ -459,14 +461,14 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
     }, []);
 
     const toggleKeyStatus = useCallback(async (id: string) => {
-        const key = groupManager.getAllKeys().find((k) => k.id === id);
+        const key = safeKeys().find((k) => k.id === id);
         if (!key) return;
         await groupManager.syncKeyStatus(id, key.status === 'active' ? 'inactive' : 'active');
-        setStore({ keys: [...groupManager.getAllKeys()] });
+        setStore({ keys: safeKeys() });
     }, []);
 
     const enableAllKeys = useCallback(async () => {
-        const allKeys = groupManager.getAllKeys();
+        const allKeys = safeKeys();
         const errors: string[] = [];
         for (const k of allKeys) {
             try {
@@ -485,11 +487,11 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
                 timestamp: Date.now(),
             });
         }
-        setStore({ keys: [...groupManager.getAllKeys()] });
+        setStore({ keys: safeKeys() });
     }, []);
 
     const disableAllKeys = useCallback(async () => {
-        const allKeys = groupManager.getAllKeys();
+        const allKeys = safeKeys();
         const errors: string[] = [];
         for (const k of allKeys) {
             try {
@@ -508,7 +510,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
                 timestamp: Date.now(),
             });
         }
-        setStore({ keys: [...groupManager.getAllKeys()] });
+        setStore({ keys: safeKeys() });
     }, []);
 
     const exportKeys = useCallback(() => keyService.exportKeys(), []);
@@ -526,7 +528,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
             return `${provider.toLowerCase()}::${label.toLowerCase()}::${h.toString(36)}`;
         };
         const existingFingerprints = new Set(
-            groupManager.getAllKeys().map((k) => makeFingerprint(k.provider, k.label, k.key)),
+            safeKeys().map((k) => makeFingerprint(k.provider, k.label, k.key)),
         );
         for (const item of imported) {
             const parsed = parseImportedKey(item);
@@ -539,7 +541,7 @@ export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
                 existingFingerprints.add(fingerprint);
             }
         }
-        setStore({ keys: [...groupManager.getAllKeys()] });
+        setStore({ keys: safeKeys() });
         return count;
     }, []);
 

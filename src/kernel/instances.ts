@@ -184,7 +184,9 @@ export const truthConsistencyMonitor =
 
 // ── Group Manager ──────────────────────────────────────────────
 import type { IGroupManager } from './contracts/group-manager';
-export const groupManager = lazyService<IGroupManager>('groupManagerService');
+export const groupManager = lazyService<IGroupManager>('groupManagerService', {
+    getAllKeys: () => [],
+});
 
 // ── System Status Service ──────────────────────────────────────
 import type { ISystemStatusService } from './contracts/system-status';
