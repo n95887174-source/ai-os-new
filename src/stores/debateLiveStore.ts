@@ -329,6 +329,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         }),
     ];
 
+    // D-H-12: Transient UI state — no persist needed (zustand middleware not used; data is live-only)
     const metricsInterval = setInterval(() => {
         const s = get();
         const errorCount = s.agentEvents.filter((e) => e.status === 'error').length;

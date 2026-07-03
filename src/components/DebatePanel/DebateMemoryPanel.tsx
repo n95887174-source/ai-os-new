@@ -44,9 +44,10 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
                     (s.arguments ?? []).some((a) => a.content.toLowerCase().includes(q)),
             );
         }
-        if (selectedType !== 'all') result = result.filter((s) => s.convergenceScore !== undefined);
+        // FIXME: DebateSession has no conclusionType field; type filter requires adding conclusionType to DebateSession
         return result.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-    }, [sessions, searchQuery, selectedType]);
+         
+    }, [sessions, searchQuery]);
 
     const stats = useMemo(() => computeStats(sessions), [sessions]);
 

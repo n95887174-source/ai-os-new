@@ -149,13 +149,6 @@ export class DebateMemory implements IDebateMemory {
         if (this.claims.length > MAX_CLAIMS) this.claims = this.claims.slice(-MAX_CLAIMS);
     }
 
-    finalizeChain(agentId: string, conclusion: string): void {
-        const existing = this.chains.get(agentId);
-        if (!existing || existing.length === 0) return;
-        const last = existing[existing.length - 1];
-        existing[existing.length - 1] = { ...last, conclusion };
-    }
-
     getChain(agentId: string): ReasoningChain[] {
         return [...(this.chains.get(agentId) || [])];
     }

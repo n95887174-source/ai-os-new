@@ -20,14 +20,14 @@ import type { DebateProviderResolver } from './debate-query-engine';
 import { DEBATE_MODEL_PRIORITY } from './debate-query-engine';
 
 const LOGGER = rootLogger.child('DebateConclusionEngine');
-let sharedEnhancementInFlight = false;
-let sharedEnhancementRetryAfter = 0;
 
-export type LlmCallFn = (prompt: string) => Promise<string>;
+export type LlmCallFn = (prompt: string, signal?: AbortSignal) => Promise<string>;
 
 export class DebateConclusionEngine {
     private feedbackLog: VerdictFeedback[] = [];
     private enhancedSessions = new Set<string>();
+    private enhancementInFlight = false;
+    private enhancementRetryAfter = 0;
 
     constructor(private llmCall?: LlmCallFn) {}
 
@@ -212,27 +212,32 @@ export class DebateConclusionEngine {
     async generateVerdictWithLLM(
         snapshot: DebateSessionSnapshot,
         timeline: TimelineEntry[],
+        signal?: AbortSignal,
     ): Promise<DebateVerdict> {
         const base = this.generateVerdict(snapshot, timeline);
         if (!this.llmCall) return base;
         if (this.enhancedSessions.has(snapshot.id)) return base;
-        if (sharedEnhancementInFlight) return base;
+        if (this.enhancementInFlight) return base;
 
         const now = Date.now();
-        if (now < sharedEnhancementRetryAfter) {
+        if (now < this.enhancementRetryAfter) {
             return base;
         }
 
-        sharedEnhancementInFlight = true;
+        this.enhancementInFlight = true;
         try {
             const prompt = this.buildLLMPrompt(base, snapshot);
-            const response = await this.llmCall(prompt);
+            const response = await this.llmCall(prompt, signal);
             const enhanced = this.parseLLMResponse(response, base);
             this.enhancedSessions.add(snapshot.id);
             return enhanced;
         } catch (e) {
+            if (signal?.aborted) {
+                this.enhancementInFlight = false;
+                return base;
+            }
             this.enhancedSessions.add(snapshot.id);
-            sharedEnhancementRetryAfter = Date.now() + 10 * 60 * 1000;
+            this.enhancementRetryAfter = Date.now() + 10 * 60 * 1000;
             LOGGER.warn(
                 'DebateConclusionEngine',
                 'LLM verdict enhancement failed, using heuristic base',
@@ -240,7 +245,7 @@ export class DebateConclusionEngine {
             );
             return base;
         } finally {
-            sharedEnhancementInFlight = false;
+            this.enhancementInFlight = false;
         }
     }
 
@@ -287,6 +292,8 @@ Respond ONLY with valid JSON, no markdown.`;
         this.feedbackLog = [];
         this.llmCall = undefined;
         this.enhancedSessions.clear();
+        this.enhancementInFlight = false;
+        this.enhancementRetryAfter = 0;
     }
 
     recordFeedback(sessionId: string, vote: VerdictFeedbackVote, comment?: string): void {
@@ -334,8 +341,8 @@ export interface ConclusionLlmDeps {
 
 export function buildConclusionLlmCall(
     deps: ConclusionLlmDeps,
-): (prompt: string) => Promise<string> {
-    return async (prompt: string): Promise<string> => {
+): (prompt: string, signal?: AbortSignal) => Promise<string> {
+    return async (prompt: string, signal?: AbortSignal): Promise<string> => {
         const adapterRegistry = deps.getAdapterRegistry();
         const keyService = deps.getKeyService();
         const keys = keyService.getKeys();
@@ -383,7 +390,7 @@ export function buildConclusionLlmCall(
                     : (DEBATE_MODEL_PRIORITY[activeKey.provider.toLowerCase()] ?? [])[0] || 'auto';
 
             try {
-                const result = await adapter.sendMessage(messages, model, activeKey.key);
+                const result = await adapter.sendMessage(messages, model, activeKey.key, signal);
                 return typeof result.content === 'string' ? result.content : String(result.content);
             } catch (error) {
                 const sc = (error as { statusCode?: number }).statusCode;

@@ -2706,3 +2706,32 @@ Fix all Critical/High findings from `audit/new/arheterktura.md` (98 findings tot
 - **arheterktura.md**: 14/25 Critical/High fixed this session, 5 pre-fixed, 6 deferred (complex or scope)
 - Remaining: C-03 (STREAM events — complex), C-06 (dual metrics — refactor), T-09 (DAL still alive, skip), A-04 (service-locator DI — large), C-08 (debate singleton — needs persistence layer), S-02/03 (security — medium)
 - Next audit files: `AUDIT_REPORT.md`, `AUDIT_REPORT_DEBATES.md`, `audit-report-part2-gemini.md`, `audit-report-part3-groq-openrouter-nvidia.pdf`, `audit-report-part4-kernel.pdf`, `debb.md`, `kontrakti.md`, `rantaim.md` (partial)
+
+---
+
+## Current Session (2026-07-03) — AUDIT_REPORT_DEBATES.md: Remaining 8 findings fixed 🟢
+
+### Goal
+
+Fix all 8 remaining findings from **AUDIT_REPORT_DEBATES.md** to close the report (was 16/24 fixed, 8 remaining).
+
+### Changes
+
+| ID     | Severity | Fix                                                                                                                                                                                                             | File                                                             |
+| :----- | :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------- |
+| D-C-10 | CRITICAL | `handleLeave` now uses `userName.trim()` (was untrimmed, causing leave/send to miss user with whitespace)                                                                                                       | `src/components/DebatePanel/CollabDebatePanel.tsx`               |
+| D-C-11 | CRITICAL | Removed unused `DUMMY_PARTICIPANTS` array (3 fake agents without LLM backend, created broken sessions)                                                                                                          | `src/components/DebatesManager/DebatesManagerPanel.tsx`          |
+| D-C-12 | CRITICAL | Replaced no-op filter that never read `selectedType` — pass-through with FIXME comment (DebateSession has no `conclusionType` field to filter against)                                                          | `src/components/DebatePanel/DebateMemoryPanel.tsx`               |
+| D-C-13 | CRITICAL | Fixed 4 invalid enum values: `tieBreaker: 'moderator'` → `'judge'`, `criteria: ['evidence_quality', 'impact_assessment']` → `['correctness', 'completeness']`, `stopWhen: 'contradiction'` → `'agreement'` (×2) | `src/kernel/services/debate-runtime/debate-strategy-registry.ts` |
+| D-H-06 | HIGH     | Removed dead `finalizeChain()` method (never called); `getChain()` inlined at original position                                                                                                                 | `src/kernel/services/debate-runtime/debate-memory.ts`            |
+| D-H-09 | HIGH     | Moved module-level `sharedEnhancementInFlight`/`sharedEnhancementRetryAfter` → instance fields; added `AbortSignal` to `generateVerdictWithLLM()` and `buildConclusionLlmCall()`; abort guard in catch block    | `src/kernel/services/debate-runtime/debate-conclusion-engine.ts` |
+| D-H-12 | HIGH     | Documented transient UI state — `schedulePersist()` not applicable (Zustand store, no persist middleware; live-only data)                                                                                       | `src/stores/debateLiveStore.ts`                                  |
+| D-H-13 | HIGH     | `getEntries()` now sorts by `a.timestamp - b.timestamp` after ring buffer wrap (was returning index-order, not chronological)                                                                                   | `src/kernel/services/debate-runtime/debate-timeline.ts`          |
+| —      | —        | Added `export type { TimelineEntry }` to `debate-runtime.ts` — was imported internally but not re-exported, causing import errors                                                                               | `src/kernel/contracts/debate-runtime.ts`                         |
+
+### Status
+
+- `npx tsc --noEmit` ✅ zero errors
+- `npx vite build` ✅ 8.47s, 4002 modules
+- **AUDIT_REPORT_DEBATES.md: 24/24 findings 🟢 Complete**
+- Next: `debb.md` (deep debate audit, 3.5/10 score, Top-12 critical bugs)
