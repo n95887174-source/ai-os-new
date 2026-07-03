@@ -10,7 +10,7 @@ import { ssrSafeStorage } from '../utils/ssr-storage';
 const STORAGE_KEY = 'deploy_data';
 
 function id(): string {
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    return `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 interface PersistedData {
@@ -100,12 +100,12 @@ export class DeployService implements IDeployService {
             id: id(),
             configId,
             environment: cfg.environment,
-            version: `v${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 10)}.0`,
+            version: `${cfg.environment === 'production' ? '1' : '0'}.0.0-${id()}`,
             status: 'pending',
             progress: 0,
             logs: [{ timestamp: Date.now(), level: 'info', message: 'Deployment queued...' }],
             url: null,
-            commitHash: `abc${Math.random().toString(36).slice(2, 10)}`,
+            commitHash: id().slice(0, 12),
             startedAt: Date.now(),
             completedAt: null,
             rollbackTarget: null,

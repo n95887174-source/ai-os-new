@@ -450,7 +450,8 @@ export class KeyService implements IKeyRotationManager {
         this.deps.eventBus.emit(EVENTS.KEYS_LOADED, keys);
     };
 
-    private notify = debounce(this.emitKeyUpdate, 100);
+    // C-07: leading=true fires first update immediately, coalesces rapid subsequent calls
+    private notify = debounce(this.emitKeyUpdate, 100, true);
     private notifyImmediate = this.emitKeyUpdate;
 
     // -- Vault ----------------------------------------------------------
@@ -1115,7 +1116,33 @@ export class KeyService implements IKeyRotationManager {
         this.deps.eventBus.emit(EVENTS.SETTINGS_LATENCY_THRESHOLD, { threshold });
     }
 
-    clearAllData() {
+    async clearAllData(): Promise<void> {
+        try {
+            const { getDexieDb } = await import('../database-service');
+            const db = getDexieDb();
+            await Promise.allSettled([
+                db.keyValue.clear(),
+                db.apiKeys.clear(),
+                db.memories.clear(),
+                db.sessions.clear(),
+                db.roles.clear(),
+                db.cognitiveTraces.clear(),
+                db.traces.clear(),
+                db.skills.clear(),
+                db.connectors.clear(),
+                db.debateSessions.clear(),
+                db.debateVerdicts.clear(),
+                db.debateTimeline.clear(),
+                db.debateOverrides.clear(),
+                db.sessionLinks.clear(),
+                db.eventLog.clear(),
+                db.notes.clear(),
+            ]);
+        } catch (e) {
+            rootLogger
+                ?.child('KeyService')
+                ?.error('KeyService', 'clearAllData: Dexie clear failed', { error: e });
+        }
         BucketStorageAdapter.removeItem(STORAGE_KEY);
         this.deps.eventBus.emit(EVENTS.CLEAR_DATA, undefined);
     }

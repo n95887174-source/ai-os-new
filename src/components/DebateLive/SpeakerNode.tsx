@@ -35,19 +35,13 @@ interface Props {
 }
 
 export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive, sessionId }) => {
-    const streamingContent = useDebateLiveStore((s) => s.streamingContent);
-    const currentThinking = useDebateLiveStore((s) => s.currentThinking);
-    const emotions = useDebateLiveStore((s) => s.emotions);
-    const agentCountdowns = useDebateLiveStore((s) => s.agentCountdowns);
-    const memoryBubbles = useDebateLiveStore((s) => s.memoryBubbles);
-
     const key = `${sessionId}:${node.id}`;
-    const streamText = streamingContent.get(key);
-    const thinking = currentThinking.get(key);
-    const emotion = emotions.get(key) ?? 'neutral';
+    const streamText = useDebateLiveStore((s) => s.streamingContent.get(key));
+    const thinking = useDebateLiveStore((s) => s.currentThinking.get(key));
+    const emotion = useDebateLiveStore((s) => s.emotions.get(key) ?? 'neutral');
     const emotionColor = DEBATE_EMOTION_COLORS[emotion];
-    const countdown = agentCountdowns.get(key);
-    const memoryBubble = memoryBubbles.get(key);
+    const countdown = useDebateLiveStore((s) => s.agentCountdowns.get(key) ?? null);
+    const memoryBubble = useDebateLiveStore((s) => s.memoryBubbles.get(key) ?? null);
 
     return (
         <div

@@ -12,7 +12,11 @@ export class MemoryTransferService implements IMemoryTransferService {
     private imports: MemoryImport[] = [];
 
     export(format: ExportFormat, sections: string[]): MemoryExport {
-        const data = `# Memory Export\nFormat: ${format}\nSections: ${sections.join(', ')}\n\n## Episodic Memories\n- Event 1: User configured provider keys\n- Event 2: Debate session completed\n- Event 3: Memory consolidated\n\n## Semantic Memories\n- Fact: System supports 7 providers\n- Fact: Debate engine supports 32 strategies\n`;
+        const serialized = sections
+            .map((s) => `## ${s}\n- (memory data for section: ${s})\n`)
+            .join('\n');
+        const header = `# Memory Export\nFormat: ${format}\nGenerated: ${new Date().toISOString()}\nSections: ${sections.join(', ')}\n\n`;
+        const data = header + serialized;
         const exportEntry: MemoryExport = {
             format,
             sections,

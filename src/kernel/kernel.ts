@@ -42,6 +42,7 @@ export class SystemKernel implements IKernel {
     // Only recompute when isDirty becomes true (state was mutated).
     private cachedFrozenState: Readonly<SystemState> | null = null;
     private unsubs: Array<() => void> = [];
+    private saveTimeout: ReturnType<typeof setTimeout> | null = null;
     #beforeUnloadHandler: (() => void) | null = null;
 
     constructor(deps: KernelDeps) {
@@ -51,6 +52,10 @@ export class SystemKernel implements IKernel {
     destroy() {
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = null;
+        }
         if (typeof window !== 'undefined' && this.#beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this.#beforeUnloadHandler);
             this.#beforeUnloadHandler = null;
@@ -183,6 +188,15 @@ export class SystemKernel implements IKernel {
         this.isDirty = true;
         this.cachedFrozenState = null; // KC-H02: Invalidate cache on any state mutation
         this.deps.eventBus.emit(EVENTS.KERNEL_UPDATED, this.state);
+        this.scheduleSave();
+    }
+
+    private scheduleSave(): void {
+        if (this.saveTimeout) clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+            this.saveTimeout = null;
+            this.saveToStorage();
+        }, 2000);
     }
 
     private applyMutation(type: string, payload: unknown): void {

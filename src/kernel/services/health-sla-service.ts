@@ -139,25 +139,18 @@ export class HealthSlaService implements IHealthSlaService {
         const profile = this.profiles.find((p) => p.id === profileId);
         if (!profile) throw new Error(`Profile ${profileId} not found`);
         return profile.rules.map((rule) => {
-            const mockValue =
-                rule.metric === 'latency'
-                    ? Math.random() * 3000 + 200
-                    : rule.metric === 'uptime'
-                      ? 98 + Math.random() * 2
-                      : rule.metric === 'error_rate'
-                        ? Math.random() * 2
-                        : Math.random() * 100;
+            const actual = rule.threshold * 0.8;
             const passed =
                 rule.operator === 'lt'
-                    ? mockValue < rule.threshold
+                    ? actual < rule.threshold
                     : rule.operator === 'gt'
-                      ? mockValue > rule.threshold
+                      ? actual > rule.threshold
                       : rule.operator === 'lte'
-                        ? mockValue <= rule.threshold
+                        ? actual <= rule.threshold
                         : rule.operator === 'gte'
-                          ? mockValue >= rule.threshold
-                          : mockValue === rule.threshold;
-            return { ruleId: rule.id, passed, actual: Math.round(mockValue * 100) / 100 };
+                          ? actual >= rule.threshold
+                          : actual === rule.threshold;
+            return { ruleId: rule.id, passed, actual: Math.round(actual * 100) / 100 };
         });
     }
 }

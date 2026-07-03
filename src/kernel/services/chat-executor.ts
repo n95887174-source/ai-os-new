@@ -5,6 +5,7 @@ import { CONFIG } from './config-registry';
 import { LLMError } from '../../llm/core/errors';
 import type { ChatServiceDeps } from './chat-service';
 import { rootLogger } from './logger-service';
+import { promptSecurityService } from './prompt-security-service';
 
 const LOGGER = rootLogger.child('ChatExecutor');
 
@@ -139,6 +140,38 @@ export class ChatExecutor {
                 const startTime = performance.now();
 
                 try {
+                    // S-04: Security scan prompt before any LLM call
+                    if (promptSecurityService.getConfig().enabled) {
+                        const scanResult = promptSecurityService.scan(promptText);
+                        if (!scanResult.safe) {
+                            LOGGER.warn('ChatExecutor', 'Prompt blocked by security scan', {
+                                requestId,
+                                score: scanResult.score,
+                                summary: scanResult.summary,
+                            });
+                            this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+                                id: `err-${Date.now()}`,
+                                requestId,
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                keyId: req.keyId,
+                                content: '',
+                                latency: 0,
+                                status: 'error',
+                                error: `Prompt blocked by security policy (score: ${scanResult.score}/10)`,
+                            } satisfies ChatResponse);
+                            return;
+                        }
+                        promptSecurityService
+                            .addEvent({
+                                timestamp: Date.now(),
+                                prompt: promptText.slice(0, 200),
+                                result: scanResult,
+                                blocked: false,
+                            })
+                            .catch(() => {});
+                    }
+
                     let result: Awaited<ReturnType<ILLMClientService['sendMessage']>>;
 
                     const cacheKey = this.deps.cacheService

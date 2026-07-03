@@ -138,6 +138,16 @@ function walkAndValidate(node: ESTree.Node, errors: ValidationError[]): void {
             if (node.callee.type === 'SequenceExpression') {
                 errors.push({ keyword: 'indirect_call' });
             }
+            // S-07: Catch computed MemberExpression calls (obj['eval'](), obj['Function']())
+            if (node.callee.type === 'MemberExpression' && node.callee.computed) {
+                if (
+                    node.callee.property.type === 'Literal' &&
+                    typeof node.callee.property.value === 'string' &&
+                    FORBIDDEN_IDENTIFIERS.has(node.callee.property.value)
+                ) {
+                    errors.push({ keyword: node.callee.property.value });
+                }
+            }
             break;
         case 'NewExpression':
             if (node.callee.type === 'Identifier' && node.callee.name === 'Function') {

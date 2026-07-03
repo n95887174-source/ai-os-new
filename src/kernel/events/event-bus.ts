@@ -4,7 +4,7 @@ import type { EventMap } from '../types/event-map';
 import { EventValidators } from './event-registry';
 import { rootLogger } from '../services/logger-service';
 import { TraceContext } from '../services/trace-context';
-import { sanitizeObject } from '../../llm/http/llm-http-client';
+import { sanitizeObject } from '../utils/sanitize';
 import { EVENTS } from './event-names';
 export { EVENTS };
 

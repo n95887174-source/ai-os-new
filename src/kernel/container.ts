@@ -25,14 +25,19 @@ export class Container implements IContainer {
     private dependencies = new Map<ServiceIdentifier, Set<ServiceIdentifier>>();
     private activeFactoryId: ServiceIdentifier | null = null;
     private resolving = new Set<ServiceIdentifier>();
+    private registrationOrder: ServiceIdentifier[] = [];
 
     register<T>(id: ServiceIdentifier, instance: T): void {
         this.services.set(id, instance);
+        this.registrationOrder.push(id);
     }
 
     registerFactory<T>(id: ServiceIdentifier, factory: (container: IContainer) => T): void {
         this.factories.set(id, factory);
-        this.services.delete(id); // evict stale cached instance
+        if (!this.services.has(id) && !this.factories.has(id)) {
+            this.registrationOrder.push(id);
+        }
+        this.services.delete(id);
     }
 
     get<T>(id: ServiceIdentifier): T {
@@ -82,8 +87,8 @@ export class Container implements IContainer {
 
     clear(): void {
         const errors: Array<{ service: string; error: unknown }> = [];
-        // LIFO: destroy in reverse registration order (last registered = first destroyed)
-        for (const id of Array.from(this.services.keys()).reverse()) {
+        // LIFO: destroy in reverse registration order (matches LifecycleManager.shutdown())
+        for (const id of this.registrationOrder.slice().reverse()) {
             const service = this.services.get(id);
             if (service && typeof (service as Record<string, unknown>).destroy === 'function') {
                 try {
@@ -102,6 +107,7 @@ export class Container implements IContainer {
         this.dependencies.clear();
         this.resolving.clear();
         this.activeFactoryId = null;
+        this.registrationOrder = [];
     }
 
     getDependencies(): Record<string, string[]> {

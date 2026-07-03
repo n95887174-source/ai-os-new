@@ -80,7 +80,7 @@ export default defineConfig([
                                 'UI/React dependencies are forbidden in kernel (src/kernel/) — kernel is platform-agnostic.',
                         },
                         {
-                            group: ['src/components/*', 'src/stores/*', 'src/llm/*'],
+                            group: ['**/components/**', '**/stores/**', '**/llm/**'],
                             message: 'UI/store/LLM layers must not be imported by kernel.',
                         },
                     ],

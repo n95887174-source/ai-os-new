@@ -7,17 +7,24 @@ export interface DebouncedFn<T extends (...args: unknown[]) => unknown> {
 export function debounce<T extends (...args: unknown[]) => unknown>(
     fn: T,
     ms: number,
+    leading?: boolean,
 ): DebouncedFn<T> {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let lastArgs: Parameters<T> | null = null;
+    let leadingFired = false;
 
     const debounced = (...args: Parameters<T>) => {
         lastArgs = args;
         if (timer) clearTimeout(timer);
+        if (leading && !leadingFired) {
+            leadingFired = true;
+            fn(...args);
+        }
         timer = setTimeout(() => {
             timer = null;
+            leadingFired = false;
+            if (lastArgs) fn(...lastArgs);
             lastArgs = null;
-            fn(...args);
         }, ms);
     };
 
@@ -25,6 +32,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
         if (timer) clearTimeout(timer);
         timer = null;
         lastArgs = null;
+        leadingFired = false;
     };
 
     debounced.flush = () => {
