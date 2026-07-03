@@ -28,10 +28,7 @@ import type { FreeTierLimit } from './key-types';
 
 const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
     ...CONFIG.keys.freeTierLimits,
-    OpenRouter: { requestsPerDay: 0, tokensPerDay: 0 },
     Together: { requestsPerDay: 0, tokensPerDay: 0 },
-    Cerebras: { requestsPerDay: 0, tokensPerDay: 0 },
-    Cloudflare: { requestsPerDay: 0, tokensPerDay: 0 },
 };
 
 export const FREE_TIER_LIMITS = DEFAULT_FREE_TIER_LIMITS;

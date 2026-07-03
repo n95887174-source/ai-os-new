@@ -96,7 +96,7 @@ const DEFAULTS: SystemSettings = {
     autoUpdateCheck: true,
     fallbackChains: {
         free_first: [
-            { provider: 'groq', model: 'llama-3.3-70b' },
+            { provider: 'groq', model: 'llama-3.3-70b-versatile' },
             { provider: 'gemini', model: 'gemini-2.0-flash' },
             { provider: 'openrouter', model: 'openrouter/auto' },
         ],

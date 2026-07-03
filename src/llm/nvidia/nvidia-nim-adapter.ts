@@ -31,16 +31,19 @@ interface NvidiaOptions {
     baseURL?: string;
     timeout?: number;
     maxRetries?: number;
+    idleTimeoutMs?: number;
 }
 
 export class NvidiaNIMAdapter extends BaseLLMAdapter {
     readonly id = 'nvidia-nim';
 
     private baseURL: string;
+    private _idleTimeoutMs: number;
 
     constructor(options?: NvidiaOptions) {
         super();
         this.baseURL = options?.baseURL ?? '/proxy/nvidia';
+        this._idleTimeoutMs = options?.idleTimeoutMs ?? 30000;
     }
 
     protected override sanitizeModel(model: string): string {
@@ -169,12 +172,12 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
             (parsed: Record<string, unknown>) => {
                 const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
                 const choice = choices?.[0];
-                const delta = choice?.delta as { content?: string } | undefined;
+                const delta = choice?.delta as { content?: string; reasoning?: string } | undefined;
                 if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
                 return delta?.content;
             },
             undefined,
-            { signal, idleTimeoutMs: 60000 },
+            { signal, idleTimeoutMs: this._idleTimeoutMs },
         );
 
         if (finalFinishReason) {
@@ -182,14 +185,12 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
         }
     }
 
-    private _lastModelFetchFail = 0;
-    private static MODEL_FETCH_RETRY_MS = 300_000;
+    private _modelFetchFails = new Map<string, number>();
+    private static MODEL_FETCH_RETRY_MS = 30_000;
 
     async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
-        if (
-            this._lastModelFetchFail &&
-            Date.now() - this._lastModelFetchFail < NvidiaNIMAdapter.MODEL_FETCH_RETRY_MS
-        ) {
+        const lastFail = this._modelFetchFails.get(apiKey);
+        if (lastFail && Date.now() - lastFail < NvidiaNIMAdapter.MODEL_FETCH_RETRY_MS) {
             return [];
         }
         try {
@@ -197,15 +198,19 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
             const res = await fetch(`${this.baseURL}/v1/models`, { headers, signal });
             if (!res.ok) {
                 res.body?.cancel();
-                this._lastModelFetchFail = Date.now();
+                this._modelFetchFails.set(apiKey, Date.now());
                 return [];
             }
             const data = (await res.json()) as { data?: Array<{ id: string }> };
-            this._lastModelFetchFail = 0;
-            return data.data?.map((m) => m.id) || [];
+            this._modelFetchFails.delete(apiKey);
+            return (
+                data.data
+                    ?.filter((m): m is { id: string } => typeof m.id === 'string')
+                    .map((m) => m.id) || []
+            );
         } catch (e) {
             if (e instanceof DOMException && e.name === 'AbortError') throw e;
-            this._lastModelFetchFail = Date.now();
+            this._modelFetchFails.set(apiKey, Date.now());
             return [];
         }
     }

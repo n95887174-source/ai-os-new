@@ -236,6 +236,19 @@ const tdStyle: React.CSSProperties = {
     whiteSpace: 'nowrap',
 };
 
+const DEMO_BANNER: React.CSSProperties = {
+    background: 'linear-gradient(135deg, #fef3cd, #fbbf24)',
+    color: '#78350f',
+    padding: '12px 16px',
+    borderRadius: 8,
+    marginBottom: 16,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontWeight: 600,
+    fontSize: 14,
+};
+
 export default function NvidiaEnterprisePanel() {
     const [config, setConfig] = useState<NvidiaEnterpriseConfig>(() =>
         nvidiaEnterpriseService.getConfig(),
@@ -293,6 +306,10 @@ export default function NvidiaEnterprisePanel() {
 
     return (
         <div style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
+            <div style={DEMO_BANNER}>
+                ⚠️ DEMO DATA — Not connected to NVIDIA Enterprise API. Real data requires an NGC API
+                key and separate auth flow.
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
                 <Cpu size={24} style={{ color: '#76b900' }} />
                 <div>

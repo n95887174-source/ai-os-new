@@ -8,7 +8,9 @@ import type { IProviderTracker } from './provider-tracker';
 import type { PricingService } from './pricing-service';
 
 const CHEAPER_MAP: Record<string, Array<{ model: string; provider: string; savings: string }>> = {
-    'llama-3.3-70b': [{ model: 'llama-3.1-8b-instant', provider: 'groq', savings: '~85%' }],
+    'llama-3.3-70b-versatile': [
+        { model: 'llama-3.1-8b-instant', provider: 'groq', savings: '~85%' },
+    ],
     'llama-3-70b': [{ model: 'llama-3.1-8b-instant', provider: 'groq', savings: '~85%' }],
     'llama-3.1-405b': [{ model: 'llama-3.3-70b', provider: 'meta', savings: '~90%' }],
     'mixtral-8x7b': [{ model: 'llama-3.1-8b-instant', provider: 'groq', savings: '~80%' }],

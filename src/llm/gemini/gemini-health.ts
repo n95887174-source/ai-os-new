@@ -38,11 +38,16 @@ export class GeminiHealthCheck {
         } catch (e: unknown) {
             const errMsg = e instanceof Error ? e.message : String(e);
             const isAuth = e instanceof AuthError;
+            LOGGER.warn('GeminiHealth', 'checkHealth failed', {
+                error: errMsg,
+                isAuth,
+                latency: Date.now() - start,
+            });
             return {
-                status: isAuth ? 'error' : 'error',
+                status: 'error',
                 latency: Date.now() - start,
                 models: [],
-                error: isAuth ? errMsg : `No models returned — ${errMsg}`,
+                error: isAuth ? errMsg : `Network error — ${errMsg}`,
             };
         }
     }

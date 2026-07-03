@@ -242,9 +242,9 @@ export class KeyHealth implements IHealthCheckService {
         const urls: Record<string, string> = {
             OpenAI: 'https://api.openai.com/v1/models',
             Gemini: 'https://generativelanguage.googleapis.com/v1/models',
-            Groq: 'https://api.groq.com/v1/models',
+            Groq: 'https://api.groq.com/openai/v1/models',
             OpenRouter: 'https://openrouter.ai/api/v1/models',
-            NVIDIA: 'https://api.nvcf.nvidia.com/v2/models',
+            NVIDIA: 'https://integrate.api.nvidia.com/v1/models',
             DeepSeek: 'https://api.deepseek.com/v1/models',
             Cohere: 'https://api.cohere.ai/v1/models',
             Anthropic: 'https://api.anthropic.com/v1/models',

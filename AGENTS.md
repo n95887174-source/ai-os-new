@@ -2735,3 +2735,34 @@ Fix all 8 remaining findings from **AUDIT_REPORT_DEBATES.md** to close the repor
 - `npx vite build` ✅ 8.47s, 4002 modules
 - **AUDIT_REPORT_DEBATES.md: 24/24 findings 🟢 Complete**
 - Next: `debb.md` (deep debate audit, 3.5/10 score, Top-12 critical bugs)
+
+---
+
+## Current Session (2026-07-03 continued) — `debb.md` Deep Debate Audit: Top-12 + statuses
+
+### Goal
+
+Fix all unfixed findings from `debb.md` Top-12 critical bug list.
+
+### Changes
+
+| #   | Finding                                                                           | Fix                                                                            | File                                                      |
+| :-- | :-------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- | :-------------------------------------------------------- |
+| #5  | `debateLiveStore` metricsInterval corrupts DebatePanel session state              | Added guard `if (!data.topic \|\| !data.status) return;` before `setSession()` | `src/components/DebatePanel/DebatePanel.tsx`              |
+| #9  | `DebateTemplatesPanel` uses `window.location.href` → full reload, loses SPA state | Replaced with `useNavigate()`                                                  | `src/components/DebateTemplates/DebateTemplatesPanel.tsx` |
+| #11 | `DebateReplayLiveControls` uses `selectedId!` — TypeError on null                 | All 3 handlers now guard `if (!selectedId) return;`                            | `src/components/DebateReplayLiveControls.tsx`             |
+
+### Pre-existing fixes (before this session)
+
+- #1, #2: D-C-01 (missing imports/fields in debate-engine.ts)
+- #7: D-C-05 (auto-debate re-checks session.status)
+- #8: D-H-24 (winRate arrays populated)
+- #10: D-C-11 (DUMMY_PARTICIPANTS removed)
+- #3: ✅ Verified correct (order at HEAD: deps before Engine constructor)
+
+### Status
+
+- All debb.md statuses updated in `audit/new/debb.md` (not in git — audit/ dir in .gitignore)
+- 9/12 fully fixed 🟢, 2 partially fixed (#4 i18n, #12 dead events) 🟡, 1 deferred (#6 tests) 🟡
+- `npx tsc --noEmit` ✅ | `git push` ✅ (commits: `79432c24`, `2a402376`)
+- **Next**: `audit-report-part2-gemini.md` (Gemini/Google audit, 1358 lines)

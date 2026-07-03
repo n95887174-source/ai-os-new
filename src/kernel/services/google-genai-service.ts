@@ -295,7 +295,7 @@ export class GoogleGenAIService {
         };
         const m = this.#client.getGenerativeModel({
             model: 'imagen-3.0-generate-001',
-            generationConfig: imagenConfig as never,
+            generationConfig: imagenConfig,
         });
         try {
             const result = await m.generateContent(prompt);
@@ -306,13 +306,9 @@ export class GoogleGenAIService {
             if (candidates) {
                 for (const c of candidates) {
                     for (const part of c.content?.parts || []) {
-                        const p = part as unknown as {
-                            inlineData?: { mimeType: string; data: string };
-                            text?: string;
-                        };
-                        if (p.inlineData) {
-                            images.push(p.inlineData.data);
-                            mimeType = p.inlineData.mimeType;
+                        if (part.inlineData) {
+                            images.push(part.inlineData.data);
+                            mimeType = part.inlineData.mimeType;
                         }
                     }
                 }

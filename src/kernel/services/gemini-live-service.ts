@@ -131,6 +131,14 @@ export class GeminiLiveService implements IGeminiLiveService {
             const responseText = result.content || result.error || '(no response)';
             if (!fullText) fullText = responseText;
 
+            this.session = {
+                ...this.session,
+                messages: [
+                    ...this.session.messages,
+                    { role: 'model', text: responseText, timestamp: Date.now() },
+                ],
+            };
+
             if (this.synth) {
                 this.session = { ...this.session, status: 'speaking' };
                 const u = new SpeechSynthesisUtterance(fullText);
@@ -140,16 +148,9 @@ export class GeminiLiveService implements IGeminiLiveService {
                     if (!this.aborted) this.session = { ...this.session, status: 'listening' };
                 };
                 this.synth.speak(u);
+            } else if (!this.aborted) {
+                this.session = { ...this.session, status: 'listening' };
             }
-
-            this.session = {
-                ...this.session,
-                messages: [
-                    ...this.session.messages,
-                    { role: 'model', text: responseText, timestamp: Date.now() },
-                ],
-                status: !this.synth?.speaking && !this.aborted ? 'listening' : this.session.status,
-            };
         } catch (e) {
             const errMsg = e instanceof Error ? e.message : String(e);
             LOGGER.error('GeminiLive', 'LLM call failed', { error: errMsg });

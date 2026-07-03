@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { rootLogger } from './logger-service';
 import type {
     IGeminiResearchService,
@@ -5,8 +6,8 @@ import type {
     GeminiResearchSource,
     GeminiClaimAnalysis,
     GeminiEnhancedSummary,
-    GeminiPeerReviewOutput,
     GeminiAnomalyResult,
+    GeminiPeerReviewOutput,
 } from '../contracts/gemini-research';
 import type { GoogleGenAIService } from './google-genai-service';
 import type { ResearchEngineService } from './research-engine-service';
@@ -22,7 +23,7 @@ function buildMessages(system: string, user: string): ChatMessage[] {
     ];
 }
 
-function extractJson(text: string): unknown {
+function extractJson<T>(text: string, schema: z.ZodType<T>): T | null {
     const cleaned = text
         .replace(/```(?:json)?\s*/g, '')
         .replace(/```\s*/g, '')
@@ -32,15 +33,95 @@ function extractJson(text: string): unknown {
     if (objStart === -1 || objEnd === -1 || objEnd <= objStart) return null;
     const candidate = cleaned.slice(objStart, objEnd + 1);
     try {
-        return JSON.parse(candidate);
+        const parsed = JSON.parse(candidate);
+        const result = schema.safeParse(parsed);
+        if (result.success) return result.data;
+        LOGGER.warn('GeminiResearch', 'extractJson schema validation failed', {
+            error: result.error.message,
+            preview: candidate.slice(0, 200),
+        });
+        return null;
     } catch (e) {
-        LOGGER.warn('GeminiResearch', 'extractJson failed', {
+        LOGGER.warn('GeminiResearch', 'extractJson parse failed', {
             error: e instanceof Error ? e.message : String(e),
             preview: candidate.slice(0, 200),
         });
         return null;
     }
 }
+
+const SearchResponseSchema = z.object({
+    answer: z.string(),
+    sources: z
+        .array(
+            z.object({
+                title: z.string(),
+                uri: z.string(),
+                snippet: z.string(),
+                relevanceScore: z.number().optional(),
+            }),
+        )
+        .optional(),
+    confidence: z.number().optional(),
+});
+
+const ClaimAnalysisResponseSchema = z.object({
+    analyses: z.array(
+        z.object({
+            claimId: z.string(),
+            claim: z.string(),
+            assessment: z.enum([
+                'supported',
+                'contradicted',
+                'unverifiable',
+                'partially_supported',
+            ]),
+            confidence: z.number(),
+            reasoning: z.string(),
+            suggestedCorrection: z.string().optional(),
+        }),
+    ),
+});
+
+const SummaryResponseSchema = z.object({
+    abstract: z.string(),
+    keyFindings: z.array(z.string()).optional(),
+    methodology: z.string().optional(),
+    limitations: z.array(z.string()).optional(),
+    futureWork: z.array(z.string()).optional(),
+});
+
+const PeerReviewResponseSchema = z.object({
+    originality: z.number(),
+    methodology: z.number(),
+    clarity: z.number(),
+    significance: z.number(),
+    overall: z.number(),
+    recommendation: z.enum(['accept', 'minor_revision', 'major_revision', 'reject']),
+    summary: z.string(),
+    comments: z
+        .array(
+            z.object({
+                section: z.string(),
+                type: z.enum(['major_issue', 'minor_issue', 'question', 'suggestion', 'praise']),
+                severity: z.enum(['critical', 'major', 'minor', 'cosmetic']),
+                comment: z.string(),
+            }),
+        )
+        .optional(),
+});
+
+const AnomalyResponseSchema = z.object({
+    anomalies: z.array(
+        z.object({
+            type: z.enum(['contradiction', 'data_gap', 'methodology_flaw', 'source_bias']),
+            severity: z.enum(['critical', 'warning', 'info']),
+            description: z.string(),
+            affectedClaims: z.array(z.string()).optional(),
+            recommendation: z.string(),
+        }),
+    ),
+});
 
 const SEARCH_PROMPT = `You are a research assistant. Answer the question thoroughly using your knowledge. For each factual claim, provide a source reference. Return your answer as JSON:
 {
@@ -117,22 +198,19 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                 this._model,
                 { temperature: 0.3, googleSearchGrounding: true },
             );
-            const parsed = extractJson(resp.content) as Record<string, unknown> | null;
-            if (parsed && typeof parsed.answer === 'string') {
-                const rawSources = parsed.sources;
-                const sources: GeminiResearchSource[] = Array.isArray(rawSources)
-                    ? rawSources.map((s: Record<string, unknown>) => ({
-                          title: String(s.title || 'Source'),
-                          uri: String(s.uri || ''),
-                          snippet: String(s.snippet || '').slice(0, 300),
-                          relevanceScore: Number(s.relevanceScore) || 0.5,
-                      }))
-                    : [];
+            const parsed = extractJson(resp.content, SearchResponseSchema);
+            if (parsed) {
+                const sources: GeminiResearchSource[] = (parsed.sources || []).map((s) => ({
+                    title: s.title,
+                    uri: s.uri,
+                    snippet: s.snippet.slice(0, 300),
+                    relevanceScore: s.relevanceScore ?? 0.5,
+                }));
                 return {
                     query,
-                    answer: parsed.answer as string,
+                    answer: parsed.answer,
                     sources,
-                    confidence: Number(parsed.confidence) || 0.5,
+                    confidence: parsed.confidence ?? 0.5,
                     latency: Date.now() - start,
                 };
             }
@@ -174,20 +252,16 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                     this._model,
                     { temperature: 0.2 },
                 );
-                const parsed = extractJson(resp.content) as Record<string, unknown> | null;
-                if (parsed && Array.isArray(parsed.analyses)) {
-                    for (const a of parsed.analyses as Array<Record<string, unknown>>) {
+                const parsed = extractJson(resp.content, ClaimAnalysisResponseSchema);
+                if (parsed) {
+                    for (const a of parsed.analyses) {
                         results.push({
-                            claimId: String(a.claimId || ''),
-                            claim: String(a.claim || ''),
-                            assessment:
-                                (a.assessment as GeminiClaimAnalysis['assessment']) ||
-                                'unverifiable',
-                            confidence: Number(a.confidence) || 0,
-                            reasoning: String(a.reasoning || ''),
-                            suggestedCorrection: a.suggestedCorrection
-                                ? String(a.suggestedCorrection)
-                                : undefined,
+                            claimId: a.claimId,
+                            claim: a.claim,
+                            assessment: a.assessment,
+                            confidence: a.confidence,
+                            reasoning: a.reasoning,
+                            suggestedCorrection: a.suggestedCorrection,
                         });
                     }
                 }
@@ -212,22 +286,16 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                 this._model,
                 { temperature: 0.3 },
             );
-            const parsed = extractJson(resp.content) as Record<string, unknown> | null;
+            const parsed = extractJson(resp.content, SummaryResponseSchema);
             if (parsed) {
                 return {
                     sessionId,
                     title: session.title,
-                    abstract: String(parsed.abstract || ''),
-                    keyFindings: Array.isArray(parsed.keyFindings)
-                        ? parsed.keyFindings.map(String)
-                        : [],
-                    methodology: String(parsed.methodology || ''),
-                    limitations: Array.isArray(parsed.limitations)
-                        ? parsed.limitations.map(String)
-                        : [],
-                    futureWork: Array.isArray(parsed.futureWork)
-                        ? parsed.futureWork.map(String)
-                        : [],
+                    abstract: parsed.abstract,
+                    keyFindings: parsed.keyFindings ?? [],
+                    methodology: parsed.methodology ?? '',
+                    limitations: parsed.limitations ?? [],
+                    futureWork: parsed.futureWork ?? [],
                 };
             }
             return {
@@ -266,17 +334,15 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                 this._model,
                 { temperature: 0.2 },
             );
-            const parsed = extractJson(resp.content) as Record<string, unknown> | null;
-            if (parsed && Array.isArray(parsed.anomalies)) {
+            const parsed = extractJson(resp.content, AnomalyResponseSchema);
+            if (parsed) {
                 return {
-                    anomalies: parsed.anomalies.map((a: Record<string, unknown>) => ({
-                        type: a.type as GeminiAnomalyResult['anomalies'][0]['type'],
-                        severity: a.severity as GeminiAnomalyResult['anomalies'][0]['severity'],
-                        description: String(a.description || ''),
-                        affectedClaims: Array.isArray(a.affectedClaims)
-                            ? a.affectedClaims.map(String)
-                            : [],
-                        recommendation: String(a.recommendation || ''),
+                    anomalies: parsed.anomalies.map((a) => ({
+                        type: a.type,
+                        severity: a.severity,
+                        description: a.description,
+                        affectedClaims: a.affectedClaims ?? [],
+                        recommendation: a.recommendation,
                     })),
                 };
             }
@@ -303,30 +369,18 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                 this._model,
                 { temperature: 0.2 },
             );
-            const parsed = extractJson(resp.content) as Record<string, unknown> | null;
+            const parsed = extractJson(resp.content, PeerReviewResponseSchema);
             if (parsed) {
-                const scores = {
-                    originality: Math.min(100, Math.max(0, Number(parsed.originality) || 50)),
-                    methodology: Math.min(100, Math.max(0, Number(parsed.methodology) || 50)),
-                    clarity: Math.min(100, Math.max(0, Number(parsed.clarity) || 50)),
-                    significance: Math.min(100, Math.max(0, Number(parsed.significance) || 50)),
-                    overall: Math.min(100, Math.max(0, Number(parsed.overall) || 50)),
-                };
+                const clamp = (v: number) => Math.min(100, Math.max(0, v));
                 return {
-                    ...scores,
-                    recommendation:
-                        (parsed.recommendation as GeminiPeerReviewOutput['recommendation']) ||
-                        'major_revision',
-                    summary: String(parsed.summary || ''),
-                    comments: Array.isArray(parsed.comments)
-                        ? parsed.comments.map((c: Record<string, unknown>) => ({
-                              section: String(c.section || 'general'),
-                              type: c.type as GeminiPeerReviewOutput['comments'][0]['type'],
-                              severity:
-                                  c.severity as GeminiPeerReviewOutput['comments'][0]['severity'],
-                              comment: String(c.comment || ''),
-                          }))
-                        : [],
+                    originality: clamp(parsed.originality),
+                    methodology: clamp(parsed.methodology),
+                    clarity: clamp(parsed.clarity),
+                    significance: clamp(parsed.significance),
+                    overall: clamp(parsed.overall),
+                    recommendation: parsed.recommendation,
+                    summary: parsed.summary,
+                    comments: parsed.comments ?? [],
                 };
             }
             return {

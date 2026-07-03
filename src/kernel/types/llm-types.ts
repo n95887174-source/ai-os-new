@@ -55,6 +55,8 @@ export interface ProviderResponse {
     toolCalls?: ToolCall[];
     /** Gemini grounding metadata (from Google Search) */
     groundingMetadata?: GroundingMetadata;
+    /** Chain-of-thought reasoning from thinking models */
+    reasoning?: string;
 }
 
 export interface HealthCheckResult {

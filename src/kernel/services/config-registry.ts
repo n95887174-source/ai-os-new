@@ -92,8 +92,8 @@ export const rawConfig: ConfigRegistry = {
             long: { provider: 'gemini', model: 'gemini-2.0-flash' },
             complexCode: { provider: 'gemini', model: 'gemini-2.0-flash' },
             complex: { provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
-            medium: { provider: 'groq', model: 'llama-3.3-70b' },
-            default: { provider: 'groq', model: 'llama-3.1-8b' },
+            medium: { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+            default: { provider: 'groq', model: 'llama-3.1-8b-instant' },
         },
     },
 
@@ -142,9 +142,15 @@ export const rawConfig: ConfigRegistry = {
     },
 
     keys: {
+        // TODO: Per-model limits — FreeTierLimit type needs refactoring
+        // Real Groq limits: llama-3.3-70b 1000/500k, light models 14400/500k
         freeTierLimits: {
-            Groq: { requestsPerDay: 14400, tokensPerDay: 700000 },
+            Groq: { requestsPerDay: 1000, tokensPerDay: 500000 },
             Gemini: { requestsPerDay: 1500, tokensPerDay: 1000000 },
+            OpenRouter: { requestsPerDay: 50, tokensPerDay: 0 },
+            NVIDIA: { requestsPerDay: 1000, tokensPerDay: 0 },
+            Cerebras: { requestsPerDay: 14400, tokensPerDay: 1000000 },
+            Cloudflare: { requestsPerDay: 10000, tokensPerDay: 0 },
         },
         defaultRules: {
             maxConcurrentRequests: 5,

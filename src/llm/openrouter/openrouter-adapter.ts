@@ -37,11 +37,11 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
     private baseURL: string;
     private defaultOrigin: string;
-    private cachedModels: string[] | null = null;
-    private lastModelFetch = 0;
     private modelCacheTTL: number;
-    // B10-93: In-flight refresh promise to prevent thundering-herd on concurrent calls
-    private modelRefreshPromise: Promise<string[]> | null = null;
+    private modelCaches = new Map<
+        string,
+        { models: string[]; timestamp: number; promise: Promise<string[]> | null }
+    >();
 
     constructor(options?: { baseURL?: string; origin?: string; modelCacheTTL?: number }) {
         super();
@@ -56,39 +56,46 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     }
 
     /** Force-refresh model cache on next access */
-    forceRefreshModels(): void {
-        this.cachedModels = null;
-        this.lastModelFetch = 0;
+    forceRefreshModels(apiKey?: string): void {
+        if (apiKey) {
+            this.modelCaches.delete(apiKey);
+        } else {
+            this.modelCaches.clear();
+        }
     }
 
     private async refreshModelCache(apiKey: string): Promise<string[]> {
-        if (this.cachedModels && Date.now() - this.lastModelFetch < this.modelCacheTTL) {
-            return this.cachedModels;
+        const existing = this.modelCaches.get(apiKey);
+        if (existing && Date.now() - existing.timestamp < this.modelCacheTTL) {
+            return existing.models;
         }
-        // B10-93: If a refresh is already in-flight, reuse that promise instead of spawning another
-        if (this.modelRefreshPromise) return this.modelRefreshPromise;
-        this.modelRefreshPromise = this._doRefreshModelCache(apiKey).finally(() => {
-            this.modelRefreshPromise = null;
-        });
-        return this.modelRefreshPromise;
+        // Reuse in-flight promise per key to prevent thundering-herd
+        if (existing?.promise) return existing.promise;
+        const entry = {
+            models: [] as string[],
+            timestamp: 0,
+            promise: null as Promise<string[]> | null,
+        };
+        this.modelCaches.set(apiKey, entry);
+        entry.promise = this.getAvailableModels(apiKey)
+            .then((models) => {
+                entry.models = models;
+                entry.timestamp = Date.now();
+                entry.promise = null;
+                return models;
+            })
+            .catch(() => {
+                entry.promise = null;
+                return existing?.models ?? [];
+            });
+        return entry.promise;
     }
 
-    private async _doRefreshModelCache(apiKey: string): Promise<string[]> {
-        try {
-            const models = await this.getAvailableModels(apiKey);
-            this.cachedModels = models;
-            this.lastModelFetch = Date.now();
-            return models;
-        } catch {
-            return this.cachedModels ?? [];
-        }
-    }
-
-    private buildHeaders(apiKey: string, origin?: string): Record<string, string> {
+    private buildHeaders(apiKey: string): Record<string, string> {
         return {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': origin ?? this.defaultOrigin,
+            'HTTP-Referer': this.defaultOrigin,
             'X-Title': 'Super-Agents OS',
         };
     }
@@ -123,14 +130,17 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         }
         const data = parsed.data;
         if (data.error) {
-            throw new LLMError(`OpenRouter API error: ${data.error.message}`, 'openrouter');
+            throw new LLMError(
+                `OpenRouter API error: ${sanitizeError(data.error.message)}`,
+                'openrouter',
+            );
         }
         const choice = data.choices?.[0];
         const content = choice?.message?.content ?? choice?.delta?.content ?? '';
         const finishReason = normalizeFinishReason(choice?.finish_reason);
         const tokens = data.usage?.total_tokens ?? estimateTokenCount(content);
 
-        return { content, latency, tokens, finishReason };
+        return { content, latency, tokens, finishReason, reasoning: undefined };
     }
 
     async doSendMessage(
@@ -156,7 +166,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             if (res.status === 429 || res.status >= 500) {
                 const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
                 throw new RetryableError(
-                    `OpenRouter Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+                    `OpenRouter Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
                     'openrouter',
                     res.status,
                     undefined,
@@ -164,7 +174,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
                 );
             }
             throw new LLMError(
-                `OpenRouter Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+                `OpenRouter Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
                 'openrouter',
                 res.status,
             );
@@ -198,7 +208,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             if (res.status === 429 || res.status >= 500) {
                 const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
                 throw new RetryableError(
-                    `OpenRouter Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+                    `OpenRouter Stream Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
                     'openrouter',
                     res.status,
                     undefined,
@@ -206,7 +216,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
                 );
             }
             throw new LLMError(
-                `OpenRouter Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
+                `OpenRouter Stream Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
                 'openrouter',
                 res.status,
             );
@@ -232,9 +242,12 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             { signal, idleTimeoutMs: 30000 },
         );
 
+        const normalizedFinishReason = finalFinishReason
+            ? normalizeFinishReason(finalFinishReason)
+            : undefined;
         if (finalFinishReason || finalUsage || finalReasoning) {
             onChunk('', {
-                finishReason: finalFinishReason,
+                finishReason: normalizedFinishReason,
                 usage: finalUsage,
                 reasoning: finalReasoning,
             });
@@ -245,9 +258,18 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         try {
             const headers = this.buildHeaders(apiKey);
             const res = await fetch(`${this.baseURL}/models`, { headers, signal });
-            if (!res.ok) return [];
+            if (!res.ok) {
+                LOGGER.warn('OpenRouterAdapter', `getAvailableModels returned ${res.status}`, {
+                    status: res.status,
+                });
+                return [];
+            }
             const data = (await res.json()) as { data?: Array<{ id: string }> };
-            return data.data?.map((m) => m.id) || [];
+            return (
+                data.data
+                    ?.filter((m): m is { id: string } => typeof m.id === 'string')
+                    .map((m) => m.id) || []
+            );
         } catch (e) {
             LOGGER.warn('OpenRouterAdapter', 'getAvailableModels failed', {
                 error: (e as Error).message,
@@ -277,7 +299,10 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             if (!newKey) return null;
             return { newKey, label: `Rotated ${Date.now()}` };
         } catch (e) {
-            console.warn('[OpenRouter] rotateKey failed:', e);
+            console.warn(
+                '[OpenRouter] rotateKey failed:',
+                e instanceof Error ? e.message : 'unknown',
+            );
             return null;
         }
     }

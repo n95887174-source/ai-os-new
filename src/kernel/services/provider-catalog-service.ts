@@ -118,6 +118,23 @@ const DEFAULT_CATALOG: ProviderCatalogEntry[] = [
         lastChecked: 0,
         status: 'unknown',
     },
+    {
+        id: 'nvidia',
+        name: 'NVIDIA NIM',
+        baseURL: 'https://integrate.api.nvidia.com',
+        authType: 'api-key',
+        capabilities: ['chat'],
+        models: [
+            'meta/llama-3.3-70b-instruct',
+            'meta/llama-3.1-8b-instruct',
+            'mistralai/mistral-nemo',
+        ],
+        features: { streaming: true, tools: false, vision: false, embeddings: false },
+        pricing: { inputPer1M: 0.6, outputPer1M: 0.6, currency: 'USD' },
+        autoDetected: false,
+        lastChecked: 0,
+        status: 'unknown',
+    },
 ];
 
 class ProviderCatalogService {

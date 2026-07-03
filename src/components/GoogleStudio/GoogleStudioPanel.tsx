@@ -24,8 +24,29 @@ interface GoogleStudioMessage {
 }
 
 export function GoogleStudioPanel() {
-    const [apiKey, setApiKey] = useState('');
     const [configured, setConfigured] = useState(false);
+    const [autoConfiguring, setAutoConfiguring] = useState(true);
+    const [configError, setConfigError] = useState('');
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                await googleGenAIService.ensureConfigured();
+                if (!cancelled) setConfigured(true);
+            } catch {
+                if (!cancelled)
+                    setConfigError(
+                        'No Gemini key found in Key Manager. Add one or enter a key manually.',
+                    );
+            } finally {
+                if (!cancelled) setAutoConfiguring(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
     const [activeTab, setActiveTab] = useState<TabId>('chat');
     const [model, setModel] = useState('gemini-2.5-flash');
     const [messages, setMessages] = useState<GoogleStudioMessage[]>([]);
@@ -54,13 +75,6 @@ export function GoogleStudioPanel() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
-
-    const handleConfigure = useCallback(() => {
-        if (!apiKey.trim()) return;
-        googleGenAIService.setApiKey(apiKey.trim());
-        setConfigured(true);
-        setError('');
-    }, [apiKey]);
 
     const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -241,6 +255,39 @@ export function GoogleStudioPanel() {
     }, [model]);
 
     if (!configured) {
+        if (autoConfiguring) {
+            return (
+                <div style={{ padding: '32px', maxWidth: 600, margin: '0 auto' }}>
+                    <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}
+                    >
+                        <Shield size={32} color="#4285F4" />
+                        <div>
+                            <h2 style={{ margin: 0 }}>Google Studio</h2>
+                            <p style={{ margin: '4px 0 0', color: '#888', fontSize: 13 }}>
+                                Google GenAI SDK integration — Multimodal · Thinking · Grounding
+                            </p>
+                        </div>
+                    </div>
+                    <div
+                        style={{
+                            background: '#1a1a2e',
+                            borderRadius: 12,
+                            padding: 24,
+                            border: '1px solid #2a2a4e',
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Loader2
+                            size={32}
+                            style={{ animation: 'spin 1s linear infinite', marginBottom: 12 }}
+                        />
+                        <p>Auto-configuring from Key Manager...</p>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div style={{ padding: '32px', maxWidth: 600, margin: '0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
@@ -252,6 +299,21 @@ export function GoogleStudioPanel() {
                         </p>
                     </div>
                 </div>
+                {configError && (
+                    <div
+                        style={{
+                            background: 'rgba(255,68,68,0.1)',
+                            borderRadius: 8,
+                            padding: 12,
+                            border: '1px solid rgba(255,68,68,0.3)',
+                            marginBottom: 16,
+                            fontSize: 13,
+                            color: '#f44',
+                        }}
+                    >
+                        {configError}
+                    </div>
+                )}
                 <div
                     style={{
                         background: '#1a1a2e',
@@ -260,16 +322,17 @@ export function GoogleStudioPanel() {
                         border: '1px solid #2a2a4e',
                     }}
                 >
-                    <label
-                        style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#aaa' }}
-                    >
-                        Gemini API Key
-                    </label>
+                    <p style={{ fontSize: 14, color: '#ccc', marginBottom: 16 }}>
+                        Add a Gemini key in{' '}
+                        <a href="/providers" style={{ color: '#4285F4' }}>
+                            Key Manager
+                        </a>{' '}
+                        first, then return here. Or enter a key manually below:
+                    </p>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <input
+                            id="gs-api-key"
                             type="password"
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
                             placeholder="AIza..."
                             style={{
                                 flex: 1,
@@ -280,11 +343,18 @@ export function GoogleStudioPanel() {
                                 color: '#fff',
                                 fontSize: 14,
                             }}
-                            onKeyDown={(e) => e.key === 'Enter' && handleConfigure()}
                         />
                         <button
-                            onClick={handleConfigure}
-                            disabled={!apiKey.trim()}
+                            onClick={() => {
+                                const el = document.getElementById(
+                                    'gs-api-key',
+                                ) as HTMLInputElement;
+                                if (el?.value?.trim()) {
+                                    googleGenAIService.setApiKey(el.value.trim());
+                                    setConfigured(true);
+                                    setConfigError('');
+                                }
+                            }}
                             style={{
                                 padding: '10px 20px',
                                 borderRadius: 8,
@@ -293,7 +363,6 @@ export function GoogleStudioPanel() {
                                 color: '#fff',
                                 cursor: 'pointer',
                                 fontWeight: 600,
-                                opacity: apiKey.trim() ? 1 : 0.5,
                             }}
                         >
                             Connect
@@ -338,10 +407,7 @@ export function GoogleStudioPanel() {
                     <button
                         onClick={() => {
                             setConfigured(false);
-                            setApiKey('');
-                            import('../../kernel/services/google-genai-service').then((m) =>
-                                m.googleGenAIService.clearApiKey(),
-                            );
+                            googleGenAIService.clearApiKey();
                         }}
                         style={{
                             padding: '6px 12px',
