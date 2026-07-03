@@ -10,6 +10,7 @@
 import { rootLogger } from '../../logger-service';
 import type { DebateRole } from '../../contracts/debate-types';
 import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
+import { getActiveDebateSession } from '../active-debate-store';
 
 const LOGGER = rootLogger.child('AutoDebateService');
 import type { DebateParticipant, DebateSession } from '../debate-service';
@@ -231,7 +232,13 @@ export class AutoDebateService implements IAutoDebateService {
         if (TERMINAL_SESSION_STATUSES.has(session.status)) return session;
         while (Date.now() - startedAt < timeoutMs) {
             await new Promise((resolve) => setTimeout(resolve, pollMs));
+            const fresh = getActiveDebateSession();
+            if (fresh && fresh.id === session.id && TERMINAL_SESSION_STATUSES.has(fresh.status))
+                return fresh;
         }
+        const final = getActiveDebateSession();
+        if (final && final.id === session.id && TERMINAL_SESSION_STATUSES.has(final.status))
+            return final;
         return session;
     }
 

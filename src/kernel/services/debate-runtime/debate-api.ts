@@ -174,6 +174,7 @@ export class DebateApiService {
         }
         return () => {
             this.subscribers.get(sessionId)?.delete(sub);
+            sub.close();
         };
     }
 
@@ -258,7 +259,9 @@ export class DebateApiService {
     private closeStream(sessionId: string): void {
         const subs = this.subscribers.get(sessionId);
         if (!subs) return;
-        for (const sub of subs) sub.close();
+        for (const sub of subs) {
+            sub.close();
+        }
         this.subscribers.delete(sessionId);
     }
 

@@ -87,7 +87,8 @@ export class DebateTopologyService implements ITopologyService {
                 break;
             }
             case 'roundtable': {
-                rounds.push(topology.nodes);
+                const maxRounds = topology.maxRounds ?? 1;
+                for (let r = 0; r < maxRounds; r++) rounds.push(topology.nodes);
                 break;
             }
             case 'judge': {

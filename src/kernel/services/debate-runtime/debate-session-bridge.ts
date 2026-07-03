@@ -33,7 +33,10 @@ export function participantsToConfig(participants: DebateParticipant[]): Partici
     }));
 }
 
-export function buildRoundtableTopology(participants: DebateParticipant[]): DebateTopology {
+export function buildRoundtableTopology(
+    participants: DebateParticipant[],
+    maxRounds?: number,
+): DebateTopology {
     const nodes = participants.map((p) => ({
         id: p.id,
         label: p.name,
@@ -54,6 +57,7 @@ export function buildRoundtableTopology(participants: DebateParticipant[]): Deba
         type: 'roundtable',
         nodes,
         edges,
+        maxRounds,
     };
 }
 

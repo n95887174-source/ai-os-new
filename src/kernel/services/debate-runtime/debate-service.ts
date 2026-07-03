@@ -112,6 +112,10 @@ export async function startDebate(
     checkDebatePreflight(_deps, participants);
     if (_engineOnly && !_syncManager.engine)
         throw new Error('debate.engineOnly flag is set but no DebateEngine configured');
+    // Cancel any existing engine session before starting a new one
+    if (_syncManager.engine && _syncManager.runtimeSessionId) {
+        _syncManager.engine.cancelSession(_syncManager.runtimeSessionId);
+    }
     const sessionConfig = _syncManager.resetDebateState();
     if (config) Object.assign(sessionConfig, config);
     _syncManager.setupDurationTimer(sessionConfig);
@@ -123,7 +127,7 @@ export async function startDebate(
         }
     }
     const session = _syncManager.initEngineSession(
-        buildRoundtableTopology(participants),
+        buildRoundtableTopology(participants, maxRounds),
         topic,
         participants,
         sessionConfig,
@@ -143,6 +147,10 @@ export async function startTopologyDebate(
 ): Promise<DebateSession> {
     if (!_deps) throw new Error('DebateService not initialized');
     checkDebatePreflight(_deps, participants);
+    // Cancel any existing engine session before starting a new one
+    if (_syncManager.engine && _syncManager.runtimeSessionId) {
+        _syncManager.engine.cancelSession(_syncManager.runtimeSessionId);
+    }
     const sessionConfig = _syncManager.resetDebateState();
     if (config) Object.assign(sessionConfig, config);
     _syncManager.setupDurationTimer(sessionConfig);

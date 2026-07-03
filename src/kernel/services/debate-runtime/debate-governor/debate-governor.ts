@@ -59,6 +59,8 @@ export class DebateGovernor {
         const merged: Contradiction[] = [...fresh];
         for (const existing of this.state.contradictions) {
             if (existing.status === 'resolved') {
+                this.state.resolvedClaimIds.add(existing.claimA);
+                this.state.resolvedClaimIds.add(existing.claimB);
                 merged.push(existing);
             } else {
                 const stillExists = fresh.some(
@@ -66,6 +68,8 @@ export class DebateGovernor {
                 );
                 if (!stillExists) {
                     merged.push({ ...existing, status: 'resolved', lastCheckedAt: Date.now() });
+                    this.state.resolvedClaimIds.add(existing.claimA);
+                    this.state.resolvedClaimIds.add(existing.claimB);
                 }
             }
         }

@@ -119,6 +119,7 @@ export class TimelinePlayer {
             this.status = 'playing';
             this._onStatusChange?.(this.status);
         }
+        this.processNext();
         this._onRewind?.(oldIndex, this.currentIndex);
         this._onEvent?.(event, this.currentIndex);
         return event;

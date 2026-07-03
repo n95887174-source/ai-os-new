@@ -148,6 +148,7 @@ export class DebateSyncManager {
             ) {
                 this.engine.cancelSession(sid);
             }
+            if (sid !== this.runtimeSessionId) return;
             this.syncSession();
             this.finalizeInternal();
         }

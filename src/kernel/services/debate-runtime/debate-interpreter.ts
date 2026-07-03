@@ -178,7 +178,10 @@ export class DebateInterpreter {
             if (session.strategy === 'argument_tree' && a.parentId) {
                 let depth = 1;
                 let current: DebateArgument | undefined = a;
+                const visited = new Set<string>();
                 while (current?.parentId && session.strategy === 'argument_tree') {
+                    if (visited.has(current.id)) break;
+                    visited.add(current.id);
                     current = session.arguments.find((pa) => pa.id === current!.parentId);
                     if (current) depth++;
                 }

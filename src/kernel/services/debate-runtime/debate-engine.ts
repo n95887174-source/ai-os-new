@@ -311,7 +311,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     ): string {
         const id = genId('debate');
         const session = new DebateSessionInstance(id, topic, topology, participants, language);
-        const budget = new DebateBudget(id);
+        const budget = new DebateBudget(id, { maxRounds: topology.maxRounds });
 
         session.onPhaseChange((from: string, to: string) => {
             this.getContext(id).timeline.record({
@@ -394,14 +394,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                 const claims = this.deps.memoryExtractor.extractClaims(
                                     extracted.units,
                                 );
-                                const chains = session.participants
-                                    .map((p) => this.getMemory(id).getChain(p.agentId))
-                                    .flat();
                                 for (const p of session.participants) {
+                                    const chain = this.getMemory(id).getChain(p.agentId);
                                     const score = this.deps.evaluator.scoreArguments(
                                         p.agentId,
                                         claims,
-                                        chains,
+                                        chain,
                                     );
                                     this.deps.eventBus.emit('debate-runtime:agent:phase:changed', {
                                         sessionId: id,
@@ -893,7 +891,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         externalSignal?: AbortSignal,
     ): Promise<string> {
         const keyService = this.deps.getKeyService();
-        const routerService = this.deps.getRouterService();
         const adapterRegistry = this.deps.getAdapterRegistry();
         let retries = 0;
         let resolvedKey:
@@ -965,7 +962,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 );
 
                 const defaultPrompt = await this.getDefaultPrompt(participant.nodeId, session);
-                let systemContent = `You are ${currentName}. ${participant.systemPrompt || defaultPrompt}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
+                const sanitizedSystemPrompt = (participant.systemPrompt || '')
+                    .replace(/<[^>]*>/g, '')
+                    .slice(0, 2000);
+                let systemContent = `You are ${currentName}. ${sanitizedSystemPrompt || defaultPrompt}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
 
                 // RAG: inject relevant memory from past debates
                 if (this.deps.ragRetriever) {
@@ -1262,9 +1262,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const mem = this.memories.get(sessionId);
         if (mem) mem.destroy();
         this.memories.delete(sessionId);
-        // Destroy context — cascades to consensus, timeline, orchestrator, conclusionEngine
+        // Abort orchestrator before destroying context
         const ctx = this.sessionContexts.get(sessionId);
-        if (ctx) ctx.destroy();
+        if (ctx) {
+            ctx.orchestrator.abort(sessionId);
+            ctx.destroy();
+        }
         this.sessionContexts.delete(sessionId);
         // Destroy session itself — clears phase listeners
         session.destroy();
@@ -1483,14 +1486,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                     const claims = this.deps.memoryExtractor.extractClaims(
                                         extracted.units,
                                     );
-                                    const chains = session.participants
-                                        .map((p) => this.getMemory(record.id).getChain(p.agentId))
-                                        .flat();
                                     for (const p of session.participants) {
+                                        const chain = this.getMemory(record.id).getChain(p.agentId);
                                         const score = this.deps.evaluator.scoreArguments(
                                             p.agentId,
                                             claims,
-                                            chains,
+                                            chain,
                                         );
                                         this.deps.eventBus.emit(
                                             'debate-runtime:agent:phase:changed',

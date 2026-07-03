@@ -25,6 +25,7 @@ export interface DebateTopology {
     readonly nodes: TopologyNode[];
     readonly edges: TopologyEdge[];
     readonly maxDepth?: number;
+    readonly maxRounds?: number;
 }
 
 export interface ITopologyService {
