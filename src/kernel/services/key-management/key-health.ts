@@ -112,7 +112,7 @@ export class KeyHealth implements IHealthCheckService {
         const versionAtStart = keyRef.statusVersion ?? 0;
         const start = performance.now();
         let ok = false;
-        let statusCode = 0;
+        let statusCode: number | undefined;
 
         try {
             // CRIT-K4: Prefer adapter checkHealth which uses Authorization header
@@ -234,10 +234,10 @@ export class KeyHealth implements IHealthCheckService {
         return results;
     }
 
-    private getHealthUrl(provider: string, apiKey?: string): string {
+    private getHealthUrl(provider: string, _apiKey?: string): string {
         const isGemini = provider.toLowerCase() === 'gemini';
-        if (isGemini && apiKey) {
-            return `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
+        if (isGemini) {
+            return 'https://generativelanguage.googleapis.com/v1/models';
         }
         const urls: Record<string, string> = {
             OpenAI: 'https://api.openai.com/v1/models',

@@ -1,7 +1,7 @@
 import type { ChatMessage } from './llm-types';
 
 export type ChatStatus =
-    'loading' | 'done' | 'error' | 'cancelled' | 'streaming' | 'queued' | 'timeout';
+    'loading' | 'done' | 'error' | 'cancelled' | 'streaming' | 'queued' | 'timeout' | 'cached';
 export type ChatRole = 'user' | 'assistant' | 'system' | 'tool';
 export type ChatStrategy =
     'auto' | 'broadcast' | 'race' | 'performance' | 'cost' | 'latency' | 'manual';

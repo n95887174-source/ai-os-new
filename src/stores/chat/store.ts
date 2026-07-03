@@ -19,6 +19,7 @@ import {
     MODEL_CONTEXT_WINDOWS,
     DELETED_IDS_TTL,
     genId,
+    rebuildRequestEntryMap,
 } from './types';
 
 let _sessionStore: SessionStore | null = null;
@@ -49,7 +50,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
 
     return {
         sessions: [DEFAULT_SESSION],
-        activeSessionId: 'default',
+        activeSessionId: DEFAULT_SESSION.id,
         activeRequestIds: new Set<string>(),
         deletedIds: new Set<string>(),
         deletedAtTimestamps: new Map(),
@@ -106,7 +107,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 ).slice(-MAX_HISTORY);
                 requestIdsToTrack =
                     targets.length > 1
-                        ? targets.map((_, idx) => `${requestId}-${idx}`)
+                        ? targets.map((t, idx) => `${requestId}-${t.provider}-${t.keyId ?? idx}`)
                         : [requestId];
                 govOp = executionGovernor.start({
                     type: 'send-message',
@@ -293,7 +294,6 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 govOp?.fail(e instanceof Error ? e : new Error(String(e)));
                 throw e;
             } finally {
-                requestIdsToTrack?.forEach((rid) => get().removeActiveRequestId(rid));
                 _sendLock = false;
             }
         },
@@ -386,7 +386,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         },
 
         deleteSession: (id) => {
-            sessionManager.delete(id).catch(() => {});
+            sessionManager
+                .delete(id)
+                .catch((e) => console.warn('[ChatStore] Failed to persist session deletion', e));
             set((s) => {
                 const now = Date.now();
                 const timestamps = new Map(s.deletedAtTimestamps);
@@ -415,7 +417,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     };
                     return {
                         sessions: [fresh],
-                        activeSessionId: 'default',
+                        activeSessionId: DEFAULT_SESSION.id,
                         deletedIds: updated,
                         deletedAtTimestamps: timestamps,
                     };
@@ -438,7 +440,15 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             if (!session) return;
             const entryIndex = session.history.findIndex((e) => e.id === entryId);
             if (entryIndex === -1) return;
-            const newHistory = session.history.slice(0, entryIndex + 1);
+            const newHistory = session.history.slice(0, entryIndex + 1).map((e) => ({
+                ...e,
+                id: crypto.randomUUID(),
+                requestId: crypto.randomUUID(),
+                responses: e.responses.map((r) => ({
+                    ...r,
+                    requestId: crypto.randomUUID(),
+                })),
+            }));
             const id = crypto.randomUUID();
             const newSession: ChatSession = {
                 id,
@@ -448,13 +458,19 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 updatedAt: Date.now(),
             };
             set((s) => ({ sessions: [newSession, ...s.sessions], activeSessionId: id }));
+            rebuildRequestEntryMap(get().sessions);
             const sStore = resolveSessionStore();
-            if (sStore) sStore.put(newSession).catch(() => {});
+            if (sStore)
+                sStore
+                    .put(newSession)
+                    .catch((e) => console.warn('[ChatStore] Failed to persist forked session', e));
         },
 
         renameSession: (id, title) => {
             set((s) => ({ sessions: s.sessions.map((x) => (x.id === id ? { ...x, title } : x)) }));
-            sessionManager.updateMeta(id, { title }).catch(() => {});
+            sessionManager
+                .updateMeta(id, { title })
+                .catch((e) => console.warn('[ChatStore] Failed to persist session rename', e));
         },
 
         archiveSession: (id) => {
@@ -481,7 +497,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             set((s) => {
                 const current = s.sessions.find((x) => x.id === id);
                 const next = !current?.isPinned;
-                sessionManager.updateMeta(id, { isPinned: next }).catch(() => {});
+                sessionManager
+                    .updateMeta(id, { isPinned: next })
+                    .catch((e) => console.warn('[ChatStore] Failed to persist pin state', e));
                 return {
                     sessions: s.sessions.map((x) => (x.id === id ? { ...x, isPinned: next } : x)),
                 };
@@ -493,7 +511,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 const existingIds = new Set(s.sessions.map((x) => x.id));
                 const newSessions = imported.filter((x) => !existingIds.has(x.id));
                 const sStore = resolveSessionStore();
-                if (sStore && newSessions.length > 0) sStore.bulkPut(newSessions).catch(() => {});
+                if (sStore && newSessions.length > 0)
+                    sStore
+                        .bulkPut(newSessions)
+                        .catch((e) =>
+                            console.warn('[ChatStore] Failed to persist imported sessions', e),
+                        );
                 return { sessions: [...newSessions, ...s.sessions] };
             });
         },

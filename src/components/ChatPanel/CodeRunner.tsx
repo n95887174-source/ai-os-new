@@ -154,28 +154,35 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
 
         if (normLang === 'html') {
             const iframe = document.createElement('iframe');
-            iframe.sandbox.add('allow-scripts', 'allow-same-origin');
+            iframe.sandbox.add('allow-scripts');
             iframe.style.display = 'none';
             document.body.appendChild(iframe);
             iframeRef.current = iframe;
 
-            // C-6: Use allowlist sanitizer for HTML preview — strips unknown tags,
-            // all event handlers, and javascript: URLs before rendering in sandboxed iframe.
-            iframe.srcdoc = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${sanitizeAllowedHtml(code)}</body></html>`;
-            // L-07: Capture iframe in local var so timeout callback holds its own reference.
-            // cleanup() nulls iframeRef.current on unmount, but this local ref keeps the
-            // iframe alive until the 1s access window closes (or cleanup cancels the timer).
-            const capturedIframe = iframe;
-            timeoutRef.current = setTimeout(() => {
-                try {
-                    const doc = capturedIframe.contentDocument;
-                    const bodyText = doc?.body?.innerText || '(no output)';
-                    setOutput(bodyText.slice(0, 5000));
-                } catch {
-                    setOutput('(rendered — check iframe for visual output)');
+            const expectedOrigin = window.location.origin;
+            const listener = (e: MessageEvent) => {
+                if (e.source !== iframe.contentWindow) return;
+                if (e.origin !== expectedOrigin && e.origin !== 'null') return;
+                if (e.data?.type === 'sandbox-result') {
+                    setOutput((e.data.body || '(no output)').slice(0, 5000));
+                    setIsRunning(false);
+                    window.removeEventListener('message', listener);
+                    setTimeout(cleanup, 100);
                 }
+            };
+            listenerRef.current = listener;
+            window.addEventListener('message', listener);
+
+            const safeBody = sanitizeAllowedHtml(code);
+            iframe.srcdoc =
+                `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${safeBody}<script>parent.postMessage({type:'sandbox-result',body:document.body.innerText},'${expectedOrigin}');</scr` +
+                `ipt></body></html>`;
+            timeoutRef.current = setTimeout(() => {
+                setOutput('(rendered — check iframe for visual output)');
                 setIsRunning(false);
-            }, 1000);
+                window.removeEventListener('message', listener);
+                cleanup();
+            }, 2000);
             return;
         }
 

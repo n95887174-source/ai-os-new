@@ -13,18 +13,14 @@ import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
-import {
-    createObfuscation,
-    OBFUSCATION_PREFIX,
-    DEFAULT_OBFUSCATION_SALT,
-} from '../utils/obfuscation';
+import { createObfuscation, OBFUSCATION_PREFIX } from '../utils/obfuscation';
 
 const LOGGER = rootLogger.child('BucketStorageAdapter');
 
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
 export type StorageBucket = (typeof KNOWN_BUCKETS)[number];
 
-const { obfuscate, deobfuscate } = createObfuscation(DEFAULT_OBFUSCATION_SALT);
+const { deobfuscate } = createObfuscation('');
 
 const ssrFallback = new Map<string, string>();
 
@@ -46,11 +42,10 @@ function readRaw(key: string): string | null {
 }
 
 function writeRaw(key: string, value: string): void {
-    const data = OBFUSCATION_PREFIX + obfuscate(value);
     if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, data);
+        localStorage.setItem(key, value);
     } else {
-        ssrFallback.set(key, data);
+        ssrFallback.set(key, value);
     }
 }
 

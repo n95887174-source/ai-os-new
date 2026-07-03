@@ -45,14 +45,17 @@ export function useChatStoreHydration(): void {
             const sStore = resolveSessionStore();
             if (!sStore) return;
             const state = useChatStore.getState();
+            const syncedDeletes = [...state.deletedIds];
             try {
-                await sStore.syncSessions(state.sessions, [...state.deletedIds]);
+                await sStore.syncSessions(state.sessions, syncedDeletes);
             } catch (e) {
                 console.error('[ChatStore] Failed to sync to Dexie', e);
             } finally {
-                if (useChatStore.getState().deletedIds.size > 0) {
-                    useChatStore.setState({ deletedIds: new Set() });
-                }
+                useChatStore.setState((prev) => {
+                    const remaining = new Set(prev.deletedIds);
+                    for (const id of syncedDeletes) remaining.delete(id);
+                    return { deletedIds: remaining };
+                });
             }
         };
 
@@ -87,7 +90,7 @@ export function useChatStoreHydration(): void {
                             const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
                             useChatStore.setState({
                                 sessions: batch,
-                                activeSessionId: batch[0]?.id ?? 'default',
+                                activeSessionId: batch[0]?.id ?? DEFAULT_SESSION.id,
                                 hasMoreSessions: batch.length < migratedTotal,
                             });
                         }
@@ -110,7 +113,7 @@ export function useChatStoreHydration(): void {
                     }
                     useChatStore.setState({
                         sessions: batch,
-                        activeSessionId: batch[0]?.id ?? 'default',
+                        activeSessionId: batch[0]?.id ?? DEFAULT_SESSION.id,
                         hasMoreSessions: batch.length < total,
                     });
                 } else {
@@ -127,7 +130,12 @@ export function useChatStoreHydration(): void {
                     const cleaned = cleanupOrphanLoading(current);
                     if (cleaned !== current) {
                         const sStore = resolveSessionStore();
-                        if (sStore) sStore.syncSessions(cleaned, []).catch(() => {});
+                        if (sStore)
+                            sStore
+                                .syncSessions(cleaned, [])
+                                .catch((e) =>
+                                    console.warn('[ChatStore] Failed to sync orphan cleanup', e),
+                                );
                         useChatStore.setState({ sessions: cleaned });
                     }
                     useChatStore.setState({ isLoaded: true, activeRequestIds: new Set() });

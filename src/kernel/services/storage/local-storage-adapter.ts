@@ -1,11 +1,7 @@
 import type { ILocalStorageAdapter } from '../../contracts/storage-adapter';
-import {
-    createObfuscation,
-    OBFUSCATION_PREFIX,
-    DEFAULT_OBFUSCATION_SALT,
-} from '../../utils/obfuscation';
+import { createObfuscation, OBFUSCATION_PREFIX } from '../../utils/obfuscation';
 
-const { obfuscate, deobfuscate } = createObfuscation(DEFAULT_OBFUSCATION_SALT);
+const { deobfuscate } = createObfuscation('');
 
 const hasLocalStorage = typeof localStorage !== 'undefined';
 
@@ -28,11 +24,10 @@ export class LocalStorageAdapter implements ILocalStorageAdapter {
     }
     setItem(key: string, value: string): void {
         try {
-            const data = OBFUSCATION_PREFIX + obfuscate(value);
             if (hasLocalStorage) {
-                localStorage.setItem(key, data);
+                localStorage.setItem(key, value);
             } else {
-                this.memory.set(key, data);
+                this.memory.set(key, value);
             }
         } catch (e) {
             if (e instanceof DOMException && e.name === 'QuotaExceededError') {

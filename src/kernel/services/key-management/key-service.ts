@@ -471,6 +471,11 @@ export class KeyService implements IKeyRotationManager {
 
     lockVault(): void {
         this.vault.lock(this.registry.getKeys());
+        // C-10: Strip plaintext keys from in-memory registry — lock() only
+        // cleaned clones, not the actual registry's internal store.
+        this.registry.replaceKeys(
+            this.registry.getKeys().map((k) => (k.isEncrypted ? k : { ...k, key: '' })),
+        );
         this.notify();
     }
 

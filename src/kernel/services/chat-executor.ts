@@ -67,87 +67,272 @@ export class ChatExecutor {
         const sessionController = new AbortController();
         this.activeRequests.set(req.requestId, sessionController);
 
-        while (depth < this.MAX_429_RETRIES) {
-            const { requestId, model, messages, keyId } = req;
+        try {
+            while (depth < this.MAX_429_RETRIES) {
+                const { requestId, model, messages, keyId } = req;
 
-            const agentId = req.options?.metadata?.agentId as string | undefined;
+                const agentId = req.options?.metadata?.agentId as string | undefined;
 
-            const promptText = messages.map((m) => m.content).join(' ');
-            const useRace =
-                req.options?.strategy === 'race' ||
-                (req.provider && req.provider.toLowerCase() === 'race');
+                const promptText = messages.map((m) => m.content).join(' ');
+                const useRace =
+                    req.options?.strategy === 'race' ||
+                    (req.provider && req.provider.toLowerCase() === 'race');
 
-            if (useRace && this.deps.raceExecutor) {
-                const raceCandidates = this.deps.routerService.getRaceCandidateDetails(promptText);
-                if (raceCandidates.length >= 2) {
-                    const raced = await this.executeRaceRequest(
-                        req,
-                        messages,
-                        raceCandidates,
-                        agentId,
-                        sessionController.signal,
-                    );
-                    if (raced) return;
+                if (useRace && this.deps.raceExecutor) {
+                    const raceCandidates =
+                        this.deps.routerService.getRaceCandidateDetails(promptText);
+                    if (raceCandidates.length >= 2) {
+                        const raced = await this.executeRaceRequest(
+                            req,
+                            messages,
+                            raceCandidates,
+                            agentId,
+                            sessionController.signal,
+                        );
+                        if (raced) return;
+                    }
                 }
-            }
 
-            let resolvedProvider = req.provider;
-            if (
-                !resolvedProvider ||
-                resolvedProvider.toLowerCase() === 'auto' ||
-                resolvedProvider.toLowerCase() === 'race'
-            ) {
-                const ranked = this.deps.routerService.getRankedProviders(
-                    'content',
-                    promptText,
-                    req.priority,
-                    agentId,
-                );
-                if (ranked.length > 0) {
-                    resolvedProvider = ranked[0].provider;
-                    this.deps.logger.info('ChatExecutor', `Auto-routed to ${resolvedProvider}`, {
-                        requestId,
-                    });
-                } else {
-                    this.emitError(req, 'No providers available for auto-routing');
-                    return;
-                }
-            }
-
-            // L07 — fallback retry: on failure try next best provider
-            let currentProvider = resolvedProvider;
-            let attemptsForProvider = 0;
-            const maxAttemptsPerProvider = 1;
-
-            let lastError: string | null = null;
-
-            while (currentProvider) {
-                if (sessionController.signal.aborted) return;
-
-                if (excludedProviders.has(currentProvider)) {
-                    const fallback = this.deps.routerService.resolveWithFallback(
+                let resolvedProvider = req.provider;
+                if (
+                    !resolvedProvider ||
+                    resolvedProvider.toLowerCase() === 'auto' ||
+                    resolvedProvider.toLowerCase() === 'race'
+                ) {
+                    const ranked = this.deps.routerService.getRankedProviders(
                         'content',
-                        excludedProviders,
+                        promptText,
+                        req.priority,
+                        agentId,
                     );
-                    if (!fallback) break;
-                    currentProvider = fallback.provider;
-                    continue;
+                    if (ranked.length > 0) {
+                        resolvedProvider = ranked[0].provider;
+                        this.deps.logger.info(
+                            'ChatExecutor',
+                            `Auto-routed to ${resolvedProvider}`,
+                            {
+                                requestId,
+                            },
+                        );
+                    } else {
+                        this.emitError(req, 'No providers available for auto-routing');
+                        return;
+                    }
                 }
 
-                const effectiveModel = model || 'default';
-                const effectiveMessages = messages;
+                // L07 — fallback retry: on failure try next best provider
+                let currentProvider = resolvedProvider;
+                let attemptsForProvider = 0;
+                const maxAttemptsPerProvider = 1;
 
-                const startTime = performance.now();
+                let lastError: string | null = null;
 
-                try {
-                    // S-04: Security scan prompt before any LLM call
-                    if (promptSecurityService.getConfig().enabled) {
-                        const scanResult = promptSecurityService.scan(promptText);
-                        if (!scanResult.safe) {
-                            LOGGER.warn('ChatExecutor', 'Prompt blocked by security scan', {
+                while (currentProvider) {
+                    if (sessionController.signal.aborted) return;
+
+                    if (excludedProviders.has(currentProvider)) {
+                        const fallback = this.deps.routerService.resolveWithFallback(
+                            'content',
+                            excludedProviders,
+                        );
+                        if (!fallback) break;
+                        currentProvider = fallback.provider;
+                        continue;
+                    }
+
+                    const effectiveModel = model || 'default';
+                    const effectiveMessages = messages;
+
+                    const startTime = performance.now();
+
+                    try {
+                        // S-04: Security scan prompt before any LLM call
+                        if (promptSecurityService.getConfig().enabled) {
+                            const scanResult = promptSecurityService.scan(promptText);
+                            if (!scanResult.safe) {
+                                LOGGER.warn('ChatExecutor', 'Prompt blocked by security scan', {
+                                    requestId,
+                                    score: scanResult.score,
+                                    summary: scanResult.summary,
+                                });
+                                this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+                                    id: `err-${Date.now()}`,
+                                    requestId,
+                                    provider: currentProvider,
+                                    model: effectiveModel,
+                                    keyId: req.keyId,
+                                    content: '',
+                                    latency: 0,
+                                    status: 'error',
+                                    error: `Prompt blocked by security policy (score: ${scanResult.score}/10)`,
+                                } satisfies ChatResponse);
+                                return;
+                            }
+                            promptSecurityService
+                                .addEvent({
+                                    timestamp: Date.now(),
+                                    prompt: promptText.slice(0, 200),
+                                    result: scanResult,
+                                    blocked: false,
+                                })
+                                .catch(() => {});
+                        }
+
+                        let result: Awaited<ReturnType<ILLMClientService['sendMessage']>>;
+
+                        const cacheKey = this.deps.cacheService
+                            ? await this.deps.cacheService.generateKey(
+                                  effectiveMessages as unknown as Array<{
+                                      role: string;
+                                      content: string;
+                                  }>,
+                                  effectiveModel,
+                              )
+                            : null;
+
+                        if (cacheKey) {
+                            const cached = this.deps.cacheService.get(cacheKey);
+                            if (cached) {
+                                this.emitStatus(req, 'cached');
+                                const res: ChatResponse = {
+                                    id: crypto.randomUUID(),
+                                    requestId,
+                                    provider: currentProvider,
+                                    model: effectiveModel,
+                                    keyId: req.keyId,
+                                    content: cached.response,
+                                    latency: 0,
+                                    status: 'done',
+                                    tokens: cached.completionTokens,
+                                    strategy: 'cache',
+                                };
+                                this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
+                                return;
+                            }
+
+                            const inflightKey = `${currentProvider}:${cacheKey}`;
+                            const existingInflight = this.cacheInflight.get(inflightKey);
+                            if (existingInflight) {
+                                // Another identical request is in-flight; wait for it
+                                await existingInflight;
+                                const recheck = this.deps.cacheService.get(cacheKey);
+                                if (recheck) {
+                                    this.emitStatus(req, 'cached');
+                                    const res: ChatResponse = {
+                                        id: crypto.randomUUID(),
+                                        requestId,
+                                        provider: currentProvider,
+                                        model: effectiveModel,
+                                        keyId: req.keyId,
+                                        content: recheck.response,
+                                        latency: 0,
+                                        status: 'done',
+                                        tokens: recheck.completionTokens,
+                                        strategy: 'cache',
+                                    };
+                                    this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
+                                    return;
+                                }
+                            }
+
+                            const inflightPromise = (async () => {
+                                const r = await this.llmClient.sendMessage(effectiveMessages, {
+                                    provider: currentProvider,
+                                    model: effectiveModel,
+                                    temperature: req.options?.temperature,
+                                    maxTokens: req.options?.maxTokens,
+                                    signal: sessionController.signal,
+                                });
+                                return r;
+                            })();
+
+                            this.cacheInflight.set(
+                                inflightKey,
+                                inflightPromise.then(() => {}).catch(() => {}),
+                            );
+                            try {
+                                result = await inflightPromise;
+                            } finally {
+                                this.cacheInflight.delete(inflightKey);
+                            }
+                        } else {
+                            result = await this.llmClient.sendMessage(effectiveMessages, {
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                temperature: req.options?.temperature,
+                                maxTokens: req.options?.maxTokens,
+                                signal: sessionController.signal,
+                            });
+                        }
+
+                        const latencyMs = Math.round(performance.now() - startTime);
+
+                        if (result && result.content !== undefined && result.content !== null) {
+                            this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+                                id: crypto.randomUUID(),
                                 requestId,
-                                score: scanResult.score,
-                                summary: scanResult.summary,
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                keyId: req.keyId,
+                                content: result.content,
+                                latency: latencyMs,
+                                status: 'done',
+                                tokens: result.tokens,
+                                finishReason: result.finishReason,
+                            } satisfies ChatResponse);
+
+                            this.deps.keyService.recordUsage(
+                                currentProvider,
+                                latencyMs,
+                                result.tokens,
+                                effectiveModel,
+                                { requestId },
+                            );
+                            this.deps.keyService.handleProviderError(keyId || currentProvider, '');
+
+                            if (cacheKey && this.deps.cacheService) {
+                                try {
+                                    this.deps.cacheService.set(
+                                        cacheKey,
+                                        result.content,
+                                        effectiveModel,
+                                        currentProvider,
+                                        result.tokens || 0,
+                                        result.tokens || 0,
+                                    );
+                                } catch {
+                                    // cache set failure is non-critical
+                                }
+                            }
+
+                            const session = this.deps.providerRuntime?.createSession(
+                                currentProvider,
+                                currentProvider,
+                                effectiveModel,
+                            );
+                            if (session) {
+                                session.activate();
+                                session.complete(latencyMs);
+                                session.recordTokens(result.tokens || 0, result.tokens || 0);
+                                const cost = (result.tokens || 0) * 0.000002;
+                                session.recordCost(cost);
+                            }
+
+                            this.deps.eventBus.emit(EVENTS.STREAM_END, {
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                latency: latencyMs,
+                                tokens: result.tokens || 0,
+                            });
+
+                            return;
+                        }
+
+                        const finishReason = result?.finishReason;
+                        if (finishReason && !['stop', 'length', 'done'].includes(finishReason)) {
+                            LOGGER.warn('ChatExecutor', `Unhandled finishReason: ${finishReason}`, {
+                                provider: currentProvider,
+                                requestId,
                             });
                             this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
                                 id: `err-${Date.now()}`,
@@ -156,290 +341,119 @@ export class ChatExecutor {
                                 model: effectiveModel,
                                 keyId: req.keyId,
                                 content: '',
-                                latency: 0,
+                                latency: latencyMs,
                                 status: 'error',
-                                error: `Prompt blocked by security policy (score: ${scanResult.score}/10)`,
+                                error: `Unexpected finish reason: ${finishReason}`,
                             } satisfies ChatResponse);
+
                             return;
                         }
-                        promptSecurityService
-                            .addEvent({
-                                timestamp: Date.now(),
-                                prompt: promptText.slice(0, 200),
-                                result: scanResult,
-                                blocked: false,
-                            })
-                            .catch(() => {});
-                    }
 
-                    let result: Awaited<ReturnType<ILLMClientService['sendMessage']>>;
+                        lastError = 'Empty or invalid response from provider';
+                        this.deps.keyService.handleProviderError(
+                            keyId || currentProvider,
+                            lastError,
+                        );
+                        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+                            id: `err-${Date.now()}`,
+                            requestId,
+                            provider: currentProvider,
+                            model: effectiveModel,
+                            keyId: req.keyId,
+                            content: '',
+                            latency: latencyMs,
+                            status: 'error',
+                            error: lastError,
+                        } satisfies ChatResponse);
+                        return;
+                    } catch (error: unknown) {
+                        const errMsg = error instanceof Error ? error.message : String(error);
+                        LOGGER.warn(
+                            'ChatExecutor',
+                            `Provider ${currentProvider} failed: ${errMsg}`,
+                            {
+                                requestId,
+                                provider: currentProvider,
+                            },
+                        );
 
-                    const cacheKey = this.deps.cacheService
-                        ? await this.deps.cacheService.generateKey(
-                              effectiveMessages as unknown as Array<{
-                                  role: string;
-                                  content: string;
-                              }>,
-                              effectiveModel,
-                          )
-                        : null;
+                        const isRateLimit =
+                            /\b429\b/.test(errMsg) ||
+                            (error instanceof LLMError && error.statusCode === 429);
 
-                    if (cacheKey) {
-                        const cached = this.deps.cacheService.get(cacheKey);
-                        if (cached) {
-                            this.emitStatus(req, 'cached');
-                            const res: ChatResponse = {
-                                id: crypto.randomUUID(),
+                        this.deps.keyService.handleProviderError(keyId || currentProvider, errMsg);
+
+                        if (isRateLimit && depth < this.MAX_429_RETRIES - 1) {
+                            depth++;
+                            excludedProviders.add(currentProvider);
+                            const fallback = this.deps.routerService.resolveWithFallback(
+                                'content',
+                                excludedProviders,
+                            );
+                            if (fallback) {
+                                excludedProviders.add(fallback.provider);
+                                currentProvider = fallback.provider;
+                                const session = this.deps.providerRuntime?.createSession(
+                                    currentProvider,
+                                    currentProvider,
+                                    effectiveModel,
+                                );
+                                if (session) {
+                                    session.activate();
+                                }
+                                continue;
+                            }
+                        }
+
+                        if (isRateLimit) {
+                            this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+                                id: `err-${Date.now()}`,
                                 requestId,
                                 provider: currentProvider,
                                 model: effectiveModel,
                                 keyId: req.keyId,
-                                content: cached.response,
-                                latency: 0,
-                                status: 'done',
-                                tokens: cached.completionTokens,
-                                strategy: 'cache',
-                            };
-                            this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
+                                content: '',
+                                latency: Math.round(performance.now() - startTime),
+                                status: 'error',
+                                error: 'Rate limited. Please try again later.',
+                            } satisfies ChatResponse);
                             return;
                         }
 
-                        const inflightKey = `${currentProvider}:${cacheKey}`;
-                        const existingInflight = this.cacheInflight.get(inflightKey);
-                        if (existingInflight) {
-                            // Another identical request is in-flight; wait for it
-                            await existingInflight;
-                            const recheck = this.deps.cacheService.get(cacheKey);
-                            if (recheck) {
-                                this.emitStatus(req, 'cached');
-                                const res: ChatResponse = {
-                                    id: crypto.randomUUID(),
-                                    requestId,
-                                    provider: currentProvider,
-                                    model: effectiveModel,
-                                    keyId: req.keyId,
-                                    content: recheck.response,
-                                    latency: 0,
-                                    status: 'done',
-                                    tokens: recheck.completionTokens,
-                                    strategy: 'cache',
-                                };
-                                this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
-                                return;
-                            }
-                        }
-
-                        const inflightPromise = (async () => {
-                            const r = await this.llmClient.sendMessage(effectiveMessages, {
-                                provider: currentProvider,
-                                model: effectiveModel,
-                                temperature: req.options?.temperature,
-                                maxTokens: req.options?.maxTokens,
-                                signal: sessionController.signal,
-                            });
-                            return r;
-                        })();
-
-                        this.cacheInflight.set(
-                            inflightKey,
-                            inflightPromise.then(() => {}).catch(() => {}),
-                        );
-                        try {
-                            result = await inflightPromise;
-                        } finally {
-                            this.cacheInflight.delete(inflightKey);
-                        }
-                    } else {
-                        result = await this.llmClient.sendMessage(effectiveMessages, {
-                            provider: currentProvider,
-                            model: effectiveModel,
-                            temperature: req.options?.temperature,
-                            maxTokens: req.options?.maxTokens,
-                            signal: sessionController.signal,
-                        });
-                    }
-
-                    const latencyMs = Math.round(performance.now() - startTime);
-
-                    if (result && result.content !== undefined && result.content !== null) {
-                        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                            id: crypto.randomUUID(),
-                            requestId,
-                            provider: currentProvider,
-                            model: effectiveModel,
-                            keyId: req.keyId,
-                            content: result.content,
-                            latency: latencyMs,
-                            status: 'done',
-                            tokens: result.tokens,
-                            finishReason: result.finishReason,
-                        } satisfies ChatResponse);
-
-                        this.deps.keyService.recordUsage(
-                            currentProvider,
-                            latencyMs,
-                            result.tokens,
-                            effectiveModel,
-                            { requestId },
-                        );
-                        this.deps.keyService.handleProviderError(keyId || currentProvider, '');
-
-                        if (cacheKey && this.deps.cacheService) {
-                            try {
-                                this.deps.cacheService.set(
-                                    cacheKey,
-                                    result.content,
-                                    effectiveModel,
-                                    currentProvider,
-                                    result.tokens || 0,
-                                    result.tokens || 0,
-                                );
-                            } catch {
-                                // cache set failure is non-critical
-                            }
-                        }
-
-                        const session = this.deps.providerRuntime?.createSession(
-                            currentProvider,
-                            currentProvider,
-                            effectiveModel,
-                        );
-                        if (session) {
-                            session.activate();
-                            session.complete(latencyMs);
-                            session.recordTokens(result.tokens || 0, result.tokens || 0);
-                            const cost = (result.tokens || 0) * 0.000002;
-                            session.recordCost(cost);
-                        }
-
-                        this.deps.eventBus.emit(EVENTS.STREAM_END, {
-                            provider: currentProvider,
-                            model: effectiveModel,
-                            latency: latencyMs,
-                            tokens: result.tokens || 0,
-                        });
-
-                        return;
-                    }
-
-                    const finishReason = result?.finishReason;
-                    if (finishReason && !['stop', 'length', 'done'].includes(finishReason)) {
-                        LOGGER.warn('ChatExecutor', `Unhandled finishReason: ${finishReason}`, {
-                            provider: currentProvider,
-                            requestId,
-                        });
-                        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                            id: `err-${Date.now()}`,
-                            requestId,
-                            provider: currentProvider,
-                            model: effectiveModel,
-                            keyId: req.keyId,
-                            content: '',
-                            latency: latencyMs,
-                            status: 'error',
-                            error: `Unexpected finish reason: ${finishReason}`,
-                        } satisfies ChatResponse);
-
-                        return;
-                    }
-
-                    lastError = 'Empty or invalid response from provider';
-                    this.deps.keyService.handleProviderError(keyId || currentProvider, lastError);
-                    this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                        id: `err-${Date.now()}`,
-                        requestId,
-                        provider: currentProvider,
-                        model: effectiveModel,
-                        keyId: req.keyId,
-                        content: '',
-                        latency: latencyMs,
-                        status: 'error',
-                        error: lastError,
-                    } satisfies ChatResponse);
-                    return;
-                } catch (error: unknown) {
-                    const errMsg = error instanceof Error ? error.message : String(error);
-                    LOGGER.warn('ChatExecutor', `Provider ${currentProvider} failed: ${errMsg}`, {
-                        requestId,
-                        provider: currentProvider,
-                    });
-
-                    const isRateLimit =
-                        /\b429\b/.test(errMsg) ||
-                        (error instanceof LLMError && error.statusCode === 429);
-
-                    this.deps.keyService.handleProviderError(keyId || currentProvider, errMsg);
-
-                    if (isRateLimit && depth < this.MAX_429_RETRIES - 1) {
-                        depth++;
+                        lastError = errMsg;
                         excludedProviders.add(currentProvider);
-                        const fallback = this.deps.routerService.resolveWithFallback(
-                            'content',
-                            excludedProviders,
-                        );
-                        if (fallback) {
-                            excludedProviders.add(fallback.provider);
-                            currentProvider = fallback.provider;
-                            const session = this.deps.providerRuntime?.createSession(
-                                currentProvider,
-                                currentProvider,
-                                effectiveModel,
+                        attemptsForProvider++;
+
+                        if (attemptsForProvider >= maxAttemptsPerProvider) {
+                            const fallback = this.deps.routerService.resolveWithFallback(
+                                'content',
+                                excludedProviders,
                             );
-                            if (session) {
-                                session.activate();
+                            if (fallback) {
+                                currentProvider = fallback.provider;
+                                attemptsForProvider = 0;
+                                continue;
                             }
-                            continue;
+                            const downgraded =
+                                this.deps.routerService.getDowngradedModel(effectiveModel);
+                            if (downgraded) {
+                                req = { ...req, model: downgraded, provider: currentProvider };
+                                attemptsForProvider = 0;
+                                continue;
+                            }
+                            break;
                         }
-                    }
-
-                    if (isRateLimit) {
-                        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                            id: `err-${Date.now()}`,
-                            requestId,
-                            provider: currentProvider,
-                            model: effectiveModel,
-                            keyId: req.keyId,
-                            content: '',
-                            latency: Math.round(performance.now() - startTime),
-                            status: 'error',
-                            error: 'Rate limited. Please try again later.',
-                        } satisfies ChatResponse);
-                        return;
-                    }
-
-                    lastError = errMsg;
-                    excludedProviders.add(currentProvider);
-                    attemptsForProvider++;
-
-                    if (attemptsForProvider >= maxAttemptsPerProvider) {
-                        const fallback = this.deps.routerService.resolveWithFallback(
-                            'content',
-                            excludedProviders,
-                        );
-                        if (fallback) {
-                            currentProvider = fallback.provider;
-                            attemptsForProvider = 0;
-                            continue;
-                        }
-                        const downgraded =
-                            this.deps.routerService.getDowngradedModel(effectiveModel);
-                        if (downgraded) {
-                            req = { ...req, model: downgraded, provider: currentProvider };
-                            attemptsForProvider = 0;
-                            continue;
-                        }
-                        break;
                     }
                 }
-            }
 
-            if (lastError) {
-                this.emitError(req, lastError);
+                if (lastError) {
+                    this.emitError(req, lastError);
+                }
+                break;
             }
-            break;
+        } finally {
+            this.activeRequests.delete(req.requestId);
         }
-
-        this.activeRequests.delete(req.requestId);
     }
 
     private async executeRaceRequest(

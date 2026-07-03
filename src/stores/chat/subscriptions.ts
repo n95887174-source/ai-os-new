@@ -106,7 +106,9 @@ moduleUnsubs.push(
                     ...entry,
                     responses: entry.responses.map((r, i) =>
                         i === responseIndex
-                            ? { ...r, provider, model, status: 'loading' as const, content: '' }
+                            ? r.status === 'cancelled'
+                                ? r
+                                : { ...r, provider, model, status: 'loading' as const, content: '' }
                             : r,
                     ),
                 };
@@ -233,14 +235,16 @@ moduleUnsubs.push(
                         ...entry,
                         responses: entry.responses.map((r) =>
                             matchesResponse(r, provider, requestId)
-                                ? {
-                                      ...r,
-                                      content: fullContent ?? r.content,
-                                      latency: latency ?? 0,
-                                      ttft: ttft ?? 0,
-                                      tps: tps ?? 0,
-                                      status: resolvedStatus,
-                                  }
+                                ? r.status === 'cancelled'
+                                    ? r
+                                    : {
+                                          ...r,
+                                          content: fullContent ?? r.content,
+                                          latency: latency ?? 0,
+                                          ttft: ttft ?? 0,
+                                          tps: tps ?? 0,
+                                          status: resolvedStatus,
+                                      }
                                 : r,
                         ),
                     };

@@ -170,9 +170,21 @@ export class CacheDecorator extends BaseDecorator {
             .filter((m) => m.role === 'system')
             .map((m) => m.content)
             .join('\n');
+        const prevMessages = messages
+            .slice(0, -1)
+            .filter((m) => m.role !== 'system')
+            .map((m) => (typeof m.content === 'string' ? m.content : ''))
+            .join('\n');
         const apiKeyHash = await this.hashKey(apiKey);
         if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
-            const targetText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
+            const targetText = [
+                systemParts,
+                `history:${messages.length}`,
+                prevMessages.slice(0, 2000),
+                userMsg.content,
+            ]
+                .filter(Boolean)
+                .join('\n');
             const targetEmbed = this.getEmbedding(targetText);
             const indexKey = `${apiKeyHash}:${model}`;
             const bucket = this.approximateTextIndex.get(indexKey);
@@ -254,9 +266,14 @@ export class CacheDecorator extends BaseDecorator {
                     userMsg &&
                     typeof userMsg.content === 'string'
                 ) {
-                    const cacheText = systemParts
-                        ? systemParts + '\n' + userMsg.content
-                        : userMsg.content;
+                    const cacheText = [
+                        systemParts,
+                        `history:${messages.length}`,
+                        prevMessages.slice(0, 2000),
+                        userMsg.content,
+                    ]
+                        .filter(Boolean)
+                        .join('\n');
                     entry.embedding = this.getEmbedding(cacheText);
                     entry.promptText = cacheText;
                 }
@@ -301,11 +318,23 @@ export class CacheDecorator extends BaseDecorator {
             .filter((m) => m.role === 'system')
             .map((m) => m.content)
             .join('\n');
+        const prevMessages = messages
+            .slice(0, -1)
+            .filter((m) => m.role !== 'system')
+            .map((m) => (typeof m.content === 'string' ? m.content : ''))
+            .join('\n');
         const apiKeyHash = await this.hashKey(apiKey);
 
         // Check semantic cache for streaming (same logic as sendMessage)
         if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
-            const targetText = systemParts ? systemParts + '\n' + userMsg.content : userMsg.content;
+            const targetText = [
+                systemParts,
+                `history:${messages.length}`,
+                prevMessages.slice(0, 2000),
+                userMsg.content,
+            ]
+                .filter(Boolean)
+                .join('\n');
             const targetEmbed = this.getEmbedding(targetText);
             const indexKey = `${apiKeyHash}:${model}`;
             const bucket = this.approximateTextIndex.get(indexKey);
@@ -388,9 +417,14 @@ export class CacheDecorator extends BaseDecorator {
             };
 
             if (this.#similarityThreshold > 0 && userMsg && typeof userMsg.content === 'string') {
-                const cacheText = systemParts
-                    ? systemParts + '\n' + userMsg.content
-                    : userMsg.content;
+                const cacheText = [
+                    systemParts,
+                    `history:${messages.length}`,
+                    prevMessages.slice(0, 2000),
+                    userMsg.content,
+                ]
+                    .filter(Boolean)
+                    .join('\n');
                 entry.embedding = this.getEmbedding(cacheText);
                 entry.promptText = cacheText;
             }

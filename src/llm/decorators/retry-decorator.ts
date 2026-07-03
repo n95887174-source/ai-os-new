@@ -153,7 +153,7 @@ export class RetryDecorator extends BaseDecorator {
             } catch (e) {
                 if (!this.shouldRetry(e, signal)) throw e;
                 if (signal?.aborted) throw e;
-                if (hasEmittedChunks) return;
+                if (hasEmittedChunks) throw e;
                 lastError = this.toRetryable(e);
                 LOGGER.warn('RetryDecorator', 'Stream attempt failed', {
                     provider: this.inner.id,
