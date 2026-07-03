@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Search, Users, MessageCircle, Thermometer, ArrowUpRight } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { DEBATE_TEMPLATES } from '../../kernel/services/debate-runtime/debate-templates';
@@ -14,6 +15,7 @@ const STRATEGY_COLORS: Record<string, string> = {
 };
 
 const DebateTemplatesPanelContent: React.FC = () => {
+    const navigate = useNavigate();
     const [search, setSearch] = useState('');
 
     const filtered = DEBATE_TEMPLATES.filter(
@@ -165,7 +167,7 @@ const DebateTemplatesPanelContent: React.FC = () => {
                                 fontWeight: 600,
                                 marginTop: 'auto',
                             }}
-                            onClick={() => (window.location.href = `/debate?template=${tmpl.id}`)}
+                            onClick={() => navigate(`/debate?template=${tmpl.id}`)}
                         >
                             <ArrowUpRight size={14} /> Use Template
                         </button>

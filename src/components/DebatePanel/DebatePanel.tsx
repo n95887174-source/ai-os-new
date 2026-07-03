@@ -246,6 +246,8 @@ const DebatePanel: React.FC = () => {
     useEffect(() => {
         const unsub = eventBus.onSafe<DebateSession>('debate:updated', (data) => {
             if (!isMountedRef.current) return;
+            // Guard: skip non-session payloads (e.g. metricsInterval emits DEBATE_UPDATED with {sessionId:'', type:'store_metrics'})
+            if (!data.topic || !data.status) return;
             queueMicrotask(() => {
                 if (!isMountedRef.current) return;
                 try {
