@@ -4,109 +4,127 @@ import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('LifecycleManager');
 
 function getHeapMB(): number {
-  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
-  return mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
+    const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+    return mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
 }
 
 export interface InitStatus {
-  name: string;
-  status: 'ok' | 'error' | 'skipped';
-  error?: string;
+    name: string;
+    status: 'ok' | 'error' | 'skipped';
+    error?: string;
 }
 
 interface LifecycleEntry {
-  name: string;
-  service: ILifecycle;
+    name: string;
+    service: ILifecycle;
 }
 
 export class LifecycleManager {
-  private entries: LifecycleEntry[] = [];
-  private statuses: InitStatus[] = [];
+    private entries: LifecycleEntry[] = [];
+    private statuses: InitStatus[] = [];
 
-  register(name: string, service: ILifecycle): void {
-    if (this.entries.some(e => e.name === name)) return;
-    this.entries.push({ name, service });
-  }
-
-  async initAll(): Promise<void> {
-    for (const entry of this.entries) {
-      await this.tryInit(entry.name, () => entry.service.init());
+    register(name: string, service: ILifecycle): void {
+        if (this.entries.some((e) => e.name === name)) return;
+        this.entries.push({ name, service });
     }
-  }
 
-  async startAll(): Promise<void> {
-    for (const entry of this.entries) {
-      if (!this.statuses.some(s => s.name === entry.name && s.status === 'ok')) {
-        LOGGER.warn('LifecycleManager', `Skipping start() for ${entry.name} — init not completed`);
-        continue;
-      }
-      await entry.service.start?.();
-    }
-  }
-
-  async shutdown(): Promise<void> {
-    for (const entry of this.entries.slice().reverse()) {
-      try {
-        await entry.service.destroy();
-      } catch (e) {
-        LOGGER.error('LifecycleManager', `Error destroying ${entry.name}`, { error: e });
-      }
-    }
-    this.entries = [];
-    this.statuses = [];
-  }
-
-  async tryInit(name: string, fn: () => Promise<void> | void, retries = 2): Promise<boolean> {
-    const maxAttempts = 1 + retries;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        await fn();
-        this.statuses.push({ name, status: 'ok' });
-        return true;
-      } catch (e) {
-        if (attempt < maxAttempts) {
-          LOGGER.warn('LifecycleManager', `${name} init attempt ${attempt}/${maxAttempts} failed, retrying...`);
-        } else {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.statuses.push({ name, status: 'error', error: msg });
-          LOGGER.error('LifecycleManager', `${name} init failed after ${maxAttempts} attempts`, { error: e });
+    async initAll(): Promise<void> {
+        for (const entry of this.entries) {
+            await this.tryInit(entry.name, () => entry.service.init());
         }
-      }
-    }
-    return false;
-  }
-
-  async initAllSequential(names?: string[]): Promise<boolean[]> {
-    const toInit = names
-      ? this.entries.filter(e => names.includes(e.name))
-      : this.entries;
-
-    const results: boolean[] = [];
-    let prevHeap = getHeapMB();
-
-    for (const entry of toInit) {
-      const ok = await this.tryInit(entry.name, () => entry.service.init());
-      results.push(ok);
-
-      const nowHeap = getHeapMB();
-      const delta = nowHeap - prevHeap;
-      const deltaStr = delta > 0 ? `+${delta}MB` : delta < 0 ? `${delta}MB` : '±0MB';
-      LOGGER.info('LifecycleManager', `[MEM] ${entry.name}: ${nowHeap}MB total (${deltaStr})`);
-      prevHeap = nowHeap;
     }
 
-    return results;
-  }
+    async startAll(): Promise<void> {
+        let lastError: Error | undefined;
+        for (const entry of this.entries) {
+            if (!this.statuses.some((s) => s.name === entry.name && s.status === 'ok')) {
+                LOGGER.warn(
+                    'LifecycleManager',
+                    `Skipping start() for ${entry.name} — init not completed`,
+                );
+                continue;
+            }
+            try {
+                await entry.service.start?.();
+            } catch (e) {
+                lastError = e instanceof Error ? e : new Error(String(e));
+                LOGGER.error('LifecycleManager', `start() failed for ${entry.name}`, { error: e });
+            }
+        }
+        if (lastError) throw lastError;
+    }
 
-  getStatuses(): InitStatus[] {
-    return this.statuses;
-  }
+    async shutdown(): Promise<void> {
+        for (const entry of this.entries.slice().reverse()) {
+            try {
+                await entry.service.destroy();
+            } catch (e) {
+                LOGGER.error('LifecycleManager', `Error destroying ${entry.name}`, { error: e });
+            }
+        }
+        this.entries = [];
+        this.statuses = [];
+    }
 
-  clearStatuses(): void {
-    this.statuses = [];
-  }
+    async tryInit(name: string, fn: () => Promise<void> | void, retries = 2): Promise<boolean> {
+        const maxAttempts = 1 + retries;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                await fn();
+                this.statuses.push({ name, status: 'ok' });
+                return true;
+            } catch (e) {
+                if (attempt < maxAttempts) {
+                    LOGGER.warn(
+                        'LifecycleManager',
+                        `${name} init attempt ${attempt}/${maxAttempts} failed, retrying...`,
+                    );
+                } else {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    this.statuses.push({ name, status: 'error', error: msg });
+                    LOGGER.error(
+                        'LifecycleManager',
+                        `${name} init failed after ${maxAttempts} attempts`,
+                        { error: e },
+                    );
+                }
+            }
+        }
+        return false;
+    }
 
-  getEntries(): ReadonlyArray<LifecycleEntry> {
-    return this.entries;
-  }
+    async initAllSequential(names?: string[]): Promise<boolean[]> {
+        const toInit = names ? this.entries.filter((e) => names.includes(e.name)) : this.entries;
+
+        const results: boolean[] = [];
+        let prevHeap = getHeapMB();
+
+        for (const entry of toInit) {
+            const ok = await this.tryInit(entry.name, () => entry.service.init());
+            results.push(ok);
+
+            const nowHeap = getHeapMB();
+            const delta = nowHeap - prevHeap;
+            const deltaStr = delta > 0 ? `+${delta}MB` : delta < 0 ? `${delta}MB` : '±0MB';
+            LOGGER.info(
+                'LifecycleManager',
+                `[MEM] ${entry.name}: ${nowHeap}MB total (${deltaStr})`,
+            );
+            prevHeap = nowHeap;
+        }
+
+        return results;
+    }
+
+    getStatuses(): InitStatus[] {
+        return this.statuses;
+    }
+
+    clearStatuses(): void {
+        this.statuses = [];
+    }
+
+    getEntries(): ReadonlyArray<LifecycleEntry> {
+        return this.entries;
+    }
 }

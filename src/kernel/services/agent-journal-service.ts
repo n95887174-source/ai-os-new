@@ -260,19 +260,3 @@ export class AgentJournalService {
         };
     }
 }
-
-let _instance: AgentJournalService | null = null;
-
-export function getAgentJournalService(deps?: AgentJournalServiceDeps): AgentJournalService {
-    if (!_instance && deps) {
-        _instance = new AgentJournalService(deps);
-    }
-    if (!_instance) {
-        throw new Error('AgentJournalService not initialized');
-    }
-    return _instance;
-}
-
-export function resetAgentJournalService(): void {
-    _instance = null;
-}

@@ -23,6 +23,32 @@ interface KeyDetailsFormProps {
     onDocsClick: (e: React.MouseEvent) => void;
 }
 
+function detectProvider(apiKey: string): string | null {
+    if (!apiKey.trim()) return null;
+    const patterns: [string, RegExp][] = [
+        ['gemini', /^AIza/],
+        ['groq', /^gsk_/],
+        ['anthropic', /^sk-ant-/],
+        ['nvidia', /^nvapi-/],
+        ['huggingface', /^hf_/],
+        ['openrouter', /^sk-or-/],
+        ['fireworks', /^fw_/],
+        ['deepseek', /^sk-[a-f0-9]{32}$/],
+        ['github', /^ghp_/],
+        ['openai', /^sk-(proj-)?[A-Za-z0-9_-]{20,}/],
+        ['cerebras', /^cerebras_/],
+        ['cloudflare', /^[a-f0-9]{32}:[A-Za-z0-9_-]{40,}$/],
+    ];
+    for (const [provider, regex] of patterns) {
+        if (regex.test(apiKey.trim())) return provider;
+    }
+    return null;
+}
+
+function capitalize(s: string): string {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
     label,
     setLabel,
@@ -184,17 +210,8 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                 </div>
                 {apiKey.length > 0 &&
                     (() => {
-                        const score = Math.min(
-                            (apiKey.length >= 40 ? 30 : apiKey.length >= 20 ? 15 : 0) +
-                                (/[a-z]/.test(apiKey) ? 15 : 0) +
-                                (/[A-Z]/.test(apiKey) ? 15 : 0) +
-                                (/\d/.test(apiKey) ? 15 : 0) +
-                                (/[^a-zA-Z0-9]/.test(apiKey) ? 15 : 0) +
-                                (/^(sk-or|gsk_|AIza|nvapi|sk-|sk-ant)/i.test(apiKey) ? 10 : 0),
-                            100,
-                        );
-                        const color = score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-                        const label = score >= 80 ? 'Strong' : score >= 50 ? 'Medium' : 'Weak';
+                        const provider = detectProvider(apiKey);
+                        const isValidFormat = provider !== null;
                         return (
                             <div
                                 style={{
@@ -204,36 +221,41 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                                     marginTop: '0.4rem',
                                 }}
                             >
-                                <div
-                                    style={{
-                                        flex: 1,
-                                        height: 4,
-                                        borderRadius: 2,
-                                        background: 'rgba(255,255,255,0.06)',
-                                        overflow: 'hidden',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            width: `${score}%`,
-                                            height: '100%',
-                                            borderRadius: 2,
-                                            background: color,
-                                            transition: 'width 0.3s',
-                                        }}
-                                    />
-                                </div>
                                 <span
                                     style={{
-                                        fontSize: '0.65rem',
-                                        fontWeight: 700,
-                                        color,
-                                        minWidth: 50,
-                                        textAlign: 'right',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        padding: '2px 8px',
+                                        borderRadius: 4,
+                                        background: isValidFormat
+                                            ? 'rgba(16,185,129,0.12)'
+                                            : 'rgba(239,68,68,0.12)',
+                                        color: isValidFormat ? '#10b981' : '#ef4444',
                                     }}
                                 >
-                                    {label}
+                                    {isValidFormat
+                                        ? `Detected: ${capitalize(provider)}`
+                                        : 'Unexpected format'}
                                 </span>
+                                {isValidFormat ? (
+                                    <span
+                                        style={{
+                                            fontSize: '0.65rem',
+                                            color: 'var(--text-muted)',
+                                        }}
+                                    >
+                                        ✓ Valid format
+                                    </span>
+                                ) : (
+                                    <span
+                                        style={{
+                                            fontSize: '0.65rem',
+                                            color: 'var(--text-muted)',
+                                        }}
+                                    >
+                                        Unrecognized key prefix
+                                    </span>
+                                )}
                             </div>
                         );
                     })()}

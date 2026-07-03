@@ -1,7 +1,6 @@
 import type { IProviderMigrationService, MigrationPlan } from '../contracts/provider-migration';
 
-let _idCounter = 0;
-const genId = () => `migr-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
 
 export class ProviderMigrationService implements IProviderMigrationService {
     private plans: MigrationPlan[] = [

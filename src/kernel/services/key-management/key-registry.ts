@@ -4,7 +4,7 @@ import { EVENTS } from '../../events/event-names';
 import type { FreeTierLimit } from './key-types';
 import { CONFIG } from '../config-registry';
 import type { KeyStore } from '../../contracts/storage/key-store';
-import { dexieDb } from '../database-service';
+import { getDexieDb } from '../database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identity';
 import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';
 import { rootLogger } from '../logger-service';
@@ -123,6 +123,7 @@ export class KeyRegistry {
 
     private loadingKeys = false;
     private saveQueue = Promise.resolve();
+    private addKeyLock: Promise<ApiKey | null> = Promise.resolve(null);
 
     async reload(): Promise<void> {
         const prevCount = this.keys.length;
@@ -150,7 +151,7 @@ export class KeyRegistry {
         if (this.keys.length > 0) {
             try {
                 // DEXIE_IDENTITY: log identity on every reload peek
-                await logDexieIdentityWithCount('KeyRegistry.reload:peek', dexieDb);
+                await logDexieIdentityWithCount('KeyRegistry.reload:peek', getDexieDb());
                 const dexieKeys = await this.deps.keyStore.listKeys();
                 if (dexieKeys.length === 0) {
                     LOGGER.warn(
@@ -178,7 +179,7 @@ export class KeyRegistry {
         try {
             // DEXIE_IDENTITY: verify KeyRegistry sees the same Dexie instance as
             // the hydration layer. Throws [DEXIE MISMATCH] on split.
-            const verifiedInstance = verifyDexieInstance('KeyRegistry.loadKeys', dexieDb);
+            const verifiedInstance = verifyDexieInstance('KeyRegistry.loadKeys', getDexieDb());
             await logDexieIdentityWithCount('KeyRegistry.loadKeys', verifiedInstance);
             // ── Bootstrap snapshot fast path ─────────────────────────────
             // During bootstrap phase, the snapshot is the ONLY source. We do not
@@ -412,7 +413,7 @@ export class KeyRegistry {
     }
 
     /**
-     * Force-resync from dexieDb.apiKeys. Used as a safety net when the registry
+     * Force-resync from getDexieDb().apiKeys. Used as a safety net when the registry
      * ends up empty but Dexie has data (e.g. race during init or stub keyStore).
      * Uses `force: true` because this is the explicit recovery path.
      */
@@ -423,7 +424,7 @@ export class KeyRegistry {
             // DEXIE_IDENTITY: verify same instance.
             const verifiedInstance = verifyDexieInstance(
                 'KeyRegistry.forceResyncFromDexie',
-                dexieDb,
+                getDexieDb(),
             );
             await logDexieIdentityWithCount('KeyRegistry.forceResyncFromDexie', verifiedInstance);
 
@@ -513,6 +514,11 @@ export class KeyRegistry {
     }
 
     async addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey | null> {
+        // HIGH-K3: Serialize via promise chain to prevent race conditions on duplicate check
+        return (this.addKeyLock = this.addKeyLock.then(() => this._addKey(data)));
+    }
+
+    private async _addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey | null> {
         // D-25: Validate non-empty, non-whitespace-only key before any processing
         const trimmedKey = data.key.trim();
         if (!trimmedKey) {
@@ -622,16 +628,16 @@ export class KeyRegistry {
     }
 
     pushHistory(keyId: string, action: KeyHistoryEntry['action'], detail: string): void {
-        const key = this.getKey(keyId);
-        if (!key) return;
-        if (!key.history) key.history = [];
-        key.history.push({
-            id: crypto.randomUUID(),
-            timestamp: Date.now(),
-            action,
-            detail,
+        this.modifyKey(keyId, (key) => {
+            if (!key.history) key.history = [];
+            key.history.push({
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                action,
+                detail,
+            });
+            if (key.history.length > 100) key.history = key.history.slice(-99);
         });
-        if (key.history.length > 100) key.history = key.history.slice(-99);
     }
 
     replaceKeys(newKeys: ApiKey[]): void {
@@ -640,7 +646,7 @@ export class KeyRegistry {
 
     /**
      * Wipe in-memory cache. Used by the canonical reset pipeline; the next
-     * `loadKeys()` call re-hydrates from dexieDb.apiKeys. This is the ONLY
+     * `loadKeys()` call re-hydrates from getDexieDb().apiKeys. This is the ONLY
      * way an empty overwrite is permitted.
      */
     clearKeys(): void {
@@ -665,10 +671,7 @@ export class KeyRegistry {
         const data = encoder.encode(key);
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray
-            .map((b) => b.toString(16).padStart(2, '0'))
-            .join('')
-            .slice(0, 16);
+        return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
     }
 
     private setKeysInternal(
@@ -708,21 +711,18 @@ export class KeyRegistry {
     }
 
     modifyKey(id: string, fn: (key: ApiKey) => void): void {
-        const key = this.getKey(id);
-        if (key) {
-            fn(key);
-            this.setKeysInternal('modifyKey', [...this.keys]);
-        }
+        const idx = this.#keyMap.get(id);
+        if (idx === undefined) return;
+        const clone = structuredClone(this.keys[idx]);
+        fn(clone);
+        this.keys[idx] = clone;
+        this.setKeysInternal('modifyKey', [...this.keys]);
     }
 
     async importKeys(jsonData: string): Promise<number> {
-        let imported: unknown[];
-        try {
-            imported = safeJsonParse(jsonData);
-        } catch {
-            throw new Error('Invalid JSON data');
-        }
-        if (!Array.isArray(imported)) throw new Error('Invalid data format');
+        const result = safeJsonParse(jsonData);
+        if (!result || !Array.isArray(result)) throw new Error('Invalid JSON data');
+        const imported: unknown[] = result as unknown[];
         let count = 0;
         const now = Date.now();
         const newKeys = [...this.keys];
@@ -768,21 +768,29 @@ export class KeyRegistry {
     }
 
     async exportKeys(encryptFn: (plaintext: string) => Promise<string | null>): Promise<string> {
-        // D-20: Collect failed keys and throw if any encryption fails — no silent data loss
         const failedKeys: string[] = [];
+        const isVaultLocked = this.deps.vault.isLocked();
         const exportData = await Promise.all(
             this.keys.map(async (k) => {
                 let keyVal = k.key;
                 let isEnc = k.isEncrypted;
-                if (!this.deps.vault.isLocked() && k.key && !k.isEncrypted) {
-                    const encrypted = await encryptFn(k.key);
-                    if (encrypted) {
-                        keyVal = encrypted;
+
+                if (k.key && !k.isEncrypted) {
+                    if (isVaultLocked) {
+                        // HIGH-K5: Refuse to export plaintext when vault locked
+                        failedKeys.push(k.label || k.id);
+                        keyVal = '';
                         isEnc = true;
                     } else {
-                        // D-20: Track failed keys instead of silently replacing with placeholder
-                        failedKeys.push(k.label || k.id);
-                        isEnc = true;
+                        const encrypted = await encryptFn(k.key);
+                        if (encrypted) {
+                            keyVal = encrypted;
+                            isEnc = true;
+                        } else {
+                            failedKeys.push(k.label || k.id);
+                            keyVal = '';
+                            isEnc = true;
+                        }
                     }
                 }
                 return {
@@ -802,7 +810,6 @@ export class KeyRegistry {
                 };
             }),
         );
-        // D-20: Fail entirely if any key failed to encrypt — no silent corruption
         if (failedKeys.length > 0) {
             throw new Error(
                 `Export failed: encryption error for key(s): ${failedKeys.join(', ')}. ` +
@@ -826,19 +833,19 @@ export class KeyRegistry {
             type,
             author,
         };
-        const key = this.getKey(keyId);
-        if (key) {
+        this.modifyKey(keyId, (key) => {
             key.notes = [...(key.notes || []), note];
-        }
+        });
         await this.saveKeys();
         return note;
     }
 
     async removeNote(keyId: string, noteId: string): Promise<void> {
-        const key = this.getKey(keyId);
-        if (key?.notes) {
-            key.notes = key.notes.filter((n) => n.id !== noteId);
-        }
+        this.modifyKey(keyId, (key) => {
+            if (key.notes) {
+                key.notes = key.notes.filter((n) => n.id !== noteId);
+            }
+        });
         await this.saveKeys();
     }
 

@@ -211,19 +211,3 @@ export class ChatBookmarksService {
         return Array.from(set).sort();
     }
 }
-
-let _instance: ChatBookmarksService | null = null;
-
-export function getChatBookmarksService(deps?: ChatBookmarksServiceDeps): ChatBookmarksService {
-    if (!_instance && deps) {
-        _instance = new ChatBookmarksService(deps);
-    }
-    if (!_instance) {
-        throw new Error('ChatBookmarksService not initialized');
-    }
-    return _instance;
-}
-
-export function resetChatBookmarksService(): void {
-    _instance = null;
-}

@@ -114,13 +114,6 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         return this.updateAndGetState();
     }
 
-    /**
-     * @deprecated Use peekState() for passive reading or getState() for active transition-aware reading.
-     */
-    checkAndGetState(): CircuitState {
-        return this.updateAndGetState();
-    }
-
     forceReset(): void {
         this.reset();
     }

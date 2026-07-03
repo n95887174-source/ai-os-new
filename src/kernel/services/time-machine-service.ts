@@ -1,7 +1,6 @@
 import type { ITimeMachineService, TimeSnapshot, SnapshotScope } from '../contracts/time-machine';
 
-let _idCounter = 0;
-const genId = () => `snap-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
 
 export class TimeMachineService implements ITimeMachineService {
     private snapshots: TimeSnapshot[] = [

@@ -25,11 +25,22 @@ function toGeminiParameters(
     schema: GeminiSchema | undefined,
 ): GeminiFunctionDeclaration['parameters'] | undefined {
     if (!schema) return undefined;
-    return {
-        type: schema.type ?? 'OBJECT',
-        properties: schema.properties as Record<string, unknown> | undefined,
-        required: schema.required,
-    };
+    const props: Record<string, unknown> = {};
+    if (schema.properties) {
+        for (const [key, val] of Object.entries(schema.properties)) {
+            const prop: Record<string, unknown> = { type: val.type };
+            if (val.description) prop.description = val.description;
+            if (val.properties) {
+                const nested = toGeminiParameters(val);
+                if (nested) prop.properties = nested.properties;
+            }
+            if (val.items) prop.items = val.items;
+            if (val.enum) prop.enum = val.enum;
+            if (val.required) prop.required = val.required;
+            props[key] = prop;
+        }
+    }
+    return { type: schema.type ?? 'OBJECT', properties: props, required: schema.required };
 }
 
 function isOpenAISchema(value: unknown): value is OpenAISchema {
@@ -38,10 +49,12 @@ function isOpenAISchema(value: unknown): value is OpenAISchema {
 
 function transformOpenAiSchemaToGemini(schema: OpenAISchema): GeminiSchema {
     if (!schema) return schema;
-    const result: GeminiSchema = { ...schema };
+    const result: GeminiSchema = {};
     if (typeof schema.type === 'string') {
-        result.type = schema.type.toUpperCase();
+        const types = schema.type.split(',').map((t) => t.trim().toUpperCase());
+        result.type = types.find((t) => t !== 'NULL') || 'STRING';
     }
+    if (schema.description) result.description = schema.description;
     if (schema.properties) {
         result.properties = {};
         for (const key of Object.keys(schema.properties)) {
@@ -51,6 +64,8 @@ function transformOpenAiSchemaToGemini(schema: OpenAISchema): GeminiSchema {
     if (schema.items) {
         result.items = transformOpenAiSchemaToGemini(schema.items);
     }
+    if (schema.required) result.required = schema.required;
+    if (schema.enum) result.enum = schema.enum;
     return result;
 }
 
@@ -138,22 +153,7 @@ export class GeminiRequestBuilder {
 
         const body: GeminiRequestBody = { contents };
         if (systemParts.length > 0) {
-            // streamGenerateContent rejects systemInstruction for some models,
-            // so merge system prompt into first user message (avoids consecutive user turns which Gemini rejects)
-            const firstUserIdx = contents.findIndex((c) => c.role === 'user');
-            if (firstUserIdx >= 0) {
-                const firstUserMsg = contents[firstUserIdx];
-                const systemText = systemParts.map((p) => p.text).join('\n');
-                // C-02: Prepend system text as a new part instead of replacing ALL parts.
-                // The old code discarded functionResponse/tool-call parts, breaking multi-turn
-                // tool-calling conversations with system prompts on Gemini.
-                contents[firstUserIdx] = {
-                    ...firstUserMsg,
-                    parts: [{ text: systemText }, ...firstUserMsg.parts],
-                };
-            } else {
-                contents.unshift({ role: 'user', parts: systemParts });
-            }
+            body.systemInstruction = { parts: systemParts };
         }
 
         if (config) {

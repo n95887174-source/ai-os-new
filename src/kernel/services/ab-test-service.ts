@@ -1,4 +1,3 @@
-import { BucketStorageAdapter } from './storage-adapter';
 import type {
     ABTestRequest,
     ABTestResult,
@@ -121,8 +120,8 @@ export async function runABTest(request: ABTestRequest): Promise<ABTestResult> {
     };
 
     // Persist
-    const store = BucketStorageAdapter.UI;
-    const existing = (await store.get<ABTestHistory[]>(STORAGE_KEY)) || [];
+    const { database } = await import('../instances');
+    const existing = (await database.getKv<ABTestHistory[]>(STORAGE_KEY)) || [];
     const entry: ABTestHistory = {
         id: uid(),
         timestamp: result.timestamp,
@@ -145,13 +144,13 @@ export async function runABTest(request: ABTestRequest): Promise<ABTestResult> {
                   : 'tie',
     };
     existing.push(entry);
-    await store.set(STORAGE_KEY, existing.slice(-MAX_HISTORY));
+    await database.setKv(STORAGE_KEY, existing.slice(-MAX_HISTORY));
 
     return result;
 }
 
 export async function getABTestHistory(): Promise<ABTestHistory[]> {
-    const store = BucketStorageAdapter.UI;
-    const existing = (await store.get<ABTestHistory[]>(STORAGE_KEY)) || [];
+    const { database } = await import('../instances');
+    const existing = (await database.getKv<ABTestHistory[]>(STORAGE_KEY)) || [];
     return existing.reverse();
 }

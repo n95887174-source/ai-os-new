@@ -7,310 +7,343 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import { eventBus as defaultEventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
-import { BucketStorageAdapter } from './storage-adapter';
-
 const LOGGER = rootLogger.child('AgentAutoTrigger');
 
 export interface TriggerRule {
-  id: string;
-  name: string;
-  event: string; // EventBus event name
-  agentId: string;
-  agentConfig: {
-    name?: string;
-    roleId?: string;
-    tools?: string[];
-  };
-  conditions?: {
-    field: string;
-    operator: 'eq' | 'neq' | 'contains' | 'gt' | 'lt';
-    value: string | number;
-  }[];
-  enabled: boolean;
-  cooldownMs: number;
-  lastTriggered: number;
+    id: string;
+    name: string;
+    event: string; // EventBus event name
+    agentId: string;
+    agentConfig: {
+        name?: string;
+        roleId?: string;
+        tools?: string[];
+    };
+    conditions?: {
+        field: string;
+        operator: 'eq' | 'neq' | 'contains' | 'gt' | 'lt';
+        value: string | number;
+    }[];
+    enabled: boolean;
+    cooldownMs: number;
+    lastTriggered: number;
 }
 
 export interface TriggerHistory {
-  ruleId: string;
-  triggeredAt: number;
-  event: string;
-  agentSpawned: string;
-  success: boolean;
-  error?: string;
+    ruleId: string;
+    triggeredAt: number;
+    event: string;
+    agentSpawned: string;
+    success: boolean;
+    error?: string;
 }
 
 class AgentAutoTriggerService {
-  private storage: BucketStorageAdapter;
-  private rules: Map<string, TriggerRule> = new Map();
-  private history: TriggerHistory[] = [];
-  private listeners: Map<string, () => void> = new Map();
-  private triggerLocks = new Set<string>();
-  private eventBus: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void };
-
-  constructor(eventBus?: { on: (event: string, cb: (...args: unknown[]) => void) => () => void; off: (event: string, cb: (...args: unknown[]) => void) => void; emit: (event: string, data?: unknown) => void }) {
-    this.storage = BucketStorageAdapter.AGENTS;
-    this.eventBus = eventBus || defaultEventBus as typeof this.eventBus;
-  }
-
-  private _initialized = false;
-
-  async init(): Promise<void> {
-    if (this._initialized) return;
-    this._initialized = true;
-    const saved = await this.storage.get<{
-      rules: [string, TriggerRule][];
-      history: TriggerHistory[];
-    }>('data');
-
-    if (saved) {
-      for (const [id, rule] of saved.rules || []) {
-        this.rules.set(id, rule);
-      }
-      this.history = saved.history || [];
-    }
-
-    // Register listeners for all rules
-    this.registerEventListeners();
-
-    LOGGER.info('AgentAutoTrigger', `Initialized with ${this.rules.size} rules`);
-  }
-
-  /**
-   * Create trigger rule
-   */
-  async createRule(data: Omit<TriggerRule, 'id' | 'lastTriggered'>): Promise<TriggerRule> {
-    const id = genId('trigger');
-    const rule: TriggerRule = {
-      ...data,
-      id,
-      lastTriggered: 0,
+    private rules: Map<string, TriggerRule> = new Map();
+    private history: TriggerHistory[] = [];
+    private listeners: Map<string, () => void> = new Map();
+    private triggerLocks = new Set<string>();
+    private eventBus: {
+        on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+        off: (event: string, cb: (...args: unknown[]) => void) => void;
+        emit: (event: string, data?: unknown) => void;
     };
-
-    this.rules.set(id, rule);
-    this.registerEventListener(rule);
-    await this.save();
-
-    this.eventBus.emit(EVENTS.AGENT_TRIGGER_CREATED, rule);
-    LOGGER.info('AgentAutoTrigger', 'Rule created', { id, name: data.name, event: data.event });
-
-    return rule;
-  }
-
-  /**
-   * Update trigger rule
-   */
-  async updateRule(id: string, data: Partial<TriggerRule>): Promise<TriggerRule | null> {
-    const existing = this.rules.get(id);
-    if (!existing) return null;
-
-    const updated = { ...existing, ...data, id };
-    this.rules.set(id, updated);
-    
-    // Re-register listener if event changed
-    if (data.event && data.event !== existing.event) {
-      this.unregisterEventListener(id);
-      this.registerEventListener(updated);
+    private async db(): Promise<import('../types/interfaces').IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
     }
 
-    await this.save();
-    return updated;
-  }
-
-  /**
-   * Delete trigger rule
-   */
-  async deleteRule(id: string): Promise<boolean> {
-    const deleted = this.rules.delete(id);
-    if (deleted) {
-      this.unregisterEventListener(id);
-      await this.save();
-    }
-    return deleted;
-  }
-
-  /**
-   * Enable/disable rule
-   */
-  async toggleRule(id: string, enabled: boolean): Promise<boolean> {
-    const rule = this.rules.get(id);
-    if (!rule) return false;
-
-    rule.enabled = enabled;
-    await this.save();
-    LOGGER.info('AgentAutoTrigger', `Rule ${enabled ? 'enabled' : 'disabled'}`, { id });
-    return true;
-  }
-
-  /**
-   * Get all rules
-   */
-  getRules(): TriggerRule[] {
-    return Array.from(this.rules.values());
-  }
-
-  /**
-   * Get active rules
-   */
-  getActiveRules(): TriggerRule[] {
-    return this.getRules().filter(r => r.enabled);
-  }
-
-  /**
-   * Get trigger history
-   */
-  getHistory(limit = 100): TriggerHistory[] {
-    return this.history.slice(-limit).reverse();
-  }
-
-  /**
-   * Test trigger manually
-   */
-  async testTrigger(ruleId: string, eventData: Record<string, unknown>): Promise<boolean> {
-    const rule = this.rules.get(ruleId);
-    if (!rule) return false;
-
-    return this.evaluateAndTrigger(rule, eventData, true);
-  }
-
-  private registerEventListeners(): void {
-    for (const rule of this.rules.values()) {
-      this.registerEventListener(rule);
-    }
-  }
-
-  private registerEventListener(rule: TriggerRule): void {
-    if (this.listeners.has(rule.id)) return;
-
-    const listener = (data: unknown) => {
-      const current = this.rules.get(rule.id);
-      if (!current || !current.enabled) return;
-      this.evaluateAndTrigger(current, data as Record<string, unknown>);
-    };
-
-    this.eventBus.on(rule.event, listener);
-    this.listeners.set(rule.id, () => this.eventBus.off(rule.event, listener));
-  }
-
-  private unregisterEventListener(ruleId: string): void {
-    const unsub = this.listeners.get(ruleId);
-    if (unsub) {
-      unsub();
-      this.listeners.delete(ruleId);
-    }
-  }
-
-  private async evaluateAndTrigger(rule: TriggerRule, eventData: Record<string, unknown>, isTest = false): Promise<boolean> {
-    // Check cooldown
-    const now = Date.now();
-    if (!isTest && now - rule.lastTriggered < rule.cooldownMs) {
-      LOGGER.debug('AgentAutoTrigger', 'Cooldown active', { ruleId: rule.id });
-      return false;
+    constructor(eventBus?: {
+        on: (event: string, cb: (...args: unknown[]) => void) => () => void;
+        off: (event: string, cb: (...args: unknown[]) => void) => void;
+        emit: (event: string, data?: unknown) => void;
+    }) {
+        this.eventBus = eventBus || (defaultEventBus as typeof this.eventBus);
     }
 
-    // AR9-02: Per-rule trigger lock prevents concurrent duplicate spawns
-    if (this.triggerLocks.has(rule.id)) {
-      LOGGER.debug('AgentAutoTrigger', 'Trigger already in progress', { ruleId: rule.id });
-      return false;
-    }
-    this.triggerLocks.add(rule.id);
+    private _initialized = false;
 
-    // Evaluate conditions
-    if (rule.conditions && rule.conditions.length > 0) {
-      for (const condition of rule.conditions) {
-        const value = this.getNestedValue(eventData, condition.field);
-        if (!this.evaluateCondition(value, condition.operator, condition.value)) {
-          this.triggerLocks.delete(rule.id);
-          return false;
+    async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
+        const saved = await (
+            await this.db()
+        ).getKv<{
+            rules: [string, TriggerRule][];
+            history: TriggerHistory[];
+        }>('auto_trigger_data');
+
+        if (saved) {
+            for (const [id, rule] of saved.rules || []) {
+                this.rules.set(id, rule);
+            }
+            this.history = saved.history || [];
         }
-      }
+
+        // Register listeners for all rules
+        this.registerEventListeners();
+
+        LOGGER.info('AgentAutoTrigger', `Initialized with ${this.rules.size} rules`);
     }
 
-    // Trigger agent spawn
-    try {
-      // This would call AgentService.spawnAgent in real implementation
-      const agentSpawned = `auto-agent-${Date.now()}`;
+    /**
+     * Create trigger rule
+     */
+    async createRule(data: Omit<TriggerRule, 'id' | 'lastTriggered'>): Promise<TriggerRule> {
+        const id = genId('trigger');
+        const rule: TriggerRule = {
+            ...data,
+            id,
+            lastTriggered: 0,
+        };
 
-      rule.lastTriggered = now;
+        this.rules.set(id, rule);
+        this.registerEventListener(rule);
+        await this.save();
 
-      const historyEntry: TriggerHistory = {
-        ruleId: rule.id,
-        triggeredAt: now,
-        event: rule.event,
-        agentSpawned,
-        success: true,
-      };
+        this.eventBus.emit(EVENTS.AGENT_TRIGGER_CREATED, rule);
+        LOGGER.info('AgentAutoTrigger', 'Rule created', { id, name: data.name, event: data.event });
 
-      this.history.push(historyEntry);
-      // AR9-01: Trim in-memory history
-      if (this.history.length > 1000) this.history = this.history.slice(-1000);
-      await this.save();
-
-      this.eventBus.emit(EVENTS.AGENT_TRIGGER_FIRED, {
-        ruleId: rule.id,
-        agentSpawned,
-        event: rule.event,
-      });
-
-      LOGGER.info('AgentAutoTrigger', 'Trigger fired', {
-        ruleId: rule.id,
-        event: rule.event,
-        agentSpawned,
-      });
-
-      return true;
-    } catch (error) {
-      const historyEntry: TriggerHistory = {
-        ruleId: rule.id,
-        triggeredAt: now,
-        event: rule.event,
-        agentSpawned: '',
-        success: false,
-        error: String(error),
-      };
-
-      this.history.push(historyEntry);
-      if (this.history.length > 1000) this.history = this.history.slice(-1000);
-      await this.save();
-
-      LOGGER.error('AgentAutoTrigger', 'Trigger failed', { ruleId: rule.id, error });
-      return false;
-    } finally {
-      this.triggerLocks.delete(rule.id);
+        return rule;
     }
-  }
 
-  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-    return path.split('.').reduce((acc: unknown, key: string) => 
-      acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[key] : undefined, obj);
-  }
+    /**
+     * Update trigger rule
+     */
+    async updateRule(id: string, data: Partial<TriggerRule>): Promise<TriggerRule | null> {
+        const existing = this.rules.get(id);
+        if (!existing) return null;
 
-  private evaluateCondition(value: unknown, operator: NonNullable<TriggerRule['conditions']>[0]['operator'], target: string | number): boolean {
-    switch (operator) {
-      case 'eq': return value === target;
-      case 'neq': return value !== target;
-      case 'contains': return String(value).includes(String(target));
-      case 'gt': return Number(value) > Number(target);
-      case 'lt': return Number(value) < Number(target);
-      default: return false;
+        const updated = { ...existing, ...data, id };
+        this.rules.set(id, updated);
+
+        // Re-register listener if event changed
+        if (data.event && data.event !== existing.event) {
+            this.unregisterEventListener(id);
+            this.registerEventListener(updated);
+        }
+
+        await this.save();
+        return updated;
     }
-  }
 
-  private async save(): Promise<void> {
-    await this.storage.set('data', {
-      rules: Array.from(this.rules.entries()),
-      history: this.history.slice(-1000),
-    });
-  }
+    /**
+     * Delete trigger rule
+     */
+    async deleteRule(id: string): Promise<boolean> {
+        const deleted = this.rules.delete(id);
+        if (deleted) {
+            this.unregisterEventListener(id);
+            await this.save();
+        }
+        return deleted;
+    }
 
-  destroy(): void {
-    for (const [, unsub] of this.listeners) unsub();
-    this.listeners.clear();
-    this.rules.clear();
-    this.history = [];
-    this.triggerLocks.clear();
-    this._initialized = false;
-  }
+    /**
+     * Enable/disable rule
+     */
+    async toggleRule(id: string, enabled: boolean): Promise<boolean> {
+        const rule = this.rules.get(id);
+        if (!rule) return false;
+
+        rule.enabled = enabled;
+        await this.save();
+        LOGGER.info('AgentAutoTrigger', `Rule ${enabled ? 'enabled' : 'disabled'}`, { id });
+        return true;
+    }
+
+    /**
+     * Get all rules
+     */
+    getRules(): TriggerRule[] {
+        return Array.from(this.rules.values());
+    }
+
+    /**
+     * Get active rules
+     */
+    getActiveRules(): TriggerRule[] {
+        return this.getRules().filter((r) => r.enabled);
+    }
+
+    /**
+     * Get trigger history
+     */
+    getHistory(limit = 100): TriggerHistory[] {
+        return this.history.slice(-limit).reverse();
+    }
+
+    /**
+     * Test trigger manually
+     */
+    async testTrigger(ruleId: string, eventData: Record<string, unknown>): Promise<boolean> {
+        const rule = this.rules.get(ruleId);
+        if (!rule) return false;
+
+        return this.evaluateAndTrigger(rule, eventData, true);
+    }
+
+    private registerEventListeners(): void {
+        for (const rule of this.rules.values()) {
+            this.registerEventListener(rule);
+        }
+    }
+
+    private registerEventListener(rule: TriggerRule): void {
+        if (this.listeners.has(rule.id)) return;
+
+        const listener = (data: unknown) => {
+            const current = this.rules.get(rule.id);
+            if (!current || !current.enabled) return;
+            this.evaluateAndTrigger(current, data as Record<string, unknown>);
+        };
+
+        this.eventBus.on(rule.event, listener);
+        this.listeners.set(rule.id, () => this.eventBus.off(rule.event, listener));
+    }
+
+    private unregisterEventListener(ruleId: string): void {
+        const unsub = this.listeners.get(ruleId);
+        if (unsub) {
+            unsub();
+            this.listeners.delete(ruleId);
+        }
+    }
+
+    private async evaluateAndTrigger(
+        rule: TriggerRule,
+        eventData: Record<string, unknown>,
+        isTest = false,
+    ): Promise<boolean> {
+        // Check cooldown
+        const now = Date.now();
+        if (!isTest && now - rule.lastTriggered < rule.cooldownMs) {
+            LOGGER.debug('AgentAutoTrigger', 'Cooldown active', { ruleId: rule.id });
+            return false;
+        }
+
+        // AR9-02: Per-rule trigger lock prevents concurrent duplicate spawns
+        if (this.triggerLocks.has(rule.id)) {
+            LOGGER.debug('AgentAutoTrigger', 'Trigger already in progress', { ruleId: rule.id });
+            return false;
+        }
+        this.triggerLocks.add(rule.id);
+
+        // Evaluate conditions
+        if (rule.conditions && rule.conditions.length > 0) {
+            for (const condition of rule.conditions) {
+                const value = this.getNestedValue(eventData, condition.field);
+                if (!this.evaluateCondition(value, condition.operator, condition.value)) {
+                    this.triggerLocks.delete(rule.id);
+                    return false;
+                }
+            }
+        }
+
+        // Trigger agent spawn
+        try {
+            // This would call AgentService.spawnAgent in real implementation
+            const agentSpawned = `auto-agent-${Date.now()}`;
+
+            rule.lastTriggered = now;
+
+            const historyEntry: TriggerHistory = {
+                ruleId: rule.id,
+                triggeredAt: now,
+                event: rule.event,
+                agentSpawned,
+                success: true,
+            };
+
+            this.history.push(historyEntry);
+            // AR9-01: Trim in-memory history
+            if (this.history.length > 1000) this.history = this.history.slice(-1000);
+            await this.save();
+
+            this.eventBus.emit(EVENTS.AGENT_TRIGGER_FIRED, {
+                ruleId: rule.id,
+                agentSpawned,
+                event: rule.event,
+            });
+
+            LOGGER.info('AgentAutoTrigger', 'Trigger fired', {
+                ruleId: rule.id,
+                event: rule.event,
+                agentSpawned,
+            });
+
+            return true;
+        } catch (error) {
+            const historyEntry: TriggerHistory = {
+                ruleId: rule.id,
+                triggeredAt: now,
+                event: rule.event,
+                agentSpawned: '',
+                success: false,
+                error: String(error),
+            };
+
+            this.history.push(historyEntry);
+            if (this.history.length > 1000) this.history = this.history.slice(-1000);
+            await this.save();
+
+            LOGGER.error('AgentAutoTrigger', 'Trigger failed', { ruleId: rule.id, error });
+            return false;
+        } finally {
+            this.triggerLocks.delete(rule.id);
+        }
+    }
+
+    private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+        return path
+            .split('.')
+            .reduce(
+                (acc: unknown, key: string) =>
+                    acc && typeof acc === 'object'
+                        ? (acc as Record<string, unknown>)[key]
+                        : undefined,
+                obj,
+            );
+    }
+
+    private evaluateCondition(
+        value: unknown,
+        operator: NonNullable<TriggerRule['conditions']>[0]['operator'],
+        target: string | number,
+    ): boolean {
+        switch (operator) {
+            case 'eq':
+                return value === target;
+            case 'neq':
+                return value !== target;
+            case 'contains':
+                return String(value).includes(String(target));
+            case 'gt':
+                return Number(value) > Number(target);
+            case 'lt':
+                return Number(value) < Number(target);
+            default:
+                return false;
+        }
+    }
+
+    private async save(): Promise<void> {
+        await (
+            await this.db()
+        ).setKv('auto_trigger_data', {
+            rules: Array.from(this.rules.entries()),
+            history: this.history.slice(-1000),
+        });
+    }
+
+    destroy(): void {
+        for (const [, unsub] of this.listeners) unsub();
+        this.listeners.clear();
+        this.rules.clear();
+        this.history = [];
+        this.triggerLocks.clear();
+        this._initialized = false;
+    }
 }
 
 // Singleton

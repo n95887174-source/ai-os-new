@@ -281,6 +281,8 @@ const en = {
     'research_engine.question_placeholder': 'Enter your research question...',
     'research_engine.empty': 'No research sessions yet',
     'research_engine.empty_desc': 'Start a new session to begin the epistemic loop.',
+    'research_engine.sources': 'sources',
+    'research_engine.available_sources': 'Available Sources',
 
     // ── Phase Delta ─────────────────────────────────────────────────
     'nav.tutorials': 'Tutorials',
@@ -313,6 +315,7 @@ const en = {
 
     // ── P3 Modules ──────────────────────────────────────────────────
     'nav.persona_marketplace': 'Persona Marketplace',
+    'nav.persona_picker': 'Persona Library',
     'nav.template_sharing': 'Template Sharing',
     'nav.memory_export_import': 'Memory Export/Import',
     'nav.aquarium_trading': 'Aquarium Trading',

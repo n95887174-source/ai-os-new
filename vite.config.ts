@@ -96,7 +96,8 @@ export default defineConfig({
             'Content-Security-Policy':
                 "default-src 'self'; " +
                 "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
-                "style-src 'self' 'unsafe-inline'; " +
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+                "font-src 'self' data: https://fonts.gstatic.com; " +
                 "connect-src 'self' https://api.allorigins.win https://generativelanguage.googleapis.com https://openrouter.ai https://integrate.api.nvidia.com https://api.groq.com https://api.cerebras.ai https://api.cloudflare.com https://api.openai.com; " +
                 "worker-src 'self' blob:; " +
                 "img-src 'self' data: blob:;",

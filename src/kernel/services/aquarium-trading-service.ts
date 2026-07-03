@@ -1,7 +1,6 @@
 import type { IAquariumTradingService, TradeOffer } from '../contracts/aquarium-trading';
 
-let _idCounter = 0;
-const genId = () => `trade-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
 
 const CREATURES = [
     { id: 'c1', name: 'Golden Koi', rarity: 'Legendary' },

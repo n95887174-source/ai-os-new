@@ -299,7 +299,7 @@ const SERVICE_FILE_MAP: Record<string, string> = {
     policyService: 'src/kernel/services/policy-service.ts',
     roleService: 'src/kernel/services/role-service.ts',
     snapshotService: 'src/kernel/services/snapshot-service.ts',
-    debateService: 'src/kernel/services/debate-service.ts',
+    debateService: 'src/kernel/services/debate-runtime/debate-service.ts',
     metricsService: 'src/kernel/services/metrics-service.ts',
     advisorService: 'src/kernel/services/advisor-service.ts',
     pricingService: 'src/kernel/services/pricing-service.ts',

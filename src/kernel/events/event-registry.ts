@@ -1079,6 +1079,65 @@ export const EVENT_REGISTRY = {
     ROLE_SANDBOX_TEST_FAILED: event('role:sandbox-test:failed', z.unknown()),
     ROLE_UPDATED: event('role:updated', z.unknown()),
 
+    // ── Team Events ────────────────────────────────────────────────────────
+    TEAM_CREATED: event(
+        'team:created',
+        z.object({ id: z.string(), name: z.string(), domain: z.string(), memberCount: z.number() }),
+    ),
+    TEAM_UPDATED: event(
+        'team:updated',
+        z.object({ id: z.string(), name: z.string().optional(), strategy: z.string().optional() }),
+    ),
+    TEAM_DELETED: event('team:deleted', z.object({ id: z.string(), name: z.string() })),
+    TEAM_EXECUTION_STARTED: event(
+        'team:execution:started',
+        z.object({
+            teamId: z.string(),
+            task: z.string(),
+            strategy: z.string(),
+            timestamp: z.number(),
+        }),
+    ),
+    TEAM_EXECUTION_PROGRESS: event(
+        'team:execution:progress',
+        z.object({
+            teamId: z.string(),
+            completedRoles: z.number(),
+            totalRoles: z.number(),
+            currentRole: z.string().optional(),
+        }),
+    ),
+    TEAM_EXECUTION_COMPLETED: event(
+        'team:execution:completed',
+        z.object({
+            teamId: z.string(),
+            duration: z.number(),
+            tokensUsed: z.number(),
+            successRate: z.number(),
+            synthesis: z.string().optional(),
+        }),
+    ),
+    TEAM_EXECUTION_FAILED: event(
+        'team:execution:failed',
+        z.object({
+            teamId: z.string(),
+            error: z.string(),
+            failedRoles: z.array(z.string()).optional(),
+        }),
+    ),
+    TEAM_MEMBER_ADDED: event(
+        'team:member:added',
+        z.object({ teamId: z.string(), roleId: z.string() }),
+    ),
+    TEAM_MEMBER_REMOVED: event(
+        'team:member:removed',
+        z.object({ teamId: z.string(), roleId: z.string() }),
+    ),
+    TEAM_COMPATIBILITY_SCANNED: event(
+        'team:compatibility:scanned',
+        z.object({ teamId: z.string(), synergyCount: z.number(), conflictCount: z.number() }),
+    ),
+
     // ── Scheduler ─────────────────────────────────────────────────────────
     SCHEDULE_COMPLETED: event('schedule:completed', z.unknown()),
     SCHEDULE_CREATED: event('schedule:created', z.unknown()),

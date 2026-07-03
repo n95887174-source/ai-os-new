@@ -7,7 +7,6 @@ import type {
     ResearchSource,
     ResearchClaim,
     ResearchSynthesis,
-    SourceCategory,
     CitationGraph,
     CitationNode,
     CitationLink,
@@ -38,6 +37,9 @@ import type {
 } from '../contracts/research-engine';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
+import { sourceAdapterRegistry } from './research-adapters/source-adapter-registry';
+import type { SourceAdapterConfig } from '../contracts/research-adapter';
+import type { SourceType } from '../contracts/research-engine';
 
 const LOGGER = rootLogger.child('ResearchEngine');
 const MAX_SESSIONS = 50;
@@ -60,7 +62,36 @@ export class ResearchEngineService implements IResearchEngine {
         private deps: {
             eventBus: { emit: (event: string, data?: unknown) => void };
         },
-    ) {}
+    ) {
+        // Source adapter registry is initialized as a singleton
+        // Can be configured via updateSourceConfig()
+    }
+
+    getSourceAdapterRegistry() {
+        return sourceAdapterRegistry;
+    }
+
+    updateSourceConfig(config: Partial<SourceAdapterConfig>): void {
+        sourceAdapterRegistry.updateConfig(config);
+    }
+
+    getEnabledSources(): SourceType[] {
+        return sourceAdapterRegistry.getConfig().enabledSources;
+    }
+
+    getSourceStats(): { total: number; enabled: number; byCategory: Record<string, number> } {
+        const all = sourceAdapterRegistry.getAllAdapters();
+        const enabled = sourceAdapterRegistry.getEnabledAdapters();
+        const byCategory: Record<string, number> = {};
+        for (const a of all) {
+            byCategory[a.category] = (byCategory[a.category] || 0) + 1;
+        }
+        return {
+            total: all.length,
+            enabled: enabled.length,
+            byCategory,
+        };
+    }
 
     async init(): Promise<void> {
         if (this._initialized) return;
@@ -213,10 +244,10 @@ export class ResearchEngineService implements IResearchEngine {
         const nodes: CitationNode[] = allSources.map((s) => ({
             id: s.id,
             title: s.title,
-            authors: ['Unknown'],
-            year: new Date(s.timestamp).getFullYear(),
-            source: s.url,
-            citationsCount: Math.floor(Math.random() * 50),
+            authors: s.authors && s.authors.length > 0 ? s.authors : ['Unknown'],
+            year: s.year ?? new Date(s.timestamp).getFullYear(),
+            source: s.sourceType,
+            citationsCount: s.citationCount ?? Math.floor(Math.random() * 50),
             influenceScore:
                 s.relevanceScore *
                 (allClaims.filter((c) => c.sourceId === s.id).length /
@@ -668,12 +699,12 @@ export class ResearchEngineService implements IResearchEngine {
             const title = source.title || 'Unknown Title';
             const cleanTitle = title.replace(/[^\w\s]/g, '');
             const key = cleanTitle.split(/\s+/).slice(0, 3).join('_').toLowerCase() || 'ref';
-            const year = new Date(source.timestamp).getFullYear();
+            const year = source.year ?? new Date(source.timestamp).getFullYear();
 
             return {
                 id: source.id,
                 source,
-                bibtex: `@misc{${key}_${year},\n  title = {{${title}}},\n  url = {${source.url}},\n  year = {${year}},\n  note = {[${source.category}]}\n}`,
+                bibtex: `@misc{${key}_${year},\n  title = {{${title}}},\n  url = {${source.url}},\n  year = {${year}},\n  note = {[${source.sourceType}]}\n}`,
                 apa: `${title}. (${year}). Retrieved from ${source.url}`,
                 mla: `"${title}." ${source.url}. Accessed ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.`,
                 chicago: `${title}. ${source.url} (accessed ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}).`,
@@ -956,87 +987,31 @@ export class ResearchEngineService implements IResearchEngine {
 
     private async searchSources(query: string): Promise<ResearchSource[]> {
         const sources: ResearchSource[] = [];
-        const categories: SourceCategory[] = ['web', 'academic', 'news'];
 
-        for (const cat of categories) {
-            try {
-                const result = await this.fetchFromCategory(query, cat);
-                sources.push(...result);
-            } catch {
-                LOGGER.warn('ResearchEngine', 'Search failed for category', {
-                    category: cat,
-                    query,
-                });
+        try {
+            const results = await sourceAdapterRegistry.searchAll(query);
+
+            for (const [, adapterSources] of results) {
+                sources.push(...adapterSources);
+            }
+        } catch {
+            LOGGER.warn('ResearchEngine', 'Search failed', { query });
+        }
+
+        // Fallback: if no sources found, try restricted adapters (they return guidance messages)
+        if (sources.length === 0) {
+            const restricted = sourceAdapterRegistry.getAllAdapters().filter((a) => a.isRestricted);
+            for (const adapter of restricted) {
+                try {
+                    const r = await adapter.search(query, sourceAdapterRegistry.getConfig());
+                    sources.push(...r);
+                } catch {
+                    // skip
+                }
             }
         }
 
         return sources.sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 20);
-    }
-
-    private async fetchFromCategory(
-        query: string,
-        category: SourceCategory,
-    ): Promise<ResearchSource[]> {
-        const sources: ResearchSource[] = [];
-        const encodedQuery = encodeURIComponent(query);
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-
-        try {
-            let url: string;
-            switch (category) {
-                case 'web':
-                    url = `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`;
-                    break;
-                case 'academic':
-                case 'news':
-                    url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedQuery}?redirect=true`;
-                    break;
-                default:
-                    return [];
-            }
-
-            const response = await fetch(url, { signal: controller.signal, keepalive: true });
-            if (!response.ok) return [];
-
-            const data = (await response.json()) as Record<string, unknown>;
-
-            if (category === 'web' && data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
-                for (const topic of data.RelatedTopics.slice(0, 8)) {
-                    const t = topic as Record<string, unknown>;
-                    sources.push({
-                        id: genId('src'),
-                        title:
-                            typeof t.Text === 'string'
-                                ? t.Text.split(' - ')[0].slice(0, 120)
-                                : 'DuckDuckGo Result',
-                        url: typeof t.FirstURL === 'string' ? t.FirstURL : '',
-                        snippet: typeof t.Text === 'string' ? t.Text.slice(0, 300) : '',
-                        category: 'web',
-                        relevanceScore: 0.5,
-                        timestamp: Date.now(),
-                    });
-                }
-            }
-
-            if ((category === 'academic' || category === 'news') && data.title && data.extract) {
-                sources.push({
-                    id: genId('src'),
-                    title: typeof data.title === 'string' ? data.title : 'Wikipedia',
-                    url: `https://en.wikipedia.org/wiki/${encodedQuery}`,
-                    snippet: typeof data.extract === 'string' ? data.extract.slice(0, 400) : '',
-                    category,
-                    relevanceScore: 0.7,
-                    timestamp: Date.now(),
-                });
-            }
-        } catch {
-            // timeout or network error
-        } finally {
-            clearTimeout(timeout);
-        }
-
-        return sources;
     }
 
     private extractClaims(sources: ResearchSource[], _question: string): ResearchClaim[] {

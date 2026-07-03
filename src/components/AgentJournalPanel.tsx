@@ -37,7 +37,7 @@ void service.init();
 const AgentJournalPanel: React.FC = () => {
     const { t } = useTranslation();
     const { confirm, ConfirmDialog } = useConfirm();
-    const [entries, setEntries] = useState < typeof service.listAll() > [];
+    const [entries, setEntries] = useState<typeof service.listAll()>([]);
     const [search, setSearch] = useState('');
     const [activeTag, setActiveTag] = useState<string | null>(null);
     const [activeAgent, setActiveAgent] = useState<string | null>(null);

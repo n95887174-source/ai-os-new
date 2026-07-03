@@ -47,6 +47,7 @@ import type { IEvalDatasetService } from './contracts/eval-dataset';
 import type { ICustomMetricsService } from './contracts/custom-metrics';
 import type { IUnifiedRoleRegistry } from './contracts/unified-role';
 import type { IEcosystemEngine } from './contracts/ecosystem';
+import type { IRoleTeamService } from './contracts/role-team';
 
 export { FREE_TIER_LIMITS };
 
@@ -123,6 +124,40 @@ export const autoDebateService = lazyService<AutoDebateService>('autoDebateServi
 export const workspaceService = lazyService<WorkspaceService>('workspaceService');
 export const keyStateStore = lazyService<KeyStateStore>('keyStateStore');
 export const probeService = lazyService<ProbeService>('probeService');
+
+// ── Chat Bookmarks Service ───────────────────────────
+import type { ChatBookmarksService as ChatBookmarksServiceType } from './services/chat-bookmarks-service';
+export const chatBookmarksService = lazyService<ChatBookmarksServiceType>('chatBookmarksService');
+
+// ── Agent Journal Service ─────────────────────────────
+import type { AgentJournalService as AgentJournalServiceType } from './services/agent-journal-service';
+export const agentJournalService = lazyService<AgentJournalServiceType>('agentJournalService');
+
+// ── Key Intelligence Pipeline ─────────────────────────
+import { KeyFingerprints } from './services/key-management/key-fingerprints';
+import { KeyIntelligencePipeline } from './services/key-intelligence-pipeline';
+export const fingerprints = new KeyFingerprints();
+export const keyIntelligencePipeline = new KeyIntelligencePipeline({
+    fingerprints,
+    getExistingKeys: () => keyService.getKeys(),
+    verifyKey: async (provider, apiKey) => {
+        const adapter = adapterRegistry.getAdapter(provider);
+        if (!adapter)
+            return { valid: false, latency: 0, models: [], error: `No adapter for ${provider}` };
+        const start = performance.now();
+        try {
+            const models = await adapter.getAvailableModels(apiKey);
+            return { valid: true, latency: Math.round(performance.now() - start), models };
+        } catch (err: unknown) {
+            return {
+                valid: false,
+                latency: Math.round(performance.now() - start),
+                models: [],
+                error: err instanceof Error ? err.message : String(err),
+            };
+        }
+    },
+});
 export const sessionAffinityStore = lazyService<SessionAffinityStore>('sessionAffinityStore');
 export const executionGovernor = lazyService<IExecutionGovernor>('executionGovernor');
 import type { PersonaService as PersonaServiceType } from './services/persona-service';
@@ -324,6 +359,7 @@ export const customMetricsService = lazyService<ICustomMetricsService>('customMe
 
 // ── Unified Role Registry ───────────────────────────────────────
 export const unifiedRoleRegistry = lazyService<IUnifiedRoleRegistry>('unifiedRoleRegistry');
+export const roleTeamService = lazyService<IRoleTeamService>('roleTeamService');
 
 // ── Ecosystem Engine ─────────────────────────────────────────
 export const ecosystemEngine = lazyService<IEcosystemEngine>('ecosystemEngine');

@@ -5,9 +5,8 @@ import type {
     MultimodalAttachment,
 } from '../contracts/voice-input';
 
-let _idCounter = 0;
-const genId = () => `voice-${++_idCounter}-${Date.now()}`;
-const genAttachId = () => `attach-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
+const genAttachId = () => crypto.randomUUID();
 
 export class VoiceInputService implements IVoiceInputService {
     private sessions: VoiceInputSession[] = [];

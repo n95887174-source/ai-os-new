@@ -75,23 +75,31 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
         setModelTestResults(null);
         const results: Record<string, { status: string; latency: number; error?: string }> = {};
         for (const model of models) {
-            if (!isMountedRef.current) break;
-            const reqId = `mmtest-${apiKey.id}-${model.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
             const start = Date.now();
-            results[model] = { status: 'testing', latency: 0 };
-            setModelTestResults({ ...results });
             try {
+                if (!isMountedRef.current) break;
+                const reqId = `mmtest-${apiKey.id}-${model.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
+                results[model] = { status: 'testing', latency: 0 };
+                setModelTestResults({ ...results });
                 await new Promise<void>((resolve, reject) => {
                     const timeout = setTimeout(() => {
-                        cleanup();
+                        try {
+                            cleanup();
+                        } catch {
+                            /* ignore */
+                        }
                         reject(new Error('Timed out'));
                     }, 10000);
                     let done = false;
-                    const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
-                        if (res.requestId === reqId && !done) {
+                    const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
+                        if (res?.requestId === reqId && !done) {
                             done = true;
                             clearTimeout(timeout);
-                            cleanup();
+                            try {
+                                cleanup();
+                            } catch {
+                                /* ignore */
+                            }
                             const lat = Date.now() - start;
                             results[model] =
                                 res.status === 'error'
@@ -101,38 +109,70 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                                           error: res.error || 'Unknown',
                                       }
                                     : { status: 'ok', latency: lat };
-                            setModelTestResults({ ...results });
+                            try {
+                                setModelTestResults({ ...results });
+                            } catch {
+                                /* ignore */
+                            }
                             resolve();
                         }
                     });
-                    const subStreamEnd = eventBus.on(EVENTS.STREAM_END, (res) => {
-                        if (res.requestId === reqId && !done) {
+                    const subStreamEnd = eventBus.on(EVENTS.STREAM_END, (res: any) => {
+                        if (res?.requestId === reqId && !done) {
                             done = true;
                             clearTimeout(timeout);
-                            cleanup();
+                            try {
+                                cleanup();
+                            } catch {
+                                /* ignore */
+                            }
                             results[model] = { status: 'ok', latency: Date.now() - start };
-                            setModelTestResults({ ...results });
+                            try {
+                                setModelTestResults({ ...results });
+                            } catch {
+                                /* ignore */
+                            }
                             resolve();
                         }
                     });
-                    const subErr = eventBus.on(EVENTS.STREAM_ERROR, (res) => {
-                        if (res.requestId === reqId && !done) {
+                    const subErr = eventBus.on(EVENTS.STREAM_ERROR, (res: any) => {
+                        if (res?.requestId === reqId && !done) {
                             done = true;
                             clearTimeout(timeout);
-                            cleanup();
+                            try {
+                                cleanup();
+                            } catch {
+                                /* ignore */
+                            }
                             results[model] = {
                                 status: 'error',
                                 latency: Date.now() - start,
                                 error: res.error || 'Stream error',
                             };
-                            setModelTestResults({ ...results });
+                            try {
+                                setModelTestResults({ ...results });
+                            } catch {
+                                /* ignore */
+                            }
                             resolve();
                         }
                     });
                     const cleanup = () => {
-                        subResp();
-                        subStreamEnd();
-                        subErr();
+                        try {
+                            subResp();
+                        } catch {
+                            /* ignore */
+                        }
+                        try {
+                            subStreamEnd();
+                        } catch {
+                            /* ignore */
+                        }
+                        try {
+                            subErr();
+                        } catch {
+                            /* ignore */
+                        }
                     };
                     eventBus.emit(EVENTS.SEND_MESSAGE, {
                         provider: apiKey.provider,
@@ -144,15 +184,23 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                     });
                 });
             } catch (e: unknown) {
-                results[model] = {
-                    status: 'error',
-                    latency: Date.now() - start,
-                    error: e instanceof Error ? e.message : 'Unknown',
-                };
-                setModelTestResults({ ...results });
+                try {
+                    results[model] = {
+                        status: 'error',
+                        latency: Date.now() - (start || Date.now()),
+                        error: e instanceof Error ? e.message : 'Unknown',
+                    };
+                    setModelTestResults({ ...results });
+                } catch {
+                    /* ignore */
+                }
             }
         }
-        if (isMountedRef.current) setModelTesting(false);
+        try {
+            if (isMountedRef.current) setModelTesting(false);
+        } catch {
+            /* ignore */
+        }
     }, [apiKey]);
 
     const stats = apiKey.stats?.extended;

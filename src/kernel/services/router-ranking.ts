@@ -368,12 +368,11 @@ export class RouterRankingService {
                 }
                 const keyReputationBonus =
                     ((key.stats?.extended?.reputationScore || 100) / 100) * sc.keyReputationBonus;
+                const totalPulls = (key.stats?.successCount || 0) + (key.stats?.errorCount || 0);
                 const explorationBonus =
                     state.totalRequests > 0
                         ? state.explorationFactor *
-                          Math.sqrt(
-                              Math.log(state.totalRequests) / ((key.stats?.successCount || 0) + 1),
-                          )
+                          Math.sqrt(Math.log(state.totalRequests) / Math.max(1, totalPulls))
                         : 0.2;
                 const costPenalty = strategy === 'cost' ? this.getCostPenalty(key, prompt) : 0;
                 const budgetPenalty = this.getBudgetPenalty(providerId);

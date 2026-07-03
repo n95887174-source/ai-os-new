@@ -100,7 +100,7 @@ const AlertLayer: React.FC = () => {
                     `${getStr(d, 'provider')} spike: ${getNum(d, 'latency')}ms`,
                 );
             }),
-            eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_HEALTH_FAILED, (d) => {
+            eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_HEALTH_CHECK_FAILED, (d) => {
                 addToast(
                     'error',
                     'Health Check Failed',
@@ -108,14 +108,17 @@ const AlertLayer: React.FC = () => {
                 );
                 refreshAlerts();
             }),
-            eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_REPUTATION_DOWN, (d) => {
-                addToast(
-                    'warning',
-                    'Reputation Drop',
-                    `${getStr(d, 'provider')} score: ${getNum(d, 'score')}`,
-                );
-                refreshAlerts();
-            }),
+            eventBus.onSafe<Record<string, unknown>>(
+                EVENTS.KEY_REPUTATION_THRESHOLD_CROSSED,
+                (d) => {
+                    addToast(
+                        'warning',
+                        'Reputation Drop',
+                        `${getStr(d, 'provider')} score: ${getNum(d, 'score')}`,
+                    );
+                    refreshAlerts();
+                },
+            ),
             eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_STATE_CHANGED, (d) => {
                 addToast(
                     'info',

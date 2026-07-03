@@ -20,7 +20,7 @@ import {
     SlidersHorizontal,
     RotateCcw,
 } from 'lucide-react';
-import { useRoutingIntelligence } from '../../bridges/useRoutingIntelligence';
+import { useRoutingIntelligence } from '../../hooks/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
 import type { RouterDecision } from '../../kernel/services/provider-router';
 import { useTranslation } from '../../i18n/useTranslation';

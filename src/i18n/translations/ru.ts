@@ -280,6 +280,8 @@ const ru = {
     'research_engine.question_placeholder': 'Введите ваш исследовательский вопрос...',
     'research_engine.empty': 'Нет исследовательских сессий',
     'research_engine.empty_desc': 'Начните новую сессию, чтобы запустить эпистемический цикл.',
+    'research_engine.sources': 'источников',
+    'research_engine.available_sources': 'Доступные источники',
 
     // ── Phase Delta ─────────────────────────────────────────────────
     'nav.tutorials': 'Обучение',
@@ -312,6 +314,7 @@ const ru = {
 
     // ── P3 Modules ──────────────────────────────────────────────────
     'nav.persona_marketplace': 'Маркетплейс Персон',
+    'nav.persona_picker': 'Библиотека Персон',
     'nav.template_sharing': 'Обмен Шаблонами',
     'nav.memory_export_import': 'Экспорт/Импорт Памяти',
     'nav.aquarium_trading': 'Торговля Аквариумом',

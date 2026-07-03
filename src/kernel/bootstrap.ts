@@ -4,7 +4,7 @@ import type { ILifecycle } from './contracts/lifecycle';
 import { LifecycleManager } from './services/lifecycle-manager';
 import { LoggerService } from './services/logger-service';
 import { EVENTS } from './events/event-names';
-import { dexieDb } from './services/database-service';
+import { getDexieDb } from './services/database-service';
 import { AuditorTopology } from './state/topology-defaults';
 import { SystemKernel } from './kernel';
 import { ConfigService } from './services/config-service';
@@ -379,7 +379,15 @@ export class SystemBootstrap implements IBootstrap {
         }
 
         // ── Start all lifecycle services ───────────────────────────────
-        await this.lifecycle.startAll();
+        try {
+            await this.lifecycle.startAll();
+        } catch (e) {
+            this.logger.error('Bootstrap', 'startAll() failed — continuing in degraded mode', {
+                error: e,
+            });
+            console.error('[BOOTSTRAP] startAll() failed — continuing:', e);
+            this.phase = 'degraded';
+        }
 
         // ── Causal Debugger Layer ────────────────────────────────────────
         {
@@ -562,13 +570,22 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.warn('Bootstrap', 'KeyStateStore seed failed (non-critical)', { error: e });
         }
 
+        // ── DebateService.init() — loads active session + registers event listeners ──
+        try {
+            const ds = this.container.get<{ init: () => Promise<void> }>('debateService');
+            await ds.init();
+            this.logger.info('Bootstrap', 'DebateService initialized');
+        } catch (e) {
+            this.logger.warn('Bootstrap', 'DebateService init failed (non-critical)', { error: e });
+        }
+
         // Auto-resume interrupted debates found in Dexie after page reload
         try {
-            const allSessions = await dexieDb.debateSessions.toArray();
+            const allSessions = await getDexieDb().debateSessions.toArray();
             let interruptedCount = 0;
             for (const s of allSessions) {
                 if (RUNNING_DEBATE_PHASES.has(s.phase)) {
-                    await dexieDb.debateSessions.put({
+                    await getDexieDb().debateSessions.put({
                         ...s,
                         phase: 'failed',
                         updatedAt: Date.now(),

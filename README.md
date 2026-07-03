@@ -40,6 +40,7 @@ SuperAgents OS is an event-driven platform for orchestrating distributed intelli
 SuperAgents OS reimagines the browser as an AI operating system. Every component — routing, memory, tool execution, agent orchestration — runs locally in your browser via Web Workers and IndexedDB. No server, no cloud dependency.
 
 **Key principles:**
+
 - **Local-first**: API keys encrypted at rest in IndexedDB, never leave your browser
 - **Event-driven**: All communication flows through a typed EventBus — panels and services are decoupled
 - **Multi-strategy routing**: UCB1 bandit, broadcast, race, cost-optimized, and more
@@ -79,6 +80,7 @@ SuperAgents OS reimagines the browser as an AI operating system. Every component
 ```
 
 The system is built on three design patterns:
+
 1. **Reducer pattern** (like Redux) — `SystemKernel` processes all mutations through a pure `reduce()` function
 2. **Event sourcing** — every action is an event on the `EventBus`; state is derived from event history
 3. **Service-oriented architecture** — each domain has an isolated service with its own persistence
@@ -92,20 +94,22 @@ The system is built on three design patterns:
 Connect any LLM provider through API keys. Keys are encrypted using AES-GCM with PBKDF2-derivated keys and stored in IndexedDB.
 
 **Supported providers:**
-| Provider | Streaming | Health Check | Model Discovery |
-|----------|-----------|-------------|----------------|
-| **Gemini** | ✅ (native SSE) | ✅ | ✅ |
-| **OpenRouter** | ✅ | ✅ | ✅ |
-| **Groq** (via OpenAI-compatible) | ✅ | ✅ | Partial |
-| **NVIDIA NIM** | ✅ | ✅ | ✅ |
-| **OpenAI** | ✅ | ✅ | ✅ |
-| **Cerebras** (via OpenAI-compatible) | ✅ | ✅ | Partial |
-| **Cloudflare** (via OpenAI-compatible) | ✅ | ✅ | Partial |
-| **Azure** (via OpenAI-compatible, user-configured) | ✅ | ✅ | — |
-| **Anthropic** | ❌ not implemented | — | — |
-| **Custom** | Depends | Depends | — |
+
+| Provider                                           | Streaming          | Health Check | Model Discovery |
+| -------------------------------------------------- | ------------------ | ------------ | --------------- |
+| **Gemini**                                         | ✅ (native SSE)    | ✅           | ✅              |
+| **OpenRouter**                                     | ✅                 | ✅           | ✅              |
+| **Groq** (via OpenAI-compatible)                   | ✅                 | ✅           | Partial         |
+| **NVIDIA NIM**                                     | ✅                 | ✅           | ✅              |
+| **OpenAI**                                         | ✅                 | ✅           | ✅              |
+| **Cerebras** (via OpenAI-compatible)               | ✅                 | ✅           | Partial         |
+| **Cloudflare** (via OpenAI-compatible)             | ✅                 | ✅           | Partial         |
+| **Azure** (via OpenAI-compatible, user-configured) | ✅                 | ✅           | —               |
+| **Anthropic**                                      | ❌ not implemented | —            | —               |
+| **Custom**                                         | Depends            | Depends      | —               |
 
 Each provider adapter wraps the vendor API through a decorator chain:
+
 ```
 Request → RateLimiter → CircuitBreaker → Retry → Cache → Adapter
 ```
@@ -122,14 +126,14 @@ Request → RateLimiter → CircuitBreaker → Retry → Cache → Adapter
 
 Define agent personas with system prompts, temperature, and model selection.
 
-| Feature | Status |
-|---------|--------|
-| CRUD roles | ✅ Full |
-| Spawn from template | ✅ 10 presets |
-| Bulk pause/resume | ✅ |
-| Skills registration | ✅ |
-| Topology integration | ✅ |
-| Observability tab | ⏳ Placeholder |
+| Feature              | Status         |
+| -------------------- | -------------- |
+| CRUD roles           | ✅ Full        |
+| Spawn from template  | ✅ 10 presets  |
+| Bulk pause/resume    | ✅             |
+| Skills registration  | ✅             |
+| Topology integration | ✅             |
+| Observability tab    | ⏳ Placeholder |
 
 ### Memory Mesh
 
@@ -145,13 +149,13 @@ Hybrid search combining keyword and semantic retrieval:
 
 Visual workflow builder for creating multi-node cognitive pipelines using React Flow.
 
-| Feature | Status |
-|---------|--------|
-| Visual node editor | ✅ |
-| Deploy to engine | ✅ |
-| Save/Load workflow | ✅ |
-| Drag-and-drop palette | ⏳ |
-| Undo/redo | ⏳ |
+| Feature               | Status |
+| --------------------- | ------ |
+| Visual node editor    | ✅     |
+| Deploy to engine      | ✅     |
+| Save/Load workflow    | ✅     |
+| Drag-and-drop palette | ⏳     |
+| Undo/redo             | ⏳     |
 
 ### Debate Arena
 
@@ -173,33 +177,33 @@ Multi-agent debate system with configurable strategies and comprehensive metrics
 
 ### Telemetry & Monitoring
 
-| Panel | Purpose |
-|-------|---------|
-| **Dashboard** | Aggregate metrics, cost tracking, provider health |
-| **Traces** | Cognitive trace viewer with DecisionGraph and Microscope |
-| **Health** | Per-provider latency, error rates, throughput |
-| **Hive** | Animated topology visualization of active agents |
-| **Analytics** | Historical performance charts |
+| Panel         | Purpose                                                  |
+| ------------- | -------------------------------------------------------- |
+| **Dashboard** | Aggregate metrics, cost tracking, provider health        |
+| **Traces**    | Cognitive trace viewer with DecisionGraph and Microscope |
+| **Health**    | Per-provider latency, error rates, throughput            |
+| **Hive**      | Animated topology visualization of active agents         |
+| **Analytics** | Historical performance charts                            |
 
 ---
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|-----------|
-| **Language** | TypeScript 6.x |
-| **UI Framework** | React 19.x |
-| **Build Tool** | Vite 8.x |
-| **Database** | Dexie.js (IndexedDB wrapper) |
-| **State** | React hooks + EventBus (custom typed event system) |
-| **Workflows** | React Flow (@xyflow/react 12.x) |
-| **Search** | Orama (BM25) + Transformers.js (embeddings) |
-| **Workers** | Web Workers (memory, sandbox execution) |
-| **Animation** | Framer Motion 12.x |
-| **Icons** | Lucide React |
-| **Validation** | Zod 4.x |
-| **Testing** | Vitest + React Testing Library |
-| **Charts** | Custom SVG + ECharts |
+| Category         | Technology                                         |
+| ---------------- | -------------------------------------------------- |
+| **Language**     | TypeScript 6.x                                     |
+| **UI Framework** | React 19.x                                         |
+| **Build Tool**   | Vite 8.x                                           |
+| **Database**     | Dexie.js (IndexedDB wrapper)                       |
+| **State**        | React hooks + EventBus (custom typed event system) |
+| **Workflows**    | React Flow (@xyflow/react 12.x)                    |
+| **Search**       | Orama (BM25) + Transformers.js (embeddings)        |
+| **Workers**      | Web Workers (memory, sandbox execution)            |
+| **Animation**    | Framer Motion 12.x                                 |
+| **Icons**        | Lucide React                                       |
+| **Validation**   | Zod 4.x                                            |
+| **Testing**      | Vitest + React Testing Library                     |
+| **Charts**       | Custom SVG + ECharts                               |
 
 ---
 
@@ -242,12 +246,12 @@ Open `http://localhost:5173` in your browser.
 ```
 src/
 ├── kernel/              # Kernel (DI, contracts, services, events, state)
-│   ├── contracts/       # 66+ contract interfaces
+│   ├── contracts/       # 113+ contract interfaces
 │   ├── services/        # 254 files across 12 subdirs (key-management, provider-runtime,
 │   │                   #   debate-runtime, debate-governor, agent-diversity,
 │   │                   #   routing-policy, rotation, cognitive-intelligence,
 │   │                   #   event-sourcing, advisor, runtime-intelligence)
-│   ├── events/          # Event names + payloads (115+ events)
+│   ├── events/          # Event names + payloads (141+ events)
 │   ├── types/           # Zod schemas, domain types
 │   ├── state/           # State shapes + defaults
 │   ├── utils/           # Kernel utilities
@@ -258,7 +262,7 @@ src/
 │   ├── runtime.ts       # LifecycleManager (init→start→destroy LIFO)
 │   ├── transaction.ts   # TransactionContext (deferred persistence/emission)
 │   └── DEPENDENCY_MAP.md
-├── components/          # UI panels (47+ panels across all sections)
+├── components/          # UI panels (150+ panels across all sections)
 │   ├── ChatPanel/       # Chat interface with streaming
 │   ├── BuilderPanel/    # Visual cognitive workflow editor
 │   ├── AgentsPanel/     # Agent role management
@@ -278,20 +282,20 @@ src/
 │   ├── memory.worker.ts   # Web Worker: BM25 + semantic search
 │   ├── sandbox.worker.ts  # Web Worker: AST-based code validation
 │   └── ...
-├── llm/                 # LLM provider adapters (11 providers, 12 decorators)
+├── llm/                 # LLM provider adapters (20+ providers, 11 decorators)
 │   ├── gemini/          # Gemini adapter
 │   ├── openai-compatible/ # OpenAI-compatible (Groq, Cerebras, Cloudflare, etc.)
 │   ├── openrouter/      # OpenRouter adapter
 │   ├── nvidia/          # NVIDIA NIM adapter
 │   ├── decorators/      # Circuit Breaker, Cache, Retry, Fallback, etc.
 │   └── facade/          # LLMClient entry point
-├── stores/              # React state stores (2 files)
+├── stores/              # React state stores (7 files)
 │   ├── useChatStore.ts  # Chat sessions & messages
 │   └── useKeyStore.ts   # API key management (XOR+base64 localStorage)
 ├── types/               # Re-exports from kernel/types/
 ├── i18n/                # Internationalization (en.ts, ru.ts, I18nProvider)
 ├── styles/              # CSSProperties constants (common.ts — 91+ constants)
-├── route-registry.tsx   # 47 routes across 9 nav sections
+├── route-registry.tsx   # 134 routes across 9 nav sections
 └── test/                # Test setup and config
 ```
 
@@ -317,43 +321,43 @@ npm run proxy
 
 Adjust routing behavior in **Settings → SLA Mode**:
 
-| Mode | Behavior |
-|------|----------|
-| **Performance** | Prioritize lowest latency |
-| **Cost-Saving** | Prioritize cheapest provider |
-| **Balanced** | Equal weight to latency, cost, reliability |
-| **Reliability** | Prioritize highest success rate |
-| **FreeFirst** | Use free-tier models until quota exhausted, then fall back to paid |
+| Mode            | Behavior                                                           |
+| --------------- | ------------------------------------------------------------------ |
+| **Performance** | Prioritize lowest latency                                          |
+| **Cost-Saving** | Prioritize cheapest provider                                       |
+| **Balanced**    | Equal weight to latency, cost, reliability                         |
+| **Reliability** | Prioritize highest success rate                                    |
+| **FreeFirst**   | Use free-tier models until quota exhausted, then fall back to paid |
 
 ---
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server (HMR) |
-| `npm run build` | TypeScript check + production build |
-| `npm run preview` | Preview production build |
-| `npm run test` | Run all tests (Vitest) |
-| `npm run test:ui` | Run tests with UI dashboard |
-| `npm run test:e2e` | Run Playwright e2e tests |
-| `npm run lint` | ESLint check |
-| `npm run proxy` | Start CORS proxy server |
+| Script             | Description                         |
+| ------------------ | ----------------------------------- |
+| `npm run dev`      | Start development server (HMR)      |
+| `npm run build`    | TypeScript check + production build |
+| `npm run preview`  | Preview production build            |
+| `npm run test`     | Run all tests (Vitest)              |
+| `npm run test:ui`  | Run tests with UI dashboard         |
+| `npm run test:e2e` | Run Playwright e2e tests            |
+| `npm run lint`     | ESLint check                        |
+| `npm run proxy`    | Start CORS proxy server             |
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [System Manifest](./docs/SYSTEM_MANIFEST.md) | Architecture principles and design decisions |
-| [Full Registry (RU)](./docs/ПОЛНЫЙ_РЕЕСТР.md) | Complete system passport: 246 entries across all layers |
-| [Services Catalog (RU)](./docs/SERVICES_RU.md) | All 88+ DI services with purpose, events, lifecycle |
-| [UI Layer (RU)](./docs/07-ui-layer_RU.md) | All 47+ panels with categories, event maps |
-| [Event Reference](./docs/events.md) | 115+ typed events with payloads and Zod schemas |
-| [Cognitive Runtime Spec](./docs/COGNITIVE_RUNTIME_SPEC.md) | Event data and runtime specification |
-| [Architecture (RU)](./docs/01-system-architecture_RU.md) | System architecture overview |
-| [Debt Report](./docs/DEBT_REPORT.md) | Technical debt assessment |
+| Document                                                   | Description                                             |
+| ---------------------------------------------------------- | ------------------------------------------------------- |
+| [System Manifest](./docs/SYSTEM_MANIFEST.md)               | Architecture principles and design decisions            |
+| [Full Registry (RU)](./docs/ПОЛНЫЙ_РЕЕСТР.md)              | Complete system passport: 246 entries across all layers |
+| [Services Catalog (RU)](./docs/SERVICES_RU.md)             | All 88+ DI services with purpose, events, lifecycle     |
+| [UI Layer (RU)](./docs/07-ui-layer_RU.md)                  | All 120+ panels with categories, event maps             |
+| [Event Reference](./docs/events.md)                        | 141+ typed events with payloads and Zod schemas         |
+| [Cognitive Runtime Spec](./docs/COGNITIVE_RUNTIME_SPEC.md) | Event data and runtime specification                    |
+| [Architecture (RU)](./docs/01-system-architecture_RU.md)   | System architecture overview                            |
+| [Debt Report](./docs/DEBT_REPORT.md)                       | Technical debt assessment                               |
 
 ---
 

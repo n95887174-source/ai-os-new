@@ -250,6 +250,11 @@ function cleanupKeyStore() {
     if (typeof window !== 'undefined') {
         window.removeEventListener('beforeunload', cleanupKeyStore);
     }
+    try {
+        keyService.destroy?.();
+    } catch {
+        /* ignore during shutdown */
+    }
     initialized = false;
 }
 

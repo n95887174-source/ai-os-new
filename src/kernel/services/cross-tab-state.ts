@@ -11,9 +11,9 @@ const TAB_TIMESTAMP_KEY = 'cross-tab:timestamps';
 
 export interface CrossTabStateMessage {
     type:
-        | 'circuit-breaker-update'
-        | 'rate-limit-update'
-        | 'error-update'
+        | 'invalidate-circuit-breaker'
+        | 'invalidate-rate-limit'
+        | 'invalidate-error'
         | 'sync-request'
         | 'sync-response'
         | 'heartbeat'
@@ -30,28 +30,28 @@ export interface DebateSyncPayload {
     round: number;
 }
 
-export interface CircuitBreakerState {
+export type CircuitBreakerState = {
     provider: string;
     keyId: string;
     status: 'closed' | 'half-open' | 'open';
     failureCount: number;
     lastFailure: number;
-}
+};
 
-export interface RateLimitState {
+export type RateLimitState = {
     provider: string;
     keyId: string;
     remaining: number;
     resetAt: number;
-}
+};
 
-export interface ErrorEntry {
+export type ErrorEntry = {
     provider: string;
     keyId: string;
     error: string;
     timestamp: number;
     statusCode?: number;
-}
+};
 
 class CrossTabStateSync {
     private channel: BroadcastChannel | null = null;
@@ -74,6 +74,12 @@ class CrossTabStateSync {
         this.tabId = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
         this.tabTimestamp = Date.now();
         this.knownTabTimestamps.set(this.tabId, this.tabTimestamp);
+    }
+
+    /** BR-05: Start must be called explicitly after bootstrap is ready — constructor
+     *  no longer auto-initializes to prevent event subscriptions and timers
+     *  from running before services are ready. */
+    start(): void {
         this.init();
     }
 
@@ -150,7 +156,7 @@ class CrossTabStateSync {
                 type: 'heartbeat',
                 timestamp: Date.now(),
                 tabId: this.tabId,
-                payload: { hash: this.computeStateHash() },
+                payload: null,
             });
             this.pruneStaleTabs();
             this.pruneLocalStorage();
@@ -196,46 +202,47 @@ class CrossTabStateSync {
         }
 
         switch (message.type) {
-            case 'heartbeat': {
-                const remoteHash = (message.payload as { hash: string }).hash;
-                const localHash = this.computeStateHash();
-                if (remoteHash !== localHash) {
-                    LOGGER.warn('CrossTabStateSync', 'State hash mismatch detected', {
-                        tabId: message.tabId,
-                        remoteHash,
-                        localHash,
-                    });
-                    eventBus.emit(EVENTS.PROVIDER_STATE_DESYNC, {
-                        localHash,
-                        remoteHash,
-                        mismatches: this.countMismatches(message.tabId),
-                    });
-                    this.broadcast({
-                        type: 'sync-request',
-                        timestamp: Date.now(),
-                        tabId: this.tabId,
-                        payload: null,
-                    });
-                }
+            case 'heartbeat':
+                break;
+            case 'invalidate-circuit-breaker': {
+                const cbPayload = message.payload as { provider: string; keyId: string };
+                const cbKey = `${cbPayload.provider}:${cbPayload.keyId}`;
+                this.localCircuitBreakers.delete(cbKey);
+                LOGGER.debug('CrossTabStateSync', 'Circuit breaker invalidated from another tab', {
+                    key: cbKey,
+                });
                 break;
             }
-            case 'circuit-breaker-update':
-                this.handleCircuitBreakerUpdate(
-                    message.payload as CircuitBreakerState,
-                    message.timestamp,
+            case 'invalidate-rate-limit': {
+                const rlPayload = message.payload as { provider: string; keyId: string };
+                const rlKey = `${rlPayload.provider}:${rlPayload.keyId}`;
+                this.localRateLimits.delete(rlKey);
+                LOGGER.debug('CrossTabStateSync', 'Rate limit invalidated from another tab', {
+                    key: rlKey,
+                });
+                break;
+            }
+            case 'invalidate-error': {
+                const errPayload = message.payload as ErrorEntry;
+                this.localErrors = this.localErrors.filter(
+                    (e) =>
+                        !(
+                            e.provider === errPayload.provider &&
+                            e.keyId === errPayload.keyId &&
+                            e.timestamp === errPayload.timestamp
+                        ),
                 );
                 break;
-            case 'rate-limit-update':
-                this.handleRateLimitUpdate(message.payload as RateLimitState, message.timestamp);
-                break;
-            case 'error-update':
-                this.handleErrorUpdate(message.payload as ErrorEntry);
-                break;
+            }
             case 'sync-request':
-                this.handleSyncRequest(message);
+                this.broadcast({
+                    type: 'sync-response',
+                    timestamp: Date.now(),
+                    tabId: this.tabId,
+                    payload: null,
+                });
                 break;
             case 'sync-response':
-                this.handleSyncResponse(message);
                 break;
             case 'debate-update':
                 this.handleDebateUpdate(message.payload as DebateSyncPayload);
@@ -246,53 +253,6 @@ class CrossTabStateSync {
         if (listeners) {
             listeners.forEach((listener) => listener(message));
         }
-    }
-
-    private handleCircuitBreakerUpdate(
-        state: CircuitBreakerState,
-        _incomingTimestamp: number,
-    ): void {
-        const key = `${state.provider}:${state.keyId}`;
-        const existing = this.localCircuitBreakers.get(key);
-        if (
-            existing &&
-            existing.lastFailure >= state.lastFailure &&
-            existing.status === state.status
-        ) {
-            return;
-        }
-        this.localCircuitBreakers.set(key, state);
-        eventBus.emit(EVENTS.PROVIDER_CIRCUIT_BREAKER_SYNCED, state);
-        LOGGER.debug('CrossTabStateSync', 'Circuit breaker synced from another tab', {
-            key,
-            status: state.status,
-        });
-    }
-
-    private handleRateLimitUpdate(state: RateLimitState, _incomingTimestamp: number): void {
-        const key = `${state.provider}:${state.keyId}`;
-        const existing = this.localRateLimits.get(key);
-        if (existing && existing.resetAt >= state.resetAt) {
-            return;
-        }
-        this.localRateLimits.set(key, state);
-        eventBus.emit(EVENTS.PROVIDER_RATE_LIMIT_SYNCED, state);
-        LOGGER.debug('CrossTabStateSync', 'Rate limit synced from another tab', {
-            key,
-            remaining: state.remaining,
-        });
-    }
-
-    private handleErrorUpdate(entry: ErrorEntry): void {
-        this.localErrors.push(entry);
-        if (this.localErrors.length > 100) {
-            this.localErrors = this.localErrors.slice(-100);
-        }
-        eventBus.emit(EVENTS.PROVIDER_ERROR_SYNCED, entry);
-        LOGGER.debug('CrossTabStateSync', 'Error synced from another tab', {
-            provider: entry.provider,
-            error: entry.error,
-        });
     }
 
     private handleDebateUpdate(payload: DebateSyncPayload): void {
@@ -315,95 +275,6 @@ class CrossTabStateSync {
             phase: payload.phase,
             round: payload.round,
         });
-    }
-
-    private handleSyncRequest(_message: CrossTabStateMessage): void {
-        this.broadcast({
-            type: 'sync-response',
-            timestamp: Date.now(),
-            tabId: this.tabId,
-            payload: {
-                circuitBreakers: Array.from(this.localCircuitBreakers.values()),
-                rateLimits: Array.from(this.localRateLimits.values()),
-                errors: this.localErrors.slice(-50),
-                debates: Array.from(this.localDebateVersions.entries()).map(([sessionId, v]) => ({
-                    sessionId,
-                    ...v,
-                })),
-            },
-        });
-    }
-
-    private handleSyncResponse(message: CrossTabStateMessage): void {
-        // Skip response from stale tabs (own timestamp is newer than theirs)
-        const remoteTs = message.timestamp;
-        if (remoteTs > 0) {
-            const latestKnown = this.knownTabTimestamps.get(message.tabId) ?? 0;
-            if (remoteTs < latestKnown) return;
-        }
-
-        const payload = message.payload as {
-            circuitBreakers: CircuitBreakerState[];
-            rateLimits: RateLimitState[];
-            errors: ErrorEntry[];
-            debates?: DebateSyncPayload[];
-        };
-
-        for (const cb of payload.circuitBreakers) {
-            this.handleCircuitBreakerUpdate(cb, message.timestamp);
-        }
-        for (const rl of payload.rateLimits) {
-            this.handleRateLimitUpdate(rl, message.timestamp);
-        }
-        for (const err of payload.errors) {
-            const exists = this.localErrors.some(
-                (e) =>
-                    e.provider === err.provider &&
-                    e.keyId === err.keyId &&
-                    e.timestamp === err.timestamp,
-            );
-            if (!exists) {
-                this.handleErrorUpdate(err);
-            }
-        }
-
-        if (payload.debates) {
-            for (const d of payload.debates) {
-                this.handleDebateUpdate(d);
-            }
-        }
-    }
-
-    private computeStateHash(): string {
-        const parts: string[] = [];
-        for (const [, state] of this.localCircuitBreakers) {
-            parts.push(`${state.provider}:${state.keyId}:${state.status}:${state.failureCount}`);
-        }
-        for (const [, rl] of this.localRateLimits) {
-            parts.push(`${rl.provider}:${rl.keyId}:${rl.remaining}`);
-        }
-        for (const [id, v] of this.localDebateVersions) {
-            parts.push(`${id}:${v.updatedAt}:${v.phase}:${v.round}`);
-        }
-        parts.sort();
-        const fullString = parts.join('|');
-        let hash = 0;
-        for (let i = 0; i < fullString.length; i++) {
-            hash = ((hash << 5) - hash + fullString.charCodeAt(i)) | 0;
-        }
-        return hash.toString(16);
-    }
-
-    private countMismatches(_remoteTabId: string): number {
-        // L-12: Previously compared local→local (always 0). Now compute how many
-        // local entries differ from the baseline (status=closed, failureCount=0).
-        // Entries that are non-baseline represent real circuit states that differ
-        // from a "clean slate" — meaningful as a mismatch indicator.
-        let count = 0;
-        for (const [, state] of this.localCircuitBreakers) {
-            if (state.status !== 'closed' || state.failureCount > 0) count++;
-        }
-        return count;
     }
 
     private pruneStaleTabs(): void {
@@ -474,10 +345,10 @@ class CrossTabStateSync {
         const key = `${state.provider}:${state.keyId}`;
         this.localCircuitBreakers.set(key, state);
         this.broadcast({
-            type: 'circuit-breaker-update',
+            type: 'invalidate-circuit-breaker',
             timestamp: Date.now(),
             tabId: this.tabId,
-            payload: state,
+            payload: { provider: state.provider, keyId: state.keyId },
         });
     }
 
@@ -485,10 +356,10 @@ class CrossTabStateSync {
         const key = `${state.provider}:${state.keyId}`;
         this.localRateLimits.set(key, state);
         this.broadcast({
-            type: 'rate-limit-update',
+            type: 'invalidate-rate-limit',
             timestamp: Date.now(),
             tabId: this.tabId,
-            payload: state,
+            payload: { provider: state.provider, keyId: state.keyId },
         });
     }
 
@@ -498,10 +369,16 @@ class CrossTabStateSync {
             this.localErrors = this.localErrors.slice(-100);
         }
         this.broadcast({
-            type: 'error-update',
+            type: 'invalidate-error',
             timestamp: Date.now(),
             tabId: this.tabId,
-            payload: entry,
+            payload: {
+                provider: entry.provider,
+                keyId: entry.keyId,
+                timestamp: entry.timestamp,
+                error: entry.error,
+                statusCode: entry.statusCode,
+            },
         });
     }
 

@@ -37,6 +37,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     const [vaultUnlocking, setVaultUnlocking] = useState(false);
     const [vaultError, setVaultError] = useState('');
     const [bulkMode, setBulkMode] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     const {
         bulkInput,
@@ -180,7 +181,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
             setError(t('add_key.error_required'));
             return;
         }
-        setLoading(true);
+        setSaving(true);
         setError('');
         try {
             const isValid = await keyService.verifyKey(provider, apiKey);
@@ -207,7 +208,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
                     : 'Failed to validate API key. Please try again.',
             );
         } finally {
-            if (isMountedRef.current) setLoading(false);
+            if (isMountedRef.current) setSaving(false);
         }
     };
 
@@ -365,7 +366,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
                                         showKey={showKey}
                                         setShowKey={setShowKey}
                                         error={error}
-                                        loading={loading}
+                                        loading={loading || saving}
                                         onBack={handleBack}
                                         onSubmit={handleSubmit}
                                         onSaveClose={handleSaveAndClose}

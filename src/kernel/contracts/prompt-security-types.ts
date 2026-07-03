@@ -42,6 +42,6 @@ export interface PromptSecurityService {
     scan(prompt: string): PromptScanResult;
     getConfig(): SecurityScanConfig;
     updateConfig(config: Partial<SecurityScanConfig>): void;
-    getHistory(): SecurityScanEvent[];
-    clearHistory(): void;
+    getHistory(): Promise<SecurityScanEvent[]>;
+    clearHistory(): Promise<void>;
 }

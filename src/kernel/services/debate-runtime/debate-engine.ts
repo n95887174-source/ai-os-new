@@ -229,26 +229,21 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             });
             this._beforeUnloadHandler = () => {
                 for (const sessionId of this.sessions.keys()) {
-                    // Sync fallback to localStorage for critical state
-                    try {
-                        const snap = this.sessions.get(sessionId)?.snapshot();
-                        if (snap) {
-                            const key = `debate_pending_${sessionId}`;
-                            localStorage.setItem(
-                                key,
-                                JSON.stringify({ snapshot: snap, ts: Date.now() }),
-                            );
-                        }
-                    } catch {
-                        /* best-effort */
-                    }
                     this.saveSnapshot(sessionId);
                 }
             };
             window.addEventListener('beforeunload', this._beforeUnloadHandler);
         }
         // P1-9: Restore orphaned sessions on bootstrap — zombie detection + paused restore
-        await this._restoreOrphanedSessions();
+        try {
+            await this._restoreOrphanedSessions();
+        } catch (e) {
+            LOGGER.warn(
+                'DebateEngine',
+                '_restoreOrphanedSessions failed during start — continuing',
+                { error: e },
+            );
+        }
     }
 
     private async _restoreOrphanedSessions(): Promise<void> {
@@ -969,7 +964,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     participant.agentId,
                 );
 
-                let systemContent = `You are ${currentName}. ${participant.systemPrompt || this.getDefaultPrompt(participant.nodeId, session)}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
+                const defaultPrompt = await this.getDefaultPrompt(participant.nodeId, session);
+                let systemContent = `You are ${currentName}. ${participant.systemPrompt || defaultPrompt}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
 
                 // RAG: inject relevant memory from past debates
                 if (this.deps.ragRetriever) {
@@ -1172,9 +1168,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         throw new Error('LLM call failed after max retries');
     }
 
-    private getDefaultPrompt(nodeId: string, session: IDebateSession): string {
+    private async getDefaultPrompt(nodeId: string, session: IDebateSession): Promise<string> {
         const node = session.topology.nodes.find((n) => n.id === nodeId);
-        return getPrompt(node?.role) + `\nRespond in ${session.language}.`;
+        return (await getPrompt(node?.role)) + `\nRespond in ${session.language}.`;
     }
 
     private gatherClaims(sessionId: string, session: IDebateSession): Claim[] {

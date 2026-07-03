@@ -1,51 +1,9 @@
 import type { CachedContent, FreeTierUsage, IGeminiCacheService } from '../contracts/gemini-cache';
 
-let nextCacheId = 1;
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 export class GeminiCacheService implements IGeminiCacheService {
-    private caches: CachedContent[] = [
-        {
-            id: 'cached-1',
-            name: 'debate-system-prompt-v2',
-            model: 'gemini-2.5-flash',
-            displayName: 'Debate System Prompt (Current)',
-            sizeTokens: 1850,
-            createTime: Date.now() - 3600000,
-            expireTime: Date.now() + 3600000,
-            ttl: '2h',
-            hits: 14,
-        },
-        {
-            id: 'cached-2',
-            name: 'fact-check-prompt',
-            model: 'gemini-2.5-pro',
-            displayName: 'Fact-Check Pipeline',
-            sizeTokens: 920,
-            createTime: Date.now() - 7200000,
-            expireTime: Date.now() + 7200000,
-            ttl: '4h',
-            hits: 7,
-        },
-    ];
-
-    private freeTier: FreeTierUsage[] = [
-        {
-            model: 'gemini-2.0-flash',
-            requestsUsed: 847,
-            requestsLimit: 1500,
-            tokensUsed: 623000,
-            tokensLimit: 1000000,
-            resetsAt: Date.now() + 4 * 3600000 + 23 * 60000,
-        },
-        {
-            model: 'gemini-2.5-pro',
-            requestsUsed: 12,
-            requestsLimit: 50,
-            tokensUsed: 45000,
-            tokensLimit: 250000,
-            resetsAt: Date.now() + 7 * 3600000,
-        },
-    ];
+    private caches: CachedContent[] = [];
 
     async create(content: {
         systemPrompt: string;
@@ -53,19 +11,45 @@ export class GeminiCacheService implements IGeminiCacheService {
         ttl?: string;
     }): Promise<CachedContent> {
         const now = Date.now();
-        const ttlMs = parseTTL(content.ttl ?? '1h');
+        const ttlSeconds = parseTTL(content.ttl ?? '1h') / 1000;
         const cached: CachedContent = {
-            id: `cached-${nextCacheId++}-${now}`,
+            id: `local-${now}`,
             name: `cache-${content.model}-${now}`,
             model: content.model,
             displayName: `System Prompt — ${content.model}`,
             sizeTokens: Math.ceil(content.systemPrompt.length / 4),
             createTime: now,
-            expireTime: now + ttlMs,
+            expireTime: now + parseTTL(content.ttl ?? '1h'),
             ttl: content.ttl ?? '1h',
             hits: 0,
         };
         this.caches.push(cached);
+
+        const apiKey = await this.#getApiKey();
+        if (apiKey) {
+            try {
+                const res = await fetch(`${GEMINI_API_BASE}/cachedContents`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': apiKey,
+                    },
+                    body: JSON.stringify({
+                        model: `models/${content.model}`,
+                        ttl: `${ttlSeconds}s`,
+                        contents: [{ role: 'user', parts: [{ text: content.systemPrompt }] }],
+                        displayName: cached.displayName,
+                    }),
+                });
+                if (res.ok) {
+                    const data = (await res.json()) as { name?: string };
+                    if (data.name) {
+                        cached.id = data.name;
+                        cached.name = data.name;
+                    }
+                }
+            } catch {}
+        }
         return cached;
     }
 
@@ -73,25 +57,84 @@ export class GeminiCacheService implements IGeminiCacheService {
         return [...this.caches];
     }
 
+    async syncFromApi(): Promise<void> {
+        const apiKey = await this.#getApiKey();
+        if (!apiKey) return;
+        try {
+            const res = await fetch(`${GEMINI_API_BASE}/cachedContents`, {
+                headers: { 'x-goog-api-key': apiKey },
+            });
+            if (!res.ok) return;
+            const data = (await res.json()) as {
+                cachedContents?: Array<{
+                    name: string;
+                    model: string;
+                    displayName?: string;
+                    createTime?: string;
+                    expireTime?: string;
+                    ttl?: string;
+                }>;
+            };
+            if (data.cachedContents) {
+                const remote: CachedContent[] = data.cachedContents.map((r) => ({
+                    id: r.name,
+                    name: r.name,
+                    model: r.model.replace('models/', ''),
+                    displayName: r.displayName ?? r.name,
+                    sizeTokens: 0,
+                    createTime: r.createTime ? new Date(r.createTime).getTime() : Date.now(),
+                    expireTime: r.expireTime ? new Date(r.expireTime).getTime() : Date.now(),
+                    ttl: r.ttl ?? '1h',
+                    hits: 0,
+                }));
+                const remoteIds = new Set(remote.map((r) => r.id));
+                this.caches = [...remote, ...this.caches.filter((c) => !remoteIds.has(c.id))];
+            }
+        } catch {}
+    }
+
     get(id: string): CachedContent | null {
         return this.caches.find((c) => c.id === id) ?? null;
     }
 
-    delete(id: string): void {
+    async delete(id: string): Promise<void> {
         const idx = this.caches.findIndex((c) => c.id === id);
         if (idx !== -1) this.caches.splice(idx, 1);
+
+        if (id.startsWith('cachedContents/')) {
+            const apiKey = await this.#getApiKey();
+            if (apiKey) {
+                try {
+                    await fetch(`${GEMINI_API_BASE}/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'x-goog-api-key': apiKey },
+                    });
+                } catch {}
+            }
+        }
     }
 
     getFreeTierUsage(): FreeTierUsage[] {
-        return this.freeTier.map((f) => ({ ...f }));
+        return [];
     }
 
     getEstimatedSavings(): { totalSaved: number; cacheHitRate: number } {
         const totalHits = this.caches.reduce((s, c) => s + c.hits, 0);
         const totalTokens = this.caches.reduce((s, c) => s + c.sizeTokens, 0);
-        const cacheHitRate = totalHits > 0 ? Math.min(1, totalHits / (totalHits + 10)) : 0;
+        if (totalHits === 0 || totalTokens === 0) return { totalSaved: 0, cacheHitRate: 0 };
+        const cacheHitRate = Math.min(1, totalHits / (totalHits + totalTokens * 0.001));
         const totalSaved = totalTokens * cacheHitRate * 0.00000125;
         return { totalSaved, cacheHitRate };
+    }
+
+    async #getApiKey(): Promise<string | null> {
+        try {
+            const { keyService } = await import('../instances');
+            const key = keyService.selectFromPool('gemini');
+            return key?.key ?? null;
+        } catch {
+            return null;
+        }
     }
 }
 

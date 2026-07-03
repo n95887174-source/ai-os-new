@@ -4,8 +4,7 @@ import type {
     TemplateCategory,
 } from '../contracts/template-sharing';
 
-let _idCounter = 0;
-const genId = () => `tmpl-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
 
 const SHARED_TEMPLATES: SharedTemplate[] = [
     {

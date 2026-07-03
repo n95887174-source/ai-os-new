@@ -3,6 +3,7 @@ import type {
     AchievementProgress,
     IProviderAchievementService,
 } from '../contracts/provider-achievements';
+import type { IDatabaseService } from '../types/interfaces';
 
 function defs(): ProviderAchievement[] {
     const all: ProviderAchievement[] = [];
@@ -486,21 +487,38 @@ function defs(): ProviderAchievement[] {
     return all;
 }
 
+const STORAGE_KEY = 'provider_achievements';
+
 export class ProviderAchievementService implements IProviderAchievementService {
     private _all: ProviderAchievement[];
     private _awarded = new Set<string>();
+    private _database: IDatabaseService | null = null;
 
-    constructor() {
+    constructor(database?: IDatabaseService) {
         this._all = defs();
-        const saved =
-            typeof localStorage !== 'undefined'
-                ? localStorage.getItem('provider_achievements')
-                : null;
-        if (saved) {
+        this._database = database ?? null;
+        this._load();
+    }
+
+    private async _load(): Promise<void> {
+        if (this._database) {
             try {
-                JSON.parse(saved).forEach((id: string) => this._awarded.add(id));
+                const saved = await this._database.getKv<string[]>(STORAGE_KEY);
+                if (saved) {
+                    saved.forEach((id: string) => this._awarded.add(id));
+                }
             } catch {
                 /* ignore */
+            }
+        } else {
+            const saved =
+                typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+            if (saved) {
+                try {
+                    JSON.parse(saved).forEach((id: string) => this._awarded.add(id));
+                } catch {
+                    /* ignore */
+                }
             }
         }
     }
@@ -545,14 +563,18 @@ export class ProviderAchievementService implements IProviderAchievementService {
 
     reset(): void {
         this._awarded.clear();
-        if (typeof localStorage !== 'undefined') {
-            localStorage.removeItem('provider_achievements');
+        if (this._database) {
+            this._database.setKv(STORAGE_KEY, []).catch(() => {});
+        } else if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem(STORAGE_KEY);
         }
     }
 
     private _persist(): void {
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('provider_achievements', JSON.stringify([...this._awarded]));
+        if (this._database) {
+            this._database.setKv(STORAGE_KEY, [...this._awarded]).catch(() => {});
+        } else if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...this._awarded]));
         }
     }
 }

@@ -1,4 +1,4 @@
-import { dexieDb } from '../database-service';
+import { getDexieDb } from '../database-service';
 import { eventBus } from '../../events/event-bus';
 import { EVENTS } from '../../events/event-names';
 import type {
@@ -29,23 +29,23 @@ import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
 class DexieKeyStore implements KeyStore {
     async saveKey(key: ApiKey): Promise<void> {
-        await dexieDb.apiKeys.put(key);
+        await getDexieDb().apiKeys.put(key);
     }
 
     async getKey(id: string): Promise<ApiKey | null> {
-        return (await dexieDb.apiKeys.get(id)) ?? null;
+        return (await getDexieDb().apiKeys.get(id)) ?? null;
     }
 
     async listKeys(): Promise<ApiKey[]> {
-        return dexieDb.apiKeys.toArray();
+        return getDexieDb().apiKeys.toArray();
     }
 
     async deleteKey(id: string): Promise<void> {
-        await dexieDb.apiKeys.delete(id);
+        await getDexieDb().apiKeys.delete(id);
     }
 
     async bulkPut(keys: ApiKey[]): Promise<void> {
-        await dexieDb.apiKeys.bulkPut(keys);
+        await getDexieDb().apiKeys.bulkPut(keys);
     }
 
     async bulkAdd(keys: ApiKey[]): Promise<void> {
@@ -53,33 +53,33 @@ class DexieKeyStore implements KeyStore {
     }
 
     async where(field: 'id' | 'provider' | 'status', value: string): Promise<ApiKey | undefined> {
-        return dexieDb.apiKeys.where(field).equals(value).first();
+        return getDexieDb().apiKeys.where(field).equals(value).first();
     }
 
     async exportAll(): Promise<string> {
-        return JSON.stringify(await dexieDb.apiKeys.toArray());
+        return JSON.stringify(await getDexieDb().apiKeys.toArray());
     }
 
     async importAll(payload: string): Promise<void> {
         const data: ApiKey[] = safeParse(payload);
-        await dexieDb.transaction('rw', dexieDb.apiKeys, async () => {
-            await dexieDb.apiKeys.clear();
-            if (data.length > 0) await dexieDb.apiKeys.bulkPut(data);
+        await getDexieDb().transaction('rw', getDexieDb().apiKeys, async () => {
+            await getDexieDb().apiKeys.clear();
+            if (data.length > 0) await getDexieDb().apiKeys.bulkPut(data);
         });
     }
 
     async clear(): Promise<void> {
-        await dexieDb.apiKeys.clear();
+        await getDexieDb().apiKeys.clear();
     }
 }
 
 class DexieMemoryStore implements MemoryStore {
     async saveEntry(entry: MemoryEntry): Promise<void> {
-        await dexieDb.memories.put(entry);
+        await getDexieDb().memories.put(entry);
     }
 
     async getEntry(id: string): Promise<MemoryEntry | null> {
-        return (await dexieDb.memories.get(id)) ?? null;
+        return (await getDexieDb().memories.get(id)) ?? null;
     }
 
     async queryEntries(options: {
@@ -89,7 +89,7 @@ class DexieMemoryStore implements MemoryStore {
         limit?: number;
         order?: 'asc' | 'desc';
     }): Promise<MemoryEntry[]> {
-        let collection = dexieDb.memories.orderBy('id');
+        let collection = getDexieDb().memories.orderBy('id');
         if (options.order === 'desc') collection = collection.reverse();
         let arr = await collection.toArray();
         // M2: Apply filters BEFORE limit to avoid wrong result count
@@ -110,49 +110,51 @@ class DexieMemoryStore implements MemoryStore {
     }
 
     async deleteEntry(id: string): Promise<void> {
-        await dexieDb.memories.delete(id);
+        await getDexieDb().memories.delete(id);
     }
 
     async updateEntry(id: string, updates: Partial<MemoryEntry>): Promise<void> {
-        await dexieDb.memories.update(id, updates);
+        await getDexieDb().memories.update(id, updates);
     }
 
     async count(): Promise<number> {
-        return dexieDb.memories.count();
+        return getDexieDb().memories.count();
     }
 
     async bulkAdd(entries: MemoryEntry[]): Promise<void> {
-        await dexieDb.memories.bulkPut(entries);
+        await getDexieDb().memories.bulkPut(entries);
     }
 
     async clear(): Promise<void> {
-        await dexieDb.memories.clear();
+        await getDexieDb().memories.clear();
     }
 
     async exportAll(): Promise<string> {
-        return JSON.stringify(await dexieDb.memories.toArray());
+        return JSON.stringify(await getDexieDb().memories.toArray());
     }
 
     async importAll(payload: string): Promise<void> {
         const data: MemoryEntry[] = safeParse(payload);
-        await dexieDb.transaction('rw', dexieDb.memories, async () => {
-            await dexieDb.memories.clear();
-            if (data.length > 0) await dexieDb.memories.bulkPut(data);
+        await getDexieDb().transaction('rw', getDexieDb().memories, async () => {
+            await getDexieDb().memories.clear();
+            if (data.length > 0) await getDexieDb().memories.bulkPut(data);
         });
     }
 
     async deleteBefore(timestamp: number): Promise<void> {
-        await dexieDb.memories.filter((e) => (e.metadata?.timestamp ?? 0) < timestamp).delete();
+        await getDexieDb()
+            .memories.filter((e) => (e.metadata?.timestamp ?? 0) < timestamp)
+            .delete();
     }
 }
 
 class DexieTraceStore implements TraceStore {
     async saveTrace(trace: CognitiveTrace): Promise<void> {
-        await dexieDb.cognitiveTraces.put(trace);
+        await getDexieDb().cognitiveTraces.put(trace);
     }
 
     async getTrace(id: string): Promise<CognitiveTrace | null> {
-        return (await dexieDb.cognitiveTraces.get(id)) ?? null;
+        return (await getDexieDb().cognitiveTraces.get(id)) ?? null;
     }
 
     async queryTraces(options: {
@@ -164,7 +166,7 @@ class DexieTraceStore implements TraceStore {
         order?: 'asc' | 'desc';
         provider?: string;
     }): Promise<CognitiveTrace[]> {
-        let collection = dexieDb.cognitiveTraces.orderBy('startTime');
+        let collection = getDexieDb().cognitiveTraces.orderBy('startTime');
         if (options.status) collection = collection.filter((t) => t.status === options.status!);
         if (options.after) collection = collection.filter((t) => t.startTime >= options.after!);
         if (options.before) collection = collection.filter((t) => t.startTime <= options.before!);
@@ -174,37 +176,37 @@ class DexieTraceStore implements TraceStore {
     }
 
     async deleteTrace(id: string): Promise<void> {
-        await dexieDb.cognitiveTraces.delete(id);
+        await getDexieDb().cognitiveTraces.delete(id);
     }
 
     async count(): Promise<number> {
-        return dexieDb.cognitiveTraces.count();
+        return getDexieDb().cognitiveTraces.count();
     }
 
     async bulkPut(traces: CognitiveTrace[]): Promise<void> {
-        await dexieDb.cognitiveTraces.bulkPut(traces);
+        await getDexieDb().cognitiveTraces.bulkPut(traces);
     }
 
     async clear(): Promise<void> {
-        await dexieDb.cognitiveTraces.clear();
+        await getDexieDb().cognitiveTraces.clear();
     }
 
     async exportAll(): Promise<string> {
-        return JSON.stringify(await dexieDb.cognitiveTraces.toArray());
+        return JSON.stringify(await getDexieDb().cognitiveTraces.toArray());
     }
 
     async importAll(payload: string): Promise<void> {
         const data: CognitiveTrace[] = safeParse(payload);
-        await dexieDb.transaction('rw', dexieDb.cognitiveTraces, async () => {
-            await dexieDb.cognitiveTraces.clear();
-            if (data.length > 0) await dexieDb.cognitiveTraces.bulkPut(data);
+        await getDexieDb().transaction('rw', getDexieDb().cognitiveTraces, async () => {
+            await getDexieDb().cognitiveTraces.clear();
+            if (data.length > 0) await getDexieDb().cognitiveTraces.bulkPut(data);
         });
     }
 }
 
 class DexieSessionStore implements SessionStore {
     async saveSession(session: ChatSession): Promise<void> {
-        await dexieDb.sessions.put(session);
+        await getDexieDb().sessions.put(session);
     }
 
     async put(session: ChatSession): Promise<void> {
@@ -212,12 +214,12 @@ class DexieSessionStore implements SessionStore {
     }
 
     async getSession(id: string): Promise<ChatSession | null> {
-        return (await dexieDb.sessions.get(id)) ?? null;
+        return (await getDexieDb().sessions.get(id)) ?? null;
     }
 
     async listSessions(limit = 50, offset = 0): Promise<ChatSession[]> {
-        return dexieDb.sessions
-            .orderBy('updatedAt')
+        return getDexieDb()
+            .sessions.orderBy('updatedAt')
             .reverse()
             .offset(offset)
             .limit(limit)
@@ -225,145 +227,145 @@ class DexieSessionStore implements SessionStore {
     }
 
     async deleteSession(id: string): Promise<void> {
-        await dexieDb.sessions.delete(id);
+        await getDexieDb().sessions.delete(id);
     }
 
     async bulkPut(sessions: ChatSession[]): Promise<void> {
-        await dexieDb.sessions.bulkPut(sessions);
+        await getDexieDb().sessions.bulkPut(sessions);
     }
 
     async bulkDelete(ids: string[]): Promise<void> {
-        await dexieDb.sessions.bulkDelete(ids);
+        await getDexieDb().sessions.bulkDelete(ids);
     }
 
     async syncSessions(sessions: ChatSession[], deletedIds: string[]): Promise<void> {
-        await dexieDb.transaction('rw', dexieDb.sessions, async () => {
-            if (sessions.length > 0) await dexieDb.sessions.bulkPut(sessions);
-            if (deletedIds.length > 0) await dexieDb.sessions.bulkDelete(deletedIds);
+        await getDexieDb().transaction('rw', getDexieDb().sessions, async () => {
+            if (sessions.length > 0) await getDexieDb().sessions.bulkPut(sessions);
+            if (deletedIds.length > 0) await getDexieDb().sessions.bulkDelete(deletedIds);
         });
     }
 
     async count(): Promise<number> {
-        return dexieDb.sessions.count();
+        return getDexieDb().sessions.count();
     }
 
     async exportAll(): Promise<string> {
-        return JSON.stringify(await dexieDb.sessions.toArray());
+        return JSON.stringify(await getDexieDb().sessions.toArray());
     }
 
     async importAll(payload: string): Promise<void> {
         const data: ChatSession[] = safeParse(payload);
-        await dexieDb.transaction('rw', dexieDb.sessions, async () => {
-            await dexieDb.sessions.clear();
-            if (data.length > 0) await dexieDb.sessions.bulkPut(data);
+        await getDexieDb().transaction('rw', getDexieDb().sessions, async () => {
+            await getDexieDb().sessions.clear();
+            if (data.length > 0) await getDexieDb().sessions.bulkPut(data);
         });
     }
 
     async clear(): Promise<void> {
-        await dexieDb.sessions.clear();
+        await getDexieDb().sessions.clear();
     }
 }
 
 class DexieRolesStore implements RolesStore {
     async loadAll(): Promise<Role[]> {
-        return dexieDb.roles.toArray();
+        return getDexieDb().roles.toArray();
     }
 
     async saveAll(roles: Role[]): Promise<void> {
-        await dexieDb.transaction('rw', dexieDb.roles, async () => {
-            await dexieDb.roles.clear();
-            if (roles.length > 0) await dexieDb.roles.bulkPut(roles);
+        await getDexieDb().transaction('rw', getDexieDb().roles, async () => {
+            await getDexieDb().roles.clear();
+            if (roles.length > 0) await getDexieDb().roles.bulkPut(roles);
         });
     }
 
     async toArray(): Promise<Role[]> {
-        return dexieDb.roles.toArray();
+        return getDexieDb().roles.toArray();
     }
 
     async bulkAdd(roles: Role[]): Promise<void> {
-        await dexieDb.roles.bulkPut(roles);
+        await getDexieDb().roles.bulkPut(roles);
     }
 
     async bulkPut(roles: Role[]): Promise<void> {
-        await dexieDb.roles.bulkPut(roles);
+        await getDexieDb().roles.bulkPut(roles);
     }
 
     async count(): Promise<number> {
-        return dexieDb.roles.count();
+        return getDexieDb().roles.count();
     }
 
     async clear(): Promise<void> {
-        await dexieDb.roles.clear();
+        await getDexieDb().roles.clear();
     }
 
     async exportAll(): Promise<string> {
-        return JSON.stringify(await dexieDb.roles.toArray());
+        return JSON.stringify(await getDexieDb().roles.toArray());
     }
 
     async importAll(payload: string): Promise<void> {
         const data: Role[] = safeParse(payload);
-        await dexieDb.transaction('rw', dexieDb.roles, async () => {
-            await dexieDb.roles.clear();
-            if (data.length > 0) await dexieDb.roles.bulkPut(data);
+        await getDexieDb().transaction('rw', getDexieDb().roles, async () => {
+            await getDexieDb().roles.clear();
+            if (data.length > 0) await getDexieDb().roles.bulkPut(data);
         });
     }
 }
 
 class DexieSkillsStore implements SkillsStore {
     async loadAll(): Promise<Skill[]> {
-        return dexieDb.skills.toArray();
+        return getDexieDb().skills.toArray();
     }
 
     async saveAll(skills: Skill[]): Promise<void> {
-        await dexieDb.transaction('rw', dexieDb.skills, async () => {
-            await dexieDb.skills.clear();
-            if (skills.length > 0) await dexieDb.skills.bulkPut(skills);
+        await getDexieDb().transaction('rw', getDexieDb().skills, async () => {
+            await getDexieDb().skills.clear();
+            if (skills.length > 0) await getDexieDb().skills.bulkPut(skills);
         });
     }
 
     async toArray(): Promise<Skill[]> {
-        return dexieDb.skills.toArray();
+        return getDexieDb().skills.toArray();
     }
 
     async bulkAdd(skills: Skill[]): Promise<void> {
-        await dexieDb.skills.bulkPut(skills);
+        await getDexieDb().skills.bulkPut(skills);
     }
 
     async bulkPut(skills: Skill[]): Promise<void> {
-        await dexieDb.skills.bulkPut(skills);
+        await getDexieDb().skills.bulkPut(skills);
     }
 
     async count(): Promise<number> {
-        return dexieDb.skills.count();
+        return getDexieDb().skills.count();
     }
 
     async clear(): Promise<void> {
-        await dexieDb.skills.clear();
+        await getDexieDb().skills.clear();
     }
 
     async exportAll(): Promise<string> {
-        return JSON.stringify(await dexieDb.skills.toArray());
+        return JSON.stringify(await getDexieDb().skills.toArray());
     }
 
     async importAll(payload: string): Promise<void> {
         const data: Skill[] = safeParse(payload);
-        await dexieDb.transaction('rw', dexieDb.skills, async () => {
-            await dexieDb.skills.clear();
-            if (data.length > 0) await dexieDb.skills.bulkPut(data);
+        await getDexieDb().transaction('rw', getDexieDb().skills, async () => {
+            await getDexieDb().skills.clear();
+            if (data.length > 0) await getDexieDb().skills.bulkPut(data);
         });
     }
 }
 
 class DexieConfigStore implements ConfigStore {
     async get<T>(key: string): Promise<T | null> {
-        const record = await dexieDb.keyValue.get(key);
+        const record = await getDexieDb().keyValue.get(key);
         return record ? (record.value as T) : null;
     }
 
     async set<T>(key: string, value: T): Promise<void> {
-        await dexieDb.transaction('rw', dexieDb.keyValue, async () => {
-            const existing = await dexieDb.keyValue.get(key);
-            await dexieDb.keyValue.put({
+        await getDexieDb().transaction('rw', getDexieDb().keyValue, async () => {
+            const existing = await getDexieDb().keyValue.get(key);
+            await getDexieDb().keyValue.put({
                 id: key,
                 value,
                 createdAt: existing?.createdAt ?? Date.now(),
@@ -372,29 +374,29 @@ class DexieConfigStore implements ConfigStore {
     }
 
     async delete(key: string): Promise<void> {
-        await dexieDb.keyValue.delete(key);
+        await getDexieDb().keyValue.delete(key);
     }
 
     async clear(): Promise<void> {
-        await dexieDb.keyValue.clear();
+        await getDexieDb().keyValue.clear();
     }
 
     async exportAll(): Promise<string> {
-        return JSON.stringify(await dexieDb.keyValue.toArray());
+        return JSON.stringify(await getDexieDb().keyValue.toArray());
     }
 
     async importAll(payload: string): Promise<void> {
         const data = safeParse<{ id: string; value: unknown; createdAt?: number }[]>(payload);
-        await dexieDb.transaction('rw', dexieDb.keyValue, async () => {
-            await dexieDb.keyValue.clear();
-            if (data.length > 0) await dexieDb.keyValue.bulkPut(data);
+        await getDexieDb().transaction('rw', getDexieDb().keyValue, async () => {
+            await getDexieDb().keyValue.clear();
+            if (data.length > 0) await getDexieDb().keyValue.bulkPut(data);
         });
     }
 }
 
 class DexieDebateStore implements DebateStore {
     async saveSnapshot(record: DebateSessionRecord): Promise<number> {
-        const current = await dexieDb.debateSessions.get(record.id);
+        const current = await getDexieDb().debateSessions.get(record.id);
         const currentVersion = (current as { version?: number })?.version ?? 0;
         if (current && record.version != null && record.version < currentVersion) {
             eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
@@ -407,12 +409,12 @@ class DexieDebateStore implements DebateStore {
             );
         }
         const newVersion = currentVersion + 1;
-        await dexieDb.debateSessions.put({ ...record, version: newVersion });
+        await getDexieDb().debateSessions.put({ ...record, version: newVersion });
         return newVersion;
     }
 
     async getSnapshot(id: string): Promise<DebateSessionRecord | null> {
-        const raw = await dexieDb.debateSessions.get(id);
+        const raw = await getDexieDb().debateSessions.get(id);
         return raw ?? null;
     }
 
@@ -421,7 +423,7 @@ class DexieDebateStore implements DebateStore {
         limit?: number;
         offset?: number;
     }): Promise<DebateSessionRecord[]> {
-        const collection = dexieDb.debateSessions.orderBy('updatedAt').reverse();
+        const collection = getDexieDb().debateSessions.orderBy('updatedAt').reverse();
         const limit = options?.limit ?? 50;
         const offset = options?.offset ?? 0;
         let records: DebateSessionRecord[];
@@ -438,20 +440,20 @@ class DexieDebateStore implements DebateStore {
     }
 
     async deleteSession(id: string): Promise<void> {
-        await dexieDb.debateSessions.delete(id);
+        await getDexieDb().debateSessions.delete(id);
     }
 
     async saveVerdict(record: DebateVerdictRecord): Promise<void> {
-        await dexieDb.debateVerdicts.put(record);
+        await getDexieDb().debateVerdicts.put(record);
     }
 
     async getVerdict(sessionId: string): Promise<DebateVerdictRecord | null> {
-        const raw = await dexieDb.debateVerdicts.get(sessionId);
+        const raw = await getDexieDb().debateVerdicts.get(sessionId);
         return raw ?? null;
     }
 
     async count(): Promise<number> {
-        return dexieDb.debateSessions.count();
+        return getDexieDb().debateSessions.count();
     }
 }
 

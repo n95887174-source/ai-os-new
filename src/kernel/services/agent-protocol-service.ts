@@ -5,8 +5,7 @@ import type {
     AgentCapability,
 } from '../contracts/agent-protocol';
 
-let _idCounter = 0;
-const genId = () => `msg-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
 
 const DEFAULT_CAPABILITIES: AgentCapability[] = [
     {

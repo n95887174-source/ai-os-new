@@ -478,6 +478,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 lazy: true,
                 level: 'L2',
             },
+            {
+                id: 'persona-picker',
+                labelKey: 'nav.persona_picker',
+                icon: <Sparkles size={18} />,
+                color: '#8b5cf6',
+                lazy: true,
+                level: 'L2',
+            },
         ],
     },
 
@@ -579,14 +587,6 @@ export const NAV_SECTIONS: NavSection[] = [
                 color: '#a855f7',
                 lazy: true,
                 level: 'L1',
-            },
-            {
-                id: 'provider-migration',
-                labelKey: 'nav.provider_migration',
-                icon: <Shuffle size={18} />,
-                color: '#f59e0b',
-                lazy: true,
-                level: 'L2',
             },
             {
                 id: 'nvidia-enterprise',
@@ -1431,9 +1431,6 @@ const AgentComparisonPanelLazy = React.lazy(
 const DebateTemplatesPanelLazy = React.lazy(
     () => import('./components/DebateTemplates/DebateTemplatesPanel'),
 );
-const ProviderMigrationPanelLazy = React.lazy(
-    () => import('./components/ProviderMigration/ProviderMigrationPanel'),
-);
 const SmartRoutingPanelLazy = React.lazy(
     () => import('./components/SmartRouting/SmartRoutingPanel'),
 );
@@ -1475,6 +1472,9 @@ const FederatedMemoryPanelLazy = React.lazy(
 const PluginSdkPanelLazy = React.lazy(() => import('./components/PluginSdk/PluginSdkPanel'));
 const PersonaMarketplacePanelLazy = React.lazy(
     () => import('./components/PersonaMarketplace/PersonaMarketplacePanel'),
+);
+const PersonaPickerPanelLazy = React.lazy(
+    () => import('./components/PersonaPicker/PersonaPickerPanel'),
 );
 const TemplateSharingPanelLazy = React.lazy(
     () => import('./components/TemplateSharing/TemplateSharingPanel'),
@@ -1628,7 +1628,6 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'export-import': ExportImportPanelLazy,
     'agent-comparison': AgentComparisonPanelLazy,
     'debate-templates': DebateTemplatesPanelLazy,
-    'provider-migration': ProviderMigrationPanelLazy,
     'health-sla': HealthSlaPanelLazy,
     leaderboard: SocialLeaderboardPanelLazy,
     'research-reports': ResearchReportPanelLazy,
@@ -1642,6 +1641,7 @@ const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'federated-memory': FederatedMemoryPanelLazy,
     'plugin-sdk': PluginSdkPanelLazy,
     'persona-marketplace': PersonaMarketplacePanelLazy,
+    'persona-picker': PersonaPickerPanelLazy,
     'template-sharing': TemplateSharingPanelLazy,
     'memory-export-import': MemoryTransferPanelLazy,
     'aquarium-trading': AquariumTradingPanelLazy,

@@ -24,8 +24,67 @@ import type {
     IResearchEngine,
     ResearchSession,
     EpistemicLoopResult,
+    SourceType,
 } from '../../kernel/contracts/research-engine';
 import { researchEngine } from '../../kernel/instances';
+import { sourceAdapterRegistry } from '../../kernel/services/research-adapters/source-adapter-registry';
+
+const SOURCE_COLORS: Record<string, string> = {
+    duckduckgo: '#de5833',
+    google_custom_search: '#4285F4',
+    wikipedia: '#636363',
+    arxiv: '#b31b1b',
+    pubmed: '#4b8bbe',
+    pubmed_central: '#4b8bbe',
+    semantic_scholar: '#1857b6',
+    openalex: '#8c1515',
+    crossref: '#1a7c3a',
+    dblp: '#004b6e',
+    core: '#e67e22',
+    base: '#2ecc71',
+    hal: '#9b59b6',
+    openaire: '#e74c3c',
+    biorxiv: '#3498db',
+    medrxiv: '#2980b9',
+    chemrxiv: '#1abc9c',
+    news_api: '#f39c12',
+    github: '#333333',
+    stack_overflow: '#f48024',
+    reddit: '#ff4500',
+    google_patents: '#4285F4',
+    wolfram_alpha: '#d95e27',
+    ieee_xplore: '#00629B',
+    acm_dl: '#008080',
+    jstor: '#0080c3',
+    scopus: '#e9711a',
+    web_of_science: '#003399',
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+    duckduckgo: 'DuckDuckGo',
+    google_custom_search: 'Google',
+    wikipedia: 'Wikipedia',
+    arxiv: 'ArXiv',
+    pubmed: 'PubMed',
+    pubmed_central: 'PMC',
+    semantic_scholar: 'Semantic Sch.',
+    openalex: 'OpenAlex',
+    crossref: 'Crossref',
+    dblp: 'DBLP',
+    core: 'CORE',
+    base: 'BASE',
+    hal: 'HAL',
+    openaire: 'OpenAIRE',
+    biorxiv: 'BioRxiv',
+    medrxiv: 'MedRxiv',
+    chemrxiv: 'ChemRxiv',
+    news_api: 'News API',
+    github: 'GitHub',
+    stack_overflow: 'Stack Overflow',
+    reddit: 'Reddit',
+    google_patents: 'Google Patents',
+    wolfram_alpha: 'Wolfram Alpha',
+};
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
     idle: { color: '#64748b', icon: <Clock size={14} />, label: 'Idle' },
@@ -549,6 +608,38 @@ const LoopCard: React.FC<{ loop: EpistemicLoopResult; index: number }> = ({ loop
                                             >
                                                 {src.title}
                                             </span>
+                                            {src.sourceType && (
+                                                <span
+                                                    style={{
+                                                        fontSize: '0.6rem',
+                                                        padding: '1px 5px',
+                                                        borderRadius: 3,
+                                                        background: `${SOURCE_COLORS[src.sourceType] || '#64748b'}22`,
+                                                        color:
+                                                            SOURCE_COLORS[src.sourceType] ||
+                                                            '#64748b',
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    {SOURCE_LABELS[src.sourceType] ||
+                                                        src.sourceType}
+                                                </span>
+                                            )}
+                                            {src.authors && src.authors.length > 0 && (
+                                                <span
+                                                    style={{
+                                                        fontSize: '0.6rem',
+                                                        color: '#475569',
+                                                        maxWidth: 100,
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                    }}
+                                                >
+                                                    {src.authors[0]}
+                                                    {src.authors.length > 1 ? ' et al.' : ''}
+                                                </span>
+                                            )}
                                             <span style={{ fontSize: '0.65rem', color: '#475569' }}>
                                                 {(src.relevanceScore * 100).toFixed(0)}%
                                             </span>
@@ -575,8 +666,30 @@ export const ResearchEnginePanel: React.FC = () => {
     const [newTitle, setNewTitle] = useState('');
     const [newQuestion, setNewQuestion] = useState('');
     const [showForm, setShowForm] = useState(false);
+    const [showSourceConfig, setShowSourceConfig] = useState(false);
+    const [enabledSources, setEnabledSources] = useState<SourceType[]>(
+        sourceAdapterRegistry.getConfig().enabledSources,
+    );
     const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const engineRef = useRef<IResearchEngine>(researchEngine);
+
+    const sourceStats = sourceAdapterRegistry.getAllAdapters().reduce(
+        (acc, a) => {
+            acc.total++;
+            acc.byCategory[a.category] = (acc.byCategory[a.category] || 0) + 1;
+            if (enabledSources.includes(a.name)) acc.enabled++;
+            return acc;
+        },
+        { total: 0, enabled: 0, byCategory: {} as Record<string, number> },
+    );
+
+    const toggleSource = useCallback((type: SourceType) => {
+        setEnabledSources((prev) => {
+            const next = prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type];
+            sourceAdapterRegistry.updateConfig({ enabledSources: next });
+            return next;
+        });
+    }, []);
 
     const refresh = useCallback(() => {
         setSessions(engineRef.current.getAllSessions());
@@ -646,25 +759,157 @@ export const ResearchEnginePanel: React.FC = () => {
                         {translate('research_engine.subtitle')}
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '8px 16px',
-                        borderRadius: 8,
-                        background: 'rgba(139,92,246,0.15)',
-                        border: '1px solid rgba(139,92,246,0.3)',
-                        color: '#a78bfa',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        fontSize: '0.8rem',
-                    }}
-                >
-                    <Plus size={16} /> {translate('research_engine.new_session')}
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                        onClick={() => setShowSourceConfig(!showSourceConfig)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            background: 'rgba(100,116,139,0.15)',
+                            border: '1px solid rgba(100,116,139,0.3)',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '0.78rem',
+                        }}
+                        title={`${sourceStats.enabled}/${sourceStats.total} sources enabled`}
+                    >
+                        <Search size={14} /> {sourceStats.enabled}/{sourceStats.total}{' '}
+                        {translate('research_engine.sources')}
+                    </button>
+                    <button
+                        onClick={() => setShowForm(!showForm)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 16px',
+                            borderRadius: 8,
+                            background: 'rgba(139,92,246,0.15)',
+                            border: '1px solid rgba(139,92,246,0.3)',
+                            color: '#a78bfa',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                        }}
+                    >
+                        <Plus size={16} /> {translate('research_engine.new_session')}
+                    </button>
+                </div>
             </div>
+
+            <AnimatePresence>
+                {showSourceConfig && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        style={{ overflow: 'hidden', marginBottom: '1rem' }}
+                    >
+                        <div
+                            style={{
+                                background: 'rgba(100,116,139,0.05)',
+                                border: '1px solid rgba(100,116,139,0.15)',
+                                borderRadius: 12,
+                                padding: '0.75rem 1rem',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    marginBottom: 8,
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    color: '#94a3b8',
+                                }}
+                            >
+                                <Search size={14} />{' '}
+                                {translate('research_engine.available_sources')} (
+                                {sourceStats.total})
+                                <span
+                                    style={{
+                                        marginLeft: 'auto',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 400,
+                                        color: '#64748b',
+                                    }}
+                                >
+                                    {sourceStats.enabled} active
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {sourceAdapterRegistry.getAllAdapters().map((adapter) => {
+                                    const isEnabled = enabledSources.includes(adapter.name);
+                                    return (
+                                        <label
+                                            key={adapter.name}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                padding: '3px 6px',
+                                                borderRadius: 4,
+                                                cursor: 'pointer',
+                                                fontSize: '0.72rem',
+                                                color: isEnabled ? '#e2e8f0' : '#475569',
+                                                opacity: adapter.isRestricted ? 0.5 : 1,
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isEnabled}
+                                                onChange={() => toggleSource(adapter.name)}
+                                                style={{ accentColor: '#8b5cf6' }}
+                                            />
+                                            <span
+                                                style={{
+                                                    width: 6,
+                                                    height: 6,
+                                                    borderRadius: '50%',
+                                                    background:
+                                                        SOURCE_COLORS[adapter.name] || '#64748b',
+                                                    flexShrink: 0,
+                                                }}
+                                            />
+                                            <span style={{ fontWeight: isEnabled ? 600 : 400 }}>
+                                                {adapter.displayName}
+                                            </span>
+                                            {adapter.needsKey && (
+                                                <span
+                                                    style={{ fontSize: '0.6rem', color: '#f59e0b' }}
+                                                >
+                                                    🔑
+                                                </span>
+                                            )}
+                                            {adapter.isRestricted && (
+                                                <span
+                                                    style={{ fontSize: '0.6rem', color: '#ef4444' }}
+                                                >
+                                                    🔒
+                                                </span>
+                                            )}
+                                            <span
+                                                style={{
+                                                    fontSize: '0.6rem',
+                                                    color: '#64748b',
+                                                    marginLeft: 'auto',
+                                                }}
+                                            >
+                                                {adapter.category}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {showForm && (

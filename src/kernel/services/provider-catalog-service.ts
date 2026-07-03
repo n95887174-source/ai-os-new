@@ -6,8 +6,6 @@
 import { rootLogger } from './logger-service';
 import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
-import { BucketStorageAdapter } from './storage-adapter';
-
 const LOGGER = rootLogger.child('ProviderCatalog');
 
 export interface ProviderCatalogEntry {
@@ -51,19 +49,6 @@ const DEFAULT_CATALOG: ProviderCatalogEntry[] = [
         models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
         features: { streaming: true, tools: true, vision: true, embeddings: true },
         pricing: { inputPer1M: 2.5, outputPer1M: 10, currency: 'USD' },
-        autoDetected: false,
-        lastChecked: 0,
-        status: 'unknown',
-    },
-    {
-        id: 'anthropic',
-        name: 'Anthropic',
-        baseURL: 'https://api.anthropic.com/v1',
-        authType: 'api-key',
-        capabilities: ['chat', 'vision'],
-        models: ['claude-3-5-sonnet', 'claude-3-5-haiku', 'claude-3-opus', 'claude-3-sonnet'],
-        features: { streaming: true, tools: true, vision: true, embeddings: false },
-        pricing: { inputPer1M: 3, outputPer1M: 15, currency: 'USD' },
         autoDetected: false,
         lastChecked: 0,
         status: 'unknown',
@@ -133,28 +118,14 @@ const DEFAULT_CATALOG: ProviderCatalogEntry[] = [
         lastChecked: 0,
         status: 'unknown',
     },
-    {
-        id: 'perplexity',
-        name: 'Perplexity',
-        baseURL: 'https://api.perplexity.ai',
-        authType: 'api-key',
-        capabilities: ['chat'],
-        models: ['llama-3.1-sonar-small-128k-online', 'llama-3.1-sonar-large-128k-online'],
-        features: { streaming: true, tools: true, vision: false, embeddings: false },
-        pricing: { inputPer1M: 1, outputPer1M: 1, currency: 'USD' },
-        autoDetected: false,
-        lastChecked: 0,
-        status: 'unknown',
-    },
 ];
 
 class ProviderCatalogService {
-    private storage: BucketStorageAdapter;
     private catalog: Map<string, ProviderCatalogEntry> = new Map();
     private autoDetectedProviders: DiscoveredProvider[] = [];
-
-    constructor() {
-        this.storage = BucketStorageAdapter.PROVIDERS;
+    private async db(): Promise<import('../types/interfaces').IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
     }
 
     private unsubs: Array<() => void> = [];
@@ -166,7 +137,9 @@ class ProviderCatalogService {
         }
 
         // Load custom entries
-        const saved = await this.storage.get<ProviderCatalogEntry[]>('custom');
+        const saved = await (
+            await this.db()
+        ).getKv<ProviderCatalogEntry[]>('provider_catalog_custom');
         if (saved) {
             for (const entry of saved) {
                 this.catalog.set(entry.id, entry);
@@ -396,7 +369,7 @@ class ProviderCatalogService {
 
     private async save(): Promise<void> {
         const custom = this.getAll().filter((p) => !DEFAULT_CATALOG.some((d) => d.id === p.id));
-        await this.storage.set('custom', custom);
+        await (await this.db()).setKv('provider_catalog_custom', custom);
     }
 }
 

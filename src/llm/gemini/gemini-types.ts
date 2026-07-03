@@ -118,4 +118,9 @@ export interface StreamMeta {
         probability: 'NEGLIGIBLE' | 'LOW' | 'MEDIUM' | 'HIGH';
         blocked?: boolean;
     }>;
+    usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+    };
 }

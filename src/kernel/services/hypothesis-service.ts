@@ -15,13 +15,13 @@ const STORAGE_KEY = 'research_hypotheses';
 const SEED_HYPOTHESES: ResearchHypothesis[] = [
     {
         id: 'seed-1',
-        title: 'Split debate-service.ts into domain-specific modules',
+        title: 'Debate runtime: split into domain-specific modules',
         description:
-            'The debate-service.ts file exceeds 1400 lines. Splitting into orchestration, parser, metrics, and state modules would improve maintainability.',
+            'The debate runtime is organized across debate-engine, debate-session, debate-metrics, debate-prompt-builder, debate-finalizer, and debate-sync-manager modules under debate-runtime/.',
         category: 'arch',
         status: 'accepted',
         createdAt: Date.now() - 86400000 * 2,
-        sourceFile: 'src/kernel/services/debate-service.ts',
+        sourceFile: 'src/kernel/services/debate-runtime/',
         evidenceRefs: ['docs/DEBT_REPORT.md D-02'],
     },
     {

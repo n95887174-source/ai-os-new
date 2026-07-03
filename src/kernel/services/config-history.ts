@@ -2,9 +2,7 @@ import { genId } from '../../utils/gen-id';
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { CONFIG } from './config-registry';
 import { replaceConfig } from './config-mutations';
-import { BucketStorageAdapter } from '../storage-adapter-instance';
 import { rootLogger } from './logger-service';
-import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('ConfigHistory');
 
@@ -36,43 +34,38 @@ const CONFIG_HISTORY_KEY = 'config_history_v1';
 export class ConfigHistoryService {
     private history: ConfigVersion[] = [];
     private currentVersionSeq = 1;
+    private async db(): Promise<import('../types/interfaces').IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
+    }
 
-    constructor() {
-        // D-24: Load persisted history from storage on startup
-        try {
-            const stored = BucketStorageAdapter.getItem(CONFIG_HISTORY_KEY);
-            if (stored) {
-                const parsed = safeJsonParse(stored) as { history: ConfigVersion[]; seq: number };
-                this.history = parsed.history ?? [];
-                this.currentVersionSeq = parsed.seq ?? this.history.length + 1;
-            }
-        } catch (e) {
-            LOGGER.warn('ConfigHistory', 'Failed to load persisted history, starting fresh', {
-                error: e,
-            });
+    async init(): Promise<void> {
+        const stored = await (
+            await this.db()
+        ).getKv<{ history: ConfigVersion[]; seq: number }>(CONFIG_HISTORY_KEY);
+        if (stored) {
+            this.history = stored.history ?? [];
+            this.currentVersionSeq = stored.seq ?? this.history.length + 1;
         }
-        // Commit initial seed if no history loaded
         if (this.history.length === 0) {
-            this.commit(CONFIG, 'System', 'Initial configuration seed (v1.0.0)');
+            await this.commit(CONFIG, 'System', 'Initial configuration seed (v1.0.0)');
         }
     }
 
-    private persist(): void {
-        // D-24: Save history to storage after every mutation
+    private async persist(): Promise<void> {
         try {
-            BucketStorageAdapter.setItem(
-                CONFIG_HISTORY_KEY,
-                JSON.stringify({
-                    history: this.history,
-                    seq: this.currentVersionSeq,
-                }),
-            );
+            await (
+                await this.db()
+            ).setKv(CONFIG_HISTORY_KEY, {
+                history: this.history,
+                seq: this.currentVersionSeq,
+            });
         } catch (e) {
             LOGGER.error('ConfigHistory', 'Failed to persist history', { error: e });
         }
     }
 
-    commit(config: ConfigRegistry, author: string, comment: string): ConfigVersion {
+    async commit(config: ConfigRegistry, author: string, comment: string): Promise<ConfigVersion> {
         // Clone config deeply to preserve immutability
         // JSON round-trip (not structuredClone) because CONFIG is a Proxy that throws DATA_CLONE_ERR
         let snapshot: ConfigRegistry;
@@ -92,7 +85,7 @@ export class ConfigHistoryService {
         };
         this.history.push(newVersion);
         if (this.history.length > MAX_HISTORY) this.history.shift();
-        this.persist();
+        await this.persist();
         return newVersion;
     }
 

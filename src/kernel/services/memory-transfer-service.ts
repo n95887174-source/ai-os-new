@@ -5,8 +5,7 @@ import type {
     ExportFormat,
 } from '../contracts/memory-transfer';
 
-let _idCounter = 0;
-const genId = () => `mimport-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
 
 export class MemoryTransferService implements IMemoryTransferService {
     private exports: MemoryExport[] = [];

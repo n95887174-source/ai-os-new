@@ -2,12 +2,7 @@ import type { ILLMClientService, AdapterMessage } from '../contracts/provider-ad
 import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
-import type { ILogger } from '../contracts/logger';
 import { LLMError } from '../../llm/core/errors';
-import { estimateTokens } from '../utils/tokenEstimate';
-import type { RaceExecutor } from './race-executor';
-import type { ProviderMetrics, DowngradeCandidate } from './downgrade-strategy';
-import type { ApiKey } from '../types/metrics-types';
 import type { ChatServiceDeps } from './chat-service';
 import { rootLogger } from './logger-service';
 
@@ -73,7 +68,6 @@ export class ChatExecutor {
 
         while (depth < this.MAX_429_RETRIES) {
             const { requestId, model, messages, keyId } = req;
-            const settings = this.deps.settingsService.getSettings();
 
             const agentId = req.options?.metadata?.agentId as string | undefined;
 
@@ -145,37 +139,6 @@ export class ChatExecutor {
                 const startTime = performance.now();
 
                 try {
-                    let requestBody: Record<string, unknown>;
-
-                    try {
-                        const estimatedInputTokens = estimateTokens(
-                            effectiveMessages as unknown as Array<{
-                                role: string;
-                                content: string;
-                            }>,
-                        );
-                        requestBody = await this.llmClient.buildRequestBody({
-                            messages: effectiveMessages as unknown as Array<{
-                                role: string;
-                                content: string;
-                            }>,
-                            model: effectiveModel,
-                            temperature: req.options?.temperature,
-                            maxTokens: req.options?.maxTokens,
-                            stream: settings.streamingEnabled,
-                            estimatedInputTokens,
-                            provider: currentProvider,
-                        });
-                    } catch (buildError: unknown) {
-                        const buildMsg =
-                            buildError instanceof Error ? buildError.message : String(buildError);
-                        LOGGER.error('ChatExecutor', `buildRequestBody failed: ${buildMsg}`, {
-                            provider: currentProvider,
-                        });
-                        this.emitError(req, buildMsg);
-                        return;
-                    }
-
                     let result: Awaited<ReturnType<ILLMClientService['sendMessage']>>;
 
                     const cacheKey = this.deps.cacheService
@@ -234,15 +197,12 @@ export class ChatExecutor {
                         }
 
                         const inflightPromise = (async () => {
-                            const r = await this.llmClient.sendMessage(currentProvider, {
-                                messages: effectiveMessages,
+                            const r = await this.llmClient.sendMessage(effectiveMessages, {
+                                provider: currentProvider,
                                 model: effectiveModel,
                                 temperature: req.options?.temperature,
                                 maxTokens: req.options?.maxTokens,
-                                requestBody,
-                                adapterOptions: {
-                                    signal: sessionController.signal,
-                                },
+                                signal: sessionController.signal,
                             });
                             return r;
                         })();
@@ -257,15 +217,12 @@ export class ChatExecutor {
                             this.cacheInflight.delete(inflightKey);
                         }
                     } else {
-                        result = await this.llmClient.sendMessage(currentProvider, {
-                            messages: effectiveMessages,
+                        result = await this.llmClient.sendMessage(effectiveMessages, {
+                            provider: currentProvider,
                             model: effectiveModel,
                             temperature: req.options?.temperature,
                             maxTokens: req.options?.maxTokens,
-                            requestBody,
-                            adapterOptions: {
-                                signal: sessionController.signal,
-                            },
+                            signal: sessionController.signal,
                         });
                     }
 
@@ -276,7 +233,7 @@ export class ChatExecutor {
                             id: crypto.randomUUID(),
                             requestId,
                             provider: currentProvider,
-                            model: result.model || effectiveModel,
+                            model: effectiveModel,
                             keyId: req.keyId,
                             content: result.content,
                             latency: latencyMs,
@@ -289,7 +246,7 @@ export class ChatExecutor {
                             currentProvider,
                             latencyMs,
                             result.tokens,
-                            result.model || effectiveModel,
+                            effectiveModel,
                             { requestId },
                         );
                         this.deps.keyService.handleProviderError(keyId || currentProvider, '');
@@ -299,7 +256,7 @@ export class ChatExecutor {
                                 this.deps.cacheService.set(
                                     cacheKey,
                                     result.content,
-                                    result.model || effectiveModel,
+                                    effectiveModel,
                                     currentProvider,
                                     result.tokens || 0,
                                     result.tokens || 0,

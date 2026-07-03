@@ -1,4 +1,3 @@
-import { BucketStorageAdapter } from './storage-adapter';
 import { BUILT_IN_TEMPLATES } from '../contracts/prompt-library';
 import type { PromptTemplate } from '../contracts/prompt-library';
 
@@ -10,12 +9,17 @@ function generateId(): string {
 }
 
 export class PromptLibraryService {
-    private readonly store = BucketStorageAdapter.UI;
     private cache: PromptTemplate[] | null = null;
+
+    private async db(): Promise<import('../types/interfaces').IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
+    }
 
     async getAll(): Promise<PromptTemplate[]> {
         if (this.cache) return this.cache;
-        const saved = await this.store.get<PromptTemplate[]>(STORAGE_KEY);
+        const d = await this.db();
+        const saved = await d.getKv<PromptTemplate[]>(STORAGE_KEY);
         const custom = saved ?? [];
         const all = [...BUILT_IN_TEMPLATES, ...custom];
         this.cache = all;
@@ -40,9 +44,10 @@ export class PromptLibraryService {
             usageCount: 0,
             isBuiltIn: false,
         };
-        const saved = (await this.store.get<PromptTemplate[]>(STORAGE_KEY)) ?? [];
+        const d = await this.db();
+        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
         saved.push(prompt);
-        await this.store.set(STORAGE_KEY, saved);
+        await d.setKv(STORAGE_KEY, saved);
         this.cache = null;
         return prompt;
     }
@@ -51,30 +56,33 @@ export class PromptLibraryService {
         id: string,
         data: Partial<Omit<PromptTemplate, 'id' | 'createdAt' | 'isBuiltIn'>>,
     ): Promise<PromptTemplate | undefined> {
-        const saved = (await this.store.get<PromptTemplate[]>(STORAGE_KEY)) ?? [];
+        const d = await this.db();
+        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
         const idx = saved.findIndex((p) => p.id === id);
         if (idx === -1) return undefined;
         saved[idx] = { ...saved[idx], ...data, updatedAt: Date.now() };
-        await this.store.set(STORAGE_KEY, saved);
+        await d.setKv(STORAGE_KEY, saved);
         this.cache = null;
         return saved[idx];
     }
 
     async remove(id: string): Promise<boolean> {
-        const saved = (await this.store.get<PromptTemplate[]>(STORAGE_KEY)) ?? [];
+        const d = await this.db();
+        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
         const filtered = saved.filter((p) => p.id !== id);
         if (filtered.length === saved.length) return false;
-        await this.store.set(STORAGE_KEY, filtered);
+        await d.setKv(STORAGE_KEY, filtered);
         this.cache = null;
         return true;
     }
 
     async incrementUsage(id: string): Promise<void> {
-        const saved = (await this.store.get<PromptTemplate[]>(STORAGE_KEY)) ?? [];
+        const d = await this.db();
+        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
         const idx = saved.findIndex((p) => p.id === id);
         if (idx !== -1) {
             saved[idx].usageCount++;
-            await this.store.set(STORAGE_KEY, saved);
+            await d.setKv(STORAGE_KEY, saved);
         }
         this.cache = null;
     }

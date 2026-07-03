@@ -8,7 +8,7 @@ export type { IContainer } from './container';
 export type { ServiceIdentifier } from './container';
 
 export { EventBus } from './events/event-bus';
-export { DatabaseService, dexieDb } from './services/database-service';
+export { DatabaseService } from './services/database-service';
 export { DataAccessLayerImpl } from './dal';
 export type { DataAccessLayer } from './dal';
 export { SecurityService } from './security';
@@ -85,16 +85,6 @@ export type {
 
 export { RoleService } from './services/role-service';
 export type { RoleServiceDeps, RoleUsageStats } from './services/role-service';
-
-export { DebateService } from './services/debate-runtime/debate-service';
-export type {
-    DebateServiceDeps,
-    DebateSession,
-    DebateParticipant,
-    DebateArgument,
-    DebateConfig,
-    HumanVote,
-} from './services/debate-runtime/debate-service';
 
 export { SkillService } from './services/skill-service';
 export type { SkillServiceDeps } from './services/skill-service';

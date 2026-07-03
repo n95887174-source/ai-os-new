@@ -3,6 +3,7 @@ import type { ApiKey } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
 import { sanitizeError } from '../../../llm/http/llm-http-client';
 import type { IHealthCheckService } from '../../contracts/health-check';
+import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 
 export interface KeyHealthDeps {
     eventBus: {
@@ -14,12 +15,15 @@ export interface KeyHealthDeps {
     notify: () => void;
     getKey: (id: string) => ApiKey | undefined;
     getActiveKeys: () => ApiKey[];
+    modifyKey: (id: string, fn: (key: ApiKey) => void) => void;
+    providerAdapterRegistry?: IAdapterRegistry;
 }
 
 export class KeyHealth implements IHealthCheckService {
     private rateLimitHistory: Map<string, number[]> = new Map();
     private retryCounts: Map<string, number> = new Map();
     private backoffMap = new Map<string, number>();
+    private backoffDuration = new Map<string, number>();
     private backoffStartedAt = new Map<string, number>();
 
     constructor(private deps: KeyHealthDeps) {}
@@ -27,37 +31,31 @@ export class KeyHealth implements IHealthCheckService {
     getBackoffRemaining(keyId: string): number | null {
         const startedAt = this.backoffStartedAt.get(keyId);
         if (!startedAt) return null;
-        const nextBackoff = this.backoffMap.get(keyId);
-        const currentDuration = nextBackoff ? nextBackoff / 2 : CONFIG.keys.initialBackoffMs;
+        const duration = this.backoffDuration.get(keyId) ?? CONFIG.keys.initialBackoffMs;
         const elapsed = Date.now() - startedAt;
-        const remaining = currentDuration - elapsed;
-        return Math.max(0, Math.round(remaining));
+        return Math.max(0, Math.round(duration - elapsed));
     }
 
     handleProviderError(key: ApiKey, error: string): void {
-        const previousState = key.status;
-        key.status = 'error';
-        if (!key.stats)
-            key.stats = {
-                successCount: 0,
-                errorCount: 0,
-                totalTokens: 0,
-                avgLatency: 0,
-                minLatency: 0,
-                maxLatency: 0,
-            };
-        key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
+        this.deps.modifyKey(key.id, (k) => {
+            k.status = 'error';
+            if (!k.stats)
+                k.stats = {
+                    successCount: 0,
+                    errorCount: 0,
+                    totalTokens: 0,
+                    avgLatency: 0,
+                    minLatency: 0,
+                    maxLatency: 0,
+                };
+            k.stats.lastError = { message: error, timestamp: new Date().toISOString() };
+        });
 
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
             message: `Error ${key.provider}: ${sanitizeError(error).substring(0, 60)}...`,
             type: 'error',
         });
-        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
-            id: key.id,
-            provider: key.provider,
-            state: 'error',
-            previousState,
-        });
+        this.transitionState(key, 'error');
     }
 
     check429Spike(keyId: string): void {
@@ -79,6 +77,7 @@ export class KeyHealth implements IHealthCheckService {
         const current = this.backoffMap.get(keyId) || CONFIG.keys.initialBackoffMs;
         const next = Math.min(current * 2, CONFIG.keys.maxBackoffMs);
         this.backoffMap.set(keyId, next);
+        this.backoffDuration.set(keyId, current);
         this.backoffStartedAt.set(keyId, Date.now());
         return current;
     }
@@ -88,6 +87,7 @@ export class KeyHealth implements IHealthCheckService {
         this.retryCounts.delete(keyId);
         this.backoffMap.delete(keyId);
         this.backoffStartedAt.delete(keyId);
+        this._healthCache.delete(keyId);
     }
 
     resetRetryCount(keyId: string): void {
@@ -107,72 +107,106 @@ export class KeyHealth implements IHealthCheckService {
     ): Promise<{ id: string; provider: string; status: string; latency: number }> {
         const keyRef = this.deps.getKey(keyId);
         if (!keyRef) return { id: 'none', provider: 'none', status: 'error', latency: 0 };
+        const provider = keyRef.provider;
 
-        // Capture version before async work — if user toggles status while
-        // health check is in-flight, skip the status update to avoid TOCTOU race.
         const versionAtStart = keyRef.statusVersion ?? 0;
-
         const start = performance.now();
-        const healthUrl = this.getHealthUrl(keyRef.provider, keyRef.key);
+        let ok = false;
+        let statusCode = 0;
+
         try {
-            const response = await fetch(healthUrl, {
-                signal: AbortSignal.timeout(CONFIG.keys.healthCheckTimeoutMs),
-            });
-            const latency = performance.now() - start;
-            if (!response.ok) {
-                response.body?.cancel();
-                this._healthCache.set(keyId, Date.now());
-            }
-            const protectedStatuses = new Set(['compromised', 'quarantined']);
-            const newStatus = protectedStatuses.has(keyRef.status)
-                ? keyRef.status
-                : response.ok
-                  ? 'active'
-                  : 'error';
-            // Only apply status if version hasn't changed (user didn't toggle during check)
-            if ((keyRef.statusVersion ?? 0) === versionAtStart) {
-                Object.assign(keyRef, { latency, status: newStatus });
+            // CRIT-K4: Prefer adapter checkHealth which uses Authorization header
+            const adapter = this.deps.providerAdapterRegistry?.getAdapter(provider);
+            if (adapter?.checkHealth) {
+                const result = await adapter.checkHealth(keyRef.key);
+                ok = result.status === 'active';
+                statusCode = ok ? 200 : 0;
             } else {
-                Object.assign(keyRef, { latency });
-            }
-            if (response.ok && keyRef.stats) {
-                keyRef.stats.avgLatency = keyRef.stats.avgLatency * 0.7 + latency * 0.3;
-            }
-            await this.deps.saveKeys();
-            this.deps.notify();
-            if (!response.ok) {
-                this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
-                    id: keyRef.id,
-                    provider: keyRef.provider,
-                    error: `Health check failed: ${response.status}`,
+                // Fallback: URL-based health check with Authorization header
+                const healthUrl = this.getHealthUrl(provider, keyRef.key);
+                const headers: Record<string, string> = {};
+                if (keyRef.key) {
+                    if (provider.toLowerCase() === 'gemini') {
+                        headers['x-goog-api-key'] = keyRef.key;
+                    } else {
+                        headers['Authorization'] = `Bearer ${keyRef.key}`;
+                    }
+                }
+                const response = await fetch(healthUrl, {
+                    method: 'GET',
+                    headers,
+                    signal: AbortSignal.timeout(CONFIG.keys.healthCheckTimeoutMs),
                 });
-            } else {
-                this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_COMPLETED, {
-                    id: keyRef.id,
-                    provider: keyRef.provider,
-                    status: 'active',
-                    latency,
-                });
+                ok = response.ok;
+                statusCode = response.status;
+                if (!ok) response.body?.cancel();
             }
-            return { id: keyRef.id, provider: keyRef.provider, status: keyRef.status, latency };
         } catch (e) {
             const latency = performance.now() - start;
             this._healthCache.set(keyId, Date.now());
-            // Only apply status if version hasn't changed
-            if ((keyRef.statusVersion ?? 0) === versionAtStart) {
-                Object.assign(keyRef, { status: 'error' as const, latency });
-            } else {
-                Object.assign(keyRef, { latency });
-            }
+            this.deps.modifyKey(keyId, (key) => {
+                if ((key.statusVersion ?? 0) === versionAtStart) {
+                    key.status = 'error' as ApiKey['status'];
+                    key.latency = latency;
+                } else {
+                    key.latency = latency;
+                }
+            });
             await this.deps.saveKeys();
             this.deps.notify();
             this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
-                id: keyRef.id,
-                provider: keyRef.provider,
+                id: keyId,
+                provider,
                 error: e instanceof Error ? e.message : String(e),
             });
-            return { id: keyRef.id, provider: keyRef.provider, status: keyRef.status, latency: -1 };
+            return { id: keyId, provider, status: 'error', latency: -1 };
         }
+
+        const latency = performance.now() - start;
+        const protectedStatuses = new Set(['compromised', 'quarantined']);
+
+        if (ok) {
+            this._healthCache.delete(keyId); // HIGH-K1: clear failure cache on success
+        } else {
+            this._healthCache.set(keyId, Date.now());
+        }
+
+        const newStatus = protectedStatuses.has(keyRef.status)
+            ? keyRef.status
+            : ok
+              ? 'active'
+              : 'error';
+
+        this.deps.modifyKey(keyId, (key) => {
+            if ((key.statusVersion ?? 0) === versionAtStart) {
+                key.status = newStatus;
+                key.latency = latency;
+            } else {
+                key.latency = latency;
+            }
+            if (ok && key.stats) {
+                key.stats.avgLatency = key.stats.avgLatency * 0.7 + latency * 0.3;
+            }
+        });
+
+        await this.deps.saveKeys();
+        this.deps.notify();
+
+        if (!ok) {
+            this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_FAILED, {
+                id: keyId,
+                provider,
+                error: `Health check failed: ${statusCode || 'unknown'}`,
+            });
+        } else {
+            this.deps.eventBus.emit(EVENTS.KEY_HEALTH_CHECK_COMPLETED, {
+                id: keyId,
+                provider,
+                status: 'active',
+                latency,
+            });
+        }
+        return { id: keyId, provider, status: newStatus, latency };
     }
 
     private _healthCache = new Map<string, number>(); // keyId → timestamp of last failure
@@ -222,8 +256,10 @@ export class KeyHealth implements IHealthCheckService {
     }
 
     updateKeyStatus(key: ApiKey, status: ApiKey['status'], latency?: number): void {
-        key.status = status;
-        if (latency !== undefined) key.latency = latency;
+        this.deps.modifyKey(key.id, (k) => {
+            k.status = status;
+            if (latency !== undefined) k.latency = latency;
+        });
     }
 
     updateAvailableModels(key: ApiKey, models: string[]): void {
@@ -231,24 +267,34 @@ export class KeyHealth implements IHealthCheckService {
     }
 
     toggleKeyStatus(key: ApiKey): void {
-        if (key.status === 'active') {
-            key.status = 'inactive';
-        } else if (key.status === 'inactive' || key.status === 'error') {
-            key.status = 'active';
-        }
+        this.deps.modifyKey(key.id, (k) => {
+            if (k.status === 'active') {
+                k.status = 'inactive';
+            } else if (k.status === 'inactive' || k.status === 'error') {
+                k.status = 'active';
+            }
+        });
         // Other states (quarantined, compromised) are not toggleable — user must use explicit recovery flow
     }
 
     enableAllKeys(keys: ApiKey[]): void {
-        keys.forEach((k) => (k.status = 'active'));
+        for (const k of keys)
+            this.deps.modifyKey(k.id, (key) => {
+                key.status = 'active';
+            });
     }
 
     disableAllKeys(keys: ApiKey[]): void {
-        keys.forEach((k) => (k.status = 'inactive'));
+        for (const k of keys)
+            this.deps.modifyKey(k.id, (key) => {
+                key.status = 'inactive';
+            });
     }
 
     quarantineKey(key: ApiKey, source: string): boolean {
-        key.status = 'quarantined' as ApiKey['status'];
+        this.deps.modifyKey(key.id, (k) => {
+            k.status = 'quarantined' as ApiKey['status'];
+        });
         this.deps.addAlert(key.id, {
             type: 'security',
             severity: 'critical',
@@ -263,7 +309,9 @@ export class KeyHealth implements IHealthCheckService {
 
     compromiseKey(key: ApiKey, source: string): void {
         const prevStatus = key.status;
-        key.status = 'compromised' as ApiKey['status'];
+        this.deps.modifyKey(key.id, (k) => {
+            k.status = 'compromised' as ApiKey['status'];
+        });
         // Wipe the key material entirely instead of leaving a sentinel
         // string in place. Previously we wrote `key.key = '[COMPROMISED]'`
         // and left `isEncrypted: false`, which (a) got re-encrypted on the

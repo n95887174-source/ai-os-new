@@ -14,10 +14,11 @@ export class GeminiAdapter extends BaseLLMAdapter {
     private readonly healthCheck: GeminiHealthCheck;
     readonly #httpClient: LLMHttpClient;
 
-    constructor(httpClient = new LLMHttpClient('/proxy/gemini', {}, 'x-goog-api-key', 'Gemini')) {
+    constructor(httpClient?: LLMHttpClient, baseURL?: string) {
         super();
-        this.#httpClient = httpClient;
-        this.healthCheck = new GeminiHealthCheck(httpClient);
+        const url = baseURL ?? import.meta.env.VITE_PROXY_GEMINI ?? '/proxy/gemini';
+        this.#httpClient = httpClient ?? new LLMHttpClient(url, {}, 'x-goog-api-key', 'Gemini');
+        this.healthCheck = new GeminiHealthCheck(this.#httpClient);
         modelCache.setFetcher((apiKey) =>
             this.healthCheck.getAvailableModels(apiKey).then((m) => new Set(m)),
         );

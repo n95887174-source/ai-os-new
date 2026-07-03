@@ -1,7 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { X, Check, Users } from 'lucide-react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { X, Check, Users, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HISTORICAL_FIGURES } from '../../kernel/services/debate-runtime/debate-historical-figures';
+import {
+    ALL_FIGURES,
+    searchFigures,
+} from '../../kernel/services/debate-runtime/debate-historical-figures';
 
 interface HistoricalFiguresPickerProps {
     isOpen: boolean;
@@ -11,6 +14,28 @@ interface HistoricalFiguresPickerProps {
     max?: number;
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+    scientist: '#3b82f6',
+    philosopher: '#8b5cf6',
+    writer: '#f59e0b',
+    politician: '#ef4444',
+    artist: '#ec4899',
+    musician: '#a855f7',
+    entrepreneur: '#10b981',
+    military: '#dc2626',
+    religious: '#d97706',
+    fictional: '#06b6d4',
+    expert: '#64748b',
+};
+
+const UNIQUE_CATEGORIES = Array.from(
+    new Set(ALL_FIGURES.map((f) => f.category).filter(Boolean)),
+) as string[];
+
+const UNIQUE_ERAS = Array.from(new Set(ALL_FIGURES.map((f) => f.era))).sort();
+
+const ITEMS_PER_PAGE = 30;
+
 export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = ({
     isOpen,
     onClose,
@@ -19,10 +44,27 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
     max = 5,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const [search, setSearch] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('');
+    const [eraFilter, setEraFilter] = useState('');
+    const [page, setPage] = useState(0);
+
+    const filtered = useMemo(() => {
+        return searchFigures(
+            search,
+            categoryFilter || undefined,
+            eraFilter || undefined,
+            page,
+            ITEMS_PER_PAGE,
+        );
+    }, [search, categoryFilter, eraFilter, page]);
 
     useEffect(() => {
         if (!isOpen) return;
-        // Move focus into the modal and trap it
+        setSearch('');
+        setCategoryFilter('');
+        setEraFilter('');
+        setPage(0);
         const prevFocus = document.activeElement as HTMLElement | null;
         const focusable = containerRef.current?.querySelector<HTMLElement>(
             'button, [tabindex]:not([tabindex="-1"]), input, select, textarea',
@@ -31,7 +73,6 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
 
         const handler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
-            // Trap Tab cycling within the modal
             if (e.key === 'Tab' && containerRef.current) {
                 const all = containerRef.current.querySelectorAll<HTMLElement>(
                     'button, [tabindex]:not([tabindex="-1"])',
@@ -54,6 +95,18 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
             prevFocus?.focus();
         };
     }, [isOpen, onClose]);
+
+    const chip = (color: string): React.CSSProperties => ({
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '2px 6px',
+        borderRadius: 4,
+        fontSize: '0.6rem',
+        fontWeight: 600,
+        background: `${color}20`,
+        color,
+    });
 
     return (
         <AnimatePresence>
@@ -81,8 +134,8 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                         exit={{ scale: 0.9, opacity: 0 }}
                         onClick={(e) => e.stopPropagation()}
                         style={{
-                            width: 580,
-                            maxHeight: '80vh',
+                            width: 680,
+                            maxHeight: '85vh',
                             overflow: 'auto',
                             background:
                                 'linear-gradient(145deg, rgba(20,20,40,0.98), rgba(15,15,30,0.98))',
@@ -95,40 +148,131 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                             style={{
                                 padding: '20px 24px',
                                 borderBottom: '1px solid rgba(100,116,139,0.15)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
                             }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <Users size={20} color="#a855f7" />
-                                <div>
-                                    <h3
-                                        style={{
-                                            margin: 0,
-                                            fontSize: '1rem',
-                                            fontWeight: 700,
-                                            color: '#e2e8f0',
-                                        }}
-                                    >
-                                        Historical Figures
-                                    </h3>
-                                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>
-                                        Select up to {max} figures for your debate
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={onClose}
+                            <div
                                 style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#64748b',
-                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginBottom: 12,
                                 }}
                             >
-                                <X size={18} />
-                            </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <Users size={20} color="#a855f7" />
+                                    <div>
+                                        <h3
+                                            style={{
+                                                margin: 0,
+                                                fontSize: '1rem',
+                                                fontWeight: 700,
+                                                color: '#e2e8f0',
+                                            }}
+                                        >
+                                            Historical Figures ({ALL_FIGURES.length})
+                                        </h3>
+                                        <p
+                                            style={{
+                                                margin: 0,
+                                                fontSize: '0.75rem',
+                                                color: '#64748b',
+                                            }}
+                                        >
+                                            Select up to {max} figures for your debate
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={onClose}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#64748b',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
+                                    <Search
+                                        size={14}
+                                        style={{
+                                            position: 'absolute',
+                                            left: 10,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            color: '#64748b',
+                                        }}
+                                    />
+                                    <input
+                                        value={search}
+                                        onChange={(e) => {
+                                            setSearch(e.target.value);
+                                            setPage(0);
+                                        }}
+                                        placeholder="Search by name, expertise, nationality..."
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 12px 8px 32px',
+                                            borderRadius: 8,
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            color: '#e2e8f0',
+                                            fontSize: '0.8rem',
+                                            outline: 'none',
+                                            boxSizing: 'border-box',
+                                        }}
+                                    />
+                                </div>
+                                <select
+                                    value={categoryFilter}
+                                    onChange={(e) => {
+                                        setCategoryFilter(e.target.value);
+                                        setPage(0);
+                                    }}
+                                    style={{
+                                        padding: '8px 10px',
+                                        borderRadius: 8,
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: '#e2e8f0',
+                                        fontSize: '0.75rem',
+                                        outline: 'none',
+                                    }}
+                                >
+                                    <option value="">All Categories</option>
+                                    {UNIQUE_CATEGORIES.map((cat) => (
+                                        <option key={cat} value={cat}>
+                                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                        </option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={eraFilter}
+                                    onChange={(e) => {
+                                        setEraFilter(e.target.value);
+                                        setPage(0);
+                                    }}
+                                    style={{
+                                        padding: '8px 10px',
+                                        borderRadius: 8,
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: '#e2e8f0',
+                                        fontSize: '0.75rem',
+                                        outline: 'none',
+                                    }}
+                                >
+                                    <option value="">All Eras</option>
+                                    {UNIQUE_ERAS.map((era) => (
+                                        <option key={era} value={era}>
+                                            {era}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div
@@ -136,12 +280,15 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                 padding: '16px 24px',
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
-                                gap: 10,
+                                gap: 8,
                             }}
                         >
-                            {HISTORICAL_FIGURES.map((fig) => {
+                            {filtered.items.map((fig) => {
                                 const selected = selectedIds.includes(fig.id);
                                 const disabled = !selected && selectedIds.length >= max;
+                                const catColor = fig.category
+                                    ? CATEGORY_COLORS[fig.category] || '#64748b'
+                                    : fig.color;
                                 return (
                                     <button
                                         key={fig.id}
@@ -152,9 +299,9 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                             gap: 10,
                                             padding: '10px 12px',
                                             borderRadius: 10,
-                                            border: `1px solid ${selected ? `${fig.color}60` : 'rgba(100,116,139,0.15)'}`,
+                                            border: `1px solid ${selected ? `${catColor}60` : 'rgba(100,116,139,0.15)'}`,
                                             background: selected
-                                                ? `${fig.color}15`
+                                                ? `${catColor}15`
                                                 : 'rgba(30,30,50,0.4)',
                                             cursor: disabled ? 'not-allowed' : 'pointer',
                                             opacity: disabled ? 0.4 : 1,
@@ -168,20 +315,61 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                                 style={{
                                                     fontWeight: 700,
                                                     fontSize: '0.85rem',
-                                                    color: selected ? fig.color : '#e2e8f0',
+                                                    color: selected ? catColor : '#e2e8f0',
                                                 }}
                                             >
                                                 {fig.name}
                                             </div>
-                                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                                                {fig.era} · {fig.expertise.split(',')[0]!}
+                                            <div
+                                                style={{
+                                                    fontSize: '0.7rem',
+                                                    color: '#64748b',
+                                                    display: 'flex',
+                                                    gap: 4,
+                                                    flexWrap: 'wrap',
+                                                    marginTop: 2,
+                                                }}
+                                            >
+                                                <span>{fig.era}</span>
+                                                <span>·</span>
+                                                <span>{fig.expertise.split(',')[0]}</span>
+                                            </div>
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    gap: 4,
+                                                    flexWrap: 'wrap',
+                                                    marginTop: 4,
+                                                }}
+                                            >
+                                                {fig.category && (
+                                                    <span style={chip(catColor)}>
+                                                        {fig.category}
+                                                    </span>
+                                                )}
+                                                <span style={chip('#64748b')}>
+                                                    {fig.nationality}
+                                                </span>
                                             </div>
                                         </div>
-                                        {selected && <Check size={16} color={fig.color} />}
+                                        {selected && <Check size={16} color={catColor} />}
                                     </button>
                                 );
                             })}
                         </div>
+
+                        {filtered.items.length === 0 && (
+                            <div
+                                style={{
+                                    padding: 30,
+                                    textAlign: 'center',
+                                    color: '#64748b',
+                                    fontSize: '0.85rem',
+                                }}
+                            >
+                                No figures match your search
+                            </div>
+                        )}
 
                         <div
                             style={{
@@ -190,26 +378,51 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: 8,
                             }}
                         >
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                {selectedIds.length}/{max} selected
-                            </span>
-                            <button
-                                onClick={onClose}
-                                style={{
-                                    padding: '6px 16px',
-                                    borderRadius: 8,
-                                    border: 'none',
-                                    background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
-                                    color: 'white',
-                                    fontWeight: 600,
-                                    fontSize: '0.8rem',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                Done
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                    {selectedIds.length}/{max} selected
+                                </span>
+                                {filtered.total > ITEMS_PER_PAGE &&
+                                    page * ITEMS_PER_PAGE + ITEMS_PER_PAGE < filtered.total && (
+                                        <button
+                                            onClick={() => setPage((p) => p + 1)}
+                                            style={{
+                                                padding: '4px 10px',
+                                                borderRadius: 6,
+                                                border: '1px solid rgba(99,102,241,0.3)',
+                                                background: 'rgba(99,102,241,0.1)',
+                                                color: '#818cf8',
+                                                cursor: 'pointer',
+                                                fontSize: '0.7rem',
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            Show More ({filtered.total - filtered.items.length}{' '}
+                                            left)
+                                        </button>
+                                    )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button
+                                    onClick={onClose}
+                                    style={{
+                                        padding: '6px 16px',
+                                        borderRadius: 8,
+                                        border: 'none',
+                                        background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                                        color: 'white',
+                                        fontWeight: 600,
+                                        fontSize: '0.8rem',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Done
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 </motion.div>

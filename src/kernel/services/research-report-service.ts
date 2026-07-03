@@ -5,8 +5,7 @@ import type {
     ReportFormat,
 } from '../contracts/research-report';
 
-let _idCounter = 0;
-const genId = () => `report-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
 
 const SAMPLE_SECTIONS: Record<string, { title: string; content: string }[]> = {
     'AI Safety': [

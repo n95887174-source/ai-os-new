@@ -7,6 +7,9 @@ import {
 } from '../../kernel/contracts/debate-emotion';
 import type { TopologyNode } from '../../kernel/contracts/debate-runtime';
 import type { Avatar } from '../../kernel/services/agent-avatar-service';
+import { CountdownRing } from './CountdownRing';
+import { ThoughtBubble } from './ThoughtBubble';
+import { MemoryBubble } from './MemoryBubble';
 
 const EMOTION_ICONS: Record<string, string> = {
     joy: '😊',
@@ -35,11 +38,16 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
     const streamingContent = useDebateLiveStore((s) => s.streamingContent);
     const currentThinking = useDebateLiveStore((s) => s.currentThinking);
     const emotions = useDebateLiveStore((s) => s.emotions);
+    const agentCountdowns = useDebateLiveStore((s) => s.agentCountdowns);
+    const memoryBubbles = useDebateLiveStore((s) => s.memoryBubbles);
 
-    const streamText = streamingContent.get(`${sessionId}:${node.id}`);
-    const thinking = currentThinking.get(`${sessionId}:${node.id}`);
-    const emotion = emotions.get(`${sessionId}:${node.id}`) ?? 'neutral';
+    const key = `${sessionId}:${node.id}`;
+    const streamText = streamingContent.get(key);
+    const thinking = currentThinking.get(key);
+    const emotion = emotions.get(key) ?? 'neutral';
     const emotionColor = DEBATE_EMOTION_COLORS[emotion];
+    const countdown = agentCountdowns.get(key);
+    const memoryBubble = memoryBubbles.get(key);
 
     return (
         <div
@@ -51,36 +59,55 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
                 width: 120,
             }}
         >
-            <motion.div
-                animate={
-                    isActive
-                        ? {
-                              boxShadow: [
-                                  `0 0 20px ${emotionColor}80, 0 0 60px ${emotionColor}40`,
-                                  `0 0 30px ${emotionColor}, 0 0 80px ${emotionColor}60`,
-                                  `0 0 20px ${emotionColor}80, 0 0 60px ${emotionColor}40`,
-                              ],
-                              scale: [1, 1.08, 1],
-                          }
-                        : emotion !== 'neutral'
-                          ? { boxShadow: `0 0 12px ${emotionColor}40` }
-                          : undefined
-                }
-                transition={
-                    isActive ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : undefined
-                }
-                style={{
-                    ...avatarCSS,
-                    width: isActive ? 56 : 44,
-                    height: isActive ? 56 : 44,
-                    fontSize: isActive ? '1.5em' : '1.2em',
-                    transition: 'width 0.3s, height 0.3s, font-size 0.3s',
-                    cursor: 'default',
-                    position: 'relative',
-                }}
-            >
-                {avatar.emoji}
-            </motion.div>
+            <div style={{ position: 'relative' }}>
+                <motion.div
+                    animate={
+                        isActive
+                            ? {
+                                  boxShadow: [
+                                      `0 0 20px ${emotionColor}80, 0 0 60px ${emotionColor}40`,
+                                      `0 0 30px ${emotionColor}, 0 0 80px ${emotionColor}60`,
+                                      `0 0 20px ${emotionColor}80, 0 0 60px ${emotionColor}40`,
+                                  ],
+                                  scale: [1, 1.08, 1],
+                              }
+                            : emotion !== 'neutral'
+                              ? { boxShadow: `0 0 12px ${emotionColor}40` }
+                              : undefined
+                    }
+                    transition={
+                        isActive
+                            ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
+                            : undefined
+                    }
+                    style={{
+                        ...avatarCSS,
+                        width: isActive ? 56 : 44,
+                        height: isActive ? 56 : 44,
+                        fontSize: isActive ? '1.5em' : '1.2em',
+                        transition: 'width 0.3s, height 0.3s, font-size 0.3s',
+                        cursor: 'default',
+                        position: 'relative',
+                    }}
+                >
+                    {avatar.emoji}
+                </motion.div>
+
+                {countdown && (
+                    <CountdownRing
+                        secondsTotal={countdown.secondsTotal}
+                        secondsLeft={countdown.secondsLeft}
+                        isActive={isActive}
+                    />
+                )}
+
+                {thinking && (
+                    <ThoughtBubble
+                        draftPreview={node.label + ' is formulating...'}
+                        progress={countdown ? countdown.secondsLeft / countdown.secondsTotal : 0.5}
+                    />
+                )}
+            </div>
 
             {emotion !== 'neutral' && (
                 <div
@@ -115,6 +142,14 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
             <div style={{ fontSize: '0.6rem', color: '#475569', textTransform: 'capitalize' }}>
                 {node.role}
             </div>
+
+            {memoryBubble && (
+                <MemoryBubble
+                    debateLabel={memoryBubble.debateLabel}
+                    similarity={memoryBubble.similarity}
+                    relation={memoryBubble.relation}
+                />
+            )}
 
             {(streamText || thinking) && (
                 <motion.div

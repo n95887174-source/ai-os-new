@@ -130,8 +130,15 @@ export class SecurityService implements ISecurityService {
         if (reEncrypt) {
             const encryptWithNew = (plain: string) => this.encryptWithKey(plain, newMasterKey);
             const encryptWithOld = (plain: string) => this.encryptWithKey(plain, oldKey);
-            const reEncrypted = await reEncrypt(encryptWithNew);
+            let reEncrypted: boolean;
+            try {
+                reEncrypted = await reEncrypt(encryptWithNew);
+            } catch (e) {
+                LOGGER.error('Security', 'reEncrypt callback threw', { error: e });
+                return false;
+            }
             if (!reEncrypted) return false;
+            this.masterKey = newMasterKey;
             try {
                 BucketStorageAdapter.setItem(saltKey, hex);
             } catch (e) {
@@ -140,6 +147,7 @@ export class SecurityService implements ISecurityService {
                     'Failed to persist salt after re-encryption, attempting rollback',
                     { error: e },
                 );
+                this.masterKey = oldKey;
                 try {
                     await reEncrypt(encryptWithOld);
                     if (previousSalt) BucketStorageAdapter.setItem(saltKey, previousSalt);
@@ -156,10 +164,9 @@ export class SecurityService implements ISecurityService {
                 'Security',
                 'changePassword called without reEncrypt — previously encrypted data will become unrecoverable after this operation',
             );
+            this.masterKey = newMasterKey;
             BucketStorageAdapter.setItem(saltKey, hex);
         }
-
-        this.masterKey = newMasterKey;
         return true;
     }
 

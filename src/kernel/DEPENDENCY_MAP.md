@@ -4,7 +4,7 @@
 
 ## DI Injection Graph
 
-Every kernel service receives its dependencies via `constructor(deps)`. 
+Every kernel service receives its dependencies via `constructor(deps)`.
 Below is the full dependency graph (A → B means "A depends on B").
 
 ### Core Infrastructure
@@ -89,7 +89,7 @@ SystemKernel (kernel.ts)
   → IProviderTracker   (providerTracker)        [optional]
   → ICostCalculator    (costCalculator)         [optional]
 
-DebateService (debate-service.ts)
+DebateService (debate-runtime/debate-service.ts)
   → IDatabaseService   (database.getKv, setKv)
   → IProviderAdapterRegistry (adapterRegistry.getAdapter, resetCircuitBreaker)
   → IKeyService        (keyService.getKeys, getActiveKeys, recordUsage)
@@ -149,10 +149,11 @@ ConsistencyHealingPipeline (consistency-healing-pipeline.ts)
 ### Full Dependency Graph (textual)
 
 ```
+
                     ┌──────────────┐
                     │   Container  │
                     └──────────────┘
-                      
+
                     ┌──────────────┐
                     │   EventBus   │◄──────────────────────────────┐
                     └──────────────┘                               │
@@ -183,8 +184,9 @@ ConsistencyHealingPipeline (consistency-healing-pipeline.ts)
           └──────────────────────────────┘
 
 Legend:
-  →  = constructor injection (required deps)
-  ─ ─ = optional injection
+→ = constructor injection (required deps)
+─ ─ = optional injection
+
 ```
 
 ### Migration Status
@@ -217,3 +219,4 @@ Legend:
 | ExternalSecretsService | — (new) | `src/kernel/services/external-secrets-service.ts` | ✅ | ✅ |
 | CompromiseWebhookService | — (new) | `src/kernel/services/compromise-webhook-service.ts` | ✅ | ✅ |
 | NotificationWebhookService | — (new) | `src/kernel/services/notification-webhook-service.ts` | ✅ | ✅ |
+```

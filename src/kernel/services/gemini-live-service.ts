@@ -82,7 +82,7 @@ export class GeminiLiveService implements IGeminiLiveService {
 
         this.recognition.onend = () => {
             if (!this.aborted && this.session.status !== 'error') {
-                this.recognition?.start();
+                setTimeout(() => this.recognition?.start(), 100);
             }
         };
 
@@ -112,7 +112,9 @@ export class GeminiLiveService implements IGeminiLiveService {
         ];
         this.session = { ...this.session, messages: msgs, status: 'thinking' };
 
-        if (this.synth?.speaking) this.synth.cancel();
+        if (this.synth?.speaking) {
+            this.synth.cancel();
+        }
 
         const chatMessages = [{ role: 'user' as const, content: text }];
 
@@ -122,17 +124,6 @@ export class GeminiLiveService implements IGeminiLiveService {
                 chatMessages,
                 (chunk) => {
                     fullText += chunk;
-                    if (this.session.status === 'thinking' && !this.synth?.speaking) {
-                        this.session = { ...this.session, status: 'speaking' };
-                        const u = new SpeechSynthesisUtterance(chunk);
-                        if (this.voice) u.voice = this.voice;
-                        u.rate = 1.1;
-                        u.onend = () => {
-                            if (!this.aborted)
-                                this.session = { ...this.session, status: 'listening' };
-                        };
-                        this.synth?.speak(u);
-                    }
                 },
                 'gemini-2.5-flash',
             );
@@ -140,9 +131,9 @@ export class GeminiLiveService implements IGeminiLiveService {
             const responseText = result.content || result.error || '(no response)';
             if (!fullText) fullText = responseText;
 
-            if (this.synth && !this.synth.speaking) {
+            if (this.synth) {
                 this.session = { ...this.session, status: 'speaking' };
-                const u = new SpeechSynthesisUtterance(responseText);
+                const u = new SpeechSynthesisUtterance(fullText);
                 if (this.voice) u.voice = this.voice;
                 u.rate = 1.1;
                 u.onend = () => {

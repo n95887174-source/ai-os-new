@@ -339,6 +339,9 @@ export function GoogleStudioPanel() {
                         onClick={() => {
                             setConfigured(false);
                             setApiKey('');
+                            import('../../kernel/services/google-genai-service').then((m) =>
+                                m.googleGenAIService.clearApiKey(),
+                            );
                         }}
                         style={{
                             padding: '6px 12px',

@@ -626,6 +626,11 @@ export type {
     TeamStrategy,
     TeamDomain,
     TeamExecutionConfig,
+    TeamExecution,
+    RoleOutput,
+    TeamMetrics,
+    TeamCompatibilityEntry,
+    TeamAnalytics,
+    TeamFallback,
     IRoleTeamService,
 } from './role-team';
-export { DEFAULT_TEAM_TEMPLATES } from './role-team';

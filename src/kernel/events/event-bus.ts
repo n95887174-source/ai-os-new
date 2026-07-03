@@ -54,6 +54,7 @@ export class EventBus implements IEventBus {
     private emitDepth = 0;
     private hotEmitDepth = 0;
     private staticValidators = new Set<string>(); // N-18: track which validators are static (from EventValidators)
+    private _unsubByCb = new Map<Callback<unknown>, () => void>(); // callback → unsubFn for off() cleanup
     private logger?: ILogger;
     private emitCount = 0;
     private strictMode: boolean;
@@ -141,11 +142,6 @@ export class EventBus implements IEventBus {
         this.logger?.warn('EventBus', 'clearAllSubscriptions');
     }
 
-    /** @deprecated Use clearAllSubscriptions() instead. Called only from RuntimeManager during full system shutdown. */
-    reset(_guard?: string): void {
-        this.clearAllSubscriptions();
-    }
-
     static emit<K extends keyof EventMap>(event: K, data: EventMap[K]): void {
         eventBus.emit(event, data);
     }
@@ -164,6 +160,7 @@ export class EventBus implements IEventBus {
         handlers.push(callback as Callback<unknown>);
         this.listenerMap.set(key, handlers);
         const unsub = () => this.off(event, callback);
+        this._unsubByCb.set(callback as Callback<unknown>, unsub);
         // H-06: Track unsubscribe so reset() can clean up all subscriptions
         // P0-2: warn-only when nearing capacity — never silently prune legitimate subscribers
         if (this.unsubCallbacks.size >= 5000 && !this._unsubWarned) {
@@ -176,6 +173,7 @@ export class EventBus implements IEventBus {
         this.unsubCallbacks.add(unsub);
         return () => {
             this.unsubCallbacks.delete(unsub);
+            this._unsubByCb.delete(callback as Callback<unknown>);
             unsub();
         };
     }
@@ -186,6 +184,12 @@ export class EventBus implements IEventBus {
         if (!handlers) return;
         const idx = handlers.indexOf(callback as Callback<unknown>);
         if (idx !== -1) handlers.splice(idx, 1);
+        // Also remove from unsubCallbacks to prevent leak when off() is used directly
+        const unsub = this._unsubByCb.get(callback as Callback<unknown>);
+        if (unsub) {
+            this.unsubCallbacks.delete(unsub);
+            this._unsubByCb.delete(callback as Callback<unknown>);
+        }
     }
 
     emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {

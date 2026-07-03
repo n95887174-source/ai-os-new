@@ -40,11 +40,23 @@ const mockDebateService = {
     setFactCheckLevel: vi.fn(),
 };
 
+const mockGetActiveSession = vi.fn();
+
 const mockDebateHumanService = {
     addArgument: vi.fn(),
     getHumanVotes: vi.fn(() => []),
     recordHumanVote: vi.fn(),
 };
+
+const mockDebateEngine = {
+    pauseSession: vi.fn(),
+    resumeSession: vi.fn(),
+    cancelSession: vi.fn(),
+};
+
+vi.mock('../../kernel/services/debate-runtime/active-debate-store', () => ({
+    getActiveDebateSession: mockGetActiveSession,
+}));
 
 vi.mock('../../kernel/instances', () => ({
     orchestrator: {
@@ -56,6 +68,28 @@ vi.mock('../../kernel/instances', () => ({
     },
     debateService: mockDebateService,
     debateHumanService: mockDebateHumanService,
+    debateEngine: mockDebateEngine,
+    debateWorkspace: {
+        syncFromEngine: vi.fn(),
+        listRooms: vi.fn(() => []),
+        createRoom: vi.fn(),
+        setActiveRoom: vi.fn(),
+        closeRoom: vi.fn(),
+    },
+    hypothesisService: {
+        proposeHypothesis: vi.fn(),
+        getHypotheses: vi.fn(() => []),
+    },
+    autoDebateService: {
+        getResults: vi.fn(() => null),
+        getWinRates: vi.fn(() => []),
+    },
+    sessionManager: {
+        getDebateHistory: vi.fn(() => []),
+        restoreDebateSession: vi.fn(),
+        deleteDebateHistory: vi.fn(),
+        archiveDebateSession: vi.fn(),
+    },
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -96,7 +130,6 @@ vi.mock('../ModuleInfo/ModuleInfo', () => ({
 }));
 
 vi.mock('./DebateSetupWizard', () => ({
-     
     default: ({
         topic,
         onTopicChange,
@@ -167,6 +200,7 @@ vi.mock('./DebateSetupWizard', () => ({
 describe('DebatePanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetActiveSession.mockReset();
     });
 
     it('renders without crashing', async () => {
@@ -267,7 +301,7 @@ describe('DebatePanel', () => {
     });
 
     it('displays active debate UI when session exists', async () => {
-        mockDebateService.getSession.mockReturnValue({
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'AI Safety',
             status: 'active',
@@ -291,7 +325,7 @@ describe('DebatePanel', () => {
     });
 
     it('shows debate arguments when present', async () => {
-        mockDebateService.getSession.mockReturnValue({
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'AI Safety',
             status: 'active',
@@ -335,7 +369,7 @@ describe('DebatePanel', () => {
     });
 
     it('shows convergence score in analytics panel', async () => {
-        mockDebateService.getSession.mockReturnValue({
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'AI Safety',
             status: 'active',
@@ -367,7 +401,7 @@ describe('DebatePanel', () => {
             arguments: [],
             convergenceScore: 50,
         };
-        mockDebateService.getSession.mockReturnValue(session);
+        mockGetActiveSession.mockReturnValue(session);
         const DebatePanel = (await import('./DebatePanel')).default;
         render(<DebatePanel />);
         const input = screen.getByPlaceholderText('Inject human argument into the dialectic...');
@@ -382,7 +416,7 @@ describe('DebatePanel', () => {
     });
 
     it('does not inject when input is empty', async () => {
-        mockDebateService.getSession.mockReturnValue({
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'AI Safety',
             status: 'active',
@@ -400,7 +434,7 @@ describe('DebatePanel', () => {
     });
 
     it('clears injection input after successful inject', async () => {
-        mockDebateService.getSession.mockReturnValue({
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'AI Safety',
             status: 'active',
@@ -421,8 +455,8 @@ describe('DebatePanel', () => {
         await waitFor(() => expect(input.value).toBe(''));
     });
 
-    it('calls pauseDebate when pause button clicked', async () => {
-        mockDebateService.getSession.mockReturnValue({
+    it('calls debateEngine.pauseSession when pause button clicked', async () => {
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'Test',
             status: 'active',
@@ -438,11 +472,11 @@ describe('DebatePanel', () => {
         const pauseBtn = document.querySelector('button[title="Pause Debate"]');
         expect(pauseBtn).toBeDefined();
         fireEvent.click(pauseBtn!);
-        expect(mockDebateService.pauseDebate).toHaveBeenCalled();
+        expect(mockDebateEngine.pauseSession).toHaveBeenCalledWith('debate-1');
     });
 
-    it('calls resumeDebate when resume button clicked', async () => {
-        mockDebateService.getSession.mockReturnValue({
+    it('calls debateEngine.resumeSession when resume button clicked', async () => {
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'Test',
             status: 'paused',
@@ -458,11 +492,11 @@ describe('DebatePanel', () => {
         const resumeBtn = document.querySelector('button[title="Resume Debate"]');
         expect(resumeBtn).toBeDefined();
         fireEvent.click(resumeBtn!);
-        expect(mockDebateService.resumeDebate).toHaveBeenCalled();
+        expect(mockDebateEngine.resumeSession).toHaveBeenCalledWith('debate-1');
     });
 
-    it('calls stopDebate when stop button clicked', async () => {
-        mockDebateService.getSession.mockReturnValue({
+    it('calls debateEngine.cancelSession when stop button clicked', async () => {
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'Test',
             status: 'active',
@@ -478,11 +512,11 @@ describe('DebatePanel', () => {
         const stopBtn = document.querySelector('button[title="Force Stop"]');
         expect(stopBtn).toBeDefined();
         fireEvent.click(stopBtn!);
-        expect(mockDebateService.stopDebate).toHaveBeenCalled();
+        expect(mockDebateEngine.cancelSession).toHaveBeenCalledWith('debate-1');
     });
 
     it('hides injection input when session is completed', async () => {
-        mockDebateService.getSession.mockReturnValue({
+        mockGetActiveSession.mockReturnValue({
             id: 'debate-1',
             topic: 'Test',
             status: 'completed',
@@ -534,11 +568,10 @@ describe('DebatePanel', () => {
         expect(screen.getByText('Hello debate')).toBeDefined();
     });
 
-    it('shows loading state initially then resolves after event', async () => {
-        mockDebateService.getSession.mockReturnValue(null);
+    it('shows loading skeleton initially', async () => {
         const DebatePanel = (await import('./DebatePanel')).default;
         render(<DebatePanel />);
-        expect(screen.getByText('Loading debate session...')).toBeDefined();
+        expect(screen.getByRole('status')).toBeDefined();
     });
 
     it('displays session from eventBus when loading times out', async () => {

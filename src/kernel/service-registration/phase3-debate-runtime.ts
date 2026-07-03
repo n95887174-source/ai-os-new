@@ -36,7 +36,6 @@ import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engin
 import { StrategyManager } from '../services/debate-runtime/debate-strategy-manager';
 import { DebateModeManagerPersistent } from '../services/debate-runtime/debate-mode-manager';
 import { DebateWorkspace } from '../services/debate-runtime/debate-workspace';
-import { DebateRoom } from '../services/debate-runtime/debate-room';
 import { DebatePolicyEngine } from '../services/debate-runtime/debate-policy-engine';
 import { DebateRAGRetriever } from '../services/debate-runtime/debate-rag-retriever';
 import { DebateEmbeddingPipeline } from '../services/debate-runtime/debate-embedding-pipeline';
@@ -65,13 +64,27 @@ function simpleEmbedText(text: string): Promise<Float32Array> {
 }
 
 const EMPTY_DEBATE_STORE: DebateStore = {
-    saveSnapshot: async () => 1,
-    getSnapshot: async () => null,
-    listSessions: async () => [],
-    deleteSession: async () => {},
-    saveVerdict: async () => {},
-    getVerdict: async () => null,
-    count: async () => 0,
+    saveSnapshot: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
+    getSnapshot: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
+    listSessions: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
+    deleteSession: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
+    saveVerdict: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
+    getVerdict: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
+    count: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
 };
 
 export const registerPhase3: Phase = (helpers, ctx) => {
@@ -204,6 +217,17 @@ export const registerPhase3: Phase = (helpers, ctx) => {
         }),
     );
 
+    register('debatePolicyEngine', new DebatePolicyEngine());
+
+    const embedPipeline = new DebateEmbeddingPipeline({ embedText: simpleEmbedText });
+    register('debateEmbeddingPipeline', embedPipeline);
+
+    register('debateRAGRetriever', new DebateRAGRetriever({ embeddingPipeline: embedPipeline }));
+
+    register('debateMemoryExtractor', new DebateMemoryExtractor());
+
+    register('debateEvaluator', new DebateEvaluator());
+
     register(
         'debateEngine',
         new DebateEngine({
@@ -257,31 +281,13 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     register('debateModeManager', new DebateModeManagerPersistent(storageLayer));
 
     register(
-        'debateRoom',
-        new DebateRoom({
-            getEngine: () => _container.get<DebateEngine>('debateEngine'),
-        }),
-    );
-
-    register(
         'debateWorkspace',
         new DebateWorkspace({
-            getRoom: () => _container.get<DebateRoom>('debateRoom'),
+            getRoom: () => undefined,
             getEngine: () => _container.get<DebateEngine>('debateEngine'),
             storage: storageLayer,
         }),
     );
-
-    register('debatePolicyEngine', new DebatePolicyEngine());
-
-    const embedPipeline = new DebateEmbeddingPipeline({ embedText: simpleEmbedText });
-    register('debateEmbeddingPipeline', embedPipeline);
-
-    register('debateRAGRetriever', new DebateRAGRetriever({ embeddingPipeline: embedPipeline }));
-
-    register('debateMemoryExtractor', new DebateMemoryExtractor());
-
-    register('debateEvaluator', new DebateEvaluator());
 
     register(
         'cognitiveIntelligenceService',

@@ -127,7 +127,9 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
         <LayoutContext.Provider
             value={{ layout, setLayout, isGlobal, setIsGlobal, availableLayouts }}
         >
-            <div data-layout={layout}>{children}</div>
+            <div data-layout={layout} style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+                {children}
+            </div>
         </LayoutContext.Provider>
     );
 }

@@ -2,10 +2,10 @@
  * key-storage-hydrator.ts
  *
  * Single-source-of-truth hydration. After `resetKeyStorageToCanonical()` runs
- * in bootstrap, `dexieDb.apiKeys` is a clean mirror of localStorage (the
+ * in bootstrap, `getDexieDb().apiKeys` is a clean mirror of localStorage (the
  * canonical store). This function:
  *
- *   1. Reads `dexieDb.apiKeys` (mirror only — NOT a source of truth)
+ *   1. Reads `getDexieDb().apiKeys` (mirror only — NOT a source of truth)
  *   2. NO merge logic — no fallback to keyStore, no SQLite blob extraction
  *   3. NO cross-storage combinations of any kind
  *   4. Pushes the result to KeyRegistry via `keyService.reload()`
@@ -14,7 +14,7 @@
  * Idempotent: running multiple times is safe (the same N keys are read).
  */
 
-import { dexieDb } from './database-service';
+import { getDexieDb } from './database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from './dexie-identity';
 import { EVENTS } from '../events/event-names';
 import type { IEventBus } from '../types/interfaces';
@@ -40,7 +40,7 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
 
         // DEXIE_IDENTITY: verify the hydration instance is the same as the
         // globalThis anchor. Throws [DEXIE MISMATCH] on split.
-        const verifiedInstance = verifyDexieInstance('key-storage-hydrator:start', dexieDb);
+        const verifiedInstance = verifyDexieInstance('key-storage-hydrator:start', getDexieDb());
         await logDexieIdentityWithCount('key-storage-hydrator:start', verifiedInstance);
 
         // Mirror only — single source. No merge, no fallback, no SQLite blob.
@@ -50,7 +50,7 @@ export async function hydrateKeyStorage(deps: HydrationDeps): Promise<number> {
             `dexieKeys.length = ${dexieKeys.length} from instance ${verifiedInstance}`,
         );
 
-        // Reload the registry (reads dexieDb.apiKeys via loadKeys()).
+        // Reload the registry (reads getDexieDb().apiKeys via loadKeys()).
         await deps.keyService.reload();
         let finalCount = deps.keyService.getKeys().length;
 

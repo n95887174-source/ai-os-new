@@ -132,27 +132,40 @@ export class CompromiseWebhookService {
     ): Promise<boolean> {
         const { CONFIG } = await import('./config-registry');
         const secret = CONFIG.security?.webhookSecret;
-        if (secret && (!signature || !rawBody)) {
+
+        // CRIT-K7: Fail-closed — require secret, signature, AND rawBody for every webhook
+        if (!secret) {
+            LOGGER.error(
+                'CompromiseWebhook',
+                'Webhook secret not configured — rejecting all webhooks',
+            );
+            this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, {
+                source,
+                reason: 'no_secret_configured',
+            });
+            return false;
+        }
+
+        if (!signature || !rawBody) {
             LOGGER.warn(
                 'CompromiseWebhook',
                 'Missing signature or raw body when secret configured',
             );
             this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, {
                 source,
-                reason: 'missing_signature',
+                reason: 'missing_signature_or_body',
             });
             return false;
         }
-        if (signature && rawBody) {
-            const isValid = await this.verifySignature(rawBody, signature);
-            if (!isValid) {
-                LOGGER.warn('CompromiseWebhook', 'Invalid HMAC signature');
-                this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, {
-                    source,
-                    reason: 'invalid_signature',
-                });
-                return false;
-            }
+
+        const isValid = await this.verifySignature(rawBody, signature);
+        if (!isValid) {
+            LOGGER.warn('CompromiseWebhook', 'Invalid HMAC signature');
+            this.deps.eventBus.emit(EVENTS.COMPROMISE_SIGNAL_REJECTED, {
+                source,
+                reason: 'invalid_signature',
+            });
+            return false;
         }
 
         switch (source) {

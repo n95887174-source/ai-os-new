@@ -1,6 +1,7 @@
 import type { DebatePhase } from './contracts/debate-types';
 
-export type InitPhase = 'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed';
+export type InitPhase =
+    'pending' | 'kernel' | 'services' | 'topology' | 'ready' | 'failed' | 'degraded';
 
 export interface BootstrapReport {
     phase: InitPhase;
@@ -74,6 +75,21 @@ export const SERVICE_PHASES: string[][] = [
         'consistencyChecker',
         'systemStatusService',
         'memoryOrchestrator',
+    ],
+    [
+        'audienceService',
+        'tutorialService',
+        'teamCollaborationService',
+        'fineTuningService',
+        'distillationService',
+        'deployService',
+        'budgetAlertService',
+        'promptVersionService',
+        'debateEmbeddingPipeline',
+        'strategyManager',
+        'researchEngine',
+        'geminiResearchService',
+        'ecosystemEngine',
     ],
 ];
 

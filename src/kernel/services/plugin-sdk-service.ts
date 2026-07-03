@@ -5,7 +5,6 @@ import type {
     PluginHook,
 } from '../contracts/plugin-sdk';
 
-let _idCounter = 0;
 const genTs = () => Date.now() - Math.floor(Math.random() * 86400000 * 30);
 
 const AVAILABLE_PLUGINS: PluginManifest[] = [

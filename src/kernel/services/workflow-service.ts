@@ -1,4 +1,3 @@
-import { BucketStorageAdapter } from './storage-adapter';
 import type {
     Workflow,
     WorkflowStep,
@@ -49,17 +48,22 @@ function interpolatePrompt(
 }
 
 export class WorkflowService {
-    private readonly store = BucketStorageAdapter.UI;
     private workflows: Workflow[] = [];
     private runs: WorkflowRun[] = [];
     private loaded = false;
     private currentAbort: AbortController | null = null;
 
+    private async db(): Promise<import('../types/interfaces').IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
+    }
+
     private async ensureLoaded(): Promise<void> {
         if (this.loaded) return;
+        const d = await this.db();
         const [saved, savedRuns] = await Promise.all([
-            this.store.get<Workflow[]>(STORAGE_KEY_WORKFLOWS),
-            this.store.get<WorkflowRun[]>(STORAGE_KEY_RUNS),
+            d.getKv<Workflow[]>(STORAGE_KEY_WORKFLOWS),
+            d.getKv<WorkflowRun[]>(STORAGE_KEY_RUNS),
         ]);
         this.workflows = saved ?? [];
         this.runs = savedRuns ?? [];
@@ -67,9 +71,10 @@ export class WorkflowService {
     }
 
     private async persist(): Promise<void> {
+        const d = await this.db();
         await Promise.all([
-            this.store.set(STORAGE_KEY_WORKFLOWS, this.workflows),
-            this.store.set(STORAGE_KEY_RUNS, this.runs.slice(-MAX_RUNS)),
+            d.setKv(STORAGE_KEY_WORKFLOWS, this.workflows),
+            d.setKv(STORAGE_KEY_RUNS, this.runs.slice(-MAX_RUNS)),
         ]);
     }
 

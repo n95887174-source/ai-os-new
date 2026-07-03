@@ -27,6 +27,7 @@ import type {
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 const LOGGER = rootLogger.child('DatabaseService');
+const REDACTED_MARKER = '[REDACTED]';
 
 export interface QueryResult<T> {
     rows: T[];
@@ -149,6 +150,7 @@ export class SuperAgentsDB extends Dexie {
                     const sessions = oldIndex.value as DebateSessionRecord[];
                     const destTable = tx.table('debateSessions');
                     await destTable.bulkPut(sessions);
+                    await kvTable.delete('debate:sessions:index');
                 }
             });
 
@@ -678,10 +680,9 @@ export class SuperAgentsDB extends Dexie {
  *   const dal = container.get<DataAccessLayer>('dal');
  *   const keys = await dal.keys.getAll();
  *
- * Direct `dexieDb.X` calls outside the allowed paths skip DAL consistency
- * guarantees and repository-level abstractions. Remaining import sites
- * (bootstrap.ts, key-registry.ts, key-storage-hydrator.ts, dexie-identity.ts)
- * are on the cleanup path and will be migrated in upcoming epics.
+ * Direct `getDexieDb().X` calls outside the allowed paths skip DAL consistency
+ * guarantees and repository-level abstractions. All external callers have been
+ * migrated from `dexieDb` Proxy to `getDexieDb()` (Sprint M4-L3-001).
  * The ESLint rule `no-restricted-imports` enforces this boundary.
  */
 let _dexieDb: SuperAgentsDB | null = null;
@@ -711,82 +712,61 @@ export function getDexieDb(): SuperAgentsDB {
     return _dexieDb;
 }
 
-/** @deprecated Use getDexieDb() instead */
-export const dexieDb = new Proxy({} as SuperAgentsDB, {
-    get(_, prop) {
-        return (getDexieDb() as unknown as Record<string | symbol, unknown>)[prop];
-    },
-});
-// Self-test: ensure globalThis can be written to (SSR-safe). The
-// globalThis anchor relies on a writable globalThis — in some SSR
-// environments this may be undefined. Detect and warn.
-try {
-    const probe = (globalThis as unknown as { __DEXIE_INSTANCE__?: unknown }).__DEXIE_INSTANCE__;
-    if (probe !== undefined && probe !== dexieDb) {
-        LOGGER.error(
-            'DatabaseService',
-            'globalThis.__DEXIE_INSTANCE__ is already set to a different instance BEFORE database-service.ts loaded. Module ordering is broken — check that database-service.ts is imported before any other module that uses dexieDb.',
-        );
-    }
-} catch (e) {
-    LOGGER.warn('DatabaseService', 'globalThis self-test failed', { error: e });
-}
-
 export class DatabaseService {
     get apiKeys() {
-        return dexieDb.apiKeys;
+        return getDexieDb().apiKeys;
     }
     get notes() {
-        return dexieDb.notes;
+        return getDexieDb().notes;
     }
     get memories() {
-        return dexieDb.memories;
+        return getDexieDb().memories;
     }
     get sessions() {
-        return dexieDb.sessions;
+        return getDexieDb().sessions;
     }
     get roles() {
-        return dexieDb.roles;
+        return getDexieDb().roles;
     }
     get cognitiveTraces() {
-        return dexieDb.cognitiveTraces;
+        return getDexieDb().cognitiveTraces;
     }
     get traces() {
-        return dexieDb.traces;
+        return getDexieDb().traces;
     }
     get skills() {
-        return dexieDb.skills;
+        return getDexieDb().skills;
     }
     get connectors() {
-        return dexieDb.connectors;
+        return getDexieDb().connectors;
     }
     get keyValue() {
-        return dexieDb.keyValue;
+        return getDexieDb().keyValue;
     }
     get debateSessions() {
-        return dexieDb.debateSessions;
+        return getDexieDb().debateSessions;
     }
     get debateVerdicts() {
-        return dexieDb.debateVerdicts;
+        return getDexieDb().debateVerdicts;
     }
     get debateTimeline() {
-        return dexieDb.debateTimeline;
+        return getDexieDb().debateTimeline;
     }
     get debateOverrides() {
-        return dexieDb.debateOverrides;
+        return getDexieDb().debateOverrides;
     }
     get sessionLinks() {
-        return dexieDb.sessionLinks;
+        return getDexieDb().sessionLinks;
     }
     get eventLog() {
-        return dexieDb.eventLog;
+        return getDexieDb().eventLog;
     }
     get db() {
-        return dexieDb;
+        return getDexieDb();
     }
 
     async getKv<T>(id: string): Promise<T | null> {
-        const record = await dexieDb.keyValue.get(id);
+        const record = await getDexieDb().keyValue.get(id);
         if (!record) return null;
         // N-07: log instead of silently dropping uncloneable values
         try {
@@ -802,8 +782,12 @@ export class DatabaseService {
     }
 
     async setKv<T>(id: string, value: T): Promise<void> {
-        const existing = await dexieDb.keyValue.get(id);
-        await dexieDb.keyValue.put({ id, value, createdAt: existing?.createdAt ?? Date.now() });
+        const existing = await getDexieDb().keyValue.get(id);
+        await getDexieDb().keyValue.put({
+            id,
+            value,
+            createdAt: existing?.createdAt ?? Date.now(),
+        });
     }
 
     async exportToJson(includeSecrets = false): Promise<Record<string, unknown[]>> {
@@ -826,28 +810,28 @@ export class DatabaseService {
             sessionLinks,
             eventLog,
         ] = await Promise.all([
-            dexieDb.notes.toArray(),
-            dexieDb.memories.toArray(),
-            dexieDb.apiKeys.toArray(),
-            dexieDb.sessions.toArray(),
-            dexieDb.roles.toArray(),
-            dexieDb.cognitiveTraces.toArray(),
-            dexieDb.traces.toArray(),
-            dexieDb.skills.toArray(),
-            dexieDb.connectors.toArray(),
-            dexieDb.keyValue.toArray(),
-            dexieDb.debateSessions.toArray(),
-            dexieDb.debateVerdicts.toArray(),
-            dexieDb.debateTimeline.toArray(),
-            dexieDb.debateOverrides.toArray(),
-            dexieDb.sessionLinks.toArray(),
-            dexieDb.eventLog.toArray(),
+            getDexieDb().notes.toArray(),
+            getDexieDb().memories.toArray(),
+            getDexieDb().apiKeys.toArray(),
+            getDexieDb().sessions.toArray(),
+            getDexieDb().roles.toArray(),
+            getDexieDb().cognitiveTraces.toArray(),
+            getDexieDb().traces.toArray(),
+            getDexieDb().skills.toArray(),
+            getDexieDb().connectors.toArray(),
+            getDexieDb().keyValue.toArray(),
+            getDexieDb().debateSessions.toArray(),
+            getDexieDb().debateVerdicts.toArray(),
+            getDexieDb().debateTimeline.toArray(),
+            getDexieDb().debateOverrides.toArray(),
+            getDexieDb().sessionLinks.toArray(),
+            getDexieDb().eventLog.toArray(),
         ]);
         const exportedKeys = includeSecrets
             ? apiKeys
             : apiKeys.map((k) => ({
                   ...k,
-                  key: '[REDACTED]',
+                  key: REDACTED_MARKER,
               }));
         return {
             notes,
@@ -872,25 +856,25 @@ export class DatabaseService {
     async importFromJson(data: Record<string, unknown[]>): Promise<void> {
         // AUDIT FIX: Include debateSessions, debateVerdicts, eventLog (were missing)
         const tableMap: Record<string, Table> = {
-            notes: dexieDb.notes,
-            memories: dexieDb.memories,
-            apiKeys: dexieDb.apiKeys,
-            sessions: dexieDb.sessions,
-            roles: dexieDb.roles,
-            cognitiveTraces: dexieDb.cognitiveTraces,
-            traces: dexieDb.traces,
-            skills: dexieDb.skills,
-            connectors: dexieDb.connectors,
-            keyValue: dexieDb.keyValue,
-            debateSessions: dexieDb.debateSessions,
-            debateVerdicts: dexieDb.debateVerdicts,
-            debateTimeline: dexieDb.debateTimeline,
-            debateOverrides: dexieDb.debateOverrides,
-            sessionLinks: dexieDb.sessionLinks,
-            eventLog: dexieDb.eventLog,
+            notes: getDexieDb().notes,
+            memories: getDexieDb().memories,
+            apiKeys: getDexieDb().apiKeys,
+            sessions: getDexieDb().sessions,
+            roles: getDexieDb().roles,
+            cognitiveTraces: getDexieDb().cognitiveTraces,
+            traces: getDexieDb().traces,
+            skills: getDexieDb().skills,
+            connectors: getDexieDb().connectors,
+            keyValue: getDexieDb().keyValue,
+            debateSessions: getDexieDb().debateSessions,
+            debateVerdicts: getDexieDb().debateVerdicts,
+            debateTimeline: getDexieDb().debateTimeline,
+            debateOverrides: getDexieDb().debateOverrides,
+            sessionLinks: getDexieDb().sessionLinks,
+            eventLog: getDexieDb().eventLog,
         };
         const tables = Object.values(tableMap);
-        await dexieDb.transaction('rw', tables, async () => {
+        await getDexieDb().transaction('rw', tables, async () => {
             for (const [tableName, rows] of Object.entries(data)) {
                 const table = tableMap[tableName];
                 if (!table) continue;
@@ -903,8 +887,8 @@ export class DatabaseService {
                     valid = (valid as Array<Record<string, unknown>>).filter((row) => {
                         const keyValue = typeof row.key === 'string' ? row.key : '';
                         const isMasked =
-                            keyValue === '****' ||
-                            (keyValue.length > 8 && keyValue.includes('****'));
+                            keyValue === REDACTED_MARKER ||
+                            (keyValue.length > 8 && keyValue.includes(REDACTED_MARKER));
                         if (isMasked) {
                             LOGGER.warn(
                                 'DatabaseService',

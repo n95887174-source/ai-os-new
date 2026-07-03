@@ -82,7 +82,7 @@ export type DebateConstraint =
     | 'ethical_framework'
     | 'first_principles'
     | 'pragmatic';
-type ParentResolution = 'explicit' | 'fallback_latest' | 'orphan' | 'invalid_reference';
+export type ParentResolution = 'explicit' | 'fallback_latest' | 'orphan' | 'invalid_reference';
 
 export interface DebateGraphMetrics {
     totalNodes: number;

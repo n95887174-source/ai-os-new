@@ -118,13 +118,6 @@ const ROUTE_PREDICTIONS: Record<string, Prediction[]> = {
             reason: 'prediction.logs',
             icon: '📝',
         },
-        {
-            id: 'provider-migration',
-            label: 'nav.provider_migration',
-            path: '/provider-migration',
-            reason: 'prediction.provider_migration',
-            icon: '🚚',
-        },
     ],
     settings: [
         {

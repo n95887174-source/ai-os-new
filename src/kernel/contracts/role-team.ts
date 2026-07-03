@@ -28,6 +28,14 @@ export type TeamDomain =
     | 'research'
     | 'custom';
 
+export type TeamExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'aborted';
+
+export interface TeamFallback {
+    onRoleFailure: 'skip' | 'retry' | 'replace' | 'abort';
+    maxRetries?: number;
+    replacementRoleId?: string;
+}
+
 export interface TeamExecutionConfig {
     maxRounds?: number;
     consensusThreshold?: number;
@@ -45,7 +53,7 @@ export interface RoleTeam {
     roleIds: string[];
     leaderRoleId?: string;
     coordinationStrategy: TeamStrategy;
-    fallbackPlan?: string;
+    fallbackPlan?: TeamFallback;
     metadata: {
         domain: TeamDomain;
         created: number;
@@ -74,164 +82,115 @@ export interface TeamTemplate {
     isBuiltin: boolean;
 }
 
-export const DEFAULT_TEAM_TEMPLATES: TeamTemplate[] = [
-    {
-        id: 'tt-medical',
-        name: 'Medical Council',
-        description: 'Multi-specialty medical consultation team for complex diagnoses',
-        icon: '🩺',
-        color: '#10b981',
-        domain: 'medical',
-        defaultStrategy: 'consensus',
-        recommendedRoles: [
-            'diagnostician',
-            'surgeon',
-            'pharmacologist',
-            'radiologist',
-            'pathologist',
-        ],
-        minRoles: 3,
-        maxRoles: 8,
-        useCases: ['Complex diagnosis', 'Treatment planning', 'Second opinion'],
-        isBuiltin: true,
-    },
-    {
-        id: 'tt-research',
-        name: 'Research Lab',
-        description: 'Scientific research team for hypothesis testing and analysis',
-        icon: '🔬',
-        color: '#3b82f6',
-        domain: 'scientific',
-        defaultStrategy: 'pipeline',
-        recommendedRoles: [
-            'principal_investigator',
-            'data_scientist',
-            'lab_technician',
-            'literature_reviewer',
-            'statistician',
-        ],
-        minRoles: 3,
-        maxRoles: 7,
-        useCases: ['Paper writing', 'Experiment design', 'Data analysis'],
-        isBuiltin: true,
-    },
-    {
-        id: 'tt-dev-team',
-        name: 'Software Development Team',
-        description: 'Full-stack development team with code review pipeline',
-        icon: '💻',
-        color: '#8b5cf6',
-        domain: 'technical',
-        defaultStrategy: 'pipeline',
-        recommendedRoles: [
-            'product_manager',
-            'architect',
-            'frontend_dev',
-            'backend_dev',
-            'qa_engineer',
-            'devops',
-        ],
-        minRoles: 3,
-        maxRoles: 10,
-        useCases: ['Feature development', 'Code review', 'Architecture design'],
-        isBuiltin: true,
-    },
-    {
-        id: 'tt-crisis',
-        name: 'Crisis Management Team',
-        description: 'Rapid response team for crisis situations',
-        icon: '🚨',
-        color: '#ef4444',
-        domain: 'crisis',
-        defaultStrategy: 'hierarchical',
-        recommendedRoles: [
-            'incident_commander',
-            'communications_lead',
-            'technical_lead',
-            'legal_advisor',
-            'logistics_coordinator',
-        ],
-        minRoles: 3,
-        maxRoles: 8,
-        useCases: ['Incident response', 'Damage assessment', 'Recovery planning'],
-        isBuiltin: true,
-    },
-    {
-        id: 'tt-editorial',
-        name: 'Editorial Board',
-        description: 'Content creation and review pipeline',
-        icon: '📝',
-        color: '#f59e0b',
-        domain: 'editorial',
-        defaultStrategy: 'sequential',
-        recommendedRoles: ['editor_in_chief', 'writer', 'fact_checker', 'copy_editor', 'publisher'],
-        minRoles: 3,
-        maxRoles: 7,
-        useCases: ['Article writing', 'Review process', 'Publication'],
-        isBuiltin: true,
-    },
-    {
-        id: 'tt-legal',
-        name: 'Legal Council',
-        description: 'Legal analysis and strategy team',
-        icon: '⚖️',
-        color: '#6366f1',
-        domain: 'legal',
-        defaultStrategy: 'debate',
-        recommendedRoles: [
-            'senior_counsel',
-            'associate',
-            'paralegal',
-            'expert_witness',
-            'compliance_officer',
-        ],
-        minRoles: 2,
-        maxRoles: 6,
-        useCases: ['Case strategy', 'Contract review', 'Compliance audit'],
-        isBuiltin: true,
-    },
-    {
-        id: 'tt-creative',
-        name: 'Creative Studio',
-        description: 'Creative brainstorming and production team',
-        icon: '🎨',
-        color: '#ec4899',
-        domain: 'creative',
-        defaultStrategy: 'swarm',
-        recommendedRoles: [
-            'creative_director',
-            'designer',
-            'copywriter',
-            'art_director',
-            'producer',
-        ],
-        minRoles: 2,
-        maxRoles: 6,
-        useCases: ['Campaign ideation', 'Concept development', 'Creative review'],
-        isBuiltin: true,
-    },
-    {
-        id: 'tt-business',
-        name: 'Strategy Board',
-        description: 'Business strategy and decision-making team',
-        icon: '📊',
-        color: '#14b8a6',
-        domain: 'business',
-        defaultStrategy: 'consensus',
-        recommendedRoles: ['ceo', 'cfo', 'cmo', 'coo', 'strategy_analyst'],
-        minRoles: 3,
-        maxRoles: 8,
-        useCases: ['Strategic planning', 'Risk assessment', 'Investment decision'],
-        isBuiltin: true,
-    },
-];
+export interface RoleOutput {
+    roleId: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    output?: string;
+    latency?: number;
+    tokens?: number;
+    cost?: number;
+    error?: string;
+    startedAt?: number;
+    completedAt?: number;
+}
+
+export interface TeamMetrics {
+    totalDuration: number;
+    totalCost: number;
+    totalTokens: number;
+    roleCount: number;
+    successRate: number;
+    consensusLevel?: number;
+}
+
+export interface TeamExecution {
+    id: string;
+    teamId: string;
+    task: string;
+    status: TeamExecutionStatus;
+    startedAt: number;
+    completedAt?: number;
+    roleOutputs: Record<string, RoleOutput>;
+    synthesis?: string;
+    metrics?: TeamMetrics;
+    currentRoleId?: string;
+}
+
+export interface TeamCompatibilityEntry {
+    roleA: string;
+    roleB: string;
+    score: number;
+    synergyLabel: 'synergy' | 'neutral' | 'conflict';
+    note?: string;
+}
+
+export interface TeamAnalytics {
+    teamId: string;
+    totalExecutions: number;
+    successRate: number;
+    avgDuration: number;
+    avgCost: number;
+    perRoleContribution: Record<string, number>;
+    bottleneckRoleId?: string;
+}
+
+export const TEAM_STRATEGY_LABELS: Record<TeamStrategy, string> = {
+    parallel: 'All at once — all roles receive the task simultaneously',
+    sequential: 'One by one — roles execute in specified order',
+    pipeline: 'Chain — output of one role becomes input of next',
+    debate: 'Pro/Con — roles argue opposing sides, judge synthesizes',
+    consensus: 'Voting — all roles vote, threshold decides',
+    hierarchical: 'Leader delegates — leader assigns sub-tasks, synthesizes results',
+    swarm: 'Emergent — roles interact freely, message-passing',
+    tournament: 'Knockout — pairwise comparisons, winner advances',
+    'round-robin': 'Cyclic — each role takes turns, N rounds',
+    review: 'Author + Reviewers — draft, critique, revise cycle',
+};
+
+export const TEAM_DOMAIN_ICONS: Record<TeamDomain, string> = {
+    medical: '🩺',
+    scientific: '🔬',
+    technical: '💻',
+    legal: '⚖️',
+    business: '📊',
+    creative: '🎨',
+    educational: '🎓',
+    crisis: '🚨',
+    ethical: '🛡️',
+    financial: '💰',
+    investigation: '🔍',
+    editorial: '📝',
+    research: '📚',
+    custom: '⚙️',
+};
+
+export const STRATEGY_COLORS: Record<TeamStrategy, string> = {
+    parallel: '#10b981',
+    sequential: '#3b82f6',
+    pipeline: '#8b5cf6',
+    debate: '#ef4444',
+    consensus: '#f59e0b',
+    hierarchical: '#f97316',
+    swarm: '#ec4899',
+    tournament: '#a855f7',
+    'round-robin': '#06b6d4',
+    review: '#14b8a6',
+};
 
 export interface IRoleTeamService {
     listTeams(): RoleTeam[];
     getTeam(id: string): RoleTeam | undefined;
-    createTeam(input: Omit<RoleTeam, 'id' | 'metadata'>): RoleTeam;
+    createTeam(input: Omit<RoleTeam, 'id'>): RoleTeam;
     updateTeam(id: string, patch: Partial<RoleTeam>): void;
     deleteTeam(id: string): void;
     getTemplates(): TeamTemplate[];
     createFromTemplate(templateId: string, overrides?: Partial<RoleTeam>): RoleTeam;
+
+    executeTeam(teamId: string, task: string): TeamExecution;
+    getExecution(executionId: string): TeamExecution | undefined;
+    abortExecution(executionId: string): void;
+    getExecutionHistory(teamId: string): TeamExecution[];
+    getTeamAnalytics(teamId: string): TeamAnalytics;
+    getCompatibilityMatrix(): TeamCompatibilityEntry[];
+    synthesizeTeamOutput(execution: TeamExecution): string;
 }

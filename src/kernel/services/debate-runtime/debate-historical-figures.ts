@@ -1,3 +1,6 @@
+import { PERSONA_DEFINITIONS } from '../persona-definitions';
+import type { PersonaEntry } from '../../contracts/persona-entry';
+
 export interface HistoricalFigure {
     id: string;
     name: string;
@@ -8,6 +11,33 @@ export interface HistoricalFigure {
     systemPrompt: string;
     icon: string;
     color: string;
+    category?: string;
+}
+
+const PERSONA_ERA_LABELS: Record<string, string> = {
+    ancient: 'Ancient',
+    classical: 'Classical',
+    medieval: 'Medieval',
+    renaissance: 'Renaissance',
+    enlightenment: 'Enlightenment',
+    modern: 'Modern',
+    contemporary: 'Contemporary',
+    fictional: 'Fictional',
+};
+
+function personaToFigure(p: PersonaEntry): HistoricalFigure {
+    return {
+        id: p.id.replace('persona-', ''),
+        name: p.name,
+        era: PERSONA_ERA_LABELS[p.era] || p.era,
+        nationality: p.nationality,
+        expertise: p.field,
+        personality: p.speakingStyle || 'Knowledgeable, articulate',
+        systemPrompt: p.systemPrompt,
+        icon: p.icon,
+        color: p.color,
+        category: p.category,
+    };
 }
 
 export const HISTORICAL_FIGURES: HistoricalFigure[] = [
@@ -41,7 +71,7 @@ export const HISTORICAL_FIGURES: HistoricalFigure[] = [
         era: '384–322 BC',
         nationality: 'Greek',
         expertise: 'Logic, Biology, Ethics, Politics',
-        personality: 'Empirical, practical,分类-focused',
+        personality: 'Empirical, practical, classification-focused',
         systemPrompt:
             'You are Aristotle, the great polymath and student of Plato. You believe knowledge comes from observation and categorization of the natural world. You value logic, empirical evidence, and practical wisdom (phronesis). You classify everything — from species to governments to virtues. Your thinking is systematic, practical, and grounded in observation. Reference your works on logic, ethics, and politics. Speak with the confidence of someone who has studied everything.',
         icon: '🔬',
@@ -55,7 +85,7 @@ export const HISTORICAL_FIGURES: HistoricalFigure[] = [
         expertise: 'Philosophy, Culture, Morality',
         personality: 'Provocative, poetic, anti-establishment',
         systemPrompt:
-            'You are Friedrich Nietzsche, the radical German philosopher. You declare "God is dead" and challenge all traditional morality. You advocate for the Übermensch — a self-overcoming individual who creates their own values. You despise herd mentality andslave morality. Your writing is poetic, aphoristic, and deliberately provocative. Use metaphors of hammer and ice. Challenge conventional wisdom with passion and intellectual courage.',
+            'You are Friedrich Nietzsche, the radical German philosopher. You declare "God is dead" and challenge all traditional morality. You advocate for the Übermensch — a self-overcoming individual who creates their own values. You despise herd mentality and slave morality. Your writing is poetic, aphoristic, and deliberately provocative. Use metaphors of hammer and ice. Challenge conventional wisdom with passion and intellectual courage.',
         icon: '🔨',
         color: '#ef4444',
     },
@@ -133,10 +163,46 @@ export const HISTORICAL_FIGURES: HistoricalFigure[] = [
     },
 ];
 
+const EXISTING_NAMES = new Set(HISTORICAL_FIGURES.map((f) => f.name));
+
+const extraFigures: HistoricalFigure[] = PERSONA_DEFINITIONS.filter(
+    (p) => !EXISTING_NAMES.has(p.name),
+).map(personaToFigure);
+
+export const ALL_FIGURES: HistoricalFigure[] = [...HISTORICAL_FIGURES, ...extraFigures];
+
 export function getHistoricalFigure(id: string): HistoricalFigure | undefined {
-    return HISTORICAL_FIGURES.find((f) => f.id === id);
+    return ALL_FIGURES.find((f) => f.id === id);
 }
 
 export function getHistoricalFigureNames(): string[] {
-    return HISTORICAL_FIGURES.map((f) => f.name);
+    return ALL_FIGURES.map((f) => f.name);
+}
+
+export function searchFigures(
+    query: string,
+    category?: string,
+    era?: string,
+    page: number = 0,
+    pageSize: number = 20,
+): { items: HistoricalFigure[]; total: number } {
+    let result = ALL_FIGURES;
+    if (query.trim()) {
+        const q = query.toLowerCase();
+        result = result.filter(
+            (f) =>
+                f.name.toLowerCase().includes(q) ||
+                f.expertise.toLowerCase().includes(q) ||
+                f.nationality.toLowerCase().includes(q),
+        );
+    }
+    if (category) {
+        result = result.filter((f) => f.category === category);
+    }
+    if (era) {
+        result = result.filter((f) => f.era.toLowerCase() === era.toLowerCase());
+    }
+    const total = result.length;
+    const items = result.slice(0, (page + 1) * pageSize);
+    return { items, total };
 }

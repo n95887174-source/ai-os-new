@@ -10,30 +10,77 @@ import type {
 
 const LOGGER = rootLogger.child('GoogleGenAI');
 
-function buildSDKParts(messages: ChatMessage[]): Part[] {
-    const parts: Part[] = [];
-    const lastUser = messages.filter((m) => m.role === 'user').pop();
-    if (lastUser) {
-        if (lastUser.inlineData) {
-            for (const d of lastUser.inlineData) {
+function buildSDKContents(messages: ChatMessage[]): {
+    contents: { role: 'user' | 'model'; parts: Part[] }[];
+    systemInstruction?: { role: 'user'; parts: Part[] };
+} {
+    const contents: { role: 'user' | 'model'; parts: Part[] }[] = [];
+    let systemParts: Part[] | undefined;
+
+    for (const m of messages) {
+        if (m.role === 'system') {
+            if (m.content) {
+                if (!systemParts) systemParts = [];
+                systemParts.push({ text: m.content });
+            }
+            continue;
+        }
+
+        const role = m.role === 'assistant' ? 'model' : 'user';
+        const parts: Part[] = [];
+
+        if (m.inlineData) {
+            for (const d of m.inlineData) {
                 parts.push({
                     inlineData: { mimeType: d.mimeType, data: d.data },
                 } as unknown as Part);
             }
         }
-        if (lastUser.content) {
-            parts.push({ text: lastUser.content });
+
+        if (m.content) {
+            parts.push({ text: m.content });
+        }
+
+        if (m.toolCalls) {
+            for (const tc of m.toolCalls) {
+                try {
+                    parts.push({
+                        functionCall: {
+                            name: tc.function.name,
+                            args: JSON.parse(tc.function.arguments),
+                        },
+                    } as unknown as Part);
+                } catch {
+                    parts.push({ text: `[tool_call: ${tc.function.name}]` });
+                }
+            }
+        }
+
+        if (m.role === 'tool' && m.content) {
+            parts.push({
+                functionResponse: {
+                    name: m.name || 'unknown',
+                    response: JSON.parse(m.content),
+                },
+            } as unknown as Part);
+        }
+
+        if (parts.length > 0) {
+            contents.push({ role, parts });
         }
     }
-    if (parts.length === 0) {
-        parts.push({ text: lastUser?.content || '' });
-    }
-    return parts;
+
+    return {
+        contents: contents.length > 0 ? contents : [{ role: 'user', parts: [{ text: '' }] }],
+        systemInstruction: systemParts ? { role: 'user', parts: systemParts } : undefined,
+    };
 }
 
 export class GoogleGenAIService {
     #client: GoogleGenerativeAI | null = null;
     #apiKey: string | null = null;
+    #lastKeyFetch = 0;
+    #KEY_CACHE_TTL = 60_000;
 
     setApiKey(apiKey: string): void {
         if (apiKey === this.#apiKey && this.#client) return;
@@ -41,8 +88,29 @@ export class GoogleGenAIService {
         this.#client = new GoogleGenerativeAI(apiKey);
     }
 
+    clearApiKey(): void {
+        this.#apiKey = null;
+        this.#client = null;
+        this.#lastKeyFetch = 0;
+    }
+
     get isConfigured(): boolean {
         return !!this.#client;
+    }
+
+    async ensureConfigured(): Promise<void> {
+        if (this.#client && Date.now() - this.#lastKeyFetch < this.#KEY_CACHE_TTL) return;
+        const { keyService } = await import('../instances');
+        const key = keyService.selectFromPool('gemini');
+        if (!key?.key) {
+            if (this.#client) return;
+            throw new Error('No Gemini key available — add a Gemini key in Key Manager');
+        }
+        if (key.key !== this.#apiKey) {
+            this.#apiKey = key.key;
+            this.#client = new GoogleGenerativeAI(key.key);
+        }
+        this.#lastKeyFetch = Date.now();
     }
 
     #model(modelName = 'gemini-2.5-flash', options?: SendMessageOptions): GenerativeModel {
@@ -105,17 +173,15 @@ export class GoogleGenAIService {
         options?: SendMessageOptions,
         signal?: AbortSignal,
     ): Promise<ProviderResponse> {
+        await this.ensureConfigured().catch(() => {});
         const start = Date.now();
         const m = this.#model(model, options);
-        const parts = buildSDKParts(messages);
-        const systemText = messages.find((r) => r.role === 'system')?.content;
+        const { contents, systemInstruction } = buildSDKContents(messages);
 
         try {
-            const req: Record<string, unknown> = {
-                contents: [{ role: 'user', parts }],
-            };
-            if (systemText) {
-                req.systemInstruction = { role: 'user', parts: [{ text: systemText }] };
+            const req: Record<string, unknown> = { contents };
+            if (systemInstruction) {
+                req.systemInstruction = systemInstruction;
             }
             const result = await m.generateContent(req as never, { signal });
             const resp = result.response;
@@ -156,17 +222,15 @@ export class GoogleGenAIService {
         options?: SendMessageOptions,
         signal?: AbortSignal,
     ): Promise<ProviderResponse> {
+        await this.ensureConfigured().catch(() => {});
         const start = Date.now();
         const m = this.#model(model, options);
-        const parts = buildSDKParts(messages);
-        const systemText = messages.find((r) => r.role === 'system')?.content;
+        const { contents, systemInstruction } = buildSDKContents(messages);
 
         try {
-            const req: Record<string, unknown> = {
-                contents: [{ role: 'user', parts }],
-            };
-            if (systemText) {
-                req.systemInstruction = { role: 'user', parts: [{ text: systemText }] };
+            const req: Record<string, unknown> = { contents };
+            if (systemInstruction) {
+                req.systemInstruction = systemInstruction;
             }
             const result = await m.generateContentStream(req as never, { signal });
 
@@ -207,6 +271,7 @@ export class GoogleGenAIService {
     }
 
     async countTokens(text: string, model = 'gemini-2.5-flash'): Promise<number> {
+        await this.ensureConfigured().catch(() => {});
         try {
             const m = this.#model(model);
             const result = await m.countTokens(text);
@@ -220,21 +285,17 @@ export class GoogleGenAIService {
         prompt: string,
         options?: { aspectRatio?: string; personGeneration?: string; safetyFilterLevel?: string },
     ): Promise<{ images: string[]; mimeType: string }> {
-        this.#model('imagen-3.0-generate-001');
+        await this.ensureConfigured().catch(() => {});
         if (!this.#client) throw new Error('GoogleGenAI not configured');
+        const imagenConfig: Record<string, unknown> = {
+            responseModalities: ['image', 'text'],
+            ...(options?.aspectRatio ? { aspectRatio: options.aspectRatio } : {}),
+            ...(options?.personGeneration ? { personGeneration: options.personGeneration } : {}),
+            ...(options?.safetyFilterLevel ? { safetyFilterLevel: options.safetyFilterLevel } : {}),
+        };
         const m = this.#client.getGenerativeModel({
             model: 'imagen-3.0-generate-001',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            generationConfig: {
-                responseModalities: ['image', 'text'],
-                ...(options?.aspectRatio ? { aspectRatio: options.aspectRatio } : {}),
-                ...(options?.personGeneration
-                    ? { personGeneration: options.personGeneration }
-                    : {}),
-                ...(options?.safetyFilterLevel
-                    ? { safetyFilterLevel: options.safetyFilterLevel }
-                    : {}),
-            } as any,
+            generationConfig: imagenConfig as never,
         });
         try {
             const result = await m.generateContent(prompt);
@@ -265,6 +326,7 @@ export class GoogleGenAIService {
     }
 
     async getEmbedding(text: string): Promise<number[]> {
+        await this.ensureConfigured().catch(() => {});
         if (!this.#client) throw new Error('GoogleGenAI not configured');
         try {
             const m = this.#client.getGenerativeModel({ model: 'text-embedding-004' });
@@ -332,14 +394,19 @@ export class GoogleGenAIService {
     }
 
     async getModels(): Promise<string[]> {
+        await this.ensureConfigured().catch(() => {});
+        const apiKey = this.#apiKey;
+        if (!apiKey) return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
         try {
-            if (!this.#client) return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
-            const m = this.#client.getGenerativeModel({ model: 'gemini-2.5-flash' });
-            const models = await (
-                m as unknown as { listModels?: () => Promise<{ models: Array<{ name: string }> }> }
-            ).listModels?.();
-            if (models?.models) {
-                return models.models.map((x: { name: string }) => x.name.replace('models/', ''));
+            const res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
+                headers: { 'x-goog-api-key': apiKey },
+            });
+            if (!res.ok) return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
+            const data = (await res.json()) as { models?: Array<{ name: string }> };
+            if (data.models) {
+                return data.models
+                    .map((x) => x.name.replace('models/', ''))
+                    .filter((n) => n.startsWith('gemini-'));
             }
             return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
         } catch {

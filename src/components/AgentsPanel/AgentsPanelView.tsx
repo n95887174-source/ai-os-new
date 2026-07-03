@@ -181,6 +181,7 @@ const AgentsPanelView: React.FC = () => {
                             color: tmpl.color,
                         }}
                         title={tmpl.description}
+                        aria-label={`Deploy ${tmpl.name} agent`}
                     >
                         {tmpl.icon} {tmpl.name}
                     </button>
@@ -247,6 +248,7 @@ const AgentsPanelView: React.FC = () => {
                         className={`agents-view-btn${viewMode === 'grid' ? ' agents-view-btn--active' : ''}`}
                         role="radio"
                         aria-checked={viewMode === 'grid'}
+                        aria-label="Grid view"
                     >
                         <LayoutGrid size={16} />
                     </button>
@@ -255,6 +257,7 @@ const AgentsPanelView: React.FC = () => {
                         className={`agents-view-btn${viewMode === 'list' ? ' agents-view-btn--active' : ''}`}
                         role="radio"
                         aria-checked={viewMode === 'list'}
+                        aria-label="List view"
                     >
                         <List size={16} />
                     </button>

@@ -54,8 +54,8 @@ export interface IPressureEngine {
 
 // ── Diagnostics Engine ─────────────────────────────────────────────────
 
-type DiagnosticCategory = 'auth' | 'quota' | 'latency' | 'reliability' | 'usage';
-type DiagnosticSeverity = 'info' | 'warning' | 'critical';
+export type DiagnosticCategory = 'auth' | 'quota' | 'latency' | 'reliability' | 'usage';
+export type DiagnosticSeverity = 'info' | 'warning' | 'critical';
 
 export interface DiagnosticFinding {
     readonly severity: DiagnosticSeverity;
@@ -158,8 +158,8 @@ export interface AdvisorConfig {
 
 // ── Optimization Engine (existing) ─────────────────────────────────────
 
-type SuggestionType = 'latency' | 'accuracy' | 'cost' | 'topology' | 'security';
-type SuggestionImpact = 'high' | 'medium' | 'low';
+export type SuggestionType = 'latency' | 'accuracy' | 'cost' | 'topology' | 'security';
+export type SuggestionImpact = 'high' | 'medium' | 'low';
 
 export interface ProposedChange {
     routing_update?: string;

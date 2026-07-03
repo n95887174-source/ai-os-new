@@ -190,11 +190,6 @@ export const AdapterMessageSchema = z.object({
     toolCalls: z.array(ToolCallSchema).optional(),
 });
 
-/** @deprecated ChatMessageSchema had a misleading shape (text instead of content,
- *  extra fields id/sessionId/entryId). Removed — use AdapterMessageSchema for
- *  API-level messages or ChatHistoryEntrySchema for stored entries. */
-export const ChatMessageSchema = z.object({}).passthrough();
-
 export const MemoryEntrySchema = z.object({
     id: z.string(),
     content: z.string(),

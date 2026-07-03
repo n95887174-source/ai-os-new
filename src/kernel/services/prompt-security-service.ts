@@ -1,4 +1,3 @@
-import { BucketStorageAdapter } from './storage-adapter';
 import type {
     SecurityFinding,
     PromptScanResult,
@@ -7,6 +6,7 @@ import type {
     SecurityScanEvent,
     PromptSecurityService,
 } from '../contracts/prompt-security-types';
+import type { IDatabaseService } from '../types/interfaces';
 
 const STORAGE_KEY_HISTORY = 'security_scan_history';
 const MAX_HISTORY = 100;
@@ -156,13 +156,18 @@ export class PromptSecurityServiceImpl implements PromptSecurityService {
     private config: SecurityScanConfig = DEFAULT_CONFIG;
     private history: SecurityScanEvent[] = [];
     private loaded = false;
-    private readonly store = BucketStorageAdapter.UI;
+
+    private async db(): Promise<IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
+    }
 
     private async ensureLoaded(): Promise<void> {
         if (this.loaded) return;
+        const d = await this.db();
         const [savedConfig, savedHistory] = await Promise.all([
-            this.store.get<SecurityScanConfig>(STORAGE_KEY_CONFIG),
-            this.store.get<SecurityScanEvent[]>(STORAGE_KEY_HISTORY),
+            d.getKv<SecurityScanConfig>(STORAGE_KEY_CONFIG),
+            d.getKv<SecurityScanEvent[]>(STORAGE_KEY_HISTORY),
         ]);
         if (savedConfig)
             this.config = {
@@ -175,9 +180,10 @@ export class PromptSecurityServiceImpl implements PromptSecurityService {
     }
 
     private async persist(): Promise<void> {
+        const d = await this.db();
         await Promise.all([
-            this.store.set(STORAGE_KEY_CONFIG, this.config),
-            this.store.set(STORAGE_KEY_HISTORY, this.history.slice(-MAX_HISTORY)),
+            d.setKv(STORAGE_KEY_CONFIG, this.config),
+            d.setKv(STORAGE_KEY_HISTORY, this.history.slice(-MAX_HISTORY)),
         ]);
     }
 

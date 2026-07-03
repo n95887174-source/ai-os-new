@@ -12,14 +12,55 @@ export interface ResearchQuestion {
     timestamp: number;
 }
 
+export type SourceType =
+    | 'duckduckgo'
+    | 'google_custom_search'
+    | 'wikipedia'
+    | 'arxiv'
+    | 'pubmed'
+    | 'pubmed_central'
+    | 'semantic_scholar'
+    | 'openalex'
+    | 'crossref'
+    | 'dblp'
+    | 'core'
+    | 'base'
+    | 'science_gov'
+    | 'hal'
+    | 'openaire'
+    | 'biorxiv'
+    | 'medrxiv'
+    | 'chemrxiv'
+    | 'ieee_xplore'
+    | 'acm_dl'
+    | 'jstor'
+    | 'scopus'
+    | 'web_of_science'
+    | 'ssrn'
+    | 'academia_edu'
+    | 'researchgate'
+    | 'philpapers'
+    | 'open_library'
+    | 'wolfram_alpha'
+    | 'news_api'
+    | 'reddit'
+    | 'github'
+    | 'stack_overflow'
+    | 'google_patents';
+
 export interface ResearchSource {
     id: string;
     title: string;
     url: string;
     snippet: string;
     category: SourceCategory;
+    sourceType: SourceType;
     relevanceScore: number;
     timestamp: number;
+    authors?: string[];
+    year?: number;
+    doi?: string;
+    citationCount?: number;
 }
 
 export interface ResearchClaim {

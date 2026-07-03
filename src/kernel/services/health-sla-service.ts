@@ -1,8 +1,7 @@
 import type { IHealthSlaService, SlaProfile, SlaRule } from '../contracts/health-sla';
 
-let _idCounter = 0;
-const genId = () => `sla-${++_idCounter}-${Date.now()}`;
-const genRuleId = () => `rule-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
+const genRuleId = () => crypto.randomUUID();
 
 export class HealthSlaService implements IHealthSlaService {
     private profiles: SlaProfile[] = [

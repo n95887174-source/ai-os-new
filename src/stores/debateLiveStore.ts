@@ -1,11 +1,7 @@
 import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
 import { EVENTS } from '../kernel/events/event-names';
-import { safeJsonParse } from '../kernel/utils/safe-json';
 import type { DebateEmotion } from '../kernel/contracts/debate-emotion';
-
-const LIVE_STORAGE_KEY = 'debate_live_state';
-const LIVE_STORAGE_DEBOUNCE = 500;
 
 const MAX_AGENT_EVENTS = 500;
 const MAX_ROUND_EVENTS = 200;
@@ -36,10 +32,31 @@ export interface DebateLiveState {
     currentThinking: Map<string, string>;
     streamingContent: Map<string, string>;
     emotions: Map<string, DebateEmotion>;
+    agentCountdowns: Map<string, { secondsLeft: number; secondsTotal: number }>;
+    agentAddressing: Map<string, string>;
+    memoryBubbles: Map<
+        string,
+        {
+            debateLabel: string;
+            similarity: number;
+            relation: 'supports' | 'refutes' | 'extends' | 'contradicts';
+        }
+    >;
+    judgeWeights: { pro: number; con: number; neutral: number };
     addAgentEvent: (event: DebateAgentEvent) => void;
     addRoundEvent: (event: DebateRoundEvent) => void;
     clearSession: (sessionId: string) => void;
     clearAll: () => void;
+    setAgentAddressing: (key: string, targetId: string | null) => void;
+    addMemoryBubble: (
+        key: string,
+        bubble: {
+            debateLabel: string;
+            similarity: number;
+            relation: 'supports' | 'refutes' | 'extends' | 'contradicts';
+        },
+    ) => void;
+    setJudgeWeights: (weights: { pro: number; con: number; neutral: number }) => void;
     // B10-114: Cleanup event subscriptions on unmount
     destroy: () => void;
 }
@@ -112,10 +129,13 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                         ek,
                         computeEmotion(ek, 'thinking', s.agentEvents),
                     );
+                    const cd = new Map(s.agentCountdowns);
+                    cd.set(ek, { secondsLeft: 30, secondsTotal: 30 });
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         currentThinking: m,
                         emotions: em,
+                        agentCountdowns: cd,
                     };
                 });
             },
@@ -140,11 +160,14 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                         ek,
                         computeEmotion(ek, 'responded', s.agentEvents),
                     );
+                    const cd = new Map(s.agentCountdowns);
+                    cd.delete(ek);
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         currentThinking: m,
                         streamingContent: sc,
                         emotions: em,
+                        agentCountdowns: cd,
                     };
                 });
             },
@@ -169,11 +192,14 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                         ek,
                         computeEmotion(ek, 'error', s.agentEvents),
                     );
+                    const cd = new Map(s.agentCountdowns);
+                    cd.delete(ek);
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         currentThinking: m,
                         streamingContent: sc,
                         emotions: em,
+                        agentCountdowns: cd,
                     };
                 });
             },
@@ -198,11 +224,14 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                         ek,
                         computeEmotion(ek, 'timeout', s.agentEvents),
                     );
+                    const cdd = new Map(s.agentCountdowns);
+                    cdd.delete(ek);
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         streamingContent: sc,
                         currentThinking: ct,
                         emotions: em,
+                        agentCountdowns: cdd,
                     };
                 });
             },
@@ -231,11 +260,14 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     ek,
                     computeEmotion(ek, 'fallback', s.agentEvents),
                 );
+                const cdd = new Map(s.agentCountdowns);
+                cdd.delete(ek);
                 return {
                     agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                     streamingContent: sc,
                     currentThinking: ct,
                     emotions: em,
+                    agentCountdowns: cdd,
                 };
             });
         }),
@@ -263,6 +295,38 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 ].slice(-MAX_ROUND_EVENTS),
             }));
         }),
+        eventBus.onSafe<{ sessionId: string; agentId: string; claim: string }>(
+            'debate-runtime:memory:claim',
+            (d) => {
+                set((s) => {
+                    const ek = `${d.sessionId}:${d.agentId}`;
+                    const mb = new Map(s.memoryBubbles);
+                    if (mb.size < 50) {
+                        mb.set(ek, {
+                            debateLabel:
+                                d.claim.length > 30 ? d.claim.slice(0, 30) + '...' : d.claim,
+                            similarity: 0.85,
+                            relation: 'supports' as const,
+                        });
+                    }
+                    return { memoryBubbles: mb };
+                });
+            },
+        ),
+        eventBus.onSafe<{
+            sessionId: string;
+            confidence: number;
+            agreements: number;
+            conflicts: number;
+        }>('debate-runtime:consensus:reached', (d) => {
+            set({
+                judgeWeights: {
+                    pro: d.agreements,
+                    con: d.conflicts,
+                    neutral: Math.max(0, 10 - d.agreements - d.conflicts),
+                },
+            });
+        }),
     ];
 
     const metricsInterval = setInterval(() => {
@@ -281,74 +345,53 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         });
     }, METRICS_INTERVAL_MS);
 
-    let persistTimer: ReturnType<typeof setTimeout> | null = null;
-    const schedulePersist = () => {
-        if (persistTimer) clearTimeout(persistTimer);
-        persistTimer = setTimeout(() => {
-            persistTimer = null;
-            const s = get();
-            try {
-                sessionStorage.setItem(
-                    LIVE_STORAGE_KEY,
-                    JSON.stringify({
-                        agentEvents: s.agentEvents,
-                        roundEvents: s.roundEvents,
-                    }),
-                );
-            } catch {
-                /* sessionStorage full or unavailable */
+    const countdownInterval = setInterval(() => {
+        set((s) => {
+            const cd = new Map(s.agentCountdowns);
+            let changed = false;
+            for (const [k, v] of cd) {
+                if (v.secondsLeft <= 0) {
+                    cd.delete(k);
+                    changed = true;
+                } else {
+                    cd.set(k, { ...v, secondsLeft: v.secondsLeft - 1 });
+                    changed = true;
+                }
             }
-        }, LIVE_STORAGE_DEBOUNCE);
-    };
-
-    const isValidAgentEvent = (e: unknown): boolean =>
-        !!e && typeof e === 'object' && 'sessionId' in e && 'agentId' in e && 'status' in e;
-    const isValidRoundEvent = (e: unknown): boolean =>
-        !!e && typeof e === 'object' && 'sessionId' in e && 'round' in e;
-
-    const initialState = (() => {
-        try {
-            const saved = sessionStorage.getItem(LIVE_STORAGE_KEY);
-            if (saved) {
-                const parsed = safeJsonParse(saved);
-                return {
-                    agentEvents: Array.isArray(parsed.agentEvents)
-                        ? parsed.agentEvents.filter(isValidAgentEvent)
-                        : [],
-                    roundEvents: Array.isArray(parsed.roundEvents)
-                        ? parsed.roundEvents.filter(isValidRoundEvent)
-                        : [],
-                };
-            }
-        } catch {
-            /* corrupt or unavailable */
-        }
-        return {};
-    })();
+            return changed ? { agentCountdowns: cd } : {};
+        });
+    }, 1000);
 
     return {
-        ...initialState,
-        agentEvents: initialState.agentEvents ?? [],
-        roundEvents: initialState.roundEvents ?? [],
+        agentEvents: [],
+        roundEvents: [],
         currentThinking: new Map(),
         streamingContent: new Map(),
         emotions: new Map(),
+        agentCountdowns: new Map(),
+        agentAddressing: new Map(),
+        memoryBubbles: new Map(),
+        judgeWeights: { pro: 0, con: 0, neutral: 0 },
         addAgentEvent: (event) => {
             set((s) => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
-            schedulePersist();
         },
         addRoundEvent: (event) => {
             set((s) => ({ roundEvents: [...s.roundEvents, event].slice(-MAX_ROUND_EVENTS) }));
-            schedulePersist();
         },
         clearSession: (sessionId) => {
             set((s) => {
                 const sc = new Map(s.streamingContent);
                 const em = new Map(s.emotions);
+                const cd = new Map(s.agentCountdowns);
+                const aa = new Map(s.agentAddressing);
+                const mb = new Map(s.memoryBubbles);
                 for (const k of sc.keys()) {
                     if (k.startsWith(`${sessionId}:`)) {
                         sc.delete(k);
                         em.delete(k);
+                        cd.delete(k);
+                        aa.delete(k);
+                        mb.delete(k);
                     }
                 }
                 return {
@@ -356,9 +399,11 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     roundEvents: s.roundEvents.filter((e) => e.sessionId !== sessionId),
                     streamingContent: sc,
                     emotions: em,
+                    agentCountdowns: cd,
+                    agentAddressing: aa,
+                    memoryBubbles: mb,
                 };
             });
-            schedulePersist();
         },
         clearAll: () => {
             set({
@@ -367,14 +412,35 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 currentThinking: new Map(),
                 streamingContent: new Map(),
                 emotions: new Map(),
+                agentCountdowns: new Map(),
+                agentAddressing: new Map(),
+                memoryBubbles: new Map(),
+                judgeWeights: { pro: 0, con: 0, neutral: 0 },
             });
-            schedulePersist();
+        },
+        setAgentAddressing: (key, targetId) => {
+            set((s) => {
+                const m = new Map(s.agentAddressing);
+                if (targetId === null) m.delete(key);
+                else m.set(key, targetId);
+                return { agentAddressing: m };
+            });
+        },
+        addMemoryBubble: (key, bubble) => {
+            set((s) => {
+                const m = new Map(s.memoryBubbles);
+                m.set(key, bubble);
+                return { memoryBubbles: m };
+            });
+        },
+        setJudgeWeights: (weights) => {
+            set({ judgeWeights: weights });
         },
         // B10-114: Cleanup all event subscriptions to prevent memory leaks
         destroy: () => {
             subs.forEach((u) => u());
             clearInterval(metricsInterval);
-            if (persistTimer) clearTimeout(persistTimer);
+            clearInterval(countdownInterval);
         },
     };
 });

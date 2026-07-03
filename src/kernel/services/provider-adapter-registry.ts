@@ -42,6 +42,7 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
                               maxConcurrency: CONFIG.llm.priorityQueue.maxConcurrency,
                               lowPriorityDelayMs: CONFIG.llm.priorityQueue.lowPriorityDelayMs,
                           },
+                          costManager: true,
                       },
                   );
     }
@@ -86,6 +87,10 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
 
     resetCircuitBreaker(provider: string): void {
         this.factory.resetCircuitBreaker(provider);
+    }
+
+    getCircuitBreakerState(provider: string): 'closed' | 'open' | 'half-open' {
+        return this.factory.getCircuitBreakerState(provider) as 'closed' | 'open' | 'half-open';
     }
 
     syncCircuitBreakerState(provider: string, status: string): void {

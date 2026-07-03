@@ -272,7 +272,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Prompt Version Service ──────────────────────────
     register('promptVersionService', new PromptVersionService());
 
-    // ── Provider Migration Service ──────────────────────
+    // ── Provider Migration Service (DEMO — setTimeout(800) per step, no real migration) ──
     register('providerMigrationService', new ProviderMigrationService());
 
     // ── Health SLA Service ──────────────────────────────
@@ -327,5 +327,8 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     register('geminiCacheService', new GeminiCacheService());
 
     // ── Provider Achievement Service ──────────────
-    register('providerAchievementService', new ProviderAchievementService());
+    register(
+        'providerAchievementService',
+        new ProviderAchievementService(get<IDatabaseService>('database')),
+    );
 };

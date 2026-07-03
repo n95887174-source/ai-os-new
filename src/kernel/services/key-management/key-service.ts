@@ -158,6 +158,8 @@ export class KeyService implements IKeyRotationManager {
             notify: () => this.notify(),
             getKey: (id) => this.registry.getKey(id),
             getActiveKeys: () => this.registry.getActiveKeys(),
+            modifyKey: (id, fn) => this.registry.modifyKey(id, fn),
+            providerAdapterRegistry: deps.providerAdapterRegistry,
         });
 
         this.analytics = new KeyAnalytics({
@@ -262,15 +264,13 @@ export class KeyService implements IKeyRotationManager {
         this.registry.setupListeners({
             addKey: (data) => this.addKey(data),
             compromiseByFingerprint: (fingerprint, source) => {
-                const key = this.registry
+                // CRIT-K5: Exact match only — id or SHA-256 fingerprint, no substring
+                const matches = this.registry
                     .getKeys()
-                    .find(
-                        (k) =>
-                            k.id === fingerprint ||
-                            k.label.toLowerCase().includes(fingerprint.toLowerCase()) ||
-                            k.provider.toLowerCase() === fingerprint.toLowerCase(),
-                    );
-                if (key) this.compromiseKey(key.id, source);
+                    .filter((k) => k.id === fingerprint || k.fingerprint === fingerprint);
+                for (const key of matches) {
+                    this.compromiseKey(key.id, source);
+                }
             },
             updateMetricsFromResponse: (res) => {
                 const r = res as {
@@ -283,12 +283,13 @@ export class KeyService implements IKeyRotationManager {
                     tokens?: number | { total?: number };
                     tps?: number;
                 };
-                const key = r.keyId
+                const keyEntry = r.keyId
                     ? this.registry.getKey(r.keyId)
                     : this.registry
                           .getKeys()
                           .find((k) => k.provider.toLowerCase() === r.provider.toLowerCase());
-                if (!key) return;
+                if (!keyEntry) return;
+                const keyId = keyEntry.id;
 
                 if (r.status === 'error' && r.error) {
                     const isRateLimit =
@@ -296,32 +297,56 @@ export class KeyService implements IKeyRotationManager {
                         r.error.toLowerCase().includes('quota') ||
                         r.error.toLowerCase().includes('rate limit');
                     if (isRateLimit) {
-                        this.alerts.addAlert(key, {
-                            type: 'rate_limit',
-                            severity: 'medium',
-                            message: `Provider ${key.provider} quota exhausted (429)`,
+                        this.health.check429Spike(keyId);
+                        const backoffMs = this.health.getBackoffMs(keyId);
+                        this.registry.modifyKey(keyId, (key) => {
+                            this.alerts.addAlert(key, {
+                                type: 'rate_limit',
+                                severity: 'medium',
+                                message: `Provider ${key.provider} quota exhausted (429)`,
+                            });
+                            if (key.stats?.extended) {
+                                key.stats.extended.state = 'DEGRADED' as NonNullable<
+                                    ApiKey['stats']['extended']
+                                >['state'];
+                            }
+                            key.status = 'inactive';
                         });
-                        this.health.check429Spike(key.id);
-                        this.health.transitionState(key, 'DEGRADED');
-                        key.status = 'inactive';
                         this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, {
-                            id: key.id,
-                            provider: key.provider,
+                            id: keyId,
+                            provider: keyEntry.provider,
                             quotaType: 'requests',
                         });
-                        const backoffMs = this.health.getBackoffMs(key.id);
                         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-                            message: `${key.provider} hit 429 � retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
+                            message: `${keyEntry.provider} hit 429 — retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
                             type: 'warning',
                         });
                         setTimeout(() => {
-                            this.deps.eventBus.emit(EVENTS.CHECK_HEALTH, key.id);
+                            this.deps.eventBus.emit(EVENTS.CHECK_HEALTH, keyId);
                         }, backoffMs);
                     }
-                    this.health.handleProviderError(key, r.error);
+                    this.registry.modifyKey(keyId, (key) => {
+                        const previousState = key.status;
+                        key.status = 'error';
+                        if (!key.stats) {
+                            key.stats = this.registry.initStats();
+                        }
+                        key.stats.lastError = {
+                            message: r.error || 'Unknown error',
+                            timestamp: new Date().toISOString(),
+                        };
+                        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+                            id: keyId,
+                            provider: key.provider,
+                            state: 'error',
+                            previousState,
+                        });
+                    });
                 }
 
-                this.analytics.updateMetricsFromResponse(key, r);
+                this.registry.modifyKey(keyId, (key) => {
+                    this.analytics.updateMetricsFromResponse(key, r);
+                });
                 this.registry.saveKeys();
                 this.notify();
             },
@@ -426,6 +451,7 @@ export class KeyService implements IKeyRotationManager {
     };
 
     private notify = debounce(this.emitKeyUpdate, 100);
+    private notifyImmediate = this.emitKeyUpdate;
 
     // -- Vault ----------------------------------------------------------
 
@@ -541,8 +567,10 @@ export class KeyService implements IKeyRotationManager {
         try {
             const saved = await this.deps.keyStore.where('id', keyId);
             if (saved && 'notes' in saved && Array.isArray((saved as { notes?: unknown }).notes)) {
-                const key = this.registry.getKey(keyId);
-                if (key) key.notes = (saved as { notes: KeyNote[] }).notes;
+                const notes = (saved as { notes: KeyNote[] }).notes;
+                this.registry.modifyKey(keyId, (key) => {
+                    key.notes = notes;
+                });
             }
         } catch (e) {
             rootLogger.warn('KeyService', `[KeyService] Failed to load notes for key ${keyId}`, {
@@ -556,14 +584,16 @@ export class KeyService implements IKeyRotationManager {
         const key = this.registry.getKey(id);
         if (!key || !key.key) return;
         try {
-            this.health.updateKeyStatus(key, 'checking');
+            this.updateKeyStatus(id, 'checking');
             const registry = this.deps.providerAdapterRegistry;
             if (!registry) return;
             const adapter = registry.getAdapter(key.provider);
             if (adapter) {
                 const models = await adapter.getAvailableModels(key.key);
                 if (Array.isArray(models) && models.length > 0) {
-                    this.health.updateAvailableModels(key, models);
+                    this.registry.modifyKey(id, (k) => {
+                        k.availableModels = models;
+                    });
                     this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                         message: `Found ${models.length} models for ${key.provider}`,
                         type: 'success',
@@ -589,11 +619,13 @@ export class KeyService implements IKeyRotationManager {
                     GitHub: ['gpt-4o', 'meta-llama-3.1-405b-instruct'],
                 };
                 const models = defaults[key.provider] || [];
-                this.health.updateAvailableModels(key, models);
+                this.registry.modifyKey(id, (k) => {
+                    k.availableModels = models;
+                });
             }
-            this.health.updateKeyStatus(key, 'active');
+            this.updateKeyStatus(id, 'active');
         } catch (e) {
-            this.health.updateKeyStatus(key, 'error');
+            this.updateKeyStatus(id, 'error');
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                 message: `Failed to refresh models: ${e instanceof Error ? e.message : String(e)}`,
                 type: 'error',
@@ -604,30 +636,40 @@ export class KeyService implements IKeyRotationManager {
     // -- Health ---------------------------------------------------------
 
     updateKeyStatus(id: string, status: ApiKey['status'], latency?: number) {
-        const key = this.registry.getKey(id);
-        if (key) {
+        let prev: ApiKey['status'] | undefined;
+        let provider = '';
+        this.registry.modifyKey(id, (key) => {
+            prev = key.status;
+            provider = key.provider;
             key.statusVersion = (key.statusVersion ?? 0) + 1;
-            const prev = key.status;
-            this.health.updateKeyStatus(key, status, latency);
-            this.registry.pushHistory(id, 'status_changed', `${prev} > ${status}`);
-            this.registry.saveKeys();
-            this.notify();
-            this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
-                id,
-                provider: key.provider,
-                state: status,
-                previousState: prev,
+            key.status = status;
+            if (latency !== undefined) key.latency = latency;
+            if (!key.history) key.history = [];
+            key.history.push({
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                action: 'status_changed',
+                detail: `${prev} > ${status}`,
             });
-        }
+            if (key.history.length > 100) key.history = key.history.slice(-99);
+        });
+        if (prev === undefined) return;
+        this.registry.saveKeys();
+        this.notify();
+        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+            id,
+            provider,
+            state: status,
+            previousState: prev,
+        });
     }
 
     updateAvailableModels(id: string, models: string[]) {
-        const key = this.registry.getKey(id);
-        if (key) {
-            this.health.updateAvailableModels(key, models);
-            this.registry.saveKeys();
-            this.notify();
-        }
+        this.registry.modifyKey(id, (key) => {
+            key.availableModels = models;
+        });
+        this.registry.saveKeys();
+        this.notify();
     }
 
     async checkHealth(keyId?: string) {
@@ -642,50 +684,79 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async toggleKeyStatus(id: string) {
-        const key = this.registry.getKey(id);
-        if (key) {
+        let prev: ApiKey['status'] | undefined;
+        this.registry.modifyKey(id, (key) => {
+            prev = key.status;
             key.statusVersion = (key.statusVersion ?? 0) + 1;
-            const prev = key.status;
-            this.health.toggleKeyStatus(key);
-            this.registry.pushHistory(id, 'status_changed', `${prev} > ${key.status}`);
+            if (key.status === 'active') {
+                key.status = 'inactive';
+            } else if (key.status === 'inactive' || key.status === 'error') {
+                key.status = 'active';
+            }
+            if (!key.history) key.history = [];
+            key.history.push({
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                action: 'status_changed',
+                detail: `${prev} > ${key.status}`,
+            });
+            if (key.history.length > 100) key.history = key.history.slice(-99);
+        });
+        if (prev !== undefined) {
             await this.registry.saveKeys();
             this.notify();
         }
     }
 
     async enableAllKeys() {
-        this.health.enableAllKeys(this.registry.getKeys());
+        const keys = this.registry.getKeys();
+        for (const k of keys) {
+            this.registry.modifyKey(k.id, (key) => {
+                key.status = 'active';
+            });
+        }
         await this.registry.saveKeys();
         this.notify();
     }
 
     async disableAllKeys() {
-        this.health.disableAllKeys(this.registry.getKeys());
+        const keys = this.registry.getKeys();
+        for (const k of keys) {
+            this.registry.modifyKey(k.id, (key) => {
+                key.status = 'inactive';
+            });
+        }
         await this.registry.saveKeys();
         this.notify();
     }
 
     quarantineKey(idOrFingerprint: string, source: string = 'manual'): boolean {
-        const key = this.registry.getKey(idOrFingerprint);
-        if (key) {
+        let found = false;
+        this.registry.modifyKey(idOrFingerprint, (key) => {
             this.health.quarantineKey(key, source);
-            this.registry.saveKeys();
-            this.notify();
-            return true;
-        }
-        return false;
+            found = true;
+        });
+        if (!found) return false;
+        this.registry.saveKeys();
+        this.notify();
+        return true;
     }
 
     compromiseKey(id: string, source: string = 'webhook'): boolean {
-        const key = this.registry.getKey(id);
-        if (!key) return false;
-        this.health.compromiseKey(key, source);
+        let provider = '';
+        let found = false;
+        this.registry.modifyKey(id, (key) => {
+            provider = key.provider;
+            this.health.compromiseKey(key, source);
+            found = true;
+        });
+        if (!found) return false;
         this.registry.saveKeys();
         this.notify();
 
         this.deps.eventBus.emit(EVENTS.KEY_COMPROMISED, {
-            id: key.id,
-            provider: key.provider,
+            id,
+            provider,
             source,
         });
 
@@ -832,7 +903,7 @@ export class KeyService implements IKeyRotationManager {
         model?: string,
         extra?: Record<string, unknown>,
     ) {
-        const key = this.registry
+        const keyEntry = this.registry
             .getKeys()
             .find(
                 (k) =>
@@ -840,54 +911,74 @@ export class KeyService implements IKeyRotationManager {
                         k.provider.toLowerCase() === keyIdOrProvider.toLowerCase()) &&
                     k.status === 'active',
             );
-        if (!key) return;
-        this.ensureExtendedStats(key);
-        this.analytics.recordUsage(key, latency, tokens, model, extra);
-        this.quotas.checkQuotas(key);
-        if (extra?.failed) {
-            this.registry.pushHistory(
-                key.id,
-                'error',
-                `${extra.error || 'Unknown error'} (${model || 'auto'})`,
-            );
-            this.lifecycle.onError(key.id);
-        } else {
-            this.lifecycle.onSuccess(key.id);
-        }
+        if (!keyEntry) return;
+        const keyId = keyEntry.id;
+
+        this.registry.modifyKey(keyId, (key) => {
+            this.ensureExtendedStats(key);
+            this.analytics.recordUsage(key, latency, tokens, model, extra);
+            this.quotas.checkQuotas(key);
+            if (extra?.failed) {
+                if (!key.history) key.history = [];
+                key.history.push({
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                    action: 'error',
+                    detail: `${extra.error || 'Unknown error'} (${model || 'auto'})`,
+                });
+                if (key.history.length > 100) key.history = key.history.slice(-99);
+                this.lifecycle.onError(keyId);
+            } else {
+                this.lifecycle.onSuccess(keyId);
+            }
+        });
         this.registry.saveKeys();
         this.notify();
     }
 
     incrementConcurrency(id: string) {
-        const key = this.registry.getKey(id);
-        if (key) {
-            this.analytics.incrementConcurrency(key);
-            this.notify();
-        }
+        this.registry.modifyKey(id, (key) => {
+            if (key.stats?.extended) {
+                key.stats.extended.currentConcurrentRequests++;
+            }
+        });
+        this.notify();
     }
 
     decrementConcurrency(id: string) {
-        const key = this.registry.getKey(id);
-        if (key) {
-            this.analytics.decrementConcurrency(key);
-            this.notify();
-        }
+        this.registry.modifyKey(id, (key) => {
+            if (key.stats?.extended) {
+                key.stats.extended.currentConcurrentRequests = Math.max(
+                    0,
+                    key.stats.extended.currentConcurrentRequests - 1,
+                );
+            }
+        });
+        this.notify();
     }
 
     async recalculateAllReputations() {
-        this.analytics.recalculateAllReputations(this.registry.getKeys());
+        const keys = this.registry.getKeys();
+        for (const k of keys) {
+            this.registry.modifyKey(k.id, (key) => {
+                this.analytics.calculateReputation(key);
+            });
+        }
         await this.registry.saveKeys();
         this.notify();
     }
 
     async resetKeyStats(keyId: string) {
-        const key = this.registry.getKey(keyId);
-        if (!key) return;
-        this.analytics.resetKeyStats(key);
+        let label = '';
+        this.registry.modifyKey(keyId, (key) => {
+            label = key.label || '';
+            this.analytics.resetKeyStats(key);
+        });
+        if (!label) return;
         await this.registry.saveKeys();
         this.notify();
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-            message: `Statistics reset for ${key.label}`,
+            message: `Statistics reset for ${label}`,
             type: 'info',
         });
     }
@@ -953,7 +1044,17 @@ export class KeyService implements IKeyRotationManager {
 
     async setGlobalSLA(mode: string) {
         const keys = this.registry.getKeys();
-        keys.forEach((k) => this.lifecycle.applySLA(k, mode));
+        for (const k of keys) {
+            this.registry.modifyKey(k.id, (key) => {
+                if (!key.stats?.extended) return;
+                key.stats.extended.activeSLA = mode as NonNullable<
+                    ApiKey['stats']['extended']
+                >['activeSLA'];
+                const profile = CONFIG.keys.slaProfiles[mode] ?? CONFIG.keys.slaProfiles.DEFAULT;
+                key.stats.extended.rules.timeoutMs = profile.timeoutMs;
+                key.stats.extended.rules.slaThresholds.latencyP95 = profile.latencyP95;
+            });
+        }
         this._globalSLAMode = mode;
         await this.saveConfig();
         await this.registry.saveKeys();
@@ -965,26 +1066,38 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async setSLA(id: string, mode: string) {
-        const key = this.registry.getKey(id);
-        if (key) {
-            this.lifecycle.applySLA(key, mode);
-            await this.registry.saveKeys();
-            this.notify();
-            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-                message: `${key.provider} SLA set to ${mode}`,
-                type: 'info',
-            });
-        }
+        let provider = '';
+        this.registry.modifyKey(id, (key) => {
+            provider = key.provider;
+            if (!key.stats?.extended) return;
+            key.stats.extended.activeSLA = mode as NonNullable<
+                ApiKey['stats']['extended']
+            >['activeSLA'];
+            const profile = CONFIG.keys.slaProfiles[mode] ?? CONFIG.keys.slaProfiles.DEFAULT;
+            key.stats.extended.rules.timeoutMs = profile.timeoutMs;
+            key.stats.extended.rules.slaThresholds.latencyP95 = profile.latencyP95;
+        });
+        if (!provider) return;
+        await this.registry.saveKeys();
+        this.notify();
+        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+            message: `${provider} SLA set to ${mode}`,
+            type: 'info',
+        });
     }
 
     // -- Misc -----------------------------------------------------------
 
     transitionState(id: string, newState: string) {
-        const key = this.registry.getKey(id);
-        if (key) {
-            this.health.transitionState(key, newState);
-            this.notify();
-        }
+        this.registry.modifyKey(id, (key) => {
+            if (!key.stats?.extended) return;
+            const oldState = key.stats.extended.state;
+            if (oldState === newState) return;
+            key.stats.extended.state = newState as NonNullable<
+                ApiKey['stats']['extended']
+            >['state'];
+        });
+        this.notify();
     }
 
     resetStats(keyId: string) {
@@ -1008,11 +1121,21 @@ export class KeyService implements IKeyRotationManager {
     }
 
     handleProviderError(keyId: string, error: string) {
-        const key = this.registry.getKey(keyId);
-        if (key) {
-            this.health.handleProviderError(key, error);
-            this.lifecycle.onError(keyId);
-        }
+        this.registry.modifyKey(keyId, (key) => {
+            const previousState = key.status;
+            key.status = 'error';
+            if (!key.stats) {
+                key.stats = this.registry.initStats();
+            }
+            key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
+            this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+                id: keyId,
+                provider: key.provider,
+                state: 'error',
+                previousState,
+            });
+        });
+        this.lifecycle.onError(keyId);
     }
 
     // -- Diagnostics -----------------------------------------------------
@@ -1033,26 +1156,24 @@ export class KeyService implements IKeyRotationManager {
     }
 
     compromiseByFingerprint(fingerprint: string, source: string = 'webhook'): boolean {
-        const key = this.registry
+        const matches = this.registry
             .getKeys()
-            .find(
-                (k) =>
-                    k.id === fingerprint ||
-                    k.label.toLowerCase().includes(fingerprint.toLowerCase()),
-            );
-        if (key) return this.compromiseKey(key.id, source);
-        return false;
+            .filter((k) => k.id === fingerprint || k.fingerprint === fingerprint);
+        if (matches.length === 0) return false;
+        for (const key of matches) {
+            this.compromiseKey(key.id, source);
+        }
+        return true;
     }
 
     quarantineByFingerprint(fingerprint: string, source: string = 'manual'): boolean {
-        const key = this.registry
+        const matches = this.registry
             .getKeys()
-            .find(
-                (k) =>
-                    k.id === fingerprint ||
-                    k.label.toLowerCase().includes(fingerprint.toLowerCase()),
-            );
-        if (key) return this.quarantineKey(key.id, source);
-        return false;
+            .filter((k) => k.id === fingerprint || k.fingerprint === fingerprint);
+        if (matches.length === 0) return false;
+        for (const key of matches) {
+            this.quarantineKey(key.id, source);
+        }
+        return true;
     }
 }

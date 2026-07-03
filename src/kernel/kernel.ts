@@ -35,13 +35,8 @@ const VALID_SLA_MODES: SLAMode[] = [
 ];
 
 export class SystemKernel implements IKernel {
-    private static readonly MAX_EVENTS = 1_000;
-    // private static readonly EVENT_LOG_TTL = 3_600_000;
     private readonly deps: KernelDeps;
     private state: SystemState = this.getInitialState();
-    private eventLog: Array<{ id: string; type: string; payload: unknown; timestamp: number }> = [];
-    private eventLogCursor = 0;
-    private eventSeq = 0;
     private isDirty = false;
     // KC-H02: Cache frozen state to avoid O(n) structuredClone + deepFreeze on every getState() call.
     // Only recompute when isDirty becomes true (state was mutated).
@@ -183,20 +178,7 @@ export class SystemKernel implements IKernel {
         return this.deps.providerTracker;
     }
 
-    private logEvent(type: string, payload: unknown) {
-        const now = Date.now();
-        const id = `${now}-${this.eventSeq++}`;
-        const entry = { id, type, payload, timestamp: now };
-        if (this.eventLog.length < SystemKernel.MAX_EVENTS) {
-            this.eventLog.push(entry);
-        } else {
-            this.eventLog[this.eventLogCursor] = entry;
-            this.eventLogCursor = (this.eventLogCursor + 1) % SystemKernel.MAX_EVENTS;
-        }
-    }
-
     private reduce(type: string, payload: unknown) {
-        this.logEvent(type, payload);
         this.applyMutation(type, payload);
         this.isDirty = true;
         this.cachedFrozenState = null; // KC-H02: Invalidate cache on any state mutation
@@ -396,8 +378,6 @@ export class SystemKernel implements IKernel {
     dumpState() {
         return JSON.stringify({
             state: this.state,
-            eventLog: this.eventLog,
-            eventLogCursor: this.eventLogCursor,
             version: '2.1.0-safety',
         });
     }
@@ -409,9 +389,6 @@ export class SystemKernel implements IKernel {
             if (!data || typeof data !== 'object') throw new Error('Invalid JSON structure');
             if (data.version !== '2.1.0-safety') {
                 this.state = this.getInitialState();
-                this.eventLog = [];
-                this.eventLogCursor = 0;
-                this.eventSeq = 0;
                 this.isDirty = true;
                 this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, {
                     reason: `State version mismatch (got ${data.version}, expected 2.1.0-safety)`,
@@ -427,24 +404,12 @@ export class SystemKernel implements IKernel {
 
             const parsed = this.validateState(data.state);
             this.state = parsed;
-            this.eventLog = Array.isArray(data.eventLog)
-                ? data.eventLog.slice(-SystemKernel.MAX_EVENTS)
-                : [];
-            this.eventLogCursor =
-                typeof data.eventLogCursor === 'number' &&
-                this.eventLog.length >= SystemKernel.MAX_EVENTS
-                    ? data.eventLogCursor
-                    : 0;
-            this.eventSeq = this.eventLog.length;
             this.isDirty = false;
             this.cachedFrozenState = null; // KC-H02: Invalidate cache on state reload
             this.deps.eventBus.emit(EVENTS.KERNEL_UPDATED, this.state);
         } catch (e) {
             getLogger()?.warn('Kernel', 'loadState failed, resetting to defaults', { error: e });
             this.state = this.getInitialState();
-            this.eventLog = [];
-            this.eventLogCursor = 0;
-            this.eventSeq = 0;
             this.isDirty = true;
             this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, {
                 reason: `loadState parse error: ${e instanceof Error ? e.message : String(e)}`,
@@ -642,9 +607,6 @@ export class SystemKernel implements IKernel {
         this.state.decisions = init.decisions;
         this.state.totalRequests = init.totalRequests;
         this.state.totalTokens = init.totalTokens;
-        this.eventLog.length = 0;
-        this.eventLogCursor = 0;
-        this.eventSeq = 0;
         this.markDirtyAndEmit(tx);
     }
 
@@ -657,4 +619,14 @@ export class SystemKernel implements IKernel {
     }
 }
 
-export const kernel = new SystemKernel({} as KernelDeps);
+// Default instance for backward compat — bootstrap.ts creates the real one via initKernel().
+// Using Proxy to throw on any uninitialized access instead of silently failing.
+const THROW_UNINITIALIZED: KernelDeps = new Proxy({} as KernelDeps, {
+    get(_, prop) {
+        throw new Error(
+            `SystemKernel accessed before bootstrap: ${String(prop)} is not initialized. ` +
+                'Ensure bootstrap.initKernel() is called before using kernel.',
+        );
+    },
+});
+export const kernel = new SystemKernel(THROW_UNINITIALIZED);

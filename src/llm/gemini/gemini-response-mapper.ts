@@ -117,13 +117,22 @@ export function extractStreamMeta(parsed: Record<string, unknown>): StreamMeta |
             finishReason?: string;
             safetyRatings?: Array<{ category: string; probability: string; blocked?: boolean }>;
         }>;
+        usageMetadata?: {
+            promptTokenCount?: number;
+            candidatesTokenCount?: number;
+            totalTokenCount?: number;
+        };
     };
     const candidate = chunk.candidates?.[0];
-    if (!candidate?.finishReason && !candidate?.safetyRatings?.length) return null;
+    const hasCandidateMeta = candidate?.finishReason || candidate?.safetyRatings?.length;
+    const hasUsageMeta =
+        chunk.usageMetadata &&
+        (chunk.usageMetadata.promptTokenCount || chunk.usageMetadata.totalTokenCount);
+    if (!hasCandidateMeta && !hasUsageMeta) return null;
     const meta: StreamMeta = {};
-    if (candidate.finishReason)
+    if (candidate?.finishReason)
         meta.finishReason = candidate.finishReason as StreamMeta['finishReason'];
-    if (candidate.safetyRatings?.length) {
+    if (candidate?.safetyRatings?.length) {
         meta.safetyRatings = candidate.safetyRatings.map(
             (r: { category: string; probability: string; blocked?: boolean }) => ({
                 category: r.category,
@@ -131,6 +140,13 @@ export function extractStreamMeta(parsed: Record<string, unknown>): StreamMeta |
                 blocked: r.blocked,
             }),
         );
+    }
+    if (chunk.usageMetadata) {
+        meta.usageMetadata = {
+            promptTokenCount: chunk.usageMetadata.promptTokenCount,
+            candidatesTokenCount: chunk.usageMetadata.candidatesTokenCount,
+            totalTokenCount: chunk.usageMetadata.totalTokenCount,
+        };
     }
     return meta;
 }

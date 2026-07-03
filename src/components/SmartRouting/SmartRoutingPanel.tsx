@@ -601,7 +601,7 @@ export default function SmartRoutingPanel() {
                 <AchievementList
                     achievements={providerAchievementService.getAchievements('openrouter')}
                     progress={providerAchievementService.getProgress('openrouter', {
-                        requests: decisions.length * 2 + 1,
+                        requests: history.length * 2 + 1,
                         modelsUsed: Math.min(10, config.defaultModel ? 3 : 0),
                         failovers: config.enableFallback ? rules.length : 0,
                         routingRules: rules.length,

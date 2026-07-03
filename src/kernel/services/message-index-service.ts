@@ -1,7 +1,5 @@
 import { eventBus, EVENTS } from '../events/event-bus';
-import { BucketStorageAdapter } from '../storage-adapter-instance';
 import type { ILogger } from '../contracts/logger';
-import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 export interface IndexedMessage {
     id: string;
@@ -36,27 +34,6 @@ export interface SearchOptions {
 
 const STORAGE_KEY = 'message_index_v1';
 const MAX_MESSAGES = 1000;
-
-function loadFromStorage(): IndexedMessage[] {
-    try {
-        const raw = BucketStorageAdapter.getItem(STORAGE_KEY);
-        if (!raw) return [];
-        const parsed: unknown = safeJsonParse(raw);
-        return Array.isArray(parsed) ? (parsed as IndexedMessage[]) : [];
-    } catch {
-        return [];
-    }
-}
-
-function saveToStorage(messages: IndexedMessage[]): void {
-    try {
-        const trimmed = messages.length > MAX_MESSAGES ? messages.slice(-MAX_MESSAGES) : messages;
-        BucketStorageAdapter.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-    } catch {
-        /* noop */
-    }
-}
-
 const QUEUE_MAX = 500;
 
 export class MessageIndexService {
@@ -69,11 +46,16 @@ export class MessageIndexService {
     private unsubClearData: (() => void) | null = null;
     private currentSessionId: string | null = null;
     private sessionUserBuffer = new Map<string, { content: string; timestamp: number }>();
+    private async db(): Promise<import('../types/interfaces').IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
+    }
 
     constructor(_logger?: ILogger) {}
 
-    init(): void {
-        this.messages = loadFromStorage();
+    async init(): Promise<void> {
+        const stored = await (await this.db()).getKv<IndexedMessage[]>(STORAGE_KEY);
+        this.messages = stored ?? [];
         for (const m of this.messages) {
             if (m.requestId) this.byRequestId.set(`${m.requestId}-${m.role}`, m);
         }
@@ -213,7 +195,17 @@ export class MessageIndexService {
     private persistTimeout: ReturnType<typeof setTimeout> | null = null;
     private persistDebounced(): void {
         if (this.persistTimeout) clearTimeout(this.persistTimeout);
-        this.persistTimeout = setTimeout(() => saveToStorage(this.messages), 1000);
+        this.persistTimeout = setTimeout(async () => {
+            const trimmed =
+                this.messages.length > MAX_MESSAGES
+                    ? this.messages.slice(-MAX_MESSAGES)
+                    : this.messages;
+            try {
+                await (await this.db()).setKv(STORAGE_KEY, trimmed);
+            } catch {
+                /* noop */
+            }
+        }, 1000);
     }
 
     private notify(): void {
@@ -293,10 +285,14 @@ export class MessageIndexService {
         return this.messages.length;
     }
 
-    clear(): void {
+    async clear(): Promise<void> {
         this.messages = [];
         this.byRequestId.clear();
-        BucketStorageAdapter.removeItem(STORAGE_KEY);
+        try {
+            await (await this.db()).setKv(STORAGE_KEY, []);
+        } catch {
+            /* noop */
+        }
         this.notify();
     }
 

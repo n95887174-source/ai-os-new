@@ -65,6 +65,8 @@ export class RuntimeManager {
                 });
                 this.container.register('storageLayer', storage);
                 await this.bootstrapper.init();
+                // BR-05: Start cross-tab sync AFTER bootstrap is ready, not at module import
+                crossTabStateSync.start();
                 const report = this.bootstrapper.getReport();
                 this.servicesTotal = report.services.length;
                 this.servicesReady = report.services.filter((s) => s.status === 'ok').length;
@@ -77,7 +79,11 @@ export class RuntimeManager {
                 this.phase = 'error';
                 this.lastError = e instanceof Error ? e.message : String(e);
                 getLogger()?.error('Runtime', 'Failed to start', { error: e });
-                await this.shutdown();
+                console.error('[RUNTIME] Failed to start — full error:', e);
+                // BR-03: Do NOT call shutdown() here — it would set shutdownInitiated=true
+                // and prevent any retry. Instead, just clean state so restart() can retry.
+                this.initialized = false;
+                this.startPromise = null;
                 return false;
             }
         })();
@@ -111,6 +117,11 @@ export class RuntimeManager {
     }
 
     async shutdown(): Promise<void> {
+        // BR-02: Wait for in-flight start() before shutting down — prevents
+        // container.clear() mid-init and bootstrapper race with destroy.
+        if (this.startPromise) {
+            await this.startPromise.catch(() => {});
+        }
         if (this.shutdownInitiated) return;
         this.shutdownInitiated = true;
         this.phase = 'shutdown';
@@ -121,7 +132,7 @@ export class RuntimeManager {
         await this.bootstrapper.shutdown();
         crossTabStateSync.destroy();
         this.container.clear();
-        coreEventBus.reset('shutdown-reset-42');
+        coreEventBus.clearAllSubscriptions();
         this.registerCoreServices();
         this.initialized = false;
         this.startPromise = null;

@@ -12,7 +12,7 @@ export interface TopologyNode {
     readonly config?: Record<string, unknown>;
 }
 
-interface TopologyEdge {
+export interface TopologyEdge {
     readonly from: string;
     readonly to: string;
     readonly type: 'sequential' | 'broadcast' | 'conditional';

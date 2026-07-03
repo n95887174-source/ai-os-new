@@ -1,7 +1,8 @@
 import React from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import type { FallbackLink } from '../../kernel/instances';
-import type { RouterConfig } from '../../bridges/useRoutingIntelligence';
+import type { RouterConfig } from '../../kernel/types/routing-types';
+import type { RoutingPolicySnapshot } from '../../kernel/contracts/routing-policy';
 import WeightTunerInner from './WeightTunerInner';
 import SlaModeSection from './SlaModeSection';
 import WeightProfilesSection from './WeightProfilesSection';
@@ -10,7 +11,7 @@ import DowngradeMapSection from './DowngradeMapSection';
 import { flexColGap5, glassPanel, sectionHeader } from '../../styles/common';
 
 interface Props {
-    config: RouterConfig | null;
+    config: (RoutingPolicySnapshot & Pick<RouterConfig, 'activeProfile' | 'weightProfiles'>) | null;
     slaMode: string;
     actions: {
         setActiveProfile: (name: string) => Promise<void>;

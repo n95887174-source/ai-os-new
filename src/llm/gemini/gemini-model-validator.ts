@@ -5,150 +5,169 @@ const MODEL_CACHE_TTL = 5 * 60 * 1000;
 
 const FAILED_KEY_RETRY_MS = 10 * 60 * 1000;
 
+function hashKey(apiKey: string): string {
+    let hash = 0;
+    for (let i = 0; i < apiKey.length; i++) {
+        const chr = apiKey.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0;
+    }
+    return `k_${Math.abs(hash).toString(36)}`;
+}
+
 class ModelCache {
-  private cache = new Map<string, { models: Set<string>; timestamp: number }>();
-  private fetchPromises = new Map<string, Promise<Set<string>>>();
-  private refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private fetcher: ((apiKey: string) => Promise<Set<string>>) | null = null;
-  /** Tracks API keys that failed to fetch (e.g., 403 auth) — skip HTTP fetches for them */
-  private failedKeys = new Map<string, number>();
-  private static readonly MAX_CACHE_SIZE = 100;
-  private static readonly MAX_FETCH_PROMISES = 50;
+    private cache = new Map<string, { models: Set<string>; timestamp: number }>();
+    private fetchPromises = new Map<string, Promise<Set<string>>>();
+    private refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    private fetcher: ((apiKey: string) => Promise<Set<string>>) | null = null;
+    private failedKeys = new Map<string, number>();
+    private static readonly MAX_CACHE_SIZE = 100;
+    private static readonly MAX_FETCH_PROMISES = 50;
 
-  setFetcher(fn: (apiKey: string) => Promise<Set<string>>): void {
-    this.fetcher = fn;
-  }
-
-  markFailed(apiKey: string): void {
-    this.failedKeys.set(apiKey, Date.now() + FAILED_KEY_RETRY_MS);
-    this.clearTimer(apiKey);
-    this.fetchPromises.delete(apiKey);
-    this.cache.delete(apiKey);
-  }
-
-  private isKeyFailed(apiKey: string): boolean {
-    const retryAt = this.failedKeys.get(apiKey);
-    if (!retryAt) return false;
-    if (Date.now() >= retryAt) {
-      this.failedKeys.delete(apiKey);
-      return false;
+    private k(apiKey: string): string {
+        return hashKey(apiKey);
     }
-    return true;
-  }
 
-  private cleanupCache(): void {
-    if (this.cache.size > ModelCache.MAX_CACHE_SIZE) {
-      const toRemove = this.cache.size - ModelCache.MAX_CACHE_SIZE;
-      let count = 0;
-      for (const [apiKey] of this.cache.entries()) {
-        if (count >= toRemove) break;
-        this.cache.delete(apiKey);
+    setFetcher(fn: (apiKey: string) => Promise<Set<string>>): void {
+        this.fetcher = fn;
+    }
+
+    markFailed(apiKey: string): void {
+        const h = this.k(apiKey);
+        this.failedKeys.set(h, Date.now() + FAILED_KEY_RETRY_MS);
         this.clearTimer(apiKey);
-        count++;
-      }
+        this.fetchPromises.delete(h);
+        this.cache.delete(h);
     }
-  }
 
-  private clearTimer(apiKey: string): void {
-    const timer = this.refreshTimers.get(apiKey);
-    if (timer) {
-      clearTimeout(timer);
-      this.refreshTimers.delete(apiKey);
-    }
-  }
-
-  destroy(): void {
-    this.cache.clear();
-    this.fetchPromises.clear();
-    this.failedKeys.clear();
-    for (const timer of this.refreshTimers.values()) {
-      clearTimeout(timer);
-    }
-    this.refreshTimers.clear();
-  }
-
-  private scheduleRefresh(apiKey: string): void {
-    this.clearTimer(apiKey);
-    const delay = MODEL_CACHE_TTL * 0.8;
-    this.refreshTimers.set(apiKey, setTimeout(() => {
-      this.refresh(apiKey);
-    }, delay));
-  }
-
-  private async refresh(apiKey: string): Promise<void> {
-    if (!this.fetcher) return;
-    if (this.isKeyFailed(apiKey)) return;
-    const existing = this.fetchPromises.get(apiKey);
-    if (existing) return;
-    if (this.fetchPromises.size >= ModelCache.MAX_FETCH_PROMISES) {
-      return; // Skip refresh if too many concurrent fetches
-    }
-    const promise = this.fetcher(apiKey);
-    this.fetchPromises.set(apiKey, promise);
-    try {
-      const models = await promise;
-      this.cache.set(apiKey, { models, timestamp: Date.now() });
-      this.cleanupCache();
-      this.scheduleRefresh(apiKey);
-    } catch {
-      this.markFailed(apiKey);
-    } finally {
-      this.fetchPromises.delete(apiKey);
-    }
-  }
-
-  async get(apiKey: string): Promise<Set<string>> {
-    if (this.isKeyFailed(apiKey)) return new Set();
-
-    const cached = this.cache.get(apiKey);
-    if (cached) {
-      const age = Date.now() - cached.timestamp;
-      if (age < MODEL_CACHE_TTL) {
-        if (age > MODEL_CACHE_TTL * 0.8) {
-          this.refresh(apiKey);
+    private isKeyFailed(apiKey: string): boolean {
+        const h = this.k(apiKey);
+        const retryAt = this.failedKeys.get(h);
+        if (!retryAt) return false;
+        if (Date.now() >= retryAt) {
+            this.failedKeys.delete(h);
+            return false;
         }
-        return cached.models;
-      }
-    }
-    if (!this.fetcher) return new Set();
-
-    const existingPromise = this.fetchPromises.get(apiKey);
-    if (existingPromise) return existingPromise;
-
-    if (this.fetchPromises.size >= ModelCache.MAX_FETCH_PROMISES) {
-      return cached?.models ?? new Set();
+        return true;
     }
 
-    const promise = this.fetcher(apiKey);
-    this.fetchPromises.set(apiKey, promise);
-
-    try {
-      const models = await promise;
-      this.cache.set(apiKey, { models, timestamp: Date.now() });
-      this.cleanupCache();
-      return models;
-    } catch {
-      this.markFailed(apiKey);
-      return cached?.models ?? new Set();
-    } finally {
-      this.fetchPromises.delete(apiKey);
+    private cleanupCache(): void {
+        if (this.cache.size > ModelCache.MAX_CACHE_SIZE) {
+            const toRemove = this.cache.size - ModelCache.MAX_CACHE_SIZE;
+            let count = 0;
+            for (const [h] of this.cache.entries()) {
+                if (count >= toRemove) break;
+                this.cache.delete(h);
+                count++;
+            }
+        }
     }
-  }
+
+    private clearTimer(apiKey: string): void {
+        const h = this.k(apiKey);
+        const timer = this.refreshTimers.get(h);
+        if (timer) {
+            clearTimeout(timer);
+            this.refreshTimers.delete(h);
+        }
+    }
+
+    destroy(): void {
+        this.cache.clear();
+        this.fetchPromises.clear();
+        this.failedKeys.clear();
+        for (const timer of this.refreshTimers.values()) {
+            clearTimeout(timer);
+        }
+        this.refreshTimers.clear();
+    }
+
+    private scheduleRefresh(apiKey: string): void {
+        this.clearTimer(apiKey);
+        const h = this.k(apiKey);
+        const delay = MODEL_CACHE_TTL * 0.8;
+        this.refreshTimers.set(
+            h,
+            setTimeout(() => {
+                this.refresh(apiKey);
+            }, delay),
+        );
+    }
+
+    private async refresh(apiKey: string): Promise<void> {
+        if (!this.fetcher) return;
+        if (this.isKeyFailed(apiKey)) return;
+        const h = this.k(apiKey);
+        const existing = this.fetchPromises.get(h);
+        if (existing) return;
+        if (this.fetchPromises.size >= ModelCache.MAX_FETCH_PROMISES) return;
+        const promise = this.fetcher(apiKey);
+        this.fetchPromises.set(h, promise);
+        try {
+            const models = await promise;
+            this.cache.set(h, { models, timestamp: Date.now() });
+            this.cleanupCache();
+            this.scheduleRefresh(apiKey);
+        } catch {
+            this.markFailed(apiKey);
+        } finally {
+            this.fetchPromises.delete(h);
+        }
+    }
+
+    async get(apiKey: string): Promise<Set<string>> {
+        if (this.isKeyFailed(apiKey)) return new Set();
+        const h = this.k(apiKey);
+
+        const cached = this.cache.get(h);
+        if (cached) {
+            const age = Date.now() - cached.timestamp;
+            if (age < MODEL_CACHE_TTL) {
+                if (age > MODEL_CACHE_TTL * 0.8) this.refresh(apiKey);
+                return cached.models;
+            }
+        }
+        if (!this.fetcher) return new Set();
+
+        const existingPromise = this.fetchPromises.get(h);
+        if (existingPromise) return existingPromise;
+
+        if (this.fetchPromises.size >= ModelCache.MAX_FETCH_PROMISES) {
+            return cached?.models ?? new Set();
+        }
+
+        const promise = this.fetcher(apiKey);
+        this.fetchPromises.set(h, promise);
+
+        try {
+            const models = await promise;
+            this.cache.set(h, { models, timestamp: Date.now() });
+            this.cleanupCache();
+            return models;
+        } catch {
+            this.markFailed(apiKey);
+            return cached?.models ?? new Set();
+        } finally {
+            this.fetchPromises.delete(h);
+        }
+    }
 }
 
 export const modelCache = new ModelCache();
 
 export function sanitizeModel(model: string): void {
-  if (!MODEL_NAME_RE.test(model)) {
-    throw new ModelValidationError(model, 'contains disallowed characters', 'gemini');
-  }
+    if (!MODEL_NAME_RE.test(model)) {
+        throw new ModelValidationError(model, 'contains disallowed characters', 'gemini');
+    }
 }
 
 export async function validateModel(model: string, apiKey: string): Promise<string> {
-  sanitizeModel(model);
-  const cached = await modelCache.get(apiKey);
-  if (cached && cached.size > 0 && !cached.has(model)) {
-    console.warn(`[Gemini] Model "${model}" not in recent model list for this API key — may fail at runtime`);
-  }
-  return model;
+    sanitizeModel(model);
+    const cached = await modelCache.get(apiKey);
+    if (cached && cached.size > 0 && !cached.has(model)) {
+        console.warn(
+            `[Gemini] Model "${model}" not in recent model list for this API key — may fail at runtime`,
+        );
+    }
+    return model;
 }

@@ -17,7 +17,6 @@ export { DebateMemoryGraph } from './debate-memory-graph';
 export type { KnowledgeGraph, KnowledgeNode, KnowledgeEdge } from './debate-memory-graph';
 
 // Moved standalone debate files
-export { DebateService } from './debate-service';
 export { DebateInterpreter } from './debate-interpreter';
 export type { DebateInterpretation, DebateInsight } from './debate-interpreter';
 export {

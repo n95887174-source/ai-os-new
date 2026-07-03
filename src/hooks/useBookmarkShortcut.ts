@@ -1,25 +1,7 @@
 import { useEffect } from 'react';
-import { eventBus, type EventMap } from '../kernel/events/event-bus';
-import { database } from '../kernel/instances';
+import { eventBus } from '../kernel/events/event-bus';
+import { chatBookmarksService } from '../kernel/instances';
 import { EVENTS } from '../kernel/events/event-names';
-import { ChatBookmarksService } from '../kernel/services/chat-bookmarks-service';
-
-const service = new ChatBookmarksService({
-    eventBus: {
-        on: (event: string, cb: (...args: unknown[]) => void) =>
-            eventBus.on(event as keyof EventMap, cb as (...args: unknown[]) => void),
-        emit: (event: string, data?: unknown) =>
-            eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
-    },
-    database,
-});
-
-void service.init();
-if (import.meta.hot) {
-    import.meta.hot.dispose(() => {
-        service.destroy?.();
-    });
-}
 
 interface BookmarkShortcutPayload {
     sessionId: string;
@@ -45,7 +27,7 @@ export function useBookmarkShortcut(): void {
             if (!raw || typeof raw !== 'object') return;
             const data = raw as BookmarkShortcutPayload;
             if (!data.sessionId || !data.message?.content) return;
-            void service.addBookmark({
+            void chatBookmarksService.addBookmark({
                 sessionId: data.sessionId,
                 message: data.message,
                 note: data.note,

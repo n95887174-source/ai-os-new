@@ -15,11 +15,10 @@ import { FactCheckService } from '../fact-check-service';
 import { DebateHumanService } from './debate-human-service';
 import { loadActiveSession } from './debate-session-persistence';
 import { rootLogger } from '../logger-service';
-import { getCachedVerdict, setCachedVerdict } from '../../verdict-cache';
+import { setCachedVerdict } from '../../verdict-cache';
 import { buildRoundtableTopology } from './debate-session-bridge';
 import { checkDebatePreflight } from './debate-preflight';
 import { DebateSyncManager } from './debate-sync-manager';
-import { setActiveDebateSession, setDebateGovernorState } from './active-debate-store';
 
 const LOGGER = rootLogger.child('DebateService');
 
@@ -166,26 +165,6 @@ export function destroy(): void {
     _syncManager.destroy();
 }
 
-export function getSession(): DebateSession | null {
-    if (_syncManager.isEngineActive()) {
-        _syncManager.syncSession();
-    } else {
-        setActiveDebateSession(_syncManager.activeSession);
-    }
-    if (_syncManager.governor) {
-        setDebateGovernorState(_syncManager.governor.getState());
-    }
-    return _syncManager.activeSession;
-}
-
-export function getGovernorState(): import('./debate-governor/types').GovernorState | null {
-    return _syncManager.governor?.getState() ?? null;
-}
-
-export function getVerdict(sessionId: string): DebateVerdict | undefined {
-    return getCachedVerdict(sessionId);
-}
-
 export const debateService = {
     get factCheckService() {
         return factCheckService;
@@ -193,18 +172,12 @@ export const debateService = {
     get humanService() {
         return humanService;
     },
-    get activeRuntimeSessionId() {
-        return _syncManager.runtimeSessionId;
-    },
     setEngine,
     init,
     startDebate,
     startTopologyDebate,
     stopDebate,
     destroy,
-    getSession,
-    getGovernorState,
-    getVerdict,
 };
 
 export type {

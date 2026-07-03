@@ -3,7 +3,7 @@ import type { IContainer } from './container';
 import type { StorageLayer } from './contracts/storage/storage-layer';
 import type { ApiKey } from './types/metrics-types';
 import type { LoggerService } from './services/logger-service';
-import { dexieDb } from './services/database-service';
+import { getDexieDb } from './services/database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie-identity';
 import { setBootstrapSnapshot } from './bootstrap-state';
 import { safeJsonParse } from '../kernel/utils/safe-json';
@@ -45,7 +45,7 @@ export async function loadBootstrapSnapshot(
     container: IContainer,
     logger: LoggerService,
 ): Promise<void> {
-    const bootstrapDexie = verifyDexieInstance('bootstrap:step3', dexieDb);
+    const bootstrapDexie = verifyDexieInstance('bootstrap:step3', getDexieDb());
     await logDexieIdentityWithCount('bootstrap:step3', bootstrapDexie);
 
     const storage = container.get<StorageLayer>('storageLayer');
@@ -57,7 +57,7 @@ export async function loadBootstrapSnapshot(
     let snapshotSource = repoKeys.length > 0 ? 'keystore' : 'unknown';
 
     if (snapshotKeys.length === 0) {
-        const dexieRaw = await dexieDb.apiKeys.toArray();
+        const dexieRaw = await getDexieDb().apiKeys.toArray();
         if (import.meta.env.DEV)
             console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);
 
@@ -68,7 +68,7 @@ export async function loadBootstrapSnapshot(
 
         if (snapshotKeys.length === 0) {
             try {
-                const blob = await dexieDb.keyValue.get('sqlite_db_blob');
+                const blob = await getDexieDb().keyValue.get('sqlite_db_blob');
                 if (blob?.value && Array.isArray(blob.value)) {
                     const bytes = new Uint8Array(blob.value as number[]);
                     const SQLITE_MAGIC = new Uint8Array([
@@ -115,7 +115,7 @@ export async function loadBootstrapSnapshot(
 
     if (snapshotKeys.length === 0) {
         try {
-            const dexieGuard = await dexieDb.apiKeys.toArray();
+            const dexieGuard = await getDexieDb().apiKeys.toArray();
             if (dexieGuard.length > 0) {
                 logger.warn('Bootstrap', 'Snapshot guard: snapshot is 0 but dexie has entries', {
                     dexieCount: dexieGuard.length,

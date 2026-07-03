@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import { CircularLayout } from './CircularLayout';
 import { JudgeCenter } from './JudgeCenter';
+import { SocratesMascot } from './SocratesMascot';
 import { debateEngine } from '../../kernel/instances';
 import { ARENA_LAYOUTS } from '../../kernel/contracts/debate-emotion';
 import type { ArenaLayout } from '../../kernel/contracts/debate-emotion';
@@ -142,6 +143,7 @@ export const DebateLivePanel: React.FC = () => {
                     {judge && (
                         <JudgeCenter judge={judge} sessionId={session.id} phase={session.phase} />
                     )}
+                    <SocratesMascot />
                 </>
             ) : (
                 <div style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center' }}>

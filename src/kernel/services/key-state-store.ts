@@ -138,7 +138,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     async start(): Promise<void> {
         if (this._started) return;
         this._started = true;
-        await this.loadPersisted();
+        try {
+            await this.loadPersisted();
+        } catch (e) {
+            LOGGER.warn('KeyStateStore', 'loadPersisted failed during start — continuing', {
+                error: e,
+            });
+        }
         if (!this.eventBus) return;
 
         this.unsubs.push(

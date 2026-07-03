@@ -32,7 +32,6 @@ export type {
     CognitiveStep,
     CognitiveTrace,
     CognitiveSkill,
-    EventPayloads,
 } from '../kernel/types/domain-types';
 
 export type { ExecutionTrace } from '../kernel/contracts/observability';

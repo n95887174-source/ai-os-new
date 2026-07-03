@@ -4,6 +4,7 @@ import { SpeakerNode } from './SpeakerNode';
 import { agentAvatarService } from '../../kernel/services/agent-avatar-service';
 import type { TopologyNode } from '../../kernel/contracts/debate-runtime';
 import type { ArenaLayout } from '../../kernel/contracts/debate-emotion';
+import { EyeLine } from './EyeLine';
 
 interface Props {
     participants: TopologyNode[];
@@ -203,6 +204,11 @@ export const CircularLayout: React.FC<Props> = ({
     const positions = useMemo(() => computePositions(participants, layout), [participants, layout]);
     const svgRadius = positions.length > 0 ? Math.max(...positions.map((p) => p.radius)) : 120;
 
+    const activeIdx = activeSpeakerId
+        ? participants.findIndex((p) => p.id === activeSpeakerId)
+        : -1;
+    const activePos = activeIdx >= 0 ? positions[activeIdx] : null;
+
     return (
         <div
             style={{
@@ -248,6 +254,25 @@ export const CircularLayout: React.FC<Props> = ({
                     strokeDasharray="4 4"
                 />
             </svg>
+
+            {activePos &&
+                participants.map((p, i) => {
+                    if (p.id === activeSpeakerId) return null;
+                    const toPos = positions[i];
+                    const fromX = activePos.x + 60;
+                    const fromY = activePos.y + 60;
+                    const toX = toPos.x + 60;
+                    const toY = toPos.y + 60;
+                    return (
+                        <EyeLine
+                            key={`eyeline-${activeSpeakerId}-${p.id}`}
+                            fromPos={{ x: fromX, y: fromY }}
+                            toPos={{ x: toX, y: toY }}
+                            color="rgba(139,92,246,0.5)"
+                        />
+                    );
+                })}
+
             {participants.map((p, i) => {
                 const avatar = agentAvatarService.generate(p.id);
                 const css = agentAvatarService.getAvatarCSS(avatar);

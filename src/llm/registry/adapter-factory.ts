@@ -66,6 +66,7 @@ export class AdapterFactory {
         'github',
         'ollama',
         'lmstudio',
+        'anthropic',
     ];
 
     constructor(config: AdapterFactoryConfig = {}) {
@@ -93,7 +94,7 @@ export class AdapterFactory {
 
         switch (normalized) {
             case 'gemini':
-                adapter = new GeminiAdapter();
+                adapter = new GeminiAdapter(undefined, import.meta.env.VITE_PROXY_GEMINI);
                 break;
             case 'openrouter':
                 adapter = new OpenRouterAdapter();
@@ -260,7 +261,7 @@ export class AdapterFactory {
         const cb = this.#circuitBreakers.get(normalized);
         const rl = this.#rateLimiters.get(normalized);
         return {
-            circuitOpen: cb ? cb.checkAndGetState() === 'open' : false,
+            circuitOpen: cb ? cb.peekState() === 'open' : false,
             rateLimited: rl ? !rl.canSend() : false,
         };
     }

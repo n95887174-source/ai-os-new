@@ -1,5 +1,3 @@
-import { BucketStorageAdapter } from './storage-adapter';
-
 const STORAGE_KEY = 'batch_jobs';
 
 let nextJobId = Date.now();
@@ -40,20 +38,26 @@ export interface BatchJob {
 const MAX_JOBS = 20;
 
 export class BatchProcessorService {
-    private readonly store = BucketStorageAdapter.UI;
     private jobs: BatchJob[] = [];
     private currentAbort: AbortController | null = null;
     private loaded = false;
 
+    private async db(): Promise<import('../types/interfaces').IDatabaseService> {
+        const { database } = await import('../instances');
+        return database;
+    }
+
     private async ensureLoaded(): Promise<void> {
         if (this.loaded) return;
-        const saved = await this.store.get<BatchJob[]>(STORAGE_KEY);
+        const d = await this.db();
+        const saved = await d.getKv<BatchJob[]>(STORAGE_KEY);
         this.jobs = saved ?? [];
         this.loaded = true;
     }
 
     private async persist(): Promise<void> {
-        await this.store.set(STORAGE_KEY, this.jobs.slice(-MAX_JOBS));
+        const d = await this.db();
+        await d.setKv(STORAGE_KEY, this.jobs.slice(-MAX_JOBS));
     }
 
     async getJobs(): Promise<BatchJob[]> {
@@ -168,7 +172,8 @@ export class BatchProcessorService {
     async clearHistory(): Promise<void> {
         this.jobs = [];
         this.loaded = true;
-        await this.store.set(STORAGE_KEY, []);
+        const d = await this.db();
+        await d.setKv(STORAGE_KEY, []);
     }
 }
 

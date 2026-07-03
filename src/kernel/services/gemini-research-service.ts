@@ -23,11 +23,21 @@ function buildMessages(system: string, user: string): ChatMessage[] {
 }
 
 function extractJson(text: string): unknown {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
+    const cleaned = text
+        .replace(/```(?:json)?\s*/g, '')
+        .replace(/```\s*/g, '')
+        .trim();
+    const objStart = cleaned.indexOf('{');
+    const objEnd = cleaned.lastIndexOf('}');
+    if (objStart === -1 || objEnd === -1 || objEnd <= objStart) return null;
+    const candidate = cleaned.slice(objStart, objEnd + 1);
     try {
-        return JSON.parse(match[0]);
-    } catch {
+        return JSON.parse(candidate);
+    } catch (e) {
+        LOGGER.warn('GeminiResearch', 'extractJson failed', {
+            error: e instanceof Error ? e.message : String(e),
+            preview: candidate.slice(0, 200),
+        });
         return null;
     }
 }

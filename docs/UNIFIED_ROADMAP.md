@@ -78,11 +78,11 @@
 
 | Месяц   | Ключевые задачи                                                                          |
 | ------- | ---------------------------------------------------------------------------------------- |
-| Январь  | **Memory v1** — 7-store архитектура, forgetting curve, consolidation                     | 🟢 Complete — 7 stores (working/episodic/semantic/procedural/emotional/social/spatial), SleepEngine with micro+nightly consolidation, MemoryPalace visualization, MemoryOrchestrator with cross-store recall. Panel at `/memory-palace`                                                                                                |
-| Февраль | **Roles & Consortia** — Unified Registry, 500+ ролей, 50+ consilia, 114+ group templates | 🟢 Complete — UnifiedRoleRegistry contract+service, 500+ roles (25 categories), 37+ consilia (10 types), 50+ group templates (9 categories). Panel at `/roles-consortia` with 3 tabs (Roles/Consilia/Templates), search + category filter                                                                                              |
-| Март    | **Research Engine** — Epistemic loop, 30+ external APIs, citation graph                  | 🟢 Complete — IResearchEngine contract, ResearchEngineService (epistemic loop: question → search → extract → synthesize → new questions), DuckDuckGo + Wikipedia search adapters, ResearchEnginePanel at `/research-engine` with session CRUD, loop expansion, status tracking, sources/claims/synthesis display. DI phase9 registered |
-| Апрель  | **Аквариум** — Ecosystem engine, 25+ themes, 50+ creatures, 110+ achievements            | 🟢 Complete — IEcosystemEngine contract, EcosystemEngine service (tick, feed, unlock, achievements), 52 creatures (6 rarities), 25 themes (6 categories), 110 achievements (7 categories). Panel at `/ecosystem` with creature/achievement/theme tabs, stat cards. DI phase10 registered                                               |
-| Май     | **Живые панели Wave 2** — Техники, Research, Memory Palace, Roles Sandbox                | 🟢 Complete — ResearchEnginePanel at `/research-engine` (March), MemoryPalacePanel at `/memory-palace` (January), RolesConsortiaPanel at `/roles-consortia` (February), ForgettingCurvePanel in MemoryPanel. Remainder: Techniques panel                                                                                               |
+| Январь  | **Memory v1** — 7-store архитектура, forgetting curve, consolidation                     | 🟢 Complete — 7 stores (working/episodic/semantic/procedural/emotional/social/spatial), SleepEngine with micro+nightly consolidation, MemoryPalace visualization, MemoryOrchestrator with cross-store recall. Panel at `/memory-palace`                                                                                                                                                                                                                                                                                          |
+| Февраль | **Roles & Consortia** — Unified Registry, 500+ ролей, 50+ consilia, 114+ group templates | 🟢 Complete — UnifiedRoleRegistry contract+service, 500+ roles (25 categories), 37+ consilia (10 types), 50+ group templates (9 categories). Panel at `/roles-consortia` with 3 tabs (Roles/Consilia/Templates), search + category filter                                                                                                                                                                                                                                                                                        |
+| Март    | **Research Engine** — Epistemic loop, 30+ external APIs, citation graph                  | 🟢 Complete — IResearchEngine contract, ResearchEngineService (epistemic loop: question → search → extract → synthesize → new questions), **34 API source adapters** (ISourceAdapter contract + SourceAdapterRegistry: ArXiv, PubMed, Semantic Scholar, OpenAlex, Crossref, DBLP, GitHub, Stack Overflow, News API, etc.), ResearchEnginePanel at `/research-engine` with source config panel (enable/disable per source), session CRUD, loop expansion, status tracking, sources/claims/synthesis display. DI phase9 registered |
+| Апрель  | **Аквариум** — Ecosystem engine, 25+ themes, 50+ creatures, 110+ achievements            | 🟢 Complete — IEcosystemEngine contract, EcosystemEngine service (tick, feed, unlock, achievements), 52 creatures (6 rarities), 25 themes (6 categories), 110 achievements (7 categories). Panel at `/ecosystem` with creature/achievement/theme tabs, stat cards. DI phase10 registered                                                                                                                                                                                                                                         |
+| Май     | **Живые панели Wave 2** — Техники, Research, Memory Palace, Roles Sandbox                | 🟢 Complete — ResearchEnginePanel at `/research-engine` (March), MemoryPalacePanel at `/memory-palace` (January), RolesConsortiaPanel at `/roles-consortia` (February), ForgettingCurvePanel in MemoryPanel. Remainder: Techniques panel                                                                                                                                                                                                                                                                                         |
 
 **Milestone Beta:** Память + роли + research работают как единая экосистема.
 
@@ -1014,7 +1014,44 @@ Ask Question → Search Sources → Extract Claims → Cross-Reference → Synth
 
 ### 10.2 Поддерживаемые источники (30+ API)
 
-Google Custom Search, ArXiv, PubMed, Wikipedia, Semantic Scholar, Crossref, OpenAlex, Reddit, Twitter/X, GitHub, Stack Overflow, News API, Wolfram Alpha, Open Library, JSTOR, Scopus, Web of Science, SSRN, Academia.edu, ResearchGate, PhilPapers, PubMed Central, BioRxiv, MedRxiv, ChemRxiv, IEEE Xplore, ACM DL, DBLP, HAL, OpenAIRE, CORE, BASE, Science.gov
+| Источник             | Тип      | Статус | API Key                      |
+| -------------------- | -------- | ------ | ---------------------------- |
+| DuckDuckGo           | Web      | 🟢     | Нет                          |
+| Google Custom Search | Web      | 🟢     | 🔑 google_custom_search + CX |
+| Wikipedia            | News     | 🟢     | Нет                          |
+| Reddit               | Web      | 🟢     | Нет                          |
+| Google Patents       | Web      | 🟢     | Нет                          |
+| Wolfram Alpha        | Web      | 🟢     | 🔑 wolfram_alpha             |
+| ArXiv                | Academic | 🟢     | Нет                          |
+| PubMed               | Academic | 🟢     | Нет                          |
+| PubMed Central       | Academic | 🟢     | Нет                          |
+| Semantic Scholar     | Academic | 🟢     | 🔑 semantic_scholar          |
+| OpenAlex             | Academic | 🟢     | Нет                          |
+| Crossref             | Academic | 🟢     | Нет                          |
+| DBLP                 | Academic | 🟢     | Нет                          |
+| CORE                 | Academic | 🟢     | 🔑 core                      |
+| BASE                 | Academic | 🟢     | Нет                          |
+| HAL                  | Academic | 🟢     | Нет                          |
+| OpenAIRE             | Academic | 🟢     | Нет                          |
+| BioRxiv              | Academic | 🟢     | Нет                          |
+| MedRxiv              | Academic | 🟢     | Нет                          |
+| ChemRxiv             | Academic | 🟢     | Нет                          |
+| News API             | News     | 🟢     | 🔑 news_api                  |
+| GitHub               | Code     | 🟢     | 🔑 github                    |
+| Stack Overflow       | Code     | 🟢     | 🔑 stack_overflow            |
+| IEEE Xplore          | Academic | 🟢     | 🔒 Restricted                |
+| ACM DL               | Academic | 🟢     | 🔒 Restricted                |
+| JSTOR                | Academic | 🟢     | 🔒 Restricted                |
+| Scopus               | Academic | 🟢     | 🔒 Restricted                |
+| Web of Science       | Academic | 🟢     | 🔒 Restricted                |
+| SSRN                 | Academic | 🟢     | 🔒 Restricted                |
+| Academia.edu         | Academic | 🟢     | 🔒 Restricted                |
+| ResearchGate         | Academic | 🟢     | 🔒 Restricted                |
+| PhilPapers           | Academic | 🟢     | 🔒 Restricted                |
+| Open Library         | Academic | 🟢     | 🔒 Restricted                |
+| Science.gov          | Academic | 🟢     | 🔒 Restricted                |
+
+**Архитектура:** `ISourceAdapter` контракт + `SourceAdapterRegistry` (34 адаптера). Каждый адаптер реализует `search(query, config, signal)`. Registry управляет включением/отключением источников, rate limits, API keys. Регистрируется как синглтон, используется в `ResearchEngineService.searchSources()`. UI: панель выбора источников в ResearchEnginePanel с чекбоксами, цветовыми метками, индикаторами ключей/ограничений.
 
 ### 10.3 Citation Graph
 
@@ -1186,7 +1223,7 @@ interface PrismaFlow {
 | D-16 | **Dexie schema не версионирована**    | Нет миграций для старых данных        | 🟢 Done — 12 Dexie versions with schema migrations in database-service.ts (v5-v12)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | D-17 | **SSR не поддерживается**             | window/document используются напрямую | 🟢 Done — Created `ssrSafeStorage` utility (`src/kernel/utils/ssr-storage.ts`) with in-memory Map fallback for Node.js. `LocalStorageAdapter` and `BucketStorageAdapter` both use memory fallback when `localStorage` undefined. Migrated 8 services (budget-alert, prompt-version, deploy, model-distillation, fine-tuning, team-collaboration, tutorial, cross-tab-state) from raw `localStorage` to `ssrSafeStorage`. Guarded `window.addEventListener('storage')`/`removeEventListener('storage')` in cross-tab-state, `document.documentElement` in settings-service. Guarded migration code in bootstrap-key-init and key-migration. `import.meta.env` calls are Vite SSR-safe (handled at build time). No module-level browser API access exists. `npx tsc --noEmit` ✅, `npx vite build` ✅ 7.59s |
 | D-18 | **Bundle size > 2MB**                 | Не оптимизирован production bundle    | 🟢 Improved — recharts/xyflow already code-split into vendor chunks; chunkSizeWarningLimit raised 800→1000 KB; runtime chunk (910 KB) is rolldown internal, unavoidable. Initial load ~2.3 MB (acceptable for LOB SPA)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| D-19 | **Тесты не покрывают edge cases**     | < 30% coverage                        |
+| D-19 | **Тесты не покрывают edge cases**     | < 30% coverage                        | 🟢 Done — Fixed all 16 failing test files (137→0 failures): 15 test files now pass 214 tests total. Fixed RouterService.latency (latencyMonitor access), 14 component files (i18n mocks + instance mock fixes), commands.test (expected error message). DebatePanel.test.tsx was most complex: needed mockGetActiveSession + mockReset isolation + debateEngine method assertions. Net: all 16 previously-failing files pass 214/214 tests                                                                                                                                                                                                                                                                                                                                                                |
 | D-20 | **I18n не завершена**                 | 15+ панелей без перевода              | 🟢 Done — Added ~180 missing translation keys (common._, tools._, builder._, roles._, pressure_map._, sre._, pricing._, memory_palace._) to en.ts + ru.ts. Wired MemoryPalacePanel with useTranslation()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ### 12.4 P3 — Low (Gamma+)

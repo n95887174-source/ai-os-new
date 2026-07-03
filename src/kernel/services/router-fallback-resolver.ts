@@ -54,14 +54,6 @@ export class RouterFallbackResolver {
         const chain = this.getFallbackChain(strategy);
         for (const link of chain) {
             if (excludedSet.has(link.provider.toLowerCase())) {
-                const pool = this.deps.keyService.getPoolKeys(link.provider);
-                const usable = pool.filter((k) => {
-                    if (excludeKeyId && k.id === excludeKeyId) return false;
-                    return this.deps.keyService.canUseKey(k.id).can;
-                });
-                if (usable.length > 0) {
-                    return { key: usable[0], provider: link.provider };
-                }
                 continue;
             }
             if (!this.deps.budgetService.canUseProvider(link.provider)) {
@@ -69,6 +61,7 @@ export class RouterFallbackResolver {
             }
             const pool = this.deps.keyService.getPoolKeys(link.provider);
             const usable = pool.filter((k) => {
+                if (excludeKeyId && k.id === excludeKeyId) return false;
                 const u = this.deps.keyService.canUseKey(k.id);
                 return u.can;
             });
@@ -82,7 +75,14 @@ export class RouterFallbackResolver {
         }
         const allActive = this.deps.keyService.getKeys().filter((k) => k.status === 'active');
         if (allActive.length > 0) {
-            return { key: allActive[0], provider: allActive[0].provider };
+            for (const k of allActive) {
+                const selected =
+                    this.deps.keyService.selectWithBurst?.(k.provider) ??
+                    this.deps.keyService.selectFromPool(k.provider);
+                if (selected && this.deps.keyService.canUseKey(selected.id).can) {
+                    return { key: selected, provider: selected.provider };
+                }
+            }
         }
         return null;
     }

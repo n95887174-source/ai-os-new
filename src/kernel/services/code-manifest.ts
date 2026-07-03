@@ -3,9 +3,9 @@ import type { CodeManifest, CodeManifestEntry } from '../contracts/consistency-c
 const FILE_ENTRIES: CodeManifestEntry[] = [
     // ── Kernel services ──
     {
-        name: 'src/kernel/services/debate-service.ts',
+        name: 'src/kernel/services/debate-runtime/debate-service.ts',
         type: 'file_path',
-        location: 'services/debate-service.ts',
+        location: 'services/debate-runtime/debate-service.ts',
     },
     {
         name: 'src/kernel/services/debate-interpreter.ts',
@@ -599,21 +599,21 @@ const FILE_ENTRIES: CodeManifestEntry[] = [
 
 const TYPE_ENTRIES: CodeManifestEntry[] = [
     // ── Debate types ──
-    { name: 'DebateSession', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'DebateParticipant', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'DebateArgument', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'DebateConfig', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'DebateStrategy', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'DebateConstraint', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'ParentResolution', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'DebateGraphMetrics', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'ActivityMetrics', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'AgentActivityMetric', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'ArgumentImpact', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'QualityMetrics', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'DepthMetric', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'OriginalityMetric', type: 'type_name', location: 'debate-service.ts' },
-    { name: 'UsefulnessMetric', type: 'type_name', location: 'debate-service.ts' },
+    { name: 'DebateSession', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'DebateParticipant', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'DebateArgument', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'DebateConfig', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'DebateStrategy', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'DebateConstraint', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'ParentResolution', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'DebateGraphMetrics', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'ActivityMetrics', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'AgentActivityMetric', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'ArgumentImpact', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'QualityMetrics', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'DepthMetric', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'OriginalityMetric', type: 'type_name', location: 'contracts/debate-types.ts' },
+    { name: 'UsefulnessMetric', type: 'type_name', location: 'contracts/debate-types.ts' },
     { name: 'DebateInterpretation', type: 'type_name', location: 'debate-interpreter.ts' },
     { name: 'DisagreementPoint', type: 'type_name', location: 'debate-interpreter.ts' },
     { name: 'TrajectoryChanger', type: 'type_name', location: 'debate-interpreter.ts' },
@@ -729,7 +729,11 @@ const EVENT_ENTRIES: CodeManifestEntry[] = [
 ];
 
 const SERVICE_ENTRIES: CodeManifestEntry[] = [
-    { name: 'DebateService', type: 'service_name', location: 'services/debate-service.ts' },
+    {
+        name: 'DebateService',
+        type: 'service_name',
+        location: 'services/debate-runtime/debate-service.ts',
+    },
     { name: 'DebateInterpreter', type: 'service_name', location: 'services/debate-interpreter.ts' },
     {
         name: 'DebateGovernor',
@@ -835,28 +839,87 @@ const SERVICE_ENTRIES: CodeManifestEntry[] = [
 ];
 
 const METHOD_ENTRIES: CodeManifestEntry[] = [
-    // DebateService methods
-    { name: 'startDebate', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'pauseDebate', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'resumeDebate', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'stopDebate', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'addArgument', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'getSession', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'getArguments', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'getHistory', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'getGraphMetrics', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'getConstraintCompliance', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'exportAsMarkdown', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'computeGraphMetrics', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'computeActivityMetrics', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'computeQualityMetrics', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'buildOpeningPrompt', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'buildArgumentPrompt', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'buildTemperaturePrompt', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'calculateConfidence', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'callLLM', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'generateConsensus', type: 'method_name', location: 'debate-service.ts' },
-    { name: 'scoreConstraintCompliance', type: 'method_name', location: 'debate-service.ts' },
+    // DebateService facade methods
+    {
+        name: 'startDebate',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-service.ts',
+    },
+    {
+        name: 'stopDebate',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-service.ts',
+    },
+    {
+        name: 'getSession',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-service.ts',
+    },
+    // DebateEngine methods
+    {
+        name: 'pauseSession',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-engine.ts',
+    },
+    {
+        name: 'resumeSession',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-engine.ts',
+    },
+    {
+        name: 'cancelSession',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-engine.ts',
+    },
+    { name: 'callLLM', type: 'method_name', location: 'services/debate-runtime/debate-engine.ts' },
+    // Debate metrics
+    {
+        name: 'computeGraphMetrics',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-metrics.ts',
+    },
+    {
+        name: 'computeActivityMetrics',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-metrics.ts',
+    },
+    {
+        name: 'computeQualityMetrics',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-metrics.ts',
+    },
+    {
+        name: 'scoreConstraintCompliance',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-metrics.ts',
+    },
+    {
+        name: 'getConstraintCompliance',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-metrics.ts',
+    },
+    // Debate prompt builder
+    {
+        name: 'buildOpeningPrompt',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-prompt-builder.ts',
+    },
+    {
+        name: 'buildArgumentPrompt',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-prompt-builder.ts',
+    },
+    {
+        name: 'buildTemperaturePrompt',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-prompt-builder.ts',
+    },
+    // Debate stop conditions
+    {
+        name: 'calculateConfidence',
+        type: 'method_name',
+        location: 'services/debate-runtime/debate-stop-conditions.ts',
+    },
     // DebateInterpreter methods
     { name: 'interpret', type: 'method_name', location: 'debate-interpreter.ts' },
     // DebateGovernor methods

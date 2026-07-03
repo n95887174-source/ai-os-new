@@ -6,9 +6,8 @@ import type {
     FederationRole,
 } from '../contracts/federated-memory';
 
-let _idCounter = 0;
-const genId = () => `fed-${++_idCounter}-${Date.now()}`;
-const genSyncId = () => `sync-${++_idCounter}-${Date.now()}`;
+const genId = () => crypto.randomUUID();
+const genSyncId = () => crypto.randomUUID();
 
 export class FederatedMemoryService implements IFederatedMemoryService {
     private config: FederationConfig = {
