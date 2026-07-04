@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronDown, ChevronRight, MessageSquare, Clock } from 'lucide-react';
 import type { DebateSession } from '../../kernel/contracts/debate-types';
 import { CONCLUSION_COLORS, getConclusionType } from './debate-memory-helpers';

@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore, useActiveSessionHistory } from '../../stores/useChatStore';
 import MessageSearchPanel from '../MessageSearchPanel';
-import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ChatSidebar from './ChatSidebar';
 import ChatInputArea from './ChatInputArea';
@@ -101,8 +100,6 @@ const ChatPanel: React.FC = () => {
         statusTimeoutRef.current = setTimeout(() => setStatusMessage(null), 3000);
     }, []);
 
-    useAutoClearError(statusMessage, setStatusMessage, statusTimeoutRef);
-
     useEffect(() => {
         storageAdapter.setItem('chat-split-view', String(isSplitView));
     }, [isSplitView]);
@@ -118,14 +115,21 @@ const ChatPanel: React.FC = () => {
     }, []);
 
     const historyLen = activeSessionHistory?.length;
+    const lastContentLen =
+        activeSessionHistory && activeSessionHistory.length > 0
+            ? activeSessionHistory[activeSessionHistory.length - 1].responses?.[0]?.content?.length ?? 0
+            : 0;
     useEffect(() => {
         if (userScrolledUpRef.current) return;
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, [historyLen]);
+    }, [historyLen, lastContentLen]);
 
     const handleSend = useCallback(
-        (text: string, mode: ExecutionMode) => {
-            sendMessage(text, selectedKeys, selectedModel, mode);
+        (text: string, _mode: ExecutionMode) => {
+            sendMessage(
+                selectedKeys.map((id) => ({ provider: '', model: selectedModel, keyId: id })),
+                text,
+            );
         },
         [sendMessage, selectedKeys, selectedModel],
     );
@@ -150,18 +154,18 @@ const ChatPanel: React.FC = () => {
 
     const handleFork = useCallback(
         (entryId: string) => {
-            const newId = forkSession(entryId);
-            if (newId) {
-                setActiveSessionId(newId);
-                showStatus(t('chat.forked'));
-            }
+            forkSession(entryId);
+            showStatus(t('chat.forked'));
         },
-        [forkSession, setActiveSessionId, showStatus, t],
+        [forkSession, showStatus, t],
     );
 
     const handleRegenerate = useCallback(
-        (entryId: string) => {
-            sendMessage('', selectedKeys, selectedModel, 'single', entryId);
+        (_entryId: string) => {
+            sendMessage(
+                selectedKeys.map((id) => ({ provider: '', model: selectedModel, keyId: id })),
+                '',
+            );
         },
         [sendMessage, selectedKeys, selectedModel],
     );
@@ -169,11 +173,11 @@ const ChatPanel: React.FC = () => {
     const activeSession = sessions.find((s) => s.id === activeSessionId);
     const historyEntries = activeSessionHistory;
 
-    const activeConfig = activeSessionId ? getSessionConfig(activeSessionId) : undefined;
+    const activeConfig = activeSessionId ? getSessionConfig() : undefined;
     const activeModel = activeConfig?.model || selectedModel;
 
-    const handleNewChat = useCallback(() => {
-        const newId = createSession();
+    const handleNewChat = useCallback(async () => {
+        const newId = await createSession();
         setActiveSessionId(newId);
         setEditingEntryId(null);
         setShowSidebar(true);

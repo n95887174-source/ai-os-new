@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, X, GitCommit, Save, Link, Zap, FileText } from 'lucide-react';
 import type { GraphNodeData, EdgeData } from './graph-utils';

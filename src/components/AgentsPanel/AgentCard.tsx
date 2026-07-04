@@ -1,9 +1,7 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Pause, Play, Wrench } from 'lucide-react';
 import { AgentAvatar } from './AgentAvatar';
 import type { AgentWithStats } from './AgentsPanelContext';
-import { useTranslation } from '../../i18n/useTranslation';
 
 interface AgentCardProps {
     agent: AgentWithStats;

@@ -3,6 +3,9 @@
  *
  * Debate services, research services, and runtime intelligence
  * (cognitive intelligence, what-if, pressure map, diagnostics).
+ *
+ * A-04: All services now use registerFactory (lazy instantiation).
+ * Imperative calls (setDeps, setEngine) remain outside factories.
  */
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
@@ -88,15 +91,24 @@ const EMPTY_DEBATE_STORE: DebateStore = {
 };
 
 export const registerPhase3: Phase = (helpers, ctx) => {
-    const { register, get, asDeps } = helpers;
+    const { register, asDeps } = helpers;
     const _container: IContainer = ctx.container;
-    const storageLayer = get<StorageLayer>('storageLayer');
+    const storageLayer = ctx.container.get<StorageLayer>('storageLayer');
 
+    // A-04: embedPipeline created once as a plain const — used directly by
+    // all dependent services (debateRAGRetriever, debateEngine).
+    const embedPipeline = new DebateEmbeddingPipeline({ embedText: simpleEmbedText });
+    const debateEvaluator = new DebateEvaluator();
+    const debateMemoryExtractor = new DebateMemoryExtractor();
+    const debateRAGRetriever = new DebateRAGRetriever({ embeddingPipeline: embedPipeline });
+
+    // A-04: setDeps() is imperative — mutates module-level singleton.
+    // Keep outside factory; runs once at registration time.
     if (!isInitialized()) {
         setDeps(
             asDeps<DebateServiceDeps>({
-                database: get<IDatabaseService>('database'),
-                eventBus: get<IEventBus>('eventBus'),
+                database: _container.get<IDatabaseService>('database'),
+                eventBus: _container.get<IEventBus>('eventBus'),
                 get routerService() {
                     return _container.get<import('../services/provider-router').RouterService>(
                         'routerService',
@@ -121,79 +133,72 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             }),
         );
     }
-    register('debateService', debateServiceModule);
+    register('debateService', (_c) => debateServiceModule);
 
-    register(
-        'collaborativeService',
+    register('collaborativeService', (c) =>
         new CollaborativeService({
-            eventBus: get<IEventBus>('eventBus'),
+            eventBus: c.get<IEventBus>('eventBus'),
             get humanService() {
-                return _container.get<
+                return c.get<
                     import('../services/debate-runtime/debate-human-service').DebateHumanService
                 >('debateHumanService');
             },
         }),
     );
 
-    register(
-        'debateApiService',
+    register('debateApiService', (c) =>
         new DebateApiService({
-            eventBus: get<IEventBus>('eventBus'),
-            debateService: get<typeof debateServiceModule>('debateService'),
+            eventBus: c.get<IEventBus>('eventBus'),
+            debateService: c.get<typeof debateServiceModule>('debateService'),
             get orchestrator() {
-                return _container.get<OrchestrationService>('orchestrator');
+                return c.get<OrchestrationService>('orchestrator');
             },
             get sessionManager() {
-                return _container.get<ISessionManager>('sessionManagerService');
+                return c.get<ISessionManager>('sessionManagerService');
             },
         }),
     );
 
-    register(
-        'debateKnowledgeSync',
+    register('debateKnowledgeSync', (c) =>
         new DebateKnowledgeSyncService({
-            eventBus: get<IEventBus>('eventBus'),
-            memoryService: get<MemoryService>('memoryService'),
+            eventBus: c.get<IEventBus>('eventBus'),
+            memoryService: c.get<MemoryService>('memoryService'),
         }),
     );
 
-    register(
-        'hypothesisService',
+    register('hypothesisService', (c) =>
         new HypothesisService({
-            eventBus: get<IEventBus>('eventBus'),
-            database: get<IDatabaseService>('database'),
+            eventBus: c.get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
         }),
     );
 
-    register(
-        'researchRunService',
+    register('researchRunService', (c) =>
         new ResearchRunService({
-            database: get<IDatabaseService>('database'),
+            database: c.get<IDatabaseService>('database'),
         }),
     );
 
-    register('architectureReviewService', new ArchitectureReviewService());
+    register('architectureReviewService', (_c) => new ArchitectureReviewService());
 
-    register(
-        'promptAuditService',
+    register('promptAuditService', (c) =>
         new PromptAuditService({
             get getAllRoles() {
-                return () => _container.get<RoleService>('roleService').getAllRoles();
+                return () => c.get<RoleService>('roleService').getAllRoles();
             },
         }),
     );
 
-    register(
-        'routingExperimentsService',
+    register('routingExperimentsService', (c) =>
         new RoutingExperimentsService({
-            database: get<IDatabaseService>('database'),
+            database: c.get<IDatabaseService>('database'),
             resolveApiKey: (provider: string) => {
-                const keyService = _container.get<KeyService>('keyService');
+                const keyService = c.get<KeyService>('keyService');
                 const keys = keyService.getKeysByProvider(provider);
                 return keys?.[0]?.key ?? '';
             },
             getAdapter: (provider: string) => {
-                const registry = _container.get<ProviderAdapterRegistry>('providerAdapterRegistry');
+                const registry = c.get<ProviderAdapterRegistry>('providerAdapterRegistry');
                 const adapter = registry.getAdapter(provider);
                 if (!adapter) return null;
                 return {
@@ -217,110 +222,128 @@ export const registerPhase3: Phase = (helpers, ctx) => {
         }),
     );
 
-    register('debatePolicyEngine', new DebatePolicyEngine());
+    register('debatePolicyEngine', (_c) => new DebatePolicyEngine());
 
-    const embedPipeline = new DebateEmbeddingPipeline({ embedText: simpleEmbedText });
-    register('debateEmbeddingPipeline', embedPipeline);
+    // A-04: embedPipeline, evaluator, extractor created as plain consts above.
+    // They are singletons but not registered individually — they are passed
+    // directly to services that need them, avoiding extra factory indirection.
+    register('debateEmbeddingPipeline', (_c) => embedPipeline);
+    register('debateRAGRetriever', (_c) => debateRAGRetriever);
+    register('debateMemoryExtractor', (_c) => debateMemoryExtractor);
+    register('debateEvaluator', (_c) => debateEvaluator);
 
-    register('debateRAGRetriever', new DebateRAGRetriever({ embeddingPipeline: embedPipeline }));
-
-    register('debateMemoryExtractor', new DebateMemoryExtractor());
-
-    register('debateEvaluator', new DebateEvaluator());
-
-    register(
-        'debateEngine',
-        new DebateEngine({
-            eventBus: get<IEventBus>('eventBus'),
+    register('debateEngine', (c) => {
+        const noopGet = () => undefined;
+        const noopUpdate = () => {};
+        return new DebateEngine({
+            eventBus: c.get<IEventBus>('eventBus'),
             get getRouterService() {
                 return () =>
-                    _container.get<import('../services/provider-router').RouterService>(
-                        'routerService',
-                    );
+                    c.get<import('../services/provider-router').RouterService>('routerService');
             },
             get getKeyService() {
-                return () => _container.get<KeyService>('keyService');
+                return () => c.get<KeyService>('keyService');
             },
             get getAdapterRegistry() {
-                return () => _container.get<ProviderAdapterRegistry>('providerAdapterRegistry');
+                return () => c.get<ProviderAdapterRegistry>('providerAdapterRegistry');
             },
             get getKeyStateStore() {
-                return () => {
+                const getter = (): {
+                    get: (
+                        id: string,
+                    ) =>
+                        | {
+                              flags: {
+                                  authFailed: boolean;
+                                  circuitOpen: boolean;
+                                  rateLimited: boolean;
+                              };
+                          }
+                        | undefined;
+                    update: (id: string, patch: { flags: Record<string, boolean> }) => void;
+                } => {
                     try {
-                        return _container.get<import('../services/key-state-store').KeyStateStore>(
+                        return c.get<import('../services/key-state-store').KeyStateStore>(
                             'keyStateStore',
-                        ) as {
-                            get: (id: string) => { flags: { authFailed: boolean } } | undefined;
-                            update: (
+                        ) as unknown as {
+                            get: (
                                 id: string,
-                                patch: Partial<{ flags: { authFailed: boolean } }>,
-                            ) => void;
+                            ) =>
+                                | {
+                                      flags: {
+                                          authFailed: boolean;
+                                          circuitOpen: boolean;
+                                          rateLimited: boolean;
+                                  };
+                              }
+                                | undefined;
+                            update: (id: string, patch: { flags: Record<string, boolean> }) => void;
                         };
                     } catch {
-                        return undefined;
+                        return { get: noopGet, update: noopUpdate };
                     }
                 };
+                return getter;
             },
             get getExecutionGovernor() {
-                return () => _container.get<IExecutionGovernor>('executionGovernor');
+                return () => c.get<IExecutionGovernor>('executionGovernor');
             },
             debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
-            policyEngine: get<DebatePolicyEngine>('debatePolicyEngine'),
-            ragRetriever: _container.get<DebateRAGRetriever>('debateRAGRetriever'),
-            memoryExtractor: _container.get<DebateMemoryExtractor>('debateMemoryExtractor'),
-            evaluator: _container.get<DebateEvaluator>('debateEvaluator'),
-        }),
+            policyEngine: c.get<DebatePolicyEngine>('debatePolicyEngine'),
+            ragRetriever: debateRAGRetriever,
+            memoryExtractor: debateMemoryExtractor,
+            evaluator: debateEvaluator,
+        });
+    });
+
+    register('debateHumanService', (c) =>
+        c.get<typeof debateServiceModule>('debateService').humanService,
     );
+    register('strategyManager', (_c) => new StrategyManager(storageLayer.config));
+    register('debateModeManager', (_c) => new DebateModeManagerPersistent(storageLayer));
 
-    _container
-        .get<typeof debateServiceModule>('debateService')
-        .setEngine(_container.get<DebateEngine>('debateEngine'));
-
-    register('debateHumanService', get<typeof debateServiceModule>('debateService').humanService);
-    register('strategyManager', new StrategyManager(storageLayer.config));
-    register('debateModeManager', new DebateModeManagerPersistent(storageLayer));
-
-    register(
-        'debateWorkspace',
+    register('debateWorkspace', (c) =>
         new DebateWorkspace({
             getRoom: () => undefined,
-            getEngine: () => _container.get<DebateEngine>('debateEngine'),
+            getEngine: () => c.get<DebateEngine>('debateEngine'),
             storage: storageLayer,
         }),
     );
 
-    register(
-        'cognitiveIntelligenceService',
-        new CognitiveIntelligenceService(get<IEventBus>('eventBus')),
+    register('cognitiveIntelligenceService', (c) =>
+        new CognitiveIntelligenceService(c.get<IEventBus>('eventBus')),
     );
 
-    register(
-        'whatIfService',
+    register('whatIfService', (c) =>
         new WhatIfService({
-            eventBus: get<IEventBus>('eventBus'),
-            cognitiveIntelligenceService: get<CognitiveIntelligenceService>(
+            eventBus: c.get<IEventBus>('eventBus'),
+            cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
                 'cognitiveIntelligenceService',
             ),
         }),
     );
 
-    register(
-        'pressureMapService',
+    register('pressureMapService', (c) =>
         new PressureMapService({
-            eventBus: get<IEventBus>('eventBus'),
-            cognitiveIntelligenceService: get<CognitiveIntelligenceService>(
+            eventBus: c.get<IEventBus>('eventBus'),
+            cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
                 'cognitiveIntelligenceService',
             ),
         }),
     );
 
-    register(
-        'diagnosticService',
+    register('diagnosticService', (c) =>
         new DiagnosticService({
-            eventBus: get<IEventBus>('eventBus'),
-            cognitiveIntelligenceService: get<CognitiveIntelligenceService>(
+            eventBus: c.get<IEventBus>('eventBus'),
+            cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
                 'cognitiveIntelligenceService',
             ),
         }),
     );
+
+    // A-04: setEngine() is imperative — wire debateEngine to debateService.
+    // Runs after registration; by this point factories have executed.
+    const debateSvc = _container.get<typeof debateServiceModule>('debateService');
+    const debateEng = _container.get<DebateEngine>('debateEngine');
+    debateSvc.setEngine(debateEng);
 };

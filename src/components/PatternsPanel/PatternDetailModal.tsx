@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExternalLink, Save } from 'lucide-react';
 import { t } from '../../i18n/translations';

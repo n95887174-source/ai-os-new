@@ -1,4 +1,3 @@
-import React from 'react';
 import { formatSize } from './project-os-utils';
 
 interface ProjectStats {

@@ -326,7 +326,9 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                                     gap: 6,
                                 }}
                             >
-                                {ROLE_ICONS[p.role] || null} {p.name || p.id}
+                                {(ROLE_ICONS as Record<string, React.ReactNode>)[p.role ?? ''] ||
+                                    null}{' '}
+                                {p.name || p.id}
                             </span>
                         ))}
                     </div>

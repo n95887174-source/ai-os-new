@@ -11,6 +11,7 @@ import {
     Sparkles,
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
+import { topologyTemplateService } from '../../kernel/instances';
 
 const CATEGORIES = [
     { id: '', label: 'All', icon: <Grid3X3 size={14} /> },

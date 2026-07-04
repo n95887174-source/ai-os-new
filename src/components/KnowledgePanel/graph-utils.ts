@@ -41,7 +41,7 @@ export interface GraphNodeData {
     type: string;
     importance: number;
     source: string;
-    timestamp?: string;
+    timestamp?: string | number;
     memory: unknown;
 }
 
@@ -56,7 +56,12 @@ export function buildNodes(
     memories: Array<{
         id: string;
         content: string;
-        metadata: { type?: string; importance?: number; source?: string; timestamp?: string };
+        metadata: {
+            type?: string;
+            importance?: number;
+            source?: string;
+            timestamp?: string | number;
+        };
     }>,
 ): GraphNodeData[] {
     return memories.slice(0, 50).map((m, i) => {

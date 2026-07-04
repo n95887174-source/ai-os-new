@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Cpu, Brain, Puzzle, Activity, Terminal, FileJson, Database } from 'lucide-react';
 
 export const GETTING_STARTED_STEPS = [

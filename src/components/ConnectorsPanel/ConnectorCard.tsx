@@ -1,4 +1,3 @@
-import React from 'react';
 import { RefreshCw, Settings } from 'lucide-react';
 import { flexAlignCenterGap2 } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';

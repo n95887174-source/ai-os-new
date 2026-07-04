@@ -1,4 +1,3 @@
-import React from 'react';
 import { Activity } from 'lucide-react';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
 import { PHASE_COLORS } from './debate-runtime-constants';
@@ -13,7 +12,7 @@ interface SessionListPanelProps {
     sessions: DebateSessionSnapshot[];
     selectedId: string | null;
     onSelect: (id: string) => void;
-    t: (key: string, params?: Record<string, unknown>) => string;
+    t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const SessionListPanel: React.FC<SessionListPanelProps> = ({

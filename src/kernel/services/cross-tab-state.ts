@@ -17,7 +17,11 @@ export interface CrossTabStateMessage {
         | 'sync-request'
         | 'sync-response'
         | 'heartbeat'
-        | 'debate-update';
+        | 'debate-update'
+        | 'key-update'
+        | 'kernel-state-update'
+        | 'chat-session-update'
+        | 'settings-update';
     timestamp: number;
     tabId: string;
     payload: unknown;
@@ -120,6 +124,42 @@ class CrossTabStateSync {
                     phase: data.phase,
                     round: data.round,
                 },
+            });
+        });
+
+        eventBus.on(EVENTS.KEY_UPDATED, () => {
+            this.broadcast({
+                type: 'key-update',
+                timestamp: Date.now(),
+                tabId: this.tabId,
+                payload: null,
+            });
+        });
+
+        eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
+            this.broadcast({
+                type: 'settings-update',
+                timestamp: Date.now(),
+                tabId: this.tabId,
+                payload: null,
+            });
+        });
+
+        eventBus.on(EVENTS.KERNEL_UPDATED, () => {
+            this.broadcast({
+                type: 'kernel-state-update',
+                timestamp: Date.now(),
+                tabId: this.tabId,
+                payload: null,
+            });
+        });
+
+        eventBus.on(EVENTS.CHAT_FORKED, () => {
+            this.broadcast({
+                type: 'chat-session-update',
+                timestamp: Date.now(),
+                tabId: this.tabId,
+                payload: null,
             });
         });
 
@@ -246,6 +286,31 @@ class CrossTabStateSync {
                 break;
             case 'debate-update':
                 this.handleDebateUpdate(message.payload as DebateSyncPayload);
+                break;
+            case 'key-update':
+                LOGGER.debug('CrossTabStateSync', 'Cross-tab key update, refreshing local state');
+                eventBus.emit(EVENTS.KEY_UPDATED, message.payload as any);
+                break;
+            case 'kernel-state-update':
+                LOGGER.debug(
+                    'CrossTabStateSync',
+                    'Cross-tab kernel update, refreshing local state',
+                );
+                eventBus.emit(EVENTS.KERNEL_UPDATED, message.payload as any);
+                break;
+            case 'chat-session-update':
+                LOGGER.debug(
+                    'CrossTabStateSync',
+                    'Cross-tab chat session update, refreshing local state',
+                );
+                eventBus.emit(EVENTS.CHAT_FORKED, message.payload);
+                break;
+            case 'settings-update':
+                LOGGER.debug(
+                    'CrossTabStateSync',
+                    'Cross-tab settings update, refreshing local state',
+                );
+                eventBus.emit(EVENTS.SETTINGS_UPDATED, message.payload as any);
                 break;
         }
 

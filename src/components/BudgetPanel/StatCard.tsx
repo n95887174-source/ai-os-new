@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const StatCard: React.FC<{ label: string; value: string; color: string }> = ({
     label,

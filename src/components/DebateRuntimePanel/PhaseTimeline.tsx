@@ -1,4 +1,3 @@
-import React from 'react';
 import type { DebatePhase } from '../../kernel/instances';
 import { PHASE_COLORS } from './debate-runtime-constants';
 
@@ -12,6 +11,8 @@ const PHASES: DebatePhase[] = [
     'summarizing',
     'paused',
     'completed',
+    'failed',
+    'cancelled',
 ];
 
 const LABEL_MAP: Record<string, string> = {
@@ -24,6 +25,8 @@ const LABEL_MAP: Record<string, string> = {
     summarizing: 'Summary',
     paused: 'Paused',
     completed: 'Done',
+    failed: 'Failed',
+    cancelled: 'Cancelled',
 };
 
 export function PhaseTimeline({ phase }: { phase: DebatePhase }) {

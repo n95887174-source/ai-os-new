@@ -1,4 +1,3 @@
-import React from 'react';
 import { Thermometer } from 'lucide-react';
 import type { AuditedAgentPrompt } from '../../kernel/contracts/prompt-audit';
 

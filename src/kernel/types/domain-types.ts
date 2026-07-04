@@ -1,6 +1,3 @@
-import type { ChatMessage } from './llm-types';
-import type { MemoryEntry } from './memory-types';
-
 export interface Connector {
     readonly id: string;
     readonly name: string;

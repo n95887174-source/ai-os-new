@@ -333,12 +333,12 @@ export class SnapshotService {
 
     importSnapshots(jsonData: string): number {
         try {
-            const data = safeJsonParse(jsonData);
-            const imported = data.snapshots || [];
+            const data = safeJsonParse(jsonData) as Record<string, unknown> | undefined;
+            const imported = ((data as Record<string, unknown>)?.snapshots as unknown[]) || [];
             let count = 0;
             for (const snap of imported) {
-                if (!this.snapshots.some((s) => s.id === snap.id)) {
-                    this.snapshots.push(snap);
+                if (!this.snapshots.some((s) => s.id === (snap as SystemSnapshot).id)) {
+                    this.snapshots.push(snap as SystemSnapshot);
                     count++;
                 }
             }

@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, Bot, Zap, Shield } from 'lucide-react';
 import type { TranslationKey } from '../../i18n/translations';
 

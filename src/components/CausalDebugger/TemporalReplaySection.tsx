@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clock, SkipBack, SkipForward, Rewind, FastForward } from 'lucide-react';
 import { textXxsMuted, flexCenterGap8 } from '../../styles/common';
 import { CARD, SMALL_BUTTON } from './causal-debugger-constants';

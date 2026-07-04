@@ -77,7 +77,7 @@ export class AgentGenerator {
 
         let parsed: Record<string, unknown>;
         try {
-            parsed = safeJsonParse(jsonMatch[0]);
+            parsed = safeJsonParse(jsonMatch[0]) ?? {};
         } catch (e) {
             throw new Error(`Failed to parse generated config: ${(e as Error).message}`, {
                 cause: e,
@@ -142,7 +142,7 @@ Respond with ONLY the updated JSON object (same format as before, no markdown, n
 
         let parsed: Record<string, unknown>;
         try {
-            parsed = safeJsonParse(jsonMatch[0]);
+            parsed = safeJsonParse(jsonMatch[0]) ?? {};
         } catch (e) {
             throw new Error(`Failed to parse refined config: ${(e as Error).message}`, {
                 cause: e,

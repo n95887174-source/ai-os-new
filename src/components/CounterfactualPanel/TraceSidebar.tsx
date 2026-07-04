@@ -1,5 +1,4 @@
-import React from 'react';
-import { CARD, RATE_PRESETS, PRESET_LABELS } from './counterfactual-constants';
+import { CARD, PRESET_LABELS } from './counterfactual-constants';
 import type { CausalTraceEntry } from '../../kernel/contracts/causal-debugger';
 
 interface Props {

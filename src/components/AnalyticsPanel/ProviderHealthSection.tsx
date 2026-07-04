@@ -1,7 +1,7 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Activity } from 'lucide-react';
-import type { ProviderMetrics, HealthEvent } from '../../types/metrics';
+import type { ProviderMetrics } from '../../types/metrics';
+import type { HealthEvent } from '../../kernel/types/interfaces';
 import { SparklineMemo } from './Sparkline';
 
 interface ProviderHealthSectionProps {
@@ -9,7 +9,7 @@ interface ProviderHealthSectionProps {
     latencyHistory: number[];
     reliabilityHistory: number[];
     healthEvents: HealthEvent[];
-    itemVariants: Record<string, unknown>;
+    itemVariants: import('framer-motion').Variants;
     t: (key: string) => string;
 }
 

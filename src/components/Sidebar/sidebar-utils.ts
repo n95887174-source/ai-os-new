@@ -5,7 +5,7 @@ const PINNED_KEY = 'mavis:sidebar:pinned';
 
 export function getRecent(): string[] {
     try {
-        return safeJsonParse(localStorage.getItem(RECENT_KEY) || '[]');
+        return (safeJsonParse(localStorage.getItem(RECENT_KEY) || '[]') as string[]) ?? [];
     } catch {
         return [];
     }
@@ -13,7 +13,7 @@ export function getRecent(): string[] {
 
 export function getPinned(): string[] {
     try {
-        return safeJsonParse(localStorage.getItem(PINNED_KEY) || '[]');
+        return (safeJsonParse(localStorage.getItem(PINNED_KEY) || '[]') as string[]) ?? [];
     } catch {
         return [];
     }
@@ -31,7 +31,7 @@ const COLLAPSED_KEY = 'mavis:collapsedSections';
 
 export function getCollapsedSections(): Set<string> {
     try {
-        return new Set<string>(safeJsonParse(localStorage.getItem(COLLAPSED_KEY) || '[]'));
+        return new Set<string>((safeJsonParse(localStorage.getItem(COLLAPSED_KEY) || '[]') as string[]) ?? []);
     } catch {
         return new Set<string>();
     }
@@ -44,3 +44,4 @@ export function saveCollapsedSections(sections: Set<string>) {
         /* noop */
     }
 }
+

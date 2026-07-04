@@ -22,3 +22,4 @@ export interface ICacheService {
   tryGet?(key: string): Result<{ response: string; model: string; promptTokens: number; completionTokens: number }, MemoryError>;
   trySet?(key: string, response: string, model: string, provider: string, promptTokens: number, completionTokens: number, ttl?: number): Result<void, MemoryError>;
 }
+

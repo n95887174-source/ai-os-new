@@ -4,6 +4,7 @@ import { CONFIG } from '../../kernel/services/config-registry';
 import { LLMError } from '../core/errors';
 import { estimateTokenCount } from '../utils/token-counter';
 import { rootLogger } from '../../kernel/services/logger-service';
+export type { ModelPricing } from '../../kernel/services/pricing-service';
 
 const LOGGER = rootLogger.child('CostManagerDecorator');
 

@@ -57,7 +57,7 @@ export class ResearchScheduler implements ILifecycle {
         this._initialized = true;
         try {
             const stored = this.storage?.getItem(STORAGE_KEY);
-            if (stored) this.schedules = safeJsonParse(stored);
+            if (stored) this.schedules = (safeJsonParse(stored) as ScheduledResearch[]) ?? [];
         } catch {
             /* ignore */
         }
@@ -148,3 +148,4 @@ export class ResearchScheduler implements ILifecycle {
         }
     }
 }
+

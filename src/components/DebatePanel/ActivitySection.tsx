@@ -1,4 +1,3 @@
-import React from 'react';
 import { BarChart3, MessageSquare } from 'lucide-react';
 import type { DebateSession } from '../../kernel/instances';
 import { glassPanelRounded24 } from '../../styles/common';

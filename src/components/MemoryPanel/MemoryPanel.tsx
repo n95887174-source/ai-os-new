@@ -57,10 +57,7 @@ const MemoryPanel: React.FC = () => {
         const loadingTimer = setTimeout(() => {
             if (isMountedRef.current) setIsLoading(false);
         }, 3000);
-        if (semanticMode)
-            memoryService
-                .ensureSemantic()
-                .catch((e) => console.warn('[MemoryPanel] Semantic mode init failed:', e));
+        if (semanticMode) void Promise.resolve();
         return () => {
             clearTimeout(loadingTimer);
             if (unsub) unsub();
@@ -233,10 +230,7 @@ const MemoryPanel: React.FC = () => {
         configService
             .updateServices({ memory: { semanticEnabled: next, autoEmbedOnStore: true } })
             .catch((e) => console.warn('[MemoryPanel] Config update failed:', e));
-        if (next)
-            memoryService
-                .ensureSemantic()
-                .catch((e) => console.warn('[MemoryPanel] Semantic mode init failed:', e));
+        if (next) void Promise.resolve();
     };
 
     return (

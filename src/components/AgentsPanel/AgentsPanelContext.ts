@@ -43,6 +43,10 @@ export interface UiAgentTemplate {
   };
 }
 
+export interface AgentWithStats extends Agent {
+  stats: Agent['stats'] & { avgTokensPerCall?: number };
+}
+
 export interface AgentsPanelContextValue {
   agents: Agent[];
   agentStats: Record<string, { calls: number; tokens: number; latency: number; errors?: number; avgTokensPerCall?: number; lastActive?: number }>;

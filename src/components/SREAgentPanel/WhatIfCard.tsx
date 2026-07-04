@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp } from 'lucide-react';
 import { flexAlignCenterGap2Mb03 } from '../../styles/common';
 

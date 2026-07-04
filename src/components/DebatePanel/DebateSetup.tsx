@@ -1,5 +1,3 @@
-import React from 'react';
-import { motion } from 'framer-motion';
 import { Users, Play, Loader2, Activity, Zap } from 'lucide-react';
 import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';

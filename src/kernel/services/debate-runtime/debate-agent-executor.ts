@@ -1,7 +1,13 @@
-import type { AgentExecutor, ParticipantConfig } from '../../contracts/debate-runtime';
+import type {
+    AgentExecutor,
+    ParticipantConfig,
+    IDebateSession,
+    IDebateBudget,
+} from '../../contracts/debate-runtime';
 import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
 import type { IEventBus } from '../../types/interfaces';
 import type { DebateProviderResolver } from './debate-query-engine';
+import { estimateTokenCount } from '../../../llm/utils/token-counter';
 
 interface KeyServiceLike {
     getKeys(): Array<{
@@ -15,32 +21,18 @@ interface KeyServiceLike {
 }
 
 export interface AgentExecutorDeps {
-    getSession(sessionId: string): IDebateSessionLike | undefined;
-    getBudget(sessionId: string): IDebateBudgetLike | undefined;
+    getSession(sessionId: string): IDebateSession | undefined;
+    getBudget(sessionId: string): IDebateBudget | undefined;
     eventBus: IEventBus;
     getKeyService(): KeyServiceLike;
     callLLM(
         sessionId: string,
-        session: IDebateSessionLike,
+        session: IDebateSession,
         participant: ParticipantConfig,
         signal?: AbortSignal,
     ): Promise<string>;
     providerResolver: DebateProviderResolver;
     findParticipant(sessionId: string, nodeId: string): ParticipantConfig | undefined;
-}
-
-interface IDebateSessionLike {
-    readonly agentStates: Map<string, { agentId: string; phase: string }>;
-    readonly participants: ParticipantConfig[];
-    recordUsage(agentId: string, tokensIn: number, tokensOut: number, latency: number): void;
-    hasProviderFailed(provider: string): boolean;
-}
-
-interface IDebateBudgetLike {
-    reserveAndRecord(id: string, tokens: number, cost: number): Promise<boolean>;
-    getPressureAction(): string;
-    getPressure(): string;
-    snapshot(): { tokensUsed: number };
 }
 
 export function createAgentExecutor(sessionId: string, deps: AgentExecutorDeps): AgentExecutor {
@@ -81,7 +73,9 @@ export function createAgentExecutor(sessionId: string, deps: AgentExecutorDeps):
             const latency = performance.now() - startTime;
 
             if (budget) {
-                session.recordUsage(participant.agentId, 0, 0, Math.round(latency));
+                // D-C-07: Use estimated token count instead of hardcoded zero
+                const estimatedTokens = estimateTokenCount(content);
+                session.recordUsage(participant.agentId, estimatedTokens, 0, Math.round(latency));
                 deps.eventBus.emit(DebateRuntimeEvents.BUDGET_UPDATED, {
                     sessionId,
                     pressure: budget.getPressure(),

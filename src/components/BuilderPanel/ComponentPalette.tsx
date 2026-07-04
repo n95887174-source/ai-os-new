@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Bot, GitBranch, ShieldCheck, Blocks } from 'lucide-react';
 import { labelSection800 } from '../../styles/common';

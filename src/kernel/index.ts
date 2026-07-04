@@ -182,13 +182,12 @@ export type { ITimelineContract } from './contracts/observability';
 
 export type {
     AdapterMessage,
-    AdapterSafetyRating,
     AdapterFinishReason,
     AdapterResponse,
     AdapterHealthResult,
     IProviderAdapter,
     IAdapterRegistry,
-    ProviderAdapterEvents,
+    ToolCall,
 } from './contracts/provider-adapter';
 
 export type { CacheEntry, ICacheService } from './contracts/cache';

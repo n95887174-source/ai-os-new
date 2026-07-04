@@ -56,7 +56,7 @@ const MAX_EVENTS = 500;
 const loadEvents = (): TimelineEvent[] => {
     try {
         const raw = storageAdapter.getItem(STORAGE_KEY);
-        return raw ? safeJsonParse(raw) : [];
+        return raw ? (safeJsonParse(raw) as TimelineEvent[]) : [];
     } catch {
         return [];
     }
@@ -552,3 +552,4 @@ const summarizeEvent = (data: Record<string, unknown> | string | null | undefine
 };
 
 export default EventsTimeline;
+

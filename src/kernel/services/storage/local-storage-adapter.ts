@@ -1,7 +1,20 @@
 import type { ILocalStorageAdapter } from '../../contracts/storage-adapter';
-import { createObfuscation, OBFUSCATION_PREFIX } from '../../utils/obfuscation';
 
-const { deobfuscate } = createObfuscation('');
+const OBFUSCATION_PREFIX = 'xob:';
+
+function legacyDeobfuscate(encoded: string): string | null {
+    try {
+        const salt = 'a1b2c3d4e5f6g7h8';
+        const text = atob(encoded);
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            result += String.fromCharCode(text.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+        }
+        return result;
+    } catch {
+        return null;
+    }
+}
 
 const hasLocalStorage = typeof localStorage !== 'undefined';
 
@@ -15,7 +28,7 @@ export class LocalStorageAdapter implements ILocalStorageAdapter {
                 : (this.memory.get(key) ?? null);
             if (!raw) return null;
             if (raw.startsWith(OBFUSCATION_PREFIX)) {
-                return deobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
+                return legacyDeobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
             }
             return raw;
         } catch {

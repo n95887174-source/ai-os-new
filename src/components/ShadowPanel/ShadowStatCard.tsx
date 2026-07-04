@@ -1,4 +1,3 @@
-import React from 'react';
 import { CARD } from './shadow-constants';
 
 interface Props {

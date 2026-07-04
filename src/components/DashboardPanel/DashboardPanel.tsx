@@ -19,7 +19,7 @@ import {
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { kernel } from '../../kernel/kernel';
+import { kernel } from '../../kernel/instances';
 import { settingsService } from '../../kernel/instances';
 import { cognitiveService, debateEngine } from '../../kernel/instances';
 import { budgetService } from '../../kernel/instances';
@@ -165,7 +165,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         const unsubscribeKernel = eventBus.on(EVENTS.KERNEL_UPDATED, (state) => {
             if (!isMountedRef.current) return;
             try {
-                setSystemState({ ...state });
+                setSystemState(state as unknown as SystemState);
                 setError(null);
             } catch (e) {
                 console.warn('[DashboardPanel] Failed to update system state:', e);

@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CARD, pLevelColor } from './pressure-map-constants';

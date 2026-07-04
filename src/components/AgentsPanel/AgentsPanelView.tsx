@@ -5,8 +5,6 @@ import {
     Bot,
     Plus,
     Search,
-    Play,
-    Pause,
     X,
     LayoutGrid,
     List,

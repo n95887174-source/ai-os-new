@@ -86,7 +86,7 @@ export class RouterLatencyMonitor {
         }
     }
 
-    getLatencyBalancedWeights(config: RouterConfig): RouterWeights {
+    getLatencyBalancedWeights(_config: RouterConfig): RouterWeights {
         const state = this.deps.kernel.getState();
         const providers = Object.values(state.providers);
         const profile = this.deps.getActiveProfile();

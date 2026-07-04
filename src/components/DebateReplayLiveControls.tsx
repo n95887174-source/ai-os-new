@@ -1,4 +1,3 @@
-import React from 'react';
 import { debateEngine } from '../kernel/instances';
 import { btn } from './DebateReplayTypes';
 

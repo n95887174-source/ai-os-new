@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link2, Loader2, Brain } from 'lucide-react';
 import type { DebateSession } from '../../kernel/contracts/debate-types';
 import { CONCLUSION_COLORS, getConclusionType } from './debate-memory-helpers';
@@ -21,7 +20,7 @@ interface Props {
 
 const RelatedDebates: React.FC<Props> = ({
     relatedDebates,
-    currentTopic,
+    currentTopic: _currentTopic,
     expandedId,
     sessions,
     onSelectSession,

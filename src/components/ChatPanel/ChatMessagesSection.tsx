@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrainCircuit, X } from 'lucide-react';
 import ChatHistoryEntry from './ChatHistoryEntry';
 import { useTranslation } from '../../i18n/useTranslation';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { ZapOff, ChevronRight } from 'lucide-react';
 import type { DecisionTrace } from '../../types/metrics';
@@ -138,7 +137,9 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                         </div>
                         <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
                             {d.secondBest
-                                ? t('analytics.decision_chosen', { provider: d.secondBest })
+                                ? t('analytics.decision_chosen', undefined, {
+                                      provider: d.secondBest,
+                                  })
                                 : t('analytics.decision_sole')}
                         </div>
                         {d.skipped && d.skipped.length > 0 && (

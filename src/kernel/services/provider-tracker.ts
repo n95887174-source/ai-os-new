@@ -2,44 +2,27 @@ import type { ProviderState } from '../types/metrics-types';
 import type { ICostCalculator } from '../contracts/pricing';
 import type { IKeyStateStore } from '../contracts/key-state';
 import type { IEventBus, HealthEvent, HealthEventType } from '../types/interfaces';
-
+import type { IProviderTracker } from '../types/interfaces';
+import { rootLogger } from './logger-service';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
-import { rootLogger } from './logger-service';
-const LOGGER = rootLogger.child('ProviderTracker');
 
-const ALPHA = 0.15;
-
+/** Metric data received from provider events for tracking */
 export interface ProviderMetricData {
     provider: string;
+    latency: number;
     tokens?: number;
     fullContent?: string;
-    latency: number;
-    ttft?: number;
     model?: string;
+    ttft?: number;
 }
 
-export interface IProviderTracker {
-    start(eventBus: IEventBus): void;
-    getHealthEvents(provider?: string, limit?: number): HealthEvent[];
-    getMetrics(
-        provider: string,
-        keyId: string,
-    ): {
-        errors: number;
-        totalRequests: number;
-        avgLatency: number;
-        quotaRemaining: number;
-        quotaLimit: number;
-        reputation: number;
-        lastUsed: number;
-    } | null;
-    getProviderRankings(catalogProviders?: string[]): ProviderRanking[];
-    getCollaborativeSuggestions(
-        installedProviders?: string[],
-    ): Array<{ provider: string; reason: string; matchScore: number }>;
-    destroy(): void;
-}
+const ALPHA = 0.15;
+const LOGGER = rootLogger.child('ProviderTracker');
+
+// Re-export for backward compat — canonical definition lives in types/interfaces.ts
+export type { IProviderTracker };
+export type { HealthEvent, HealthEventType } from '../types/interfaces';
 
 export interface ProviderTrackerDeps {
     costCalculator?: ICostCalculator;

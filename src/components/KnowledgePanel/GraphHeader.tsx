@@ -1,4 +1,3 @@
-import React from 'react';
 import { Network } from 'lucide-react';
 
 interface GraphHeaderProps {

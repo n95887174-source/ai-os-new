@@ -208,7 +208,7 @@ export const DebatesManagerPanel: React.FC = () => {
 
     const handleCreate = useCallback(async () => {
         if (!newTopic.trim()) return;
-        await createSession(newTopic.trim(), 'round_robin', DUMMY_PARTICIPANTS, {
+        await createSession(newTopic.trim(), 'round_robin', [], {
             roundDelayMs: 2000,
             maxTokens: 4096,
             temperature: 0.7,

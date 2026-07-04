@@ -32,9 +32,7 @@ export interface InsightEngineDeps {
         }>;
     };
     adapterRegistry: {
-        getAdapter: (
-            provider: string,
-        ) =>
+        getAdapter: (provider: string) =>
             | {
                   sendMessage: (
                       messages: { role: string; content: string }[],
@@ -234,11 +232,19 @@ Focus on actionable, specific improvements.`;
                 const response = await adapter.sendMessage(messages, modelId, key.key);
                 const jsonMatch = response.content.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                    const parsed = safeJsonParse(jsonMatch[0]);
+                    const parsed = safeJsonParse(jsonMatch[0]) as
+                        Record<string, unknown> | undefined;
+                    const r = (parsed ?? {}) as Record<string, unknown>;
                     return {
-                        suggestions: parsed.suggestions || [],
-                        bottlenecks: parsed.bottlenecks || [],
-                        recommendations: parsed.recommendations || [],
+                        suggestions: (Array.isArray(r.suggestions)
+                            ? r.suggestions
+                            : []) as LLMAnalysisResult['suggestions'],
+                        bottlenecks: (Array.isArray(r.bottlenecks)
+                            ? r.bottlenecks
+                            : []) as string[],
+                        recommendations: (Array.isArray(r.recommendations)
+                            ? r.recommendations
+                            : []) as string[],
                     };
                 }
             } catch {

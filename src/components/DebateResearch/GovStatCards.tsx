@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, FileText, BarChart3 } from 'lucide-react';
 
 interface Props {

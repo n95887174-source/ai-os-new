@@ -1,4 +1,3 @@
-import React from 'react';
 import type { DebateSessionSnapshot } from '../kernel/contracts/debate-runtime';
 import { statusColor } from './DebateReplayTypes';
 

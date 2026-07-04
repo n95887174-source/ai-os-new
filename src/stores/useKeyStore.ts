@@ -404,22 +404,44 @@ function ensureInitialized() {
         }),
     );
 
+    // C-09: Subscribe to KEYS_LOADED — primary event-driven path (replaces polling)
+    unsubs.push(
+        eventBus.on(EVENTS.KEYS_LOADED, () => {
+            queueMicrotask(() => {
+                const next = safeKeys();
+                if (next.length > 0) {
+                    const nextIds = next.map((k) => k.id).join(',');
+                    const currentIds = store.keys.map((k) => k.id).join(',');
+                    if (nextIds !== currentIds) {
+                        setStore({ keys: next });
+                    }
+                }
+                // Stop polling once keys arrive via event
+                if (pollTimer !== null) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            });
+        }),
+    );
+
     // Defer sync setStore to avoid "Cannot update while rendering" warning
     const latestKeys = safeKeys();
     if (latestKeys.length > 0) {
         queueMicrotask(() => setStore({ keys: latestKeys }));
     }
 
+    // C-09: Polling fallback — only fires if event-driven path never arrives (edge case)
     if (pollTimer !== null) {
         clearInterval(pollTimer);
         pollTimer = null;
     }
     let pollAttempts = 0;
+    let pollMaxAttempts = 5;
     pollTimer = setInterval(() => {
         pollAttempts++;
         const nextKeys = safeKeys();
-        if (nextKeys.length > 0 || pollAttempts >= 10) {
-            // STATE-M1: Only overwrite if data actually changed to avoid stale event-driven updates
+        if (nextKeys.length > 0 || pollAttempts >= pollMaxAttempts) {
             if (nextKeys.length > 0) {
                 const nextIds = nextKeys.map((k) => k.id).join(',');
                 const currentIds = store.keys.map((k) => k.id).join(',');

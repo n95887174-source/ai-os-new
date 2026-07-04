@@ -66,7 +66,6 @@ export class AdapterFactory {
         'github',
         'ollama',
         'lmstudio',
-        'anthropic',
     ];
 
     constructor(config: AdapterFactoryConfig = {}) {

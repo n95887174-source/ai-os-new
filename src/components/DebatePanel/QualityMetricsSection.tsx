@@ -1,4 +1,3 @@
-import React from 'react';
 import { Target } from 'lucide-react';
 import type { DebateSession } from '../../kernel/instances';
 import {
@@ -10,7 +9,6 @@ import {
     borderTopSection,
     metricBoxSmall,
     textXsSubtle,
-    textWeight600,
 } from '../../styles/common';
 
 interface QualityMetricsSectionProps {

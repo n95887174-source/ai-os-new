@@ -1,4 +1,3 @@
-import React from 'react';
 import { PILL } from './counterfactual-constants';
 import type { CounterfactualResult } from '../../kernel/contracts/counterfactual';
 

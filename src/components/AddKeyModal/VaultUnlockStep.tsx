@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Loader2 } from 'lucide-react';
 
 interface VaultUnlockStepProps {

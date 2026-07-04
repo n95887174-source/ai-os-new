@@ -1,4 +1,3 @@
-import React from 'react';
 import { Layers } from 'lucide-react';
 import { t } from '../../i18n/translations';
 import { flexAlignCenterGap2Mb03 } from '../../styles/common';

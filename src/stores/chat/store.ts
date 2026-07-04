@@ -254,10 +254,14 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                         ),
                     };
                     await sStore.syncSessions(stateWithNew.sessions, []).catch((e) => {
-                        console.warn(
+                        console.error(
                             '[ChatStore] write-through persist failed — message not saved',
                             e,
                         );
+                        eventBus.emit(EVENTS.NOTIFICATION, {
+                            message: 'Failed to save message in database',
+                            type: 'error',
+                        });
                         throw e;
                     });
                 }
@@ -318,24 +322,30 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 if (req.requestId)
                     eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
             }
-            set((s) => ({
-                activeRequestIds: new Set<string>(),
-                sessions: s.sessions.map((sess) =>
-                    sess.id === sessionId
-                        ? {
-                              ...sess,
-                              history: sess.history.map((e) => ({
-                                  ...e,
-                                  responses: e.responses.map((r) =>
-                                      r.status === 'loading' || r.status === 'streaming'
-                                          ? { ...r, status: 'cancelled' as const }
-                                          : r,
-                                  ),
-                              })),
-                          }
-                        : sess,
-                ),
-            }));
+            set((s) => {
+                const newActiveIds = new Set(s.activeRequestIds);
+                for (const req of loadingReqs) {
+                    if (req.requestId) newActiveIds.delete(req.requestId);
+                }
+                return {
+                    activeRequestIds: newActiveIds,
+                    sessions: s.sessions.map((sess) =>
+                        sess.id === sessionId
+                            ? {
+                                  ...sess,
+                                  history: sess.history.map((e) => ({
+                                      ...e,
+                                      responses: e.responses.map((r) =>
+                                          r.status === 'loading' || r.status === 'streaming'
+                                              ? { ...r, status: 'cancelled' as const }
+                                              : r,
+                                      ),
+                                  })),
+                              }
+                            : sess,
+                    ),
+                };
+            });
         },
 
         cancelMessage: (requestId) => {
@@ -388,7 +398,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         deleteSession: (id) => {
             sessionManager
                 .delete(id)
-                .catch((e) => console.warn('[ChatStore] Failed to persist session deletion', e));
+                .catch((e) => {
+                    console.error('[ChatStore] Failed to persist session deletion', e);
+                    eventBus.emit(EVENTS.NOTIFICATION, {
+                        message: 'Failed to delete session in database',
+                        type: 'error',
+                    });
+                });
             set((s) => {
                 const now = Date.now();
                 const timestamps = new Map(s.deletedAtTimestamps);
@@ -463,14 +479,26 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             if (sStore)
                 sStore
                     .put(newSession)
-                    .catch((e) => console.warn('[ChatStore] Failed to persist forked session', e));
+                    .catch((e) => {
+                        console.error('[ChatStore] Failed to persist forked session', e);
+                        eventBus.emit(EVENTS.NOTIFICATION, {
+                            message: 'Failed to save forked session in database',
+                            type: 'error',
+                        });
+                    });
         },
 
         renameSession: (id, title) => {
             set((s) => ({ sessions: s.sessions.map((x) => (x.id === id ? { ...x, title } : x)) }));
             sessionManager
                 .updateMeta(id, { title })
-                .catch((e) => console.warn('[ChatStore] Failed to persist session rename', e));
+                .catch((e) => {
+                    console.error('[ChatStore] Failed to persist session rename', e);
+                    eventBus.emit(EVENTS.NOTIFICATION, {
+                        message: 'Failed to rename session in database',
+                        type: 'error',
+                    });
+                });
         },
 
         archiveSession: (id) => {
@@ -499,7 +527,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 const next = !current?.isPinned;
                 sessionManager
                     .updateMeta(id, { isPinned: next })
-                    .catch((e) => console.warn('[ChatStore] Failed to persist pin state', e));
+                    .catch((e) => {
+                        console.error('[ChatStore] Failed to persist pin state', e);
+                        eventBus.emit(EVENTS.NOTIFICATION, {
+                            message: 'Failed to pin session in database',
+                            type: 'error',
+                        });
+                    });
                 return {
                     sessions: s.sessions.map((x) => (x.id === id ? { ...x, isPinned: next } : x)),
                 };
@@ -514,9 +548,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 if (sStore && newSessions.length > 0)
                     sStore
                         .bulkPut(newSessions)
-                        .catch((e) =>
-                            console.warn('[ChatStore] Failed to persist imported sessions', e),
-                        );
+                        .catch((e) => {
+                            console.error('[ChatStore] Failed to persist imported sessions', e);
+                            eventBus.emit(EVENTS.NOTIFICATION, {
+                                message: 'Failed to save imported sessions in database',
+                                type: 'error',
+                            });
+                        });
                 return { sessions: [...newSessions, ...s.sessions] };
             });
         },

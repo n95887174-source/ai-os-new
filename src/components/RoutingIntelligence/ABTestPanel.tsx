@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Square, Play } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import MetricBar from './MetricBar';

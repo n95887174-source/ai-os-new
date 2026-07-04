@@ -10,7 +10,7 @@ import {
     textMuted,
     textWeight600,
 } from '../../styles/common';
-import { badgeGreen, badgeAmber, badgeRed } from './debate-analytics-badges';
+import { badgeGreen, badgeAmber } from './debate-analytics-badges';
 import GraphMetricsSection from './GraphMetricsSection';
 import QualityMetricsSection from './QualityMetricsSection';
 import ActivitySection from './ActivitySection';

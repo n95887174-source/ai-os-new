@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNow } from '../../hooks/useNow';
 import { BarChart3, TrendingUp, Activity, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';

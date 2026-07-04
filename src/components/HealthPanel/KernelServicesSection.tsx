@@ -1,4 +1,3 @@
-import React from 'react';
 import { Layers, Loader2, Server } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { getStatusColor } from '../Common/status-vocabulary';

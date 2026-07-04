@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { textSecondaryXs } from '../../styles/common';
 

@@ -341,9 +341,15 @@ export class OrchestrationService {
         let updatedBlackboard = { ...data.blackboard };
         try {
             if (output.trim().startsWith('{')) {
-                const parsed = safeJsonParse(output);
-                if (parsed._blackboard) {
-                    updatedBlackboard = { ...updatedBlackboard, ...parsed._blackboard };
+                const parsed = safeJsonParse(output) as Record<string, unknown> | undefined;
+                if ((parsed as Record<string, unknown>)?._blackboard) {
+                    updatedBlackboard = {
+                        ...updatedBlackboard,
+                        ...((parsed as Record<string, unknown>)._blackboard as Record<
+                            string,
+                            unknown
+                        >),
+                    };
                 }
             }
         } catch (e) {

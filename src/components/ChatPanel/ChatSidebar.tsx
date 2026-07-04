@@ -61,7 +61,10 @@ const ChatSidebar: React.FC<Props> = ({
 
     const handleDelete = useCallback(
         async (id: string) => {
-            const confirmed = await confirmDelete(t('chat.confirm_delete'));
+            const confirmed = await confirmDelete({
+                title: t('chat.delete_session'),
+                message: t('chat.confirm_delete'),
+            });
             if (!confirmed) return;
             deleteSession(id);
             if (id === activeSessionId) {
@@ -73,7 +76,10 @@ const ChatSidebar: React.FC<Props> = ({
     );
 
     const handleClear = useCallback(async () => {
-        const confirmed = await confirmClear(t('chat.confirm_clear'));
+        const confirmed = await confirmClear({
+            title: t('chat.clear_all'),
+            message: t('chat.confirm_clear'),
+        });
         if (!confirmed) return;
         useChatStore.getState().clearHistory();
     }, [confirmClear, t]);

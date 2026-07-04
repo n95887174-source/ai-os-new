@@ -1,4 +1,3 @@
-import React from 'react';
 import { Loader2, Upload } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { BulkImportReport } from './add-key-constants';

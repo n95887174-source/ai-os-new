@@ -138,9 +138,10 @@ interface WindowDebug {
 }
 const w = window as unknown as WindowDebug;
 w.__getState = async () => {
-    const { kernel, keyStateProjection, keyService } = await import('./kernel/instances');
+    const { kernel, keyService } = await import('./kernel/instances');
     const kState = kernel?.getState();
-    const proj = keyStateProjection?.getSnapshot();
+    const proj = (kState as unknown as Record<string, unknown>)?.['keys'] as
+        Array<unknown> | undefined;
     const keys = keyService?.getKeys();
     return {
         keyServiceCount: Array.isArray(keys) ? keys.length : 0,
@@ -154,19 +155,13 @@ w.__getState = async () => {
 };
 
 w.__checkConsistency = async () => {
-    const { truthConsistencyMonitor, kernel, keyStateProjection } =
-        await import('./kernel/instances');
+    const { truthConsistencyMonitor, kernel } = await import('./kernel/instances');
     const kState = kernel?.getState();
-    const proj = keyStateProjection?.getSnapshot();
-    if (!kState || !proj) {
-        console.warn('[Consistency] kernel or projection not ready');
+    if (!kState) {
+        console.warn('[Consistency] kernel not ready');
         return null;
     }
-    const keyMap: Record<string, unknown> = {};
-    for (const k of proj) {
-        keyMap[k.id] = k;
-    }
-    const report = truthConsistencyMonitor?.check(kState.providers, keyMap);
+    const report = truthConsistencyMonitor?.check(kState.providers, {});
     console.log('[Consistency] Report:', JSON.stringify(report, null, 2));
     return report;
 };

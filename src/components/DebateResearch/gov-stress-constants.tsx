@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import type { GovScenarioOutcome } from '../../kernel/contracts/gov-stress-test';
 

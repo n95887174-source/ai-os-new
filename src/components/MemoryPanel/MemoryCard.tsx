@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Tag, Target, Code, Trash2 } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';

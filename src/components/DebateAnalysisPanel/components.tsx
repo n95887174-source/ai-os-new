@@ -1,7 +1,4 @@
-import React from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { textWhiteXs, textMutedXs } from '../../styles/common';
-import { useTranslation } from '../../i18n/useTranslation';
+import { textWhiteXs } from '../../styles/common';
 import type { TonePoint, PersuasionScore } from '../../kernel/utils/debate-analysis';
 import { FALLACY_LABELS } from '../../kernel/utils/debate-analysis';
 

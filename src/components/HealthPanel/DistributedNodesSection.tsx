@@ -1,4 +1,3 @@
-import React from 'react';
 import { Globe, Network } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';

@@ -204,7 +204,7 @@ export class ChatExecutor {
                                     latency: 0,
                                     status: 'done',
                                     tokens: cached.completionTokens,
-                                    strategy: 'cache',
+                                    strategy: 'auto' as const,
                                 };
                                 this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
                                 return;
@@ -213,7 +213,6 @@ export class ChatExecutor {
                             const inflightKey = `${currentProvider}:${cacheKey}`;
                             const existingInflight = this.cacheInflight.get(inflightKey);
                             if (existingInflight) {
-                                // Another identical request is in-flight; wait for it
                                 await existingInflight;
                                 const recheck = this.deps.cacheService.get(cacheKey);
                                 if (recheck) {
@@ -228,13 +227,27 @@ export class ChatExecutor {
                                         latency: 0,
                                         status: 'done',
                                         tokens: recheck.completionTokens,
-                                        strategy: 'cache',
+                                        strategy: 'auto' as const,
                                     };
                                     this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
                                     return;
                                 }
                             }
 
+                            const onChunk = (chunk: string) => {
+                                this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, {
+                                    requestId,
+                                    provider: currentProvider,
+                                    chunk,
+                                    keyId: req.keyId,
+                                });
+                            };
+                            this.deps.eventBus.emit(EVENTS.STREAM_START, {
+                                requestId,
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                keyId: req.keyId,
+                            });
                             const inflightPromise = (async () => {
                                 const r = await this.llmClient.sendMessage(effectiveMessages, {
                                     provider: currentProvider,
@@ -242,6 +255,7 @@ export class ChatExecutor {
                                     temperature: req.options?.temperature,
                                     maxTokens: req.options?.maxTokens,
                                     signal: sessionController.signal,
+                                    onChunk,
                                 });
                                 return r;
                             })();
@@ -256,12 +270,26 @@ export class ChatExecutor {
                                 this.cacheInflight.delete(inflightKey);
                             }
                         } else {
+                            this.deps.eventBus.emit(EVENTS.STREAM_START, {
+                                requestId,
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                keyId: req.keyId,
+                            });
                             result = await this.llmClient.sendMessage(effectiveMessages, {
                                 provider: currentProvider,
                                 model: effectiveModel,
                                 temperature: req.options?.temperature,
                                 maxTokens: req.options?.maxTokens,
                                 signal: sessionController.signal,
+                                onChunk: (chunk: string) => {
+                                    this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, {
+                                        requestId,
+                                        provider: currentProvider,
+                                        chunk,
+                                        keyId: req.keyId,
+                                    });
+                                },
                             });
                         }
 

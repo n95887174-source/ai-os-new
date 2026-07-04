@@ -82,7 +82,7 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
 
     const handleSend = async () => {
         if (!message.trim()) return;
-        await collaborativeService.submitArgument(session.id, userName, message.trim());
+        await collaborativeService.submitArgument(session.id, userName.trim(), message.trim());
         setMessage('');
     };
 

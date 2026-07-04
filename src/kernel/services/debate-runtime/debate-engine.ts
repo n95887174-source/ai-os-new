@@ -22,10 +22,14 @@ import type {
     IDebateEngine,
     IDebateSession,
     IDebateBudget,
-    Claim,
     TimelineEntry,
     AgentStateEntry,
 } from '../../contracts/debate-runtime';
+import type {
+    DebateArgument,
+    DebateConfig,
+    DebateSession as DebateSessionInterface,
+} from '../../contracts/debate-types';
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
@@ -37,22 +41,29 @@ import { executePolicyActions } from './debate-policy-engine';
 import type { DebateRAGRetriever } from './debate-rag-retriever';
 import type { DebateMemoryExtractor } from './debate-memory-extractor';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
+import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
+import { DebateSessionContext } from './debate-session-context';
+import { DebateMemory } from './debate-memory';
+import { DebateBudget } from './debate-budget';
+import { DebateSession as DebateSessionClass } from './debate-session';
+import { DebateSessionRecordSchema } from '../../types/schema-types';
+import type { DebateStore } from '../../contracts/storage/debate-store';
 const LOGGER = rootLogger.child('DebateEngine');
 
 interface SnapshotBridgeContext {
-    participants: LegacyDebateParticipant[];
+    participants: ParticipantConfig[];
     strategy: import('../../contracts/debate-types').DebateSessionStrategy;
     maxRounds: number;
-    config: LegacyDebateConfig;
+    config: DebateConfig;
     timeline?: TimelineEntry[];
 }
 
 function timelineToArguments(
     timeline: TimelineEntry[],
-    participants: LegacyDebateParticipant[],
+    participants: ParticipantConfig[],
     defaultConfidence = 0.7,
-): LegacyDebateArgument[] {
-    const nameById = new Map(participants.map((p) => [p.id, p.name]));
+): DebateArgument[] {
+    const nameById = new Map(participants.map((p) => [p.agentId, p.role || p.nodeId]));
     return timeline
         .filter((e) => e.type === 'agent:responded')
         .map((e, idx) => {
@@ -75,7 +86,7 @@ function timelineToArguments(
 function snapshotToSession(
     snapshot: DebateSessionSnapshot,
     ctx: SnapshotBridgeContext,
-): LegacyDebateSession {
+): DebateSessionInterface {
     const participants = Array.isArray(ctx.participants) ? ctx.participants : [];
     const args = ctx.timeline ? timelineToArguments(ctx.timeline, participants) : [];
     const round = Math.max(1, snapshot.round);
@@ -90,7 +101,8 @@ function snapshotToSession(
         strategy: ctx.strategy,
         maxRounds: ctx.maxRounds,
         currentRound: round,
-        participants,
+        participants:
+            participants as unknown as import('../../contracts/debate-types').DebateParticipant[],
         arguments: args,
         convergenceScore: 0,
         openingStatements: args.filter((a) => a.round === 0),
@@ -98,7 +110,7 @@ function snapshotToSession(
         socraticQuestioner,
         argumentTreeRoundMap: {},
         createdAt: snapshot.startedAt,
-    };
+    } as DebateSessionInterface;
 }
 
 function estimateConfidence(content: string): number {
@@ -147,12 +159,14 @@ interface DebateEngineDeps {
     getRouterService: () => RouterServiceLike;
     getKeyService: () => KeyServiceLike;
     getAdapterRegistry: () => IAdapterRegistry;
-    getKeyStateStore?: () =>
-        | {
-              get: (id: string) => { flags: { authFailed: boolean } } | undefined;
-              update: (id: string, patch: Partial<{ flags: { authFailed: boolean } }>) => void;
-          }
-        | undefined;
+    getKeyStateStore?: () => {
+        get(
+            id: string,
+        ):
+            | { flags: { authFailed: boolean; circuitOpen: boolean; rateLimited: boolean } }
+            | undefined;
+        update(id: string, patch: { flags: Record<string, boolean> }): void;
+    };
     debateStore?: DebateStore;
     getExecutionGovernor?: () => {
         start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): {
@@ -184,6 +198,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private cleanupInterval: ReturnType<typeof setInterval> | null = null;
     private providerResolver: DebateProviderResolver;
     private topologyService: DebateTopologyService;
+    private sessionStartTimes = new Map<string, number>();
+    private sessionTimeoutTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    private sessionAbortControllers = new Map<string, Map<string, AbortController>>();
+    private runningSessions = new Set<string>();
+    private preflightDone = new Set<string>();
 
     constructor(deps: DebateEngineDeps) {
         this.deps = deps;
@@ -310,7 +329,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         language?: string,
     ): string {
         const id = genId('debate');
-        const session = new DebateSessionInstance(id, topic, topology, participants, language);
+        const session = new DebateSessionClass(id, topic, topology, participants, language);
         const budget = new DebateBudget(id, { maxRounds: topology.maxRounds });
 
         session.onPhaseChange((from: string, to: string) => {
@@ -463,9 +482,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }
         return mem;
     }
-
-    private runningSessions = new Set<string>();
-    private preflightDone = new Set<string>();
 
     private async runProviderPreflight(sessionId: string): Promise<void> {
         const session = this.sessions.get(sessionId);
@@ -805,8 +821,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                     const ctx = engine.deps.policyEngine.buildContext(
                                         session.phase,
                                         event.round,
-                                        session.totalTokens,
-                                        session.totalCost,
+                                        session.snapshot().totalTokens,
+                                        session.snapshot().totalCost,
                                         interimConfidence,
                                         budgetSnap?.pressure ?? 'low',
                                         agentErrorRates,
@@ -1173,29 +1189,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         return (await getPrompt(node?.role)) + `\nRespond in ${session.language}.`;
     }
 
-    private gatherClaims(sessionId: string, session: IDebateSession): Claim[] {
-        const claims: Claim[] = [];
-        for (const participant of session.participants) {
-            const chains = this.getMemory(sessionId).getChain(participant.agentId);
-            for (const chain of chains) {
-                for (const step of chain.steps) {
-                    if (step.type === 'claim') {
-                        claims.push({
-                            id: `${step.agentId}-${step.timestamp}`,
-                            text: step.content,
-                            agentId: step.agentId,
-                            round: step.round ?? session.round,
-                            confidence: step.confidence,
-                            speaker: participant.agentId,
-                            role: participant.role ?? '',
-                        });
-                    }
-                }
-            }
-        }
-        return claims;
-    }
-
     pauseSession(sessionId: string): void {
         const session = this.sessions.get(sessionId);
         if (!session) return;
@@ -1360,20 +1353,17 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const existing = this.sessions.get(sessionId);
         if (existing) return existing.snapshot();
 
-        // D9-04: Reconstruct and register a DebateSessionInstance so the
+        // D9-04: Reconstruct and register a DebateSession so the
         // restored session is visible to all engine operations (startSession,
         // pauseSession, cancelSession, etc.)
         try {
-            const topology: DebateTopology = safeJsonParse(record.topology);
-            const agentStates: AgentStateEntry[] = safeJsonParse(record.agentStates);
-            const participants: ParticipantConfig[] = safeJsonParse(record.participants || '[]');
+            const topology: DebateTopology =
+                safeJsonParse(record.topology) ?? ({} as DebateTopology);
+            const agentStates: AgentStateEntry[] = safeJsonParse(record.agentStates) ?? [];
+            const participants: ParticipantConfig[] =
+                safeJsonParse(record.participants || '[]') ?? [];
 
-            const session = new DebateSessionInstance(
-                record.id,
-                record.topic,
-                topology,
-                participants,
-            );
+            const session = new DebateSessionClass(record.id, record.topic, topology, participants);
 
             // Restore internal state from snapshot
             const restoredSnapshot: DebateSessionSnapshot = {
@@ -1387,7 +1377,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 totalCost: record.totalCost,
                 startedAt: record.startedAt,
                 updatedAt: record.updatedAt,
-                version: record.version,
+                version: record.version ?? 1,
                 language: (record as { language?: string }).language ?? 'Russian',
             };
             session.restoreInternalState(restoredSnapshot);
@@ -1396,7 +1386,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             try {
                 const mem = this.getMemory(record.id);
                 const memData = safeJsonParse(record.memory || '{}');
-                mem.restoreFrom(memData);
+                mem.restoreFrom(memData as import('../../contracts/debate-runtime').MemoryRecord);
             } catch {
                 /* memory is optional — fresh start if parse fails */
             }
@@ -1544,7 +1534,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     exportLegacySession(
         sessionId: string,
         ctx: Omit<SnapshotBridgeContext, 'timeline'>,
-    ): LegacyDebateSession | null {
+    ): DebateSessionInterface | null {
         const snapshot = this.getSession(sessionId);
         if (!snapshot) return null;
         const timeline = this.getTimeline(sessionId);

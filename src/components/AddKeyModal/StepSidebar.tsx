@@ -1,4 +1,3 @@
-import React from 'react';
 import { Key, CheckCircle2, Shield } from 'lucide-react';
 import { flexColGap6, textXsMutedAuto } from '../../styles/common';
 

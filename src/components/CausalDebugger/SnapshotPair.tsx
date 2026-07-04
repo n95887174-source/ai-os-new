@@ -1,4 +1,3 @@
-import React from 'react';
 import { preBlockMono } from '../../styles/common';
 import { CARD } from './causal-debugger-constants';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Bug } from 'lucide-react';
 import type { ErrorBreakdown } from '../../kernel/types/metrics-types';
 import { glassCard, flexCenterGap2Mb1 } from '../../styles/common';

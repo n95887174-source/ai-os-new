@@ -1,4 +1,3 @@
-import React from 'react';
 import { Settings, Zap, Cpu, Activity, Shield, BookOpen, RefreshCw } from 'lucide-react';
 import type { TabId } from './AgentsPanelContext';
 

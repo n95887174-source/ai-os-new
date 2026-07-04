@@ -1,4 +1,9 @@
-import type { RouterConfig, WeightProfile, ABTestConfig } from '../types/routing-types';
+import type {
+    RouterConfig,
+    WeightProfile,
+    ABTestConfig,
+    RouterWeights,
+} from '../types/routing-types';
 import type { RouterConfigSection } from '../contracts/config-registry';
 import { CONFIG } from './config-registry';
 
@@ -35,7 +40,7 @@ export function getRouterConfig(): RouterConfigSection {
             defaultWeights: { ...profile.defaultWeights },
             strategyWeights: {
                 ...profile.strategyWeights,
-            } as RouterConfigSection['strategyWeights'],
+            } as unknown as RouterConfigSection['strategyWeights'],
             autoDynamicAdjustment: {
                 short: { ...profile.autoDynamicAdjustment.short },
                 long: { ...profile.autoDynamicAdjustment.long },
@@ -45,7 +50,7 @@ export function getRouterConfig(): RouterConfigSection {
                 Object.entries(profile.strategyWeights).map(([k, v]) => [k, { ...v }]),
             ) as RouterConfigSection['weights'],
             activeProfile: c.activeProfile,
-            weightProfiles: c.weightProfiles as RouterConfigSection['weightProfiles'],
+            weightProfiles: c.weightProfiles as unknown as RouterConfigSection['weightProfiles'],
             abTest: c.abTest as RouterConfigSection['abTest'],
             affinity: c.affinity,
             priority: c.priority,
@@ -67,7 +72,11 @@ function buildDefaultProfile(r: typeof CONFIG.router): WeightProfile {
         name: DEFAULT_PROFILE_NAME,
         description: 'Default system profile based on CONFIG.router defaults',
         defaultWeights: r.defaultWeights,
-        strategyWeights: { ...r.strategyWeights, free_first: r.strategyWeights.freeFirst },
+        strategyWeights: {
+            ...r.strategyWeights,
+            free_first: (r.strategyWeights as unknown as Record<string, unknown>)
+                .freeFirst as RouterWeights,
+        },
         autoDynamicAdjustment: r.autoDynamicAdjustment,
         latencyVarianceBands: r.latencyVarianceBands,
         scoring: {

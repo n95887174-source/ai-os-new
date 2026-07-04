@@ -1,4 +1,3 @@
-import React from 'react';
 import { Trophy } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { EloLeaderboard } from '../AgentsPanel/EloLeaderboard';

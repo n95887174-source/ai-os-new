@@ -602,3 +602,9 @@ export function getConstraintCompliance(
     }
     return scores;
 }
+export interface DebateMetrics {
+    graph: DebateGraphMetrics;
+    activity: ActivityMetrics;
+    quality: QualityMetrics;
+    constraintCompliance?: Record<string, number>;
+}

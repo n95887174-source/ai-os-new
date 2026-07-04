@@ -1,4 +1,3 @@
-import React from 'react';
 import { ProceduralAvatar } from './ProceduralAvatar';
 
 const SHAPES: { id: string; label: string }[] = [

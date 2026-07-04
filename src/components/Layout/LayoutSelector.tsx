@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLayout, LAYOUT_LABELS, LAYOUT_ICONS } from './LayoutContext';
 import { useTranslation } from '../../i18n/useTranslation';
 

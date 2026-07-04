@@ -1,4 +1,3 @@
-import React from 'react';
 import { Bot, Copy, BookOpen, RefreshCw, Trash2, Pause, Play, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { templateService } from '../../kernel/instances';

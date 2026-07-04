@@ -151,8 +151,9 @@ export class CheckpointStore {
 
     importCheckpoints(json: string): number {
         try {
-            const data = safeJsonParse(json);
-            const imported: Checkpoint[] = data.checkpoints ?? [];
+            const data = safeJsonParse(json) as Record<string, unknown> | undefined;
+            const imported: Checkpoint[] =
+                ((data as Record<string, unknown>)?.checkpoints as Checkpoint[]) ?? [];
             let count = 0;
             for (const cp of imported) {
                 if (!this.checkpoints.some((c) => c.id === cp.id)) {

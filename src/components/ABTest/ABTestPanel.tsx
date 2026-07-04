@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { runABTest, getABTestHistory } from '../../kernel/services/ab-test-service';
 import { keyService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';

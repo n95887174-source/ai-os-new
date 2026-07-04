@@ -1,10 +1,9 @@
-import React from 'react';
 import { Handle, Position, type Node, type Edge } from '@xyflow/react';
 import { Bot, ShieldCheck, Cpu, Wrench, GitBranch, Blocks } from 'lucide-react';
 import { genId } from '../../utils/gen-id';
 import { nodeDetailRow } from '../../styles/common';
 import { t as tt } from '../../i18n/translations';
-import type { ISTopology, ISNode, ISEdge } from '../../kernel/contracts/topology';
+import type { ISTopology } from '../../kernel/contracts/topology';
 
 export const generateId = () => genId();
 

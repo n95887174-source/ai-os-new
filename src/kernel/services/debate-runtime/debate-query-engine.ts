@@ -125,12 +125,14 @@ export interface ProviderResolverDeps {
         ): Array<{ id: string; provider: string; key: string; availableModels?: string[] }>;
     };
     adapterRegistry: IAdapterRegistry;
-    getKeyStateStore?: () =>
-        | {
-              get: (id: string) => { flags: { authFailed: boolean } } | undefined;
-              update: (id: string, patch: Partial<{ flags: { authFailed: boolean } }>) => void;
-          }
-        | undefined;
+    getKeyStateStore?: () => {
+        get(
+            id: string,
+        ):
+            | { flags: { authFailed: boolean; circuitOpen: boolean; rateLimited: boolean } }
+            | undefined;
+        update(id: string, patch: { flags: Record<string, boolean> }): void;
+    };
 }
 
 export interface SessionProviderState {
@@ -159,7 +161,7 @@ export class DebateProviderResolver {
         if (session.hasProviderFailed(provider)) return false;
         try {
             const registry = this.deps.adapterRegistry;
-            const cb = registry.getCircuitBreakerState?.(provider);
+            const cb = registry.getCircuitBreakerState(provider);
             if (cb === 'open') return false;
         } catch {
             /* best-effort */
@@ -305,7 +307,7 @@ export class DebateQueryEngine implements IDebateQueryEngine {
         },
     ): TimelineEntry[] {
         const entries: TimelineEntry[] =
-            ((session as any).arguments?.map((arg: any) => ({
+            (session.arguments?.map((arg) => ({
                 type: 'agent:responded',
                 payload: arg,
                 timestamp: arg.timestamp,

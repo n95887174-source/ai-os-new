@@ -1,4 +1,3 @@
-import React from 'react';
 import { Zap, BookOpen, Route, Shield } from 'lucide-react';
 import type { HypothesisCategory, HypothesisStatus } from '../../kernel/types/research-types';
 

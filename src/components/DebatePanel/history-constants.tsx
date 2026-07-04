@@ -1,4 +1,3 @@
-import React from 'react';
 import { Swords, Shield, Scale, Check, X } from 'lucide-react';
 
 export const PAGE_SIZE = 10;

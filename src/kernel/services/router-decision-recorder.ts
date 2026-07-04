@@ -1,12 +1,6 @@
 import type { ApiKey, SystemState } from '../types/metrics-types';
-import type { RouterConfig } from '../types/routing-types';
-import type {
-    SkippedKeyEntry,
-    PipelineStep,
-    RouterDecision,
-    DecisionOrigin,
-    RoutingStrategy,
-} from './router-types';
+
+import type { SkippedKeyEntry, RouterDecision, RoutingStrategy } from './router-types';
 import { getEffectiveWeights } from './router-scoring';
 import type { WeightProfile } from '../types/routing-types';
 

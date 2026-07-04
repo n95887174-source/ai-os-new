@@ -353,10 +353,11 @@ export class KeyService implements IKeyRotationManager {
             this.deps.eventBus.on(EVENTS.KEY_REMOVED, async (id: unknown) => {
                 if (typeof id === 'string') {
                     try {
-                        const { dexieDb } = await import('../database-service');
-                        const notes = await dexieDb.notes.where('keyId').equals(id).toArray();
+                        const { getDexieDb } = await import('../database-service');
+                        const db = getDexieDb();
+                        const notes = await db.notes.where('keyId').equals(id).toArray();
                         if (notes.length > 0) {
-                            await dexieDb.notes.bulkDelete(notes.map((n) => n.id!));
+                            await db.notes.bulkDelete(notes.map((n) => n.id!));
                         }
                     } catch {
                         /* note cleanup is best-effort */
@@ -449,7 +450,6 @@ export class KeyService implements IKeyRotationManager {
 
     // C-07: leading=true fires first update immediately, coalesces rapid subsequent calls
     private notify = debounce(this.emitKeyUpdate, 100, true);
-    private notifyImmediate = this.emitKeyUpdate;
 
     // -- Vault ----------------------------------------------------------
 

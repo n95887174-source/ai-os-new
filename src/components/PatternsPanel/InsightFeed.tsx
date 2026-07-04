@@ -1,4 +1,3 @@
-import React from 'react';
 import { Lightbulb, Zap, Shield, GitBranch } from 'lucide-react';
 import { t } from '../../i18n/translations';
 

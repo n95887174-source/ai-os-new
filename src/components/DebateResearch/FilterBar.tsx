@@ -1,4 +1,3 @@
-import React from 'react';
 import { List } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CATEGORY_CONFIG, STATUS_CONFIG } from './hypothesis-constants';

@@ -1,6 +1,6 @@
 import type { ITransaction } from './transaction';
 import type { TopologyType, DebatePhase, AgentPhase, TimelineEntry } from './debate-types';
-export type { TimelineEntry } from './debate-types';
+export type { TimelineEntry, DebatePhase, TopologyType, AgentPhase } from './debate-types';
 
 // ── Topology ────────────────────────────────────────────────────────────
 

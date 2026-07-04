@@ -1,4 +1,3 @@
-import React from 'react';
 import { scoreColor } from './obs-gaps-constants';
 
 interface Props {

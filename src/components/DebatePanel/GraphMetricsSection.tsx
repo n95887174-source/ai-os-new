@@ -1,7 +1,6 @@
-import React from 'react';
 import { GitBranch } from 'lucide-react';
 import type { DebateSession } from '../../kernel/instances';
-import { glassPanelRounded24, flexColGap3MarginTop3, textXsSubtle } from '../../styles/common';
+import { glassPanelRounded24 } from '../../styles/common';
 import { badgeGreen, badgeAmber, badgeRed, badgePink, badgeBlue } from './debate-analytics-badges';
 
 interface GraphMetricsSectionProps {

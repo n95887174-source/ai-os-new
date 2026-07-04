@@ -1,4 +1,3 @@
-import React from 'react';
 import { Cpu, Play, RotateCcw, Loader2 } from 'lucide-react';
 import { glassCard, flexBetweenMb1, flexCenterGap2 } from '../../styles/common';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Cpu, Shield, TrendingUp } from 'lucide-react';
 import { t } from '../../i18n/translations';
 

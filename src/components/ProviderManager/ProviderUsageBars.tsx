@@ -1,4 +1,3 @@
-import React from 'react';
 import { flexCenterGap6px } from '../../styles/common';
 import type { ApiKey } from '../../types/metrics';
 

@@ -6,40 +6,74 @@
  * (foundation → infrastructure → debate-runtime → agents-roles →
  * routing-llm → high-level) because later phases depend on services
  * registered by earlier ones.
+ *
+ * A-04 refactor: All services now use registerFactory (lazy instantiation)
+ * instead of register (eager).  This makes services:
+ *   1. Lazy — not created until first get()
+ *   2. Overridable — container.override('name', mockImpl) in tests
+ *   3. Mockable — no module-level singletons to mock
+ *
+ * registerWithLifecycle is called lazily on first get(), so the actual
+ * instance is available for init()/start().
  */
 import type { IContainer } from '../container';
 import type { IEventBus } from '../types/interfaces';
 import { rootLogger } from '../services/logger-service';
+import { invalidateLazyServiceNotFound } from '../service-helper';
 
 const LOGGER = rootLogger.child('ServiceRegistration');
 
 export interface PhaseContext {
-  container: IContainer;
-  eventBus: IEventBus;
-  registerWithLifecycle: (name: string, instance: unknown) => void;
+    container: IContainer;
+    eventBus: IEventBus;
+    registerWithLifecycle: (name: string, instance: unknown) => void;
 }
+
+const _pendingLifecycle = new Map<string, unknown>();
 
 /**
  * Phase-local register/get/asDeps closures.  Calling `makeHelpers`
  * inside a phase file keeps the closure variables out of module scope
  * while still letting each phase share the same idioms.
+ *
+ * A-04: register() now wraps in registerFactory — services are lazy,
+ * not instantiated until first container.get().
  */
 export function makeHelpers(ctx: PhaseContext) {
-  const register = <T>(name: string, instance: T): void => {
-    if (!ctx.container.has(name)) {
-      ctx.container.register(name, instance);
-      ctx.registerWithLifecycle(name, instance);
-    }
-  };
-  const get = <T>(name: string): T => ctx.container.get<T>(name);
-  const asDeps = <T>(value: unknown): T => {
-    // SR-2: In dev mode, warn if value is missing expected properties
-    if (typeof value !== 'object' || value === null) {
-      LOGGER.warn('ServiceRegistration', 'asDeps() received non-object', { value });
-    }
-    return value as T;
-  };
-  return { register, get, asDeps };
+    /**
+     * Register a service lazily via registerFactory.
+     *
+     * The factory function `(c) => new ConcreteClass(...)` is NOT
+     * executed until the first `container.get(name)`.  This enables:
+     *   - container.override(name, mockFactory) in tests
+     *   - Circular-dependency-safe bootstrap (no eager instantiation chain)
+     *   - Lazy init — actual instance passed to registerWithLifecycle
+     *     only after first get(), so LifecycleManager can call init()/start()
+     */
+    const register = <T>(name: string, factory: (c: IContainer) => T): void => {
+        if (ctx.container.has(name)) return;
+
+        ctx.container.registerFactory(name, (c: IContainer) => {
+            // First get() — create and register with lifecycle
+            const instance = factory(c);
+            _pendingLifecycle.set(name, instance);
+            ctx.registerWithLifecycle(name, instance);
+            invalidateLazyServiceNotFound(name);
+            return instance;
+        });
+    };
+
+    const get = <T>(name: string): T => ctx.container.get<T>(name);
+
+    const asDeps = <T>(value: unknown): T => {
+        // SR-2: In dev mode, warn if value is missing expected properties
+        if (typeof value !== 'object' || value === null) {
+            LOGGER.warn('ServiceRegistration', 'asDeps() received non-object', { value });
+        }
+        return value as T;
+    };
+
+    return { register, get, asDeps };
 }
 
 export type PhaseHelpers = ReturnType<typeof makeHelpers>;

@@ -1,4 +1,4 @@
-import type { IDatabaseService } from '../types/interfaces';
+import type { IDatabaseService, ISecurityService } from '../types/interfaces';
 import type { KeyStore } from '../contracts/storage/key-store';
 import type { ApiKey } from '../types/metrics-types';
 import { rootLogger } from '../services/logger-service';
@@ -13,6 +13,7 @@ const DB_BLOB_KEY = 'sqlite_db_blob';
 interface MigrationDeps {
     db: IDatabaseService;
     keyStore: KeyStore;
+    securityService?: ISecurityService;
 }
 
 function readRawFromLocalStorage(key: string): string | null {
@@ -109,18 +110,63 @@ export async function runOnce(deps: MigrationDeps): Promise<{ migrated: number; 
     }
 
     const deduped = dedupKeys(allKeys);
-    await deps.keyStore.bulkPut(deduped);
-    await deps.db.setKv(MIGRATION_FLAG, { done: true, timestamp: Date.now() });
+    let encryptedCount = 0;
+    let skippedCount = 0;
 
-    LOGGER.info('KeyMigration', 'Migration complete', {
-        totalSources: allKeys.length,
-        afterDedup: deduped.length,
-        sources: {
-            localStorage: localKeys.length,
-            sqliteBlob: blobKeys.length,
-            dexie: dexieKeys.length,
-        },
-    });
+    for (const k of deduped) {
+        if (k.isEncrypted) continue;
+        if (!k.key) continue;
 
-    return { migrated: deduped.length, source: 'migration-v12' };
+        if (deps.securityService && !deps.securityService.isLocked()) {
+            const encrypted = await deps.securityService.encrypt(k.key);
+            if (encrypted) {
+                k.key = encrypted;
+                k.isEncrypted = true;
+                encryptedCount++;
+            } else {
+                skippedCount++;
+            }
+        } else {
+            skippedCount++;
+        }
+    }
+
+    const persistable = deduped.filter((k) => k.isEncrypted || !k.key);
+
+    if (persistable.length > 0) {
+        await deps.keyStore.bulkPut(persistable);
+    }
+
+    if (skippedCount > 0) {
+        LOGGER.warn('KeyMigration', 'Skipped plaintext keys — vault was locked', {
+            skipped: skippedCount,
+        });
+    }
+
+    if (skippedCount === 0) {
+        await deps.db.setKv(MIGRATION_FLAG, { done: true, timestamp: Date.now() });
+        LOGGER.info('KeyMigration', 'Migration complete', {
+            totalSources: allKeys.length,
+            afterDedup: deduped.length,
+            encrypted: encryptedCount,
+            persisted: persistable.length,
+            sources: {
+                localStorage: localKeys.length,
+                sqliteBlob: blobKeys.length,
+                dexie: dexieKeys.length,
+            },
+        });
+    } else {
+        await deps.db.setKv(MIGRATION_FLAG, {
+            done: false,
+            timestamp: Date.now(),
+            pending: skippedCount,
+        });
+        LOGGER.warn('KeyMigration', 'Migration deferred — vault locked', {
+            encrypted: encryptedCount,
+            skipped: skippedCount,
+        });
+    }
+
+    return { migrated: persistable.length, source: 'migration-v12' };
 }

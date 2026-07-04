@@ -1,4 +1,3 @@
-import React from 'react';
 import { t } from '../../i18n/translations';
 import { metricCardCenter, labelMetricSub } from '../../styles/common';
 

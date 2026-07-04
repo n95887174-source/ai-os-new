@@ -1,4 +1,4 @@
-import type { IEventBus, IDatabaseService } from './types/interfaces';
+import type { IEventBus, IDatabaseService, ISecurityService } from './types/interfaces';
 import type { IContainer } from './container';
 import type { StorageLayer } from './contracts/storage/storage-layer';
 import type { ApiKey } from './types/metrics-types';
@@ -13,7 +13,10 @@ export async function runKeyMigration(container: IContainer, logger: LoggerServi
         const { runOnce } = await import('./dal/key-migration');
         const db = container.get<IDatabaseService>('database');
         const storageMig = container.get<StorageLayer>('storageLayer');
-        await runOnce({ db, keyStore: storageMig.keys });
+        const securityService = container.has('securityService')
+            ? container.get<ISecurityService>('securityService')
+            : undefined;
+        await runOnce({ db, keyStore: storageMig.keys, securityService });
     } catch (e) {
         logger.warn('Bootstrap', 'Key migration failed (non-critical)', { error: e });
     }

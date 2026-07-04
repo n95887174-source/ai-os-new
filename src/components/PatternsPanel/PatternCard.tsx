@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { providerColors } from './pattern-constants';
 import type { PatternNote } from './pattern-constants';

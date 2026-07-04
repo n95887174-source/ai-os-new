@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const scoreColor = (pct: number) =>
     pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';

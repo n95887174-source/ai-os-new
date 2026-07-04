@@ -1,4 +1,4 @@
-import type { ApiKey, RouterWeights, SystemState } from '../types/metrics-types';
+import type { ApiKey, SystemState } from '../types/metrics-types';
 import type { RouterConfig, WeightProfile } from '../types/routing-types';
 import type { ProbeResult } from '../contracts/probe';
 import type { IKeyStateStore } from '../contracts/key-state';

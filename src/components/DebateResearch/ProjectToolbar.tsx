@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, ArrowUpDown, Eye, EyeOff, BarChart3, X, Loader2 } from 'lucide-react';
 import { FILTER_DIRS, FILTER_ICONS } from './project-os-utils';
 import type { FilterKey, SortKey } from './project-os-utils';
@@ -21,7 +20,7 @@ const ProjectToolbar: React.FC<Props> = ({
     filter,
     sortBy,
     showSensitive,
-    showStats,
+    showStats: _showStats,
     searchQuery,
     searching,
     onSetFilter,

@@ -1,4 +1,3 @@
-import React from 'react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { PersonalityBadge } from '../ProviderManager/PersonalityBadge';
 

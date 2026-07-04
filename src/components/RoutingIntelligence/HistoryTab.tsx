@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowRight, Info, TrendingUp, Zap, DollarSign, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -466,7 +465,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                     lineHeight: 1.8,
                                 }}
                             >
-                                {getExplanation(selected).map((line, _i) => (
+                                {getExplanation(selected).map((line, i) => (
                                     <li key={`${line}-${i}`}>{line}</li>
                                 ))}
                             </ul>

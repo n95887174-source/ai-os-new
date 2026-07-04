@@ -1,4 +1,3 @@
-import React from 'react';
 import { Brain } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { CognitiveMetricsSnapshot } from '../../kernel/instances';

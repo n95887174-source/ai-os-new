@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Database } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';

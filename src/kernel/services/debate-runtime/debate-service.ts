@@ -76,7 +76,12 @@ export function getRuntimeSessionId(): string | null {
 
 export async function init() {
     if (!_deps) return;
-    _syncManager.activeSession = await loadActiveSession(_deps.debateStore);
+    const loaded = await loadActiveSession(_deps.debateStore);
+    _syncManager.activeSession = loaded;
+    if (loaded) {
+        const { setActiveDebateSession } = await import('./active-debate-store');
+        setActiveDebateSession(loaded);
+    }
     _deps.eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
         const payload = data as { sessionId: string; verdict: DebateVerdict };
         setCachedVerdict(payload.sessionId, payload.verdict);

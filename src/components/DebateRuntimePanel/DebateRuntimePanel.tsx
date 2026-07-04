@@ -14,7 +14,6 @@ import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type {
     DebateSessionSnapshot,
-    DebatePhase,
     TopologyType,
     TopologyNode,
     DebateTopology,
@@ -46,7 +45,6 @@ import {
     debateRuntimeTitle,
     errorContainer,
     flexBetween,
-    flexColGap3,
     grid2,
     purpleBorderSection,
 } from '../../styles/common';
@@ -149,11 +147,20 @@ const DebateRuntimePanel: React.FC = () => {
                     const streamKey = `streaming-${d.agentId}`;
                     const existing = argsRef.current.get(d.sessionId) || [];
                     const streamIdx = existing.findIndex((a) => a.id === streamKey);
+                    // D-H-16: Resolve real round and position from session snapshot
+                    const snap = debateEngine.getSession(d.sessionId);
+                    const realRound = snap?.round ?? 1;
+                    const realPosition = (snap?.participants?.find(
+                        (p: { agentId?: string; nodeId?: string; role?: string }) =>
+                            p.agentId === d.agentId || p.nodeId === d.agentId,
+                    )?.role ?? 'neutral') as DebateArgument['position'];
                     if (streamIdx >= 0) {
                         const updated = [...existing];
                         updated[streamIdx] = {
                             ...updated[streamIdx],
                             content: updated[streamIdx].content + d.chunk,
+                            round: realRound,
+                            position: realPosition,
                         };
                         const next = new Map(argsRef.current);
                         next.set(d.sessionId, updated);
@@ -167,8 +174,8 @@ const DebateRuntimePanel: React.FC = () => {
                             content: d.chunk,
                             confidence: 0.5,
                             timestamp: Date.now(),
-                            round: 1,
-                            position: 'neutral',
+                            round: realRound,
+                            position: realPosition,
                             source: 'llm',
                         };
                         const next = new Map(argsRef.current);
@@ -184,6 +191,13 @@ const DebateRuntimePanel: React.FC = () => {
                     const existing = argsRef.current.get(d.sessionId) || [];
                     const streamKey = `streaming-${d.agentId}`;
                     const clean = existing.filter((a) => a.id !== streamKey);
+                    // D-H-16: Resolve real round and position from session snapshot
+                    const snap = debateEngine.getSession(d.sessionId);
+                    const realRound = snap?.round ?? 1;
+                    const realPosition = (snap?.participants?.find(
+                        (p: { agentId?: string; nodeId?: string; role?: string }) =>
+                            p.agentId === d.agentId || p.nodeId === d.agentId,
+                    )?.role ?? 'neutral') as DebateArgument['position'];
                     const arg: DebateArgument = {
                         id: `runtime-${Date.now()}-${clean.length}`,
                         agentId: d.agentId,
@@ -191,8 +205,8 @@ const DebateRuntimePanel: React.FC = () => {
                         content: d.content,
                         confidence: 0.7,
                         timestamp: Date.now(),
-                        round: 1,
-                        position: 'neutral',
+                        round: realRound,
+                        position: realPosition,
                         source: 'llm',
                     };
                     const next = new Map(argsRef.current);

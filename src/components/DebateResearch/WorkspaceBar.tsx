@@ -1,4 +1,3 @@
-import React from 'react';
 import { HardDrive, X } from 'lucide-react';
 
 interface WorkspaceBarProps {

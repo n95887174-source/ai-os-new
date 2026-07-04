@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertCircle, AlertTriangle, Info, Layers } from 'lucide-react';
 import { typeColor } from './arch-review-utils';
 

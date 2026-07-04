@@ -1,4 +1,3 @@
-import React from 'react';
 import { SEVERITY_CONFIG } from './sre-constants';
 import type { SREAlert } from './sre-constants';
 

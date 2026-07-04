@@ -1,4 +1,3 @@
-import React from 'react';
 import type { AuditedAgentPrompt } from '../../kernel/contracts/prompt-audit';
 import { GROUP_COLORS } from './prompt-audit-constants';
 

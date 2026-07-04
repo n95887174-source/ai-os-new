@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Bot, TrendingUp, Shield } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
 import { emptyStateCenter, emptyStateTitle } from '../../styles/common';
 import { advisorService } from '../../kernel/instances';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Server, Share2, Globe } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 

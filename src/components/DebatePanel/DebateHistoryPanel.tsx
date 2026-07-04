@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { ChevronsDown } from 'lucide-react';
 import type { DebateSession } from '../../kernel/instances';
 import { sessionManager } from '../../kernel/instances';
@@ -107,6 +107,7 @@ const DebateHistoryPanel: React.FC<DebateHistoryPanelProps> = ({
                             isExpanded={expandedHistory.has(h.id)}
                             onToggleExpand={() => onToggleExpand(h.id)}
                             onRestore={handleRestore}
+                            onArchive={() => {}}
                             onDelete={handleDelete}
                             onRefresh={onRefresh}
                             sessionManager={sessionManager}

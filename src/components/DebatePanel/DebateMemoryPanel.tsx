@@ -3,15 +3,11 @@ import { Search, Brain } from 'lucide-react';
 import { debateHumanService } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';
-import {
-    CONCLUSION_LABELS,
-    computeStats,
-    findRelated,
-    getCurrentSessions,
-} from './debate-memory-helpers';
+import { computeStats, findRelated, getCurrentSessions } from './debate-memory-helpers';
 import DebateMemoryStats from './DebateMemoryStats';
 import RelatedDebates from './RelatedDebates';
 import DebateSessionCard from './DebateSessionCard';
+import type { DebateSession } from '../../kernel/contracts/debate-types';
 
 interface DebateMemoryPanelProps {
     onSelectSession?: (sessionId: string) => void;
@@ -44,10 +40,12 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
                     (s.arguments ?? []).some((a) => a.content.toLowerCase().includes(q)),
             );
         }
-        // FIXME: DebateSession has no conclusionType field; type filter requires adding conclusionType to DebateSession
+        // D-C-12: Filter by session status (conclusionType does not exist on DebateSession)
+        if (selectedType !== 'all') {
+            result = result.filter((s) => s.status === selectedType);
+        }
         return result.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-         
-    }, [sessions, searchQuery]);
+    }, [sessions, searchQuery, selectedType]);
 
     const stats = useMemo(() => computeStats(sessions), [sessions]);
 
@@ -166,12 +164,12 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
                         fontSize: '0.75rem',
                     }}
                 >
-                    <option value="all">All Types</option>
-                    {Object.entries(CONCLUSION_LABELS).map(([key, label]) => (
-                        <option key={key} value={key}>
-                            {label}
-                        </option>
-                    ))}
+                    <option value="all">All Statuses</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
                 </select>
             </div>
 

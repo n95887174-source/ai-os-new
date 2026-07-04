@@ -1,4 +1,3 @@
-import React from 'react';
 import { Settings2 } from 'lucide-react';
 import { glassPanel, sectionHeader, textXsSecondary } from '../../styles/common';
 

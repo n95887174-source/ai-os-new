@@ -67,7 +67,7 @@ async function getLinkedIds(id: string): Promise<string[]> {
 function toMeta(r: DebateRecord, linkedIds?: string[]): DebateSessionMeta {
     let p: DebateParticipant[];
     try {
-        p = safeJsonParse(r.participants || '[]');
+        p = (safeJsonParse(r.participants || '[]') as DebateParticipant[]) ?? [];
     } catch {
         p = [];
     }
@@ -97,19 +97,20 @@ async function loadFull(id: string): Promise<DebateSession | null> {
         let args: unknown[] = [];
         let parts: unknown[] = [];
         try {
-            args = safeJsonParse(r.arguments || '[]');
+            args = (safeJsonParse(r.arguments || '[]') as unknown[]) ?? [];
         } catch {
             args = [];
         }
         try {
-            parts = safeJsonParse(r.participants || '[]');
+            parts = (safeJsonParse(r.participants || '[]') as unknown[]) ?? [];
         } catch {
             parts = [];
         }
         let storedConfig: Record<string, unknown> = {};
         try {
-            const topology = safeJsonParse(r.topology || '{}');
-            storedConfig = (topology.config || topology) as Record<string, unknown>;
+            const topology = safeJsonParse(r.topology || '{}') as
+                Record<string, unknown> | undefined;
+            storedConfig = ((topology?.config || topology) as Record<string, unknown>) ?? {};
         } catch {
             /* ignore parse errors */
         }

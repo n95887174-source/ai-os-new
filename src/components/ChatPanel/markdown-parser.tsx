@@ -1,4 +1,3 @@
-import React from 'react';
 import { inlineMarkdown } from './inline-markdown';
 
 export function parseTable(tableLines: string[], key: string): React.ReactNode {

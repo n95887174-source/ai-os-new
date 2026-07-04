@@ -3,6 +3,8 @@
  *
  * Services that depend on Phase 1 (settings, pricing, keyService, kernel,
  * eventBus) but not on memory/cognitive or debate.
+ *
+ * A-04: All services now use registerFactory (lazy instantiation).
  */
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
@@ -27,75 +29,67 @@ import { CognitiveService, type CognitiveServiceDeps } from '../services/cogniti
 import type { StorageLayer } from '../contracts/storage/storage-layer';
 
 export const registerPhase2: Phase = (helpers, ctx) => {
-    const { register, get, asDeps } = helpers;
+    const { register, asDeps } = helpers;
 
-    register(
-        'sessionAffinityStore',
-        new SessionAffinityStore(get<IEventBus>('eventBus'), get<KeyStateStore>('keyStateStore')),
+    register('sessionAffinityStore', (c) =>
+        new SessionAffinityStore(c.get<IEventBus>('eventBus'), c.get<KeyStateStore>('keyStateStore')),
     );
 
-    register(
-        'chatBookmarksService',
+    register('chatBookmarksService', (c) =>
         new ChatBookmarksService({
-            eventBus: get<IEventBus>('eventBus'),
-            database: get<IDatabaseService>('database'),
-            logger: get<LoggerService>('logger'),
+            eventBus: c.get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
+            logger: c.get<LoggerService>('logger'),
         }),
     );
 
-    register(
-        'agentJournalService',
+    register('agentJournalService', (c) =>
         new AgentJournalService({
-            eventBus: get<IEventBus>('eventBus'),
-            database: get<IDatabaseService>('database'),
-            logger: get<LoggerService>('logger'),
+            eventBus: c.get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
+            logger: c.get<LoggerService>('logger'),
         }),
     );
 
-    register(
-        'systemStatusService',
+    register('systemStatusService', (c) =>
         new SystemStatusService({
-            groupManager: get<GroupManagerService>('groupManagerService'),
-            keyService: get<KeyService>('keyService'),
-            keyStateStore: get<KeyStateStore>('keyStateStore'),
+            groupManager: c.get<GroupManagerService>('groupManagerService'),
+            keyService: c.get<KeyService>('keyService'),
+            keyStateStore: c.get<KeyStateStore>('keyStateStore'),
         }),
     );
 
-    register(
-        'rotationService',
+    register('rotationService', (c) =>
         new RotationService(
             asDeps<ConstructorParameters<typeof RotationService>[0]>({
-                keyManager: get<KeyService>('keyService'),
-                eventBus: get<IEventBus>('eventBus'),
-                adapterRegistry: get<ProviderAdapterRegistry>('providerAdapterRegistry'),
-                logger: get<LoggerService>('logger'),
-                groupManager: get<GroupManagerService>('groupManagerService'),
+                keyManager: c.get<KeyService>('keyService'),
+                eventBus: c.get<IEventBus>('eventBus'),
+                adapterRegistry: c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
+                logger: c.get<LoggerService>('logger'),
+                groupManager: c.get<GroupManagerService>('groupManagerService'),
             }),
         ),
     );
 
-    register(
-        'policyService',
+    register('policyService', (c) =>
         new PolicyService({
-            database: get<IDatabaseService>('database'),
-            eventBus: get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
+            eventBus: c.get<IEventBus>('eventBus'),
         }),
     );
 
-    register(
-        'toolService',
+    register('toolService', (c) =>
         new ToolService({
-            database: get<IDatabaseService>('database'),
-            eventBus: get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
+            eventBus: c.get<IEventBus>('eventBus'),
         }),
     );
 
-    register(
-        'memoryService',
+    register('memoryService', (c) =>
         new MemoryService(
             asDeps<ConstructorParameters<typeof MemoryService>[0]>({
-                database: get<IDatabaseService>('database'),
-                eventBus: get<IEventBus>('eventBus'),
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
                 executionGovernor: (() => {
                     try {
                         return ctx.container.get<IExecutionGovernor>('executionGovernor');
@@ -107,48 +101,49 @@ export const registerPhase2: Phase = (helpers, ctx) => {
         ),
     );
 
-    register(
-        'externalSecretsService',
+    register('externalSecretsService', (c) =>
         new ExternalSecretsService({
-            database: get<IDatabaseService>('database'),
-            eventBus: get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
+            eventBus: c.get<IEventBus>('eventBus'),
         }),
     );
 
-    const blackboardService = new BlackboardService({ eventBus: get<IEventBus>('eventBus') });
-    register('blackboardService', blackboardService);
-
-    const storageLayer = get<StorageLayer>('storageLayer');
-    register(
-        'cognitiveService',
-        new CognitiveService({
-            traceStore:
-                storageLayer?.traces ??
-                ({
-                    saveTrace: async () => {},
-                    getTrace: async () => null,
-                    queryTraces: async () => [],
-                    deleteTrace: async () => {},
-                    count: async () => 0,
-                    bulkPut: async () => {},
-                    clear: async () => {},
-                    exportAll: async () => '[]',
-                    importAll: async () => {},
-                } as TraceStore),
-            eventBus: get<IEventBus>('eventBus'),
-            get routerService() {
-                return get<CognitiveServiceDeps['routerService']>('routerService');
-            },
-            get keyService() {
-                return get<CognitiveServiceDeps['keyService']>('keyService');
-            },
-            get roleService() {
-                return get<CognitiveServiceDeps['roleService']>('roleService');
-            },
-            get adapterRegistry() {
-                return get<CognitiveServiceDeps['adapterRegistry']>('providerAdapterRegistry');
-            },
-            blackboardService,
-        }),
-    );
+    // A-04: blackboardService created inside factory so it can be passed to cognitiveService
+    register('blackboardService', (c) => {
+        const bs = new BlackboardService({ eventBus: c.get<IEventBus>('eventBus') });
+        // Register cognitiveService here, after blackboardService exists
+        const storageLayer = ctx.container.get<StorageLayer>('storageLayer');
+        register('cognitiveService', (_c) =>
+            new CognitiveService({
+                traceStore:
+                    storageLayer?.traces ??
+                    ({
+                        saveTrace: async () => {},
+                        getTrace: async () => null,
+                        queryTraces: async () => [],
+                        deleteTrace: async () => {},
+                        count: async () => 0,
+                        bulkPut: async () => {},
+                        clear: async () => {},
+                        exportAll: async () => '[]',
+                        importAll: async () => {},
+                    } as TraceStore),
+                eventBus: _c.get<IEventBus>('eventBus'),
+                get routerService() {
+                    return _c.get<CognitiveServiceDeps['routerService']>('routerService');
+                },
+                get keyService() {
+                    return _c.get<CognitiveServiceDeps['keyService']>('keyService');
+                },
+                get roleService() {
+                    return _c.get<CognitiveServiceDeps['roleService']>('roleService');
+                },
+                get adapterRegistry() {
+                    return _c.get<CognitiveServiceDeps['adapterRegistry']>('providerAdapterRegistry');
+                },
+                blackboardService: bs,
+            }),
+        );
+        return bs;
+    });
 };

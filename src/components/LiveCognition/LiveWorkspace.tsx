@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Terminal, Network, Brain, AlertTriangle, X } from 'lucide-react';
+import { Network, Brain, AlertTriangle, X } from 'lucide-react';
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
 import { adminService, kernel } from '../../kernel/instances';

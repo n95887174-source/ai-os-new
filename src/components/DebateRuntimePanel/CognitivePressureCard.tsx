@@ -1,4 +1,3 @@
-import React from 'react';
 import { Thermometer } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { CognitivePressure, PressureLevel } from '../../kernel/instances';

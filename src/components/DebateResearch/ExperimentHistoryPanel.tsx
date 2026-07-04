@@ -1,4 +1,3 @@
-import React from 'react';
 import { BarChart3, Trash2, Cpu } from 'lucide-react';
 import type { RoutingExperimentRun } from '../../kernel/contracts/routing-experiments';
 
@@ -15,7 +14,7 @@ const ExperimentHistoryPanel: React.FC<Props> = ({
     results,
     onLoad,
     onDelete,
-    onClose,
+    onClose: _onClose,
 }) => (
     <div
         style={{

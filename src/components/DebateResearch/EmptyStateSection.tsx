@@ -1,4 +1,3 @@
-import React from 'react';
 import { FolderOpen, Code } from 'lucide-react';
 
 interface Props {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ThumbsUp, BarChart3 } from 'lucide-react';
 import type { HumanVote } from '../../kernel/contracts';
 import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';

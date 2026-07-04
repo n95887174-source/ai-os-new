@@ -1,4 +1,3 @@
-import React from 'react';
 import { Webhook } from 'lucide-react';
 import { notificationWebhookService } from '../../kernel/instances';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../kernel/instances';

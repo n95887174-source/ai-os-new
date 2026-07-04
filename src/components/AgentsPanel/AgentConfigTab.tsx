@@ -1,4 +1,3 @@
-import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { PromptOptimizer } from '../../kernel/services/prompt-optimizer';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';

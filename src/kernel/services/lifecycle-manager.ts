@@ -66,7 +66,7 @@ export class LifecycleManager {
         this.statuses = [];
     }
 
-    async tryInit(name: string, fn: () => Promise<void> | void, retries = 2): Promise<boolean> {
+    async tryInit(name: string, fn: () => Promise<void> | void, retries = 3): Promise<boolean> {
         const maxAttempts = 1 + retries;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
@@ -75,10 +75,13 @@ export class LifecycleManager {
                 return true;
             } catch (e) {
                 if (attempt < maxAttempts) {
+                    const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
                     LOGGER.warn(
                         'LifecycleManager',
-                        `${name} init attempt ${attempt}/${maxAttempts} failed, retrying...`,
+                        `${name} init attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`,
+                        { error: e },
                     );
+                    await new Promise((resolve) => setTimeout(resolve, delayMs));
                 } else {
                     const msg = e instanceof Error ? e.message : String(e);
                     this.statuses.push({ name, status: 'error', error: msg });

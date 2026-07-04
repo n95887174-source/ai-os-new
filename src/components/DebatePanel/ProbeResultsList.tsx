@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import { textSecondaryItalic } from '../../styles/common';
 

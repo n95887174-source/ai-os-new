@@ -1,8 +1,7 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PlayCircle, Braces, Shield, Cpu, Play, Key, Globe } from 'lucide-react';
 import type { ToolDefinition } from '../../kernel/instances';
-import { labelUppercaseBold } from '../../styles/common';
+
 import { ToolSandboxTab } from './ToolSandboxTab';
 import { ToolSchemaTab } from './ToolSchemaTab';
 import { ToolSecurityTab } from './ToolSecurityTab';

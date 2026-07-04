@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Plus, RefreshCw, Activity, DollarSign, Zap, Download, Upload, Loader2, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

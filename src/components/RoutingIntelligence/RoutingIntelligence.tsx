@@ -1,48 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import {
-    GitBranch,
-    ArrowRight,
-    Info,
-    TrendingUp,
-    Zap,
-    Activity,
-    DollarSign,
-    Shield,
-    Settings2,
-    Plus,
-    Trash2,
-    Save,
-    ChevronDown,
-    Scale,
-    FlaskConical,
-    Play,
-    Square,
-    SlidersHorizontal,
-    RotateCcw,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { GitBranch, Activity, Settings2, FlaskConical } from 'lucide-react';
 import { useRoutingIntelligence } from '../../hooks/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
 import type { RouterDecision } from '../../kernel/services/provider-router';
 import { useTranslation } from '../../i18n/useTranslation';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import MetricBar from './MetricBar';
-import WeightTunerInner from './WeightTunerInner';
 import ABTestPanel from './ABTestPanel';
 import DecisionTreeTab from './DecisionTreeTab';
 import HistoryTab from './HistoryTab';
 import AdvancedTab from './AdvancedTab';
-import type { ABTestConfig } from '../../kernel/types/routing-types';
-
-import {
-    flexCenterGap4,
-    flexColGap2,
-    tabBase,
-    textSecondary,
-    textXsMuted,
-    textXxsMuted,
-} from '../../styles/common';
-import { STRATEGY_LABELS, providerColor, scoreBreakdown, getExplanation } from './routing-utils';
+import { flexCenterGap4, tabBase } from '../../styles/common';
 
 const RoutingIntelligence: React.FC = () => {
     const [selected, setSelected] = useState<RouterDecision | null>(null);

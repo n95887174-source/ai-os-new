@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, Brain, Circle, Thermometer } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';

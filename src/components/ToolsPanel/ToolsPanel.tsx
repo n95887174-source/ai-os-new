@@ -139,9 +139,9 @@ const ToolsPanel: React.FC = () => {
         setError(null);
 
         try {
-            let parsedParams = {};
+            let parsedParams: Record<string, unknown> = {};
             try {
-                parsedParams = safeJsonParse(testParams);
+                parsedParams = (safeJsonParse(testParams) as Record<string, unknown>) ?? {};
             } catch (parseErr) {
                 setTestOutput(`Error: Invalid JSON parameters.\n${(parseErr as Error).message}`);
                 setIsExecuting(false);
@@ -335,7 +335,7 @@ const ToolsPanel: React.FC = () => {
                                     padding: '4rem 0',
                                 }}
                             >
-                                <Blocks size={56} opacity={0.2} aria-hidden="true" />
+                                <Wrench size={56} opacity={0.2} aria-hidden="true" />
                                 <span style={{ fontSize: '1rem', fontWeight: 600 }}>
                                     {searchQuery || typeFilter !== 'all'
                                         ? t('tools.empty_filter')
@@ -406,3 +406,5 @@ const ToolsPanel: React.FC = () => {
 };
 
 export default ToolsPanel;
+
+

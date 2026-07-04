@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { CognitiveIssue } from '../../kernel/instances';

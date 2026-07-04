@@ -1,4 +1,3 @@
-import React from 'react';
 import { FolderOpen, Zap } from 'lucide-react';
 
 interface EmptyAttachStateProps {
@@ -6,7 +5,7 @@ interface EmptyAttachStateProps {
     t: (key: string) => string;
 }
 
-const EmptyAttachState: React.FC<EmptyAttachStateProps> = ({ onAttach, t }) => (
+const EmptyAttachState: React.FC<EmptyAttachStateProps> = ({ onAttach, t: _t }) => (
     <div
         style={{
             flex: 1,

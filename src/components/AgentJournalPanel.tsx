@@ -12,12 +12,12 @@ import {
     CheckCircle2,
     Loader2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { eventBus, EVENTS, type EventMap } from '../kernel/events/event-bus';
 import { database } from '../kernel/instances';
-import { AgentJournalService } from '../kernel/services/agent-journal-service';
-import { errorContainer, dismissBtnRed, textMutedXs } from '../styles/common';
+import { AgentJournalService, type JournalEntry } from '../kernel/services/agent-journal-service';
+import { errorContainer, dismissBtnRed } from '../styles/common';
 import { useConfirm } from '../hooks/useConfirm';
 import { StatMini } from './AgentJournalPanel/StatMini';
 import { JournalAddForm } from './AgentJournalPanel/JournalAddForm';
@@ -37,7 +37,7 @@ void service.init();
 const AgentJournalPanel: React.FC = () => {
     const { t } = useTranslation();
     const { confirm, ConfirmDialog } = useConfirm();
-    const [entries, setEntries] = useState<typeof service.listAll()>([]);
+    const [entries, setEntries] = useState<JournalEntry[]>([]);
     const [search, setSearch] = useState('');
     const [activeTag, setActiveTag] = useState<string | null>(null);
     const [activeAgent, setActiveAgent] = useState<string | null>(null);
@@ -47,7 +47,7 @@ const AgentJournalPanel: React.FC = () => {
         agentName: '',
         taskType: 'general',
         taskDescription: '',
-        outcome: 'success' as const,
+        outcome: 'success' as JournalEntry['outcome'],
         durationMs: 0,
         tokensUsed: 0,
         notes: '',

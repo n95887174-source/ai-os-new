@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Bot, CheckCircle2 } from 'lucide-react';
 import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';

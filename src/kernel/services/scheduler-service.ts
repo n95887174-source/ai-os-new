@@ -468,5 +468,10 @@ class SchedulerService {
     }
 }
 
-// Singleton instance
-export const schedulerService = new SchedulerService();
+// Singleton instance — created lazily in RuntimeManager.registerCoreServices
+// to ensure database is available from the start
+export let schedulerService: SchedulerService | null = null;
+export function initSchedulerService(db: IDatabaseService): SchedulerService {
+    if (!schedulerService) schedulerService = new SchedulerService(db);
+    return schedulerService;
+}

@@ -1,7 +1,6 @@
 import type {
     IResearchReportService,
     ResearchReport,
-    ReportSection,
     ReportFormat,
 } from '../contracts/research-report';
 

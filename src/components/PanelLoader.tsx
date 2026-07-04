@@ -1,4 +1,3 @@
-import React from 'react';
 import ErrorBoundary from './Common/ErrorBoundary';
 
 interface PanelLoaderProps {

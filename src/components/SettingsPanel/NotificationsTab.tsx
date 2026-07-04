@@ -1,4 +1,3 @@
-import React from 'react';
 import { Bell, Volume2, Activity, Route, Shield, Bot, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { SettingRow, Toggle } from './settings-shared';

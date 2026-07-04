@@ -61,21 +61,9 @@ export class EventBus implements IEventBus {
     private unsubCallbacks: Set<() => void> = new Set(); // H-06: track all unsubs for reset cleanup
     private _unsubWarned = false; // P0-2: one-shot warn flag for unsubCallbacks capacity
 
-    // P1-18: ring buffer of recent events for late-connecting subscribers
-    private static readonly REPLAY_BUFFER_SIZE = 100;
-    private static readonly REPLAY_SKIP_EVENTS = new Set([
-        'chat:stream:chunk',
-        'chat:stream:end',
-        'chat:stream:provider-switch',
-        'cognitive:trace:updated',
-        'cognitive:step:active',
-        'cognitive:step:completed',
-        'cognitive:decision:made',
-        'kernel:heartbeat',
-    ]);
-    private _replayBuffer: Array<{ event: string; data: unknown; timestamp: number }> = [];
-    private _replayHead = 0;
-    private _replayCount = 0;
+    // HIGH-K3: replay buffer removed — nobody called replay() and STREAM_END payloads
+    // (up to 1MB each × 100 = 100MB memory leak). If replay is needed later, implement with
+    // structuredClone + size cap. See git history for removed code.
 
     // PERF-C2: High-frequency events that skip Zod validation to avoid main-thread blocking
     // STREAM_CHUNK fires 50-200/sec during streaming; validation adds 5-50µs per call = significant overhead
@@ -136,9 +124,6 @@ export class EventBus implements IEventBus {
         this.emitCount = 0;
         this.emitDepth = 0;
         this._unsubWarned = false;
-        this._replayBuffer = [];
-        this._replayHead = 0;
-        this._replayCount = 0;
         this.logger?.warn('EventBus', 'clearAllSubscriptions');
     }
 
@@ -240,16 +225,8 @@ export class EventBus implements IEventBus {
             }
         }
 
-        // P1-18: store non-hot events in ring buffer for late-connecting subscribers
-        if (!EventBus.REPLAY_SKIP_EVENTS.has(eventStr)) {
-            this._replayBuffer[this._replayHead] = {
-                event: eventStr,
-                data: payload,
-                timestamp: Date.now(),
-            };
-            this._replayHead = (this._replayHead + 1) % EventBus.REPLAY_BUFFER_SIZE;
-            if (this._replayCount < EventBus.REPLAY_BUFFER_SIZE) this._replayCount++;
-        }
+        // HIGH-K3: replay buffer removed — nobody called replay() and STREAM_END payloads
+        // (up to 1MB each × 100 = 100MB memory leak). See git history for removed code.
 
         const trace = TraceContext.current;
         if (import.meta.env.DEV) {
@@ -271,44 +248,19 @@ export class EventBus implements IEventBus {
         };
     }
 
-    // P1-18: replay recent events for late-connecting subscribers
-    // Replays buffer entries where the event name matches filterEvent (or all if '*')
-    // into the callback. Returns the number of replayed events.
-    replay(filterEvent: string, callback: (data: unknown) => void): number {
-        let count = 0;
-        const total = this._replayCount;
-        const size = EventBus.REPLAY_BUFFER_SIZE;
-        if (total === 0) return 0;
-        // Walk the ring buffer from oldest to newest
-        const start = total < size ? 0 : this._replayHead;
-        const len = Math.min(total, size);
-        for (let i = 0; i < len; i++) {
-            const idx = (start + i) % size;
-            const entry = this._replayBuffer[idx];
-            if (!entry) continue;
-            if (filterEvent === '*' || entry.event === filterEvent) {
-                try {
-                    callback(entry.data);
-                    count++;
-                } catch {
-                    /* skip */
-                }
-            }
-        }
-        return count;
-    }
-
     subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
         return this.on('*', callback as Callback<EventMap['*']>);
     }
 
-    onSafe<T>(event: string, callback: (data: T) => void): () => void {
+    onSafe<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): () => void;
+    onSafe<T>(event: string, callback: (data: T) => void): () => void;
+    onSafe(event: string, callback: (data: unknown) => void): () => void {
         const validator = this.validatorMap.get(event);
         if (validator) {
             return this.on(event as keyof EventMap, (raw: unknown) => {
                 const result = validator.safeParse(raw);
                 if (result.success) {
-                    callback(result.data as T);
+                    callback(result.data);
                 } else {
                     this.logger?.debug('EventBus', 'onSafe dropped invalid payload', {
                         event,
@@ -317,7 +269,7 @@ export class EventBus implements IEventBus {
                 }
             });
         }
-        return this.on(event as keyof EventMap, (raw: unknown) => callback(raw as T));
+        return this.on(event as keyof EventMap, (raw: unknown) => callback(raw));
     }
 
     private deferCounts = new Map<string, number>();
@@ -372,8 +324,8 @@ export class EventBus implements IEventBus {
             return;
         }
 
-        // N-24: prevent infinite recursion when handler emits synchronously
-        if (this.emitDepth > 16) {
+        // N-24: prevent infinite recursion when handler emits synchronously (HIGH-K4: 16→32)
+        if (this.emitDepth > 32) {
             const count = (this.deferCounts.get(event) || 0) + 1;
             // P0-3: emit backpressure signal before dropping
             if (count > EventBus.MAX_DEFER_CHAIN) {
@@ -403,12 +355,13 @@ export class EventBus implements IEventBus {
                     `Recursion limit reached at ${event} — deferring (#${count})`,
                 );
             }
-            setTimeout(() => {
+            // HIGH-K4: queueMicrotask instead of setTimeout(0) — faster, fewer macrotasks
+            queueMicrotask(() => {
                 const remaining = (this.deferCounts.get(event) || 1) - 1;
                 if (remaining <= 0) this.deferCounts.delete(event);
                 else this.deferCounts.set(event, remaining);
                 this.emit(event as keyof EventMap, data);
-            }, 0);
+            });
             return;
         }
         this.emitDepth++;

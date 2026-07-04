@@ -1,4 +1,3 @@
-import React from 'react';
 import { Database, Trash2, Download } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import {

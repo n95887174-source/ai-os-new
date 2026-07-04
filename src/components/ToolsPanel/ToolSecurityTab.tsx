@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Key, Globe } from 'lucide-react';
 
 interface ToolSecurityTabProps {

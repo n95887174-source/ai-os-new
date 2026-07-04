@@ -224,9 +224,13 @@ export class EventRecorder {
 
     importSession(json: string): { events: number; checkpoints: number } {
         try {
-            const data = safeJsonParse(json);
-            const events = this.importLog(data.events ?? '{}');
-            const checkpoints = this.checkpoints.importCheckpoints(data.checkpoints ?? '{}');
+            const data = safeJsonParse(json) as Record<string, unknown> | undefined;
+            const events = this.importLog(
+                ((data as Record<string, unknown>)?.events as string) ?? '{}',
+            );
+            const checkpoints = this.checkpoints.importCheckpoints(
+                ((data as Record<string, unknown>)?.checkpoints as string) ?? '{}',
+            );
             return { events, checkpoints };
         } catch (e) {
             LOGGER.warn('EventRecorder', 'Import session failed', { error: e });
@@ -266,8 +270,9 @@ export class EventRecorder {
 
     importLog(json: string): number {
         try {
-            const data = safeJsonParse(json);
-            const imported: RecordedEvent[] = data.events ?? [];
+            const data = safeJsonParse(json) as Record<string, unknown> | undefined;
+            const imported: RecordedEvent[] =
+                ((data as Record<string, unknown>)?.events as RecordedEvent[]) ?? [];
             const hex32 = /^[0-9a-f]{32}$/;
             let valid = 0;
             for (const ev of imported) {
@@ -284,7 +289,10 @@ export class EventRecorder {
                 }
             }
             this.events.sort((a, b) => a.sequence - b.sequence);
-            this.sequence = Math.max(this.sequence, data.sequence ?? 0);
+            this.sequence = Math.max(
+                this.sequence,
+                ((data as Record<string, unknown>)?.sequence as number) ?? 0,
+            );
             this.schedulePersist();
             return valid;
         } catch (e) {

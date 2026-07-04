@@ -42,7 +42,7 @@ const MAX_RECENT = 8;
 
 function getRecent(): string[] {
     try {
-        return safeJsonParse(localStorage.getItem(RECENT_KEY) || '[]');
+        return (safeJsonParse(localStorage.getItem(RECENT_KEY) || '[]') as string[]) ?? [];
     } catch {
         return [];
     }
@@ -451,3 +451,4 @@ export function useCommandPalette() {
 
     return { isOpen, open: () => setIsOpen(true), close: () => setIsOpen(false) };
 }
+

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, RefreshCw, X } from 'lucide-react';
 import { t } from '../../i18n/translations';

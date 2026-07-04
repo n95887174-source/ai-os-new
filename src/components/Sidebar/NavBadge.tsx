@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 
 interface NavBadgeProps {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Power, PowerOff } from 'lucide-react';
 import type { PolicyRule } from '../../kernel/services/debate-runtime/debate-policy-engine';
 import { s } from './policy-editor-styles';

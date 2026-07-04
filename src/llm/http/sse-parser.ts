@@ -77,7 +77,10 @@ export async function parseSSEStream(
                 if (done) {
                     if (dataAccumulator) {
                         try {
-                            const parsed = safeJsonParse(dataAccumulator);
+                            const parsed = safeJsonParse(dataAccumulator) as Record<
+                                string,
+                                unknown
+                            >;
                             const chunk = extractor(parsed);
                             onLine?.(parsed);
                             if (chunk) controller.enqueue(chunk);
@@ -113,7 +116,10 @@ export async function parseSSEStream(
                     if (line === '') {
                         if (dataAccumulator) {
                             try {
-                                const parsed = safeJsonParse(dataAccumulator);
+                                const parsed = safeJsonParse(dataAccumulator) as Record<
+                                    string,
+                                    unknown
+                                >;
                                 const chunk = extractor(parsed);
                                 onLine?.(parsed);
                                 if (chunk) controller.enqueue(chunk);
@@ -134,7 +140,10 @@ export async function parseSSEStream(
                     if (dataContent === '[DONE]') {
                         if (dataAccumulator) {
                             try {
-                                const parsed = safeJsonParse(dataAccumulator);
+                                const parsed = safeJsonParse(dataAccumulator) as Record<
+                                    string,
+                                    unknown
+                                >;
                                 const chunk = extractor(parsed);
                                 onLine?.(parsed);
                                 if (chunk) controller.enqueue(chunk);

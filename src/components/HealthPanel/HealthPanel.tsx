@@ -18,6 +18,7 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { keyService, kernel } from '../../kernel/instances';
 import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import type { ProbeResult } from '../../kernel/contracts/probe';
+import type { AlertEntry } from '../../kernel/types/interfaces';
 import { APP_VERSION } from '../../utils/version';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -431,7 +432,7 @@ const HealthPanel: React.FC = () => {
 
             <RateLimitIntrospection
                 keys={keys}
-                allAlerts={allAlerts}
+                allAlerts={allAlerts as unknown as AlertEntry[]}
                 introspectionResults={introspectionResults}
                 introspectingKeys={introspectingKeys}
             />

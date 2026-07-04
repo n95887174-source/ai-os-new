@@ -1,4 +1,3 @@
-import React from 'react';
 import { Zap, Blocks, FileJson, Shield, HelpCircle, BookText } from 'lucide-react';
 
 export type DocSection =

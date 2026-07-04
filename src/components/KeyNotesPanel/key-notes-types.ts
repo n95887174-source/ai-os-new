@@ -5,7 +5,7 @@ export interface AttachedFile {
     dataUrl: string;
 }
 
-import type { KeyNote } from '../kernel/types/metrics-types';
+import type { KeyNote } from '../../kernel/types/metrics-types';
 
 export interface EnhancedNote extends KeyNote {
     attachments?: AttachedFile[];

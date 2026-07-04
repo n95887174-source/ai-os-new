@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Upload, Download, Trash, Trash2 } from 'lucide-react';
 import { flexColGap4, flexWrapGap4, inputLargeSelect, btnImportExport } from '../../styles/common';
 

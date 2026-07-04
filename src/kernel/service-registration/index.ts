@@ -4,6 +4,7 @@
  * The 686-line `registerServices()` god-function has been split into
  * six phase files.  This module runs them in dependency order:
  *
+ *   0. Event Bridge     — EventBridge, ProjectionRegistry, RouterProjection
  *   1. Foundation       — settings, pricing, kernel, keyService
  *   2. Infrastructure   — rotation, policy, tool, memory, cognitive
  *   3. Debate & Runtime — debateService, debateEngine, intelligence
@@ -11,11 +12,14 @@
  *   5. Routing & LLM    — router, LLM client, cache, advisor
  *   6. High-level       — chat, workspace, probe, webhooks, etc.
  *
+ *  11. Causal Debugger  — causal scope, timeline, counterfactual, replay, truth monitor
+ *
  * Each phase only depends on services registered by earlier phases.
  * The container's `!has` guard inside `register()` makes re-runs
  * idempotent.
  */
 import { makeHelpers } from './helpers';
+import { registerPhase0 } from './phase0-event-bridge';
 import { registerPhase1 } from './phase1-foundation';
 import { registerPhase2 } from './phase2-infrastructure';
 import { registerPhase3 } from './phase3-debate-runtime';
@@ -26,6 +30,7 @@ import { registerPhase7 } from './phase7-memory-eval-metrics';
 import { registerPhase8 } from './phase8-roles-consortia';
 import { registerPhase9 } from './phase9-research-engine';
 import { registerPhase10 } from './phase10-ecosystem';
+import { registerPhase11 } from './phase11-causal-debugger';
 import type { IContainer } from '../container';
 import type { IEventBus } from '../types/interfaces';
 
@@ -37,6 +42,7 @@ export function registerServices(
     const ctx = { container, eventBus, registerWithLifecycle };
     const helpers = makeHelpers(ctx);
 
+    registerPhase0(helpers, ctx);
     registerPhase1(helpers, ctx);
     registerPhase2(helpers, ctx);
     registerPhase3(helpers, ctx);
@@ -47,6 +53,7 @@ export function registerServices(
     registerPhase8(helpers, ctx);
     registerPhase9(helpers, ctx);
     registerPhase10(helpers, ctx);
+    registerPhase11(helpers, ctx);
 }
 
 export type { PhaseContext, Phase } from './helpers';

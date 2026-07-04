@@ -1,4 +1,3 @@
-import React from 'react';
 import { Loader2, Zap, Search, X } from 'lucide-react';
 
 interface ControlsBarProps {

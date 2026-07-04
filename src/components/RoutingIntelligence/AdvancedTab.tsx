@@ -1,4 +1,3 @@
-import React from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import type { FallbackLink } from '../../kernel/instances';
 import type { RouterConfig } from '../../kernel/types/routing-types';

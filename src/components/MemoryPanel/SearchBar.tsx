@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Network, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../../i18n/useTranslation';

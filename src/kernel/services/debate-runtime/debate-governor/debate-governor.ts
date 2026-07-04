@@ -1,5 +1,5 @@
 import type { Claim, GovernorState, SynthesisResult, Contradiction } from './types';
-import type { DiversityState } from '../agent-diversity/types';
+import type { DiversityState } from '../../agent-diversity/types';
 import { createClaimGraph, addClaimsToGraph } from './claim-graph';
 import { detectContradictions, hasOpenContradictions } from './contradiction-detector';
 import { extractClaims } from './claim-extractor';

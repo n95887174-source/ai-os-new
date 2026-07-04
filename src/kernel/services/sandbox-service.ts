@@ -84,8 +84,11 @@ export class SandboxService {
                     throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
                 const text = await proxyRes.text();
                 try {
-                    const err = safeJsonParse(text);
-                    if (err.error) throw new Error(err.error, { cause: e });
+                    const err = safeJsonParse(text) as Record<string, unknown> | undefined;
+                    if ((err as Record<string, unknown>)?.error)
+                        throw new Error((err as Record<string, unknown>).error as string, {
+                            cause: e,
+                        });
                 } catch {
                     if (import.meta.env.DEV) {
                         LOGGER.debug(

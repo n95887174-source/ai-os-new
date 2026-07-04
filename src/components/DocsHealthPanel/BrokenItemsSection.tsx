@@ -1,4 +1,3 @@
-import React from 'react';
 import { XCircle } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { textMutedXs, textSm } from '../../styles/common';

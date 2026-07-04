@@ -1,4 +1,3 @@
-import React from 'react';
 import { Scale } from 'lucide-react';
 import {
     flexColGap3,

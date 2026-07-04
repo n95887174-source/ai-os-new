@@ -1,5 +1,5 @@
-import type { Claim } from '../../contracts/debate-runtime';
-export type { Claim } from '../../contracts/debate-runtime';
+import type { Claim } from '../../../contracts/debate-runtime';
+export type { Claim } from '../../../contracts/debate-runtime';
 
 export interface ClaimEdge {
     from: string;

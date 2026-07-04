@@ -1,12 +1,9 @@
-import React from 'react';
 import type {
     StrategyPrimitive,
-    SequencePrimitive,
     DebateGraphPrimitive,
     CriticLoopPrimitive,
     VotingPrimitive,
     PeerReviewPrimitive,
-    ReviewCriteria,
     VotingMechanism,
     GraphAgentConfig,
 } from '../../kernel/contracts/debate-strategy-dsl';

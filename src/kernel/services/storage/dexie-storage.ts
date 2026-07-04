@@ -89,23 +89,41 @@ class DexieMemoryStore implements MemoryStore {
         limit?: number;
         order?: 'asc' | 'desc';
     }): Promise<MemoryEntry[]> {
-        let collection = getDexieDb().memories.orderBy('id');
-        if (options.order === 'desc') collection = collection.reverse();
-        let arr = await collection.toArray();
-        // M2: Apply filters BEFORE limit to avoid wrong result count
+        const db = getDexieDb();
+        let collection:
+            ReturnType<typeof db.memories.where> | ReturnType<typeof db.memories.orderBy>;
+
         if (options.type) {
+            collection = db.memories.where('[metadata.type]').equals(options.type);
+        } else if (options.before) {
+            collection = db.memories.where('[metadata.timestamp]').below(options.before);
+        } else if (options.after) {
+            collection = db.memories.where('[metadata.timestamp]').above(options.after);
+        } else {
+            collection = db.memories.orderBy('id');
+        }
+
+        if (options.order === 'desc' && 'reverse' in collection) {
+            collection = (collection as ReturnType<typeof db.memories.orderBy>).reverse();
+        }
+
+        let arr = await collection.toArray();
+
+        if (options.type && !arr.every((e) => e.metadata?.type === options.type)) {
             arr = arr.filter((e) => e.metadata?.type === options.type);
         }
-        if (options.before) {
-            arr = arr.filter((e) => (e.metadata?.timestamp ?? 0) < options.before!);
+        const beforeTs = options.before;
+        const afterTs = options.after;
+        if (beforeTs) {
+            arr = arr.filter((e) => (e.metadata?.timestamp ?? 0) < beforeTs);
         }
-        if (options.after) {
-            arr = arr.filter((e) => (e.metadata?.timestamp ?? 0) > options.after!);
+        if (afterTs) {
+            arr = arr.filter((e) => (e.metadata?.timestamp ?? 0) > afterTs);
         }
+        if (options.order === 'desc') arr.reverse();
         if (options.limit && arr.length > options.limit) {
             arr = arr.slice(0, options.limit);
         }
-        if (options.order === 'desc') arr.reverse();
         return arr;
     }
 

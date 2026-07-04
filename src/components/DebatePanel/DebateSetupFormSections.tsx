@@ -1,9 +1,7 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Bot } from 'lucide-react';
 import { DEBATE_ARCHETYPES } from '../../kernel/services/debate-runtime/debate-archetypes';
 import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
-import { textSecondaryItalic } from '../../styles/common';
 
 const TEMPERATURE_LABELS = [
     'Pure Logic',

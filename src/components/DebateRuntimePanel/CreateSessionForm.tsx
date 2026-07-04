@@ -1,4 +1,3 @@
-import React from 'react';
 import { Play, Loader2, Check, Plus } from 'lucide-react';
 import type { TopologyType, TopologyNode, DebateTopology } from '../../kernel/instances';
 import { TOPOLOGY_TYPES, TOPOLOGY_ROLES, ROLE_COLORS } from './debate-runtime-constants';
@@ -23,7 +22,7 @@ interface CreateSessionFormProps {
     setAgentRoles: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
     creating: boolean;
     handleCreate: () => void;
-    t: (key: string, params?: Record<string, unknown>) => string;
+    t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function buildPreviewTopology(
@@ -176,7 +175,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                             <div style={{ display: 'flex', gap: 6 }}>
                                 <button
                                     onClick={() =>
-                                        setSelectedAgentIds(availableNodes.map((n) => n.id))
+                                        setSelectedAgentIds(() => availableNodes.map((n) => n.id))
                                     }
                                     style={{
                                         fontSize: '0.65rem',
@@ -191,7 +190,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                                     All
                                 </button>
                                 <button
-                                    onClick={() => setSelectedAgentIds([])}
+                                    onClick={() => setSelectedAgentIds(() => [])}
                                     style={{
                                         fontSize: '0.65rem',
                                         padding: '0.15rem 0.5rem',

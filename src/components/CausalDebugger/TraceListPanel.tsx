@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { textXxsMuted } from '../../styles/common';
 import { CARD, PILL } from './causal-debugger-constants';

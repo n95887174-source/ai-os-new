@@ -1,4 +1,3 @@
-import React from 'react';
 import { Activity, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTopologyTraceStore } from '../../stores/topologyTraceStore';

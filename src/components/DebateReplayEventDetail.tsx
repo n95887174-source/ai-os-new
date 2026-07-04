@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PlayerStatus } from './DebateReplayTypes';
 import type { TimelineEntry } from '../kernel/contracts/debate-runtime';

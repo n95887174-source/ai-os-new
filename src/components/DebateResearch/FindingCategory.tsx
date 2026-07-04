@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronDown, ChevronRight, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import type { ArchFinding } from '../../kernel/contracts/architecture-review';
 import { typeColor } from './arch-review-utils';

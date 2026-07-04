@@ -202,7 +202,7 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
     const [reportFormat, setReportFormat] = useState<'markdown' | 'html' | 'json'>('markdown');
 
     // Review config
-    const [reviewConfig, setReviewConfig] = useState<SystematicReviewConfig>({
+    const [reviewConfig, _setReviewConfig] = useState<SystematicReviewConfig>({
         inclusionCriteria: [],
         exclusionCriteria: [{ id: 'exc1', field: 'title', operator: 'contains', value: 'spam' }],
         maxSources: 50,
@@ -285,11 +285,7 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
     const handleSummary = () => {
         if (!selectedSessionId) return;
         withLoading('summary', async () => {
-            const r = await engineRef.current.generateSummary(
-                selectedSessionId,
-                summaryStyle,
-                summaryLength,
-            );
+            await engineRef.current.generateSummary(selectedSessionId, summaryStyle, summaryLength);
             setSummaries(engineRef.current.getSummaries(selectedSessionId));
         });
     };

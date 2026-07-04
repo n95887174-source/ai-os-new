@@ -1,4 +1,3 @@
-import React from 'react';
 import { Lightbulb, X, Plus, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n/useTranslation';

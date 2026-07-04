@@ -9,7 +9,7 @@ function getLogger() {
 import { db as coreDatabase } from './services/database-service';
 import { securityService as coreSecurity } from './security';
 import { createDexieStorage } from './services/storage/dexie-storage';
-import { schedulerService } from './services/scheduler-service';
+import { initSchedulerService } from './services/scheduler-service';
 import { crossTabStateSync } from './services/cross-tab-state';
 import { DataAccessLayerImpl } from './dal/data-access-layer';
 import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
@@ -91,6 +91,7 @@ export class RuntimeManager {
     }
 
     private startHealthChecks() {
+        const intervalMs = 30_000;
         this.healthCheckInterval = setInterval(() => {
             if (this.phase === 'shutdown') return;
 
@@ -100,9 +101,15 @@ export class RuntimeManager {
                 this.phase = 'degraded';
             }
 
-            // OBS-99: Check scheduler liveness
-            const schedulerTime =
-                (schedulerService as { lastCheckTime?: number }).lastCheckTime ?? 0;
+            // OBS-99: Check scheduler liveness (get from container, may not be ready)
+            const svc = ((): { lastCheckTime?: number } | null => {
+                try {
+                    return this.container.get<{ lastCheckTime?: number }>('schedulerService');
+                } catch {
+                    return null;
+                }
+            })();
+            const schedulerTime = svc?.lastCheckTime ?? 0;
             if (schedulerTime > 0 && Date.now() - schedulerTime > 120_000) {
                 this.phase = 'degraded';
                 this.lastError = 'Scheduler has not checked in for 2+ minutes';
@@ -113,7 +120,7 @@ export class RuntimeManager {
                 phase: this.phase,
                 uptime: Date.now() - this.startTime,
             });
-        }, 60000);
+        }, intervalMs);
     }
 
     async shutdown(): Promise<void> {
@@ -200,6 +207,8 @@ export class RuntimeManager {
     }
 
     private registerCoreServices(): void {
+        // BR-17: Idempotent — skip if already registered (called from both start() and shutdown())
+        if (this.container.has('runtime')) return;
         this.container.register('runtime', this);
         this.container.register('database', coreDatabase);
         this.container.register('dal', new DataAccessLayerImpl(coreDatabase));
@@ -207,7 +216,8 @@ export class RuntimeManager {
         coreEventBus.setLogger(rootLogger);
         this.container.register('securityService', coreSecurity);
         this.container.register('BucketStorageAdapter', localStorageAdapter);
-        schedulerService.setDatabase(coreDatabase);
+        const schedulerService = initSchedulerService(coreDatabase);
+        this.container.register('schedulerService', schedulerService);
     }
 }
 

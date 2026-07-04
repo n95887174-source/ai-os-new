@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tag } from 'lucide-react';
 import { textSecondaryXs } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';

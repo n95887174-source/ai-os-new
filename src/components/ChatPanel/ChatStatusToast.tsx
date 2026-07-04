@@ -1,4 +1,3 @@
-import React from 'react';
 import { toastBase } from '../../styles/common';
 
 interface Props {

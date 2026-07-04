@@ -191,7 +191,7 @@ function rescore(
 ): ScoreSnapshot | null {
     const stateBlock = providerMetricsToStateBlock(metrics);
     const simState: SystemState = {
-        providers: stateBlock,
+        providers: stateBlock as unknown as SystemState['providers'],
         weights: {
             base: { ttft: 1, tps: 1, reliability: 1 },
             adaptiveDelta: { ttft: 0, tps: 0, reliability: 0 },
@@ -231,7 +231,7 @@ function rescore(
         scores[s.provider] = s.score;
         ranking.push(s.provider);
         if (s.components) {
-            components[s.provider] = s.components as Record<string, number>;
+            components[s.provider] = s.components as unknown as Record<string, number>;
         }
     }
 

@@ -12,7 +12,7 @@ import { TransactionContext } from './services/transaction';
 import {
     updateAdaptiveWeights as updateWeights,
     setSLAMode as setSLAWeights,
-} from './WeightOptimizer';
+} from './weight-optimizer';
 import { rootLogger } from './services/logger-service';
 import { EVENTS } from './events/event-names';
 import { estimateTokens } from './utils/tokenEstimate';
@@ -126,7 +126,7 @@ export class SystemKernel implements IKernel {
             });
             this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, {
                 message:
-                    'Kernel state load failed — reset to defaults. SLA, weights, and budget may have been reset.',
+                    'Kernel state load failed вЂ” reset to defaults. SLA, weights, and budget may have been reset.',
                 type: 'warning',
             });
         }
@@ -401,22 +401,23 @@ export class SystemKernel implements IKernel {
             const data = safeJsonParse(json);
 
             if (!data || typeof data !== 'object') throw new Error('Invalid JSON structure');
-            if (data.version !== '2.1.0-safety') {
+            const obj = data as { version?: string; state?: Record<string, unknown> };
+            if (obj.version !== '2.1.0-safety') {
                 this.state = this.getInitialState();
                 this.isDirty = true;
                 this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, {
-                    reason: `State version mismatch (got ${data.version}, expected 2.1.0-safety)`,
+                    reason: `State version mismatch (got ${obj.version ?? "undefined"}, expected 2.1.0-safety)`,
                 });
                 this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, {
-                    message: 'Kernel state version mismatch — reset to defaults.',
+                    message: 'Kernel state version mismatch вЂ” reset to defaults.',
                     type: 'warning',
                 });
                 return;
             }
-            if (!data.state || typeof data.state !== 'object')
+            if (!obj.state || typeof obj.state !== 'object')
                 throw new Error('Invalid state structure');
 
-            const parsed = this.validateState(data.state);
+            const parsed = this.validateState(obj.state);
             this.state = parsed;
             this.isDirty = false;
             this.cachedFrozenState = null; // KC-H02: Invalidate cache on state reload
@@ -429,7 +430,7 @@ export class SystemKernel implements IKernel {
                 reason: `loadState parse error: ${e instanceof Error ? e.message : String(e)}`,
             });
             this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, {
-                message: 'Kernel state corrupt — reset to defaults.',
+                message: 'Kernel state corrupt вЂ” reset to defaults.',
                 type: 'warning',
             });
         }
@@ -528,7 +529,7 @@ export class SystemKernel implements IKernel {
 
     private deepFreeze<T>(obj: T, seen = new WeakSet<object>()): T {
         if (obj === null || typeof obj !== 'object') return obj;
-        if (seen.has(obj)) return obj; // ← prevent infinite loop on cyclic refs
+        if (seen.has(obj)) return obj; // в†ђ prevent infinite loop on cyclic refs
         seen.add(obj);
         if (Object.isFrozen(obj)) return obj;
         const names = Object.getOwnPropertyNames(obj);
@@ -559,7 +560,7 @@ export class SystemKernel implements IKernel {
         return this.cachedFrozenState;
     }
 
-    /** Mutable clone for Counterfactual simulation — explicit snapshot ABI */
+    /** Mutable clone for Counterfactual simulation вЂ” explicit snapshot ABI */
     getStateSnapshot(): SystemState {
         return structuredClone(this.state);
     }
@@ -633,7 +634,7 @@ export class SystemKernel implements IKernel {
     }
 }
 
-// Default instance for backward compat — bootstrap.ts creates the real one via initKernel().
+// Default instance for backward compat вЂ” bootstrap.ts creates the real one via initKernel().
 // Using Proxy to throw on any uninitialized access instead of silently failing.
 const THROW_UNINITIALIZED: KernelDeps = new Proxy({} as KernelDeps, {
     get(_, prop) {
@@ -644,3 +645,4 @@ const THROW_UNINITIALIZED: KernelDeps = new Proxy({} as KernelDeps, {
     },
 });
 export const kernel = new SystemKernel(THROW_UNINITIALIZED);
+

@@ -12,6 +12,7 @@ export interface IEventBus {
     off(event: string, callback: (data: unknown) => void): void;
     emit<K extends keyof EventMap>(event: K, data?: EventMap[K]): void;
     emit(event: string, data?: unknown): void;
+    onSafe<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): () => void;
     onSafe<T>(event: string, callback: (data: T) => void): () => void;
     subscribeAll(
         callback: (payload: { event: string; data: Record<string, unknown> }) => void,
@@ -221,6 +222,30 @@ export type ProviderRanking = {
     recommendation: 'recommended' | 'good' | 'fair' | 'avoid';
     installed: boolean;
 };
+
+export interface KeyEntry {
+    id: string;
+    provider: string;
+    label?: string;
+    status?: string;
+    latency?: number;
+    model?: string;
+    stats?: {
+        extended?: {
+            usageToday?: { requests: number; tokens: number };
+            rules?: { quota?: { requestsPerDay: number; tokensPerDay: number } };
+            errorBreakdown?: { rateLimit?: number };
+            rateLimitPressure?: number;
+        };
+    };
+}
+
+export interface AlertEntry {
+    keyId: string;
+    message: string;
+    timestamp?: number;
+    type?: string;
+}
 
 export interface IProviderTracker {
     start(eventBus: IEventBus): void;

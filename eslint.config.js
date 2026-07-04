@@ -61,6 +61,23 @@ export default defineConfig([
         },
     },
     {
+        files: ['src/components/**', 'src/stores/**'],
+        rules: {
+            'no-restricted-imports': [
+                'warn',
+                {
+                    patterns: [
+                        {
+                            group: ['**/kernel/services/**'],
+                            message:
+                                'Components/stores must not import directly from kernel/services/. Use kernel/instances (lazyService) or kernel/contracts/ instead.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
         files: ['src/kernel/**'],
         rules: {
             'no-restricted-imports': [

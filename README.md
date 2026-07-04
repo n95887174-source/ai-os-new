@@ -68,7 +68,7 @@ SuperAgents OS reimagines the browser as an AI operating system. Every component
 │  SystemKernel  EventBus  Container  Bootstrap        │
 │  KeyService  RouterService  MemoryService            │
 │  RotationService  AdvisorService  ToolService        │
-│  Contracts (66+)  Events (115+)  State  Types        │
+│  Contracts (96+)  Events (274+)  State  Types        │
 └────────────────────────┬────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────┐
@@ -246,56 +246,59 @@ Open `http://localhost:5173` in your browser.
 ```
 src/
 ├── kernel/              # Kernel (DI, contracts, services, events, state)
-│   ├── contracts/       # 113+ contract interfaces
-│   ├── services/        # 254 files across 12 subdirs (key-management, provider-runtime,
+│   ├── contracts/       # 107+ contract interfaces (IKeyVault, IProviderAdapter, etc.)
+│   ├── services/        # 303 files across 18 subdirs (key-management, provider-runtime,
 │   │                   #   debate-runtime, debate-governor, agent-diversity,
 │   │                   #   routing-policy, rotation, cognitive-intelligence,
-│   │                   #   event-sourcing, advisor, runtime-intelligence)
-│   ├── events/          # Event names + payloads (141+ events)
+│   │                   #   event-sourcing, advisor, runtime-intelligence,
+│   │                   #   storage, memory, research-adapters, debate-interpreter, etc.)
+│   ├── events/          # Event registry: 535 registered schemas (event-registry.ts)
 │   ├── types/           # Zod schemas, domain types
 │   ├── state/           # State shapes + defaults
 │   ├── utils/           # Kernel utilities
 │   ├── bootstrap.ts     # Phase-based init (System→Kernel→Database→Topology→Services)
 │   ├── container.ts     # DI container
-│   ├── event-bus.ts     # Typed EventBus with onSafe<T>() Zod validation
+│   ├── event-bus.ts     # Typed EventBus with onSafe<K>() Zod validation
 │   ├── kernel.ts        # Reducer-pattern state machine
 │   ├── runtime.ts       # LifecycleManager (init→start→destroy LIFO)
 │   ├── transaction.ts   # TransactionContext (deferred persistence/emission)
+│   ├── instances.ts     # 80+ lazyService singleton exports
 │   └── DEPENDENCY_MAP.md
-├── components/          # UI panels (150+ panels across all sections)
+├── components/          # 130+ UI panels across 9 nav sections
 │   ├── ChatPanel/       # Chat interface with streaming
 │   ├── BuilderPanel/    # Visual cognitive workflow editor
-│   ├── AgentsPanel/     # Agent role management
+│   ├── AgentsPanel/     # Agent role management + consortia
 │   ├── ProviderManager/ # API key management suite
-│   ├── DebatePanel/     # Multi-agent debate visualization
-│   ├── CachePanel/      # LLM response cache management
-│   ├── WebhooksPanel/   # Webhook CRUD and test ping
-│   ├── BudgetPanel/     # Per-provider budget limits
-│   ├── DocsHealthPanel/ # Documentation consistency checker
-│   ├── RotationsPanel/  # Key rotation timeline
-│   └── ...
-├── core/                # Legacy core (5 real files: DatabaseService, events, etc.)
+│   ├── DebatePanel/     # Multi-agent debate visualization + runtime
+│   ├── DebateLive/      # Circular live debate view
+│   ├── RolesPanel/      # Unified role registry (610+ roles, 37 consilia)
+│   ├── MemoryPanel/     # Memory palace (7-store architecture)
+│   ├── ResearchPanel/   # Research engine (34 API sources)
+│   ├── Editors/         # TipTap, Monaco, DSL Canvas, JSON Schema editors
+│   └── ... (Cache, Webhooks, Budget, Rotations, Health, DocsHealth,
+│           Traces, Analytics, Audience, Guardians, Deploy, Workflows,
+│           Prompts, Security, GoogleStudio, GeminiLive, EvalDatasets,
+│           CustomMetrics, Guardians, Aquarium, Ecosystem, etc.)
+├── core/                # Legacy core (DatabaseService, PluginSDK, storage)
 ├── services/            # Thin legacy wrappers (25 files, proxy → kernel)
-│   ├── KeyService.ts      # Proxy → kernel
-│   ├── RouterService.ts   # Proxy → kernel
-│   ├── MemoryService.ts   # Proxy → kernel
 │   ├── memory.worker.ts   # Web Worker: BM25 + semantic search
 │   ├── sandbox.worker.ts  # Web Worker: AST-based code validation
-│   └── ...
-├── llm/                 # LLM provider adapters (20+ providers, 11 decorators)
-│   ├── gemini/          # Gemini adapter
+│   └── ... (21 proxy wrappers, 2 workers)
+├── llm/                 # LLM provider adapters (11 providers, 12 decorators)
+│   ├── gemini/          # Gemini adapter + Google GenAI SDK integration
 │   ├── openai-compatible/ # OpenAI-compatible (Groq, Cerebras, Cloudflare, etc.)
 │   ├── openrouter/      # OpenRouter adapter
 │   ├── nvidia/          # NVIDIA NIM adapter
-│   ├── decorators/      # Circuit Breaker, Cache, Retry, Fallback, etc.
+│   ├── decorators/      # Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, etc.
 │   └── facade/          # LLMClient entry point
-├── stores/              # React state stores (7 files)
+├── stores/              # React state stores
 │   ├── useChatStore.ts  # Chat sessions & messages
-│   └── useKeyStore.ts   # API key management (XOR+base64 localStorage)
+│   ├── useKeyStore.ts   # API key management (StorageAdapter-backed)
+│   └── debateLiveStore.ts # Live debate streaming state
 ├── types/               # Re-exports from kernel/types/
 ├── i18n/                # Internationalization (en.ts, ru.ts, I18nProvider)
-├── styles/              # CSSProperties constants (common.ts — 91+ constants)
-├── route-registry.tsx   # 134 routes across 9 nav sections
+├── styles/              # CSSProperties constants (common.ts — 148+ constants)
+├── routes.tsx            # 90+ routes across 9 nav sections
 └── test/                # Test setup and config
 ```
 
@@ -321,13 +324,13 @@ npm run proxy
 
 Adjust routing behavior in **Settings → SLA Mode**:
 
-| Mode            | Behavior                                                           |
-| --------------- | ------------------------------------------------------------------ |
-| **Performance** | Prioritize lowest latency                                          |
-| **Cost-Saving** | Prioritize cheapest provider                                       |
-| **Balanced**    | Equal weight to latency, cost, reliability                         |
-| **Reliability** | Prioritize highest success rate                                    |
-| **FreeFirst**   | Use free-tier models until quota exhausted, then fall back to paid |
+| Mode             | Behavior                                                           |
+| ---------------- | ------------------------------------------------------------------ |
+| **LOW_LATENCY**  | Prioritize lowest latency                                          |
+| **ECONOMY**      | Prioritize cheapest provider                                       |
+| **BALANCED**     | Equal weight to latency, cost, reliability                         |
+| **HIGH_QUALITY** | Prioritize highest success rate                                    |
+| **FREE_FIRST**   | Use free-tier models until quota exhausted, then fall back to paid |
 
 ---
 
@@ -375,7 +378,7 @@ Contributions are welcome! The project is in active development.
 
 - Follow existing code style and patterns
 - Add tests for new functionality
-- Ensure TypeScript strict mode passes (`npx tsc --noEmit`)
+- Ensure TypeScript strict mode passes (`npx tsc -b --noEmit`)
 - Update documentation as needed
 
 ---

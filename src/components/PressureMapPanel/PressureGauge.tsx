@@ -1,4 +1,3 @@
-import React from 'react';
 import { pLevelColor } from './pressure-map-constants';
 
 interface Props {

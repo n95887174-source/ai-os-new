@@ -20,7 +20,7 @@ interface Props {
 
 const ChatInputArea: React.FC<Props> = ({
     selectedKeys,
-    selectedModel,
+    selectedModel: _selectedModel,
     onSend,
     isSending,
     onError,

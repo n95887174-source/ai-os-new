@@ -1,4 +1,3 @@
-import React from 'react';
 import { Target, Loader2, Activity, Zap, Play } from 'lucide-react';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type {

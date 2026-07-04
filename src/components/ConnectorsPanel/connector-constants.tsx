@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, Send, FileText, Database, Mail, Box, Layers, Globe } from 'lucide-react';
 import { getStatusColor } from '../Common/status-vocabulary';
 import type { Connector } from '../../types/domain';

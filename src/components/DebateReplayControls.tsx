@@ -1,4 +1,3 @@
-import React from 'react';
 import type { PlayerStatus } from './DebateReplayTypes';
 import { btn, replayStatusLabel, replayStatusColor } from './DebateReplayTypes';
 

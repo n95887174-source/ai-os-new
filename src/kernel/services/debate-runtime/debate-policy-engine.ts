@@ -1,5 +1,7 @@
 import type { DebatePhase } from '../../contracts/debate-runtime';
 import type { ModePolicy, PolicyType } from '../../contracts/debate-mode-system';
+export type { PolicyType } from '../../contracts/debate-mode-system';
+export type { DebatePhase } from '../../contracts/debate-runtime';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
 // ── Policy Rule DSL ────────────────────────────────────────────────

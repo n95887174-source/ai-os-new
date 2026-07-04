@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { fmtUSD, usageColor } from './budget-utils';

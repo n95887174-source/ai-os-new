@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { BudgetAlert } from '../../kernel/contracts/budget';

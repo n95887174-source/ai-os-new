@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     Clock,
     RotateCcw,
@@ -31,7 +30,7 @@ interface HistoryHeaderProps {
 }
 
 const HistoryHeader: React.FC<HistoryHeaderProps> = ({
-    count,
+    count: _count,
     filteredCount,
     stats,
     searchQuery,

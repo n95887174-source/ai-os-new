@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle2, Wrench } from 'lucide-react';
 import type { AgentDetailPanelProps } from './AgentDetailPanelProps';
 

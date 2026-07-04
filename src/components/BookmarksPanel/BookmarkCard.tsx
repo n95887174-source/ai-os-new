@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Copy, Check, X, ExternalLink } from 'lucide-react';
 import type { ChatBookmark } from '../../kernel/services/chat-bookmarks-service';

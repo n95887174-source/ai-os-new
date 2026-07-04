@@ -1,4 +1,3 @@
-import React from 'react';
 import { taskHandoffService } from '../../kernel/instances';
 import type { AgentDetailPanelProps } from './AgentDetailPanelProps';
 

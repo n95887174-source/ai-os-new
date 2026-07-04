@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CARD, pLevelColor } from './pressure-map-constants';
 import type { PressureTrendPoint } from '../../kernel/instances';

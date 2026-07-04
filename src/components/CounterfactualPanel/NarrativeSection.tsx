@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare } from 'lucide-react';
 import type { NarrativeExplanation } from '../../kernel/contracts/counterfactual-narrative';
 

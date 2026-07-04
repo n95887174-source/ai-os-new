@@ -290,7 +290,9 @@ moduleUnsubs.push(
                 ...entry,
                 responses: entry.responses.map((r) =>
                     matchesResponse(r, provider, requestId)
-                        ? { ...r, status: 'error' as const, error }
+                        ? r.status === 'cancelled'
+                            ? r
+                            : { ...r, status: 'error' as const, error }
                         : r,
                 ),
             })),

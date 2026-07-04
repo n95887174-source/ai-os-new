@@ -1,4 +1,3 @@
-import React from 'react';
 import { textMutedXs, textWhiteXs } from '../../styles/common';
 
 export const StatMini: React.FC<{

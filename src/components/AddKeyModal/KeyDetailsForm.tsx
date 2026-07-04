@@ -1,4 +1,3 @@
-import React from 'react';
 import { HelpCircle, Upload, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 

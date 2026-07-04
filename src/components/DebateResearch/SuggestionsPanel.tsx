@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronDown, ChevronRight, Lightbulb, CheckCircle } from 'lucide-react';
 import type { PromptSuggestion } from '../../kernel/contracts/prompt-audit';
 import { suggestionTypeColor } from './prompt-audit-constants';

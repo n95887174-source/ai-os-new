@@ -1,4 +1,3 @@
-import React from 'react';
 import { Target } from 'lucide-react';
 import { STRATEGY_COLORS } from './prompt-audit-constants';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { MAX_INLINE, valueType, valueColor } from './state-inspector-constants';
 

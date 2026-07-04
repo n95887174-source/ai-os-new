@@ -26,11 +26,13 @@ interface DebateChatProps {
 const DebateChat: React.FC<DebateChatProps> = ({ arguments: args, t, agentLabel, streamingArgIds, agentErrors }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastArgId = args.length > 0 ? args[args.length - 1].id : undefined;
+  // D-H-19: Also scroll when content of the last arg changes (during streaming)
+  const lastArgContentLen = args.length > 0 ? args[args.length - 1].content.length : 0;
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [lastArgId]);
+  }, [lastArgId, lastArgContentLen]);
   const getAgentLabel = (agentId: string): string => {
     if (agentLabel) return agentLabel(agentId);
     return agentId;

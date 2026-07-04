@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Target, Lightbulb, CheckCircle } from 'lucide-react';
 import type { StrategyComparison } from '../../kernel/contracts/routing-experiments';

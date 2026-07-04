@@ -31,7 +31,7 @@ const ArchitectureReview: React.FC = () => {
             return null;
         }
     });
-    const [tree, setTree] = useState<FileNode[]>([]);
+    const [tree, setTree] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [findings, setFindings] = useState<ArchFinding[]>([]);
     const [scanning, setScanning] = useState(false);

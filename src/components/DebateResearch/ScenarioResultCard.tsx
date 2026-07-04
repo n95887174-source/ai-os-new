@@ -1,4 +1,3 @@
-import React from 'react';
 import type { GovScenarioResult } from '../../kernel/contracts/gov-stress-test';
 import { CATEGORY_COLORS, iconForResult } from './gov-stress-constants';
 

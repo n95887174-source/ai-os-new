@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Hash, Coins, Clock } from 'lucide-react';
 import { summaryMetricCard } from '../../styles/common';
@@ -8,7 +7,7 @@ interface SummaryStatsGridProps {
     totalTokens: number;
     estimatedCost: number;
     avgLatency: number;
-    itemVariants: Record<string, unknown>;
+    itemVariants: import('framer-motion').Variants;
     t: (key: string) => string;
 }
 

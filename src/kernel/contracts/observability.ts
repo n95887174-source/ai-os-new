@@ -1,5 +1,3 @@
-import type { Result } from './results';
-import type { KernelError } from './errors';
 import type { CanonicalHealthStatus } from './health';
 
 export type { CanonicalHealthStatus } from './health';

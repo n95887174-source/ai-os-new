@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileDown, Copy, Check, Loader2, FileType } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { textMutedXs, textWhiteXs } from '../../styles/common';

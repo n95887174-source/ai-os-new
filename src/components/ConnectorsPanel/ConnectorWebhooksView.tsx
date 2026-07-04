@@ -1,4 +1,3 @@
-import React from 'react';
 import { Plus, Globe } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 

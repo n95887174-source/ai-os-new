@@ -632,20 +632,21 @@ export class ToolService {
 
     importTools(jsonData: string): number {
         try {
-            const data = safeJsonParse(jsonData);
-            const imported = data.tools || [];
+            const data = safeJsonParse(jsonData) as Record<string, unknown> | undefined;
+            const imported = ((data as Record<string, unknown>)?.tools as unknown[]) || [];
             if (!Array.isArray(imported))
                 throw toolError('tools', 'Invalid format', 'INVALID_FORMAT');
             let count = 0;
             for (const item of imported) {
-                const exists = this.tools.some((t) => t.id === item.id);
+                const tool = item as { id: string; code?: string; [key: string]: unknown };
+                const exists = this.tools.some((t) => t.id === tool.id);
                 if (!exists) {
                     // B10-135: Validate tool code to prevent eval/fetch injection via JSON import
-                    if (item.code) {
-                        const err = validateToolCode(item.code);
-                        if (err) throw toolError(item.id || 'tools', err, 'CODE_INVALID');
+                    if (tool.code) {
+                        const err = validateToolCode(tool.code);
+                        if (err) throw toolError(tool.id || 'tools', err, 'CODE_INVALID');
                     }
-                    this.tools.push({ ...item, enabled: true });
+                    this.tools.push({ ...tool, enabled: true } as (typeof this.tools)[number]);
                     count++;
                 }
             }

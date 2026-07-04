@@ -129,8 +129,8 @@ export class DebateModeManagerPersistent extends DebateModeManager {
         json: string,
     ): Promise<{ success: boolean; mode?: DebateMode; error?: string }> {
         try {
-            const data = safeJsonParse(json);
-            const mode = data.mode as DebateMode;
+            const data = safeJsonParse(json) as Record<string, unknown> | undefined;
+            const mode = (data as Record<string, unknown>)?.mode as DebateMode;
 
             if (!mode.id || !mode.name) {
                 return { success: false, error: 'Mode must have id and name' };
@@ -144,8 +144,11 @@ export class DebateModeManagerPersistent extends DebateModeManager {
             }
 
             // Restore version history if present
-            if (Array.isArray(data.versions)) {
-                this.versionHistories.set(mode.id, data.versions);
+            if (Array.isArray((data as Record<string, unknown>)?.versions)) {
+                this.versionHistories.set(
+                    mode.id,
+                    (data as Record<string, unknown>)?.versions as ModeVersion[],
+                );
                 await this.persistVersionHistory(mode.id);
             }
 

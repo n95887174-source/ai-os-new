@@ -13,14 +13,26 @@ import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
-import { createObfuscation, OBFUSCATION_PREFIX } from '../utils/obfuscation';
-
 const LOGGER = rootLogger.child('BucketStorageAdapter');
 
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
 export type StorageBucket = (typeof KNOWN_BUCKETS)[number];
 
-const { deobfuscate } = createObfuscation('');
+const OBFUSCATION_PREFIX = 'xob:';
+
+function legacyDeobfuscate(encoded: string): string | null {
+    try {
+        const salt = 'a1b2c3d4e5f6g7h8';
+        const text = atob(encoded);
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            result += String.fromCharCode(text.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+        }
+        return result;
+    } catch {
+        return null;
+    }
+}
 
 const ssrFallback = new Map<string, string>();
 
@@ -32,7 +44,7 @@ function readRaw(key: string): string | null {
                 : (ssrFallback.get(key) ?? null);
         if (!raw) return null;
         if (raw.startsWith(OBFUSCATION_PREFIX)) {
-            return deobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
+            return legacyDeobfuscate(raw.slice(OBFUSCATION_PREFIX.length)) ?? raw;
         }
         return raw;
     } catch (e) {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Zap, Clock, Trophy } from 'lucide-react';
 import type { TournamentMatch } from './tournament-types';

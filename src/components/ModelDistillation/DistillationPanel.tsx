@@ -10,7 +10,6 @@ import {
     AlertCircle,
     Clock,
     BarChart3,
-    ArrowDown,
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { distillationService } from '../../kernel/instances';

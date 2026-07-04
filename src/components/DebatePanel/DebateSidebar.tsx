@@ -224,7 +224,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                   </div>
                   {hoveredRoomId === room.id && (
                     <button
-                      onClick={e => { e.stopPropagation(); deleteRoom(room.id); }}
+                      onClick={e => { e.stopPropagation(); if (window.confirm(`Delete debate "${room.topic}"? This cannot be undone.`)) deleteRoom(room.id); }}
                       style={{
                         padding: '0.2rem', borderRadius: 4, border: 'none',
                         background: 'transparent', color: '#64748b', cursor: 'pointer',

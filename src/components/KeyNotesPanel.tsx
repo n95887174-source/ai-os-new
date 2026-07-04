@@ -3,7 +3,7 @@ import { StickyNote, Search, Tag, AlertTriangle, X, Loader2 } from 'lucide-react
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 import { keyService } from '../kernel/instances';
-import { errorContainer, dismissBtnRed, textSecondaryXs } from '../styles/common';
+import { errorContainer, dismissBtnRed } from '../styles/common';
 import { useConfirm } from '../hooks/useConfirm';
 import { KeySelectorSidebar } from './KeyNotesPanel/KeySelectorSidebar';
 import { NoteInputForm } from './KeyNotesPanel/NoteInputForm';

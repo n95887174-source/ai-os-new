@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     PowerOff,
     Power,
@@ -36,7 +35,7 @@ export const ProviderCardActions: React.FC<ProviderCardActionsProps> = ({
     onRemove,
     confirmRemove,
     onConfirmRemove,
-    onCancelRemove,
+    onCancelRemove: _onCancelRemove,
 }) => {
     const { t } = useTranslation();
 
@@ -114,7 +113,7 @@ export const ProviderCardActions: React.FC<ProviderCardActionsProps> = ({
 
 export const ConfirmRemoveBanner: React.FC<{ onCancel: () => void; onConfirm: () => void }> = ({
     onCancel,
-    onConfirm,
+    onConfirm: _onConfirm,
 }) => {
     const { t } = useTranslation();
     return (

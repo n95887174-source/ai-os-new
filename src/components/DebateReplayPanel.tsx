@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { debateEngine } from '../kernel/instances';
 import type { DebateSessionSnapshot, TimelineEntry } from '../kernel/contracts/debate-runtime';
 import PanelLoader from './PanelLoader';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { flexCenterGap2, flexColGap1 } from '../../styles/common';
 
 interface Props {

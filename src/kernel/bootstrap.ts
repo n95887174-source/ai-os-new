@@ -6,36 +6,20 @@ import { LoggerService } from './services/logger-service';
 import { EVENTS } from './events/event-names';
 import { getDexieDb } from './services/database-service';
 import { AuditorTopology } from './state/topology-defaults';
-import { SystemKernel } from './kernel';
 import { ConfigService } from './services/config-service';
+import { debateService } from './services/debate-runtime/debate-service';
 import { KeyService } from './services/key-management/key-service';
 import { KeyStateStore } from './services/key-state-store';
-import type { ToolService } from './services/tool-executor';
-import type { CognitiveService } from './services/cognitive-service';
-import type { PolicyService } from './services/policy-service';
 import { ProviderRuntimeService } from './services/provider-runtime/provider-service';
 import { RotationService } from './services/rotation-service';
 import { EventRecorder } from './services/event-sourcing/event-recorder';
 import { OrchestrationService as Orchestrator } from './services/orchestration-service';
 import { registerServices } from './service-registration/index';
-import { ProjectionRegistry } from './services/event-bridge/projection-registry';
-import { EventBridge } from './services/event-bridge/event-bridge';
-import { RouterProjection } from './services/projections/router-projection';
-import { CausalScopeManager } from './services/causal-scope-manager';
-import { CausalTimelineService } from './services/causal-timeline-service';
-import { CounterfactualEngine } from './services/counterfactual-engine';
-import { CounterfactualExplanationService } from './services/counterfactual-explanation-service';
-import { CounterfactualNarrativeService } from './services/counterfactual-narrative-service';
-import { TemporalReplayService } from './services/temporal-replay-service';
-import { TruthConsistencyMonitor } from './services/truth-consistency-monitor';
 import { GroupManagerService } from './services/group-manager';
-import type { RouterService } from './services/provider-router';
-import type { ICausalScopeManager } from './contracts/causal-debugger';
 import type { ApiKey } from './types/metrics-types';
 import { MemoryWatchdog } from './utils/memory-watchdog';
 import { clearBootstrapSnapshot } from './bootstrap-state';
 import {
-    SERVICE_PHASES,
     CRITICAL_SERVICES,
     RUNNING_DEBATE_PHASES,
     type InitPhase,
@@ -43,10 +27,7 @@ import {
 } from './bootstrap-phases';
 import { runKeyMigration, hydrateKeyStorage, loadBootstrapSnapshot } from './bootstrap-key-init';
 
-function getHeapMB(): number {
-    const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
-    return mem ? Math.round(mem.usedJSHeapSize / 1024 / 1024) : 0;
-}
+export type { InitPhase, BootstrapReport };
 
 export class SystemBootstrap implements IBootstrap {
     private isStarted = false;
@@ -57,8 +38,6 @@ export class SystemBootstrap implements IBootstrap {
     private eventBus: IEventBus;
     private lifecycle = new LifecycleManager();
     private logger: LoggerService;
-    private eventBridge: EventBridge | null = null;
-    private causalTimeline: CausalTimelineService | null = null;
     private memoryWatchdog = new MemoryWatchdog({
         intervalMs: 5000,
         thresholdMB: 100,
@@ -92,27 +71,6 @@ export class SystemBootstrap implements IBootstrap {
         this.phase = 'kernel';
 
         this.registerMigratedServices();
-
-        // ── EventBridge (must start BEFORE any events are emitted) ──────────
-        if (true) {
-            try {
-                const registry = new ProjectionRegistry();
-                const routerProjection = new RouterProjection();
-                registry.register(routerProjection);
-                const bridge = new EventBridge(this.eventBus, registry);
-                bridge.start();
-                this.eventBridge = bridge;
-                this.container.register('projectionRegistry', registry);
-                this.container.register('routerProjection', routerProjection);
-            } catch (e) {
-                this.logger.warn('Bootstrap', 'EventBridge init failed (non-critical)', {
-                    error: e,
-                });
-            }
-        }
-
-        const kernel = this.container.get<SystemKernel>('kernel');
-        await this.lifecycle.tryInit('kernel', () => kernel.init());
 
         const configService = this.container.get<ConfigService>('configService');
         await this.lifecycle.tryInit('configService', () => configService.init());
@@ -176,25 +134,15 @@ export class SystemBootstrap implements IBootstrap {
         } catch {
             /* ignore */
         }
-        if (this.causalTimeline) {
-            try {
-                this.causalTimeline.destroy();
-            } catch (e) {
-                this.logger.warn('Bootstrap', 'CausalTimeline destroy failed during shutdown', {
-                    error: e,
-                });
-            }
-            this.causalTimeline = null;
+        try {
+            (this.container.get('causalTimelineService') as { destroy?: () => void })?.destroy?.();
+        } catch {
+            /* ignore */
         }
-        if (this.eventBridge) {
-            try {
-                this.eventBridge.stop();
-            } catch (e) {
-                this.logger.warn('Bootstrap', 'EventBridge stop failed during shutdown', {
-                    error: e,
-                });
-            }
-            this.eventBridge = null;
+        try {
+            (this.container.get('eventBridge') as { stop?: () => void })?.stop?.();
+        } catch {
+            /* ignore */
         }
 
         this.memoryWatchdog.stop();
@@ -210,66 +158,71 @@ export class SystemBootstrap implements IBootstrap {
     private async initServices(): Promise<boolean> {
         this.phase = 'services';
 
-        let criticalFailed = false;
-        for (let pIdx = 0; pIdx < SERVICE_PHASES.length; pIdx++) {
-            const phaseServices = SERVICE_PHASES[pIdx];
-            const memBefore = (performance as unknown as { memory?: { usedJSHeapSize: number } })
-                .memory?.usedJSHeapSize;
-            this.logger.info(
-                'Bootstrap',
-                `Phase ${pIdx + 1}/${SERVICE_PHASES.length} starting: ${phaseServices.join(', ')}`,
-                { memMB: memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a' },
-            );
-            const results = await this.lifecycle.initAllSequential(phaseServices);
+        // BR-14: Heap logging only in DEV — 14 calls across init(), spam in prod
+        const memBefore: number | undefined = import.meta.env.DEV
+            ? (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
+                  ?.usedJSHeapSize
+            : undefined;
+        if (import.meta.env.DEV) {
+            this.logger.info('Bootstrap', 'Initializing all lifecycle services...', {
+                memMB: memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a',
+            });
+        }
+
+        // BR-11: Use single initAll() instead of hardcoded SERVICE_PHASES —
+        // services are registered in dependency order by phase files (0-11),
+        // so registration order === correct init order.
+        await this.lifecycle.initAll();
+
+        if (import.meta.env.DEV) {
             const memAfter = (performance as unknown as { memory?: { usedJSHeapSize: number } })
                 .memory?.usedJSHeapSize;
-            this.logger.info('Bootstrap', `Phase ${pIdx + 1}/${SERVICE_PHASES.length} done`, {
+            this.logger.info('Bootstrap', 'All lifecycle services initialized', {
                 memMB: memAfter ? Math.round(memAfter / 1024 / 1024) : 'n/a',
                 deltaMB:
                     memBefore && memAfter
                         ? Math.round((memAfter - memBefore) / 1024 / 1024)
                         : 'n/a',
             });
-            const entryNames = this.lifecycle
-                .getEntries()
-                .filter((e) => phaseServices.includes(e.name))
-                .map((e) => e.name);
-
-            for (let i = 0; i < results.length; i++) {
-                if (!results[i]) {
-                    const name = entryNames[i] ?? `unknown-${i}`;
-                    if (CRITICAL_SERVICES.has(name)) {
-                        this.logger.error(
-                            'Bootstrap',
-                            `Critical service ${name} failed — aborting`,
-                        );
-                        criticalFailed = true;
-                    } else {
-                        this.logger.warn(
-                            'Bootstrap',
-                            `Optional service ${name} failed — continuing`,
-                        );
-                        this.eventBus.emit(EVENTS.NOTIFICATION, {
-                            message: `Service ${name} failed to init`,
-                            type: 'warning',
-                            source: 'bootstrap',
-                        });
-                    }
-                }
-            }
-            if (criticalFailed) break;
-            this.eventBus.emit(EVENTS.KERNEL_UPDATED, {
-                bootstrapPhase: pIdx + 1,
-                totalPhases: SERVICE_PHASES.length,
-                phase: this.phase,
-            } as Record<string, unknown>);
         }
 
-        if (criticalFailed) {
-            this.phase = 'failed';
-            this.error = 'One or more critical services failed to initialize';
-            this.eventBus.emit(EVENTS.RUNTIME_FAILED, { error: this.error, phase: this.phase });
-            return false;
+        // C-08: Restore active debate session on bootstrap
+        try {
+            await debateService.init();
+        } catch (e) {
+            this.logger.warn('Bootstrap', 'Failed to restore active debate session', {
+                error: String(e),
+            });
+        }
+
+        // Check for critical service failures
+        for (const status of this.lifecycle.getStatuses()) {
+            if (status.status === 'error') {
+                if (CRITICAL_SERVICES.has(status.name)) {
+                    this.logger.error(
+                        'Bootstrap',
+                        `Critical service ${status.name} failed — aborting`,
+                        { error: status.error },
+                    );
+                    this.phase = 'failed';
+                    this.error = `Critical service ${status.name} failed: ${status.error}`;
+                    this.eventBus.emit(EVENTS.RUNTIME_FAILED, {
+                        error: this.error,
+                        phase: this.phase,
+                    });
+                    return false;
+                }
+                this.logger.warn(
+                    'Bootstrap',
+                    `Optional service ${status.name} failed — continuing`,
+                    { error: status.error },
+                );
+                this.eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: `Service ${status.name} failed to init`,
+                    type: 'warning',
+                    source: 'bootstrap',
+                });
+            }
         }
 
         this.phase = 'topology';
@@ -333,39 +286,17 @@ export class SystemBootstrap implements IBootstrap {
             `After rotation, before orchestrator, memMB: ${memPostRotation ? Math.round(memPostRotation / 1024 / 1024) : 'n/a'}`,
         );
 
-        const memBefore = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
-            ?.usedJSHeapSize;
+        const memBeforeOrch = (performance as unknown as { memory?: { usedJSHeapSize: number } })
+            .memory?.usedJSHeapSize;
         this.logger.info(
             'Bootstrap',
-            `Before orchestrator + topology, memMB: ${memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a'}`,
+            `Before orchestrator + topology, memMB: ${memBeforeOrch ? Math.round(memBeforeOrch / 1024 / 1024) : 'n/a'}`,
         );
 
         try {
-            const toolService = this.container.get<ToolService>('toolService');
-            const cognitiveService = this.container.get<CognitiveService>('cognitiveService');
-            const policyService = this.container.get<PolicyService>('policyService');
-
-            const orch = new Orchestrator({
-                eventBus: this.eventBus as unknown as {
-                    on: (event: string, cb: (...args: unknown[]) => void) => () => void;
-                    emit: (event: string, data?: unknown) => void;
-                },
-                toolService,
-                cognitiveService,
-                policyService,
-            });
-            this.container.register('orchestrator', orch);
-
-            const memAfterOrch = (performance as unknown as { memory?: { usedJSHeapSize: number } })
-                .memory?.usedJSHeapSize;
-            this.logger.info(
-                'Bootstrap',
-                `After orchestrator created, memMB: ${memAfterOrch ? Math.round(memAfterOrch / 1024 / 1024) : 'n/a'}`,
-            );
-
+            const orch = this.container.get<Orchestrator>('orchestrator');
             orch.mount(AuditorTopology);
             await orch.init();
-            await this.lifecycle.tryInit('orchestrator', () => Promise.resolve());
 
             const memAfterMount = (
                 performance as unknown as { memory?: { usedJSHeapSize: number } }
@@ -389,159 +320,18 @@ export class SystemBootstrap implements IBootstrap {
             this.phase = 'degraded';
         }
 
-        // ── Causal Debugger Layer ────────────────────────────────────────
-        {
-            const memBefore = getHeapMB();
-            this.logger.info('Bootstrap', '[MODULE START] CausalTimelineService');
-            try {
-                const causalScopeManager = new CausalScopeManager();
-                const kss = this.container.get<KeyStateStore>('keyStateStore');
-                const routerProjection = this.container.get<RouterProjection>('routerProjection');
-                const causalTimelineService = new CausalTimelineService(
-                    causalScopeManager,
-                    kss,
-                    routerProjection,
-                    this.eventBus,
-                    this.logger,
-                );
-                causalTimelineService.start();
-                this.causalTimeline = causalTimelineService;
-                this.container.register('causalScopeManager', causalScopeManager);
-                this.container.register('causalTimelineService', causalTimelineService);
-                const memAfter = getHeapMB();
-                this.logger.info(
-                    'Bootstrap',
-                    `[MODULE END] CausalTimelineService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`,
-                );
-            } catch (e) {
-                if (this.causalTimeline) {
-                    try {
-                        (this.causalTimeline as { destroy?: () => void }).destroy?.();
-                    } catch (destroyErr) {
-                        this.logger.warn(
-                            'Bootstrap',
-                            'CausalTimeline destroy failed during cleanup',
-                            { error: destroyErr },
-                        );
-                    }
-                }
-                this.logger.warn('Bootstrap', 'CausalTimelineService failed (non-critical)', {
-                    error: e,
-                });
-            }
-        }
-
-        // ── Counterfactual Engine ────────────────────────────────────────
-        {
-            const memBefore = getHeapMB();
-            this.logger.info('Bootstrap', '[MODULE START] CounterfactualEngine');
-            try {
-                const routerService = this.container.get<RouterService>('routerService');
-                const counterfactualEngine = new CounterfactualEngine(routerService);
-                this.container.register('counterfactualEngine', counterfactualEngine);
-                const memAfter1 = getHeapMB();
-                this.logger.info(
-                    'Bootstrap',
-                    `[MODULE END] CounterfactualEngine [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter1}MB [MEMORY DELTA] ${memAfter1 - memBefore > 0 ? '+' : ''}${memAfter1 - memBefore}MB`,
-                );
-            } catch (e) {
-                this.logger.warn('Bootstrap', 'CounterfactualEngine failed (non-critical)', {
-                    error: e,
-                });
-            }
-
-            this.logger.info('Bootstrap', '[MODULE START] CounterfactualExplanationService');
-            try {
-                const explanationService = new CounterfactualExplanationService();
-                this.container.register('counterfactualExplanationService', explanationService);
-                const memAfter2 = getHeapMB();
-                this.logger.info(
-                    'Bootstrap',
-                    `[MODULE END] CounterfactualExplanationService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter2}MB [MEMORY DELTA] ${memAfter2 - memBefore > 0 ? '+' : ''}${memAfter2 - memBefore}MB`,
-                );
-            } catch (e) {
-                this.logger.warn(
-                    'Bootstrap',
-                    'CounterfactualExplanationService failed (non-critical)',
-                    { error: e },
-                );
-            }
-
-            this.logger.info('Bootstrap', '[MODULE START] CounterfactualNarrativeService');
-            try {
-                const narrativeService = new CounterfactualNarrativeService();
-                this.container.register('counterfactualNarrativeService', narrativeService);
-                const memAfter3 = getHeapMB();
-                this.logger.info(
-                    'Bootstrap',
-                    `[MODULE END] CounterfactualNarrativeService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter3}MB [MEMORY DELTA] ${memAfter3 - memBefore > 0 ? '+' : ''}${memAfter3 - memBefore}MB`,
-                );
-            } catch (e) {
-                this.logger.warn(
-                    'Bootstrap',
-                    'CounterfactualNarrativeService failed (non-critical)',
-                    { error: e },
-                );
-            }
-        }
-
-        // ── Temporal Replay Service (needs EventBridge) ──────────────────
-        {
-            const memBefore = getHeapMB();
-            this.logger.info('Bootstrap', '[MODULE START] TemporalReplayService');
-            try {
-                const routerService = this.container.get<RouterService>('routerService');
-                const eventSourcing = this.container.get<EventRecorder>('eventSourcingService');
-                const scopeManager = this.container.get<ICausalScopeManager>('causalScopeManager');
-                const temporalReplayService = new TemporalReplayService(
-                    eventSourcing,
-                    routerService,
-                    scopeManager,
-                );
-                this.container.register('temporalReplayService', temporalReplayService);
-                const memAfter = getHeapMB();
-                this.logger.info(
-                    'Bootstrap',
-                    `[MODULE END] TemporalReplayService [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`,
-                );
-            } catch (e) {
-                this.logger.warn('Bootstrap', 'TemporalReplayService failed (non-critical)', {
-                    error: e,
-                });
-            }
-        }
-
-        // ── Truth Consistency Monitor ────────────────────────────────────
-        {
-            const memBefore = getHeapMB();
-            this.logger.info('Bootstrap', '[MODULE START] TruthConsistencyMonitor');
-            try {
-                const monitor = new TruthConsistencyMonitor();
-                this.container.register('truthConsistencyMonitor', monitor);
-                const memAfter = getHeapMB();
-                this.logger.info(
-                    'Bootstrap',
-                    `[MODULE END] TruthConsistencyMonitor [MEMORY BEFORE] ${memBefore}MB [MEMORY AFTER] ${memAfter}MB [MEMORY DELTA] ${memAfter - memBefore > 0 ? '+' : ''}${memAfter - memBefore}MB`,
-                );
-            } catch (e) {
-                this.logger.warn('Bootstrap', 'TruthConsistencyMonitor failed (non-critical)', {
-                    error: e,
-                });
-            }
-        }
-
         // Group Manager — wraps all key lifecycle
         try {
             const gm = this.container.get<GroupManagerService>('groupManagerService');
             const keysBeforeSync = this.container.get<KeyService>('keyService').getKeys();
             if (import.meta.env.DEV)
-                console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys before sync:', {
+                this.logger.debug('Bootstrap', 'GroupManager.syncExistingKeys — keys before sync', {
                     count: keysBeforeSync.length,
                 });
             await gm.syncExistingKeys();
             const keysAfterSync = gm.getAllKeys();
             if (import.meta.env.DEV)
-                console.log('[KEY_FLOW] GroupManager.syncExistingKeys — keys after sync:', {
+                this.logger.debug('Bootstrap', 'GroupManager.syncExistingKeys — keys after sync', {
                     count: keysAfterSync.length,
                 });
             this.container.get<KeyService>('keyService').attachGroupManager(gm);
@@ -558,7 +348,9 @@ export class SystemBootstrap implements IBootstrap {
             const kss = this.container.get<KeyStateStore>('keyStateStore');
             const existingKeys: ApiKey[] = ks.getKeys?.() ?? [];
             if (import.meta.env.DEV)
-                console.log('[KEY_FLOW] KeyStateStore seed:', { keyCount: existingKeys.length });
+                this.logger.debug('Bootstrap', 'KeyStateStore seed', {
+                    keyCount: existingKeys.length,
+                });
             if (kss && existingKeys.length > 0) {
                 kss.seedFromKeys(existingKeys);
                 this.logger.info(
@@ -619,8 +411,8 @@ export class SystemBootstrap implements IBootstrap {
     private registerWithLifecycle(name: string, instance: unknown) {
         if (
             instance &&
-            typeof (instance as ILifecycle).init === 'function' &&
-            typeof (instance as ILifecycle).destroy === 'function'
+            (typeof (instance as ILifecycle).init === 'function' ||
+                typeof (instance as ILifecycle).destroy === 'function')
         ) {
             this.lifecycle.register(name, instance as ILifecycle);
         }

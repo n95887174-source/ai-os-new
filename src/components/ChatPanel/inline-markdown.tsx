@@ -1,4 +1,3 @@
-import React from 'react';
 
 export function inlineMarkdown(text: string): React.ReactNode {
     const parts: React.ReactNode[] = [];

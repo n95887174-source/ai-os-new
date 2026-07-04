@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Network, Brain } from 'lucide-react';
 import type { GraphNodeData, EdgeData } from './graph-utils';

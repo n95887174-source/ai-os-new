@@ -1,4 +1,3 @@
-import React from 'react';
 import { PROVIDER_TABS, providerColors } from './pattern-constants';
 
 interface Props {

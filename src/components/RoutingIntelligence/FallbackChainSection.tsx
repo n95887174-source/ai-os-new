@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, ChevronDown, Trash2, Plus, Save } from 'lucide-react';
 import type { FallbackLink } from '../../kernel/instances';
 import { providerColor } from './routing-utils';

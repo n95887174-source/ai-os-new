@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface StepDotsProps {
     step: 0 | 1 | 2 | 3;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Cpu, AlertCircle, Activity, Shield, Sliders, AlertTriangle } from 'lucide-react';
 import type { SystemSettings } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';

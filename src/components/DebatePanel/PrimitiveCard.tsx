@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowUp, ArrowDown, Copy, X } from 'lucide-react';
 import type {
     StrategyPrimitive,

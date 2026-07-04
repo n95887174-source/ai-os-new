@@ -1,4 +1,5 @@
 const API_KEY_PATTERNS = [
+    /sk-or-v1-[a-zA-Z0-9]{20,}/,
     /sk-[a-zA-Z0-9]{20,}/,
     /AIza[0-9A-Za-z_-]{35,}/,
     /gsk_[a-zA-Z0-9]{30,}/,

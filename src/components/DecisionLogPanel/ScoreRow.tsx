@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const ScoreRow: React.FC<{ label: string; value: number }> = ({ label, value }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem' }}>

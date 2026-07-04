@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSystemStatus } from '../../stores/useSystemStatus';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useNow } from '../../hooks/useNow';

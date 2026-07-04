@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
@@ -15,7 +14,6 @@ interface OnboardingWizardProps {
 }
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ t }) => {
-    const navigate = useNavigate();
     const [step, setStep] = useState(0);
     const [selectedProvider, setSelectedProvider] = useState('');
     const [apiKey, setApiKey] = useState('');

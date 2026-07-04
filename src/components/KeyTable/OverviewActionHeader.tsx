@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { PowerOff, Power, Copy, Check, RotateCcw } from 'lucide-react';
 import type { KeyExtendedStats } from '../../kernel/types/metrics-types';

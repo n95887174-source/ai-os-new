@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clock } from 'lucide-react';
 import type { LatencyBreakdown } from '../../kernel/types/metrics-types';
 import { glassCard } from '../../styles/common';

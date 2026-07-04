@@ -4,9 +4,10 @@ export { rootLogger };
 import { BucketStorageAdapter } from './storage-adapter-instance';
 export { BucketStorageAdapter };
 export const storageAdapter = BucketStorageAdapter;
+export type { KeyEntry, AlertEntry } from './types/interfaces';
 import type { SettingsService } from './services/settings-service';
 import type { KeyService } from './services/key-management/key-service';
-import type { MemoryService } from './services/memory-engine';
+import type { IMemoryEngine } from './contracts/memory';
 import type { MCPService } from './services/mcp-service';
 import { FREE_TIER_LIMITS } from './services/key-management/key-service';
 import type { ChatService } from './services/chat-service';
@@ -75,7 +76,7 @@ export const keyService = lazyService<KeyService>('keyService', {
     getRoutingPolicy: () => ({ globalSLAMode: 'BALANCED' as const, latencyThreshold: 1500 }),
 });
 
-export const memoryService = lazyService<MemoryService>('memoryService');
+export const memoryService = lazyService<IMemoryEngine>('memoryService');
 export const mcpService = lazyService<MCPService>('mcpService');
 export const routerService = lazyService<RouterService>('routerService');
 export const orchestrator = lazyService<OrchestrationService>('orchestrator');
@@ -172,8 +173,8 @@ export const roleTestingSandboxService = lazyService<
 >('roleTestingSandboxService');
 
 // ── Cache Service (for CachePanel) ─────────────────────────────────────────
-import type { CacheService } from './services/cache-service';
-export const cacheService = lazyService<CacheService>('cacheService');
+import type { ICacheService } from './contracts/cache';
+export const cacheService = lazyService<ICacheService>('cacheService');
 
 // ── Event Bridge (shadow mode projections) ──────────────────────
 import type { RouterProjection, ProjectedDecision } from './services/projections/router-projection';

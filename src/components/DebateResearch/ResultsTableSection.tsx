@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import type { RoutingExperimentResult } from '../../kernel/contracts/routing-experiments';
 

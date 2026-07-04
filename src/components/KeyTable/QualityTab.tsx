@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Zap, Shield, AlertTriangle, TrendingUp, Users, Cpu } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { CheckSquare, Square, MessageSquare } from 'lucide-react';
 import { tableHeaderCell } from '../../styles/common';

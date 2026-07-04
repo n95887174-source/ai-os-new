@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Image as ImageIcon, FileText, Trash2 } from 'lucide-react';
 import { textMutedXs, textWhiteXs, flexBetween } from '../../styles/common';

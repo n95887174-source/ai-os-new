@@ -1,4 +1,3 @@
-import React from 'react';
 import { Activity } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ProbeResult } from '../../kernel/contracts/probe';

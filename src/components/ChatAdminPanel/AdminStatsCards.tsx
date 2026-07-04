@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, History, MessageCircle, BarChart3 } from 'lucide-react';
 
 interface StatsCardsProps {

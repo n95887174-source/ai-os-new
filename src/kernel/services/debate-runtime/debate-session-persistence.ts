@@ -21,13 +21,22 @@ const STRATEGY_MAP: Record<string, import('../../contracts/debate-runtime').Topo
     jury_trial: 'judge',
 };
 
+// C2-DT-001 fix: reverse map topologyType → strategy (was casting directly, losing type safety)
+const TOPOLOGY_TO_STRATEGY: Record<import('../../contracts/debate-runtime').TopologyType, DebateSession['strategy']> = {
+    roundtable: 'round_robin',
+    linear: 'sequential',
+    judge: 'judge',
+    'tree-of-thought': 'argument_tree',
+    'red-blue': 'red-blue',
+};
+
 function sessionToRecord(session: DebateSession): DebateSessionRecord {
     const extra = JSON.stringify({
         config: session.config || {},
         convergenceScore: session.convergenceScore ?? 0,
         maxRounds: session.maxRounds ?? 10,
-        metadata: (session as Record<string, unknown>).metadata ?? {},
-        tags: (session as Record<string, unknown>).tags ?? [],
+        metadata: (session as unknown as Record<string, unknown>).metadata ?? {},
+        tags: (session as unknown as Record<string, unknown>).tags ?? [],
     });
     return {
         id: session.id,
@@ -70,13 +79,12 @@ function toBool(v: unknown, fallback: boolean): boolean {
 }
 
 function recordToSession(record: DebateSessionRecord): DebateSession {
-    const savedExtra: Record<string, unknown> = record.topology
-        ? safeJsonParse(record.topology)
-        : {};
+    const savedExtra: Record<string, unknown> =
+        ((record.topology ? safeJsonParse(record.topology) : {}) as Record<string, unknown>) ?? {};
     const savedConfig =
         typeof savedExtra.config === 'object' && savedExtra.config
             ? (savedExtra.config as Record<string, unknown>)
-            : {};
+            : ({} as Record<string, unknown>);
     let parsedParticipants: unknown;
     let parsedArgs: unknown;
     try {
@@ -102,7 +110,9 @@ function recordToSession(record: DebateSessionRecord): DebateSession {
         id: record.id,
         topic: record.topic || '(untitled)',
         status: (record.phase || 'active') as DebateSession['status'],
-        strategy: (record.topologyType || 'round_robin') as DebateSession['strategy'],
+        strategy: record.topologyType
+            ? TOPOLOGY_TO_STRATEGY[record.topologyType as import('../../contracts/debate-runtime').TopologyType] ?? 'round_robin'
+            : 'round_robin',
         maxRounds: toNum(savedExtra.maxRounds, 10),
         currentRound: record.round,
         participants: Array.isArray(parsedParticipants) ? parsedParticipants : [],

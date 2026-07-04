@@ -324,7 +324,17 @@ const SettingsPanel: React.FC = () => {
                     />
                 );
             case 'notifications':
-                return <NotificationsTab settings={settings} updateSetting={updateSetting} />;
+                return (
+                    <NotificationsTab
+                        settings={settings}
+                        updateSetting={
+                            updateSetting as unknown as <K extends keyof SystemSettings>(
+                                key: K,
+                                val: SystemSettings[K],
+                            ) => void
+                        }
+                    />
+                );
             case 'appearance':
                 return <AppearanceTab />;
             case 'prompts':

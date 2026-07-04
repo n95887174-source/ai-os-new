@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, Clock, Swords, Brain, ThumbsUp, Eye } from 'lucide-react';
 import {
     debateTabBar,

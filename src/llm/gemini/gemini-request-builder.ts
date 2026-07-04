@@ -1,4 +1,4 @@
-﻿import type { ChatMessage, SendMessageOptions } from '../core/types';
+import type { ChatMessage, SendMessageOptions } from '../core/types';
 import type { GeminiRequestBody, GeminiPart } from './gemini-types';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 
@@ -64,7 +64,7 @@ function transformOpenAiSchemaToGemini(schema: OpenAISchema): GeminiSchema {
     if (schema.items) {
         result.items = transformOpenAiSchemaToGemini(schema.items);
     }
-    if (schema.required) result.required = schema.required;
+    if (schema.required) result.required = schema.required as unknown as string[];
     if (schema.enum) result.enum = schema.enum;
     return result;
 }
@@ -87,8 +87,8 @@ export class GeminiRequestBuilder {
                         try {
                             args =
                                 typeof tc.function.arguments === 'string'
-                                    ? safeJsonParse(tc.function.arguments)
-                                    : tc.function.arguments;
+                                    ? (safeJsonParse(tc.function.arguments) ?? {})
+                                    : (tc.function.arguments as Record<string, unknown>);
                         } catch {
                             args = {
                                 error: 'Failed to parse arguments JSON',
@@ -107,7 +107,7 @@ export class GeminiRequestBuilder {
                     try {
                         responseJson =
                             typeof m.content === 'string' && m.content.startsWith('{')
-                                ? safeJsonParse(m.content)
+                                ? (safeJsonParse(m.content) ?? {})
                                 : { result: m.content };
                     } catch {
                         responseJson = { result: m.content };
@@ -218,12 +218,12 @@ export class GeminiRequestBuilder {
                 }));
             }
 
-            // G5: Thinking Config (Gemini 2.5 deep thinking) — Phase 3
+            // G5: Thinking Config (Gemini 2.5 deep thinking) � Phase 3
             if (config.thinkingConfig) {
                 body.thinkingConfig = config.thinkingConfig;
             }
 
-            // G6: Google Search Grounding — Phase 4
+            // G6: Google Search Grounding � Phase 4
             if (config.googleSearchGrounding) {
                 body.groundingConfig = {
                     sources: [{ type: 'WEB' }],

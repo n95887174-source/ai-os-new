@@ -1,4 +1,3 @@
-import React from 'react';
 import { Key, Globe } from 'lucide-react';
 import type { TranslationKey } from '../../i18n/translations';
 

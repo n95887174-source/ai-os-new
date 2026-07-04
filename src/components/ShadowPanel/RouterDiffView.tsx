@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, Activity, Clock, GitBranch, CheckCircle2 } from 'lucide-react';
 import { CARD, BADGE, SEVERITY_COLORS } from './shadow-constants';
 import ShadowStatCard from './ShadowStatCard';

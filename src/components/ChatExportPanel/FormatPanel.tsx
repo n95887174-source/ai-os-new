@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, FileJson, Code } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 

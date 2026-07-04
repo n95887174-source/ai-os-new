@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Code, X, FolderOpen } from 'lucide-react';
+import { Code, X } from 'lucide-react';
 import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -149,7 +149,7 @@ const ProjectOsExplorer: React.FC = () => {
             /* silent */
         }
     };
-    const handleCreateHypothesis = (path: string) => {
+    const handleCreateHypothesis = (_path: string) => {
         /* navigate to hypothesis-gen */
     };
 

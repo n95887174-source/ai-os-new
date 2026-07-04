@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { Cpu } from 'lucide-react';
 import type { ProviderMetrics } from '../../types/metrics';

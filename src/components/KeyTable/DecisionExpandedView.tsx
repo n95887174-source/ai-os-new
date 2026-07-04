@@ -1,4 +1,3 @@
-import React from 'react';
 import type { RouterDecision, PipelineStep } from '../../kernel/services/provider-router';
 
 const STEP_ICONS: Record<PipelineStep['status'], string> = {

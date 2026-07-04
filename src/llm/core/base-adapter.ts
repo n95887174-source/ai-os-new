@@ -94,6 +94,7 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
             return { ...result, latency: Date.now() - start };
         } catch (e) {
             if (e instanceof LLMError) throw e;
+            if (e instanceof DOMException && e.name === 'AbortError') throw e;
             throw new LLMError(e instanceof Error ? e.message : String(e), this.id, undefined, {
                 cause: e,
             });

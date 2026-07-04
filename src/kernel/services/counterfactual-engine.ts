@@ -1,5 +1,6 @@
 import type { SystemState } from '../types/metrics-types';
 import type { RouterService, RouterDecision } from './provider-router';
+import type { RoutingStrategy } from './router-types';
 import type {
     ICounterfactualEngine,
     CounterfactualInput,
@@ -105,10 +106,11 @@ export class CounterfactualEngine implements ICounterfactualEngine {
 
         const original = toDecisionPayload({
             requestId: (input.baseTrace.decision.requestId as string) ?? 'simulated',
-            strategy: (input.baseTrace.decision.strategy as string) ?? '',
+            strategy:
+                (input.baseTrace.decision.strategy as RoutingStrategy) ?? ('' as RoutingStrategy),
             classification: input.baseTrace.decision
                 .classification as RouterDecision['classification'],
-            weights: input.baseTrace.decision.weights,
+            weights: input.baseTrace.decision.weights as unknown as RouterDecision['weights'],
             selected: (input.baseTrace.decision.selected as string) ?? '',
             secondBest: (input.baseTrace.decision.secondBest as string | null) ?? null,
             scores: (input.baseTrace.decision.scores as RouterDecision['scores']) ?? [],

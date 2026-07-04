@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { kernel } from '../../kernel/kernel';
-import { cacheService, providerTracker } from '../../kernel/instances';
+import { cacheService, kernel, providerTracker } from '../../kernel/instances';
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
 import { BarChart3, Activity, Globe, History, AlertTriangle, X } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { dismissBtn, errorBanner } from '../../styles/common';
-import { SparklineMemo } from './Sparkline';
+
 import { ProvidersTab } from './ProvidersTab';
 import { DecisionsTab } from './DecisionsTab';
 import SummaryStatsGrid from './SummaryStatsGrid';
@@ -50,7 +49,8 @@ const AnalyticsPanel: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const update = (state: SystemState) => {
+        const update = (data: Record<string, unknown>) => {
+            const state = data as unknown as SystemState;
             if (!isMountedRef.current) return;
             try {
                 setMetrics({ ...state.providers });
@@ -80,7 +80,7 @@ const AnalyticsPanel: React.FC = () => {
                 }
             }
         };
-        update(kernel.getState());
+        update(kernel.getState() as unknown as Record<string, unknown>);
         const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, update);
         return () => unsub();
     }, [clearError]);

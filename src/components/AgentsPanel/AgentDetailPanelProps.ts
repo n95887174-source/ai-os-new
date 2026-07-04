@@ -1,4 +1,3 @@
-import type React from 'react';
 import type { TabId, Agent } from './AgentsPanelContext';
 
 export interface AgentDetailPanelProps {

@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { researchReportService } from '../../kernel/instances';
-import type { ResearchReport } from '../../kernel/contracts/research-report';
 
 const FORMAT_OPTIONS = ['markdown', 'html', 'pdf', 'json'] as const;
 
@@ -25,7 +24,6 @@ const ResearchReportPanelContent: React.FC = () => {
     const [format, setFormat] = useState<'markdown' | 'html' | 'pdf' | 'json'>('markdown');
 
     const refresh = () => setReports([...researchReportService.getReports()]);
-    const selected = reports.find((r) => r.id === selectedId);
 
     const handleCreate = () => {
         if (!title.trim() || !topic.trim()) return;

@@ -1,4 +1,3 @@
-import React from 'react';
 
 const COLORS = [
   '#3b82f6', '#10b981', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4',

@@ -365,3 +365,5 @@ export class DebateInterpreter {
         return summary.trim();
     }
 }
+export type DebateInsight = string;
+export type { DebateInterpretation } from '../../contracts/debate-types';

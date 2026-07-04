@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, Sliders } from 'lucide-react';
 import type {
     DebateSessionSnapshot,
@@ -24,7 +23,7 @@ interface SessionViewTabsProps {
     thinkingAgentId: string | undefined;
     cognitiveMetrics: CognitiveMetricsSnapshot | null;
     cognitivePressure: CognitivePressure | null;
-    t: (key: string, params?: Record<string, unknown>) => string;
+    t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const SessionViewTabs: React.FC<SessionViewTabsProps> = ({

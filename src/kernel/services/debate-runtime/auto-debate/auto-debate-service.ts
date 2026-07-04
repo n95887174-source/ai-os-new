@@ -1,4 +1,4 @@
-﻿import type {
+import type {
     IAutoDebateService,
     AutoDebateOptions,
     AutoDebateResult,
@@ -6,15 +6,15 @@
     BatchTestResult,
     TournamentResult,
     TournamentMatch,
-} from '../../contracts/auto-debate';
+} from '../../../contracts/auto-debate';
 import { rootLogger } from '../../logger-service';
-import type { DebateRole } from '../../contracts/debate-types';
+import type { DebateRole } from '../../../contracts/debate-types';
 import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
 import { getActiveDebateSession } from '../active-debate-store';
 
 const LOGGER = rootLogger.child('AutoDebateService');
 import type { DebateParticipant, DebateSession } from '../debate-service';
-import type { ApiKey } from '../../types/metrics-types';
+import type { ApiKey } from '../../../types/metrics-types';
 
 /**
  * Select the best model for debate from available models.

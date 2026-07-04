@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clock, Code, File } from 'lucide-react';
 
 interface Props {

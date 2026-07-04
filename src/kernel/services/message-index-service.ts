@@ -72,16 +72,14 @@ export class MessageIndexService {
                 this.handleStreamEnd(data);
             },
         );
-        this.unsubSend = eventBus.on(
-            EVENTS.SEND_MESSAGE,
-            (data: {
+        this.unsubSend = eventBus.on(EVENTS.SEND_MESSAGE, (data: unknown) => {
+            const d = data as {
                 requestId?: string;
                 messages?: Array<{ role: string; content: string }>;
                 sessionId?: string;
-            }) => {
-                this.handleUserSend(data);
-            },
-        );
+            };
+            this.handleUserSend(d);
+        });
         this.unsubChatRewound = eventBus.on(EVENTS.CHAT_REWOUND, (raw: unknown) => {
             const data = raw as { sessionId: string; messageId: string; truncatedCount: number };
             this.messages = this.messages.filter((m) => m.sessionId !== data.sessionId);

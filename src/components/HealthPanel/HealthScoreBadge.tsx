@@ -1,4 +1,3 @@
-import React from 'react';
 import { getHealthBand } from '../../kernel/contracts/key-state';
 
 const BAND_COLORS: Record<string, string> = {

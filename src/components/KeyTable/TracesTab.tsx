@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { routerService } from '../../kernel/instances';
 import type { RouterDecision } from '../../kernel/services/provider-router';

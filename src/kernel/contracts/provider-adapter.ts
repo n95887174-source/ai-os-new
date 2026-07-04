@@ -8,6 +8,8 @@ import type {
 
 export type { ChatMessage as AdapterMessage } from '../types/llm-types';
 export type { ProviderResponse as AdapterResponse } from '../types/llm-types';
+export type { ToolCall } from '../types/llm-types';
+export type { HealthCheckResult as AdapterHealthResult } from '../types/llm-types';
 
 export type AdapterFinishReason =
     'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
@@ -65,7 +67,7 @@ export interface IAdapterRegistry {
     getOrCreateWithFallback(primary: string, fallback: string): IProviderAdapter;
     getAllProviders(): string[];
     getProviderRuntimeStatus(provider: string): ProviderRuntimeStatus;
-    getCircuitBreakerState?(provider: string): 'closed' | 'open' | 'half-open';
+    getCircuitBreakerState(provider: string): 'closed' | 'open' | 'half-open';
     resetCircuitBreaker(provider: string): void;
     syncCircuitBreakerState(provider: string, status: string): void;
     syncRateLimitState(provider: string, remaining: number): void;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, Zap } from 'lucide-react';
 import { TEMP_LABELS } from './wizard-constants';
 import { DEBATE_TEMPLATES } from '../../kernel/services/debate-runtime/debate-templates';

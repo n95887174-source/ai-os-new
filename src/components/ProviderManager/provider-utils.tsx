@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle2, AlertTriangle, Loader2, Shield } from 'lucide-react';
 import { getStatusColor } from '../Common/status-vocabulary';
 import type { ApiKey } from '../../types/metrics';

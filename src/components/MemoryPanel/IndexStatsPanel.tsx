@@ -1,4 +1,3 @@
-import React from 'react';
 import { Network, Zap } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { sectionPanelTitle, statBox, progressLabel, progressBarSmall } from '../../styles/common';

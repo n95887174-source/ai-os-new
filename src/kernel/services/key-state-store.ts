@@ -15,6 +15,7 @@ import type { ApiKey } from '../contracts/storage/storage-layer';
 import { EVENTS } from '../events/event-names';
 import type { QuotaExceededPayload } from '../events/provider-events';
 import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('KeyStateStore');
 
 const DEFAULT_HEALTH: KeyHealthSnapshot = { errorRate: 0, successRate: 1, consecutiveErrors: 0 };
 const DEFAULT_QUOTA: KeyQuotaSnapshot = {

@@ -1,6 +1,5 @@
-import React from 'react';
 import type { ConsistencyReport } from '../../kernel/contracts/truth-consistency';
-import { CARD, SMALL_BUTTON } from './causal-debugger-constants';
+import { SMALL_BUTTON } from './causal-debugger-constants';
 
 interface Props {
     report: ConsistencyReport | null;

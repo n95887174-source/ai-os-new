@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp, ArrowRight, Trash2, Plus, Save } from 'lucide-react';
 import { flexBetweenGapMd, glassPanel, iconBtnBlue, inputDarkSm } from '../../styles/common';
 

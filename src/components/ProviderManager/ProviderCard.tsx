@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Layers, AlertTriangle } from 'lucide-react';
+import { Loader2, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+
 import type { ApiKey } from '../../types/metrics';
 import { repColor, TagPill } from '../Common/status-vocabulary';
 import { probeService, keyService, keyStateStore } from '../../kernel/instances';
@@ -15,7 +15,7 @@ import { ProviderUsageBars } from './ProviderUsageBars';
 import { ProbeResultSection } from './ProbeResultSection';
 import { QuickTestSection } from './QuickTestSection';
 import { ProviderCardActions, ConfirmRemoveBanner } from './ProviderCardActions';
-import { posRelative, textXs, textSecondary, infoIcon } from '../../styles/common';
+import { posRelative, textXs, infoIcon } from '../../styles/common';
 import { PersonalityBadge } from './PersonalityBadge';
 
 export interface ProviderCardProps {

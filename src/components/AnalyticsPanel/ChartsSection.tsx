@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, GitMerge, HardDrive } from 'lucide-react';
 import type { ProviderMetrics } from '../../types/metrics';
@@ -10,7 +9,7 @@ interface ChartsSectionProps {
     tokenHistory: number[];
     costHistory: number[];
     cacheStats: { hits: number; misses: number; hitRate: number } | null;
-    itemVariants: Record<string, unknown>;
+    itemVariants: import('framer-motion').Variants;
     t: (key: string) => string;
 }
 

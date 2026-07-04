@@ -1,4 +1,3 @@
-import React from 'react';
 import { Gauge } from 'lucide-react';
 import { glassCard, flexCenterGap2Mb1 } from '../../styles/common';
 

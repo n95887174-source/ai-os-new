@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Key, Terminal, Settings, Database, Trash2 } from 'lucide-react';
 import { externalSecretsService } from '../../kernel/instances';
 import type { SystemSettings, BackendStatus } from '../../kernel/instances';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { getPersonality, type ProviderPersonality } from './provider-personalities';
 
 interface PersonalityBadgeProps {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { flexBetween } from '../../styles/common';
 
 interface HealthStatCardProps {

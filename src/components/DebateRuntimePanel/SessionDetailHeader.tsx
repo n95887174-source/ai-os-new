@@ -1,4 +1,3 @@
-import React from 'react';
 import { Play, Pause, Square, Loader2 } from 'lucide-react';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
 import { PHASE_COLORS } from './debate-runtime-constants';

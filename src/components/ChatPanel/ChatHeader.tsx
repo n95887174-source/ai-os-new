@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, Search, FileDown, Activity, Split, Settings } from 'lucide-react';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { iconBtnMuted } from '../../styles/common';

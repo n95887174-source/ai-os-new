@@ -136,6 +136,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     };
 
     const runCode = useCallback(async () => {
+        cleanup();
         if (
             !(await confirm({
                 title: 'Execute Code',
@@ -205,6 +206,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
                     setOutput('(rendered — check iframe for visual output)');
                 }
                 setIsRunning(false);
+                cleanup();
             }, 1000);
             return;
         }

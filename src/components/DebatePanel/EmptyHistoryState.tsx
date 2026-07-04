@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clock } from 'lucide-react';
 import { textWeight600 } from '../../styles/common';
 

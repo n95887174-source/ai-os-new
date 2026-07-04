@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, Zap, Activity } from 'lucide-react';
 
 export type SREAlert = {

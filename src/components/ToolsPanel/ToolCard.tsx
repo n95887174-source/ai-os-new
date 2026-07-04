@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Code, Globe, Database, Blocks } from 'lucide-react';
 import type { ToolDefinition } from '../../kernel/instances';

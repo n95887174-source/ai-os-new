@@ -1,4 +1,3 @@
-import React from 'react';
 import { Brain, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { CognitiveTrace } from '../../kernel/instances';

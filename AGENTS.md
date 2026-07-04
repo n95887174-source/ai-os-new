@@ -78,7 +78,7 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 
 ```bash
 npm run dev          # dev server
-npx tsc --noEmit     # typecheck
+npx tsc -b --noEmit   # typecheck (project references)
 npx vite build       # production build
 npx vitest run       # tests
 npx vitest run --reporter=verbose  # verbose tests
@@ -158,7 +158,7 @@ Integrate 6 new components (CountdownRing, JudgeScales, SocratesMascot, ThoughtB
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.21s
 - Phase 2 (Microphone-Pass Animation) explicitly skipped per user request
 
@@ -269,7 +269,7 @@ Complete all 100 provider audit fixes from `TASKS.md` (Provider section) — P0/
 
 - Process in order: P0 → P1 → P2 → Security → Performance → UI → Arch → DX
 - Tests (#98-100) deferred per user request
-- `npx tsc --noEmit` passes clean throughout
+- `npx tsc -b --noEmit` passes clean throughout
 
 ### Changes
 
@@ -484,7 +484,7 @@ Complete AGENTS.md roadmap items (non-test): strict event validation, dev trace 
 
 ### Critical Context
 
-- TypeScript compiles clean (`npx tsc --noEmit` — zero errors)
+- TypeScript compiles clean (`npx tsc -b --noEmit` — zero errors)
 - Dev server runs on `http://localhost:5173` (port auto-switches to 5174 if 5173 is taken)
 - Production bundle: 1.6MB main JS, 23MB WASM (ort-wasm-simd-threaded), ~75KB CSS
 - 235+ bugs fixed across the project since start
@@ -662,7 +662,7 @@ Execute the prioritized UI backlog from the system passport `docs/BACKLOG_UI.md`
 
 ### TypeScript
 
-- `npx tsc --noEmit` — zero errors after all edits
+- `npx tsc -b --noEmit` — zero errors after all edits
 - `npx vite build` passes in ~2.5s
 
 ### Next Steps
@@ -716,7 +716,7 @@ External audit report by independent reviewer (208d7f9). Static analysis of 550+
 
 - New bugs take priority over remaining backlog
 - Process in order: A-06 → A-07 → A-08 → A-09 → A-10 → A-11
-- `npx tsc --noEmit` after each fix — zero errors throughout
+- `npx tsc -b --noEmit` after each fix — zero errors throughout
 
 ---
 
@@ -737,7 +737,7 @@ Groups stored via `DatabaseService.setKv()` → Dexie `keyValue` table, bypassin
 
 ### TypeScript
 
-- `npx tsc --noEmit` — zero errors
+- `npx tsc -b --noEmit` — zero errors
 
 ---
 
@@ -753,7 +753,7 @@ Implement the Project OS Explorer module from `docs/debate-system-research.md` �
 | :-- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | 1   | **Project OS Explorer** — full React panel using existing `workspaceService` singleton (from `instances.ts`) with attach/detach, file tree, filter tabs (All/Code/Config/Docs/Logs), search, file preview, safety badge for sensitive paths | Done   |
 | 2   | **No new backend needed** — `WorkspaceService` already provides `listTree()`, `readFile()`, `search()` via File System Access API                                                                                                           | Done   |
-| 3   | **npx tsc --noEmit** — zero errors                                                                                                                                                                                                          | Done   |
+| 3   | **npx tsc -b --noEmit** — zero errors                                                                                                                                                                                                       | Done   |
 | 4   | **npx vite build** — 3.7s, 3288 modules                                                                                                                                                                                                     | Done   |
 
 ### Key Decisions
@@ -786,7 +786,7 @@ Implement PR-01 from `temp/TASKS.md` section 14 — add expand/collapse drill-do
 | 3   | **Steps populated in logDebateSkip** — single blocked step from skipped entry                                                                                                                                                         | Done   |
 | 4   | **Steps populated in recordDecision** — converts up to 5 skipped entries to blocked steps                                                                                                                                             | Done   |
 | 5   | **TracesTab rewrite** — extracted `DecisionCard` with expand/collapse (`AnimatePresence`), shows pipeline step badges inline, expanded view includes metadata grid, pipeline steps with status icons, scores table, skipped keys list | Done   |
-| 6   | **TypeScript + build** — `npx tsc --noEmit` ✅                                                                                                                                                                                        | Done   |
+| 6   | **TypeScript + build** — `npx tsc -b --noEmit` ✅                                                                                                                                                                                     | Done   |
 
 ### Key Decisions
 
@@ -1022,7 +1022,7 @@ Complete Phase 3 remaining items from audit: eslint cleanup, JSX dedup, Russian 
 | 4   | **Russian speculation words** — added 15 Russian hedging words (`возможно`, `вероятно`, `наверное`, etc.) to `scoreConstraintCompliance()` in `debate-metrics.ts`                                                                                                                         | Done   |
 | 5   | **Build fix: missing `storageAdapter` export** — added `export const storageAdapter = BucketStorageAdapter` in `instances.ts` (5 components imported it but it was missing)                                                                                                               | Done   |
 | 6   | **Build fix: missing `StorageAdapter` export** — added `export const StorageAdapter = BucketStorageAdapter` in `storage-adapter.ts` (ProjectOsExplorer + HypothesisMarketplace imported the old name)                                                                                     | Done   |
-| 7   | **`npx tsc --noEmit`** — zero errors throughout                                                                                                                                                                                                                                           | Done   |
+| 7   | **`npx tsc -b --noEmit`** — zero errors throughout                                                                                                                                                                                                                                        | Done   |
 | 8   | **`npx vite build`** — passes in 8.21s, all 3471 modules built                                                                                                                                                                                                                            | Done   |
 
 ### Key Decisions
@@ -1145,7 +1145,7 @@ Eliminate remaining memory leak sources: InsightEngine running every 60s, ProbeS
 - After first probe cycle, `authFailed` flags set → **zero probe calls** for broken keys
 - `gemini-2.0-flash-exp` no longer probed (removed from fallbacks)
 - Gemini model validator: 403 → `markFailed` → **zero model-list fetches** for 10 minutes
-- `npx tsc --noEmit` ✅ | `npx vite build` ✅
+- `npx tsc -b --noEmit` ✅ | `npx vite build` ✅
 
 ---
 
@@ -1165,7 +1165,7 @@ Eliminate remaining memory leak sources: InsightEngine running every 60s, ProbeS
 
 ### Result
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `failedProviders` persists across all `callLLM()` calls for the same session — once OpenRouter fails for Agent A, all subsequent agents skip it immediately
 - `destroy()` clears `_failedProviders` when session is torn down
 
@@ -1245,7 +1245,7 @@ Almost the entire report was already implemented in previous sessions. Verified 
 
 ### TypeScript
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.19s passes
 
 ---
@@ -1339,7 +1339,7 @@ Fix remaining P2/P3 issues from audit3 worklog (`audit/audit3final/ai-os-new_aud
 | :-- | :------------------------------------ | :----------------------------- | :-------------------------------------------------------------------------------------------- |
 | C5  | AddKeyModal Back button breaks wizard | `AddKeyModal.tsx`              | Removed `defaultProvider` special-case that closed modal on step 2 back                       |
 | H6  | ProviderCard test-init effect fragile | `ProviderCard.tsx`             | Added `isMounted.current` guards to `setProbeResult`/`setProbeLoading`                        |
-| —   | ChatPanel split verified              | `ChatPanel.tsx` + 6 new files  | `npx tsc --noEmit` clean                                                                      |
+| —   | ChatPanel split verified              | `ChatPanel.tsx` + 6 new files  | `npx tsc -b --noEmit` clean                                                                   |
 | —   | provider-router.ts split              | `provider-router.ts` (466 LOC) | Extracted `RouterFallbackResolver` + `RouterDebateSelector`, 639→466 LOC                      |
 | —   | H1 Router Config unified              | `config-service.ts`            | Already SOT via `getRouterConfig()`; verified no duplicate overlay                            |
 | —   | bootstrap.ts split                    | `bootstrap.ts` (668 LOC)       | Extracted `bootstrap-phases.ts` + `bootstrap-key-init.ts`, 853→668 LOC                        |
@@ -1361,7 +1361,7 @@ Fix remaining P2/P3 issues from audit3 worklog (`audit/audit3final/ai-os-new_aud
 
 ### Status
 
-- `npx tsc --noEmit` ✅
+- `npx tsc -b --noEmit` ✅
 - `npx vite build` ✅ (3.25s)
 - Next: `docs/UNIFIED_ROADMAP.md` Section 12 (исправление долгов) or Section 5 (дебаты — Live Arena)
 
@@ -1385,7 +1385,7 @@ Fix remaining P0 debts from UNIFIED_ROADMAP.md Section 12.
 ### Status
 
 - All 8 P0 debts (D-01..D-08) resolved 🟢
-- `npx tsc --noEmit` ✅
+- `npx tsc -b --noEmit` ✅
 - `UNIFIED_ROADMAP.md` July phase updated to 🟢 Complete
 - Next: Section 14 Quick Wins
 
@@ -1416,7 +1416,7 @@ Fix remaining P0 debts from UNIFIED_ROADMAP.md Section 12.
 
 ### Status
 
-- `npx tsc --noEmit` ✅
+- `npx tsc -b --noEmit` ✅
 - 12 Quick Wins done this session (27 total done, 18 remaining)
 - Remaining: Q-08 (badges), Q-12 (personality cards), Q-13 (speed dashboard), Q-14 (pie chart), Q-15 (CB visual), Q-16 (cost analytics), Q-17 (key narrative), Q-18 (bulk import), Q-19 (auto-detect provider), Q-20 (key strength), Q-22 (speaker glow), Q-31 (memory search), Q-32 (memory timeline), Q-33 (forgetting curve), Q-35 (memory count), Q-36 (settings search), Q-45 (keyboard shortcuts)
 
@@ -1446,7 +1446,7 @@ Build visual strategy selector component (Q-26 from Quick Wins) to replace the p
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.63s
 
 ---
@@ -1477,7 +1477,7 @@ Build visual strategy selector component (Q-26 from Quick Wins) to replace the p
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 
 ---
 
@@ -1507,7 +1507,7 @@ Q-13 (speed dashboard), Q-16 (cost analytics), Q-18 (bulk import), Q-33 (forgett
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 5.69s
 
 ---
@@ -1542,7 +1542,7 @@ Q-13 (speed dashboard), Q-16 (cost analytics), Q-18 (bulk import), Q-33 (forgett
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 3.67s
 
 ### Changes
@@ -1562,7 +1562,7 @@ Q-13 (speed dashboard), Q-16 (cost analytics), Q-18 (bulk import), Q-33 (forgett
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.63s
 
 ---
@@ -1579,7 +1579,7 @@ Q-13 (speed dashboard), Q-16 (cost analytics), Q-18 (bulk import), Q-33 (forgett
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.44s
 
 ---
@@ -1596,7 +1596,7 @@ Q-13 (speed dashboard), Q-16 (cost analytics), Q-18 (bulk import), Q-33 (forgett
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 5.03s
 - Next: D-12 (reconnection logic), November (Live Arena enhancements), or P0 gaps (Model Comparison Playground)
 
@@ -1618,7 +1618,7 @@ Q-13 (speed dashboard), Q-16 (cost analytics), Q-18 (bulk import), Q-33 (forgett
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.07s
 - Next: October milestone (Design System v1 — Design Tokens LIVE editor) or tackle remaining open items (D-12 reconnection, D-13 ChatService split)
 
@@ -1641,7 +1641,7 @@ Q-13 (speed dashboard), Q-16 (cost analytics), Q-18 (bulk import), Q-33 (forgett
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 5.77s
 
 ---
@@ -1662,7 +1662,7 @@ Wire the emotion system into SpeakerNode, implement 6 arena layouts, and build t
 | 4   | **Layout selector in DebateLivePanel** — dropdown with ARENA_LAYOUTS icons/labels, passes layout to CircularLayout                        | `src/components/DebateLive/DebateLivePanel.tsx` — layout state, `<select>` with ARENA_LAYOUTS              |
 | 5   | **Prompt Library (P0 gap #2)** — contract, service, full CRUD panel with 7 built-in templates, categories, search, clipboard copy         | 8 new files across contracts/services/components/routes/i18n                                               |
 | 6   | **Roadmap** — emotion system 🟢 Done, 6/10 layouts 🟢, P0 gap #2 🟢 Done, November updated                                                | `docs/UNIFIED_ROADMAP.md` — sections 5.7, 5.8, 6.6                                                         |
-| 7   | **`npx tsc --noEmit`** — zero errors throughout                                                                                           |                                                                                                            |
+| 7   | **`npx tsc -b --noEmit`** — zero errors throughout                                                                                        |                                                                                                            |
 
 ### Key Decisions
 
@@ -1705,7 +1705,7 @@ Close P0 competitive gaps #4 (batch processing queue) and #6 (multi-step workflo
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 9.07s, 3796+ modules
 - P0 gaps resolved: #1 🟢, #2 🟢, #4 🟢, #6 🟢 (4 of 13)
 - Remaining P0 gaps: #3 Team collaboration, #5 Fine-tuning UI, #7 Model distillation, #8 Deploy to production, #9 Evaluation datasets, #10 Custom metrics, #11 Security scan, #12 Cost optimization, #13 A/B testing
@@ -1740,7 +1740,7 @@ Close P0 gap #11 (Security scan for prompts) and complete all 10 Arena Layouts.
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅
 - P0 gaps resolved: #1 🟢, #2 🟢, #4 🟢, #6 🟢, #11 🟢 (5 of 13)
 - Arena layouts: 10/10 complete (was 6/10)
@@ -1766,7 +1766,7 @@ Complete remaining P0 competitive gaps #12 (Cost optimization suggestions) and #
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 5.60s
 - P0 gaps resolved: **7/13** (#1, #2, #4, #6, #11, #12, #13)
 - Remaining P0 gaps: #3 Team collaboration, #5 Fine-tuning UI, #7 Model distillation, #8 Deploy to production, #9 Evaluation datasets, #10 Custom metrics
@@ -1806,7 +1806,7 @@ Complete remaining P0 competitive gaps #9 (Evaluation Datasets) and #10 (Custom 
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.59s (3824 modules)
 - P0 gaps resolved: **9/13** (#1, #2, #4, #6, #9, #10, #11, #12, #13)
 - Phase Beta January (Memory v1): Complete
@@ -1843,7 +1843,7 @@ Complete Phase Beta April milestone — Ecosystem engine with 52 creatures, 25 t
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 7.42s
 - Phase Beta April (Aquarium Ecosystem): Complete 🟢
 - Phase Beta May (Wave 2): Complete 🟢 (panels all built, only Techniques panel remaining)
@@ -1876,7 +1876,7 @@ Complete Phase Beta March milestone — Research Engine with epistemic loop core
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.83s
 - Phase Beta March (Research Engine): Complete 🟢
 
@@ -1911,7 +1911,7 @@ Complete Phase Beta February milestone — Unified Role Registry with 500+ roles
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.07s (3830 modules)
 - Roles: **610+** entries across **28 categories**
 - Consilia: **37** entries across **10 types**
@@ -1954,7 +1954,7 @@ Implement Google Integration phases 1-4 from UNIFIED_ROADMAP §6.5: SDK integrat
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.99s (3842 modules)
 - Google Integration phases 1-4: 🟢 Complete
 - Remaining: phases 5-12 (Vertex Search, Imagen, Veo, Lyria, Gemini Live, Gemini for Debates/Research/Memory) — 🔴 Future
@@ -1998,7 +1998,7 @@ Complete Phase Gamma June-August milestones: advanced debate strategies, social 
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 7.30s (3908 modules)
 - Phase Gamma (Q2 2027): **Complete** — all 5 months done
 - Remaining: Phase Delta (H2 2027), P0 gaps (#3, #5, #7, #8), October Personalization
@@ -2024,7 +2024,7 @@ Complete Phase Delta milestones: register all 3 panels, wire TutorialService DI,
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ passes
 - Phase Delta December (Tutorial Engine), January (Community Hub), February (Export/Import): **Complete** 🟢
 - Section 12.5 debts: all 🟢 Fixed
@@ -2052,7 +2052,7 @@ Complete last remaining P0 competitive gap (#8 Deploy to Production), register m
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 8.18s (3921+ modules)
 - **All 13 P0 competitive gaps now 🟢 Complete**
 - **All 45 Quick Wins 🟢 Complete**
@@ -2092,7 +2092,7 @@ Complete all remaining Section 11 P1 modules: Custom Metrics Builder, Agent Comp
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - **All P1 modules now 🟢 Complete** (8/8):
   - Custom Metrics Builder, Agent Comparison Tool, Prompt Version History, Debate Templates Library, Provider Migration Wizard, Health SLA Config, Topology Templates Gallery, Key Usage Analytics Dashboard
 - **All P2 modules done so far**: Fine-tuning UI, Model Distillation, Deploy to Production, Social Leaderboard, Tournament Manager, Voice/Multimodal Input, Research Report Generator, Agent-to-Agent Protocol (8/8)
@@ -2145,7 +2145,7 @@ Close all remaining Section 11 modules: 2 P2 panels (contract+service existed, p
 
 ### Result
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 7.71s, 3959 modules
 - **Section 11: 100% complete** — all P0 (8), P1 (10), P2 (8), P3 (8) modules now 🟢 Done
 - **Project phases**: Alpha 🟢, Beta 🟢, Gamma 🟢, Delta 🟢 — all complete
@@ -2178,7 +2178,7 @@ Complete the last ⚪ Future milestone — Phase Gamma October Personalization:
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 10.76s, 3962 modules
 - **Phase Gamma: 🟢 Complete** (all 5 months: June-October)
 - **All roadmap phases now 🟢 Complete**: Alpha, Beta, Gamma, Delta
@@ -2205,7 +2205,7 @@ Continuing after October Personalization — tackle remaining Google phases and 
 
 ### Status
 
-- `npx tsc --noEmit` ✅ | `npx vite build` ✅ 6.11s
+- `npx tsc -b --noEmit` ✅ | `npx vite build` ✅ 6.11s
 - Google phases: 1/2/3/4/6/10/12 🟢; 5/7/8/9/11 🔴 Future
 - P2 debts: D-15/D-16/D-18 🟢; D-17/D-19/D-20 remaining
 
@@ -2229,7 +2229,7 @@ Complete ALL remaining tasks: Google Phase 9 (Gemini Live), D-21 (A11y audit), D
 
 ### Result
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 9.35s, 3964 modules
 - GeminiLivePanel code-split: 5.26 kB (1.87 kB gzip)
 - **All roadmap phases now 🟢 Complete**: Alpha, Beta, Gamma, Delta
@@ -2255,7 +2255,7 @@ Implement Vertex Search enterprise grounding — enterprise-grade grounding agai
 
 ### Result
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 8.44s, 3971 modules
 - GoogleStudioPanel chunk: 20.60 kB (4.92 kB gzip) — includes all 6 tabs now
 - Google phases: 1/2/3/4/5/6/9/10/11/12 🟢; 7/8 🔴 Future (Veo/Lyria)
@@ -2282,7 +2282,7 @@ Make the system compatible with Server-Side Rendering by guarding all browser AP
 
 ### Result
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 7.59s, 3972 modules
 - No module-level browser API access exists in the entire codebase
 - All `localStorage` access now SSR-safe with in-memory fallback
@@ -2336,7 +2336,7 @@ Added ~180 missing translation keys and Russian translations across 8 categories
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - **All D-01..D-25 debts now 🟢 Complete**
 
 ---
@@ -2363,7 +2363,7 @@ Implement Phase 1 from `audit/napolionplan/ai-os-new-roles-consortia-roadmap.md`
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 12.63s
 - **Phase 1 complete** — all 8 sub-items 🟢
 - Remaining phases: 8 (Marketplace)
@@ -2386,7 +2386,7 @@ Implement Phase 7 from `audit/napolionplan/ai-os-new-roles-consortia-roadmap.md`
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 9.41s
 - **Phase 7 complete** — 7.1 🟢, 7.3 🟢, 7.5 🟢, 7.6 🟢
 - Deferred: 7.2 (Evolution engine — needs LLM), 7.4 (Performance reviews — needs LLM)
@@ -2417,7 +2417,7 @@ Likely culprits: `KeyStateStore.loadPersisted()` (Dexie `getKv`) or `DebateEngin
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.20s
 - **App should now start** (possibly degraded) instead of crashing on load
 - Open console to see the actual error if it still fails
@@ -2443,7 +2443,7 @@ Complete Phase 6 of the napolionplan Roles & Consortia roadmap: Personas Library
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 3.77s
 - **Phase 6.1-6.3** (PersonaEntry type, definitions, PersonaPickerPanel, route): done previous session
 - **Phase 6.4** (debate integration): done this session
@@ -2481,7 +2481,7 @@ Implement 30+ real API source adapters for the Research Engine (Section 10.2 of 
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.82s, 4003 modules
 - `source-adapter-registry` chunk: 22.12 kB (6.20 kB gzip)
 - **Section 10.2**: 34 API sources now 🟢 Complete (was 2/34)
@@ -2502,7 +2502,7 @@ Fix the remaining failing test file (DebatePanel.test.tsx — ~10 failures) to c
 
 ### Result
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - **15 test files, 214/214 tests passing** (was 15 files, 137 failures)
 - **D-19: 🟢 Done** — all 25 D-01..D-25 debts resolved
 - **All roadmap sections**: Alpha 🟢, Beta 🟢, Gamma 🟢, Delta 🟢, all P0-P3 modules 🟢, all debts 🟢
@@ -2530,11 +2530,53 @@ Fix 3 runtime bugs from D-19 session: ChatExecutor `buildRequestBody` error, Add
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 6.11s
 - All 4 runtime bugs fixed
 
 ---
+
+---
+
+## Current Session (2026-07-03) — Audit Part 3: Groq/OpenRouter/NVIDIA — 23/24 🟢
+
+### Goal
+
+Fix all 24 findings from `audit/new/audit-report-part3-groq-openrouter-nvidia.pdf`. All changes pass `npx tsc -b --noEmit` and `npx vite build`.
+
+### Changes
+
+| ID               | Description                            | Fix                                                                 |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| **CRIT-G1-Groq** | Groq health URL wrong                  | `getHealthUrl` → `api.groq.com/openai/v1/models`                    |
+| **CRIT-N1**      | NVIDIA health URL outdated             | `getHealthUrl` → `integrate.api.nvidia.com/v1/models`               |
+| **CRIT-N2**      | NVIDIA Enterprise mock data            | Added `DEMO DATA` red banner warning                                |
+| **CRIT-O1**      | rotateKey plaintext leak               | `console.warn` sanitized to `e.message` only                        |
+| **HIGH-G1**      | Groq free-tier limits                  | Corrected to 1000/500k, added OpenRouter/NVIDIA/Cerebras/Cloudflare |
+| **HIGH-G2**      | Groq introspection                     | Removed invalid rate-limit headers, added active model filtering    |
+| **HIGH-O1**      | HTTP-Referer dev leak                  | Removed dead `origin` param from `buildHeaders`                     |
+| **HIGH-O2**      | getAvailableModels silent errors       | Added logging for non-OK, added `.filter()` for model IDs           |
+| **HIGH-O3**      | OpenRouter schema missing fields       | Added `model`, `provider`, `system_fingerprint`, `reasoning`        |
+| **HIGH-O4**      | reasoning not in ProviderResponse      | Added `reasoning` field to `ProviderResponse` type                  |
+| **HIGH-N1**      | NVIDIA getAvailableModels shared cache | Changed to per-apiKey Map, retry 300s→30s                           |
+| **HIGH-N2**      | NVIDIA missing from catalog            | Added entry to `DEFAULT_CATALOG`                                    |
+| **HIGH-C1**      | getHealthUrl centralized               | Groq + NVIDIA URLs fixed                                            |
+| **HIGH-C2**      | No NVIDIA introspection                | Added `nvidia` case to `getProviderIntrospection()`                 |
+| **MED-G2**       | Outdated model names                   | `llama-3.3-70b` → `llama-3.3-70b-versatile` across 5 files          |
+| **MED-O1**       | refreshModelCache race                 | Per-apiKey Map with per-key promise protection                      |
+| **MED-O2**       | errorText.slice UTF-8                  | Changed to `Array.from().slice().join('')`                          |
+| **MED-O3**       | OpenRouter error key leak              | `sanitizeError()` applied to error message                          |
+| **MED-N1**       | NVIDIA schema all optional             | `choices` required, added `error`/`reasoning` fields                |
+| **MED-N2**       | NVIDIA idleTimeout 60s                 | Default → 30s, configurable via options                             |
+| **LOW-O1**       | OpenRouter free-tier 0 RPD             | Added 50 RPD limit                                                  |
+| **LOW-N1**       | NVIDIA timeout not configurable        | Added `idleTimeoutMs` to options                                    |
+
+### Status
+
+- **23/24 🟢 Fixed**, 1 🟡 Partial (MED-G1: GroqSpeedDashboard needs Dexie storage — UX, deferred)
+- `audit/new/STATUS_PART3.md` created (local-only, audit/ in .gitignore)
+- `tsc --noEmit` ✅ | `vite build` ✅ | Pushed: `3874e622`
+- Next in pipeline: `audit-report-part4-kernel.pdf`
 
 ## Current Session (2026-07-03) — Provider Test Crash Fix
 
@@ -2555,7 +2597,7 @@ Could not be determined from static analysis — likely a React render error dur
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - Roadmap: 100% 🟢 Complete on all phases (Alpha, Beta, Gamma, Delta), all P0-P3 modules, all D-01..D-25 debts, all 45 Quick Wins
 - **Unresolved**: If the crash still occurs, user should check browser console (F12 → Console) for `[ErrorBoundary:Root]` error message with full component stack trace
 
@@ -2608,7 +2650,7 @@ Fix all remaining HIGH, MED, and LOW findings from `audit/new/api-keys-audit-rep
 - **Fixed this session**: 1 High + 6 Medium + 6 Low = 13
 - **Fixed previous session**: 6 Critical + 8 High + 2 Medium + 1 Low = 17
 - **Total fixed**: 30/30 — **all findings resolved** 🟢
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 
 ---
 
@@ -2631,7 +2673,7 @@ Execute Sprint M4 from `audit/new/migra.md` — all 5 LAW 3 deprecation items (d
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.39s, 4001 modules
 - **Sprint M4 complete** — all 5 items 🟢
 - **Migration audit Sprints:** M1 🟢, M2 🟢, M3 🟢, M4 🟢
@@ -2658,7 +2700,7 @@ Complete critical findings from `audit/new/` audit files: `au.md` (Top-10), `ran
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `au.md`: Top-10 all resolved (4 real bugs fixed, 2 not bugs, 1 design choice, 1 already optimized, 1 blocked, 1 documented)
 - `rantaim.md`: BR-01 already fixed, BR-02/03/05 fixed (4/10 done)
 - `kontrakti.md`: All 6 phantom re-exports + C2-PA-001 fixed
@@ -2701,7 +2743,7 @@ Fix all Critical/High findings from `audit/new/arheterktura.md` (98 findings tot
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 4.06s, 4002 modules
 - **arheterktura.md**: 14/25 Critical/High fixed this session, 5 pre-fixed, 6 deferred (complex or scope)
 - Remaining: C-03 (STREAM events — complex), C-06 (dual metrics — refactor), T-09 (DAL still alive, skip), A-04 (service-locator DI — large), C-08 (debate singleton — needs persistence layer), S-02/03 (security — medium)
@@ -2731,7 +2773,7 @@ Fix all 8 remaining findings from **AUDIT_REPORT_DEBATES.md** to close the repor
 
 ### Status
 
-- `npx tsc --noEmit` ✅ zero errors
+- `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 8.47s, 4002 modules
 - **AUDIT_REPORT_DEBATES.md: 24/24 findings 🟢 Complete**
 - Next: `debb.md` (deep debate audit, 3.5/10 score, Top-12 critical bugs)
@@ -2764,5 +2806,5 @@ Fix all unfixed findings from `debb.md` Top-12 critical bug list.
 
 - All debb.md statuses updated in `audit/new/debb.md` (not in git — audit/ dir in .gitignore)
 - 9/12 fully fixed 🟢, 2 partially fixed (#4 i18n, #12 dead events) 🟡, 1 deferred (#6 tests) 🟡
-- `npx tsc --noEmit` ✅ | `git push` ✅ (commits: `79432c24`, `2a402376`)
+- `npx tsc -b --noEmit` ✅ | `git push` ✅ (commits: `79432c24`, `2a402376`)
 - **Next**: `audit-report-part2-gemini.md` (Gemini/Google audit, 1358 lines)

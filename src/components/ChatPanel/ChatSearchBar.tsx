@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, ChevronRight, X } from 'lucide-react';
 import { iconBtnMuted } from '../../styles/common';
 

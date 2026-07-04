@@ -1,4 +1,3 @@
-import React from 'react';
 import { MessageSquare, Zap, HardDrive } from 'lucide-react';
 import type { SystemSettings } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';

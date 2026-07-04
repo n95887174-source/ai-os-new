@@ -8,7 +8,6 @@ import {
     addEdge,
     Panel,
     type Node,
-    type Edge,
     type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';

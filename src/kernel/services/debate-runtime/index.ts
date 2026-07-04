@@ -19,8 +19,8 @@ export type { KnowledgeGraph, KnowledgeNode, KnowledgeEdge } from './debate-memo
 // Moved standalone debate files
 export { DebateInterpreter } from './debate-interpreter';
 export type { DebateInterpretation, DebateInsight } from './debate-interpreter';
+export type { DebateMetrics } from './debate-metrics';
 export {
-    DebateMetrics,
     computeGraphMetrics,
     computeActivityMetrics,
     computeQualityMetrics,
