@@ -52,6 +52,7 @@ export class ProviderTracker implements IProviderTracker {
         getKv: <T>(id: string) => Promise<T | null>;
         setKv: <T>(id: string, value: T) => Promise<void>;
     };
+    private eventBus?: IEventBus;
     private transientHealthEvents: HealthEvent[] = [];
     private latencyWarnings = new Map<string, number>();
     private static readonly MAX_HEALTH_EVENTS = 100;
@@ -65,16 +66,20 @@ export class ProviderTracker implements IProviderTracker {
         this.database = deps?.database;
     }
 
-    /** ILifecycle — no async work needed; start() handles subscriptions. */
-    init(): void | Promise<void> {}
-
-    start(eventBus: IEventBus): void {
+    /**
+     * ILifecycle init — sets up event subscriptions.
+     * Accepts optional eventBus for direct use; otherwise uses stored reference (set by start()).
+     */
+    init(eventBus?: IEventBus): void | Promise<void> {
+        const bus = eventBus ?? this.eventBus;
+        if (!bus || this.unsubs.length > 0) return; // already subscribed or no bus
+        this.eventBus = bus;
         this.unsubs.push(
-            eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+            bus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
                 const keyId = String(id);
                 this.latencyWarnings.delete(keyId);
             }),
-            eventBus.on(EVENTS.STREAM_END, (raw: unknown) => {
+            bus.on(EVENTS.STREAM_END, (raw: unknown) => {
                 const data = raw as {
                     provider?: string;
                     latency: number;
@@ -85,16 +90,27 @@ export class ProviderTracker implements IProviderTracker {
                 };
                 if (data?.provider) this.handleMetricUpdate(data as ProviderMetricData);
             }),
-            eventBus.on(EVENTS.STREAM_ERROR, (raw: unknown) => {
+            bus.on(EVENTS.STREAM_ERROR, (raw: unknown) => {
                 const data = raw as { provider: string };
                 if (data?.provider) this.handleErrorUpdate(data);
             }),
-            eventBus.on(EVENTS.DECISION, (raw: unknown) => {
+            bus.on(EVENTS.DECISION, (raw: unknown) => {
                 const data = raw as { selected: string };
                 if (data?.selected) this.handleDecision();
             }),
         );
         void this.hydrateMetrics();
+    }
+
+    /**
+     * Stores the eventBus and delegates to init() — supports both lifecycle manager
+     * (no-arg start()) and factory (eventBus-arg start(eventBus)) call patterns.
+     */
+    start(eventBus?: IEventBus): void {
+        if (eventBus) {
+            this.init(eventBus);
+        }
+        // No-arg call from LifecycleManager.startAll() — just skip (already subscribed via init)
     }
 
     private async hydrateMetrics(): Promise<void> {
