@@ -1,11 +1,10 @@
-
 interface StepDotsProps {
-    step: 0 | 1 | 2 | 3;
+    step: 1 | 2 | 3;
 }
 
 const StepDots: React.FC<StepDotsProps> = ({ step }) => (
     <div className="modal-footer-dots">
-        {[0, 1, 2, 3].map((s) => (
+        {[1, 2, 3].map((s) => (
             <div
                 key={s}
                 className={`modal-dot${step === s ? ' modal-dot--active' : step > s ? ' modal-dot--done' : ''}`}

@@ -387,7 +387,7 @@ export const EVENT_REGISTRY = {
     ),
     DEBATE_SESSION_FAILED: event(
         'debate:runtime:session:failed',
-        z.object({ sessionId: z.string(), error: z.string() }),
+        z.object({ sessionId: z.string(), error: z.string().optional() }),
     ),
     DEBATE_PHASE_CHANGED: event(
         'debate:runtime:phase:changed',

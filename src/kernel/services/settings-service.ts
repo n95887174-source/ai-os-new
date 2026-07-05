@@ -1,6 +1,7 @@
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
 import type {
     ThemeConfig,
     NotificationPreferences,
@@ -98,7 +99,7 @@ const DEFAULTS: SystemSettings = {
         free_first: [
             { provider: 'groq', model: 'llama-3.3-70b-versatile' },
             { provider: 'gemini', model: 'gemini-2.0-flash' },
-            { provider: 'openrouter', model: 'openrouter/auto' },
+            { provider: 'openrouter', model: PROVIDER_DEFAULT_MODELS.openrouter },
         ],
         cost: [{ provider: 'groq' }, { provider: 'gemini' }, { provider: 'openrouter' }],
         default: [{ provider: 'groq' }, { provider: 'gemini' }, { provider: 'openai' }],

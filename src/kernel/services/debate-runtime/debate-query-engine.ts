@@ -1,6 +1,7 @@
 import type { TimelineEntry, IDebateQueryEngine } from '../../contracts/debate-types';
 import type { DebateSession } from '../../contracts/debate-types';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
+import { PROVIDER_DEFAULT_MODELS } from '../../utils/provider-default-models';
 
 const NON_CHAT_PREFIXES = [
     'text-',
@@ -21,7 +22,7 @@ const NON_CHAT_PATTERNS = [/^gpt-3\.5-turbo-instruct/, /^text-davinci/, /^code-d
 export const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
     gemini: ['gemini-2.0-flash', 'gemini-2.5-flash'],
     groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
-    openrouter: ['openrouter/auto', 'openrouter/free'],
+    openrouter: [PROVIDER_DEFAULT_MODELS.openrouter, 'openrouter/free'],
     nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
 };
 
@@ -218,7 +219,6 @@ export class DebateProviderResolver {
 
         let resolvedKey:
             { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
-        let modelId = 'auto';
 
         const pKey = this.providerKey(sessionId, participant.agentId);
 
@@ -284,7 +284,7 @@ export class DebateProviderResolver {
         if (!resolvedKey) return null;
 
         const avail = resolvedKey.availableModels ?? [];
-        modelId =
+        const modelId =
             pickBestModelForDebate(resolvedKey.provider, avail, participant.modelId, triedModels) ||
             (avail.length > 0 ? avail.find((m) => !triedModels.has(m)) : undefined) ||
             (DEBATE_MODEL_PRIORITY[resolvedKey.provider.toLowerCase()] ?? []).find(

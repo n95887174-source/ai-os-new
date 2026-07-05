@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { useMemo } from 'react';
 import { liveQuery } from 'dexie';
-import { eventBus, EVENTS } from '../kernel/instances';
-import { keyService, groupManager } from '../kernel/instances';
+import { eventBus, EVENTS, keyService, groupManager, keyStateStore } from '../kernel/instances';
 import { getDexieDb } from '../kernel/services/database-service';
+import { tryGetServiceProp } from '../kernel/service-helper';
 import type { ApiKey, KeyNote, ProviderAlert } from '../types/metrics';
 
 export interface KeyMeta {
@@ -289,7 +289,17 @@ export const useKeyStore = create<Store>((set, get) => {
     return {
         keys: [],
         activeKeys: [],
-        alerts: groupManager?.ready && keyService.getAlerts ? keyService.getAlerts() : [],
+        alerts: (() => {
+            try {
+                const gmReady = tryGetServiceProp(groupManager, 'ready');
+                const getAlertsFn = tryGetServiceProp(keyService, 'getAlerts');
+                return gmReady && typeof getAlertsFn === 'function'
+                    ? (getAlertsFn as () => ProviderAlert[])()
+                    : [];
+            } catch {
+                return [];
+            }
+        })(),
         checkingIds: new Set(),
         keyMeta: new Map(),
         isLoaded: false,
@@ -327,7 +337,38 @@ export const useKeyStore = create<Store>((set, get) => {
             const errors: string[] = [];
             for (const k of get().keys) {
                 try {
+                    // Reset key status to active
                     await groupManager.syncKeyStatus(k.id, 'active');
+
+                    // Clear flags in keyStateStore
+                    const currentState = keyStateStore.get(k.id);
+                    if (currentState) {
+                        keyStateStore.update(k.id, {
+                            flags: {
+                                circuitOpen: false,
+                                rateLimited: false,
+                                authFailed: false,
+                            },
+                            status: 'ready',
+                            healthScore: 100,
+                            health: {
+                                ...currentState.health,
+                                errorRate: 0,
+                                consecutiveErrors: 0,
+                                successRate: 1,
+                            },
+                        });
+                    }
+
+                    // Clear error stats in keyService
+                    await keyService.updateKey(k.id, {
+                        status: 'active',
+                        stats: {
+                            ...k.stats,
+                            errorCount: 0,
+                            lastError: undefined,
+                        },
+                    });
                 } catch {
                     errors.push(k.id);
                 }

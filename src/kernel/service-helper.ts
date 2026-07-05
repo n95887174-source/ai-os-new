@@ -63,6 +63,15 @@ export function lazyService<T extends object>(
     });
 }
 
+/** Try to access a lazy service property without throwing — returns undefined if not registered. */
+export function tryGetServiceProp<T>(lazyService: T, prop: string): unknown {
+    try {
+        return (lazyService as Record<string, unknown>)[prop];
+    } catch {
+        return undefined;
+    }
+}
+
 /** Invalidate cached "not found" for a service — call after container.register(). */
 export function invalidateLazyServiceNotFound(name: string): void {
     notFoundCache.delete(name);

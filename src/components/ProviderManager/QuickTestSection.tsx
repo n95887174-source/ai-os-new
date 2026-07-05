@@ -46,8 +46,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
         let isDone = false;
 
         const p = apiKey.provider.toLowerCase();
-        const defaultModel =
-            p === 'openrouter' ? 'openrouter/auto' : PROVIDER_DEFAULT_MODELS[p] || 'auto';
+        const defaultModel = PROVIDER_DEFAULT_MODELS[p] || 'auto';
 
         const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
 

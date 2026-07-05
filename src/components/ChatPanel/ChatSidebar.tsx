@@ -85,271 +85,278 @@ const ChatSidebar: React.FC<Props> = ({
     }, [confirmClear, t]);
 
     return (
-        <AnimatePresence>
-            {showSidebar && (
-                <motion.div
-                    ref={sidebarRef}
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: sidebarWidth, opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    style={{
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                        borderRight: '1px solid var(--border)',
-                        background: 'var(--bg-panel)',
-                    }}
-                >
-                    <div
+        <>
+            <AnimatePresence>
+                {showSidebar && (
+                    <motion.div
+                        ref={sidebarRef}
+                        key="chat-sidebar"
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: sidebarWidth, opacity: 1 }}
+                        exit={{ width: 0, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         style={{
-                            width: sidebarWidth,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            height: '100%',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            borderRight: '1px solid var(--border)',
+                            background: 'var(--bg-panel)',
                         }}
                     >
-                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: '0.75rem',
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        fontWeight: 700,
-                                        fontSize: '0.8rem',
-                                        color: 'var(--text-muted)',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
-                                    }}
-                                >
-                                    {t('chat.sessions_label')}
-                                </span>
-                                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                                    <button
-                                        onClick={onNewChat}
-                                        style={{
-                                            padding: '0.4rem',
-                                            borderRadius: 8,
-                                            background: 'rgba(59,130,246,0.1)',
-                                            border: '1px solid rgba(59,130,246,0.2)',
-                                            color: '#3b82f6',
-                                            cursor: 'pointer',
-                                        }}
-                                        title={t('chat.new_session')}
-                                        aria-label={t('chat.new_session')}
-                                    >
-                                        <Plus size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                            <div style={{ position: 'relative' }}>
-                                <Search
-                                    size={14}
-                                    style={{
-                                        position: 'absolute',
-                                        left: 10,
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        color: 'var(--text-muted)',
-                                        pointerEvents: 'none',
-                                    }}
-                                    aria-hidden="true"
-                                />
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder={t('chat.search_placeholder')}
-                                    aria-label={t('chat.search_sessions')}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.55rem 0.75rem 0.55rem 2rem',
-                                        borderRadius: 8,
-                                        background: 'rgba(255,255,255,0.04)',
-                                        border: '1px solid var(--border)',
-                                        color: 'var(--text-main)',
-                                        fontSize: '0.8rem',
-                                        outline: 'none',
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem' }}>
-                            {sessionGroups.map((group) => (
-                                <div key={group.label} style={{ marginBottom: '0.75rem' }}>
-                                    <div
-                                        onClick={() => toggleGroup(group.label)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.35rem',
-                                            padding: '0.35rem 0.5rem',
-                                            cursor: 'pointer',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 700,
-                                            color: 'var(--text-muted)',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.03em',
-                                        }}
-                                    >
-                                        <ChevronDown
-                                            size={12}
-                                            style={{
-                                                transform: collapsedGroups.has(group.label)
-                                                    ? 'rotate(-90deg)'
-                                                    : 'rotate(0deg)',
-                                                transition: 'transform 0.2s',
-                                            }}
-                                            aria-hidden="true"
-                                        />
-                                        {group.label}
-                                        <span
-                                            style={{
-                                                marginLeft: 'auto',
-                                                color: 'var(--text-muted)',
-                                                opacity: 0.5,
-                                            }}
-                                        >
-                                            {group.sessions.length}
-                                        </span>
-                                    </div>
-                                    {!collapsedGroups.has(group.label) &&
-                                        group.sessions.map((s) => {
-                                            const isActive = s.id === activeSessionId;
-                                            return (
-                                                <div
-                                                    key={s.id}
-                                                    onClick={() => onSessionClick(s.id)}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.35rem',
-                                                        padding: '0.45rem 0.5rem',
-                                                        borderRadius: 8,
-                                                        cursor: 'pointer',
-                                                        fontSize: '0.78rem',
-                                                        color: isActive
-                                                            ? '#3b82f6'
-                                                            : 'var(--text-main)',
-                                                        background: isActive
-                                                            ? 'rgba(59,130,246,0.08)'
-                                                            : 'transparent',
-                                                        fontWeight: isActive ? 600 : 400,
-                                                        border: isActive
-                                                            ? '1px solid rgba(59,130,246,0.15)'
-                                                            : '1px solid transparent',
-                                                        transition: 'all 0.15s',
-                                                    }}
-                                                >
-                                                    <MessageSquare
-                                                        size={12}
-                                                        style={{ flexShrink: 0, opacity: 0.5 }}
-                                                        aria-hidden="true"
-                                                    />
-                                                    <span
-                                                        style={{
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                            flex: 1,
-                                                        }}
-                                                    >
-                                                        {s.title}
-                                                    </span>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDelete(s.id);
-                                                        }}
-                                                        style={{
-                                                            padding: 2,
-                                                            background: 'none',
-                                                            border: 'none',
-                                                            color: 'var(--text-muted)',
-                                                            cursor: 'pointer',
-                                                            opacity: 0.4,
-                                                            flexShrink: 0,
-                                                        }}
-                                                        title={t('chat.delete_session')}
-                                                        aria-label={t('chat.delete_session_aria')}
-                                                    >
-                                                        <Trash2 size={12} aria-hidden="true" />
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
-                                </div>
-                            ))}
-                            {hasMoreSessions && (
-                                <button
-                                    onClick={loadMoreSessions}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        background: 'rgba(255,255,255,0.03)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: 8,
-                                        color: 'var(--text-muted)',
-                                        cursor: 'pointer',
-                                        fontSize: '0.75rem',
-                                        marginTop: '0.5rem',
-                                    }}
-                                >
-                                    {t('chat.load_more')}
-                                </button>
-                            )}
-                            {sessionGroups.length === 0 && (
-                                <div
-                                    style={{
-                                        padding: '2rem 1rem',
-                                        textAlign: 'center',
-                                        color: 'var(--text-muted)',
-                                        fontSize: '0.8rem',
-                                    }}
-                                >
-                                    {searchQuery
-                                        ? t('chat.no_search_results')
-                                        : t('chat.no_sessions')}
-                                </div>
-                            )}
-                        </div>
-
                         <div
                             style={{
-                                padding: '0.5rem',
-                                borderTop: '1px solid var(--border)',
+                                width: sidebarWidth,
                                 display: 'flex',
-                                gap: '0.35rem',
-                                justifyContent: 'center',
+                                flexDirection: 'column',
+                                height: '100%',
                             }}
                         >
-                            <button
-                                onClick={handleClear}
+                            <div
+                                style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: '0.75rem',
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            fontWeight: 700,
+                                            fontSize: '0.8rem',
+                                            color: 'var(--text-muted)',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em',
+                                        }}
+                                    >
+                                        {t('chat.sessions_label')}
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                                        <button
+                                            onClick={onNewChat}
+                                            style={{
+                                                padding: '0.4rem',
+                                                borderRadius: 8,
+                                                background: 'rgba(59,130,246,0.1)',
+                                                border: '1px solid rgba(59,130,246,0.2)',
+                                                color: '#3b82f6',
+                                                cursor: 'pointer',
+                                            }}
+                                            title={t('chat.new_session')}
+                                            aria-label={t('chat.new_session')}
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div style={{ position: 'relative' }}>
+                                    <Search
+                                        size={14}
+                                        style={{
+                                            position: 'absolute',
+                                            left: 10,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            color: 'var(--text-muted)',
+                                            pointerEvents: 'none',
+                                        }}
+                                        aria-hidden="true"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder={t('chat.search_placeholder')}
+                                        aria-label={t('chat.search_sessions')}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.55rem 0.75rem 0.55rem 2rem',
+                                            borderRadius: 8,
+                                            background: 'rgba(255,255,255,0.04)',
+                                            border: '1px solid var(--border)',
+                                            color: 'var(--text-main)',
+                                            fontSize: '0.8rem',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem' }}>
+                                {sessionGroups.map((group) => (
+                                    <div key={group.label} style={{ marginBottom: '0.75rem' }}>
+                                        <div
+                                            onClick={() => toggleGroup(group.label)}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.35rem',
+                                                padding: '0.35rem 0.5rem',
+                                                cursor: 'pointer',
+                                                fontSize: '0.7rem',
+                                                fontWeight: 700,
+                                                color: 'var(--text-muted)',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.03em',
+                                            }}
+                                        >
+                                            <ChevronDown
+                                                size={12}
+                                                style={{
+                                                    transform: collapsedGroups.has(group.label)
+                                                        ? 'rotate(-90deg)'
+                                                        : 'rotate(0deg)',
+                                                    transition: 'transform 0.2s',
+                                                }}
+                                                aria-hidden="true"
+                                            />
+                                            {group.label}
+                                            <span
+                                                style={{
+                                                    marginLeft: 'auto',
+                                                    color: 'var(--text-muted)',
+                                                    opacity: 0.5,
+                                                }}
+                                            >
+                                                {group.sessions.length}
+                                            </span>
+                                        </div>
+                                        {!collapsedGroups.has(group.label) &&
+                                            group.sessions.map((s) => {
+                                                const isActive = s.id === activeSessionId;
+                                                return (
+                                                    <div
+                                                        key={s.id}
+                                                        onClick={() => onSessionClick(s.id)}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.35rem',
+                                                            padding: '0.45rem 0.5rem',
+                                                            borderRadius: 8,
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.78rem',
+                                                            color: isActive
+                                                                ? '#3b82f6'
+                                                                : 'var(--text-main)',
+                                                            background: isActive
+                                                                ? 'rgba(59,130,246,0.08)'
+                                                                : 'transparent',
+                                                            fontWeight: isActive ? 600 : 400,
+                                                            border: isActive
+                                                                ? '1px solid rgba(59,130,246,0.15)'
+                                                                : '1px solid transparent',
+                                                            transition: 'all 0.15s',
+                                                        }}
+                                                    >
+                                                        <MessageSquare
+                                                            size={12}
+                                                            style={{ flexShrink: 0, opacity: 0.5 }}
+                                                            aria-hidden="true"
+                                                        />
+                                                        <span
+                                                            style={{
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                flex: 1,
+                                                            }}
+                                                        >
+                                                            {s.title}
+                                                        </span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(s.id);
+                                                            }}
+                                                            style={{
+                                                                padding: 2,
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                color: 'var(--text-muted)',
+                                                                cursor: 'pointer',
+                                                                opacity: 0.4,
+                                                                flexShrink: 0,
+                                                            }}
+                                                            title={t('chat.delete_session')}
+                                                            aria-label={t(
+                                                                'chat.delete_session_aria',
+                                                            )}
+                                                        >
+                                                            <Trash2 size={12} aria-hidden="true" />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                ))}
+                                {hasMoreSessions && (
+                                    <button
+                                        onClick={loadMoreSessions}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.5rem',
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 8,
+                                            color: 'var(--text-muted)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.75rem',
+                                            marginTop: '0.5rem',
+                                        }}
+                                    >
+                                        {t('chat.load_more')}
+                                    </button>
+                                )}
+                                {sessionGroups.length === 0 && (
+                                    <div
+                                        style={{
+                                            padding: '2rem 1rem',
+                                            textAlign: 'center',
+                                            color: 'var(--text-muted)',
+                                            fontSize: '0.8rem',
+                                        }}
+                                    >
+                                        {searchQuery
+                                            ? t('chat.no_search_results')
+                                            : t('chat.no_sessions')}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div
                                 style={{
-                                    padding: '0.4rem 0.75rem',
-                                    borderRadius: 8,
-                                    background: 'rgba(239,68,68,0.08)',
-                                    border: '1px solid rgba(239,68,68,0.15)',
-                                    color: '#ef4444',
-                                    cursor: 'pointer',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 600,
+                                    padding: '0.5rem',
+                                    borderTop: '1px solid var(--border)',
+                                    display: 'flex',
+                                    gap: '0.35rem',
+                                    justifyContent: 'center',
                                 }}
                             >
-                                {t('chat.clear_all')}
-                            </button>
+                                <button
+                                    onClick={handleClear}
+                                    style={{
+                                        padding: '0.4rem 0.75rem',
+                                        borderRadius: 8,
+                                        background: 'rgba(239,68,68,0.08)',
+                                        border: '1px solid rgba(239,68,68,0.15)',
+                                        color: '#ef4444',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {t('chat.clear_all')}
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </motion.div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <DeleteConfirmDialog />
             <ClearConfirmDialog />
-        </AnimatePresence>
+        </>
     );
 };
 

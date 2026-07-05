@@ -1,5 +1,6 @@
 import type { ApiKey, KeyHistoryEntry, ProviderAlert, KeyNote } from '../../types/metrics-types';
 import { EVENTS } from '../../events/event-names';
+import { PROVIDER_DEFAULT_MODELS } from '../../utils/provider-default-models';
 import { KeyVault } from './key-vault';
 import { KeyRegistry } from './key-registry';
 import { KeyHealth } from './key-health';
@@ -106,7 +107,7 @@ export class KeyService implements IKeyRotationManager {
     constructor(deps: KeyServiceDeps) {
         this.deps = deps;
 
-        this.vault = new KeyVault({ securityService: deps.securityService });
+        this.vault = new KeyVault();
 
         this.registry = new KeyRegistry({
             eventBus: deps.eventBus,
@@ -365,6 +366,20 @@ export class KeyService implements IKeyRotationManager {
                 }
             }),
         );
+
+        this.unsubs.push(
+            this.deps.eventBus.on(EVENTS.CHECK_HEALTH, (id: unknown) => {
+                if (typeof id === 'string') {
+                    this.health.checkHealth(id);
+                }
+            }),
+        );
+
+        this.unsubs.push(
+            this.deps.eventBus.on(EVENTS.CHECK_ALL_HEALTH, () => {
+                this.health.checkAllHealth();
+            }),
+        );
     }
 
     destroy() {
@@ -377,6 +392,11 @@ export class KeyService implements IKeyRotationManager {
 
     async reload(): Promise<void> {
         await this.registry.reload();
+        this.notify();
+    }
+
+    async loadKeys(): Promise<void> {
+        await this.registry.loadKeys();
         this.notify();
     }
 
@@ -451,30 +471,7 @@ export class KeyService implements IKeyRotationManager {
     // C-07: leading=true fires first update immediately, coalesces rapid subsequent calls
     private notify = debounce(this.emitKeyUpdate, 100, true);
 
-    // -- Vault ----------------------------------------------------------
-
-    async unlock(password: string): Promise<boolean> {
-        const ok = await this.vault.unlock(password);
-        if (!ok) return false;
-        const decrypted = await this.vault.decryptAllKeys(this.registry.getKeys());
-        this.registry.replaceKeys(decrypted);
-        this.notify();
-        return true;
-    }
-
-    async unlockVault(password: string): Promise<boolean> {
-        return this.unlock(password);
-    }
-
-    lockVault(): void {
-        this.vault.lock(this.registry.getKeys());
-        // C-10: Strip plaintext keys from in-memory registry — lock() only
-        // cleaned clones, not the actual registry's internal store.
-        this.registry.replaceKeys(
-            this.registry.getKeys().map((k) => (k.isEncrypted ? k : { ...k, key: '' })),
-        );
-        this.notify();
-    }
+    // -- Vault (removed) ------------------------------------------------
 
     // -- Registry -------------------------------------------------------
 
@@ -605,7 +602,7 @@ export class KeyService implements IKeyRotationManager {
             } else {
                 const defaults: Record<string, string[]> = {
                     OpenRouter: [
-                        'openrouter/auto',
+                        PROVIDER_DEFAULT_MODELS.openrouter,
                         'openrouter/free',
                         'anthropic/claude-3-haiku-20240307',
                     ],

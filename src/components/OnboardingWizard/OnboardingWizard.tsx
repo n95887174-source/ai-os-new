@@ -37,10 +37,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ t }) => {
             setError(t('onboarding.error_enter_key'));
             return;
         }
-        if (keyService.vaultService?.isLocked()) {
-            setError('Vault is locked. Please unlock the vault in Settings → Advanced first.');
-            return;
-        }
         setSaving(true);
         setError('');
         try {

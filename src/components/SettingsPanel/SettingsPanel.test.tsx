@@ -23,7 +23,6 @@ vi.mock('../../kernel/instances', () => ({
         reset: vi.fn(),
     },
     keyService: {
-        unlockVault: vi.fn(() => Promise.resolve(true)),
         clearAllData: vi.fn(),
     },
     configService: {
@@ -278,7 +277,7 @@ describe('SettingsPanel', () => {
         render(<SettingsPanel />);
         await screen.findByRole('tab', { name: /General Preferences/i }, { timeout: 10000 });
         fireEvent.click(getTab('Security & Core Access'));
-        expect(await screen.findByText('Vault Master Key')).toBeDefined();
+        expect(await screen.findByText('Secrets Backends')).toBeDefined();
         expect(screen.getByText('Debug Mode')).toBeDefined();
         expect(screen.getByText('Reset Settings')).toBeDefined();
         expect(screen.getByText('Factory Reset')).toBeDefined();

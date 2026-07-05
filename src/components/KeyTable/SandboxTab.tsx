@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Send, MessageSquare } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
@@ -167,8 +167,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
         setStatus('loading');
         setError(null);
         const p = apiKey.provider.toLowerCase();
-        const defaultModel =
-            p === 'openrouter' ? 'openrouter/auto' : PROVIDER_DEFAULT_MODELS[p] || 'auto';
+        const defaultModel = PROVIDER_DEFAULT_MODELS[p] || 'auto';
 
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,

@@ -13,7 +13,6 @@ import {
     Palette,
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
-import { securityService } from '../../kernel/security';
 import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { settingsService } from '../../kernel/instances';
@@ -53,14 +52,6 @@ const SettingsPanel: React.FC = () => {
             return {} as SystemSettings;
         }
     });
-    const [vaultPassword, setVaultPassword] = useState('');
-    const [isVaultActive, setIsVaultActive] = useState(() => {
-        try {
-            return !securityService.isLocked();
-        } catch {
-            return true;
-        }
-    });
     const [error, setError] = useState<string | null>(null);
     const [configForm, setConfigForm] = useState<RuntimeConfigForm | null>(null);
     const [secretsBackends, setSecretsBackends] = useState<BackendStatus[]>([]);
@@ -88,8 +79,6 @@ const SettingsPanel: React.FC = () => {
                     structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
                 );
         });
-
-        setIsVaultActive(!securityService.isLocked());
 
         const m = configService.getMonitoring();
         const me = configService.getMetrics();
@@ -148,7 +137,6 @@ const SettingsPanel: React.FC = () => {
             }
             unsubSettings();
             unsubFlags();
-            setVaultPassword('');
         };
     }, []);
 
@@ -168,23 +156,6 @@ const SettingsPanel: React.FC = () => {
         },
         [settings, clearError, t],
     );
-
-    const handleVaultAction = useCallback(async () => {
-        if (!vaultPassword.trim()) {
-            setError(t('settings.error_vault_password'));
-            clearError();
-            return;
-        }
-        try {
-            await securityService.initialize(vaultPassword);
-            setIsVaultActive(true);
-            setError(null);
-        } catch {
-            setError(t('settings.error_vault_operation'));
-            clearError();
-        }
-        setVaultPassword('');
-    }, [vaultPassword, clearError, t]);
 
     const handleSaveConfig = async () => {
         if (!configForm) return;
@@ -347,10 +318,6 @@ const SettingsPanel: React.FC = () => {
                         configForm={configForm}
                         setConfigForm={setConfigForm}
                         onSaveConfig={handleSaveConfig}
-                        vaultPassword={vaultPassword}
-                        setVaultPassword={setVaultPassword}
-                        isVaultActive={isVaultActive}
-                        onVaultAction={handleVaultAction}
                         secretsBackends={secretsBackends}
                         setSecretsBackends={setSecretsBackends}
                         showSecretsDetail={showSecretsDetail}

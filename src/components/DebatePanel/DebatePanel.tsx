@@ -408,6 +408,7 @@ const DebatePanel: React.FC = () => {
         } catch (e) {
             if (!isMountedRef.current) return;
             const msg = e instanceof Error ? e.message : String(e);
+            console.error('DEBATE START ERROR:', e); // Показать реальную ошибку в консоль
             if (
                 msg.includes('402') ||
                 msg.includes('credits') ||
@@ -417,7 +418,7 @@ const DebatePanel: React.FC = () => {
             } else if (msg.includes('Circuit breaker is OPEN')) {
                 setError(t('debate.error_provider_blocked'));
             } else {
-                setError(t('debate.error_start'));
+                setError(`${t('debate.error_start')}: ${msg}`); // Показать сообщение ошибки
             }
             clearError();
         } finally {

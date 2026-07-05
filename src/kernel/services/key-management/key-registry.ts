@@ -194,9 +194,19 @@ export class KeyRegistry {
                     );
                     // ── STAGE: normalize (map) ──────────────────────────────
                     const mapped: ApiKey[] = snapshot.map((k: ApiKey) => {
+                        // Diagnostic: log first key structure
+                        if (snapshot.indexOf(k) === 0) {
+                            console.log('[KEY_REGISTRY] First key structure (full):', k);
+                            console.log('[KEY_REGISTRY] First key keys:', Object.keys(k));
+                        }
                         const stats = k.stats || this.initStats();
                         if (!stats.extended) stats.extended = this.initExtendedStats();
-                        return { ...k, history: k.history || [], stats };
+                        return {
+                            ...k,
+                            history: k.history || [],
+                            stats,
+                            status: k.status || 'active',
+                        };
                     });
                     this.traceKeyDrop(
                         _dropRun,
@@ -213,7 +223,6 @@ export class KeyRegistry {
                         if (!k.provider) return false;
                         if (typeof k.key === 'string' && k.key.startsWith('placeholder-'))
                             return false;
-                        if (!k.key || k.key.trim() === '') return false;
                         return true;
                     });
                     this.traceKeyDrop(
@@ -225,10 +234,7 @@ export class KeyRegistry {
                     );
                     // ── STAGE: decrypt ──────────────────────────────────────
                     const decryptInput = normalized;
-                    const final =
-                        !this.deps.vault.isLocked() && normalized.length > 0
-                            ? await this.deps.vault.decryptAllKeys(normalized)
-                            : normalized;
+                    const final = await this.deps.vault.decryptAllKeys(normalized);
                     this.traceKeyDrop(
                         _dropRun,
                         'bootstrap.decrypt',
@@ -267,9 +273,19 @@ export class KeyRegistry {
 
             // ── STAGE: map (normalize stats) ────────────────────────────
             const loaded: ApiKey[] = dexieKeys.map((k) => {
+                // Diagnostic: log first key structure for non-bootstrap
+                if (dexieKeys.indexOf(k) === 0) {
+                    console.log('[KEY_REGISTRY] Normal load first key (full):', k);
+                    console.log('[KEY_REGISTRY] Normal load first key keys:', Object.keys(k));
+                }
                 const stats = k.stats || this.initStats();
                 if (!stats.extended) stats.extended = this.initExtendedStats();
-                return { ...k, history: k.history || [], stats };
+                return {
+                    ...k,
+                    history: k.history || [],
+                    stats,
+                    status: k.status || 'active',
+                };
             });
             this.traceKeyDrop(_dropRun, 'normalize.map', dexieKeys.length, loaded.length, loaded);
 
@@ -278,44 +294,33 @@ export class KeyRegistry {
             //   - non-object entries
             //   - entries missing `id` or `provider` (cannot be addressed)
             //   - entries with literal 'placeholder-' prefix (old auto-seed marker)
-            //   - entries with empty `key` (legacy demo placeholders from getDefaultKeys)
-            const real = loaded.filter((k) => {
-                if (!k || typeof k !== 'object') return false;
-                if (!k.id) return false;
-                if (!k.provider) return false;
-                if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
-                if (!k.key || k.key.trim() === '') return false;
-                return true;
-            });
+            const real: ApiKey[] = [];
+            for (const k of loaded) {
+                let valid = true;
+                if (!k || typeof k !== 'object') {
+                    valid = false;
+                    LOGGER.warn('KeyRegistry', 'Filter fail: not object', { key: k });
+                } else if (!k.id) {
+                    valid = false;
+                    LOGGER.warn('KeyRegistry', 'Filter fail: no id', { key: k });
+                } else if (!k.provider) {
+                    valid = false;
+                    LOGGER.warn('KeyRegistry', 'Filter fail: no provider', { key: k });
+                } else if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) {
+                    valid = false;
+                    LOGGER.warn('KeyRegistry', 'Filter fail: placeholder key', { key: k });
+                }
+                if (valid) real.push(k);
+            }
+            LOGGER.info('KeyRegistry', 'Filtered keys count:', { count: real.length });
             // Per-key diagnostic: show WHY each key was kept/dropped (first 3 only).
             if (loaded.length > 0 && loaded.length !== real.length) {
                 // diagnostic: decisions removed in favor of traceKeyDrop below
             }
             this.traceKeyDrop(_dropRun, 'filterValid', loaded.length, real.length, real);
 
-            // ── CLEANUP: remove empty-key demo entries from Dexie ────────
-            // One-time cleanup: delete legacy getDefaultKeys() placeholders that have key === ''.
-            const droppedIds = loaded
-                .filter((k) => k.id && (!k.key || k.key.trim() === ''))
-                .map((k) => k.id);
-            if (droppedIds.length > 0) {
-                try {
-                    await Promise.all(droppedIds.map((id) => this.deps.keyStore.deleteKey(id)));
-                    if (import.meta.env.DEV)
-                        LOGGER.info(
-                            'KeyRegistry',
-                            `Cleaned ${droppedIds.length} empty-key demo entries from Dexie`,
-                        );
-                } catch {
-                    /* non-critical */
-                }
-            }
-
             // ── STAGE: decrypt ─────────────────────────────────────────
-            // Decrypt any encrypted loaded keys first to handle in-memory plaintext operations
-            const vaultLocked = this.deps.vault.isLocked();
-            const final =
-                !vaultLocked && real.length > 0 ? await this.deps.vault.decryptAllKeys(real) : real;
+            const final = real.length > 0 ? await this.deps.vault.decryptAllKeys(real) : real;
             this.traceKeyDrop(_dropRun, 'decrypt', real.length, final.length, final);
 
             // Post-bootstrap guard: if the registry already has keys and dexie
@@ -446,7 +451,6 @@ export class KeyRegistry {
                 if (!k.id) return false;
                 if (!k.provider) return false;
                 if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) return false;
-                if (!k.key || k.key.trim() === '') return false;
                 return true;
             });
             this.traceKeyDrop(_dropRun, 'filterValid', mapped.length, loaded.length, loaded);
@@ -539,16 +543,8 @@ export class KeyRegistry {
             return null;
         }
 
-        const enc = await this.deps.vault.encryptKey(trimmedKey);
-        if (!enc) {
-            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-                message: this.deps.vault.isLocked()
-                    ? 'Vault is locked. Unlock vault to add keys.'
-                    : 'Encryption failed. Key was not added.',
-                type: 'error',
-            });
-            return null;
-        }
+        // Vault system removed — keys stored as plaintext
+        const storedKey = trimmedKey;
 
         // KD9-02: Second duplicate check after async gap prevents race condition
         const isDuplicateAfterAsync = this.keys.some(
@@ -561,9 +557,7 @@ export class KeyRegistry {
             });
             return null;
         }
-
-        const storedKey = enc ?? trimmedKey;
-        const isEnc = storedKey !== trimmedKey;
+        const isEnc = false;
         const inferredTags: string[] = [];
         const labelLower = data.label.toLowerCase();
         if (/\b(prod|production)\b/.test(labelLower)) inferredTags.push('env:production');
@@ -767,55 +761,22 @@ export class KeyRegistry {
         return count;
     }
 
-    async exportKeys(encryptFn: (plaintext: string) => Promise<string | null>): Promise<string> {
-        const failedKeys: string[] = [];
-        const isVaultLocked = this.deps.vault.isLocked();
-        const exportData = await Promise.all(
-            this.keys.map(async (k) => {
-                let keyVal = k.key;
-                let isEnc = k.isEncrypted;
-
-                if (k.key && !k.isEncrypted) {
-                    if (isVaultLocked) {
-                        // HIGH-K5: Refuse to export plaintext when vault locked
-                        failedKeys.push(k.label || k.id);
-                        keyVal = '';
-                        isEnc = true;
-                    } else {
-                        const encrypted = await encryptFn(k.key);
-                        if (encrypted) {
-                            keyVal = encrypted;
-                            isEnc = true;
-                        } else {
-                            failedKeys.push(k.label || k.id);
-                            keyVal = '';
-                            isEnc = true;
-                        }
-                    }
-                }
-                return {
-                    id: k.id,
-                    provider: k.provider,
-                    group: k.group,
-                    account: k.account,
-                    key: keyVal,
-                    label: k.label,
-                    tags: k.tags,
-                    status: k.status,
-                    isEncrypted: isEnc,
-                    availableModels: k.availableModels,
-                    notes: k.notes,
-                    stats: k.stats,
-                    history: k.history,
-                };
-            }),
-        );
-        if (failedKeys.length > 0) {
-            throw new Error(
-                `Export failed: encryption error for key(s): ${failedKeys.join(', ')}. ` +
-                    `Export aborted — no data written. Try re-unlocking the vault and export again.`,
-            );
-        }
+    async exportKeys(_encryptFn: (plaintext: string) => Promise<string | null>): Promise<string> {
+        const exportData = this.keys.map((k) => ({
+            id: k.id,
+            provider: k.provider,
+            group: k.group,
+            account: k.account,
+            key: k.key,
+            label: k.label,
+            tags: k.tags,
+            status: k.status,
+            isEncrypted: false,
+            availableModels: k.availableModels,
+            notes: k.notes,
+            stats: k.stats,
+            history: k.history,
+        }));
         return JSON.stringify(exportData, null, 2);
     }
 

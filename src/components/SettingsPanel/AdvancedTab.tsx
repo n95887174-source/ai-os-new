@@ -2,7 +2,7 @@ import { Shield, Key, Terminal, Settings, Database, Trash2 } from 'lucide-react'
 import { externalSecretsService } from '../../kernel/instances';
 import type { SystemSettings, BackendStatus } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import { amberBtn, dangerBtn, flexBetween, flexGap2, textSecondary } from '../../styles/common';
+import { amberBtn, dangerBtn, flexBetween, textSecondary } from '../../styles/common';
 import { ConfigInput, SettingRow, Toggle } from './settings-shared';
 import type { RuntimeConfigForm } from './settings-shared';
 
@@ -12,10 +12,6 @@ interface AdvancedTabProps {
     configForm: RuntimeConfigForm | null;
     setConfigForm: React.Dispatch<React.SetStateAction<RuntimeConfigForm | null>>;
     onSaveConfig: () => void;
-    vaultPassword: string;
-    setVaultPassword: (v: string) => void;
-    isVaultActive: boolean;
-    onVaultAction: () => void;
     secretsBackends: BackendStatus[];
     setSecretsBackends: (backends: BackendStatus[]) => void;
     showSecretsDetail: boolean;
@@ -30,9 +26,6 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
     configForm,
     setConfigForm,
     onSaveConfig,
-    vaultPassword,
-    setVaultPassword,
-    onVaultAction,
     secretsBackends,
     setSecretsBackends,
     showSecretsDetail,
@@ -222,55 +215,6 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
             </details>
 
             <SettingRow
-                icon={<Shield size={20} aria-hidden="true" />}
-                accent="#10b981"
-                title={t('settings.vault_title')}
-                description={t('settings.vault_desc')}
-            >
-                <div style={flexGap2}>
-                    <input
-                        type="password"
-                        placeholder={t('settings.vault_password_aria')}
-                        value={vaultPassword}
-                        onChange={(e) => setVaultPassword(e.target.value)}
-                        style={{
-                            padding: '0.6rem 1rem',
-                            background: 'rgba(0,0,0,0.3)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: 8,
-                            color: 'white',
-                            fontSize: '0.85rem',
-                            width: 180,
-                            outline: 'none',
-                        }}
-                        onFocus={(e) => {
-                            e.target.style.borderColor = '#10b981';
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                        }}
-                        aria-label={t('settings.vault_password_aria')}
-                    />
-                    <button
-                        type="button"
-                        style={{
-                            fontSize: '0.85rem',
-                            padding: '0.6rem 1.25rem',
-                            borderRadius: 8,
-                            background: '#3b82f6',
-                            border: 'none',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                        }}
-                        onClick={onVaultAction}
-                        aria-label={t('settings.vault_set_password_aria')}
-                    >
-                        {t('settings.vault_set_password')}
-                    </button>
-                </div>
-            </SettingRow>
-            <SettingRow
                 icon={<Key size={20} aria-hidden="true" />}
                 accent="#8b5cf6"
                 title={t('settings.secrets_backends')}
@@ -330,7 +274,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                                         color: b.healthy ? '#10b981' : '#ef4444',
                                     }}
                                 >
-                                    {b.healthy ? '✓' : '✗'}
+                                    {b.healthy ? '\u2713' : '\u2717'}
                                 </span>
                             </div>
                             {!b.active && (

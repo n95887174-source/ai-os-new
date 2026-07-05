@@ -24,7 +24,7 @@ import {
     type InitPhase,
     type BootstrapReport,
 } from './bootstrap-phases';
-import { runKeyMigration, hydrateKeyStorage, loadBootstrapSnapshot } from './bootstrap-key-init';
+import { runKeyMigration, loadBootstrapSnapshot, hydrateKeyStorage } from './bootstrap-key-init';
 
 export type { InitPhase, BootstrapReport };
 
@@ -80,13 +80,15 @@ export class SystemBootstrap implements IBootstrap {
         // ── Key Migration (one-shot) ───────────────────────────────────────
         await runKeyMigration(this.container, this.logger);
 
-        // Hydrate: read KeyStore and push to KeyRegistry.
-        await hydrateKeyStorage(this.container, this.eventBus, this.logger);
-
         // ════════════════════════════════════════════════════════════════════
         //   BOOTSTRAP SNAPSHOT — read from KeyStore
         // ════════════════════════════════════════════════════════════════════
         await loadBootstrapSnapshot(this.container, this.logger);
+
+        // ════════════════════════════════════════════════════════════════════
+        //   HYDRATE KEY STORAGE — normalize keys in KeyStore
+        // ════════════════════════════════════════════════════════════════════
+        await hydrateKeyStorage(this.container, this.eventBus, this.logger);
 
         const servicesOk = await this.initServices();
         if (!servicesOk) {
@@ -200,7 +202,7 @@ export class SystemBootstrap implements IBootstrap {
                 );
         });
 
-        await this.lifecycle.tryInit('providerRuntime', () => {
+        await this.lifecycle.tryInit('providerRuntimeService', () => {
             const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');
             const ks = this.container.get<KeyService>('keyService');
             const keys: ApiKey[] = ks.getKeys?.() ?? [];
@@ -228,6 +230,16 @@ export class SystemBootstrap implements IBootstrap {
         } catch (e) {
             console.error('[BOOTSTRAP] Failed to mount topology:', e);
             this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
+        }
+
+        // ── Init remaining services (created as deps but not explicitly tryInit'd) ──
+        for (const entry of this.lifecycle.getEntries()) {
+            const hasStatus = this.lifecycle
+                .getStatuses()
+                .some((s) => s.name === entry.name && s.status === 'ok');
+            if (!hasStatus) {
+                await this.lifecycle.tryInit(entry.name, () => entry.service.init());
+            }
         }
 
         // ── Start all lifecycle services ───────────────────────────────

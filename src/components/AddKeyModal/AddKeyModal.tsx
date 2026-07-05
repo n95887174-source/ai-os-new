@@ -9,7 +9,6 @@ import { PROVIDER_META } from './add-key-constants';
 import { useBulkImport } from './useBulkImport';
 import StepSidebar from './StepSidebar';
 import ModalHeader from './ModalHeader';
-import VaultUnlockStep from './VaultUnlockStep';
 import ProviderSelectionStep from './ProviderSelectionStep';
 import KeyDetailsForm from './KeyDetailsForm';
 import DefaultModelStep from './DefaultModelStep';
@@ -24,7 +23,7 @@ interface Props {
 const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     const { addKey, keys } = useKeyStore();
     const { t } = useTranslation();
-    const [step, setStep] = useState<0 | 1 | 2 | 3>(defaultProvider ? 2 : 1);
+    const [step, setStep] = useState<1 | 2 | 3>(defaultProvider ? 2 : 1);
     const [provider, setProvider] = useState(defaultProvider || 'OpenRouter');
     const [label, setLabel] = useState('');
     const [apiKey, setApiKey] = useState('');
@@ -33,9 +32,6 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     const [group, setGroup] = useState('');
     const [account, setAccount] = useState('');
     const [accountId, setAccountId] = useState<string>('');
-    const [vaultPassword, setVaultPassword] = useState('');
-    const [vaultUnlocking, setVaultUnlocking] = useState(false);
-    const [vaultError, setVaultError] = useState('');
     const [bulkMode, setBulkMode] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -52,10 +48,6 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     } = useBulkImport();
 
     const isMountedRef = useRef(true);
-
-    useEffect(() => {
-        if (step !== 0 && keyService.vaultService?.isLocked()) queueMicrotask(() => setStep(0));
-    }, [step]);
 
     const providers = useMemo(() => {
         const fromRegistry = adapterRegistry.getAllProviders();
@@ -125,39 +117,12 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
         }
     };
 
-    const handleVaultUnlock = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!vaultPassword.trim()) {
-            setVaultError(t('settings.error_vault_password'));
-            return;
-        }
-        setVaultUnlocking(true);
-        setVaultError('');
-        try {
-            const ok = await keyService.unlockVault(vaultPassword);
-            if (!isMountedRef.current) return;
-            if (ok) {
-                setStep(defaultProvider ? 2 : 1);
-                setVaultPassword('');
-            } else setVaultError(t('settings.error_vault_operation'));
-        } catch {
-            if (!isMountedRef.current) return;
-            setVaultError(t('settings.error_vault_operation'));
-        } finally {
-            if (isMountedRef.current) setVaultUnlocking(false);
-        }
-    };
-
     const handleBack = () => {
         if (step === 3) {
             setStep(2);
             setError('');
             setBulkMode(false);
             resetBulk();
-            return;
-        }
-        if (step === 0) {
-            onClose();
             return;
         }
         if (step === 2) {
@@ -279,7 +244,6 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
     };
 
     const getTitle = () => {
-        if (step === 0) return t('settings.vault_title');
         if (step === 1) return t('add_key.title_provider');
         if (step === 3) return 'Select Default Model';
         if (step === 2 && bulkMode) return t('add_key.title_bulk');
@@ -319,16 +283,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
                             />
 
                             <div className="modal-content">
-                                {step === 0 ? (
-                                    <VaultUnlockStep
-                                        vaultPassword={vaultPassword}
-                                        setVaultPassword={setVaultPassword}
-                                        vaultError={vaultError}
-                                        vaultUnlocking={vaultUnlocking}
-                                        onUnlock={handleVaultUnlock}
-                                        t={t}
-                                    />
-                                ) : step === 1 ? (
+                                {step === 1 ? (
                                     <ProviderSelectionStep
                                         providers={providers}
                                         provider={provider}

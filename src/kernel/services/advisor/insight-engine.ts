@@ -1,4 +1,4 @@
-﻿import type { IInsightEngine, LLMAnalysisResult, AdvisorMetrics } from '../../contracts/advisor';
+import type { IInsightEngine, LLMAnalysisResult, AdvisorMetrics } from '../../contracts/advisor';
 import type { KeyState } from '../../contracts/key-state';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
 import {
@@ -225,7 +225,7 @@ Focus on actionable, specific improvements.`;
                     ...PROVIDER_DEFAULT_MODELS,
                     gemini: 'gemini-2.0-flash',
                     groq: PROVIDER_PREFERRED_MODELS.groq?.[1] ?? 'llama-3.3-70b-versatile',
-                    openrouter: 'openrouter/auto',
+                    openrouter: PROVIDER_DEFAULT_MODELS.openrouter,
                     nvidia: 'meta/llama-3.3-70b-instruct',
                     deepseek: 'deepseek-chat',
                     cohere: 'command-r-plus',
