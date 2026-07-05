@@ -125,6 +125,39 @@ export class KeyRegistry {
     private saveQueue = Promise.resolve();
     private addKeyLock: Promise<ApiKey | null> = Promise.resolve(null);
 
+    /** One-time migration: detect old vault-encrypted keys and clear them.
+     *  Vault system was removed — encrypted keys cannot be decrypted. */
+    private migrateEncryptedKeys(keys: ApiKey[]): { migrated: ApiKey[]; count: number } {
+        const encrypted = keys.filter((k) => k.isEncrypted === true);
+        if (encrypted.length === 0) return { migrated: keys, count: 0 };
+
+        LOGGER.warn(
+            'KeyRegistry',
+            `[VAULT_MIGRATION] Found ${encrypted.length} old vault-encrypted key(s). Vault system was removed — clearing encrypted values. Please re-add your API keys.`,
+        );
+
+        const migrated: ApiKey[] = keys.map((k) => {
+            if (!k.isEncrypted) return k;
+            return {
+                ...k,
+                key: '',
+                isEncrypted: false,
+                status: 'error' as const,
+                history: [
+                    ...(k.history || []),
+                    {
+                        id: crypto.randomUUID(),
+                        timestamp: Date.now(),
+                        action: 'note_added' as const,
+                        detail: 'MIGRATED: Vault removed — encrypted key cleared. Re-add your API key.',
+                    },
+                ],
+            } as ApiKey;
+        });
+
+        return { migrated, count: encrypted.length };
+    }
+
     async reload(): Promise<void> {
         const prevCount = this.keys.length;
         if (import.meta.env.DEV)
@@ -234,17 +267,35 @@ export class KeyRegistry {
                     );
                     // ── STAGE: decrypt ──────────────────────────────────────
                     const decryptInput = normalized;
-                    const final = await this.deps.vault.decryptAllKeys(normalized);
+                    const decrypted = await this.deps.vault.decryptAllKeys(normalized);
                     this.traceKeyDrop(
                         _dropRun,
                         'bootstrap.decrypt',
                         decryptInput.length,
-                        final.length,
-                        final,
+                        decrypted.length,
+                        decrypted,
                     );
+                    // ── STAGE: vault migration ──────────────────────────────
+                    // Detect old vault-encrypted keys (isEncrypted === true) and clear them.
+                    const { migrated: migrated, count: migratedCount } =
+                        this.migrateEncryptedKeys(decrypted);
+                    if (migratedCount > 0) {
+                        LOGGER.warn(
+                            'KeyRegistry',
+                            `[VAULT_MIGRATION] Cleared ${migratedCount} encrypted key(s) from bootstrap snapshot.`,
+                        );
+                        try {
+                            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+                                message: `[VAULT MIGRATION] ${migratedCount} old vault-encrypted key(s) cleared. Please re-add your API keys.`,
+                                type: 'warning',
+                            });
+                        } catch {
+                            /* bootstrap — eventBus may not accept yet */
+                        }
+                    }
                     // ── STAGE: assign ───────────────────────────────────────
                     const before = this.keys.length;
-                    this.setKeysInternal('loadKeys:bootstrap-snapshot', final, { force: true });
+                    this.setKeysInternal('loadKeys:bootstrap-snapshot', migrated, { force: true });
                     this.traceKeyDrop(
                         _dropRun,
                         'bootstrap.assign',
@@ -342,9 +393,22 @@ export class KeyRegistry {
                 return;
             }
 
+            // ── STAGE: vault migration ─────────────────────────────────
+            const { migrated, count: migratedCount } = this.migrateEncryptedKeys(final);
+            if (migratedCount > 0) {
+                LOGGER.warn(
+                    'KeyRegistry',
+                    `[VAULT_MIGRATION] Cleared ${migratedCount} encrypted key(s) from Dexie.`,
+                );
+                this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: `[VAULT MIGRATION] ${migratedCount} old vault-encrypted key(s) cleared. Please re-add your API keys.`,
+                    type: 'warning',
+                });
+            }
+
             // ── STAGE: assign ──────────────────────────────────────────
             const before = this.keys.length;
-            this.setKeysInternal('loadKeys:dexie', final);
+            this.setKeysInternal('loadKeys:dexie', migrated);
             this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
             if (import.meta.env.DEV)
                 console.log('[KEY_SYNC] final committed count:', this.keys.length);
