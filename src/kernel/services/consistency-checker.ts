@@ -620,4 +620,36 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
         this.lastReport = report;
         return report;
     }
+
+    /**
+     * Fetch markdown doc files from the dev-server /docs/ path.
+     * Validates paths to prevent path traversal attacks.
+     * @param files List of paths like 'docs/SOMETHING.md'
+     * @param signal Optional AbortSignal for cancellation
+     */
+    async fetchDocs(files: string[], signal?: AbortSignal): Promise<Record<string, string>> {
+        const validPathRe = /^[\w./-]+\.md$/;
+        const contents: Record<string, string> = {};
+        const timeout = 5000; // 5s per file
+
+        for (const file of files) {
+            if (signal?.aborted) break;
+            if (!validPathRe.test(file)) {
+                // Skip invalid paths (traversal attempts, wrong extensions)
+                continue;
+            }
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeout);
+                const resp = await fetch(`/${file}`, { signal: controller.signal });
+                clearTimeout(timer);
+                if (resp.ok) {
+                    contents[file] = await resp.text();
+                }
+            } catch {
+                /* skip unavailable docs */
+            }
+        }
+        return contents;
+    }
 }

@@ -1,26 +1,30 @@
 import type { DebateSession } from '../../contracts/debate-types';
 import type { GovernorState } from './debate-governor/types';
+import { debateService } from '../../instances';
 
-let _active: DebateSession | null = null;
-let _governorState: GovernorState | null = null;
-
+/**
+ * Thin bridge to DebateSyncManager (single source of truth for active session).
+ * All state lives in DebateSyncManager — these functions delegate to it.
+ * Kept for backward compat with UI consumers. Preferred: import debateService from instances.ts.
+ */
 export function getActiveDebateSession(): DebateSession | null {
-    return _active;
+    return debateService.getActiveDebateSession();
 }
 
 export function setActiveDebateSession(session: DebateSession | null): void {
-    _active = session;
+    if (session) debateService.activeSession = session;
+    else debateService.activeSession = null;
 }
 
 export function clearActiveDebateSession(): void {
-    _active = null;
-    _governorState = null;
+    debateService.activeSession = null;
+    debateService.setDebateGovernorState(null);
 }
 
 export function getDebateGovernorState(): GovernorState | null {
-    return _governorState;
+    return debateService.getDebateGovernorState();
 }
 
 export function setDebateGovernorState(state: GovernorState | null): void {
-    _governorState = state;
+    debateService.setDebateGovernorState(state);
 }

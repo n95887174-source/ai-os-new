@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
+import { useUiPreferences } from '../../stores/uiPreferencesStore';
 import type { TranslationKey } from '../../i18n/translations';
 import WelcomeStep from './WelcomeStep';
 import AddConnectionStep from './AddConnectionStep';
 import DoneStep from './DoneStep';
-
-const ONBOARDING_KEY = 'mavis:onboarding_completed';
 
 interface OnboardingWizardProps {
     t: (key: TranslationKey) => string;
@@ -19,25 +18,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ t }) => {
     const [apiKey, setApiKey] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-
-    const [completed, setCompleted] = useState(() => {
-        try {
-            return localStorage.getItem(ONBOARDING_KEY) === '1';
-        } catch {
-            return false;
-        }
-    });
+    const { onboardingCompleted, setOnboardingCompleted } = useUiPreferences();
 
     const totalSteps = 3;
 
     const skip = () => {
-        try {
-            localStorage.setItem(ONBOARDING_KEY, '1');
-        } catch {
-            /* ignore */
-        }
-        setCompleted(true);
+        setOnboardingCompleted(true);
     };
+
+    if (onboardingCompleted) return null;
 
     const handleSaveConnection = async () => {
         if (!selectedProvider) {
@@ -83,8 +72,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ t }) => {
     const handleBack = () => {
         if (step > 0) setStep((s) => s - 1);
     };
-
-    if (completed) return null;
 
     return (
         <motion.div

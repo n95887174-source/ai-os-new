@@ -68,7 +68,7 @@ SuperAgents OS reimagines the browser as an AI operating system. Every component
 │  SystemKernel  EventBus  Container  Bootstrap        │
 │  KeyService  RouterService  MemoryService            │
 │  RotationService  AdvisorService  ToolService        │
-│  Contracts (96+)  Events (274+)  State  Types        │
+│  Contracts (96+)  Events (216+)  State  Types        │
 └────────────────────────┬────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────┐
@@ -163,7 +163,7 @@ Multi-agent debate system with configurable strategies and comprehensive metrics
 
 - **3 positions**: Pro, Con, Neutral
 - **6 strategies**: Round-robin, Moderated, Free-for-all, Socratic Method, Argument Tree, Constrained Debates
-- **20 agent workforce**: Distinct roles, prompts, temperatures, tools, models
+- **25 agent workforce**: Distinct roles, prompts, temperatures, tools, models
 - **Debate temperature slider**: Pure Logic → Balanced → Pure Emotion tone control
 - **Structural graph metrics**: Depth, branching, orphan rate, challenge/refinement density
 - **Constraint compliance scoring**: 6 constraint types (facts-only, emotional, data-driven, etc.)
@@ -225,8 +225,11 @@ cd ai-os-new
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (in terminal 1)
 npm run dev
+
+# Start proxy for sandboxed tool execution (in terminal 2)
+npm run proxy
 ```
 
 Open `http://localhost:5173` in your browser.
@@ -246,13 +249,13 @@ Open `http://localhost:5173` in your browser.
 ```
 src/
 ├── kernel/              # Kernel (DI, contracts, services, events, state)
-│   ├── contracts/       # 107+ contract interfaces (IKeyVault, IProviderAdapter, etc.)
-│   ├── services/        # 303 files across 18 subdirs (key-management, provider-runtime,
+│   ├── contracts/       # 123 contract interfaces (IKeyVault, IProviderAdapter, etc.)
+│   ├── services/        # 277 files across 18 subdirs (key-management, provider-runtime,
 │   │                   #   debate-runtime, debate-governor, agent-diversity,
 │   │                   #   routing-policy, rotation, cognitive-intelligence,
 │   │                   #   event-sourcing, advisor, runtime-intelligence,
 │   │                   #   storage, memory, research-adapters, debate-interpreter, etc.)
-│   ├── events/          # Event registry: 535 registered schemas (event-registry.ts)
+│   ├── events/          # Event registry: 198 registered schemas (event-registry.ts)
 │   ├── types/           # Zod schemas, domain types
 │   ├── state/           # State shapes + defaults
 │   ├── utils/           # Kernel utilities
@@ -262,9 +265,9 @@ src/
 │   ├── kernel.ts        # Reducer-pattern state machine
 │   ├── runtime.ts       # LifecycleManager (init→start→destroy LIFO)
 │   ├── transaction.ts   # TransactionContext (deferred persistence/emission)
-│   ├── instances.ts     # 80+ lazyService singleton exports
+│   ├── instances.ts     # 126 lazyService singleton exports
 │   └── DEPENDENCY_MAP.md
-├── components/          # 130+ UI panels across 9 nav sections
+├── components/          # 145 UI panels across 9 nav sections
 │   ├── ChatPanel/       # Chat interface with streaming
 │   ├── BuilderPanel/    # Visual cognitive workflow editor
 │   ├── AgentsPanel/     # Agent role management + consortia
@@ -273,33 +276,30 @@ src/
 │   ├── DebateLive/      # Circular live debate view
 │   ├── RolesPanel/      # Unified role registry (610+ roles, 37 consilia)
 │   ├── MemoryPanel/     # Memory palace (7-store architecture)
-│   ├── ResearchPanel/   # Research engine (34 API sources)
+│   ├── ResearchPanel/   # Research engine (23+ API sources)
 │   ├── Editors/         # TipTap, Monaco, DSL Canvas, JSON Schema editors
 │   └── ... (Cache, Webhooks, Budget, Rotations, Health, DocsHealth,
 │           Traces, Analytics, Audience, Guardians, Deploy, Workflows,
 │           Prompts, Security, GoogleStudio, GeminiLive, EvalDatasets,
-│           CustomMetrics, Guardians, Aquarium, Ecosystem, etc.)
-├── core/                # Legacy core (DatabaseService, PluginSDK, storage)
-├── services/            # Thin legacy wrappers (25 files, proxy → kernel)
+│           CustomMetrics, Aquarium, Ecosystem, etc.)
+├── services/            # Web Workers (2 files)
 │   ├── memory.worker.ts   # Web Worker: BM25 + semantic search
-│   ├── sandbox.worker.ts  # Web Worker: AST-based code validation
-│   └── ... (21 proxy wrappers, 2 workers)
-├── llm/                 # LLM provider adapters (11 providers, 12 decorators)
+│   └── sandbox.worker.ts  # Web Worker: AST-based code validation
+├── llm/                 # LLM provider adapters (7 adapters, 25 supported names, 12 decorators)
 │   ├── gemini/          # Gemini adapter + Google GenAI SDK integration
 │   ├── openai-compatible/ # OpenAI-compatible (Groq, Cerebras, Cloudflare, etc.)
 │   ├── openrouter/      # OpenRouter adapter
 │   ├── nvidia/          # NVIDIA NIM adapter
-│   ├── decorators/      # Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, etc.
-│   └── facade/          # LLMClient entry point
+│   └── decorators/      # Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, etc.
 ├── stores/              # React state stores
 │   ├── useChatStore.ts  # Chat sessions & messages
 │   ├── useKeyStore.ts   # API key management (StorageAdapter-backed)
 │   └── debateLiveStore.ts # Live debate streaming state
 ├── types/               # Re-exports from kernel/types/
 ├── i18n/                # Internationalization (en.ts, ru.ts, I18nProvider)
-├── styles/              # CSSProperties constants (common.ts — 148+ constants)
-├── routes.tsx            # 90+ routes across 9 nav sections
-└── test/                # Test setup and config
+├── styles/              # CSSProperties constants (common.ts — 302 constants)
+├── routes.tsx            # ~70 routes across 9 nav sections
+└── tests/               # Test setup and config
 ```
 
 ---
@@ -336,16 +336,20 @@ Adjust routing behavior in **Settings → SLA Mode**:
 
 ## Scripts
 
-| Script             | Description                         |
-| ------------------ | ----------------------------------- |
-| `npm run dev`      | Start development server (HMR)      |
-| `npm run build`    | TypeScript check + production build |
-| `npm run preview`  | Preview production build            |
-| `npm run test`     | Run all tests (Vitest)              |
-| `npm run test:ui`  | Run tests with UI dashboard         |
-| `npm run test:e2e` | Run Playwright e2e tests            |
-| `npm run lint`     | ESLint check                        |
-| `npm run proxy`    | Start CORS proxy server             |
+| Script                          | Description                         |
+| ------------------------------- | ----------------------------------- |
+| `npm run dev`                   | Start development server (HMR)      |
+| `npm run build`                 | TypeScript check + production build |
+| `npm run preview`               | Preview production build            |
+| `npm run test`                  | Run all tests (Vitest)              |
+| `npm run test:ui`               | Run tests with UI dashboard         |
+| `npm run test:e2e`              | Run Playwright e2e tests            |
+| `npm run lint`                  | ESLint check                        |
+| `npm run typecheck`             | TypeScript check (no emit)          |
+| `npm run lint:staged`           | Lint staged files                   |
+| `npm run check:circular-kernel` | Check circular deps in kernel       |
+| `npm run check:deps`            | Check unused/missing dependencies   |
+| `npm run proxy`                 | Start CORS proxy server             |
 
 ---
 
@@ -355,8 +359,8 @@ Adjust routing behavior in **Settings → SLA Mode**:
 | ---------------------------------------------------------- | ------------------------------------------------------- |
 | [System Manifest](./docs/SYSTEM_MANIFEST.md)               | Architecture principles and design decisions            |
 | [Full Registry (RU)](./docs/ПОЛНЫЙ_РЕЕСТР.md)              | Complete system passport: 246 entries across all layers |
-| [Services Catalog (RU)](./docs/SERVICES_RU.md)             | All 88+ DI services with purpose, events, lifecycle     |
-| [UI Layer (RU)](./docs/07-ui-layer_RU.md)                  | All 120+ panels with categories, event maps             |
+| [Services Catalog (RU)](./docs/SERVICES_RU.md)             | All 277 DI services with purpose, events, lifecycle     |
+| [UI Layer (RU)](./docs/07-ui-layer_RU.md)                  | All 145 panels with categories, event maps              |
 | [Event Reference](./docs/events.md)                        | 141+ typed events with payloads and Zod schemas         |
 | [Cognitive Runtime Spec](./docs/COGNITIVE_RUNTIME_SPEC.md) | Event data and runtime specification                    |
 | [Architecture (RU)](./docs/01-system-architecture_RU.md)   | System architecture overview                            |

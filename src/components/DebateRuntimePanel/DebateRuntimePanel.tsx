@@ -8,7 +8,7 @@ import {
     orchestrator,
     sessionManager,
 } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { DebateRuntimeEvents } from '../../kernel/events/debate-runtime-events';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -58,7 +58,7 @@ const DebateRuntimePanel: React.FC = () => {
     const [topic, setTopic] = useState('');
     const [topologyType, setTopologyType] = useState<TopologyType>('roundtable');
     const [error, setError] = useState<string | null>(null);
-    const [actionLoading, _setActionLoading] = useState<string | null>(null);
+    const [actionLoading] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
     const isMountedRef = useRef(true);
 

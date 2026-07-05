@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { t } from '../../i18n/translations';
 import { emptyStateCenter, emptyStateTitle } from '../../styles/common';
 import { advisorService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { OptimizationSuggestion } from '../../kernel/instances';
 import type { SREAlert } from './sre-constants';

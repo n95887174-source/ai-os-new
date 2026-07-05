@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import type { ApiKey } from '../../types/metrics';
 import { repColor, TagPill } from '../Common/status-vocabulary';
 import { keyStateStore } from '../../kernel/instances';

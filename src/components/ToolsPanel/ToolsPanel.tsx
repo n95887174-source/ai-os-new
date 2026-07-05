@@ -3,8 +3,8 @@ import { Wrench, Plus, Search, Download, Upload, AlertTriangle, X } from 'lucide
 import { motion, AnimatePresence } from 'framer-motion';
 import { toolService } from '../../kernel/instances';
 import type { ToolDefinition } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import type { EventMap } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
+import type { EventMap } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -406,5 +406,3 @@ const ToolsPanel: React.FC = () => {
 };
 
 export default ToolsPanel;
-
-

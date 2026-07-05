@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { useKeyIntelligence } from '../../stores/useKeyIntelligence';
 import { useTranslation } from '../../i18n/useTranslation';

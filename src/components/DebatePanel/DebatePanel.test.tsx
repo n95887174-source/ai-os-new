@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import React from 'react';
 
 beforeAll(() => {
@@ -143,7 +143,14 @@ vi.mock('./DebateSetupWizard', () => ({
         actionLoading,
         onStart,
         t,
-    }: any) => (
+    }: {
+        topic: string;
+        agents: unknown[];
+        availableAgents: unknown[];
+        actionLoading: string | null;
+        onStart: () => void;
+        t: (k: string) => string;
+    }) => (
         <div>
             <div>{t('debate.config_title')}</div>
             <textarea

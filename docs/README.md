@@ -44,7 +44,7 @@ ConsistencyChecker.checkDocs() → mismatch detected
 
 - `src/kernel/DEPENDENCY_MAP.md` — full DI injection graph
 - `docs/events.md` — event catalog with payloads
-- `docs/architecture.md` — high-level architecture diagram
+- `docs/01-system-architecture.md` — high-level architecture diagram
 - `AGENTS.md` — development guide and session history
 
 ## Русская Документация

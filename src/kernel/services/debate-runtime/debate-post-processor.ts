@@ -115,7 +115,7 @@ function scoreSocraticQuestion(
 }
 
 export class DebatePostProcessor {
-    private factCheckService: FactCheckService;
+    public factCheckService: FactCheckService;
     private processedArgIds: Set<string>;
 
     constructor(deps: { factCheckService: FactCheckService }) {

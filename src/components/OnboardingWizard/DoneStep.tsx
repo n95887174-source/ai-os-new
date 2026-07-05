@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Check, ChevronRight } from 'lucide-react';
+import { useUiPreferences } from '../../stores/uiPreferencesStore';
 import type { TranslationKey } from '../../i18n/translations';
-
-const ONBOARDING_KEY = 'mavis:onboarding_completed';
 
 interface Props {
     t: (key: TranslationKey) => string;
@@ -11,6 +10,7 @@ interface Props {
 
 const DoneStep: React.FC<Props> = ({ t }) => {
     const navigate = useNavigate();
+    const { setOnboardingCompleted } = useUiPreferences();
     return (
         <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
             <motion.div
@@ -53,11 +53,7 @@ const DoneStep: React.FC<Props> = ({ t }) => {
             </p>
             <button
                 onClick={() => {
-                    try {
-                        localStorage.setItem(ONBOARDING_KEY, '1');
-                    } catch {
-                        /* ignore */
-                    }
+                    setOnboardingCompleted(true);
                     navigate('/chat');
                 }}
                 style={{

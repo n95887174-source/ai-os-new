@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { kernel } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { errorContainer, dismissBtnRed } from '../../styles/common';
 import type { SystemState } from '../../kernel/types/metrics-types';

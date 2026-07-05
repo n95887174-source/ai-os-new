@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 
 const ROUTE_MAP: Partial<Record<keyof typeof EVENTS, string[]>> = {
@@ -30,7 +30,7 @@ export function useNavBadgeSubscriptions(): void {
             const handler = () => {
                 for (const id of routeIds) increment(id);
             };
-            unsubs.push(eventBus.on(ev as any, handler));
+            unsubs.push(eventBus.on(ev as (typeof EVENTS)[keyof typeof EVENTS], handler));
         }
 
         return () => {

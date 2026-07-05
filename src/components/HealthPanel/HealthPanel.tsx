@@ -14,7 +14,7 @@ import {
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService, probeService, keyStateStore } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { keyService, kernel } from '../../kernel/instances';
 import type { HealthEvent } from '../../kernel/services/provider-tracker';
 import type { ProbeResult } from '../../kernel/contracts/probe';

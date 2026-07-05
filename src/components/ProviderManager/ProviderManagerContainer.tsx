@@ -6,7 +6,7 @@ import type { ApiKey } from '../../types/metrics';
 import ProviderManagerView from './ProviderManagerView';
 import type { TabId } from './ProviderManagerView';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { groupManager } from '../../kernel/instances';
 

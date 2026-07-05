@@ -12,7 +12,7 @@ import {
 import { collaborativeService } from '../../kernel/instances';
 import type { CollabRole, HumanParticipant } from '../../kernel/services/collaborative-service';
 import type { DebateSession } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 
 const ROLE_ICONS: Record<CollabRole, React.ReactNode> = {
     pro: <Swords size={14} />,

@@ -6,7 +6,7 @@ import {
     counterfactualExplanationService,
     counterfactualNarrativeService,
 } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { CARD, RATE_PRESETS } from './counterfactual-constants';
 import TraceSidebar from './TraceSidebar';
 import ScoreComparison from './ScoreComparison';

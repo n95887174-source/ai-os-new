@@ -36,8 +36,8 @@ import {
     getArchetypesForRole,
 } from '../../kernel/services/debate-runtime/debate-archetypes';
 import { orchestrator } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { getCachedVerdict } from '../../kernel/verdict-cache';
+import { eventBus, EVENTS } from '../../kernel/instances';
+
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -306,7 +306,7 @@ const DebatePanel: React.FC = () => {
             setVerdict(payload.verdict);
         });
         if (session?.id && session.status === 'completed') {
-            const cached = getCachedVerdict(session.id);
+            const cached = debateService.getCachedVerdict(session.id);
             // eslint-disable-next-line react-hooks/set-state-in-effect
             if (cached) setVerdict(cached);
         }

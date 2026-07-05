@@ -13,7 +13,7 @@ import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
 import { useActiveDebateStore } from '../../../../stores/activeDebateStore';
 
 const LOGGER = rootLogger.child('AutoDebateService');
-import type { DebateParticipant, DebateSession } from '../debate-service';
+import type { DebateParticipant, DebateSession } from '../../../contracts/debate-types';
 import type { ApiKey } from '../../../types/metrics-types';
 
 /**

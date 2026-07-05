@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { runtime } from '../../kernel/runtime';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { genId } from '../../utils/gen-id';
 import type { DebateParticipant, DebateSession } from '../../kernel/contracts/debate-types';

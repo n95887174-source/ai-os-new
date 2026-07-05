@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Database, Brain, ShieldCheck } from 'lucide-react';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import type { ISTopology } from '../../kernel/contracts/topology';
 
 interface GraphNode {

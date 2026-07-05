@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { eventBus, EVENTS } from '../events/event-bus';
+import { eventBus, EVENTS } from '../instances';
 
 describe('ChatService', () => {
     beforeEach(() => {

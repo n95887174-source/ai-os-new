@@ -1,5 +1,7 @@
 # SuperAgents OS — Agent Guide
 
+> **Note:** Some "Current Session" entries below reference files in `audit/new/` — these audit files exist locally but are not committed to the repository. They are historical source documents for completed work.
+
 ## Project Overview
 
 Autonomous, event-driven multi-agent runtime. Decision-centric architecture with programmable cognitive topologies (DSL DAGs).
@@ -21,7 +23,7 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 2. **No Globals in Kernel** — only DI constructor injection (`src/kernel/container.ts`)
 3. **Dependency Rule** — UI → Application → Kernel → Infrastructure (kernel never imports UI)
 4. **Contracts at Boundaries** — interfaces in `src/kernel/contracts/`, implementations in `src/kernel/services/`
-5. **Legacy Wrappers** — fully migrated to `src/kernel/services/`; `src/services/` now holds only workers + tests
+5. **Legacy Wrappers** — fully migrated to `src/kernel/services/`; `src/services/` now holds only workers
 
 ## Architecture Layers
 
@@ -32,7 +34,7 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 - `src/kernel/services/provider-runtime/` — instances, sessions, state, budget
 - `src/kernel/services/event-sourcing/` — recorder, checkpoints, replay engine
 - `src/llm/` — provider adapters + decorators (infrastructure)
-- `src/services/` — workers (`memory.worker.ts`, `sandbox.worker.ts`) + tests (all legacy wrappers migrated to kernel/services/)
+- `src/services/` — workers (`memory.worker.ts`, `sandbox.worker.ts`) (all legacy wrappers migrated to kernel/services/)
 
 ## Code Rules
 
@@ -124,7 +126,7 @@ npx eslint src/      # lint
 | -------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
 | Priority | Task                                                 | Status                                                            |
 | ---      | ---                                                  | ---                                                               |
-| P0       | Tests on kernel/router/memory/tool services          | 🔵 Deferred per user request                                      |
+| P0       | Tests on kernel/router/memory/tool services          | 🔵 Tracked debt — 46 test files exist, kernel coverage deferred   |
 | P0       | ~~Strict event validation (Zod + onSafe)~~           | **Done** — all active events have Zod schemas                     |
 | P0       | ~~Developer trace view (PipelineStep + drill-down)~~ | **Done** — TracesTab with expand/collapse                         |
 | P1       | ~~Complete legacy wrapper migration~~                | **Done** — all wrappers migrated to kernel/services/              |
@@ -185,19 +187,19 @@ Fix all 235 bugs from `TASKS.md` (merged from audit reports), one by one, in rep
 | M-15 | `src/kernel/services/advisor-service.ts`                          | `autoExecutable: this.config.enableAutoFix`                                           |
 | T-03 | `src/llm/core/command.ts`                                         | `catch (err: any)` → `unknown`; `ILLMCommand<unknown>`                                |
 | T-04 | `src/llm/core/middleware-pipeline.ts`                             | `catch (err: any)` → `unknown`                                                        |
-| T-07 | `src/llm/facade/llm-client.ts`                                    | Removed unsafe `as unknown as Partial<ProviderResponse>`                              |
+| T-07 | `src/kernel/services/llm-client-service.ts`                       | Removed unsafe `as unknown as Partial<ProviderResponse>`                              |
 | A-03 | `src/llm/registry/adapter-registry.ts`                            | Removed deprecated `adapterRegistry` singleton                                        |
 | S-05 | `src/stores/useKeyStore.ts`                                       | XOR+base64 obfuscation for localStorage                                               |
 | H-06 | `src/kernel/services/provider-adapter-registry.ts`                | All `as any` → typed helpers `toChatMessages()`, `toAdapterOptions()`, `Parameters<>` |
 | H-14 | config-registry / config-service / config-history                 | `CONFIG` deep-frozen; `setConfig()`/`replaceConfig()`                                 |
 | A-01 | LLM 4 adapters (`BaseLLMAdapter.buildRequestBody()`)              | Shared body builder with `BuildBodyConfig`                                            |
 | T-08 | OpenRouter + NVIDIA adapters                                      | Zod schemas (`OpenRouterResponseSchema`, `NvidiaNIMResponseSchema`); `.safeParse()`   |
-| A-04 | `src/llm/facade/llm-client.ts`                                    | Local `LLMClientAdapter` instead of kernel import                                     |
+| A-04 | `src/kernel/services/llm-client-service.ts`                       | Local `LLMClientAdapter` instead of kernel import                                     |
 | A-05 | `src/llm/core/base-decorator.ts` + all 12 decorators              | `BaseDecorator` abstract class; all decorators migrated                               |
-| L-2  | `AgentsPanelContainer.tsx`                                        | Removed dead `void ([] as ...)`                                                       |
+| L-2  | `AgentsPanel/AgentsPanel.tsx` (was `AgentsPanelContainer.tsx`)    | Removed dead `void ([] as ...)`                                                       |
 | S-4  | `PricingPanel.tsx`                                                | NaN guard on `parseFloat` → `\|\| 0`                                                  |
-| T-04 | `src/core/Kernel.ts`                                              | `(instance as any)[prop]` → `instance[prop as keyof KernelSystemKernel]`              |
-| A-01 | `src/core/SecurityService.ts`                                     | Removed `new KernelSecurity()` — re-exports from kernel singleton                     |
+| T-04 | `src/core/Kernel.ts` (historical — file since deleted)            | `(instance as any)[prop]` → `instance[prop as keyof KernelSystemKernel]`              |
+| A-01 | `src/core/SecurityService.ts` (historical — file since deleted)   | Removed `new KernelSecurity()` — re-exports from kernel singleton                     |
 | M-18 | `src/kernel/services/provider-tracker.ts`                         | Documented in-place mutation with JSDoc                                               |
 
 ### Already Fixed (Pre-existing)
@@ -206,7 +208,7 @@ T-01, A-02, L-1, L-3, L-5, L-6, R-3, R-4, R-5, R-6, R-7, T-1, T-2, A-1, S-1, S-2
 
 ### Remaining (Unfixed)
 
-- **R-1**: Prop drilling in AgentsPanelContainer (37 props passed manually) — needs Context extraction
+- **R-1**: Prop drilling in AgentsPanel (was AgentsPanelContainer, 37 props passed manually) — Context extracted ✅
 - **R-2**: Inline style objects created per render across 50+ components — needs CSS class extraction
 
 ### Resolved (previously deferred)
@@ -2810,6 +2812,33 @@ Fix all unfixed findings from `debb.md` Top-12 critical bug list.
 - **Next**: `audit-report-part2-gemini.md` (Gemini/Google audit, 1358 lines)
 
 ---
+
+## Current Session (2026-07-05) — Sprint 1 Git Cleanup Commit
+
+### Goal
+
+Commit all staged changes from Sprint 1-4 (git hygiene, eslint fixes, route registry, store rewrites, DAL repos, event naming, DI cleanup).
+
+### Changes
+
+| #   | Item                                                                                | Status |
+| :-- | :---------------------------------------------------------------------------------- | :----- |
+| 1   | Fixed 22 pre-existing eslint errors across 10+ files (as any, exhaustive-deps, etc) | 🟢     |
+| 2   | Committed 798 files: 9830 insertions, 16492 deletions                               | 🟢     |
+| 3   | `npx tsc --noEmit --project tsconfig.app.json` clean                                | 🟢     |
+
+### Key Details
+
+- git commit `104fa6b` to main — "batch: Sprint 1-4 cleanup"
+- Deleted: .opencode/tmp/ (576 cached build files), audit artifacts, test results, dead code (30+ files)
+- Sprint 3-4 included: route-registry.tsx + route-imports.ts (B-036), cross-tab-state, activeDebateStore
+- B-020: useKeyStore rewrite (Zustand + liveQuery)
+- B-025: DI registration of 7 module-level singletons
+- B-040: 3 eager-init singletons → lazyService
+- B-039: Fix 48 test type errors
+- B-041: Event naming unification (kebab→colon)
+- DAL: memory-repository, trace-repository, debate-override, debate-timeline, session-link
+- Remaining: push to remote (waiting for user direction)
 
 ## Current Session (2026-07-05) — AUDIT_REPORT.md Verification + Fix Sprint (Session 3)
 

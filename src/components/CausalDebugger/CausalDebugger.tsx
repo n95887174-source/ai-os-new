@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GitBranch, Search } from 'lucide-react';
 import { textXxsMuted, detailGrid2, sectionHeaderDebug } from '../../styles/common';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import {
     causalTimelineService,
     causalScopeManager,

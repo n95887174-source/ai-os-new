@@ -24,6 +24,9 @@ export interface IDatabaseService {
     setKv<T>(id: string, value: T): Promise<void>;
     exportToJson(includeSecrets?: boolean): Promise<Record<string, unknown[]>>;
     importFromJson(data: Record<string, unknown[]>): Promise<void>;
+    saveWorkflow(topology: unknown): Promise<void>;
+    bulkPutConnectors(connectors: unknown[]): Promise<void>;
+    getAllConnectors(): Promise<unknown[]>;
 }
 
 /** Data Access Layer — single entry point for all persistent data access */

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, Send } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
 import { useTranslation } from '../../i18n/useTranslation';
 import {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock } from 'lucide-react';
 import { sessionManager } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import type { DebateSession } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import DebateHistoryPanel from './DebateHistoryPanel';

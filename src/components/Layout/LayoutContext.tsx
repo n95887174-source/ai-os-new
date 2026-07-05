@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useUiPreferences } from '../../stores/uiPreferencesStore';
 
 export type LayoutMode =
     'default' | 'wide' | 'focus' | 'presentation' | 'debug' | 'mobile' | 'cinema';
@@ -24,36 +25,16 @@ export const LAYOUT_ICONS: Record<LayoutMode, string> = {
     cinema: '🎬',
 };
 
-const STORAGE_KEY = 'mavis:layout:per-route';
-const DEFAULT_KEY = 'mavis:layout:default';
-
-function getStoredLayout(route: string): LayoutMode | null {
-    try {
-        const perRoute = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-        if (perRoute[route]) return perRoute[route] as LayoutMode;
-        const def = localStorage.getItem(DEFAULT_KEY);
-        if (def) return def as LayoutMode;
-    } catch {
-        /* noop */
-    }
-    return null;
-}
-
-function storeLayout(route: string, mode: LayoutMode, isGlobal: boolean) {
-    try {
-        if (isGlobal) {
-            localStorage.setItem(DEFAULT_KEY, mode);
-            const perRoute = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            delete perRoute[route];
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(perRoute));
-        } else {
-            const perRoute = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            perRoute[route] = mode;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(perRoute));
-        }
-    } catch {
-        /* noop */
-    }
+function getStoredLayout(
+    route: string,
+    layout: LayoutMode | null,
+    defaultLayout: LayoutMode,
+    perRouteLayout: Record<string, LayoutMode>,
+): LayoutMode {
+    if (layout) return layout;
+    if (perRouteLayout[route]) return perRouteLayout[route];
+    if (defaultLayout) return defaultLayout;
+    return 'default';
 }
 
 export interface LayoutContextValue {
@@ -75,33 +56,31 @@ export function useLayout(): LayoutContextValue {
 export function LayoutProvider({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const route = location.pathname;
+    const { defaultLayout, perRouteLayout, setLayout: storeSetLayout } = useUiPreferences();
 
     const [isGlobal, setIsGlobal] = useState(() => {
-        try {
-            return !localStorage.getItem(STORAGE_KEY + ':' + route);
-        } catch {
-            return true;
-        }
+        return !perRouteLayout[route];
     });
 
     const [layout, setLayoutState] = useState<LayoutMode>(() => {
-        return getStoredLayout(route) || 'default';
+        return (
+            getStoredLayout(route, perRouteLayout[route] ?? null, defaultLayout, perRouteLayout) ||
+            'default'
+        );
     });
 
     useEffect(() => {
-        const stored = getStoredLayout(route);
+        const { defaultLayout: def, perRouteLayout: perRoute } = useUiPreferences.getState();
+        const stored = perRoute[route] ?? null;
         if (stored) {
             setLayoutState(stored);
             setIsGlobal(false);
+        } else if (def) {
+            setLayoutState(def);
+            setIsGlobal(true);
         } else {
-            const def = localStorage.getItem(DEFAULT_KEY) as LayoutMode | null;
-            if (def) {
-                setLayoutState(def);
-                setIsGlobal(true);
-            } else {
-                setLayoutState('default');
-                setIsGlobal(true);
-            }
+            setLayoutState('default');
+            setIsGlobal(true);
         }
     }, [route]);
 
@@ -109,9 +88,9 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
         (mode: LayoutMode, global?: boolean) => {
             const g = global ?? isGlobal;
             setLayoutState(mode);
-            storeLayout(route, mode, g);
+            storeSetLayout(route, mode, g);
         },
-        [route, isGlobal],
+        [route, isGlobal, storeSetLayout],
     );
 
     const availableLayouts = useMemo((): LayoutMode[] => {

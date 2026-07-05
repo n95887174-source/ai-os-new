@@ -6,7 +6,7 @@ import {
     type AnyOrama,
 } from '@orama/orama';
 import { pipeline } from '@huggingface/transformers';
-import type { MemoryEntry } from '../types/memory';
+import type { MemoryEntry } from '../../types/memory';
 
 let db: unknown = null;
 let entries: MemoryEntry[] = [];

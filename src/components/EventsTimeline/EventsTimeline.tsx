@@ -11,7 +11,7 @@ import {
     Filter,
 } from 'lucide-react';
 import { useNow } from '../../hooks/useNow';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import { storageAdapter } from '../../kernel/instances';
 import {
     btnEventControl,
@@ -552,4 +552,3 @@ const summarizeEvent = (data: Record<string, unknown> | string | null | undefine
 };
 
 export default EventsTimeline;
-

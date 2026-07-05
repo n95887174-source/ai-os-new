@@ -1,5 +1,5 @@
 import { getDexieDb } from '../database-service';
-import { eventBus } from '../../events/event-bus';
+import { eventBus } from '../../instances';
 import { EVENTS } from '../../events/event-names';
 import type {
     StorageLayer,

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Brain } from 'lucide-react';
 import { debateHumanService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';
 import { computeStats, findRelated, getCurrentSessions } from './debate-memory-helpers';
 import DebateMemoryStats from './DebateMemoryStats';

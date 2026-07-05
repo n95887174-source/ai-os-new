@@ -4,7 +4,7 @@ import { Network, Brain, AlertTriangle, X } from 'lucide-react';
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
 import { adminService, kernel } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import LiveStatCard from './LiveStatCard';
 import EventLog from './EventLog';
 import ControlActions from './ControlActions';

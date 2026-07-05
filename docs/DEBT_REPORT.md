@@ -1,7 +1,7 @@
 # Debt Report — Технический долг системы
 
 > SuperAgents OS v4.5.0
-> Основание: аудит 246 файлов, 112 сервисов, 47+ панелей
+> Основание: аудит 1986 файлов, 277 сервисов, 145+ панелей
 
 ---
 
@@ -9,8 +9,8 @@
 
 ### D-01: Мёртвый код — 3 компонента без единого импорта ✅
 
-| Компонент | Статус |
-|-----------|--------|
+| Компонент                                      | Статус                  |
+| ---------------------------------------------- | ----------------------- |
 | WarmupService, LatencyTracker, LLMCommandQueue | Удалены ранее (2026-05) |
 
 ---
@@ -18,6 +18,7 @@
 ### D-02: `debate-service.ts` — split ✅
 
 Было 1447 строк. Вынесено в модули:
+
 - `debate-metrics.ts`, `debate-prompt-builder.ts`, `debate-interpreter.ts` (ранее)
 - `debate-llm-caller.ts` — LLM + retry + provider assignment
 - `debate-participant-scheduler.ts` — стратегии выбора участника + moderator LLM
@@ -31,11 +32,11 @@
 
 ### D-03: 3 дублирующиеся анимационные панели
 
-| Панель | Строк | Уникальной логики |
-|--------|-------|-------------------|
-| **HealthPanel** (пчёлки) | 512 | probe control, health check, полноценная приборка |
-| **AquariumPanel** (рыбки) | 608 | 0 — чистая анимация тех же данных |
-| **HivePanel** (соты) | 374 | 0 — чистая анимация тех же данных |
+| Панель                    | Строк | Уникальной логики                                 |
+| ------------------------- | ----- | ------------------------------------------------- |
+| **HealthPanel** (пчёлки)  | 512   | probe control, health check, полноценная приборка |
+| **AquariumPanel** (рыбки) | 608   | 0 — чистая анимация тех же данных                 |
+| **HivePanel** (соты)      | 374   | 0 — чистая анимация тех же данных                 |
 
 Все три читают одни и те же данные из `useKeyStore()`. Aquarium и Hive — 0% уникальной логики, только визуальный gimmick.
 
@@ -45,10 +46,10 @@
 
 ### D-04: EventsPanel дублирует EventsTimeline
 
-| Панель | Строк | Фичи |
-|--------|-------|------|
-| **EventsPanel** | 352 | ring buffer 200, search, pause, export |
-| **EventsTimeline** | 324 | localStorage 500, search, pause, grouping, timeline view |
+| Панель             | Строк | Фичи                                                     |
+| ------------------ | ----- | -------------------------------------------------------- |
+| **EventsPanel**    | 352   | ring buffer 200, search, pause, export                   |
+| **EventsTimeline** | 324   | localStorage 500, search, pause, grouping, timeline view |
 
 EventsTimeline строго лучше — умеет всё то же самое + сохраняет историю + группировка.
 
@@ -79,13 +80,13 @@ EventsTimeline строго лучше — умеет всё то же само�
 
 ### D-07: 5 неиспользуемых контрактов (только интерфейс, нет реализации)
 
-| Контракт | Строк | Статус |
-|----------|-------|--------|
-| `latency-tracker.ts` | 24 | **Никто не реализует** |
-| `session-affinity.ts` | 21 | ISessionAffinityStore — но реализация есть (session-affinity-store.ts) |
-| `truth-consistency.ts` | 22 | ITruthConsistencyMonitor — но реализация есть (truth-consistency-monitor.ts) |
-| `counterfactual-explanation.ts` | 36 | ICounterfactualExplanationService — но реализация есть |
-| `counterfactual-narrative.ts` | 14 | ICounterfactualNarrativeService — но реализация есть |
+| Контракт                        | Строк | Статус                                                                       |
+| ------------------------------- | ----- | ---------------------------------------------------------------------------- |
+| `latency-tracker.ts`            | 24    | **Никто не реализует**                                                       |
+| `session-affinity.ts`           | 21    | ISessionAffinityStore — но реализация есть (session-affinity-store.ts)       |
+| `truth-consistency.ts`          | 22    | ITruthConsistencyMonitor — но реализация есть (truth-consistency-monitor.ts) |
+| `counterfactual-explanation.ts` | 36    | ICounterfactualExplanationService — но реализация есть                       |
+| `counterfactual-narrative.ts`   | 14    | ICounterfactualNarrativeService — но реализация есть                         |
 
 **Реально неиспользуем:** только `latency-tracker.ts` — ✅ удалён (D-01).
 
@@ -93,13 +94,13 @@ EventsTimeline строго лучше — умеет всё то же само�
 
 ### D-08: oversized UI файлы (кандидаты на split)
 
-| Файл | Строк | Проблема |
-|------|-------|---------|
-| `ChatPanel.tsx` | ~530 | ✅ Split: `ResponseCard.tsx`, `ChatHistoryEntry.tsx`, `chat-panel-utils.ts` |
-| `InstalledProvidersView.tsx` | ~306 | ✅ Split: `ProviderTableRow.tsx`, `ProviderCard.tsx`, `provider-utils.tsx` |
-| `SettingsPanel/` | ~400 shell + tabs | ✅ Split: `GeneralTab`, `WritingTab`, `ReadingTab`, `AlertsTab`, `AdvancedTab`, `settings-shared` |
-| `AddKeyModal.tsx` | ~530 | ✅ Split: `BulkImportStep.tsx`, `add-key-constants.ts` |
-| `DebatePanel.tsx` | 497 | ✅ Already split into 17+ sub-modules (DebateChat, DebateSetupWizard, DebateSidebar, DebateAnalytics и др.) |
+| Файл                         | Строк             | Проблема                                                                                                    |
+| ---------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `ChatPanel.tsx`              | ~530              | ✅ Split: `ResponseCard.tsx`, `ChatHistoryEntry.tsx`, `chat-panel-utils.ts`                                 |
+| `InstalledProvidersView.tsx` | ~306              | ✅ Split: `ProviderTableRow.tsx`, `ProviderCard.tsx`, `provider-utils.tsx`                                  |
+| `SettingsPanel/`             | ~400 shell + tabs | ✅ Split: `GeneralTab`, `WritingTab`, `ReadingTab`, `AlertsTab`, `AdvancedTab`, `settings-shared`           |
+| `AddKeyModal.tsx`            | ~530              | ✅ Split: `BulkImportStep.tsx`, `add-key-constants.ts`                                                      |
+| `DebatePanel.tsx`            | 497               | ✅ Already split into 17+ sub-modules (DebateChat, DebateSetupWizard, DebateSidebar, DebateAnalytics и др.) |
 
 **Статус:** Все 5 файлов разбиты. D-08 закрыт.
 
@@ -123,20 +124,21 @@ EventsTimeline строго лучше — умеет всё то же само�
 
 ## Сводка
 
-| ID | Долг | Тип | Приоритет | Усилия | Эффект |
-|----|------|-----|-----------|--------|--------|
-| D-01 | Мёртвый код (3 шт) | clean | **P0** | — | ✅ |
-| D-02 | debate-service.ts split | split | **P0** | — | ✅ ~747 lines core + 7 modules |
-| D-03 | Aquarium+Hive дубли | deprecate | **P0** | — | ✅ |
-| D-04 | EventsPanel дубль | deprecate | **P0** | — | ✅ |
-| D-05 | HealingPipeline в Checker | merge | **P1** | — | ✅ |
-| D-06 | RoutingIntelligenceView дубль | re-route | **P1** | — | ✅ |
-| D-07 | latency-tracker контракт | clean | **P2** | — | ✅ |
-| D-08 | oversized UI | split | **P2** | — | ✅ All 5 files split |
-| D-09 | 7 as any | watch | **P3** | 0 | не увеличивать |
-| D-10 | kernel circular deps check | infra | **P3** | — | ✅ `check:circular-kernel` (19 known cycles) |
+| ID   | Долг                          | Тип       | Приоритет | Усилия | Эффект                                       |
+| ---- | ----------------------------- | --------- | --------- | ------ | -------------------------------------------- |
+| D-01 | Мёртвый код (3 шт)            | clean     | **P0**    | —      | ✅                                           |
+| D-02 | debate-service.ts split       | split     | **P0**    | —      | ✅ ~747 lines core + 7 modules               |
+| D-03 | Aquarium+Hive дубли           | deprecate | **P0**    | —      | ✅                                           |
+| D-04 | EventsPanel дубль             | deprecate | **P0**    | —      | ✅                                           |
+| D-05 | HealingPipeline в Checker     | merge     | **P1**    | —      | ✅                                           |
+| D-06 | RoutingIntelligenceView дубль | re-route  | **P1**    | —      | ✅                                           |
+| D-07 | latency-tracker контракт      | clean     | **P2**    | —      | ✅                                           |
+| D-08 | oversized UI                  | split     | **P2**    | —      | ✅ All 5 files split                         |
+| D-09 | 7 as any                      | watch     | **P3**    | 0      | не увеличивать                               |
+| D-10 | kernel circular deps check    | infra     | **P3**    | —      | ✅ `check:circular-kernel` (19 known cycles) |
 
 **Итого:**
+
 - **P0 закрыты** (D-01–D-04)
 - **2 P1** — ещё 1.5 часа
 - **4 P2/P3** — наблюдение / по задаче

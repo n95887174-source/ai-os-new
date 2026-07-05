@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BarChart3, Play, Download, ClipboardCopy } from 'lucide-react';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import type { DebateSession } from '../../kernel/contracts/debate-types';
 
 interface ExportData {

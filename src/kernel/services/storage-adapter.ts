@@ -9,7 +9,7 @@
  * Prefix format: `superagents:${bucket}:${key}` — no namespace sub-prefix.
  */
 
-import { eventBus } from '../events/event-bus';
+import { eventBus } from '../instances';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';

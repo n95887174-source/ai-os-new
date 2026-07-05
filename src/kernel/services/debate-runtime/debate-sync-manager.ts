@@ -1,4 +1,5 @@
 import { EVENTS } from '../../events/event-names';
+import { CONFIG } from '../config-registry';
 import { DebateGovernor } from './debate-governor';
 import { DebateInterpreter } from './debate-interpreter';
 import { DebatePostProcessor } from './debate-post-processor';
@@ -7,14 +8,22 @@ import type {
     DebateConfig,
     DebateSession,
     DebateServiceDeps,
+    DebateStrategy,
+    DebateVerdict,
 } from '../../contracts/debate-types';
 import type { IDebateEngine, DebateTopology } from '../../contracts/debate-runtime';
 import { rootLogger } from '../logger-service';
 import { DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
-import { participantsToConfig, mergeAndProcessSession } from './debate-session-bridge';
+import {
+    participantsToConfig,
+    mergeAndProcessSession,
+    buildRoundtableTopology,
+} from './debate-session-bridge';
 import type { SnapshotBridgeContext } from './debate-session-bridge';
 import { finalizeDebate } from './debate-finalizer';
-import { persistActiveSession } from './debate-session-persistence';
+import { persistActiveSession, loadActiveSession } from './debate-session-persistence';
+import { checkDebatePreflight } from './debate-preflight';
+import type { GovernorState } from './debate-governor/types';
 import { useActiveDebateStore } from '../../../stores/activeDebateStore';
 
 const LOGGER = rootLogger.child('DebateService.Sync');
@@ -40,13 +49,161 @@ export class DebateSyncManager {
     deps: DebateServiceDeps | null = null;
 
     private _unsubs: Array<() => void> = [];
+    private _initUnsubs: Array<() => void> = [];
     private _heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private _durationTimer: ReturnType<typeof setTimeout> | null = null;
     private _pauseController: AbortController | null = null;
     private readonly _interpreter = new DebateInterpreter();
+    private _engineOnly = false;
+    private _governorState: GovernorState | null = null;
+    private readonly _verdictCache = new Map<string, DebateVerdict>();
+    private static readonly MAX_VERDICT_CACHE = 50;
+
+    private _setCachedVerdict(sessionId: string, verdict: DebateVerdict): void {
+        if (this._verdictCache.size >= DebateSyncManager.MAX_VERDICT_CACHE) {
+            const firstKey = this._verdictCache.keys().next().value;
+            if (firstKey) this._verdictCache.delete(firstKey);
+        }
+        this._verdictCache.set(sessionId, verdict);
+    }
 
     constructor(postProcessor: DebatePostProcessor) {
         this.postProcessor = postProcessor;
+    }
+
+    /** Get active debate session (replaces active-debate-store module singleton). */
+    getActiveDebateSession(): DebateSession | null {
+        return this.activeSession;
+    }
+
+    /** Get governor state. */
+    getDebateGovernorState(): GovernorState | null {
+        return this._governorState;
+    }
+
+    /** Set governor state. */
+    setDebateGovernorState(state: GovernorState | null): void {
+        this._governorState = state;
+    }
+
+    /** Get cached verdict for a session. */
+    getCachedVerdict(sessionId: string): DebateVerdict | undefined {
+        return this._verdictCache.get(sessionId);
+    }
+
+    /** Expose FactCheckService for UI consumers (DebatePanel, FactCheckBadge). */
+    get factCheckService() {
+        return this.postProcessor.factCheckService;
+    }
+
+    /** Set deps after construction (called during DI wiring). */
+    setDeps(deps: DebateServiceDeps): void {
+        this.deps = deps;
+        this._engineOnly = CONFIG.featureFlags.debate.engineOnly;
+    }
+
+    /** Initialize: load active session + register global event listeners. */
+    async init(): Promise<void> {
+        if (!this.deps) return;
+        const loaded = await loadActiveSession(this.deps.debateStore);
+        this.activeSession = loaded;
+        if (loaded) {
+            const { useActiveDebateStore } = await import('../../../stores/activeDebateStore');
+            useActiveDebateStore.getState().setSession(loaded);
+        }
+        this._initUnsubs.push(
+            this.deps.eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
+                const payload = data as { sessionId: string; verdict: DebateVerdict };
+                this._setCachedVerdict(payload.sessionId, payload.verdict);
+            }),
+            this.deps.eventBus.on(EVENTS.SESSION_DELETED, (data) => {
+                const payload = data as { id: string; type: string };
+                if (payload.type !== 'debate') return;
+                if (payload.id === this.runtimeSessionId || payload.id === this.activeSession?.id) {
+                    LOGGER.info(
+                        'DebateSyncManager',
+                        `Debate session ${payload.id} deleted — cancelling`,
+                    );
+                    this.stopDebateInternal();
+                }
+            }),
+        );
+    }
+
+    /** Full debate start orchestration: preflight → CB reset → engine session → emit → start. */
+    async startDebate(
+        topic: string,
+        participants: DebateParticipant[],
+        strategy: DebateStrategy = 'round_robin',
+        maxRounds: number = 5,
+        config?: Partial<DebateConfig>,
+        chatSessionId?: string,
+    ): Promise<DebateSession> {
+        if (!this.deps) throw new Error('DebateService not initialized');
+        LOGGER.info('DebateSyncManager', 'Starting debate', {
+            topic,
+            participants: participants.length,
+            strategy,
+            maxRounds,
+        });
+        checkDebatePreflight(this.deps, participants);
+        if (this._engineOnly && !this.engine)
+            throw new Error('debate.engineOnly flag is set but no DebateEngine configured');
+        if (this.engine && this.runtimeSessionId) {
+            this.engine.cancelSession(this.runtimeSessionId);
+        }
+        const sessionConfig = this.resetDebateState();
+        if (config) Object.assign(sessionConfig, config);
+        this.setupDurationTimer(sessionConfig);
+        for (const p of ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare']) {
+            try {
+                this.deps.adapterRegistry.resetCircuitBreaker(p);
+            } catch {
+                /* ignore — circuit may not exist for this provider */
+            }
+        }
+        const session = this.initEngineSession(
+            buildRoundtableTopology(participants, maxRounds),
+            topic,
+            participants,
+            sessionConfig,
+            { participants, strategy, maxRounds, config: sessionConfig },
+        );
+        this.emitDebateStarted(session, topic, participants.length, chatSessionId);
+        this.startEngineWithFinalize(session.id);
+        return session;
+    }
+
+    /** Topology-based debate start. */
+    async startTopologyDebate(
+        topology: DebateTopology,
+        topic: string,
+        participants: DebateParticipant[],
+        config?: Partial<DebateConfig>,
+        chatSessionId?: string,
+    ): Promise<DebateSession> {
+        if (!this.deps) throw new Error('DebateService not initialized');
+        checkDebatePreflight(this.deps, participants);
+        if (this.engine && this.runtimeSessionId) {
+            this.engine.cancelSession(this.runtimeSessionId);
+        }
+        const sessionConfig = this.resetDebateState();
+        if (config) Object.assign(sessionConfig, config);
+        this.setupDurationTimer(sessionConfig);
+        const session = this.initEngineSession(topology, topic, participants, sessionConfig, {
+            participants,
+            strategy: topology.type as DebateSession['strategy'],
+            maxRounds: topology.maxDepth ?? 5,
+            config: sessionConfig,
+        });
+        this.emitDebateStarted(session, topic, participants.length, chatSessionId);
+        this.startEngineWithFinalize(session.id);
+        return session;
+    }
+
+    /** Public stop — delegates to internal. */
+    stopDebate(sessionId?: string): void {
+        this.stopDebateInternal(sessionId);
     }
 
     resetDebateState(): DebateConfig {
@@ -165,6 +322,8 @@ export class DebateSyncManager {
             }
         }
         this.clearListeners();
+        for (const unsub of this._initUnsubs) unsub();
+        this._initUnsubs = [];
         if (this.activeSession && this.deps)
             this.deps.sessionManager.saveToDebateHistory(this.activeSession);
         useActiveDebateStore.getState().clearAll();

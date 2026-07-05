@@ -59,19 +59,19 @@ The system is architected around a **kernel with services, not plugins**. Every 
 
 ### Key Files
 
-| Component | Location |
-|-----------|----------|
-| DebateService | `src/kernel/services/debate-service.ts` |
-| DebateGovernor | `src/kernel/services/debate-governor/` |
-| DebateInterpreter | `src/kernel/services/debate-interpreter.ts` |
-| DebateStateBuilder | `src/kernel/services/debate-state-builder.ts` |
-| AutoDebateService | `src/kernel/services/auto-debate/` |
-| DebateEngine | `src/kernel/services/debate-runtime/debate-engine.ts` |
-| TopologyDefaults | `src/kernel/state/topology-defaults.ts` |
-| DI Container | `src/kernel/container.ts` |
-| Service Registration | `src/kernel/service-registration.ts` |
-| Bootstrap | `src/kernel/bootstrap.ts` |
-| Event Names | `src/kernel/events/` |
+| Component            | Location                                                                |
+| -------------------- | ----------------------------------------------------------------------- |
+| DebateService        | `src/kernel/services/debate-runtime/debate-service.ts`                  |
+| DebateGovernor       | `src/kernel/services/debate-runtime/debate-governor/`                   |
+| DebateInterpreter    | `src/kernel/services/debate-runtime/debate-interpreter.ts`              |
+| DebateStateBuilder   | `src/kernel/services/debate-runtime/debate-state-builder.ts`            |
+| AutoDebateService    | `src/kernel/services/debate-runtime/auto-debate/auto-debate-service.ts` |
+| DebateEngine         | `src/kernel/services/debate-runtime/debate-engine.ts`                   |
+| TopologyDefaults     | `src/kernel/state/topology-defaults.ts`                                 |
+| DI Container         | `src/kernel/container.ts`                                               |
+| Service Registration | `src/kernel/service-registration/` (12 phases)                          |
+| Bootstrap            | `src/kernel/bootstrap.ts`                                               |
+| Event Names          | `src/kernel/events/`                                                    |
 
 ### Dependency Graph (DebateService)
 

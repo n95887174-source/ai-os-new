@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FocusScope } from '@react-aria/focus';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { keyService, adapterRegistry } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -55,7 +55,7 @@ const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
 
     useEffect(() => {
         if (step !== 0 && keyService.vaultService?.isLocked()) queueMicrotask(() => setStep(0));
-    }, []);
+    }, [step]);
 
     const providers = useMemo(() => {
         const fromRegistry = adapterRegistry.getAllProviders();

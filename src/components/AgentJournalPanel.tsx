@@ -14,25 +14,16 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
-import { eventBus, EVENTS, type EventMap } from '../kernel/events/event-bus';
-import { database } from '../kernel/instances';
-import { AgentJournalService, type JournalEntry } from '../kernel/services/agent-journal-service';
+import { eventBus, EVENTS } from '../kernel/instances';
+import { agentJournalService } from '../kernel/instances';
+import type { JournalEntry } from '../kernel/services/agent-journal-service';
 import { errorContainer, dismissBtnRed } from '../styles/common';
 import { useConfirm } from '../hooks/useConfirm';
 import { StatMini } from './AgentJournalPanel/StatMini';
 import { JournalAddForm } from './AgentJournalPanel/JournalAddForm';
 import { JournalEntryCard } from './AgentJournalPanel/JournalEntryCard';
 
-const service = new AgentJournalService({
-    eventBus: {
-        on: (event: string, cb: (...args: unknown[]) => void) =>
-            eventBus.on(event as keyof EventMap, cb as (...args: unknown[]) => void),
-        emit: (event: string, data?: unknown) =>
-            eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
-    },
-    database,
-});
-void service.init();
+const service = agentJournalService;
 
 const AgentJournalPanel: React.FC = () => {
     const { t } = useTranslation();

@@ -4,8 +4,7 @@ import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { LLMError } from '../../llm/core/errors';
 import type { ChatServiceDeps } from './chat-service';
-import { rootLogger } from './logger-service';
-import { promptSecurityService } from './prompt-security-service';
+import { rootLogger, promptSecurityService } from '../instances';
 
 const LOGGER = rootLogger.child('ChatExecutor');
 

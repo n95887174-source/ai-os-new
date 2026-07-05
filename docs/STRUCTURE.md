@@ -3,15 +3,14 @@
 ## 📂 Root Directory
 
 - `docs/ПОЛНЫЙ_РЕЕСТР.md`: Complete system passport (246 entries, Russian).
-- `docs/SERVICES_RU.md`: All 100+ DI services catalog (Russian).
-- `docs/events.md`: 535+ typed events with payloads and Zod schemas.
+- `docs/SERVICES_RU.md`: All 277 DI services catalog (Russian).
+- `docs/events.md`: 198+ typed events with payloads and Zod schemas.
 - `docs/STRUCTURE.md`: This file — detailed project structure.
-- `docs/07-ui-layer_RU.md`: All 120+ UI panels with categories, event maps (Russian).
+- `docs/07-ui-layer_RU.md`: All 145 UI panels with categories, event maps (Russian).
 - `README.md`: Public project overview and getting started guide.
 - `CHANGELOG.md`: Detailed record of all versions.
-- `AGENTS.md`: Root-level OpenCode agent guide with commands, patterns, and kernel hardening details.
+- `AGENTS.md`: Root-level OpenCode agent guide with commands, patterns, and kernel details.
 - `TASKS.md`: Bug tracking and audit task list.
-- `fixtask.md`: Original architectural debt fix list.
 - `.superagents/`: System rules (ARCHITECTURE.md, CODING.md, RULES.md).
 - `prompt-vault/`: Reusable prompt templates.
 
@@ -19,21 +18,21 @@
 
 ### 🧠 Kernel (`/src/kernel/`)
 
-- `kernel.ts`: Reducer-pattern state machine. Ring buffer event log, deep immutable state, composite event keys, init validation.
+- `kernel.ts`: Reducer-pattern state machine with deep immutable state and init validation.
 - `container.ts`: DI container for constructor injection.
 - `event-bus.ts`: Typed EventBus (115+ event types) with `onSafe<T>()` Zod-validated subscriptions + optional ILogger support.
 - `bootstrap.ts`: Phase-based initialization (System → Kernel → Database → Topology → Services). Uses `initServices()` with critical/optional classification from `service-list.ts`.
-- `db.ts`: Dexie persistence layer.
+- `database-service.ts`: Dexie persistence layer.
 - `security.ts`: WebCrypto AES-GCM encryption.
 - `runtime.ts`: LifecycleManager for lifecycle management (init → start → destroy LIFO).
 - `transaction.ts`: TransactionContext — deferred persistence/emission/commit hooks.
-- `contracts/`: 107+ contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, `ILifecycle`, `ILogger`, `ITransaction`, `IRotationService`, `IKeyStateStore`, `IStorageAdapter`, `IFeatureFlagService`, `IAudienceService`, `IBridgeKeeperService`, `IEcosystemEngine`, `IResearchEngine`, `IUnifiedRoleRegistry`, etc.)
+- `contracts/`: 123 contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, `ILifecycle`, `ILogger`, `ITransaction`, `IRotationService`, `IKeyStateStore`, `IStorageAdapter`, `IFeatureFlagService`, `IAudienceService`, `IBridgeKeeperService`, `IEcosystemEngine`, `IResearchEngine`, `IUnifiedRoleRegistry`, etc.)
 - `service-list.ts`: Phase-based bootstrap service list — critical vs optional classification
-- `events/`: Event name constants + typed payloads (`event-registry.ts` — 535+ registered schemas, `event-names.ts`, `cognitive-events.ts`, `domain-events.ts`, `debate-runtime-events.ts`).
+- `events/`: Event name constants + typed payloads (`event-registry.ts` — 198+ registered schemas, `event-names.ts`, `cognitive-events.ts`, `domain-events.ts`, `debate-runtime-events.ts`).
 - `types/`: Zod schemas (`schema-types.ts` — 20+ schemas + EventValidators), domain types (`domain-types.ts`).
 - `state/`: State shape interfaces + defaults (`topology-defaults.ts`).
 - `utils/`: Kernel utilities (`tokenEstimate.ts`, `ssr-storage.ts`, `sanitize.ts`).
-- `instances.ts`: 80+ lazyService singleton exports for runtime resolution
+- `instances.ts`: 126 lazyService singleton exports for runtime resolution
 - `services/`: 303 files across 18 subdirectories:
   - `key-management/` — vault, registry, health, quotas, analytics, fingerprints, alerts, lifecycle, facade, pool-selector
   - `provider-runtime/` — instances, sessions, state, budget
@@ -55,23 +54,16 @@
 - _Standalone service files_ (50+): `chat-service.ts`, `chat-executor.ts`, `config-service.ts`, `config-registry.ts`, `config-history.ts`, `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `memory-engine.ts`, `memory-orchestrator.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`, `key-state-store.ts`, `feature-flag-service.ts`, `debate-service.ts`, `debate-archetypes.ts`, `debate-interpreter.ts`, `debate-metrics.ts`, `settings-service.ts`, `group-manager.ts`, `orchestration-service.ts`, `metrics-service.ts`, `admin-service.ts`, `consistency-checker.ts`, `consistency-healing-pipeline.ts`, `prompt-store.ts`, `cross-tab-state.ts`, `deploy-service.ts`, `fine-tuning-service.ts`, `model-distillation-service.ts`, `team-collaboration-service.ts`, `tutorial-service.ts`, `audience-service.ts`, `ecosystem-engine.ts`, `research-engine-service.ts`, `unified-role-service.ts`, `prompt-library-service.ts`, `prompt-security-service.ts`, `workflow-service.ts`, `reconnection-service.ts`, `bridge-keeper-service.ts`, `google-genai-service.ts`, `gemini-live-service.ts`, `agent-avatar-service.ts`, `eval-dataset-service.ts`, `custom-metrics-service.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 
-### 🧩 Legacy Core (`/src/core/`) — УДАЛЁН
+### ⚙️ Services (`/src/services/`) — 2 Web Workers
 
-`src/core/` был полностью удалён. Все модули мигрированы в `src/kernel/`.
-
-### ⚙️ Services (`/src/services/`) — 25 wrappers + 2 workers
-
-- **23 thin Proxy wrappers** (≤10 lines each) — delegate to kernel container via `resolve()` Proxy. No business logic.
-- **1 exception**: `DiagnosticService.ts` (44 lines) — Proxy composition merging two kernel services.
-- **1 legacy**: `RouterService.ts` — contains fallback stubs for backward compat.
-- `service-resolver.ts`: Lazy Proxy resolver.
-- Web Workers: `memory.worker.ts` (BM25 + semantic embeddings), `sandbox.worker.ts` (AST-based code validation via meriyah)
+- `memory.worker.ts`: BM25 + semantic embeddings (Transformers.js) for memory search.
+- `sandbox.worker.ts`: AST-based code validation via meriyah. No business logic here — all services live in `src/kernel/services/`.
 
 ### 🤖 LLM Layer (`/src/llm/`)
 
-- Provider adapters (11 providers): Gemini, OpenRouter, Groq, NVIDIA, OpenAI, Cerebras, Cloudflare, Azure, Anthropic, Custom, OpenAI-compatible
+- Provider adapters (7 implementations, 25 supported names): Gemini, OpenRouter, Groq (via OpenAI-compatible), NVIDIA, OpenAI, Cerebras, Cloudflare, Azure, Anthropic, Custom, etc.
 - Decorators (12): Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, Priority Queue, Canary Router, Cost Manager, Metrics, Compression, Semantic Router, Logging — all extend `BaseDecorator` with `destroy()` propagation
-- `facade/LLMClient.ts` — unified entry point with local `LLMClientAdapter` interface
+- `LLM client` in `src/kernel/services/llm-client-service.ts` — adapters send directly, no facade layer
 - `core/` — types, SSE parser, token counter, HTTP client, `BaseDecorator`, middleware pipeline, errors
 - Zod response schemas: `OpenRouterResponseSchema`, `NvidiaNIMResponseSchema` — `.safeParse()` on API responses
 - Registry: `provider-adapter-registry.ts` with `getAdapter()` / `getAllProviders()` / `resetCircuitBreaker()`
@@ -92,7 +84,7 @@
 
 ### 🎨 Styles (`/src/styles/`)
 
-- `common.ts`: 148+ reusable CSSProperties constants — all inline styles eliminated across 20+ files
+- `common.ts`: 302 reusable CSSProperties constants
 - `index.css`: 7 themes (dark, light, cyberpunk, nature, ocean, sunset, high-contrast)
 
 ### 🏪 Stores (`/src/stores/`)
@@ -107,10 +99,10 @@
 
 - Re-export only from `src/kernel/types/`
 
-### 🧪 Testing (`/src/test/`)
+### 🧪 Testing (`/src/tests/`)
 
 - `setup.ts`: Global Vitest configuration (jsdom, scrollIntoView mock).
-- Service tests: 25+ files
+- Test files: 46 `*.test.{ts,tsx}` across the codebase
 - Kernel tests: 8 service + 1 E2E
 - LLM decorator tests: cache-decorator
 
@@ -122,5 +114,5 @@
 ---
 
 **Maintained by:** Antigravity  
-**Last Updated:** 2026-07-04  
+**Last Updated:** 2026-07-05  
 **Version:** v4.5.0

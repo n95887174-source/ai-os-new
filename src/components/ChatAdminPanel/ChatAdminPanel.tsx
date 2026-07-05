@@ -2,7 +2,7 @@ import React, { useState, useMemo, useDeferredValue, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { useChatStore } from '../../stores/useChatStore';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import AdminHeader from './AdminHeader';

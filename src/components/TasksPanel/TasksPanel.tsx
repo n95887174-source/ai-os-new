@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { cognitiveService } from '../../kernel/instances';
 import type { CognitiveTrace } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';

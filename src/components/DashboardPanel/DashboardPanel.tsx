@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { kernel } from '../../kernel/instances';
 import { settingsService } from '../../kernel/instances';
 import { cognitiveService, debateEngine } from '../../kernel/instances';
@@ -318,7 +318,6 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     const rps = useMemo(() => {
         const recentTraces = safeTraces.filter((t) => t.startTime > currentTime - 60000);
         return recentTraces.length;
-         
     }, [safeTraces, currentTime]);
 
     const errorRateTrend = useMemo(() => {

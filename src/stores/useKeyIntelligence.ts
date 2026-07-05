@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { keyIntelligencePipeline } from '../kernel/instances';
-import { eventBus } from '../kernel/events/event-bus';
+import { eventBus } from '../kernel/instances';
 import { rootLogger } from '../kernel/services/logger-service';
 import { EVENTS } from '../kernel/events/event-names';
 import type { KeyImportReport, KeyIntelligenceInput } from '../kernel/contracts/key-intelligence';

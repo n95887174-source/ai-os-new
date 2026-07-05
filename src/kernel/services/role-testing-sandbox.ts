@@ -6,7 +6,7 @@
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
-import { EventBus } from '../events/event-bus';
+import { EventBus } from '../instances';
 import { EVENTS } from '../events/event-names';
 const MAX_RESULTS = 500; // B10-143: Cap results to prevent unbounded growth
 

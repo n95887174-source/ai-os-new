@@ -3,7 +3,7 @@
  * Cron-like scheduling for agent tasks
  */
 
-import { EventBus } from '../events/event-bus';
+import { EventBus } from '../instances';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import type { IDatabaseService } from '../types/interfaces';

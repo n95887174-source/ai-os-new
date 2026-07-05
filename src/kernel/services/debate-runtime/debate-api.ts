@@ -5,8 +5,8 @@ import type {
     DebateSession,
     DebateStrategy,
 } from '../../contracts/debate-types';
-import { debateService as _debateServiceSingleton } from './debate-service';
-type DebateService = typeof _debateServiceSingleton;
+import type { DebateSyncManager } from './debate-sync-manager';
+type DebateService = DebateSyncManager;
 import type { OrchestrationService } from '../orchestration-service';
 import type { ISessionManager } from '../../contracts/session-manager';
 

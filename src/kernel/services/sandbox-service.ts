@@ -119,12 +119,9 @@ export class SandboxService {
         }
 
         return new Promise((resolve, reject) => {
-            const worker = new Worker(
-                new URL('../../services/sandbox.worker.ts', import.meta.url),
-                {
-                    type: 'module',
-                },
-            );
+            const worker = new Worker(new URL('../workers/sandbox.worker.ts', import.meta.url), {
+                type: 'module',
+            });
             this.activeWorkers.add(worker);
 
             const cleanup = () => {

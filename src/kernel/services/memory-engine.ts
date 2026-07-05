@@ -14,7 +14,7 @@ import type { DatabaseService } from './database-service';
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('MemoryEngine');
 
-const WORKER_URL = new URL('../../services/memory.worker.ts', import.meta.url).href;
+const WORKER_URL = new URL('../workers/memory.worker.ts', import.meta.url).href;
 
 const MEMORY_TTL_MS = CONFIG?.services?.cache?.defaultTTLMs ?? 30 * 24 * 60 * 60 * 1000;
 const PRUNE_INTERVAL_MS = MEMORY_TTL_MS * 0.5;

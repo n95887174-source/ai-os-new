@@ -501,25 +501,17 @@ export class ProviderAchievementService implements IProviderAchievementService {
     }
 
     private async _load(): Promise<void> {
-        if (this._database) {
-            try {
-                const saved = await this._database.getKv<string[]>(STORAGE_KEY);
-                if (saved) {
-                    saved.forEach((id: string) => this._awarded.add(id));
-                }
-            } catch {
-                /* ignore */
-            }
-        } else {
-            const saved =
-                typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+        if (!this._database) {
+            console.warn('[ProviderAchievement] No database injected — achievements not persisted');
+            return;
+        }
+        try {
+            const saved = await this._database.getKv<string[]>(STORAGE_KEY);
             if (saved) {
-                try {
-                    JSON.parse(saved).forEach((id: string) => this._awarded.add(id));
-                } catch {
-                    /* ignore */
-                }
+                saved.forEach((id: string) => this._awarded.add(id));
             }
+        } catch {
+            /* ignore */
         }
     }
 
@@ -563,18 +555,14 @@ export class ProviderAchievementService implements IProviderAchievementService {
 
     reset(): void {
         this._awarded.clear();
-        if (this._database) {
-            this._database.setKv(STORAGE_KEY, []).catch(() => {});
-        } else if (typeof localStorage !== 'undefined') {
-            localStorage.removeItem(STORAGE_KEY);
-        }
+        this._database?.setKv(STORAGE_KEY, []).catch(() => {});
     }
 
     private _persist(): void {
-        if (this._database) {
-            this._database.setKv(STORAGE_KEY, [...this._awarded]).catch(() => {});
-        } else if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([...this._awarded]));
+        if (!this._database) {
+            console.warn('[ProviderAchievement] No database injected — achievement not persisted');
+            return;
         }
+        this._database.setKv(STORAGE_KEY, [...this._awarded]).catch(() => {});
     }
 }

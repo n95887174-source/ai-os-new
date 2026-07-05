@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { EVENTS } from '../events/event-bus';
+import { EVENTS } from '../instances';
 
 vi.mock('../utils/tokenEstimate', () => ({ estimateTokens: vi.fn(() => 100) }));
 

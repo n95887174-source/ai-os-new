@@ -4,7 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './theme-init'; // Must run before React mounts — sets dark class on <html>
 import { runtime } from './kernel/runtime';
-import { eventBus } from './kernel/events/event-bus';
+import { eventBus } from './kernel/instances';
 import { BrowserRouter } from 'react-router-dom';
 
 import ErrorBoundary from './components/Common/ErrorBoundary';

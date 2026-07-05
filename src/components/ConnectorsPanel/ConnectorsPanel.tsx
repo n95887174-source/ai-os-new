@@ -2,8 +2,8 @@ import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, Plus, Globe } from 'lucide-react';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { db as databaseService } from '../../kernel/services/database-service';
+import { eventBus, EVENTS } from '../../kernel/instances';
+import { database as databaseService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { DEFAULT_CONNECTORS } from './connector-constants';
@@ -42,10 +42,10 @@ const ConnectorsPanel: React.FC = () => {
         isMountedRef.current = true;
         const load = async () => {
             try {
-                const count = await databaseService.connectors.count();
-                if (count === 0) {
+                const allConns = (await databaseService.getAllConnectors()) as Connector[];
+                if (allConns.length === 0) {
                     try {
-                        const saved = await databaseService.getAllConnectors();
+                        const saved = (await databaseService.getAllConnectors()) as Connector[];
                         if (saved.length === 0) {
                             try {
                                 const res = await fetch('/connectors-defaults.json');
@@ -71,8 +71,7 @@ const ConnectorsPanel: React.FC = () => {
                         setConnectors(DEFAULT_CONNECTORS);
                     }
                 } else {
-                    const all = await databaseService.getAllConnectors();
-                    setConnectors(all);
+                    setConnectors(allConns);
                 }
             } catch (e) {
                 console.warn(`[${id}] Failed to load connectors:`, e);

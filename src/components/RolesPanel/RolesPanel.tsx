@@ -8,7 +8,7 @@ import type { RoleUsageStats } from '../../kernel/instances';
 import { RoleCard } from './RoleCard';
 import { RoleEditorModal } from './RoleEditorModal';
 import { toolService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';

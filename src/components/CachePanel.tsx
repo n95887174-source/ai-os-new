@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cacheService } from '../kernel/instances';
-import { eventBus, EVENTS } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/instances';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { useConfirm } from '../hooks/useConfirm';

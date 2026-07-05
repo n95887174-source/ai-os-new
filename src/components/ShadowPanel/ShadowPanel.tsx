@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GitBranch } from 'lucide-react';
 import { routerProjection, routerService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { compareRouterDecisions } from '../../kernel/services/projections/router-shadow-diff';
 import RouterDiffView from './RouterDiffView';

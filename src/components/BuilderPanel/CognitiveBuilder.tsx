@@ -16,8 +16,8 @@ import { orchestrator, toolService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { AuditorTopology } from '../../kernel/state/topology-defaults';
 import type { ISTopology, ISNode, ISEdge } from '../../kernel/contracts/topology';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { db } from '../../kernel/services/database-service';
+import { eventBus, EVENTS } from '../../kernel/instances';
+import { database } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { errorBanner, dismissBtn } from '../../styles/common';
@@ -152,7 +152,8 @@ const CognitiveBuilder: React.FC = () => {
                 label: e.data?.label as string | undefined,
             })),
         };
-        db.saveWorkflow(topology)
+        database
+            .saveWorkflow(topology)
             .then(() => {
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Workflow saved locally',

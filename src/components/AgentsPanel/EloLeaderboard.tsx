@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import { eloService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import type { AgentElo } from '../../kernel/services/elo/elo-service';
 
 const MEDAL_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];

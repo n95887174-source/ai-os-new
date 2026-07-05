@@ -1,7 +1,7 @@
 import { genId } from '../../utils/gen-id';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X, AlertTriangle, Info, CheckCircle, Activity } from 'lucide-react';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { keyService } from '../../kernel/instances';
 import type { ProviderAlert } from '../../types/metrics';
 

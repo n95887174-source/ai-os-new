@@ -16,7 +16,7 @@ import {
     HelpCircle,
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';

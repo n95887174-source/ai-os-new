@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { eventBus, EVENTS } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/instances';
 import { keyService } from '../kernel/instances';
 import type { PoolStrategy } from '../kernel/contracts/index';
 import type { ApiKey } from '../types/metrics';
@@ -16,9 +16,7 @@ export interface PoolStatusActions {
     ) => void;
     setPoolStrategy: (provider: string, strategy: PoolStrategy) => void;
     getPoolStrategy: (provider: string) => PoolStrategy;
-    getPoolKeyDistribution: (
-        provider: string,
-    ) => Array<{
+    getPoolKeyDistribution: (provider: string) => Array<{
         id: string;
         label: string;
         used: number;

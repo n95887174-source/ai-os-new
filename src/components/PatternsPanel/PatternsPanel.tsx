@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { t } from '../../i18n/translations';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { INITIAL_NOTES } from './pattern-constants';

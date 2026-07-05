@@ -1,6 +1,6 @@
 import React from 'react';
 import { agentVersionService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { PanelSkeleton } from '../Common/Skeleton';
 
 export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {

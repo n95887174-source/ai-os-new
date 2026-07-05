@@ -11,11 +11,12 @@ import {
     X,
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ApiKey } from '../../types/metrics';
+import type { StreamEndPayload, StreamErrorPayload } from '../../kernel/events/chat-events';
 import AlertItem from './AlertItem';
 import { SparklineMemo } from './SparklineChart';
 import KeyMetadataGrid from './KeyMetadataGrid';
@@ -91,33 +92,36 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                         reject(new Error('Timed out'));
                     }, 10000);
                     let done = false;
-                    const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
-                        if (res?.requestId === reqId && !done) {
-                            done = true;
-                            clearTimeout(timeout);
-                            try {
-                                cleanup();
-                            } catch {
-                                /* ignore */
+                    const subResp = eventBus.on(
+                        EVENTS.MESSAGE_RESPONSE,
+                        (res: { requestId: string; status?: string; error?: string }) => {
+                            if (res?.requestId === reqId && !done) {
+                                done = true;
+                                clearTimeout(timeout);
+                                try {
+                                    cleanup();
+                                } catch {
+                                    /* ignore */
+                                }
+                                const lat = Date.now() - start;
+                                results[model] =
+                                    res.status === 'error'
+                                        ? {
+                                              status: 'error',
+                                              latency: lat,
+                                              error: res.error || 'Unknown',
+                                          }
+                                        : { status: 'ok', latency: lat };
+                                try {
+                                    setModelTestResults({ ...results });
+                                } catch {
+                                    /* ignore */
+                                }
+                                resolve();
                             }
-                            const lat = Date.now() - start;
-                            results[model] =
-                                res.status === 'error'
-                                    ? {
-                                          status: 'error',
-                                          latency: lat,
-                                          error: res.error || 'Unknown',
-                                      }
-                                    : { status: 'ok', latency: lat };
-                            try {
-                                setModelTestResults({ ...results });
-                            } catch {
-                                /* ignore */
-                            }
-                            resolve();
-                        }
-                    });
-                    const subStreamEnd = eventBus.on(EVENTS.STREAM_END, (res: any) => {
+                        },
+                    );
+                    const subStreamEnd = eventBus.on(EVENTS.STREAM_END, (res: StreamEndPayload) => {
                         if (res?.requestId === reqId && !done) {
                             done = true;
                             clearTimeout(timeout);
@@ -135,7 +139,7 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                             resolve();
                         }
                     });
-                    const subErr = eventBus.on(EVENTS.STREAM_ERROR, (res: any) => {
+                    const subErr = eventBus.on(EVENTS.STREAM_ERROR, (res: StreamErrorPayload) => {
                         if (res?.requestId === reqId && !done) {
                             done = true;
                             clearTimeout(timeout);

@@ -1,6 +1,6 @@
 Найду все файлы, связанные с дебатами, и проанализирую верстку и юзабилити.
 Теперь прочитаю DebateRuntimePanel:
-Я полностью проанализировал оба дебатных UI — DebatePanel (1207 строк) и DebateRuntimePanel (682 строки). Вот мой детальный разбор проблем и рекомендаций:
+Я полностью проанализировал оба дебатных UI — DebatePanel (865 строк) и DebateRuntimePanel (448 строк). Вот мой детальный разбор проблем и рекомендаций:
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### ❌ Критические проблемы юзабилити
 
-**1. Монстр-компонент DebatePanel — 1207 строк в одном файле**
+**1. Монстр-компонент DebatePanel — 865 строк в одном файле**
 Это не компонент, а приложение. 20+ state-переменных, 6 логических секций (setup, active debate, history, analytics, probe, auto-debate). Невозможно тестировать, рефакторить и поддерживать. Любое изменение ломает соседнюю логику.
 
 **2. Два отдельных маршрута для одной и той же функциональности**
@@ -55,6 +55,7 @@ DebatePanel: thesis → strategy → max rounds → temperature → archetype �
 1207 строк, ~95% стилей inline. Нет CSS modules, нет Tailwind. Изменение дизайна = grep по всему файлу.
 
 **12. Проблема с responsive**
+
 - `gridTemplateColumns: session ? '1fr 380px' : '1fr'` — на экранах <1024px sidebar уходит за край
 - Agent grid `minmax(220px, 1fr)` — на мобильном слишком широко
 - Нет медиа-запросов
@@ -69,18 +70,18 @@ DebatePanel: thesis → strategy → max rounds → temperature → archetype �
 
 ### ✅ Конкретные рекомендации
 
-| # | Проблема | Решение | Приоритет |
-|---|----------|---------|-----------|
-| 1 | 1207-строчный компонент | Разбить на 6 подкомпонентов: `<DebateSetup>`, `<DebateChat>`, `<DebateAnalytics>`, `<DebateHistory>`, `<DebateProbe>`, `<AutoDebateSection>` | P0 |
-| 2 | Два маршрута | Объединить в один с табами/переключателем engine: "classic" / "runtime" | P0 |
-| 3 | Нет аргументов в RuntimePanel | Добавить `<DebateChat>` компонент в runtime-режим | P0 |
-| 4 | Перегруженный setup | Wizard-формат: Step 1 → Topic, Step 2 → Agents, Step 3 → Advanced | P1 |
-| 5 | History ограничена 6 | Пагинация или «Load more» + фильтр по агенту | P1 |
-| 6 | Нет визуального pro/con | Добавить значки ✓/✗ + цветовые полосы слева от аргумента | P1 |
-| 7 | Inline styles | Вынести в CSS modules или Tailwind (проект уже использует common.ts стили) | P2 |
-| 8 | Responsive | Добавить breakpoint: <768px — stacked layout, sidebar снизу | P2 |
-| 9 | PhaseTimeline | Подписи под точками + текущая фаза жирным | P2 |
-| 10 | Probe UI | Рефакторинг в отдельный `<ProbeResults>` компонент с таблицей | P3 |
+| #   | Проблема                      | Решение                                                                                                                                      | Приоритет |
+| --- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| 1   | 1207-строчный компонент       | Разбить на 6 подкомпонентов: `<DebateSetup>`, `<DebateChat>`, `<DebateAnalytics>`, `<DebateHistory>`, `<DebateProbe>`, `<AutoDebateSection>` | P0        |
+| 2   | Два маршрута                  | Объединить в один с табами/переключателем engine: "classic" / "runtime"                                                                      | P0        |
+| 3   | Нет аргументов в RuntimePanel | Добавить `<DebateChat>` компонент в runtime-режим                                                                                            | P0        |
+| 4   | Перегруженный setup           | Wizard-формат: Step 1 → Topic, Step 2 → Agents, Step 3 → Advanced                                                                            | P1        |
+| 5   | History ограничена 6          | Пагинация или «Load more» + фильтр по агенту                                                                                                 | P1        |
+| 6   | Нет визуального pro/con       | Добавить значки ✓/✗ + цветовые полосы слева от аргумента                                                                                     | P1        |
+| 7   | Inline styles                 | Вынести в CSS modules или Tailwind (проект уже использует common.ts стили)                                                                   | P2        |
+| 8   | Responsive                    | Добавить breakpoint: <768px — stacked layout, sidebar снизу                                                                                  | P2        |
+| 9   | PhaseTimeline                 | Подписи под точками + текущая фаза жирным                                                                                                    | P2        |
+| 10  | Probe UI                      | Рефакторинг в отдельный `<ProbeResults>` компонент с таблицей                                                                                | P3        |
 
 ---
 

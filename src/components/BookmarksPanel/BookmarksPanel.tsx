@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bookmark, Search, Trash2, X, BookmarkPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventBus, EVENTS, type EventMap } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import { database } from '../../kernel/instances';
-import { ChatBookmarksService } from '../../kernel/services/chat-bookmarks-service';
+import { chatBookmarksService } from '../../kernel/instances';
 import type { ChatBookmark } from '../../kernel/services/chat-bookmarks-service';
 import { errorContainer, dismissBtnRed, textMutedXs } from '../../styles/common';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
@@ -13,17 +12,7 @@ import { PanelLoading } from '../PanelStates';
 import { BookmarkCard } from './BookmarkCard';
 import { TagBar } from './TagBar';
 
-const bookmarksService = new ChatBookmarksService({
-    eventBus: {
-        on: (event: string, cb: (...args: unknown[]) => void) =>
-            eventBus.on(event as keyof EventMap, cb as (...args: unknown[]) => void),
-        emit: (event: string, data?: unknown) =>
-            eventBus.emit(event as keyof EventMap, data as EventMap[keyof EventMap]),
-    },
-    database,
-});
-
-void bookmarksService.init();
+const bookmarksService = chatBookmarksService;
 
 const BookmarksPanel: React.FC = () => {
     const { confirm, ConfirmDialog } = useConfirm();

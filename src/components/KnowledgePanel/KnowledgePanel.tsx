@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { t } from '../../i18n/translations';
 import { useConfirm } from '../../hooks/useConfirm';
 import { memoryService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import GraphHeader from './GraphHeader';
 import ErrorBanner from './ErrorBanner';

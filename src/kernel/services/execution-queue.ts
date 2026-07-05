@@ -1,4 +1,4 @@
-import { EventBus, EVENTS } from '../events/event-bus';
+import { EventBus, EVENTS } from '../instances';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ExecutionQueue');

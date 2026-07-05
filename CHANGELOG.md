@@ -1,5 +1,7 @@
 # Changelog — SuperAgents OS
 
+> **Note:** Paths in entries before v4.5.0 may reference `src/core/` and `src/services/*` which have since been deleted — see `docs/STRUCTURE.md` for current layout. Services like `WarmupService` mentioned below have been removed in later refactors.
+
 ## [v4.5.0] - 2026-05-27
 
 ### 🌐 Multi-Agent Dialectic Arena — 20 Agents, 3 Strategies, Metrics Layer

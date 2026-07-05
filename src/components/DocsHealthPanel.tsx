@@ -13,7 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { consistencyChecker, consistencyHealingPipeline } from '../kernel/instances';
 import type { ConsistencyReport, HealingPlan } from '../kernel/instances';
-import { eventBus, EVENTS } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/instances';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
 import { errorContainer, dismissBtnRed, button } from '../styles/common';
@@ -45,20 +45,6 @@ const DocsHealthPanel: React.FC = () => {
         }
     }, []);
 
-    const fetchDocs = async (signal: AbortSignal): Promise<Record<string, string>> => {
-        const contents: Record<string, string> = {};
-        for (const file of DOC_FILES) {
-            if (signal.aborted) break;
-            try {
-                const resp = await fetch(`/${file}`, { signal });
-                if (resp.ok) contents[file] = await resp.text();
-            } catch {
-                /* skip unavailable docs */
-            }
-        }
-        return contents;
-    };
-
     const handleCheck = async () => {
         abortRef.current?.abort();
         const controller = new AbortController();
@@ -66,7 +52,7 @@ const DocsHealthPanel: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const docContents = await fetchDocs(controller.signal);
+            const docContents = await consistencyChecker.fetchDocs(DOC_FILES, controller.signal);
             if (Object.keys(docContents).length === 0) {
                 setError(t('docs_health.error_fetch'));
                 return;
@@ -97,7 +83,7 @@ const DocsHealthPanel: React.FC = () => {
         setHealing(true);
         setError(null);
         try {
-            const docContents = await fetchDocs(controller.signal);
+            const docContents = await consistencyChecker.fetchDocs(DOC_FILES, controller.signal);
             const newPlan = consistencyHealingPipeline.analyze(docContents);
             if (isMountedRef.current) {
                 setPlan(newPlan);

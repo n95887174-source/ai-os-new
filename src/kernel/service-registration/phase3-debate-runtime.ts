@@ -20,12 +20,12 @@ import type { RoleService } from '../services/role-service';
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { MemoryService } from '../services/memory-engine';
 import type { ChatMessage } from '../types/llm-types';
-import {
-    debateService as debateServiceModule,
-    setDeps,
-    isInitialized,
-} from '../services/debate-runtime/debate-service';
-import type { DebateServiceDeps } from '../services/debate-runtime/debate-service';
+import type { DebateServiceDeps } from '../contracts/debate-types';
+import { FactCheckService } from '../services/fact-check-service';
+import { DebatePostProcessor } from '../services/debate-runtime/debate-post-processor';
+import { DebateSyncManager } from '../services/debate-runtime/debate-sync-manager';
+import { DebateHumanService } from '../services/debate-runtime/debate-human-service';
+import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
 import { CollaborativeService } from '../services/collaborative-service';
 import { DebateApiService } from '../services/debate-runtime/debate-api';
 import { DebateKnowledgeSyncService } from '../services/debate-runtime/debate-knowledge-sync';
@@ -35,7 +35,6 @@ import { ArchitectureReviewService } from '../services/architecture-review-servi
 import { PromptAuditService } from '../services/prompt-audit-service';
 import { RoutingExperimentsService } from '../services/routing-experiments-service';
 import { DebateEngine } from '../services/debate-runtime/debate-engine';
-import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
 import { StrategyManager } from '../services/debate-runtime/debate-strategy-manager';
 import { DebateModeManagerPersistent } from '../services/debate-runtime/debate-mode-manager';
 import { DebateWorkspace } from '../services/debate-runtime/debate-workspace';
@@ -105,38 +104,73 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     const debateMemoryExtractor = new DebateMemoryExtractor();
     const debateRAGRetriever = new DebateRAGRetriever({ embeddingPipeline: embedPipeline });
 
-    // A-04: setDeps() is imperative — mutates module-level singleton.
-    // Keep outside factory; runs once at registration time.
-    if (!isInitialized()) {
-        setDeps(
-            asDeps<DebateServiceDeps>({
-                database: _container.get<IDatabaseService>('database'),
-                eventBus: _container.get<IEventBus>('eventBus'),
-                get routerService() {
-                    return _container.get<import('../services/provider-router').RouterService>(
-                        'routerService',
-                    );
-                },
-                get keyService() {
-                    return _container.get<KeyService>('keyService');
-                },
-                get adapterRegistry() {
-                    return _container.get<ProviderAdapterRegistry>('providerAdapterRegistry');
-                },
-                get workspaceService() {
-                    return _container.get<WorkspaceService>('workspaceService');
-                },
-                queryEngine: new DebateQueryEngine(),
-                debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
-                get sessionManager() {
-                    return _container.get<
-                        import('../services/session-manager-service').SessionManagerService
-                    >('sessionManagerService');
-                },
-            }),
-        );
-    }
-    register('debateService', (_c) => debateServiceModule);
+    // FactCheckService, DebatePostProcessor, DebateSyncManager — created eagerly
+    // as singletons (same pattern as embedPipeline) and wired to DI.
+    const _eventBus = _container.get<IEventBus>('eventBus');
+    const _factCheckService = new FactCheckService({
+        eventBus: _eventBus,
+        getApiKey: (provider: string) => {
+            const ks = _container.get<KeyService>('keyService');
+            const keys = ks.getKeys();
+            const key = keys.find(
+                (k) => k.provider.toLowerCase() === provider.toLowerCase() && k.status === 'active',
+            );
+            return key?.key;
+        },
+        sendMessage: async (messages, model, apiKey) => {
+            const providers = _container
+                .get<import('../services/provider-router').RouterService>('routerService')
+                .getDebateProviders(1);
+            const adapter = _container
+                .get<ProviderAdapterRegistry>('providerAdapterRegistry')
+                .getAdapter(providers[0]?.provider || 'groq');
+            if (!adapter) throw new Error('No adapter');
+            const res = await adapter.sendMessage(
+                messages as ChatMessage[],
+                model,
+                apiKey,
+                new AbortController().signal,
+            );
+            return { content: res.content };
+        },
+    });
+    const _postProcessor = new DebatePostProcessor({ factCheckService: _factCheckService });
+    const _syncManager = new DebateSyncManager(_postProcessor);
+    _syncManager.setDeps(
+        asDeps<DebateServiceDeps>({
+            database: _container.get<IDatabaseService>('database'),
+            eventBus: _eventBus,
+            get routerService() {
+                return _container.get<import('../services/provider-router').RouterService>(
+                    'routerService',
+                );
+            },
+            get keyService() {
+                return _container.get<KeyService>('keyService');
+            },
+            get adapterRegistry() {
+                return _container.get<ProviderAdapterRegistry>('providerAdapterRegistry');
+            },
+            get workspaceService() {
+                return _container.get<WorkspaceService>('workspaceService');
+            },
+            queryEngine: new DebateQueryEngine(),
+            debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
+            get sessionManager() {
+                return _container.get<
+                    import('../services/session-manager-service').SessionManagerService
+                >('sessionManagerService');
+            },
+        }),
+    );
+    const _humanService = new DebateHumanService(
+        _eventBus,
+        storageLayer?.debates ?? EMPTY_DEBATE_STORE,
+        {
+            updateConvergenceScore: (session) => _postProcessor.updateConvergenceScore(session),
+        },
+    );
+    register('debateService', (_c) => _syncManager);
 
     register(
         'collaborativeService',
@@ -156,7 +190,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
         (c) =>
             new DebateApiService({
                 eventBus: c.get<IEventBus>('eventBus'),
-                debateService: c.get<typeof debateServiceModule>('debateService'),
+                debateService: c.get<DebateSyncManager>('debateService'),
                 get orchestrator() {
                     return c.get<OrchestrationService>('orchestrator');
                 },
@@ -309,10 +343,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
         });
     });
 
-    register(
-        'debateHumanService',
-        (c) => c.get<typeof debateServiceModule>('debateService').humanService,
-    );
+    register('debateHumanService', (_c) => _humanService);
     register('strategyManager', (_c) => new StrategyManager(storageLayer.config));
     register('debateModeManager', (_c) => new DebateModeManagerPersistent(storageLayer));
 
@@ -364,9 +395,8 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             }),
     );
 
-    // A-04: setEngine() is imperative — wire debateEngine to debateService.
-    // Runs after registration; by this point factories have executed.
-    const debateSvc = _container.get<typeof debateServiceModule>('debateService');
+    // Wire DebateEngine to DebateSyncManager after all factories have executed.
+    const syncSvc = _container.get<DebateSyncManager>('debateService');
     const debateEng = _container.get<DebateEngine>('debateEngine');
-    debateSvc.setEngine(debateEng);
+    syncSvc.engine = debateEng;
 };

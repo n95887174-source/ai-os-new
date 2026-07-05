@@ -2,9 +2,9 @@
 
 ## [v4.5.0] — 2026-05-27
 
-### 🌐 Multi-Agent Dialectic Arena — 20 агентов, 3 стратегии, слой метрик
+### 🌐 Multi-Agent Dialectic Arena — 25 агентов, 71 стратегия, слой метрик
 
-- **20 агентов**: `topology-defaults.ts` переписан: 22 узла (роутер → 20 агентов → агрегатор). У каждого уникальные роль, промпт, температура, инструменты, модель. Все агенты выбираемы в DebatePanel ("Select All"/"Deselect All")
+- **25 агентов**: `topology-defaults.ts` переписан: 27 узлов (роутер → 25 агентов → агрегатор). У каждого уникальные роль, промпт, температура, инструменты, модель. Все агенты выбираемы в DebatePanel ("Select All"/"Deselect All")
 - **3 новые стратегии дебатов**: Socratic Method (чередование Сократ→респондент), Argument Tree (parent-child иерархия с `[parent:id]`), Constrained Debates (6 типов ограничений на агента). Диспетчеризация в `getNextParticipant()`
 - **Парсер аргументов**: `ParentResolution` с 4-стадийной цепочкой fallback (explicit → fallback_latest → orphan → invalid_reference). Поля `parentResolution` + `rawParentRef` на `DebateArgument`
 - **Структурные метрики графа**: `DebateGraphMetrics` (totalNodes, maxDepth, avgDepth, orphanRate, branchingFactor, challengeDensity, refinementDensity). `computeGraphMetrics()` в `stopDebate()`

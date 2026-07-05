@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { systemStatusService } from '../kernel/instances';
-import { eventBus, EVENTS } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/instances';
 import type { SystemStatusReport } from '../kernel/contracts/system-status';
 
 const EVENTS_REFRESH = [

@@ -11,8 +11,9 @@ import { Breadcrumbs } from './Common/Breadcrumbs';
 import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
 import { KeyboardShortcutsModal } from './Common/KeyboardShortcutsModal';
 import { CONFIG } from '../kernel/services/config-registry';
-import { eventBus, EVENTS } from '../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../kernel/instances';
 import { settingsService, groupManager } from '../kernel/instances';
+import { useUiPreferences } from '../stores/uiPreferencesStore';
 import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
@@ -39,40 +40,35 @@ export const AppLayout: React.FC = () => {
     const [runtimeStatus, setRuntimeStatus] = useState<'online' | 'degraded' | 'offline'>('online');
     const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
     const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+    const { userLevel, setUserLevel, theme: storedTheme, setTheme } = useUiPreferences();
     const [currentTheme, setCurrentTheme] = useState(
-        () => document.documentElement.getAttribute('data-theme') || 'dark',
+        () => document.documentElement.getAttribute('data-theme') || storedTheme || 'dark',
     );
-    const handleThemeChange = useCallback((newTheme: string) => {
-        setCurrentTheme(newTheme);
-        document.documentElement.setAttribute('data-theme', newTheme);
-        try {
-            localStorage.setItem('super-agents-theme', newTheme);
-            const s = settingsService.getSettings();
-            if (s.theme !== newTheme)
-                settingsService.updateSettings({ theme: newTheme as typeof s.theme });
-        } catch {
-            /* settingsService may not be ready */
-        }
-    }, []);
+    const handleThemeChange = useCallback(
+        (newTheme: string) => {
+            setCurrentTheme(newTheme);
+            setTheme(newTheme);
+            document.documentElement.setAttribute('data-theme', newTheme);
+            try {
+                const s = settingsService.getSettings();
+                if (s.theme !== newTheme)
+                    settingsService.updateSettings({ theme: newTheme as typeof s.theme });
+            } catch {
+                /* settingsService may not be ready */
+            }
+        },
+        [setTheme],
+    );
     const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
         () => structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
     );
 
-    const [userLevel, setUserLevel] = useState<UserLevel>(() => {
-        try {
-            return (localStorage.getItem('mavis:userLevel') as UserLevel) || 'L0';
-        } catch {
-            return 'L0';
-        }
-    });
-    const handleUserLevelChange = useCallback((level: UserLevel) => {
-        setUserLevel(level);
-        try {
-            localStorage.setItem('mavis:userLevel', level);
-        } catch {
-            /* noop */
-        }
-    }, []);
+    const handleUserLevelChange = useCallback(
+        (level: UserLevel) => {
+            setUserLevel(level);
+        },
+        [setUserLevel],
+    );
 
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     useEffect(() => {

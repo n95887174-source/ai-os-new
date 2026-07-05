@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
 import { securityService } from '../../kernel/security';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { settingsService } from '../../kernel/instances';
 import { notificationWebhookService } from '../../kernel/instances';

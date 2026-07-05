@@ -1,4 +1,4 @@
-import { eventBus, EVENTS } from '../events/event-bus';
+import { eventBus, EVENTS } from '../instances';
 import type { ILogger } from '../contracts/logger';
 
 export interface IndexedMessage {

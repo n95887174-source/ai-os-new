@@ -1,7 +1,7 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { IKeyVaultService } from '../../contracts/key-vault';
 import { EVENTS } from '../../events/event-names';
-import { eventBus } from '../../events/event-bus';
+import { eventBus } from '../../instances';
 
 export interface KeyVaultDeps {
     securityService: {

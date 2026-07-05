@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { promptLibraryService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/events/event-bus';
+import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Search, Plus, X, Copy, MessageSquare, Trash2, Star, FileText } from 'lucide-react';

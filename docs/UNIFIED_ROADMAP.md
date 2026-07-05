@@ -1,7 +1,5 @@
 # UNIFIED ROADMAP — SuperAgents OS
 
-Ссылки на исходные документы C:\Users\egily\Desktop\ai-os-new\audit\napolionplan\ папка с исходные документы.
-
 > **Сводный документ:** объединение 19 стратегических документов (napolionplan + roadmap reports).
 > Цель: единая картина развития системы на 2026–2027.
 

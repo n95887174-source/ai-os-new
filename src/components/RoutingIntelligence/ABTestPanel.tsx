@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Square, Play } from 'lucide-react';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import MetricBar from './MetricBar';
 import type { ABTestConfig } from '../../kernel/types/routing-types';
 import {

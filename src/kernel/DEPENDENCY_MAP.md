@@ -191,32 +191,34 @@ Legend:
 
 ### Migration Status
 
-| Service | Old Location | Kernel Location | DI Converted | Consumers Updated |
-|---------|-------------|-----------------|-------------|-------------------|
-| EventBus | `src/core/events.ts` | `src/kernel/events/event-bus.ts` | ✅ | ✅ |
-| Container | `src/core/Container.ts` | `src/kernel/container.ts` | ✅ | ✅ |
-| Database | `src/core/DatabaseService.ts` | `src/kernel/db.ts` | ✅ | ✅ |
-| Security | `src/core/SecurityService.ts` | `src/kernel/security.ts` | ✅ | ✅ |
-| Kernel | `src/core/Kernel.ts` | `src/kernel/kernel.ts` | ✅ | ✅ |
-| Runtime | `src/core/runtime.ts` | `src/kernel/runtime.ts` | ✅ | ✅ |
-| Bootstrap | `src/core/Bootstrap.ts` | `src/kernel/bootstrap.ts` | ✅ | ✅ |
-| KeyService | `src/services/KeyService.ts` | `src/kernel/services/key-vault.ts` | ✅ | ✅ |
-| RouterService | `src/services/RouterService.ts` | `src/kernel/services/provider-router.ts` | ✅ | ✅ |
-| MCPService | `src/services/MCPService.ts` | `src/kernel/services/mcp-service.ts` | ✅ | ✅ |
-| ToolService | `src/services/ToolService.ts` | `src/kernel/services/tool-executor.ts` | ✅ | ✅ |
-| MemoryService | `src/services/MemoryService.ts` | `src/kernel/services/memory-engine.ts` | ✅ | ✅ |
-| CacheService | `src/services/CacheService.ts` | `src/kernel/services/cache-service.ts` | ✅ | ✅ |
-| SnapshotService | `src/services/SnapshotService.ts` | `src/kernel/services/snapshot-service.ts` | ✅ | ✅ |
-| AdminService | `src/services/AdminService.ts` | `src/kernel/services/admin-service.ts` | ✅ | ✅ |
-| AdvisorService | `src/services/AdvisorService.ts` | `src/kernel/services/advisor-service.ts` | ✅ | ✅ |
-| ProviderTracker | `src/core/ProviderTracker.ts` | `src/kernel/services/provider-tracker.ts` | ✅ | ✅ |
-| PricingService | `src/services/PricingService.ts` | `src/kernel/services/pricing-service.ts` | ✅ | ✅ |
-| BudgetService | `src/services/BudgetService.ts` | `src/kernel/services/budget-service.ts` | ✅ | ✅ |
-| UsageTracker | — (new) | `src/kernel/services/usage-tracker.ts` | ✅ | ✅ |
-| RotationService | `src/services/rotation/RotationService.ts` | `src/kernel/services/rotation-service.ts` | ✅ | ✅ |
-| VirtualKeyService | — (new) | `src/kernel/services/virtual-key-service.ts` | ✅ | ✅ |
-| LLMClientService | — (new) | `src/kernel/services/llm-client-service.ts` | ✅ | ✅ |
-| ExternalSecretsService | — (new) | `src/kernel/services/external-secrets-service.ts` | ✅ | ✅ |
-| CompromiseWebhookService | — (new) | `src/kernel/services/compromise-webhook-service.ts` | ✅ | ✅ |
-| NotificationWebhookService | — (new) | `src/kernel/services/notification-webhook-service.ts` | ✅ | ✅ |
+> Миграция из `src/core/` и `src/services/` завершена. Все сервисы зарегистрированы в DI через phased bootstrap. Старые пути (src/core/*, src/services/*) не существуют — сохранены ниже только для истории. Актуальные пути везде в `src/kernel/`.
+
+| Service | Old Location (historical) | Kernel Location | DI Converted |
+|---------|--------------------------|-----------------|-------------|
+| EventBus | `src/core/events.ts` | `src/kernel/events/event-bus.ts` | ✅ |
+| Container | `src/core/Container.ts` | `src/kernel/container.ts` | ✅ |
+| Database | `src/core/DatabaseService.ts` | `src/kernel/services/database-service.ts` | ✅ |
+| Security | `src/core/SecurityService.ts` | `src/kernel/security.ts` | ✅ |
+| Kernel | `src/core/Kernel.ts` | `src/kernel/kernel.ts` | ✅ |
+| Runtime | `src/core/runtime.ts` | `src/kernel/runtime.ts` | ✅ |
+| Bootstrap | `src/core/Bootstrap.ts` | `src/kernel/bootstrap.ts` | ✅ |
+| KeyService | `src/services/KeyService.ts` | `src/kernel/services/key-management/key-service.ts` | ✅ |
+| RouterService | `src/services/RouterService.ts` | `src/kernel/services/provider-router.ts` | ✅ |
+| MCPService | `src/services/MCPService.ts` | `src/kernel/services/mcp-service.ts` | ✅ |
+| ToolService | `src/services/ToolService.ts` | `src/kernel/services/tool-executor.ts` | ✅ |
+| MemoryService | `src/services/MemoryService.ts` | `src/kernel/services/memory-engine.ts` | ✅ |
+| CacheService | `src/services/CacheService.ts` | `src/kernel/services/cache-service.ts` | ✅ |
+| SnapshotService | `src/services/SnapshotService.ts` | `src/kernel/services/snapshot-service.ts` | ✅ |
+| AdminService | `src/services/AdminService.ts` | `src/kernel/services/admin-service.ts` | ✅ |
+| AdvisorService | `src/services/AdvisorService.ts` | `src/kernel/services/advisor-service.ts` | ✅ |
+| ProviderTracker | `src/core/ProviderTracker.ts` | `src/kernel/services/provider-tracker.ts` | ✅ |
+| PricingService | `src/services/PricingService.ts` | `src/kernel/services/pricing-service.ts` | ✅ |
+| BudgetService | `src/services/BudgetService.ts` | `src/kernel/services/budget-service.ts` | ✅ |
+| UsageTracker | — (new) | `src/kernel/services/usage-tracker.ts` | ✅ |
+| RotationService | `src/services/rotation/RotationService.ts` | `src/kernel/services/rotation-service.ts` | ✅ |
+| VirtualKeyService | — (new) | `src/kernel/services/virtual-key-service.ts` | ✅ |
+| LLMClientService | — (new) | `src/kernel/services/llm-client-service.ts` | ✅ |
+| ExternalSecretsService | — (new) | `src/kernel/services/external-secrets-service.ts` | ✅ |
+| CompromiseWebhookService | — (new) | `src/kernel/services/compromise-webhook-service.ts` | ✅ |
+| NotificationWebhookService | — (new) | `src/kernel/services/notification-webhook-service.ts` | ✅ |
 ```
