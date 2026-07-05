@@ -1,6 +1,6 @@
 import type { ChatMessage, SendMessageOptions } from '../core/types';
 import type { GeminiRequestBody, GeminiPart } from './gemini-types';
-import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { safeJsonParse } from '../../shared/utils/safe-json';
 
 interface OpenAISchema {
     type?: string;

@@ -1,3 +1,6 @@
+> **STATUS:** 🟢 Implemented 2026-06 — Research Engine реализован (`research-engine-service.ts`) с epistemic loop (question → search → extract → synthesize → new questions).
+> **Источник:** Дизайн-нотация, предшествовавшая реализации. Сохранена как архив.
+
 Да, у тебя уже фактически есть ядро для этого — просто оно сейчас разрознено (debate + memory + routing + observability + agents). Следующий естественный шаг — собрать это в **research loop**, где система начинает работать не только “внутрь запроса”, но и “внутрь себя”.
 
 ---
@@ -8,23 +11,23 @@
 
 ### 1. Internal reasoning (у тебя уже есть)
 
-* дебаты агентов
-* аргумент-граф
-* интерпретация
-* метрики
+- дебаты агентов
+- аргумент-граф
+- интерпретация
+- метрики
 
 ### 2. Self-analysis loop (почти готово)
 
-* интерпретатор
-* governor
-* diversity scoring
-* constraint scoring
+- интерпретатор
+- governor
+- diversity scoring
+- constraint scoring
 
 ### 3. External grounding (частично есть идея)
 
-* поиск в интернете
-* RAG / документы
-* проверка гипотез через внешние источники
+- поиск в интернете
+- RAG / документы
+- проверка гипотез через внешние источники
 
 ---
 
@@ -44,11 +47,11 @@ Hypothesis → Debate → Evidence search → Re-evaluation → Synthesis → Ne
 
 Добавляет:
 
-* `hypothesis`
-* `researchQuestions[]`
-* `evidence[]`
-* `confidenceScore`
-* `iterations`
+- `hypothesis`
+- `researchQuestions[]`
+- `evidence[]`
+- `confidenceScore`
+- `iterations`
 
 ---
 
@@ -56,10 +59,10 @@ Hypothesis → Debate → Evidence search → Re-evaluation → Synthesis → Ne
 
 Ты не создаёшь новых агентов — ты даёшь им роли:
 
-* **Hypothesis Generator** → предлагает идеи
-* **Critic / Falsifier** → пытается опровергнуть
-* **Evidence Finder** → ищет подтверждения (web/RAG/tools)
-* **Synthesizer** → собирает итог
+- **Hypothesis Generator** → предлагает идеи
+- **Critic / Falsifier** → пытается опровергнуть
+- **Evidence Finder** → ищет подтверждения (web/RAG/tools)
+- **Synthesizer** → собирает итог
 
 Это просто режим поверх текущих агентов.
 
@@ -73,8 +76,9 @@ Hypothesis → Debate → Evidence search → Re-evaluation → Synthesis → Ne
 2. DebateGovernor выявляет противоречия
 3. Research layer формирует вопросы:
 
-   * “что нужно проверить?”
-   * “какие слабые места?”
+   - “что нужно проверить?”
+   - “какие слабые места?”
+
 4. (опционально) web/RAG поиск
 5. обновление confidence
 6. следующий раунд
@@ -97,19 +101,19 @@ Hypothesis → Debate → Evidence search → Re-evaluation → Synthesis → Ne
 
 ### 1. Self-improving knowledge graph
 
-* аргументы → узлы
-* доказательства → ребра
-* противоречия → конфликты
+- аргументы → узлы
+- доказательства → ребра
+- противоречия → конфликты
 
 ### 2. Hypothesis evolution
 
-* идеи не статичны
-* они “эволюционируют” через раунды
+- идеи не статичны
+- они “эволюционируют” через раунды
 
 ### 3. Evidence injection
 
-* внешние источники не просто вставляются
-* они меняют структуру дебатов
+- внешние источники не просто вставляются
+- они меняют структуру дебатов
 
 ---
 
@@ -131,10 +135,10 @@ Tools (web, RAG, memory)
 
 ## Где у тебя уже есть база для этого
 
-* DebateInterpreter → уже умеет находить “что важно”
-* DiversityScorer → определяет, насколько разные гипотезы
-* Governor → следит за конвергенцией
-* Graph → хранит структуру знаний
+- DebateInterpreter → уже умеет находить “что важно”
+- DiversityScorer → определяет, насколько разные гипотезы
+- Governor → следит за конвергенцией
+- Graph → хранит структуру знаний
 
 ---
 
@@ -147,11 +151,11 @@ Tools (web, RAG, memory)
 
 Которая умеет:
 
-* генерировать гипотезы
-* спорить
-* искать внешние доказательства
-* пересматривать свои выводы
-* улучшать собственные модели рассуждений
+- генерировать гипотезы
+- спорить
+- искать внешние доказательства
+- пересматривать свои выводы
+- улучшать собственные модели рассуждений
 
 ---
 
@@ -165,9 +169,9 @@ Tools (web, RAG, memory)
 
 Если хочешь дальше — следующий логичный шаг я бы разложил как:
 
-* ResearchOrchestrator spec
-* hypothesis schema
-* evidence scoring model
-* и как подключить web/RAG без хаоса
+- ResearchOrchestrator spec
+- hypothesis schema
+- evidence scoring model
+- и как подключить web/RAG без хаоса
 
 Тут уже начинается совсем “лаборатория, которая исследует сама себя”.

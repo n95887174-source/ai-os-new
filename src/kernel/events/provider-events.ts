@@ -44,8 +44,8 @@ export type ProviderEventMap = Pick<
     | 'key:health:check'
     | 'key:health:check:all'
     | 'key:probe:result'
-    | 'provider:circuit-breaker:synced'
-    | 'provider:rate-limit:synced'
+    | 'provider:circuit:breaker:synced'
+    | 'provider:rate:limit:synced'
     | 'provider:error:synced'
 >;
 

@@ -1,6 +1,8 @@
 import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
+import { TraceRepository } from '../dal/trace-repository';
+import type { DatabaseService } from './database-service';
 import type {
     ExecutionTrace,
     TraceDataQuality,
@@ -29,26 +31,14 @@ export interface TraceServiceDeps {
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
     };
-    database: {
-        db: {
-            traces: {
-                orderBy: (field: string) => {
-                    reverse: () => {
-                        limit: (n: number) => { toArray: () => Promise<ExecutionTrace[]> };
-                    };
-                };
-                put: (trace: ExecutionTrace) => Promise<void>;
-                delete: (id: string) => Promise<void>;
-                clear: () => Promise<void>;
-            };
-        };
-    };
+    database: DatabaseService;
 }
 
 export class TraceService {
     private traces: ExecutionTrace[] = [];
     private activeTraces = new Map<string, ExecutionTrace>();
     private deps: TraceServiceDeps;
+    private traceRepo: TraceRepository;
     private unsubs: Array<() => void> = [];
     private _initialized = false;
 
@@ -57,6 +47,7 @@ export class TraceService {
 
     constructor(deps: TraceServiceDeps) {
         this.deps = deps;
+        this.traceRepo = new TraceRepository(deps.database);
     }
 
     private getRetentionMetadata(evictedOlderEntries = false): TraceDataQuality['retention'] {
@@ -92,11 +83,7 @@ export class TraceService {
 
     private async load() {
         try {
-            const saved = await this.deps.database.db.traces
-                .orderBy('startTime')
-                .reverse()
-                .limit(CONFIG.traces.dbLoadLimit)
-                .toArray();
+            const saved = await this.traceRepo.getAll(CONFIG.traces.dbLoadLimit);
             this.traces = saved;
             this.emitTraces();
         } catch (e) {
@@ -106,7 +93,7 @@ export class TraceService {
 
     private async persist(trace: ExecutionTrace) {
         try {
-            await this.deps.database.db.traces.put(trace);
+            await this.traceRepo.save(trace);
         } catch (e) {
             LOGGER.error('TraceService', 'Failed to persist trace', { error: String(e) });
         }
@@ -352,7 +339,7 @@ export class TraceService {
 
     removeTrace(id: string) {
         this.traces = this.traces.filter((t) => t.id !== id);
-        this.deps.database.db.traces
+        this.traceRepo
             .delete(id)
             .catch((e) => LOGGER.error('TraceService', 'Failed to delete trace', e));
         this.emitTraces();
@@ -361,7 +348,7 @@ export class TraceService {
     clearAll() {
         this.traces = [];
         this.activeTraces.clear();
-        this.deps.database.db.traces
+        this.traceRepo
             .clear()
             .catch((e) => LOGGER.error('TraceService', 'Failed to clear traces', e));
         this.emitTraces();

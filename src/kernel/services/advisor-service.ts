@@ -31,7 +31,7 @@ export type {
     PressureMapSnapshot,
     ProviderPressure,
     GlobalPressure,
-    PressureLevel,
+    AdvisorPressureLevel,
 } from '../contracts/advisor';
 export type { DiagnosticFinding, ProviderDiagnostic } from '../contracts/advisor';
 export type { WhatIfScenario, RuntimeScenario } from '../contracts/advisor';

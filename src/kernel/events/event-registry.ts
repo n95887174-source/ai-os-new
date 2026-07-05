@@ -119,11 +119,11 @@ export const EVENT_REGISTRY = {
         }),
     ),
     PROVIDER_STATE_CHANGED: event(
-        'provider:state-changed',
+        'provider:state:changed',
         z.object({ provider: z.string(), status: z.string() }),
     ),
     PROVIDER_CIRCUIT_BREAKER_SYNCED: event(
-        'provider:circuit-breaker:synced',
+        'provider:circuit:breaker:synced',
         z.object({
             provider: z.string(),
             keyId: z.string(),
@@ -133,7 +133,7 @@ export const EVENT_REGISTRY = {
         }),
     ),
     PROVIDER_RATE_LIMIT_SYNCED: event(
-        'provider:rate-limit:synced',
+        'provider:rate:limit:synced',
         z.object({
             provider: z.string(),
             keyId: z.string(),
@@ -327,10 +327,6 @@ export const EVENT_REGISTRY = {
         z.object({ phase: z.string(), uptime: z.number() }),
     ),
     KERNEL_STATE_RESET: event('kernel:state:reset', z.object({ reason: z.string() })),
-    BOOTSTRAP_PHASE: event(
-        'kernel:bootstrap:phase',
-        z.object({ bootstrapPhase: z.number(), totalPhases: z.number(), phase: z.string() }),
-    ),
     RUNTIME_READY: event('system:runtime:ready', z.object({ timestamp: z.number() }).optional()),
     RUNTIME_FAILED: event(
         'system:runtime:failed',
@@ -342,8 +338,8 @@ export const EVENT_REGISTRY = {
     ),
     CLEAR_DATA: event('system:data:clear', z.void().or(z.undefined())),
     RELOAD: event('system:reload', z.object({ timestamp: z.number() })),
-    KERNEL_LOAD_FAILED: event('kernel:load-failed', z.object({ error: z.string() })),
-    KERNEL_PERSIST_FAILED: event('kernel:persist-failed', z.object({ error: z.string() })),
+    KERNEL_LOAD_FAILED: event('kernel:load:failed', z.object({ error: z.string() })),
+    KERNEL_PERSIST_FAILED: event('kernel:persist:failed', z.object({ error: z.string() })),
     SYSTEM_RUNTIME_METRICS: event('system:runtime:metrics', z.record(z.string(), z.unknown())),
     EVENTBUS_BACKPRESSURE: event(
         'system:eventbus:backpressure',
@@ -352,7 +348,7 @@ export const EVENT_REGISTRY = {
 
     // ── Provider Runtime ──────────────────────────────────────────────────
     PROVIDER_RUNTIME_STATE: event(
-        'provider-runtime:state',
+        'provider:runtime:state',
         z.object({
             providers: z.array(z.unknown()),
             updatedAt: z.number(),
@@ -362,43 +358,43 @@ export const EVENT_REGISTRY = {
             avgSuccessRate: z.number(),
         }),
     ),
-    PROVIDER_RUNTIME_BUDGET: event('provider-runtime:budget', BudgetStateSnapshotSchema),
+    PROVIDER_RUNTIME_BUDGET: event('provider:runtime:budget', BudgetStateSnapshotSchema),
 
     // ── Debate Runtime Events ──────────────────────────────────────────────
     DEBATE_SESSION_CREATED: event(
-        'debate-runtime:session:created',
+        'debate:runtime:session:created',
         z.object({ sessionId: z.string(), topic: z.string(), topologyType: z.string() }),
     ),
     DEBATE_SESSION_STARTED: event(
-        'debate-runtime:session:started',
+        'debate:runtime:session:started',
         z.object({ sessionId: z.string() }),
     ),
     DEBATE_SESSION_PAUSED: event(
-        'debate-runtime:session:paused',
+        'debate:runtime:session:paused',
         z.object({ sessionId: z.string() }),
     ),
     DEBATE_SESSION_RESUMED: event(
-        'debate-runtime:session:resumed',
+        'debate:runtime:session:resumed',
         z.object({ sessionId: z.string() }),
     ),
     DEBATE_SESSION_CANCELLED: event(
-        'debate-runtime:session:cancelled',
+        'debate:runtime:session:cancelled',
         z.object({ sessionId: z.string() }),
     ),
     DEBATE_SESSION_COMPLETED: event(
-        'debate-runtime:session:completed',
+        'debate:runtime:session:completed',
         z.object({ sessionId: z.string(), error: z.string().optional() }),
     ),
     DEBATE_SESSION_FAILED: event(
-        'debate-runtime:session:failed',
+        'debate:runtime:session:failed',
         z.object({ sessionId: z.string(), error: z.string() }),
     ),
     DEBATE_PHASE_CHANGED: event(
-        'debate-runtime:phase:changed',
+        'debate:runtime:phase:changed',
         z.object({ sessionId: z.string(), from: z.string(), to: z.string() }),
     ),
     DEBATE_BUDGET_EXCEEDED: event(
-        'debate-runtime:budget:exceeded',
+        'debate:runtime:budget:exceeded',
         z.object({
             sessionId: z.string(),
             reason: z.string(),
@@ -406,62 +402,36 @@ export const EVENT_REGISTRY = {
             used: z.number(),
         }),
     ),
-    DEBATE_CONSENSUS_REACHED: event(
-        'debate-runtime:consensus:reached',
-        z.object({
-            sessionId: z.string(),
-            confidence: z.number(),
-            agreements: z.number(),
-            conflicts: z.number(),
-        }),
-    ),
-    DEBATE_AGENT_PHASE_CHANGED: event(
-        'debate-runtime:agent:phase:changed',
-        z.object({ sessionId: z.string(), agentId: z.string(), from: z.string(), to: z.string() }),
-    ),
     DEBATE_ROUND_STARTED: event(
-        'debate-runtime:round:started',
+        'debate:runtime:round:started',
         z.object({ sessionId: z.string(), round: z.number(), nodes: z.array(z.string()) }),
     ),
     DEBATE_ROUND_ENDED: event(
-        'debate-runtime:round:ended',
+        'debate:runtime:round:ended',
         z.object({ sessionId: z.string(), round: z.number() }),
     ),
     DEBATE_ROUND_EARLY_EXIT: event(
-        'debate-runtime:round:early-exit',
-        z.object({ sessionId: z.string(), round: z.number(), confidence: z.number() }),
+        'debate:runtime:round:early:exit',
+        z.object({ sessionId: z.string(), confidence: z.number(), round: z.number() }),
     ),
     DEBATE_AGENT_THINKING: event(
-        'debate-runtime:agent:thinking',
+        'debate:runtime:agent:thinking',
         z.object({ sessionId: z.string(), agentId: z.string() }),
     ),
     DEBATE_AGENT_CHUNK: event(
-        'debate-runtime:agent:chunk',
+        'debate:runtime:agent:chunk',
         z.object({ sessionId: z.string(), agentId: z.string(), chunk: z.string() }),
     ),
     DEBATE_AGENT_RESPONDED: event(
-        'debate-runtime:agent:responded',
+        'debate:runtime:agent:responded',
         z.object({ sessionId: z.string(), agentId: z.string(), content: z.string() }),
     ),
     DEBATE_AGENT_ERROR: event(
-        'debate-runtime:agent:error',
+        'debate:runtime:agent:error',
         z.object({ sessionId: z.string(), agentId: z.string(), error: z.string() }),
     ),
-    DEBATE_AGENT_FALLBACK: event(
-        'debate-runtime:agent:fallback',
-        z.object({
-            sessionId: z.string(),
-            agentId: z.string(),
-            fromProvider: z.string(),
-            toProvider: z.string(),
-        }),
-    ),
-    DEBATE_AGENT_TIMEOUT: event(
-        'debate-runtime:agent:timeout',
-        z.object({ sessionId: z.string(), agentId: z.string(), timeoutMs: z.number() }),
-    ),
     DEBATE_BUDGET_UPDATED: event(
-        'debate-runtime:budget:updated',
+        'debate:runtime:budget:updated',
         z.object({
             sessionId: z.string(),
             pressure: z.string(),
@@ -470,16 +440,39 @@ export const EVENT_REGISTRY = {
         }),
     ),
     DEBATE_BUDGET_PRESSURE_CHANGED: event(
-        'debate-runtime:budget:pressure',
+        'debate:runtime:budget:pressure',
         z.object({ sessionId: z.string(), level: z.string(), action: z.unknown() }),
     ),
-    DEBATE_CONFLICT_DETECTED: event('debate-runtime:consensus:conflict', z.unknown()),
-    DEBATE_CONFIDENCE_UPDATED: event('debate-runtime:consensus:confidence', z.unknown()),
-    DEBATE_CLAIM_RECORDED: event(
-        'debate-runtime:memory:claim',
+    DEBATE_CONSENSUS_REACHED: event(
+        'debate:runtime:consensus:reached',
+        z.object({
+            sessionId: z.string(),
+            confidence: z.number(),
+            agreements: z.number(),
+            conflicts: z.number(),
+        }),
+    ),
+    DEBATE_AGENT_TIMEOUT: event(
+        'debate:runtime:agent:timeout',
+        z.object({ sessionId: z.string(), agentId: z.string(), timeoutMs: z.number() }),
+    ),
+    DEBATE_AGENT_FALLBACK: event(
+        'debate:runtime:agent:fallback',
+        z.object({
+            sessionId: z.string(),
+            agentId: z.string(),
+            fromProvider: z.string(),
+            toProvider: z.string(),
+        }),
+    ),
+    DEBATE_MEMORY_CLAIM: event(
+        'debate:runtime:memory:claim',
         z.object({ sessionId: z.string(), agentId: z.string(), claim: z.string() }),
     ),
-    DEBATE_CHAIN_UPDATED: event('debate-runtime:memory:chain', z.unknown()),
+    DEBATE_AGENT_PHASE_CHANGED: event(
+        'debate:runtime:agent:phase:changed',
+        z.object({ sessionId: z.string(), agentId: z.string(), from: z.string(), to: z.string() }),
+    ),
     // ── Observability Events ──────────────────────────────────────────────
     TIMELINE_EVENT_ADDED: event(
         'observability:timeline:event:added',
@@ -520,15 +513,6 @@ export const EVENT_REGISTRY = {
         'observability:metrics:alert:resolved',
         z.object({ id: z.string(), timestamp: z.number() }),
     ),
-    METRICS_ALERT_FIRED: event(
-        'metrics:alert-fired',
-        z.object({
-            type: z.string(),
-            title: z.string(),
-            message: z.string(),
-            timestamp: z.number(),
-        }),
-    ),
     TRACE_UPDATED: event(
         'observability:trace:updated',
         z.object({ traceId: z.string(), status: z.string(), timestamp: z.number() }),
@@ -538,7 +522,7 @@ export const EVENT_REGISTRY = {
         z.object({ status: z.string(), score: z.number(), timestamp: z.number() }),
     ),
     ERROR_BOUNDARY_CAUGHT: event(
-        'observability:error-boundary:caught',
+        'observability:error:boundary:caught',
         z.object({
             name: z.string().optional(),
             message: z.string(),
@@ -680,7 +664,7 @@ export const EVENT_REGISTRY = {
         }),
     ),
     SETTINGS_LATENCY_THRESHOLD: event(
-        'settings:latency-threshold',
+        'settings:latency:threshold',
         z.object({ keyId: z.string().optional(), threshold: z.number().optional() }).optional(),
     ),
     POLICY_VIOLATION: event('policy:violation', PolicyViolationSchema),
@@ -810,15 +794,6 @@ export const EVENT_REGISTRY = {
         'advisor:suggestion:dismissed',
         z.object({ id: z.string() }),
     ),
-    ADVISOR_SUGGESTION_EFFECTIVENESS: event(
-        'advisor:suggestion:effectiveness',
-        z.object({
-            improved: z.boolean(),
-            measuredAt: z.number(),
-            metricBefore: z.number(),
-            metricAfter: z.number(),
-        }),
-    ),
     DIAGNOSTIC_COMPLETE: event(
         'diagnostic:complete',
         z.object({
@@ -848,10 +823,6 @@ export const EVENT_REGISTRY = {
         z.object({ reason: z.string(), section: z.string().optional() }),
     ),
     SESSION_DELETED: event('session:deleted', z.object({ id: z.string(), type: z.string() })),
-    DB_ROW_INSERTED: event(
-        'db:row-inserted',
-        z.object({ table: z.string(), id: z.union([z.string(), z.number()]) }),
-    ),
 
     // ── Persona Events ────────────────────────────────────────────────────
     PERSONA_CHANGED: event('persona:changed', z.unknown()),
@@ -861,14 +832,6 @@ export const EVENT_REGISTRY = {
     PERSONA_DELETED: event('persona:deleted', z.unknown()),
 
     // ── Achievement / Agent Delegation ────────────────────────────────────
-    ACHIEVEMENT_UNLOCKED: event('achievement:unlocked', z.unknown()),
-    AGENT_DELEGATION_CANCELLED: event('agent:delegation:cancelled', z.unknown()),
-    AGENT_DELEGATION_COMPLETED: event('agent:delegation:completed', z.unknown()),
-    AGENT_DELEGATION_CREATED: event('agent:delegation:created', z.unknown()),
-    AGENT_DELEGATION_FAILED: event('agent:delegation:failed', z.unknown()),
-    AGENT_DELEGATION_STARTED: event('agent:delegation:started', z.unknown()),
-    AGENT_TRIGGER_CREATED: event('agent:trigger:created', z.unknown()),
-    AGENT_TRIGGER_FIRED: event('agent:trigger:fired', z.unknown()),
     AGENT_WIZARD_CONFIG_GENERATED: event('agent:wizard:config-generated', z.unknown()),
     AGENT_TASK_COMPLETED: event('agent:task:completed', z.unknown()),
     AGENT_JOURNAL_ADDED: event('agent:journal:added', z.unknown()),
@@ -879,27 +842,10 @@ export const EVENT_REGISTRY = {
     AQUARIUM_SCREENSHOT_CAPTURED: event('aquarium:screenshot:captured', z.unknown()),
     // ── Chat Lifecycle ────────────────────────────────────────────────────
     CHAT_FORKED: event('chat:forked', z.unknown()),
-    CHAT_RESTORED_FROM_SNAPSHOT: event('chat:restored-from-snapshot', z.unknown()),
     CHAT_REWOUND: event('chat:rewound', z.unknown()),
-    CHAT_UNDO_REWIND: event('chat:undo-rewind', z.unknown()),
     CHAT_BOOKMARK_ADDED: event('chat:bookmark:added', z.unknown()),
     CHAT_BOOKMARK_REMOVED: event('chat:bookmark:removed', z.unknown()),
     CHAT_BOOKMARK_CLEARED: event('chat:bookmark:cleared', z.unknown()),
-    CHAT_BOOKMARK_REQUEST: event('chat:bookmark:request', z.unknown()),
-    CHAT_BOOKMARK_SAVE: event('chat:bookmark:save', z.unknown()),
-    // ── Collab Research ───────────────────────────────────────────────────
-    COLLAB_RESEARCH_FINDING_ADDED: event(
-        'collab-research:finding:added',
-        z.object({ sessionId: z.string(), findingId: z.string() }),
-    ),
-    COLLAB_RESEARCH_USER_JOINED: event(
-        'collab-research:user:joined',
-        z.object({ sessionId: z.string(), userId: z.string() }),
-    ),
-    COLLAB_RESEARCH_USER_LEFT: event(
-        'collab-research:user:left',
-        z.object({ sessionId: z.string(), userId: z.string() }),
-    ),
 
     // ── Experiment / Hypothesis ───────────────────────────────────────────
     HYPOTHESES_UPDATED: event('hypotheses:updated', z.unknown()),
@@ -919,30 +865,17 @@ export const EVENT_REGISTRY = {
     ),
 
     // ── Intelligence / Local ──────────────────────────────────────────────
-    KEY_INTELLIGENCE_PIPELINE_ERROR: event('key-intelligence:pipeline-error', z.unknown()),
-    LOCAL_PROVIDER_DETECTED: event('local-provider:detected', z.unknown()),
-
-    // ── Memory ────────────────────────────────────────────────────────────
-    MEMORY_CHUNK_ADDED: event('memory:chunk:added', z.unknown()),
-    MEMORY_CHUNK_DELETED: event('memory:chunk:deleted', z.unknown()),
-    MEMORY_CHUNK_UPDATED: event('memory:chunk:updated', z.unknown()),
+    KEY_INTELLIGENCE_PIPELINE_ERROR: event('key:intelligence:pipeline:error', z.unknown()),
 
     // ── Message / Prompt ──────────────────────────────────────────────────
-    MESSAGE_FEEDBACK_SUBMITTED: event('message:feedback:submitted', z.unknown()),
-    PROMPT_AUDIT_BASELINE_SET: event('prompt-audit:baseline:set', z.unknown()),
-    PROMPT_AUDIT_COMPARISON_CREATED: event('prompt-audit:comparison:created', z.unknown()),
 
     // ── Provider Catalog / Personality ────────────────────────────────────
-    PROVIDER_CATALOG_ADDED: event('provider:catalog:added', z.unknown()),
-    PROVIDER_CATALOG_PROBED: event('provider:catalog:probed', z.unknown()),
-    PROVIDER_PERSONALITY_CALIBRATED: event('provider:personality:calibrated', z.unknown()),
-    PROVIDER_PERSONALITY_UPDATED: event('provider:personality:updated', z.unknown()),
 
     // ── Roles ─────────────────────────────────────────────────────────────
     ROLE_CREATED: event('role:created', z.unknown()),
     ROLE_DELETED: event('role:deleted', z.unknown()),
-    ROLE_SANDBOX_TEST_COMPLETED: event('role:sandbox-test:completed', z.unknown()),
-    ROLE_SANDBOX_TEST_FAILED: event('role:sandbox-test:failed', z.unknown()),
+    ROLE_SANDBOX_TEST_COMPLETED: event('role:sandbox:test:completed', z.unknown()),
+    ROLE_SANDBOX_TEST_FAILED: event('role:sandbox:test:failed', z.unknown()),
     ROLE_UPDATED: event('role:updated', z.unknown()),
 
     // ── Team Events ────────────────────────────────────────────────────────
@@ -992,7 +925,7 @@ export const EVENT_REGISTRY = {
 
     // ── Metrics ───────────────────────────────────────────────────────────
     KEY_STORE_GAUGES: event(
-        'metrics:key-store-gauges',
+        'metrics:key:store:gauges',
         z.object({
             activeCount: z.number(),
             errorCount: z.number(),
@@ -1060,9 +993,6 @@ export const EVENT_REGISTRY = {
 
     // ── Debate (extras) ──────────────────────────────────────────────────
     DEBATE_HUMAN_VOTE: event('debate:human:vote', z.unknown()),
-    CONSISTENCY_DRIFT_DETECTED: event('consistency:drift-detected', z.unknown()),
-    SHADOW_DRIFT: event('shadow:drift', z.unknown()),
-    DEBATE_INJECT_MESSAGE: event('debate:inject:message', z.unknown()),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

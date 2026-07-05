@@ -1,4 +1,5 @@
 import type { DebateArgument } from '../../contracts/debate-types';
+import { DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
 
 export interface ClaimEntry {
     agentName: string;
@@ -133,7 +134,7 @@ export function buildDebateStatePrompt(
     state: DebateState,
     participantName: string,
     round: number,
-    language = 'Russian',
+    language = DEFAULT_DEBATE_LANGUAGE,
 ): string {
     const parts: string[] = [];
     const strategy = ROUND_STRATEGIES[String(Math.min(round, 5))] || ROUND_STRATEGIES['5'];

@@ -26,8 +26,7 @@ import type {
     EpistemicLoopResult,
     SourceType,
 } from '../../kernel/contracts/research-engine';
-import { researchEngine } from '../../kernel/instances';
-import { sourceAdapterRegistry } from '../../kernel/services/research-adapters/source-adapter-registry';
+import { researchEngine, sourceAdapterRegistry } from '../../kernel/instances';
 
 const SOURCE_COLORS: Record<string, string> = {
     duckduckgo: '#de5833',

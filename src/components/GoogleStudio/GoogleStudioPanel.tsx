@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { googleGenAIService } from '../../kernel/services/google-genai-service';
+import { googleGenAIService } from '../../kernel/instances';
 import {
     Shield,
     Brain,

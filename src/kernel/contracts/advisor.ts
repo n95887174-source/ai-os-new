@@ -1,11 +1,11 @@
 // ── Pressure Engine ────────────────────────────────────────────────────
 
-export type PressureLevel = 'critical' | 'high' | 'medium' | 'low' | 'none';
+export type AdvisorPressureLevel = 'critical' | 'high' | 'medium' | 'low' | 'none';
 
 export interface ProviderPressure {
     readonly id: string;
     readonly label: string;
-    readonly level: PressureLevel;
+    readonly level: AdvisorPressureLevel;
     readonly score: number;
     readonly status: 'healthy' | 'degraded' | 'offline';
     readonly reliability: number;
@@ -24,7 +24,7 @@ export interface ProviderPressure {
 }
 
 export interface GlobalPressure {
-    readonly level: PressureLevel;
+    readonly level: AdvisorPressureLevel;
     readonly score: number;
     readonly totalKeys: number;
     readonly activeKeys: number;

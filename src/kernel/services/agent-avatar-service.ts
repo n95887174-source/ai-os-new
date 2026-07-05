@@ -8,172 +8,211 @@ import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('AgentAvatar');
 
 export interface AvatarConfig {
-  emojiPool: string[];
-  colorPool: string[];
-  shape: 'circle' | 'square' | 'rounded';
+    emojiPool: string[];
+    colorPool: string[];
+    shape: 'circle' | 'square' | 'rounded';
 }
 
 const DEFAULT_CONFIG: AvatarConfig = {
-  emojiPool: ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '⚫', '⚪', '🟤', '🔺', '🔸', '💎', '⭐', '🌙', '🔥', '💫', '🌊', '🌿', '🎯', '🎪'],
-  colorPool: ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b', '#8e44ad', '#27ae60'],
-  shape: 'circle',
+    emojiPool: [
+        '🔴',
+        '🔵',
+        '🟢',
+        '🟡',
+        '🟣',
+        '🟠',
+        '⚫',
+        '⚪',
+        '🟤',
+        '🔺',
+        '🔸',
+        '💎',
+        '⭐',
+        '🌙',
+        '🔥',
+        '💫',
+        '🌊',
+        '🌿',
+        '🎯',
+        '🎪',
+    ],
+    colorPool: [
+        '#3498db',
+        '#e74c3c',
+        '#2ecc71',
+        '#f39c12',
+        '#9b59b6',
+        '#1abc9c',
+        '#e67e22',
+        '#34495e',
+        '#16a085',
+        '#c0392b',
+        '#8e44ad',
+        '#27ae60',
+    ],
+    shape: 'circle',
 };
 
 export interface Avatar {
-  emoji: string;
-  color: string;
-  initials: string;
-  seed: string;
+    emoji: string;
+    color: string;
+    initials: string;
+    seed: string;
 }
 
-class AgentAvatarService {
-  private config: AvatarConfig;
-  private customAvatars: Map<string, { emoji: string; color: string }> = new Map();
+export class AgentAvatarService {
+    private config: AvatarConfig;
+    private customAvatars: Map<string, { emoji: string; color: string }> = new Map();
 
-  constructor(config: Partial<AvatarConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
-  }
-
-  /**
-   * Generate deterministic avatar from agent ID
-   */
-  generate(agentId: string): Avatar {
-    // Check for custom avatar first
-    const custom = this.customAvatars.get(agentId);
-    if (custom) {
-      return {
-        ...custom,
-        initials: this.getInitials(agentId),
-        seed: agentId,
-      };
+    constructor(config: Partial<AvatarConfig> = {}) {
+        this.config = { ...DEFAULT_CONFIG, ...config };
     }
 
-    // Generate deterministic values from ID
-    const hash = this.hashString(agentId);
-    
-    const emojiIndex = hash % this.config.emojiPool.length;
-    const colorIndex = (hash >> 4) % this.config.colorPool.length;
+    /**
+     * Generate deterministic avatar from agent ID
+     */
+    generate(agentId: string): Avatar {
+        // Check for custom avatar first
+        const custom = this.customAvatars.get(agentId);
+        if (custom) {
+            return {
+                ...custom,
+                initials: this.getInitials(agentId),
+                seed: agentId,
+            };
+        }
 
-    const emoji = this.config.emojiPool[emojiIndex];
-    const color = this.config.colorPool[colorIndex];
-    const initials = this.getInitials(agentId);
+        // Generate deterministic values from ID
+        const hash = this.hashString(agentId);
 
-    return {
-      emoji,
-      color,
-      initials,
-      seed: agentId,
-    };
-  }
+        const emojiIndex = hash % this.config.emojiPool.length;
+        const colorIndex = (hash >> 4) % this.config.colorPool.length;
 
-  /**
-   * Generate CSS for avatar
-   */
-  getAvatarCSS(avatar: Avatar): Record<string, string> {
-    return {
-      backgroundColor: avatar.color,
-      borderRadius: this.config.shape === 'circle' ? '50%' : this.config.shape === 'rounded' ? '30%' : '8px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '1.2em',
-      color: '#fff',
-      fontWeight: 'bold',
-      textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-    };
-  }
+        const emoji = this.config.emojiPool[emojiIndex];
+        const color = this.config.colorPool[colorIndex];
+        const initials = this.getInitials(agentId);
 
-  /**
-   * Set custom avatar for an agent
-   */
-  setCustomAvatar(agentId: string, emoji: string, color: string): void {
-    this.customAvatars.set(agentId, { emoji, color });
-    LOGGER.info('AgentAvatar', 'Custom avatar set', { agentId, emoji, color });
-  }
-
-  /**
-   * Get custom avatar for an agent
-   */
-  getCustomAvatar(agentId: string): { emoji: string; color: string } | undefined {
-    return this.customAvatars.get(agentId);
-  }
-
-  /**
-   * Remove custom avatar (revert to deterministic)
-   */
-  removeCustomAvatar(agentId: string): void {
-    this.customAvatars.delete(agentId);
-    LOGGER.info('AgentAvatar', 'Custom avatar removed', { agentId });
-  }
-
-  /**
-   * Get available emojis for selection
-   */
-  getAvailableEmojis(): string[] {
-    return [...this.config.emojiPool];
-  }
-
-  /**
-   * Get available colors for selection
-   */
-  getAvailableColors(): string[] {
-    return [...this.config.colorPool];
-  }
-
-  /**
-   * Generate avatar preview (for UI selection)
-   */
-  generatePreview(seed: string): Avatar {
-    const hash = this.hashString(seed + '-preview');
-    
-    const emojiIndex = hash % this.config.emojiPool.length;
-    const colorIndex = (hash >> 4) % this.config.colorPool.length;
-
-    return {
-      emoji: this.config.emojiPool[emojiIndex],
-      color: this.config.colorPool[colorIndex],
-      initials: this.getInitials(seed),
-      seed,
-    };
-  }
-
-  private getInitials(agentId: string): string {
-    // Extract meaningful initials from agent ID
-    const words = agentId
-      .replace(/[^a-zA-Z\s]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length > 0)
-      .slice(0, 2);
-
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
+        return {
+            emoji,
+            color,
+            initials,
+            seed: agentId,
+        };
     }
 
-    if (words.length === 1 && words[0].length >= 2) {
-      return words[0].substring(0, 2).toUpperCase();
+    /**
+     * Generate CSS for avatar
+     */
+    getAvatarCSS(avatar: Avatar): Record<string, string> {
+        return {
+            backgroundColor: avatar.color,
+            borderRadius:
+                this.config.shape === 'circle'
+                    ? '50%'
+                    : this.config.shape === 'rounded'
+                      ? '30%'
+                      : '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.2em',
+            color: '#fff',
+            fontWeight: 'bold',
+            textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+        };
     }
 
-    // Fallback: first 2 chars of hash
-    return agentId.substring(0, 2).toUpperCase();
-  }
-
-  private hashString(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+    /**
+     * Set custom avatar for an agent
+     */
+    setCustomAvatar(agentId: string, emoji: string, color: string): void {
+        this.customAvatars.set(agentId, { emoji, color });
+        LOGGER.info('AgentAvatar', 'Custom avatar set', { agentId, emoji, color });
     }
-    return Math.abs(hash);
-  }
 
-  /**
-   * Clear all custom avatars
-   */
-  clearCustomAvatars(): void {
-    this.customAvatars.clear();
-    LOGGER.info('AgentAvatar', 'All custom avatars cleared');
-  }
+    /**
+     * Get custom avatar for an agent
+     */
+    getCustomAvatar(agentId: string): { emoji: string; color: string } | undefined {
+        return this.customAvatars.get(agentId);
+    }
+
+    /**
+     * Remove custom avatar (revert to deterministic)
+     */
+    removeCustomAvatar(agentId: string): void {
+        this.customAvatars.delete(agentId);
+        LOGGER.info('AgentAvatar', 'Custom avatar removed', { agentId });
+    }
+
+    /**
+     * Get available emojis for selection
+     */
+    getAvailableEmojis(): string[] {
+        return [...this.config.emojiPool];
+    }
+
+    /**
+     * Get available colors for selection
+     */
+    getAvailableColors(): string[] {
+        return [...this.config.colorPool];
+    }
+
+    /**
+     * Generate avatar preview (for UI selection)
+     */
+    generatePreview(seed: string): Avatar {
+        const hash = this.hashString(seed + '-preview');
+
+        const emojiIndex = hash % this.config.emojiPool.length;
+        const colorIndex = (hash >> 4) % this.config.colorPool.length;
+
+        return {
+            emoji: this.config.emojiPool[emojiIndex],
+            color: this.config.colorPool[colorIndex],
+            initials: this.getInitials(seed),
+            seed,
+        };
+    }
+
+    private getInitials(agentId: string): string {
+        // Extract meaningful initials from agent ID
+        const words = agentId
+            .replace(/[^a-zA-Z\s]/g, ' ')
+            .split(/\s+/)
+            .filter((w) => w.length > 0)
+            .slice(0, 2);
+
+        if (words.length >= 2) {
+            return (words[0][0] + words[1][0]).toUpperCase();
+        }
+
+        if (words.length === 1 && words[0].length >= 2) {
+            return words[0].substring(0, 2).toUpperCase();
+        }
+
+        // Fallback: first 2 chars of hash
+        return agentId.substring(0, 2).toUpperCase();
+    }
+
+    private hashString(str: string): number {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = (hash << 5) - hash + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash);
+    }
+
+    /**
+     * Clear all custom avatars
+     */
+    clearCustomAvatars(): void {
+        this.customAvatars.clear();
+        LOGGER.info('AgentAvatar', 'All custom avatars cleared');
+    }
 }
 
 // Singleton instance

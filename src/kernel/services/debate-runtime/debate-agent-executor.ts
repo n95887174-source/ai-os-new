@@ -4,7 +4,7 @@ import type {
     IDebateSession,
     IDebateBudget,
 } from '../../contracts/debate-runtime';
-import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
+import { EVENTS } from '../../events/event-names';
 import type { IEventBus } from '../../types/interfaces';
 import type { DebateProviderResolver } from './debate-query-engine';
 import { estimateTokenCount } from '../../../llm/utils/token-counter';
@@ -52,7 +52,7 @@ export function createAgentExecutor(sessionId: string, deps: AgentExecutorDeps):
             const allowed = await budget.reserveAndRecord(sessionId, 250, 250 * 0.000002);
             if (!allowed) {
                 const action = budget.getPressureAction();
-                deps.eventBus.emit(DebateRuntimeEvents.BUDGET_PRESSURE_CHANGED, {
+                deps.eventBus.emit(EVENTS.DEBATE_BUDGET_PRESSURE_CHANGED, {
                     sessionId,
                     level: budget.getPressure(),
                     action,
@@ -76,7 +76,7 @@ export function createAgentExecutor(sessionId: string, deps: AgentExecutorDeps):
                 // D-C-07: Use estimated token count instead of hardcoded zero
                 const estimatedTokens = estimateTokenCount(content);
                 session.recordUsage(participant.agentId, estimatedTokens, 0, Math.round(latency));
-                deps.eventBus.emit(DebateRuntimeEvents.BUDGET_UPDATED, {
+                deps.eventBus.emit(EVENTS.DEBATE_BUDGET_UPDATED, {
                     sessionId,
                     pressure: budget.getPressure(),
                     used: budget.snapshot().tokensUsed,

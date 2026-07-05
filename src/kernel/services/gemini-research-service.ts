@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { rootLogger } from './logger-service';
+import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
 import type {
     IGeminiResearchService,
     GeminiEnhancedSearchResult,
@@ -163,7 +164,7 @@ const ANOMALY_PROMPT = `You are a research integrity analyst. Examine the sessio
 
 export class GeminiAugmentedResearchService implements IGeminiResearchService {
     private _initialized = false;
-    private _model = 'gemini-2.5-flash';
+    private _model = PROVIDER_DEFAULT_MODELS.gemini;
 
     constructor(
         private deps: {

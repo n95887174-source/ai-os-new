@@ -1,6 +1,5 @@
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
-import type { DatabaseService } from './database-service';
 import type {
     ISessionManager,
     SessionMeta,
@@ -8,32 +7,32 @@ import type {
     SessionType,
     SessionStatus,
     SessionFilters,
-    SessionLink,
-    DebateTimelineEntry,
-    DebateOverride,
 } from '../contracts/session-manager';
 import type { DebateSession } from '../contracts/debate-types';
 import type { DebateSessionRecord, DebateStore } from '../contracts/storage/debate-store';
-import type { ChatSession } from '../contracts/storage/session-store';
+import type { ChatSession, SessionStore } from '../contracts/storage/session-store';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import { loadHistoryList, persistHistoryList } from './debate-runtime/debate-session-persistence';
+import { DebateTimelineRepository } from '../dal/debate-timeline-repository';
+import { DebateOverrideRepository } from '../dal/debate-override-repository';
+import { SessionLinkRepository } from '../dal/session-link-repository';
 
 const LOGGER = rootLogger.child('SessionManagerService');
 
 export class SessionManagerService implements ISessionManager {
-    private db: DatabaseService;
-    private eventBus: IEventBus;
-    private debateStore: DebateStore;
     private completedSessions: DebateSession[] = [];
     private readonly MAX_HISTORY = 20;
     private _historyLoaded = false;
 
-    constructor(db: DatabaseService, eventBus: IEventBus, debateStore: DebateStore) {
-        this.db = db;
-        this.eventBus = eventBus;
-        this.debateStore = debateStore;
-    }
+    constructor(
+        private sessionStore: SessionStore,
+        private debateStore: DebateStore,
+        private eventBus: IEventBus,
+        private timelineRepo: DebateTimelineRepository,
+        private overrideRepo: DebateOverrideRepository,
+        private linkRepo: SessionLinkRepository,
+    ) {}
 
     async create(
         type: SessionType,
@@ -93,24 +92,24 @@ export class SessionManagerService implements ISessionManager {
                 isArchived: false,
                 isPinned: false,
             };
-            await this.db.sessions.put(session as ChatSession);
+            await this.sessionStore.put(session);
         }
 
         return id;
     }
 
     async load(id: string): Promise<SessionMeta | null> {
-        const debate = await this.db.debateSessions.get(id);
+        const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             const meta = this.recordToMeta(debate, 'debate');
-            const links = await this.getLinked(id);
+            const links = await this.linkRepo.getByEitherId(id);
             meta.linkedSessionIds = links.map((l) => (l.fromId === id ? l.toId : l.fromId));
             return meta;
         }
-        const chat = await this.db.sessions.get(id);
+        const chat = await this.sessionStore.getSession(id);
         if (chat) {
             const meta = this.chatToMeta(chat);
-            const links = await this.getLinked(id);
+            const links = await this.linkRepo.getByEitherId(id);
             meta.linkedSessionIds = links.map((l) => (l.fromId === id ? l.toId : l.fromId));
             return meta;
         }
@@ -118,9 +117,6 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async save(id: string): Promise<void> {
-        // Save is a no-op at the SessionManager level — individual services
-        // (DebateEngine, ChatService) handle their own persistence.
-        // This method exists for future bulk-save coordination.
         const existing = await this.load(id);
         if (!existing) {
             LOGGER.warn('SessionManagerService', `save: session ${id} not found`);
@@ -128,7 +124,7 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async pause(id: string): Promise<void> {
-        const debate = await this.db.debateSessions.get(id);
+        const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             await this.debateStore.saveSnapshot({
                 ...debate,
@@ -141,7 +137,7 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async resume(id: string): Promise<void> {
-        const debate = await this.db.debateSessions.get(id);
+        const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             await this.debateStore.saveSnapshot({
                 ...debate,
@@ -160,8 +156,8 @@ export class SessionManagerService implements ISessionManager {
         const shouldIncludeChats = !filters.type || filters.type === 'chat';
 
         if (shouldIncludeDebates) {
-            const collection = this.db.debateSessions.orderBy('updatedAt').reverse();
-            let records = await collection.toArray();
+            let records = await this.debateStore.listAllSessions();
+            records.sort((a, b) => b.updatedAt - a.updatedAt);
 
             if (filters.status) {
                 records = records.filter((r) => r.phase === filters.status);
@@ -187,8 +183,8 @@ export class SessionManagerService implements ISessionManager {
         }
 
         if (shouldIncludeChats) {
-            const collection = this.db.sessions.orderBy('updatedAt').reverse();
-            let records = await collection.toArray();
+            let records = await this.sessionStore.listAll();
+            records.sort((a, b) => b.updatedAt - a.updatedAt);
 
             if (filters.status) {
                 records = records.filter((r) => this.mapChatStatus(r) === filters.status);
@@ -218,7 +214,7 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async archive(id: string): Promise<void> {
-        const debate = await this.db.debateSessions.get(id);
+        const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             await this.debateStore.saveSnapshot({
                 ...debate,
@@ -227,9 +223,9 @@ export class SessionManagerService implements ISessionManager {
             });
             return;
         }
-        const chat = await this.db.sessions.get(id);
+        const chat = await this.sessionStore.getSession(id);
         if (chat) {
-            await this.db.sessions.update(id, {
+            await this.sessionStore.updateSession(id, {
                 isArchived: true,
                 updatedAt: Date.now(),
             } as Partial<ChatSession>);
@@ -239,7 +235,7 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async unarchive(id: string): Promise<void> {
-        const debate = await this.db.debateSessions.get(id);
+        const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             await this.debateStore.saveSnapshot({
                 ...debate,
@@ -248,9 +244,9 @@ export class SessionManagerService implements ISessionManager {
             });
             return;
         }
-        const chat = await this.db.sessions.get(id);
+        const chat = await this.sessionStore.getSession(id);
         if (chat) {
-            await this.db.sessions.update(id, {
+            await this.sessionStore.updateSession(id, {
                 isArchived: false,
                 updatedAt: Date.now(),
             } as Partial<ChatSession>);
@@ -260,65 +256,47 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async delete(id: string): Promise<void> {
-        const debate = await this.db.debateSessions.get(id);
-        const chat = debate ? null : await this.db.sessions.get(id);
+        const debate = await this.debateStore.getSnapshot(id);
+        const chat = debate ? null : await this.sessionStore.getSession(id);
         const type: SessionType = debate ? 'debate' : chat ? 'chat' : 'chat';
 
-        // P0-12: cancel any running debate BEFORE deleting records
-        // Prevents zombie debates that continue generating tokens after session deletion
         try {
             (await import('../instances')).debateEngine.cancelSession(id);
         } catch {
-            /* ignore — session may not be managed by debate engine */
+            /* ignore */
         }
 
         await Promise.allSettled([
             this.debateStore.deleteSession(id).catch((e) => {
                 LOGGER.error('SessionManager', 'delete debateStore failed', { id, error: e });
             }),
-            this.db.sessions.delete(id).catch((e) => {
+            this.sessionStore.deleteSession(id).catch((e) => {
                 LOGGER.error('SessionManager', 'delete sessions failed', { id, error: e });
             }),
-            this.db.debateTimeline
-                .where('sessionId')
-                .equals(id)
-                .delete()
-                .catch((e) => {
-                    LOGGER.error('SessionManager', 'delete debateTimeline failed', {
-                        id,
-                        error: e,
-                    });
-                }),
-            this.db.debateOverrides
-                .where('sessionId')
-                .equals(id)
-                .delete()
-                .catch((e) => {
-                    LOGGER.error('SessionManager', 'delete debateOverrides failed', {
-                        id,
-                        error: e,
-                    });
-                }),
-            this.db.sessionLinks
-                .where('fromId')
-                .equals(id)
-                .delete()
-                .catch((e) => {
-                    LOGGER.error('SessionManager', 'delete sessionLinks(from) failed', {
-                        id,
-                        error: e,
-                    });
-                }),
-            this.db.sessionLinks
-                .where('toId')
-                .equals(id)
-                .delete()
-                .catch((e) => {
-                    LOGGER.error('SessionManager', 'delete sessionLinks(to) failed', {
-                        id,
-                        error: e,
-                    });
-                }),
+            this.timelineRepo.deleteBySessionId(id).catch((e) => {
+                LOGGER.error('SessionManager', 'delete debateTimeline failed', {
+                    id,
+                    error: e,
+                });
+            }),
+            this.overrideRepo.deleteBySessionId(id).catch((e) => {
+                LOGGER.error('SessionManager', 'delete debateOverrides failed', {
+                    id,
+                    error: e,
+                });
+            }),
+            this.linkRepo.deleteByFromId(id).catch((e) => {
+                LOGGER.error('SessionManager', 'delete sessionLinks(from) failed', {
+                    id,
+                    error: e,
+                });
+            }),
+            this.linkRepo.deleteByToId(id).catch((e) => {
+                LOGGER.error('SessionManager', 'delete sessionLinks(to) failed', {
+                    id,
+                    error: e,
+                });
+            }),
         ]);
 
         this.eventBus.emit(EVENTS.SESSION_DELETED, { id, type });
@@ -327,30 +305,27 @@ export class SessionManagerService implements ISessionManager {
     async link(
         fromId: string,
         toId: string,
-        linkType: SessionLink['linkType'],
+        linkType: import('../contracts/session-manager').SessionLink['linkType'],
         context = '',
     ): Promise<void> {
-        const link: SessionLink = {
+        const link = {
             id: genId(),
             fromId,
             toId,
             linkType,
             context,
             createdAt: Date.now(),
-        };
-        await this.db.sessionLinks.put(link);
+        } satisfies import('../contracts/session-manager').SessionLink;
+        await this.linkRepo.put(link);
     }
 
-    async getLinked(id: string): Promise<SessionLink[]> {
-        const fromLinks = this.db.sessionLinks.where('fromId').equals(id).toArray();
-        const toLinks = this.db.sessionLinks.where('toId').equals(id).toArray();
-        const [from, to] = await Promise.all([fromLinks, toLinks]);
-        return [...from, ...to];
+    async getLinked(id: string): Promise<import('../contracts/session-manager').SessionLink[]> {
+        return this.linkRepo.getByEitherId(id);
     }
 
     async updateMeta(id: string, updates: Partial<SessionMeta>): Promise<void> {
         const now = Date.now();
-        const debate = await this.db.debateSessions.get(id);
+        const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             const updated = { ...debate, updatedAt: now };
             if (updates.title !== undefined) updated.topic = updates.title;
@@ -361,7 +336,7 @@ export class SessionManagerService implements ISessionManager {
             await this.debateStore.saveSnapshot(updated);
             return;
         }
-        const chat = await this.db.sessions.get(id);
+        const chat = await this.sessionStore.getSession(id);
         if (chat) {
             const patch: Partial<ChatSession> = { updatedAt: now };
             if (updates.title !== undefined) patch.title = updates.title;
@@ -370,13 +345,11 @@ export class SessionManagerService implements ISessionManager {
             if (updates.isArchived !== undefined) patch.isArchived = updates.isArchived;
             if (updates.isPinned !== undefined) patch.isPinned = updates.isPinned;
             if (updates.linkedDebateId !== undefined) patch.linkedDebateId = updates.linkedDebateId;
-            await this.db.sessions.update(id, patch);
+            await this.sessionStore.updateSession(id, patch);
             return;
         }
         throw new Error(`Session ${id} not found`);
     }
-
-    // ── Debate History ────────────────────────────────────────────────
 
     private async ensureHistoryLoaded(): Promise<void> {
         if (this._historyLoaded) return;
@@ -443,33 +416,37 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async addTimelineEntry(sessionId: string, type: string, payload: string): Promise<void> {
-        const entry: DebateTimelineEntry = {
+        const entry = {
             id: genId(),
             sessionId,
             timestamp: Date.now(),
             type,
             payload,
-        };
-        await this.db.debateTimeline.put(entry);
+        } satisfies import('../contracts/session-manager').DebateTimelineEntry;
+        await this.timelineRepo.put(entry);
     }
 
-    async getTimeline(sessionId: string): Promise<DebateTimelineEntry[]> {
-        return this.db.debateTimeline.where('sessionId').equals(sessionId).sortBy('timestamp');
+    async getTimeline(
+        sessionId: string,
+    ): Promise<import('../contracts/session-manager').DebateTimelineEntry[]> {
+        return this.timelineRepo.getBySessionId(sessionId);
     }
 
     async addOverride(sessionId: string, type: string, payload: string): Promise<void> {
-        const override: DebateOverride = {
+        const override = {
             id: genId(),
             sessionId,
             type,
             payload,
             appliedAt: Date.now(),
-        };
-        await this.db.debateOverrides.put(override);
+        } satisfies import('../contracts/session-manager').DebateOverride;
+        await this.overrideRepo.put(override);
     }
 
-    async getOverrides(sessionId: string): Promise<DebateOverride[]> {
-        return this.db.debateOverrides.where('sessionId').equals(sessionId).sortBy('appliedAt');
+    async getOverrides(
+        sessionId: string,
+    ): Promise<import('../contracts/session-manager').DebateOverride[]> {
+        return this.overrideRepo.getBySessionId(sessionId);
     }
 
     private recordToMeta(record: DebateSessionRecord, type: SessionType): SessionMeta {

@@ -61,5 +61,10 @@ audit/
 
 # Test results (Vitest, Playwright)
 test-results/
+test-results.json
+test-summary.txt
 playwright-report/
 playwright/.cache/
+
+# Prompt vault (dead code — superseded by prompt-store.ts)
+prompt-vault/

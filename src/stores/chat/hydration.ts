@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
+import { liveQuery } from 'dexie';
 import { useChatStore } from './store';
 import type { ChatSession } from './types';
-import { DEFAULT_SESSION, SESSION_BATCH_SIZE } from './types';
+import { DEFAULT_SESSION } from './types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
 import { runtime } from '../../kernel/runtime';
 import { BucketStorageAdapter } from '../../kernel/instances';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { getDexieDb } from '../../kernel/services/database-service';
+
 function cleanupOrphanLoading(sessions: ChatSession[]): ChatSession[] {
     let changed = false;
     const cleaned = sessions.map((s) => {
@@ -32,10 +35,13 @@ function resolveSessionStore(): SessionStore | null {
     return _sessionStore;
 }
 
+let _lqEpoch = 0;
+
 export function useChatStoreHydration(): void {
     useEffect(() => {
         let cancelled = false;
         let syncTimer: ReturnType<typeof setTimeout> | null = null;
+        let lastFlushEpoch = 0;
 
         const flush = async () => {
             if (syncTimer) {
@@ -59,134 +65,102 @@ export function useChatStoreHydration(): void {
             }
         };
 
-        const load = async () => {
-            const preloadSessions = useChatStore.getState().sessions;
-            // H1: Capture pre-load session IDs to detect concurrent user mutations during load
-            const preloadSessionIds = new Set(preloadSessions.map((s) => s.id));
+        const migrateLegacy = async () => {
+            const sStore = resolveSessionStore();
+            if (!sStore) return;
+            const legacyData = BucketStorageAdapter.getItem('super_agents_chat_sessions');
+            if (!legacyData) return;
             try {
-                if (cancelled) return;
-                const sStore = resolveSessionStore();
-                if (!sStore) {
-                    console.warn('[ChatStore] SessionStore unavailable — using default session');
-                    useChatStore.setState({ isLoaded: true });
-                    return;
+                const parsed = safeJsonParse(legacyData) as ChatSession[];
+                if (parsed.length > 0) {
+                    for (const session of parsed) {
+                        const existing = await sStore.getSession(session.id);
+                        if (!existing) await sStore.put(session);
+                    }
                 }
-                _sessionStore = sStore;
-                const total = await sStore.count();
+            } catch {
+                /* ignore corrupt localStorage data */
+            }
+            BucketStorageAdapter.removeItem('super_agents_chat_sessions');
+            BucketStorageAdapter.removeItem('super_agents_chat_sessions_ts');
+        };
 
-                const legacyData = BucketStorageAdapter.getItem('super_agents_chat_sessions');
-                if (legacyData) {
-                    try {
-                        const parsed = safeJsonParse(legacyData) as ChatSession[];
-                        if (parsed.length > 0) {
-                            // H6: Merge — don't overwrite newer Dexie data
-                            for (const session of parsed) {
-                                const existing = await sStore.getSession(session.id);
-                                if (!existing) {
-                                    await sStore.put(session);
-                                }
-                            }
-                            const migratedTotal = await sStore.count();
-                            const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
-                            useChatStore.setState({
-                                sessions: batch,
-                                activeSessionId: batch[0]?.id ?? DEFAULT_SESSION.id,
-                                hasMoreSessions: batch.length < migratedTotal,
-                            });
-                        }
-                    } catch {
-                        /* ignore corrupt localStorage data */
-                    }
-                    BucketStorageAdapter.removeItem('super_agents_chat_sessions');
-                    BucketStorageAdapter.removeItem('super_agents_chat_sessions_ts');
-                } else if (total > 0) {
-                    let batch = await sStore.listSessions(SESSION_BATCH_SIZE);
-                    // H1: If user created sessions during load, merge them in
-                    const currentSessions = useChatStore.getState().sessions;
-                    if (currentSessions !== preloadSessions) {
-                        const newLocalSessions = currentSessions.filter(
-                            (s) => !preloadSessionIds.has(s.id),
-                        );
-                        if (newLocalSessions.length > 0) {
-                            batch = [...newLocalSessions, ...batch];
-                        }
-                    }
-                    useChatStore.setState({
-                        sessions: batch,
-                        activeSessionId: batch[0]?.id ?? DEFAULT_SESSION.id,
-                        hasMoreSessions: batch.length < total,
-                    });
-                } else {
-                    await sStore.put(DEFAULT_SESSION);
-                }
-            } catch (e) {
-                console.warn(
-                    '[ChatStore] Dexie unavailable, using default session:',
-                    e instanceof Error ? e.message : e,
-                );
-            } finally {
-                if (!cancelled) {
-                    const current = useChatStore.getState().sessions;
-                    const cleaned = cleanupOrphanLoading(current);
-                    if (cleaned !== current) {
-                        const sStore = resolveSessionStore();
-                        if (sStore)
-                            sStore
-                                .syncSessions(cleaned, [])
-                                .catch((e) =>
-                                    console.warn('[ChatStore] Failed to sync orphan cleanup', e),
-                                );
-                        useChatStore.setState({ sessions: cleaned });
-                    }
-                    useChatStore.setState({ isLoaded: true, activeRequestIds: new Set() });
-
-                    // Restore backup from beforeunload — catches data that async flush
-                    // didn't persist before tab close.
-                    const backupData = BucketStorageAdapter.getItem(
-                        'super_agents_chat_sessions_backup',
-                    );
-                    if (backupData) {
-                        BucketStorageAdapter.removeItem('super_agents_chat_sessions_backup');
-                        try {
-                            const parsed = safeJsonParse(backupData) as ChatSession[];
-                            if (parsed.length > 0) {
-                                const sStore = resolveSessionStore();
-                                if (sStore) {
-                                    for (const session of parsed) {
-                                        const existing = await sStore.getSession(session.id);
-                                        if (!existing) {
-                                            await sStore.put(session);
-                                        }
-                                    }
-                                    const batch = await sStore.listSessions(SESSION_BATCH_SIZE);
-                                    useChatStore.setState({
-                                        sessions: batch,
-                                        hasMoreSessions: false,
-                                    });
-                                }
-                            }
-                        } catch {
-                            /* ignore corrupt backup */
-                        }
+        const restoreBackup = async () => {
+            const backupData = BucketStorageAdapter.getItem('super_agents_chat_sessions_backup');
+            if (!backupData) return;
+            BucketStorageAdapter.removeItem('super_agents_chat_sessions_backup');
+            const sStore = resolveSessionStore();
+            if (!sStore) return;
+            try {
+                const parsed = safeJsonParse(backupData) as ChatSession[];
+                if (parsed.length > 0) {
+                    for (const session of parsed) {
+                        const existing = await sStore.getSession(session.id);
+                        if (!existing) await sStore.put(session);
                     }
                 }
+            } catch {
+                /* ignore corrupt backup */
             }
         };
 
-        load();
+        migrateLegacy();
+        restoreBackup();
 
-        const unsubPersist = useChatStore.subscribe((state, prevState) => {
-            if (!state.isLoaded) return;
-            // Flush immediately on critical operations (session change, message send)
-            if (
-                state.activeSessionId !== prevState.activeSessionId ||
-                state.sessions.length !== prevState.sessions.length
-            ) {
-                if (syncTimer) {
-                    clearTimeout(syncTimer);
-                    syncTimer = null;
+        const db = getDexieDb();
+        const observable = liveQuery(() => db.sessions.orderBy('updatedAt').reverse().toArray());
+        const subscription = observable.subscribe({
+            next: (sessions: ChatSession[]) => {
+                if (cancelled) return;
+                _lqEpoch++;
+                const current = useChatStore.getState();
+
+                if (!current.isLoaded) {
+                    const cleaned = cleanupOrphanLoading(sessions);
+                    useChatStore.setState({
+                        sessions: cleaned,
+                        activeSessionId: cleaned[0]?.id ?? DEFAULT_SESSION.id,
+                        hasMoreSessions: false,
+                        isLoaded: true,
+                        activeRequestIds: new Set(),
+                    });
+                    return;
                 }
-                flush();
+
+                const currentMap = new Map(current.sessions.map((s) => [s.id, s]));
+                let changed = sessions.length !== current.sessions.length;
+                if (!changed) {
+                    for (const cs of sessions) {
+                        const cur = currentMap.get(cs.id);
+                        if (!cur || cur.updatedAt !== cs.updatedAt) {
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+                if (!changed) return;
+
+                const merged = [...sessions];
+                for (const [id, cur] of currentMap) {
+                    if (!merged.find((s) => s.id === id)) {
+                        merged.push(cur);
+                    }
+                }
+                useChatStore.setState({ sessions: merged, hasMoreSessions: false });
+            },
+            error: (err: unknown) => {
+                console.warn('[ChatStore] liveQuery error:', err);
+                if (!useChatStore.getState().isLoaded) {
+                    useChatStore.setState({ isLoaded: true });
+                }
+            },
+        });
+
+        const unsubPersist = useChatStore.subscribe((state) => {
+            if (!state.isLoaded) return;
+            // Skip flush if latest state was set by liveQuery (data already in Dexie)
+            if (_lqEpoch !== lastFlushEpoch) {
+                lastFlushEpoch = _lqEpoch;
                 return;
             }
             if (syncTimer) clearTimeout(syncTimer);
@@ -200,7 +174,7 @@ export function useChatStoreHydration(): void {
 
         const handleBeforeUnload = () => {
             const state = useChatStore.getState();
-            if (state.activeSessionId && state.sessions.length > 0) {
+            if (state.sessions.length > 0) {
                 BucketStorageAdapter.setItem(
                     'super_agents_chat_sessions_backup',
                     JSON.stringify(state.sessions),
@@ -211,6 +185,7 @@ export function useChatStoreHydration(): void {
 
         return () => {
             cancelled = true;
+            subscription.unsubscribe();
             if (syncTimer) clearTimeout(syncTimer);
             unsubPersist();
             document.removeEventListener('visibilitychange', handleVisibility);

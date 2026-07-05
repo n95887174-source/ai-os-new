@@ -1,3 +1,4 @@
+import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
 import type {
     SmartRoutingConfig,
     RoutingRule,
@@ -7,7 +8,7 @@ import type {
 
 const DEFAULT_CONFIG: SmartRoutingConfig = {
     defaultProvider: 'openrouter',
-    defaultModel: 'gpt-3.5-turbo',
+    defaultModel: PROVIDER_DEFAULT_MODELS.openai ?? 'gpt-4o',
     rules: [],
     enableAutoRouting: true,
     enableFallback: true,

@@ -9,7 +9,6 @@ export const SystemEvents = {
     KERNEL_UPDATED: EVENT_REGISTRY.KERNEL_UPDATED.name,
     KERNEL_HEARTBEAT: EVENT_REGISTRY.KERNEL_HEARTBEAT.name,
     KERNEL_STATE_RESET: EVENT_REGISTRY.KERNEL_STATE_RESET.name,
-    BOOTSTRAP_PHASE: EVENT_REGISTRY.BOOTSTRAP_PHASE.name,
     RUNTIME_READY: EVENT_REGISTRY.RUNTIME_READY.name,
     RUNTIME_FAILED: EVENT_REGISTRY.RUNTIME_FAILED.name,
     EVENTBUS_BACKPRESSURE: EVENT_REGISTRY.EVENTBUS_BACKPRESSURE.name,
@@ -28,14 +27,13 @@ export type SystemEventMap = Pick<
     | 'kernel:updated'
     | 'kernel:heartbeat'
     | 'kernel:state:reset'
-    | 'kernel:bootstrap:phase'
     | 'system:runtime:ready'
     | 'system:runtime:failed'
     | 'system:eventbus:backpressure'
     | 'system:data:clear'
     | 'system:reload'
-    | 'kernel:load-failed'
-    | 'kernel:persist-failed'
+    | 'kernel:load:failed'
+    | 'kernel:persist:failed'
     | 'system:runtime:metrics'
 >;
 

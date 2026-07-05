@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { create } from 'zustand';
+import { useMemo } from 'react';
+import { liveQuery } from 'dexie';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import { keyService, groupManager } from '../kernel/instances';
+import { getDexieDb } from '../kernel/services/database-service';
 import type { ApiKey, KeyNote, ProviderAlert } from '../types/metrics';
-import { safeJsonParse } from '../kernel/utils/safe-json';
 
 export interface KeyMeta {
     backoff: boolean;
@@ -20,31 +22,28 @@ export interface KeyStoreState {
     activeCount: number;
     errorCount: number;
     keyMeta: Map<string, KeyMeta>;
+    isLoaded: boolean;
 }
 
 export interface KeyStoreActions {
-    addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => void;
+    addKey: (data: Omit<ApiKey, 'id' | 'stats'>) => Promise<void>;
     removeKey: (id: string) => Promise<void>;
-    updateKey: (id: string, data: Partial<ApiKey>) => void;
+    updateKey: (id: string, data: Partial<ApiKey>) => Promise<void>;
     checkHealth: (id: string) => void;
     checkAllHealth: () => void;
-    toggleKeyStatus: (id: string) => void;
-    enableAllKeys: () => void;
-    disableAllKeys: () => void;
+    toggleKeyStatus: (id: string) => Promise<void>;
+    enableAllKeys: () => Promise<void>;
+    disableAllKeys: () => Promise<void>;
     exportKeys: () => Promise<string>;
     importKeys: (jsonData: string) => Promise<number>;
     getKeyById: (id: string) => ApiKey | undefined;
     getKeysByProvider: (provider: string) => ApiKey[];
     getAlerts: () => ProviderAlert[];
     resolveAlert: (alertId: string) => void;
+    refresh: () => void;
 }
 
-type Store = {
-    keys: ApiKey[];
-    alerts: ProviderAlert[];
-    checkingIds: Set<string>;
-    keyMeta: Map<string, KeyMeta>;
-};
+type Store = KeyStoreState & KeyStoreActions;
 
 const VALID_KEY_STATUSES = new Set<ApiKey['status']>([
     'active',
@@ -69,7 +68,6 @@ function isStringArray(value: unknown): value is string[] {
 function parseNotes(value: unknown): KeyNote[] | undefined {
     if (!value) return undefined;
     if (Array.isArray(value)) {
-        // Validate each item has required KeyNote fields
         const valid: KeyNote[] = [];
         for (const item of value) {
             if (item && typeof item === 'object' && !Array.isArray(item)) {
@@ -89,7 +87,7 @@ function parseNotes(value: unknown): KeyNote[] | undefined {
     }
     if (typeof value === 'string') {
         try {
-            const parsed = safeJsonParse(value);
+            const parsed = JSON.parse(value);
             return parseNotes(parsed);
         } catch {
             return undefined;
@@ -155,155 +153,65 @@ function parseImportedKey(item: unknown): ImportedKeyInput | null {
     return imported;
 }
 
-function getInitialKeys(): ApiKey[] {
-    // Guard: service proxy returns safe stub until runtime.start() completes.
-    // groupManager.ready is false at module-load time; keys populate via refreshKeyStore() after bootstrap.
-    try {
-        if (!groupManager?.ready) {
-            return [];
-        }
-        const fromService = groupManager?.getAllKeys?.();
-        if (fromService && fromService.length > 0) return fromService;
-    } catch {
-        /* runtime not ready yet — return empty, populate later */
-    }
-    return [];
+function computeActiveKeys(keys: ApiKey[]): ApiKey[] {
+    return keys.filter((k) => k.status === 'active');
+}
+function computeActiveCount(keys: ApiKey[]): number {
+    return keys.reduce((acc, k) => acc + (k.status === 'active' ? 1 : 0), 0);
+}
+function computeErrorCount(keys: ApiKey[]): number {
+    return keys.reduce((acc, k) => acc + (k.status === 'error' ? 1 : 0), 0);
 }
 
-// Module-level store for selector-based subscriptions
-let store: Readonly<Store> = {
-    keys: getInitialKeys(),
-    alerts: keyService.getAlerts ? keyService.getAlerts() : [],
-    checkingIds: new Set(),
-    keyMeta: new Map(),
-};
-const storeListeners = new Set<() => void>();
-
-function setStore(partial: Partial<Store>) {
-    store = { ...store, ...partial };
-    storeListeners.forEach((l) => l());
-    // OBS-75: emit gauge metrics on store change
-    try {
-        let activeCount = 0;
-        let errorCount = 0;
-        for (const k of store.keys) {
-            if (k.status === 'active') activeCount++;
-            else if (k.status === 'error') errorCount++;
-        }
-        eventBus.emit(EVENTS.KEY_STORE_GAUGES, {
-            activeCount,
-            errorCount,
-            alertCount: store.alerts.length,
-            totalCount: store.keys.length,
-        });
-    } catch {
-        /* best-effort */
-    }
-}
-
-// Exported for external sync (e.g., #reset in main.tsx)
-export function refreshKeyStore() {
-    try {
-        if (groupManager?.ready) {
-            setStore({ keys: [...(groupManager?.getAllKeys?.() || [])] });
-        }
-    } catch {
-        /* not ready yet */
-    }
-}
-
-function subscribeToStore(cb: () => void) {
-    storeListeners.add(cb);
-    return () => {
-        storeListeners.delete(cb);
-    };
-}
-
-// Selector hook — subscribers only re-render when their selector output changes
-export function useKeySelector<T>(selector: (s: Store) => T): T {
-    return useSyncExternalStore(subscribeToStore, () => selector(store));
-}
-
-// Convenience: hook for just keys + activeKeys (most common use case)
-export function useKeyList(): { keys: ApiKey[]; activeKeys: ApiKey[] } {
-    const keys = useKeySelector((s) => s.keys);
-    const activeKeys = useMemo(() => keys.filter((k) => k.status === 'active'), [keys]);
-    return useMemo(() => ({ keys, activeKeys }), [keys, activeKeys]);
-}
-
-// Convenience: hook for just checkingIds
-export function useCheckingIds(): Set<string> {
-    return useKeySelector((s) => s.checkingIds);
-}
-
-// Initialize event subscriptions (called once)
+let liveSub: { unsubscribe: () => void } | null = null;
 let initialized = false;
 const unsubs: (() => void)[] = [];
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-function cleanupKeyStore() {
-    for (const unsub of unsubs) unsub();
-    unsubs.length = 0;
-    if (pollTimer !== null) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-    }
-    if (typeof window !== 'undefined') {
-        window.removeEventListener('beforeunload', cleanupKeyStore);
-    }
-    try {
-        keyService.destroy?.();
-    } catch {
-        /* ignore during shutdown */
-    }
-    initialized = false;
-}
 
-// Wire cleanup to lifecycle events so subscriptions and the polling
-// timer don't leak across HMR reloads, page navigations, or test
-// teardowns.  Without this, `unsubs` and `pollTimer` accumulate and
-// produce "phantom" UI updates from stale handlers.
-if (typeof window !== 'undefined') {
-    window.addEventListener('beforeunload', cleanupKeyStore);
-    // Expose for Vite HMR dispose hook in main.tsx.
-    (window as unknown as { __cleanupKeyStore?: () => void }).__cleanupKeyStore = cleanupKeyStore;
-}
-const safeKeys = () => groupManager?.getAllKeys?.() || [];
-
-function ensureInitialized() {
+function ensureInitialized(
+    set: (partial: Partial<Store> | ((prev: Store) => Partial<Store>)) => void,
+) {
     if (initialized) return;
     initialized = true;
 
-    unsubs.push(
-        eventBus.on(EVENTS.KEYS_LOADED, () => {
-            queueMicrotask(() => {
-                const next = safeKeys();
-                if (
-                    next.length !== store.keys.length ||
-                    next.some((k, i) => k.id !== store.keys[i]?.id)
-                ) {
-                    setStore({ keys: next });
-                }
-            });
-        }),
-    );
-
-    unsubs.push(
-        eventBus.on(EVENTS.KEY_UPDATED, () => {
-            queueMicrotask(() => {
-                const next = safeKeys();
-                if (
-                    next.length !== store.keys.length ||
-                    next.some((k, i) => k.id !== store.keys[i]?.id)
-                ) {
-                    setStore({ keys: next });
-                }
-            });
-        }),
-    );
+    const db = getDexieDb();
+    const observable = liveQuery(() => db.apiKeys.toArray());
+    liveSub = observable.subscribe({
+        next: (keys: ApiKey[]) => {
+            set(() => ({
+                keys,
+                activeKeys: computeActiveKeys(keys),
+                isLoaded: true,
+            }));
+            try {
+                const activeCount = computeActiveCount(keys);
+                const errorCount = computeErrorCount(keys);
+                eventBus.emit(EVENTS.KEY_STORE_GAUGES, {
+                    activeCount,
+                    errorCount,
+                    alertCount: 0,
+                    totalCount: keys.length,
+                });
+            } catch {
+                /* best-effort */
+            }
+        },
+        error: (err: unknown) => {
+            console.warn('[KeyStore] liveQuery error:', err);
+            const fallback = groupManager?.getAllKeys?.() || [];
+            if (fallback.length > 0) {
+                set(() => ({
+                    keys: fallback,
+                    activeKeys: computeActiveKeys(fallback),
+                    isLoaded: true,
+                }));
+            }
+        },
+    });
 
     const refreshAlerts = () => {
-        if (keyService.getAlerts)
-            queueMicrotask(() => setStore({ alerts: keyService.getAlerts() }));
+        if (keyService.getAlerts) {
+            set(() => ({ alerts: keyService.getAlerts() }));
+        }
     };
     unsubs.push(eventBus.on(EVENTS.KEY_LATENCY_BURST, refreshAlerts));
     unsubs.push(eventBus.on(EVENTS.KEY_HEALTH_CHECK_FAILED, refreshAlerts));
@@ -312,328 +220,228 @@ function ensureInitialized() {
 
     unsubs.push(
         eventBus.onSafe<{ id: string }>(EVENTS.KEY_STATE_CHANGED, (data) => {
-            queueMicrotask(() => {
-                // RC-04: Batch keys + keyMeta into a single setStore to avoid race
-                const next = safeKeys();
-                const keysChanged =
-                    next.length !== store.keys.length ||
-                    next.some((k, i) => k.id !== store.keys[i]?.id);
-                const patch: Partial<KeyStoreState> = { keys: keysChanged ? next : store.keys };
-                if (data?.id) {
-                    const meta = keyService.isKeyInBackoff(data.id);
-                    const key = keyService.getKey(data.id);
-                    const errorCount = key?.stats?.errorCount ?? 0;
-                    // STATE-M3: Clear expired backoff entries
-                    if (!meta.backoff || meta.remainingMs <= 0) {
-                        const nextMeta = new Map(store.keyMeta);
-                        nextMeta.delete(data.id);
-                        patch.keyMeta = nextMeta;
-                    } else {
-                        const nextMeta = new Map(store.keyMeta);
-                        nextMeta.set(data.id, {
-                            backoff: meta.backoff,
-                            backoffRemainingMs: meta.remainingMs,
-                            consecutiveErrors: errorCount,
-                        });
-                        patch.keyMeta = nextMeta;
-                    }
+            if (!data?.id) return;
+            const meta = keyService.isKeyInBackoff(data.id);
+            const key = keyService.getKey(data.id);
+            const errorCount = key?.stats?.errorCount ?? 0;
+            set((state) => {
+                const nextMeta = new Map(state.keyMeta);
+                if (!meta.backoff || meta.remainingMs <= 0) {
+                    nextMeta.delete(data.id);
+                } else {
+                    nextMeta.set(data.id, {
+                        backoff: meta.backoff,
+                        backoffRemainingMs: meta.remainingMs,
+                        consecutiveErrors: errorCount,
+                    });
                 }
-                setStore(patch as KeyStoreState);
+                return { keyMeta: nextMeta };
             });
-        }),
-    );
-
-    unsubs.push(
-        eventBus.on(EVENTS.KEY_ADDED, () => {
-            queueMicrotask(() => {
-                const next = safeKeys();
-                if (
-                    next.length !== store.keys.length ||
-                    next.some((k, i) => k.id !== store.keys[i]?.id)
-                ) {
-                    setStore({ keys: next });
-                }
-            });
-        }),
-    );
-
-    unsubs.push(
-        eventBus.on(EVENTS.KEY_REMOVED, () => {
-            queueMicrotask(() => {
-                const next = safeKeys();
-                if (
-                    next.length !== store.keys.length ||
-                    next.some((k, i) => k.id !== store.keys[i]?.id)
-                ) {
-                    setStore({ keys: next });
-                }
-            });
-        }),
-    );
-
-    // Refresh after passport sync (bootstrap completes)
-    unsubs.push(
-        eventBus.on(EVENTS.GROUP_SYNC, () => {
-            // Defer to avoid setState-during-render in React strict mode
-            queueMicrotask(() => setStore({ keys: safeKeys() }));
         }),
     );
 
     unsubs.push(
         eventBus.on(EVENTS.KEY_HEALTH_CHECK_STARTED, (data) => {
             if (typeof data === 'string') {
-                // Defer — may fire during render
-                queueMicrotask(() =>
-                    setStore({ checkingIds: new Set(store.checkingIds).add(data) }),
-                );
+                set((state) => {
+                    const next = new Set(state.checkingIds);
+                    next.add(data);
+                    return { checkingIds: next };
+                });
             }
         }),
     );
 
     unsubs.push(
         eventBus.onSafe<{ id: string }>(EVENTS.KEY_HEALTH_CHECK_COMPLETED, (data) => {
-            const id = data.id;
-            if (id) {
-                // Defer — may fire during render
-                queueMicrotask(() => {
-                    const next = new Set(store.checkingIds);
-                    next.delete(id);
-                    setStore({ checkingIds: next });
+            if (data?.id) {
+                set((state) => {
+                    const next = new Set(state.checkingIds);
+                    next.delete(data.id);
+                    return { checkingIds: next };
                 });
             }
         }),
     );
 
-    // C-09: Subscribe to KEYS_LOADED — primary event-driven path (replaces polling)
-    unsubs.push(
-        eventBus.on(EVENTS.KEYS_LOADED, () => {
-            queueMicrotask(() => {
-                const next = safeKeys();
-                if (next.length > 0) {
-                    const nextIds = next.map((k) => k.id).join(',');
-                    const currentIds = store.keys.map((k) => k.id).join(',');
-                    if (nextIds !== currentIds) {
-                        setStore({ keys: next });
-                    }
-                }
-                // Stop polling once keys arrive via event
-                if (pollTimer !== null) {
-                    clearInterval(pollTimer);
-                    pollTimer = null;
-                }
-            });
-        }),
-    );
+    if (typeof window !== 'undefined') {
+        (window as unknown as { __cleanupKeyStore?: () => void }).__cleanupKeyStore = () => {
+            liveSub?.unsubscribe();
+            liveSub = null;
+            for (const unSub of unsubs) unSub();
+            unsubs.length = 0;
+            initialized = false;
+        };
+    }
 
-    // Defer sync setStore to avoid "Cannot update while rendering" warning
-    const latestKeys = safeKeys();
+    const latestKeys = groupManager?.getAllKeys?.() || [];
     if (latestKeys.length > 0) {
-        queueMicrotask(() => setStore({ keys: latestKeys }));
+        set(() => ({
+            keys: latestKeys,
+            activeKeys: computeActiveKeys(latestKeys),
+        }));
     }
-
-    // C-09: Polling fallback — only fires if event-driven path never arrives (edge case)
-    if (pollTimer !== null) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-    }
-    let pollAttempts = 0;
-    let pollMaxAttempts = 5;
-    pollTimer = setInterval(() => {
-        pollAttempts++;
-        const nextKeys = safeKeys();
-        if (nextKeys.length > 0 || pollAttempts >= pollMaxAttempts) {
-            if (nextKeys.length > 0) {
-                const nextIds = nextKeys.map((k) => k.id).join(',');
-                const currentIds = store.keys.map((k) => k.id).join(',');
-                if (nextIds !== currentIds) {
-                    setStore({ keys: nextKeys });
-                }
-            }
-            if (pollTimer !== null) {
-                clearInterval(pollTimer);
-                pollTimer = null;
-            }
-        }
-    }, 300);
 }
 
-export const useKeyStore = (): KeyStoreState & KeyStoreActions => {
-    ensureInitialized();
+export const useKeyStore = create<Store>((set, get) => {
+    ensureInitialized(set);
 
-    const keys = useKeySelector((s) => s.keys);
-    const alerts = useKeySelector((s) => s.alerts);
-    const checkingIds = useKeySelector((s) => s.checkingIds);
+    return {
+        keys: [],
+        activeKeys: [],
+        alerts: groupManager?.ready && keyService.getAlerts ? keyService.getAlerts() : [],
+        checkingIds: new Set(),
+        keyMeta: new Map(),
+        isLoaded: false,
+        totalKeys: 0,
+        activeCount: 0,
+        errorCount: 0,
+
+        addKey: async (data) => {
+            await groupManager.createKey(data, { source: 'ui' });
+        },
+
+        removeKey: async (id) => {
+            await groupManager.deleteKey(id);
+        },
+
+        updateKey: async (id, data) => {
+            await groupManager.updateKey(id, data);
+        },
+
+        checkHealth: (id) => {
+            eventBus.emit(EVENTS.CHECK_HEALTH, id);
+        },
+
+        checkAllHealth: () => {
+            eventBus.emit(EVENTS.CHECK_ALL_HEALTH, undefined);
+        },
+
+        toggleKeyStatus: async (id) => {
+            const key = get().keys.find((k) => k.id === id);
+            if (!key) return;
+            await groupManager.syncKeyStatus(id, key.status === 'active' ? 'inactive' : 'active');
+        },
+
+        enableAllKeys: async () => {
+            const errors: string[] = [];
+            for (const k of get().keys) {
+                try {
+                    await groupManager.syncKeyStatus(k.id, 'active');
+                } catch {
+                    errors.push(k.id);
+                }
+            }
+            if (errors.length > 0) {
+                console.warn('[KeyStore] enableAllKeys: errors on', errors.length, 'keys');
+                eventBus.emit(EVENTS.METRICS_ALERT, {
+                    id: 'enable-all-keys',
+                    metric: 'partial_failure',
+                    value: errors.length,
+                    severity: 'warning',
+                    timestamp: Date.now(),
+                });
+            }
+        },
+
+        disableAllKeys: async () => {
+            const errors: string[] = [];
+            for (const k of get().keys) {
+                try {
+                    await groupManager.syncKeyStatus(k.id, 'inactive');
+                } catch {
+                    errors.push(k.id);
+                }
+            }
+            if (errors.length > 0) {
+                console.warn('[KeyStore] disableAllKeys: errors on', errors.length, 'keys');
+                eventBus.emit(EVENTS.METRICS_ALERT, {
+                    id: 'disable-all-keys',
+                    metric: 'partial_failure',
+                    value: errors.length,
+                    severity: 'warning',
+                    timestamp: Date.now(),
+                });
+            }
+        },
+
+        exportKeys: () => keyService.exportKeys(),
+
+        importKeys: async (jsonData) => {
+            const imported = JSON.parse(jsonData);
+            if (!Array.isArray(imported)) throw new Error('Invalid data format');
+            let count = 0;
+            const makeFingerprint = (provider: string, label: string, key: string) => {
+                let h = 0x811c9dc5;
+                for (let i = 0; i < key.length; i++) {
+                    h ^= key.charCodeAt(i);
+                    h = (h * 0x01000193) >>> 0;
+                }
+                return `${provider.toLowerCase()}::${label.toLowerCase()}::${h.toString(36)}`;
+            };
+            const existingFingerprints = new Set(
+                get().keys.map((k) => makeFingerprint(k.provider, k.label, k.key)),
+            );
+            for (const item of imported) {
+                const parsed = parseImportedKey(item);
+                if (!parsed) continue;
+                const fingerprint = makeFingerprint(parsed.provider, parsed.label, parsed.key);
+                if (existingFingerprints.has(fingerprint)) continue;
+                const result = await groupManager.createKey(parsed, { source: 'import' });
+                if (result.ok) {
+                    count++;
+                    existingFingerprints.add(fingerprint);
+                }
+            }
+            return count;
+        },
+
+        getKeyById: (id) => get().keys.find((k) => k.id === id),
+
+        getKeysByProvider: (provider) =>
+            get().keys.filter((k) => k.provider.toLowerCase() === provider.toLowerCase()),
+
+        getAlerts: () => (keyService.getAlerts ? keyService.getAlerts() : []),
+
+        resolveAlert: (alertId) => {
+            keyService.resolveAlert?.(alertId);
+            if (keyService.getAlerts) set(() => ({ alerts: keyService.getAlerts() }));
+        },
+
+        refresh: () => {
+            const db = getDexieDb();
+            db.apiKeys.toArray().then((keys) => {
+                set(() => ({
+                    keys,
+                    activeKeys: computeActiveKeys(keys),
+                    isLoaded: true,
+                }));
+            });
+        },
+    };
+});
+
+export function useKeyList(): { keys: ApiKey[]; activeKeys: ApiKey[] } {
+    const keys = useKeyStore((s) => s.keys);
     const activeKeys = useMemo(() => keys.filter((k) => k.status === 'active'), [keys]);
+    return useMemo(() => ({ keys, activeKeys }), [keys, activeKeys]);
+}
 
-    const addKey = useCallback(async (data: Omit<ApiKey, 'id' | 'stats'>) => {
-        await groupManager.createKey(data, { source: 'ui' });
-    }, []);
+export function useCheckingIds(): Set<string> {
+    return useKeyStore((s) => s.checkingIds);
+}
 
-    const removeKey = useCallback(async (id: string) => {
-        await groupManager.deleteKey(id);
-        setStore({ keys: safeKeys() });
-    }, []);
+export function useKeySelector<T>(selector: (s: Store) => T): T {
+    return useKeyStore(selector);
+}
 
-    const updateKey = useCallback(async (id: string, data: Partial<ApiKey>) => {
-        await groupManager.updateKey(id, data);
-        setStore({ keys: safeKeys() });
-    }, []);
-
-    const checkHealth = useCallback((id: string) => {
-        eventBus.emit(EVENTS.CHECK_HEALTH, id);
-    }, []);
-
-    const checkAllHealth = useCallback(() => {
-        eventBus.emit(EVENTS.CHECK_ALL_HEALTH, undefined);
-    }, []);
-
-    const toggleKeyStatus = useCallback(async (id: string) => {
-        const key = safeKeys().find((k) => k.id === id);
-        if (!key) return;
-        await groupManager.syncKeyStatus(id, key.status === 'active' ? 'inactive' : 'active');
-        setStore({ keys: safeKeys() });
-    }, []);
-
-    const enableAllKeys = useCallback(async () => {
-        const allKeys = safeKeys();
-        const errors: string[] = [];
-        for (const k of allKeys) {
-            try {
-                await groupManager.syncKeyStatus(k.id, 'active');
-            } catch {
-                errors.push(k.id);
-            }
-        }
-        if (errors.length > 0) {
-            console.warn('[KeyStore] enableAllKeys: errors on', errors.length, 'keys');
-            eventBus.emit(EVENTS.METRICS_ALERT, {
-                id: 'enable-all-keys',
-                metric: 'partial_failure',
-                value: errors.length,
-                severity: 'warning',
-                timestamp: Date.now(),
-            });
-        }
-        setStore({ keys: safeKeys() });
-    }, []);
-
-    const disableAllKeys = useCallback(async () => {
-        const allKeys = safeKeys();
-        const errors: string[] = [];
-        for (const k of allKeys) {
-            try {
-                await groupManager.syncKeyStatus(k.id, 'inactive');
-            } catch {
-                errors.push(k.id);
-            }
-        }
-        if (errors.length > 0) {
-            console.warn('[KeyStore] disableAllKeys: errors on', errors.length, 'keys');
-            eventBus.emit(EVENTS.METRICS_ALERT, {
-                id: 'disable-all-keys',
-                metric: 'partial_failure',
-                value: errors.length,
-                severity: 'warning',
-                timestamp: Date.now(),
-            });
-        }
-        setStore({ keys: safeKeys() });
-    }, []);
-
-    const exportKeys = useCallback(() => keyService.exportKeys(), []);
-
-    const importKeys = useCallback(async (jsonData: string) => {
-        const imported = safeJsonParse(jsonData);
-        if (!Array.isArray(imported)) throw new Error('Invalid data format');
-        let count = 0;
-        const makeFingerprint = (provider: string, label: string, key: string) => {
-            let h = 0x811c9dc5;
-            for (let i = 0; i < key.length; i++) {
-                h ^= key.charCodeAt(i);
-                h = (h * 0x01000193) >>> 0;
-            }
-            return `${provider.toLowerCase()}::${label.toLowerCase()}::${h.toString(36)}`;
-        };
-        const existingFingerprints = new Set(
-            safeKeys().map((k) => makeFingerprint(k.provider, k.label, k.key)),
-        );
-        for (const item of imported) {
-            const parsed = parseImportedKey(item);
-            if (!parsed) continue;
-            const fingerprint = makeFingerprint(parsed.provider, parsed.label, parsed.key);
-            if (existingFingerprints.has(fingerprint)) continue;
-            const result = await groupManager.createKey(parsed, { source: 'import' });
-            if (result.ok) {
-                count++;
-                existingFingerprints.add(fingerprint);
-            }
-        }
-        setStore({ keys: safeKeys() });
-        return count;
-    }, []);
-
-    const getKeyById = useCallback((id: string) => keys.find((k) => k.id === id), [keys]);
-
-    const getKeysByProvider = useCallback(
-        (provider: string) =>
-            keys.filter((k) => k.provider.toLowerCase() === provider.toLowerCase()),
-        [keys],
-    );
-
-    const getAlerts = useCallback(() => (keyService.getAlerts ? keyService.getAlerts() : []), []);
-
-    const resolveAlert = useCallback((alertId: string) => {
-        keyService.resolveAlert?.(alertId);
-        if (keyService.getAlerts) setStore({ alerts: keyService.getAlerts() });
-    }, []);
-
-    const keyMeta = useKeySelector((s) => s.keyMeta);
-
-    return useMemo(
-        () => ({
+export function refreshKeyStore() {
+    const db = getDexieDb();
+    db.apiKeys.toArray().then((keys) => {
+        useKeyStore.setState({
             keys,
-            activeKeys,
-            alerts,
-            checkingIds,
-            keyMeta,
-            totalKeys: keys.length,
-            activeCount: activeKeys.length,
-            errorCount: keys.filter((k) => k.status === 'error').length,
-            addKey,
-            removeKey,
-            updateKey,
-            checkHealth,
-            checkAllHealth,
-            toggleKeyStatus,
-            enableAllKeys,
-            disableAllKeys,
-            exportKeys,
-            importKeys,
-            getKeyById,
-            getKeysByProvider,
-            getAlerts,
-            resolveAlert,
-        }),
-        [
-            keys,
-            activeKeys,
-            alerts,
-            checkingIds,
-            keyMeta,
-            addKey,
-            removeKey,
-            updateKey,
-            checkHealth,
-            checkAllHealth,
-            toggleKeyStatus,
-            enableAllKeys,
-            disableAllKeys,
-            exportKeys,
-            importKeys,
-            getKeyById,
-            getKeysByProvider,
-            getAlerts,
-            resolveAlert,
-        ],
-    );
-};
+            activeKeys: computeActiveKeys(keys),
+            isLoaded: true,
+        });
+    });
+}

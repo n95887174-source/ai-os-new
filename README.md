@@ -211,7 +211,7 @@ Multi-agent debate system with configurable strategies and comprehensive metrics
 
 ### Prerequisites
 
-- **Node.js** ≥ 18.x
+- **Node.js** ≥ 22.0.0
 - **npm** ≥ 9.x
 - A modern browser (Chrome, Firefox, Edge, Safari)
 

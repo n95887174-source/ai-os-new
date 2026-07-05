@@ -7,6 +7,7 @@ import { rootLogger } from './logger-service';
 import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import type { ILLMClientService } from '../contracts/provider-adapter';
+import { sanitizePromptVar } from '../utils/sanitize';
 
 const LOGGER = rootLogger.child('ChatSummarizer');
 
@@ -81,10 +82,11 @@ export class ChatSummarizerService {
                 .map((m) => `${m.role}: ${m.content}`)
                 .join('\n\n');
 
+            const safeConv = sanitizePromptVar(conversationText);
             const prompt = `Analyze this conversation and create a structured summary.
 
 CONVERSATION:
-${conversationText}
+${safeConv}
 
 Provide a summary in this exact format:
 SUMMARY: [2-3 paragraph summary of the conversation]

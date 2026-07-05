@@ -9,7 +9,6 @@ export const ObservabilityEvents = {
     TRACE_UPDATED: EVENT_REGISTRY.TRACE_UPDATED.name,
     SYSTEM_HEALTH_CHANGED: EVENT_REGISTRY.SYSTEM_HEALTH_CHANGED.name,
     ERROR_BOUNDARY_CAUGHT: EVENT_REGISTRY.ERROR_BOUNDARY_CAUGHT.name,
-    METRICS_ALERT_FIRED: EVENT_REGISTRY.METRICS_ALERT_FIRED.name,
 } as const;
 
 export type ObservabilityEventMap = Pick<
@@ -21,6 +20,5 @@ export type ObservabilityEventMap = Pick<
     | 'observability:metrics:alert:resolved'
     | 'observability:trace:updated'
     | 'observability:health:changed'
-    | 'observability:error-boundary:caught'
-    | 'metrics:alert-fired'
+    | 'observability:error:boundary:caught'
 >;

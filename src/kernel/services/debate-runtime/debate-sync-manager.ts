@@ -9,17 +9,13 @@ import type {
     DebateServiceDeps,
 } from '../../contracts/debate-types';
 import type { IDebateEngine, DebateTopology } from '../../contracts/debate-runtime';
-import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
 import { rootLogger } from '../logger-service';
+import { DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
 import { participantsToConfig, mergeAndProcessSession } from './debate-session-bridge';
 import type { SnapshotBridgeContext } from './debate-session-bridge';
 import { finalizeDebate } from './debate-finalizer';
 import { persistActiveSession } from './debate-session-persistence';
-import {
-    setActiveDebateSession,
-    setDebateGovernorState,
-    clearActiveDebateSession,
-} from './active-debate-store';
+import { useActiveDebateStore } from '../../../stores/activeDebateStore';
 
 const LOGGER = rootLogger.child('DebateService.Sync');
 
@@ -58,7 +54,7 @@ export class DebateSyncManager {
         this.clearListeners();
         if (DEFAULT_CONFIG.useGovernor !== false) {
             this.governor = new DebateGovernor();
-            setDebateGovernorState(this.governor.getState());
+            useActiveDebateStore.getState().setGovernorState(this.governor.getState());
         }
         this.postProcessor.clearProcessedIds();
         return { ...DEFAULT_CONFIG };
@@ -88,7 +84,7 @@ export class DebateSyncManager {
             topology,
             topic,
             participantsToConfig(participants),
-            sessionConfig.language === 'en' ? 'English' : 'Russian',
+            sessionConfig.language === 'en' ? 'English' : DEFAULT_DEBATE_LANGUAGE,
         );
         this.runtimeSessionId = runtimeId;
         this.bridgeCtx = bridgeCtx;
@@ -171,14 +167,13 @@ export class DebateSyncManager {
         this.clearListeners();
         if (this.activeSession && this.deps)
             this.deps.sessionManager.saveToDebateHistory(this.activeSession);
-        clearActiveDebateSession();
+        useActiveDebateStore.getState().clearAll();
         this.activeSession = null;
         this.engine = null;
         this.runtimeSessionId = null;
         this.bridgeCtx = null;
         this.governor?.reset();
         this.governor = null;
-        setDebateGovernorState(null);
     }
 
     syncSession(): void {
@@ -193,7 +188,7 @@ export class DebateSyncManager {
         );
         if (!session) return;
         this.activeSession = session;
-        setActiveDebateSession(session);
+        useActiveDebateStore.getState().setSession(session);
         for (const arg of newArgs) {
             this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
                 sessionId: this.runtimeSessionId,
@@ -221,16 +216,16 @@ export class DebateSyncManager {
             this.syncSession();
         };
         const events = [
-            DebateRuntimeEvents.SESSION_STARTED,
-            DebateRuntimeEvents.SESSION_PAUSED,
-            DebateRuntimeEvents.SESSION_RESUMED,
-            DebateRuntimeEvents.AGENT_RESPONDED,
-            DebateRuntimeEvents.PHASE_CHANGED,
-            DebateRuntimeEvents.ROUND_STARTED,
-            DebateRuntimeEvents.ROUND_ENDED,
-            DebateRuntimeEvents.SESSION_COMPLETED,
-            DebateRuntimeEvents.SESSION_FAILED,
-            DebateRuntimeEvents.SESSION_CANCELLED,
+            EVENTS.DEBATE_SESSION_STARTED,
+            EVENTS.DEBATE_SESSION_PAUSED,
+            EVENTS.DEBATE_SESSION_RESUMED,
+            EVENTS.DEBATE_AGENT_RESPONDED,
+            EVENTS.DEBATE_PHASE_CHANGED,
+            EVENTS.DEBATE_ROUND_STARTED,
+            EVENTS.DEBATE_ROUND_ENDED,
+            EVENTS.DEBATE_SESSION_COMPLETED,
+            EVENTS.DEBATE_SESSION_FAILED,
+            EVENTS.DEBATE_SESSION_CANCELLED,
         ];
         for (const event of events) {
             this._unsubs.push(this.deps!.eventBus.on(event as string, syncIfOurs));

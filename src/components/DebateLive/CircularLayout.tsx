@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { SpeakerNode } from './SpeakerNode';
-import { agentAvatarService } from '../../kernel/services/agent-avatar-service';
+import { agentAvatarService } from '../../kernel/instances';
 import type { TopologyNode } from '../../kernel/contracts/debate-runtime';
 import type { ArenaLayout } from '../../kernel/contracts/debate-emotion';
 import { EyeLine } from './EyeLine';

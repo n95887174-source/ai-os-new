@@ -388,6 +388,25 @@ const ru = {
     'common.switch_to_light': 'Переключить на светлую тему',
     'common.toggle_theme': 'Сменить тему',
 
+    // ── Settings ──────────────────────────────────────────────────
+    'settings.telemetry_enabled': 'Телеметрия',
+    'settings.telemetry_enabled_desc':
+        'Отправлять анонимные данные об использовании для улучшения продукта',
+    'settings.auto_update_check': 'Автопроверка обновлений',
+    'settings.auto_update_check_desc': 'Автоматически проверять наличие новых версий при запуске',
+    'settings.data_management': 'Управление данными',
+    'settings.auto_save_interval': 'Интервал автосохранения',
+    'settings.auto_save_interval_desc': 'Как часто сохранять изменения состояния',
+    'settings.max_history_entries': 'Макс. записей истории',
+    'settings.max_history_entries_desc': 'Максимальное количество записей истории чата',
+    'settings.max_trace_entries': 'Макс. записей трассировки',
+    'settings.max_trace_entries_desc': 'Максимальное количество записей трассировки',
+    'settings.prune_memories_days': 'Очистка памяти (дни)',
+    'settings.prune_memories_days_desc': 'Автоматически удалять воспоминания старше этого срока',
+    'settings.export_on_shutdown': 'Экспорт при завершении',
+    'settings.export_on_shutdown_desc':
+        'Экспортировать состояние в IndexedDB перед выгрузкой страницы',
+
     // ── Tools Panel ───────────────────────────────────────────────
     'tools.title': 'Инструменты',
     'tools.subtitle': 'Управление API, скриптами и коннекторами БД',

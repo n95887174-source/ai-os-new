@@ -13,6 +13,7 @@ import { initSchedulerService } from './services/scheduler-service';
 import { crossTabStateSync } from './services/cross-tab-state';
 import { DataAccessLayerImpl } from './dal/data-access-layer';
 import { LocalStorageAdapter } from './services/storage/local-storage-adapter';
+import { clearResolvedServices } from './service-helper';
 
 export type RuntimePhase = 'loading' | 'initializing' | 'ready' | 'degraded' | 'shutdown' | 'error';
 
@@ -73,6 +74,10 @@ export class RuntimeManager {
                 this.phase = report.phase === 'ready' ? 'ready' : 'degraded';
                 this.initialized = true;
                 this.lastError = report.error;
+                // B-033: Subscribe EVENTBUS_BACKPRESSURE — degrade runtime on event bus overload
+                coreEventBus.on(EVENTS.EVENTBUS_BACKPRESSURE, () => {
+                    if (this.phase === 'ready') this.phase = 'degraded';
+                });
                 this.startHealthChecks();
                 return this.phase === 'ready';
             } catch (e) {
@@ -139,6 +144,7 @@ export class RuntimeManager {
         await this.bootstrapper.shutdown();
         crossTabStateSync.destroy();
         this.container.clear();
+        clearResolvedServices();
         coreEventBus.clearAllSubscriptions();
         this.registerCoreServices();
         this.initialized = false;

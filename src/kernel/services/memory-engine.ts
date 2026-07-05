@@ -1,6 +1,7 @@
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
+import { MemoryRepository } from '../dal/memory-repository';
 import type {
     MemoryEntry,
     MemoryStats,
@@ -9,6 +10,7 @@ import type {
     MemoryPruneResult,
 } from '../types/memory-types';
 import type { IMemoryEngine, MemoryCapability } from '../contracts/memory';
+import type { DatabaseService } from './database-service';
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('MemoryEngine');
 
@@ -32,25 +34,7 @@ export interface MemoryServiceDeps {
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
     };
-    database: {
-        db: {
-            memories: {
-                where: (field: string) => {
-                    below: (val: number) => { delete: () => Promise<void> };
-                };
-                count: () => Promise<number>;
-                orderBy: (field: string) => {
-                    reverse: () => { toArray: () => Promise<MemoryEntry[]> };
-                };
-                add: (entry: MemoryEntry) => Promise<void>;
-                bulkAdd: (entries: MemoryEntry[]) => Promise<void>;
-                delete: (id: string) => Promise<void>;
-                put: (entry: MemoryEntry) => Promise<void>;
-                update: (id: string, changes: Partial<MemoryEntry>) => Promise<void>;
-                clear: () => Promise<void>;
-            };
-        };
-    };
+    database: DatabaseService;
     executionGovernor?: {
         start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): {
             complete(): void;
@@ -69,11 +53,13 @@ export class MemoryService implements IMemoryEngine {
     private unsubs: Array<() => void> = [];
     private pruneInterval: ReturnType<typeof setInterval> | null = null;
     private deps: MemoryServiceDeps;
+    private memoryRepo: MemoryRepository;
     private _listenersSetup = false;
     private readonly PENDING_TIMEOUT_MS = 30_000;
 
     constructor(deps: MemoryServiceDeps) {
         this.deps = deps;
+        this.memoryRepo = new MemoryRepository(deps.database);
     }
 
     async init() {
@@ -115,10 +101,7 @@ export class MemoryService implements IMemoryEngine {
     private async pruneOldEntries() {
         try {
             const cutoff = Date.now() - MEMORY_TTL_MS;
-            await this.deps.database.db.memories
-                .where('[metadata.timestamp]')
-                .below(cutoff)
-                .delete();
+            await this.memoryRepo.prune(cutoff);
             this.memories = this.memories.filter((m) => (m.metadata.timestamp ?? 0) >= cutoff);
             this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
         } catch (e) {
@@ -186,7 +169,8 @@ export class MemoryService implements IMemoryEngine {
 
     private async backfillVector(id: string, vector: number[]) {
         try {
-            await this.deps.database.db.memories.update(id, { vector });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await this.memoryRepo.update(id, { vector } as any);
             const mem = this.memories.find((m) => m.id === id);
             if (mem) mem.vector = vector;
         } catch (e) {
@@ -221,13 +205,8 @@ export class MemoryService implements IMemoryEngine {
 
     private async load() {
         try {
-            if ((await this.deps.database.db.memories.count()) > 0) {
-                this.memories = (
-                    await this.deps.database.db.memories
-                        .orderBy('[metadata.timestamp]')
-                        .reverse()
-                        .toArray()
-                ).slice(0, MAX_MEMORY_ENTRIES);
+            if ((await this.memoryRepo.getCount()) > 0) {
+                this.memories = (await this.memoryRepo.getAll()).slice(0, MAX_MEMORY_ENTRIES);
                 return;
             }
         } catch (e) {
@@ -319,7 +298,7 @@ export class MemoryService implements IMemoryEngine {
             id: await this.computeId(entry.content, source, type),
         } as MemoryEntry;
         try {
-            await this.deps.database.db.memories.put(newEntry);
+            await this.memoryRepo.save(newEntry);
             this.memories.unshift(newEntry);
             if (this.memories.length > MAX_MEMORY_ENTRIES)
                 this.memories.length = MAX_MEMORY_ENTRIES;
@@ -354,7 +333,7 @@ export class MemoryService implements IMemoryEngine {
         const deterministicId = await this.computeId(entry.content, source, type);
         const newEntry: MemoryEntry = { ...entry, id: deterministicId } as MemoryEntry;
         try {
-            await this.deps.database.db.memories.put(newEntry);
+            await this.memoryRepo.save(newEntry);
             const existing = this.memories.findIndex((m) => m.id === deterministicId);
             if (existing >= 0) {
                 this.memories[existing] = newEntry;
@@ -415,12 +394,12 @@ export class MemoryService implements IMemoryEngine {
             metadata: { operation: 'storeBatch', count: newEntries.length },
         });
         try {
-            await Promise.all(newEntries.map((e) => this.deps.database.db.memories.put(e)));
+            await Promise.all(newEntries.map((e) => this.memoryRepo.save(e)));
             this.memories = [...newEntries, ...this.memories];
             if (this.memories.length > MAX_MEMORY_ENTRIES) {
                 const excess = this.memories.slice(MAX_MEMORY_ENTRIES);
                 this.memories = this.memories.slice(0, MAX_MEMORY_ENTRIES);
-                await Promise.all(excess.map((e) => this.deps.database.db.memories.delete(e.id)));
+                await Promise.all(excess.map((e) => this.memoryRepo.delete(e.id)));
             }
             this.ensureWorker()
                 .then(() => {
@@ -460,7 +439,7 @@ export class MemoryService implements IMemoryEngine {
         const idx = this.memories.findIndex((m) => m.id === id);
         if (idx === -1) return;
         try {
-            await this.deps.database.db.memories.delete(id);
+            await this.memoryRepo.delete(id);
         } catch (e) {
             LOGGER.error('MemoryEngine', 'Dexie delete failed — in-memory state preserved', {
                 error: e,
@@ -485,7 +464,7 @@ export class MemoryService implements IMemoryEngine {
         if (!entry) return;
         const updated = { ...entry, content };
         try {
-            await this.deps.database.db.memories.put(updated);
+            await this.memoryRepo.save(updated);
         } catch (e) {
             LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', {
                 error: e,
@@ -617,10 +596,7 @@ export class MemoryService implements IMemoryEngine {
             const old = this.memories.filter((m) => (m.metadata.timestamp ?? 0) < cutoff);
             if (old.length > 0) {
                 if (!options.dryRun) {
-                    await this.deps.database.db.memories
-                        .where('[metadata.timestamp]')
-                        .below(cutoff)
-                        .delete();
+                    await this.memoryRepo.prune(cutoff);
                     this.memories = this.memories.filter(
                         (m) => (m.metadata.timestamp ?? 0) >= cutoff,
                     );
@@ -636,7 +612,7 @@ export class MemoryService implements IMemoryEngine {
                 details.push({ type: 'importanceBelow', count: low.length });
                 if (!options.dryRun) {
                     for (const m of low) {
-                        await this.deps.database.db.memories
+                        await this.memoryRepo
                             .delete(m.id)
                             .catch((e) =>
                                 LOGGER.warn(
@@ -663,7 +639,7 @@ export class MemoryService implements IMemoryEngine {
 
     async clear() {
         this.memories = [];
-        await this.deps.database.db.memories.clear();
+        await this.memoryRepo.clear();
         if (this.worker)
             this.sendToWorker('init', { memories: [] }).catch((e) =>
                 LOGGER.warn('MemoryEngine', 'Worker re-init after clear failed', { error: e }),

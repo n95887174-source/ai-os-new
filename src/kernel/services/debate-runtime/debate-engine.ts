@@ -1,5 +1,5 @@
 import { genId } from '../../../utils/gen-id';
-import { CONFIG } from '../config-registry';
+import { CONFIG, DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
 import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
 import {
@@ -41,7 +41,7 @@ import { executePolicyActions } from './debate-policy-engine';
 import type { DebateRAGRetriever } from './debate-rag-retriever';
 import type { DebateMemoryExtractor } from './debate-memory-extractor';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
-import { DebateRuntimeEvents } from '../../events/debate-runtime-events';
+
 import { DebateSessionContext } from './debate-session-context';
 import { DebateMemory } from './debate-memory';
 import { DebateBudget } from './debate-budget';
@@ -338,7 +338,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 type: `session:${to}`,
                 payload: { from, to },
             });
-            this.deps.eventBus.emit(DebateRuntimeEvents.PHASE_CHANGED, {
+            this.deps.eventBus.emit(EVENTS.DEBATE_PHASE_CHANGED, {
                 sessionId: id,
                 from,
                 to,
@@ -347,10 +347,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             if (to === 'completed' || to === 'failed' || to === 'cancelled') {
                 this.deps.eventBus.emit(
                     to === 'completed'
-                        ? DebateRuntimeEvents.SESSION_COMPLETED
+                        ? EVENTS.DEBATE_SESSION_COMPLETED
                         : to === 'failed'
-                          ? DebateRuntimeEvents.SESSION_FAILED
-                          : DebateRuntimeEvents.SESSION_CANCELLED,
+                          ? EVENTS.DEBATE_SESSION_FAILED
+                          : EVENTS.DEBATE_SESSION_CANCELLED,
                     {
                         sessionId: id,
                         error:
@@ -420,7 +420,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                         claims,
                                         chain,
                                     );
-                                    this.deps.eventBus.emit('debate-runtime:agent:phase:changed', {
+                                    this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_PHASE_CHANGED, {
                                         sessionId: id,
                                         agentId: p.agentId,
                                         from: 'completed',
@@ -445,7 +445,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         this.sessions.set(id, session as IDebateSession);
         this.budgets.set(id, budget);
 
-        this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CREATED, {
+        this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_CREATED, {
             sessionId: id,
             topic,
             topologyType: topology.type,
@@ -593,7 +593,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                         'DebateEngine',
                         `Session ${sessionId} exceeded max duration (${DEBATE_MAX_DURATION_MS}ms) — cancelling`,
                     );
-                    this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
+                    this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
                         sessionId,
                         error: 'Debate exceeded max duration',
                     });
@@ -617,6 +617,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     private buildDebatePipeline(isResume: boolean): DebatePipeline {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const engine = this;
         const pipeline = new DebatePipeline();
 
@@ -625,7 +626,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             run: async (sessionId) => {
                 if (isResume) return { ok: true };
                 const session = engine.sessions.get(sessionId)!;
-                engine.deps.eventBus.emit(DebateRuntimeEvents.SESSION_STARTED, { sessionId });
+                engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_STARTED, { sessionId });
                 await engine.runProviderPreflight(sessionId);
 
                 const keyService = engine.deps.getKeyService();
@@ -640,7 +641,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     const msg = 'All LLM providers failed preflight — no working keys available';
                     LOGGER.warn('DebatePipeline', msg, { sessionId });
                     session.transition('failed');
-                    engine.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
+                    engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
                         sessionId,
                         error: msg,
                     });
@@ -693,7 +694,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                 session.transition('deliberating');
                                 session.incrementRound();
                                 engine.budgets.get(sessionId)?.incrementRound(sessionId);
-                                engine.deps.eventBus.emit(DebateRuntimeEvents.ROUND_STARTED, {
+                                engine.deps.eventBus.emit(EVENTS.DEBATE_ROUND_STARTED, {
                                     sessionId,
                                     round: event.round,
                                     nodes: event.nodes,
@@ -706,7 +707,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                 );
                                 if (p) {
                                     session.setAgentPhase(p.agentId, 'thinking');
-                                    engine.deps.eventBus.emit(DebateRuntimeEvents.AGENT_THINKING, {
+                                    engine.deps.eventBus.emit(EVENTS.DEBATE_AGENT_THINKING, {
                                         sessionId,
                                         agentId: p.agentId,
                                     });
@@ -737,7 +738,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                         round: session.round,
                                     },
                                 });
-                                engine.deps.eventBus.emit(DebateRuntimeEvents.AGENT_RESPONDED, {
+                                engine.deps.eventBus.emit(EVENTS.DEBATE_AGENT_RESPONDED, {
                                     sessionId,
                                     agentId: pR.agentId,
                                     content: event.content,
@@ -756,7 +757,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                     type: 'agent:error',
                                     payload: { agentId: pE.agentId, error: event.error },
                                 });
-                                engine.deps.eventBus.emit(DebateRuntimeEvents.AGENT_ERROR, {
+                                engine.deps.eventBus.emit(EVENTS.DEBATE_AGENT_ERROR, {
                                     sessionId,
                                     agentId: pE.agentId,
                                     error: event.error,
@@ -764,7 +765,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                 break;
                             }
                             case 'round:end': {
-                                engine.deps.eventBus.emit(DebateRuntimeEvents.ROUND_ENDED, {
+                                engine.deps.eventBus.emit(EVENTS.DEBATE_ROUND_ENDED, {
                                     sessionId,
                                     round: event.round,
                                 });
@@ -777,7 +778,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                     session.transition(
                                         event.anyBudgetSkipped ? 'paused' : 'failed',
                                     );
-                                    engine.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
+                                    engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
                                         sessionId,
                                         error: msg,
                                     });
@@ -798,7 +799,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                         .consensus.evaluate(interimClaims);
                                     interimConfidence = interim.confidence;
                                     if (interim.confidence >= 0.85) {
-                                        engine.deps.eventBus.emit(DebateRuntimeEvents.EARLY_EXIT, {
+                                        engine.deps.eventBus.emit(EVENTS.DEBATE_ROUND_EARLY_EXIT, {
                                             sessionId,
                                             confidence: interim.confidence,
                                             round: event.round,
@@ -851,7 +852,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     }
                 } catch (e) {
                     session.transition('failed');
-                    engine.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
+                    engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
                         sessionId,
                         error: String(e),
                     });
@@ -885,7 +886,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     session.round,
                 );
                 const result = engine.getContext(sessionId).consensus.evaluate(claims);
-                engine.deps.eventBus.emit(DebateRuntimeEvents.CONSENSUS_REACHED, {
+                engine.deps.eventBus.emit(EVENTS.DEBATE_CONSENSUS_REACHED, {
                     sessionId,
                     confidence: result.confidence,
                     agreements: result.agreements.length,
@@ -1046,7 +1047,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 }
                 govOp?.complete();
                 const content = response.content;
-                this.deps.eventBus.emit(DebateRuntimeEvents.AGENT_CHUNK, {
+                this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
                     sessionId: session.id,
                     agentId: participant.agentId,
                     chunk: content,
@@ -1207,7 +1208,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }
         this.getContext(sessionId).orchestrator.abort(sessionId);
         session.transition('paused');
-        this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_PAUSED, { sessionId });
+        this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_PAUSED, { sessionId });
         this.saveSnapshot(sessionId).catch((e) =>
             LOGGER.warn('DebateEngine', 'pause checkpoint failed', { error: e }),
         );
@@ -1222,11 +1223,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         // DR-2: Don't set phase here — startSession handles transitions
         this.startSession(sessionId, true)
             .then(() => {
-                this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_RESUMED, { sessionId });
+                this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_RESUMED, { sessionId });
             })
             .catch((e) => {
                 LOGGER.error('DebateEngine', 'resumeSession failed', { sessionId, error: e });
-                this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_FAILED, {
+                this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
                     sessionId,
                     error: String(e),
                 });
@@ -1246,7 +1247,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         // Transition BEFORE destroying context — phase change callbacks
         // access getContext(id).timeline which requires a live context.
         session.transition('cancelled');
-        this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CANCELLED, { sessionId });
+        this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_CANCELLED, { sessionId });
         // Destroy budget — releases any queued lock promises
         const budget = this.budgets.get(sessionId);
         if (budget) (budget as DebateBudget).destroy();
@@ -1332,7 +1333,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             LOGGER.warn('DebateEngine', `saveSnapshot validation failed for ${sessionId}`, {
                 errors: parsed.error.issues,
             });
-            return;
+            throw new Error(
+                `saveSnapshot validation failed for ${sessionId}: ${parsed.error.issues.map((i) => i.message).join(', ')}`,
+            );
         }
         const newVersion = await store.saveSnapshot(record);
         session.incrementVersion?.(newVersion);
@@ -1378,7 +1381,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 startedAt: record.startedAt,
                 updatedAt: record.updatedAt,
                 version: record.version ?? 1,
-                language: (record as { language?: string }).language ?? 'Russian',
+                language: (record as { language?: string }).language ?? DEFAULT_DEBATE_LANGUAGE,
             };
             session.restoreInternalState(restoredSnapshot);
 
@@ -1398,7 +1401,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     type: `session:${to}`,
                     payload: { from, to },
                 });
-                this.deps.eventBus.emit(DebateRuntimeEvents.PHASE_CHANGED, {
+                this.deps.eventBus.emit(EVENTS.DEBATE_PHASE_CHANGED, {
                     sessionId: record.id,
                     from,
                     to,
@@ -1406,10 +1409,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 if (to === 'completed' || to === 'failed' || to === 'cancelled') {
                     this.deps.eventBus.emit(
                         to === 'completed'
-                            ? DebateRuntimeEvents.SESSION_COMPLETED
+                            ? EVENTS.DEBATE_SESSION_COMPLETED
                             : to === 'failed'
-                              ? DebateRuntimeEvents.SESSION_FAILED
-                              : DebateRuntimeEvents.SESSION_CANCELLED,
+                              ? EVENTS.DEBATE_SESSION_FAILED
+                              : EVENTS.DEBATE_SESSION_CANCELLED,
                         {
                             sessionId: record.id,
                             error:
@@ -1483,15 +1486,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                             claims,
                                             chain,
                                         );
-                                        this.deps.eventBus.emit(
-                                            'debate-runtime:agent:phase:changed',
-                                            {
-                                                sessionId: record.id,
-                                                agentId: p.agentId,
-                                                from: 'completed',
-                                                to: JSON.stringify(score),
-                                            },
-                                        );
+                                        this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_PHASE_CHANGED, {
+                                            sessionId: record.id,
+                                            agentId: p.agentId,
+                                            from: 'completed',
+                                            to: JSON.stringify(score),
+                                        });
                                     }
                                 }
                             } catch (e) {
@@ -1512,7 +1512,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             const budget = new DebateBudget(record.id);
             this.budgets.set(record.id, budget);
 
-            this.deps.eventBus.emit(DebateRuntimeEvents.SESSION_CREATED, {
+            this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_CREATED, {
                 sessionId: record.id,
                 topic: record.topic,
                 topologyType: topology.type,

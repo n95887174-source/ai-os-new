@@ -270,38 +270,13 @@ describe('EventBus', () => {
         });
     });
 
-    describe('replay', () => {
-        it('should replay previously emitted events', () => {
-            bus.emit(e('test:replay'), { n: 1 });
-            bus.emit(e('test:replay'), { n: 2 });
+    describe('clearAllSubscriptions', () => {
+        it('should clear all subscriptions', () => {
             const handler = vi.fn();
-            const count = bus.replay(e('test:replay'), handler);
-            expect(count).toBe(2);
-            expect(handler).toHaveBeenNthCalledWith(1, { n: 1 });
-            expect(handler).toHaveBeenNthCalledWith(2, { n: 2 });
-        });
-
-        it('should return 0 when buffer is empty', () => {
-            const handler = vi.fn();
-            const count = bus.replay(e('test:empty'), handler);
-            expect(count).toBe(0);
-            expect(handler).not.toHaveBeenCalled();
-        });
-
-        it('should replay all events when filter is *', () => {
-            bus.emit(e('test:star-a'), { a: 1 });
-            bus.emit(e('test:star-b'), { b: 2 });
-            const handler = vi.fn();
-            const count = bus.replay('*', handler);
-            expect(count).toBe(2);
-        });
-
-        it('should not replay events after clearAllSubscriptions', () => {
-            bus.emit(e('test:replay-clear'), { x: 1 });
+            bus.on(e('test:clear'), handler);
             bus.clearAllSubscriptions();
-            const handler = vi.fn();
-            const count = bus.replay(e('test:replay-clear'), handler);
-            expect(count).toBe(0);
+            bus.emit(e('test:clear'), {});
+            expect(handler).not.toHaveBeenCalled();
         });
     });
 

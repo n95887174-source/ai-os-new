@@ -15,6 +15,7 @@ import { OpenAiCompatibleAdapter } from '../openai-compatible/openai-compatible-
 import { CerebrasAdapter } from '../cerebras/cerebras-adapter';
 import { CloudflareAdapter } from '../cloudflare/cloudflare-adapter';
 import type { LLMProviderAdapter } from '../core/types';
+import type { LLMContext } from '../../kernel/contracts/llm-context';
 
 export interface AdapterFactoryConfig {
     logging?: boolean;
@@ -44,6 +45,7 @@ export class AdapterFactory {
     readonly #circuitBreakers = new Map<string, CircuitBreakerDecorator>();
 
     #config: AdapterFactoryConfig;
+    #llmContext?: LLMContext;
 
     static readonly SUPPORTED_PROVIDERS: readonly string[] = [
         'gemini',
@@ -60,6 +62,7 @@ export class AdapterFactory {
         'huggingface',
         'cerebras',
         'cloudflare',
+        'perplexity',
         'blackbox',
         'scaleway',
         'cometapi',
@@ -68,8 +71,9 @@ export class AdapterFactory {
         'lmstudio',
     ];
 
-    constructor(config: AdapterFactoryConfig = {}) {
+    constructor(config: AdapterFactoryConfig = {}, llmContext?: LLMContext) {
         this.#config = config;
+        this.#llmContext = llmContext;
     }
 
     getSupportedProviders(): string[] {
@@ -179,6 +183,13 @@ export class AdapterFactory {
                     true,
                 );
                 break;
+            case 'perplexity':
+                adapter = new OpenAiCompatibleAdapter(
+                    'perplexity',
+                    'https://api.perplexity.ai',
+                    true,
+                );
+                break;
             case 'cerebras':
                 adapter = new CerebrasAdapter();
                 break;
@@ -209,6 +220,7 @@ export class AdapterFactory {
                 this.#config.rateLimitMaxTokens ?? 60,
                 this.#config.rateLimitRefillRate ?? 60,
                 this.#config.rateLimitRefillIntervalMs ?? 60000,
+                this.#llmContext?.crossTabStateSync,
             );
             adapter = rlRef;
         }
@@ -219,13 +231,17 @@ export class AdapterFactory {
                 this.#config.retryBaseDelayMs ?? 1000,
             );
         if (this.#config.circuitBreaker) {
-            cbRef = new CircuitBreakerDecorator(adapter, {
-                failureThreshold: this.#config.circuitBreakerFailureThreshold ?? 5,
-                successThreshold: this.#config.circuitBreakerSuccessThreshold ?? 2,
-                openTimeoutMs: this.#config.circuitBreakerOpenTimeoutMs ?? 30000,
-                halfOpenMaxRequests: this.#config.circuitBreakerHalfOpenMaxRequests ?? 1,
-            });
-            cbRef.listenToCrossTabSync();
+            cbRef = new CircuitBreakerDecorator(
+                adapter,
+                {
+                    failureThreshold: this.#config.circuitBreakerFailureThreshold ?? 5,
+                    successThreshold: this.#config.circuitBreakerSuccessThreshold ?? 2,
+                    openTimeoutMs: this.#config.circuitBreakerOpenTimeoutMs ?? 30000,
+                    halfOpenMaxRequests: this.#config.circuitBreakerHalfOpenMaxRequests ?? 1,
+                },
+                this.#llmContext?.crossTabStateSync,
+                this.#llmContext?.eventBus,
+            );
             adapter = cbRef;
         }
         if (this.#config.priorityQueue)

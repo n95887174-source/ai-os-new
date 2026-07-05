@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { batchProcessorService } from '../../kernel/services/batch-processor-service';
-import { keyService } from '../../kernel/instances';
+import { keyService, batchProcessorService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Play, X, Download, Trash2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { BatchJob, BatchTask } from '../../kernel/services/batch-processor-service';
@@ -81,7 +80,7 @@ const BatchProcessingPanel: React.FC = () => {
         const label = `Batch ${promptList.length} prompts x ${selectedProviders.length} providers`;
         const job = await batchProcessorService.createJob(label, taskList);
         setRunningJobId(job.id);
-        jobProgress && setJobProgress(job);
+        if (jobProgress) setJobProgress(job);
         batchProcessorService
             .runJob(job.id, (updated) => setJobProgress({ ...updated }))
             .then(() => {

@@ -1,5 +1,6 @@
 ﻿import type { ApiKey } from '../../types/metrics-types';
 import { rootLogger } from '../logger-service';
+import { PROVIDER_DEFAULT_MODELS } from '../../utils/provider-default-models';
 
 const LOGGER = rootLogger.child('KeyFingerprints');
 
@@ -82,16 +83,13 @@ export class KeyFingerprints {
 
     suggestModel(provider: string): string | null {
         const suggestions: Record<string, string> = {
-            gemini: 'gemini-2.0-flash',
-            groq: 'llama-3.1-8b-instant',
+            ...PROVIDER_DEFAULT_MODELS,
             openai: 'gpt-4o-mini',
-            anthropic: 'claude-3-5-sonnet',
-            nvidia: 'meta/llama-3.3-70b-instruct',
             openrouter: 'openai/gpt-4o-mini',
+            nvidia: 'meta/llama-3.3-70b-instruct',
             deepseek: 'deepseek-chat',
             mistral: 'mistral-small',
             cohere: 'command-r-plus',
-            cloudflare: '@cf/meta/llama-3.1-8b-instruct',
             fireworks: 'accounts/fireworks/models/llama-v3p1-8b-instruct',
             cerebras: 'llama-3.1-8b',
             huggingface: 'meta-llama/Meta-Llama-3.1-8B-Instruct',

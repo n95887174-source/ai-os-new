@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { promptSecurityService } from '../../kernel/services/prompt-security-service';
+import { promptSecurityService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Shield, ShieldAlert, ShieldCheck, Trash2, AlertTriangle } from 'lucide-react';
 import type {

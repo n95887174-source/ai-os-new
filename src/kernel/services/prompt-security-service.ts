@@ -4,7 +4,7 @@ import type {
     SecurityScanRule,
     SecurityScanConfig,
     SecurityScanEvent,
-    PromptSecurityService,
+    IPromptSecurityService,
 } from '../contracts/prompt-security-types';
 import type { IDatabaseService } from '../types/interfaces';
 
@@ -44,10 +44,20 @@ const DEFAULT_RULES: SecurityScanRule[] = [
         id: 'pii-1',
         name: 'API Key Leak',
         category: 'pii',
-        pattern: '(?:sk-|pk-|groq-)[a-zA-Z0-9_-]{20,}',
+        pattern:
+            '(?:sk-|pk-|sk-ant-|sk-or-|nvapi-|fw_|groq-|hf_|gh[opsur]_|AIza|cerebras_|(?:[a-f0-9]{32}:))[a-zA-Z0-9_-]{15,}',
         severity: 'critical',
         enabled: true,
         description: 'Potential API key in prompt',
+    },
+    {
+        id: 'pii-4',
+        name: 'Generic Long Secret',
+        category: 'pii',
+        pattern: '(?<![a-zA-Z])[a-f0-9]{40}(?![a-zA-Z])',
+        severity: 'medium',
+        enabled: true,
+        description: '40-char hex string — possible API key or token',
     },
     {
         id: 'pii-2',
@@ -152,7 +162,7 @@ const DEFAULT_CONFIG: SecurityScanConfig = {
     rules: DEFAULT_RULES,
 };
 
-export class PromptSecurityServiceImpl implements PromptSecurityService {
+export class PromptSecurityService implements IPromptSecurityService {
     private config: SecurityScanConfig = DEFAULT_CONFIG;
     private history: SecurityScanEvent[] = [];
     private loaded = false;
@@ -269,4 +279,4 @@ export class PromptSecurityServiceImpl implements PromptSecurityService {
     }
 }
 
-export const promptSecurityService = new PromptSecurityServiceImpl();
+export const promptSecurityService = new PromptSecurityService();

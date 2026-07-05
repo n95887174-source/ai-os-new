@@ -1,6 +1,5 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
-import { CONFIG } from '../../kernel/services/config-registry';
 
 export type Priority = 'high' | 'normal' | 'low';
 
@@ -36,9 +35,9 @@ export interface PriorityQueueConfig {
 }
 
 const DEFAULT_CONFIG: PriorityQueueConfig = {
-    maxConcurrency: CONFIG?.llm?.priorityQueue?.maxConcurrency ?? 4,
-    lowPriorityDelayMs: CONFIG?.llm?.priorityQueue?.lowPriorityDelayMs ?? 200,
-    maxQueueSize: CONFIG?.llm?.priorityQueue?.maxQueueSize ?? 1000,
+    maxConcurrency: 4,
+    lowPriorityDelayMs: 200,
+    maxQueueSize: 1000,
 };
 
 export class PriorityQueueDecorator extends BaseDecorator {
@@ -57,12 +56,6 @@ export class PriorityQueueDecorator extends BaseDecorator {
     ) {
         super(inner);
         this.config = { ...DEFAULT_CONFIG, ...config };
-        // Live-refresh config from CONFIG at runtime
-        const p = CONFIG?.llm?.priorityQueue;
-        if (p) {
-            this.config.maxConcurrency = p.maxConcurrency;
-            this.config.lowPriorityDelayMs = p.lowPriorityDelayMs;
-        }
     }
 
     get id(): string {

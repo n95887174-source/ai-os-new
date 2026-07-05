@@ -1,4 +1,3 @@
-import { CONFIG } from '../../kernel/services/config-registry';
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 
@@ -46,7 +45,7 @@ export class CacheDecorator extends BaseDecorator {
     constructor(
         inner: import('../core/types').LLMProviderAdapter,
         ttlMs = 60000,
-        maxEntries = CONFIG?.llm?.cache?.maxEntries ?? 100,
+        maxEntries = 100,
         similarityThreshold = 0.85,
         disableSemanticCache = false,
     ) {

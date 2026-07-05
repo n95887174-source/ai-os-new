@@ -55,17 +55,9 @@
 - _Standalone service files_ (50+): `chat-service.ts`, `chat-executor.ts`, `config-service.ts`, `config-registry.ts`, `config-history.ts`, `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `memory-engine.ts`, `memory-orchestrator.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`, `key-state-store.ts`, `feature-flag-service.ts`, `debate-service.ts`, `debate-archetypes.ts`, `debate-interpreter.ts`, `debate-metrics.ts`, `settings-service.ts`, `group-manager.ts`, `orchestration-service.ts`, `metrics-service.ts`, `admin-service.ts`, `consistency-checker.ts`, `consistency-healing-pipeline.ts`, `prompt-store.ts`, `cross-tab-state.ts`, `deploy-service.ts`, `fine-tuning-service.ts`, `model-distillation-service.ts`, `team-collaboration-service.ts`, `tutorial-service.ts`, `audience-service.ts`, `ecosystem-engine.ts`, `research-engine-service.ts`, `unified-role-service.ts`, `prompt-library-service.ts`, `prompt-security-service.ts`, `workflow-service.ts`, `reconnection-service.ts`, `bridge-keeper-service.ts`, `google-genai-service.ts`, `gemini-live-service.ts`, `agent-avatar-service.ts`, `eval-dataset-service.ts`, `custom-metrics-service.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 
-### 🧩 Legacy Core (`/src/core/`) — 10 files
+### 🧩 Legacy Core (`/src/core/`) — УДАЛЁН
 
-- `events.ts` (185 lines) — extends kernel EventBus, canonical eventBus singleton (~40 panel consumers)
-- `DatabaseService.ts` (206 lines) — Dexie IndexedDB persistence
-- `Kernel.ts` (47 lines) — Proxy resolving from DI container
-- `PluginSDK.ts` (127 lines) — plugin system
-- `SafetyContract.ts` (42 lines) — safety constants
-- `storage.ts` (310 lines) — storage drivers
-- `TaskQueue.ts` (152 lines) — legacy task queue
-- `WeightOptimizer.ts` (46 lines) — weight optimizer
-- Plus re-exports from kernel: `Container.ts`, `runtime.ts`, `SecurityService.ts`
+`src/core/` был полностью удалён. Все модули мигрированы в `src/kernel/`.
 
 ### ⚙️ Services (`/src/services/`) — 25 wrappers + 2 workers
 

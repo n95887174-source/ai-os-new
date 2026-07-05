@@ -1,11 +1,10 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
-import { CONFIG } from '../../kernel/services/config-registry';
-import { rootLogger } from '../../kernel/services/logger-service';
-import { crossTabStateSync } from '../../kernel/services/cross-tab-state';
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
+import type { ICrossTabStateSync } from '../../kernel/contracts/cross-tab-state';
 
-const LOGGER = rootLogger.child('RateLimitDecorator');
+const LOGGER = FALLBACK_LOGGER.child('RateLimitDecorator');
 
 interface TokenBucket {
     tokens: number;
@@ -16,6 +15,7 @@ export class RateLimitDecorator extends BaseDecorator {
     readonly #maxTokens: number;
     readonly #refillRate: number;
     readonly #refillInterval: number;
+    readonly #crossTabStateSync?: ICrossTabStateSync;
     #global: TokenBucket;
     #perProvider: Map<string, TokenBucket>;
     private static readonly MAX_PROVIDERS = 100;
@@ -25,11 +25,13 @@ export class RateLimitDecorator extends BaseDecorator {
         maxTokens = 60,
         refillRate = 60,
         refillInterval = 60000,
+        crossTabStateSync?: ICrossTabStateSync,
     ) {
         super(inner);
         this.#maxTokens = maxTokens;
         this.#refillRate = refillRate;
         this.#refillInterval = refillInterval;
+        this.#crossTabStateSync = crossTabStateSync;
         this.#global = { tokens: maxTokens, lastRefill: Date.now() };
         this.#perProvider = new Map();
     }
@@ -38,23 +40,11 @@ export class RateLimitDecorator extends BaseDecorator {
         return `${this.inner.id}[rl]`;
     }
 
-    private get maxTokens(): number {
-        return CONFIG?.llm?.rateLimiter?.maxTokens ?? this.#maxTokens;
-    }
-
-    private get refillRate(): number {
-        return CONFIG?.llm?.rateLimiter?.refillRate ?? this.#refillRate;
-    }
-
-    private get refillInterval(): number {
-        return CONFIG?.llm?.rateLimiter?.refillIntervalMs ?? this.#refillInterval;
-    }
-
     private refill(bucket: TokenBucket): void {
         const now = Date.now();
         const elapsed = now - bucket.lastRefill;
-        const add = (elapsed / this.refillInterval) * this.refillRate;
-        bucket.tokens = Math.min(this.maxTokens, bucket.tokens + add);
+        const add = (elapsed / this.#refillInterval) * this.#refillRate;
+        bucket.tokens = Math.min(this.#maxTokens, bucket.tokens + add);
         bucket.lastRefill = now;
     }
 
@@ -91,7 +81,7 @@ export class RateLimitDecorator extends BaseDecorator {
     }
 
     reset(): void {
-        this.#global.tokens = this.maxTokens;
+        this.#global.tokens = this.#maxTokens;
         this.#global.lastRefill = Date.now();
     }
 
@@ -99,8 +89,8 @@ export class RateLimitDecorator extends BaseDecorator {
         const now = Date.now();
         const globalElapsed = now - this.#global.lastRefill;
         const globalAvailable = Math.min(
-            this.maxTokens,
-            this.#global.tokens + (globalElapsed / this.refillInterval) * this.refillRate,
+            this.#maxTokens,
+            this.#global.tokens + (globalElapsed / this.#refillInterval) * this.#refillRate,
         );
         if (globalAvailable < 1) return false;
         const providerId = this.getProviderId();
@@ -108,8 +98,8 @@ export class RateLimitDecorator extends BaseDecorator {
         if (!pb) return true;
         const provElapsed = now - pb.lastRefill;
         const provAvailable = Math.min(
-            this.maxTokens,
-            pb.tokens + (provElapsed / this.refillInterval) * this.refillRate,
+            this.#maxTokens,
+            pb.tokens + (provElapsed / this.#refillInterval) * this.#refillRate,
         );
         return provAvailable >= 1;
     }
@@ -118,17 +108,17 @@ export class RateLimitDecorator extends BaseDecorator {
         const providerId = this.getProviderId();
         if (!this.#perProvider.has(providerId)) {
             this.cleanupProviders();
-            this.#perProvider.set(providerId, { tokens: this.maxTokens, lastRefill: Date.now() });
+            this.#perProvider.set(providerId, { tokens: this.#maxTokens, lastRefill: Date.now() });
         }
         const pb = this.#perProvider.get(providerId)!;
         const now = Date.now();
         const provElapsed = now - pb.lastRefill;
         const provAvailable = Math.min(
-            this.maxTokens,
-            pb.tokens + (provElapsed / this.refillInterval) * this.refillRate,
+            this.#maxTokens,
+            pb.tokens + (provElapsed / this.#refillInterval) * this.#refillRate,
         );
         if (provAvailable < 1) {
-            crossTabStateSync.updateRateLimit({
+            this.#crossTabStateSync?.updateRateLimit({
                 provider: providerId,
                 keyId: this.inner.id,
                 remaining: 0,
@@ -141,7 +131,7 @@ export class RateLimitDecorator extends BaseDecorator {
             throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
         }
         if (!this.consume(this.#global)) {
-            crossTabStateSync.updateRateLimit({
+            this.#crossTabStateSync?.updateRateLimit({
                 provider: 'unknown',
                 keyId: this.inner.id,
                 remaining: 0,

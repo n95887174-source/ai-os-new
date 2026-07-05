@@ -298,7 +298,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         } catch {
             return 0;
         }
-    }, [currentTime]);
+    }, []);
 
     const tokenSparkData = useMemo(() => {
         const now = Date.now();
@@ -313,11 +313,12 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             );
         }
         return buckets;
-    }, [safeTraces, currentTime]);
+    }, [safeTraces]);
 
     const rps = useMemo(() => {
         const recentTraces = safeTraces.filter((t) => t.startTime > currentTime - 60000);
         return recentTraces.length;
+         
     }, [safeTraces, currentTime]);
 
     const errorRateTrend = useMemo(() => {
@@ -597,7 +598,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 <QuickActionBtn
                     icon={<FlaskConical size={14} />}
                     label={t('dashboard.open_sandbox')}
-                    onClick={() => onNavigate('sandbox')}
+                    onClick={() => onNavigate('keys')}
                 />
             </div>
 

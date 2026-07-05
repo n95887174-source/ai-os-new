@@ -389,6 +389,23 @@ const en = {
     'common.switch_to_light': 'Switch to light mode',
     'common.toggle_theme': 'Toggle theme',
 
+    // ── Settings ──────────────────────────────────────────────────
+    'settings.telemetry_enabled': 'Telemetry',
+    'settings.telemetry_enabled_desc': 'Send anonymous usage data to improve the product',
+    'settings.auto_update_check': 'Auto-Update Check',
+    'settings.auto_update_check_desc': 'Automatically check for new versions on startup',
+    'settings.data_management': 'Data Management',
+    'settings.auto_save_interval': 'Auto-Save Interval',
+    'settings.auto_save_interval_desc': 'How often to persist state changes',
+    'settings.max_history_entries': 'Max History Entries',
+    'settings.max_history_entries_desc': 'Maximum number of chat history entries to retain',
+    'settings.max_trace_entries': 'Max Trace Entries',
+    'settings.max_trace_entries_desc': 'Maximum number of trace entries to retain',
+    'settings.prune_memories_days': 'Prune Memories (Days)',
+    'settings.prune_memories_days_desc': 'Automatically prune memories older than this',
+    'settings.export_on_shutdown': 'Export on Shutdown',
+    'settings.export_on_shutdown_desc': 'Export state to IndexedDB before page unload',
+
     // ── Tools Panel ───────────────────────────────────────────────
     'tools.title': 'Tools',
     'tools.subtitle': 'Manage API tools, scripts, and database connectors',

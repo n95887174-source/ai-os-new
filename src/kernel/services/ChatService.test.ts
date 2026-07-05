@@ -7,7 +7,7 @@ describe('ChatService', () => {
     });
 
     it('should export a singleton instance', async () => {
-        const { chatService } = await import('../kernel/instances');
+        const { chatService } = await import('../instances');
         expect(chatService).toBeDefined();
     });
 

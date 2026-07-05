@@ -59,6 +59,7 @@ import { DeployService } from '../services/deploy-service';
 import { BudgetAlertService } from '../services/budget-alert-service';
 import { TopologyTemplateService } from '../services/topology-template-service';
 import { KeyUsageAnalyticsService } from '../services/key-usage-analytics-service';
+import { ProviderTracker } from '../services/provider-tracker';
 import { PromptVersionService } from '../services/prompt-version-service';
 import { ProviderMigrationService } from '../services/provider-migration-service';
 import { HealthSlaService } from '../services/health-sla-service';
@@ -79,99 +80,123 @@ import { SmartRoutingService } from '../services/smart-routing-service';
 import { NvidiaEnterpriseService } from '../services/nvidia-enterprise-service';
 import { GeminiCacheService } from '../services/gemini-cache-service';
 import { ProviderAchievementService } from '../services/provider-achievement-service';
+import { promptSecurityService } from '../services/prompt-security-service';
+import { googleGenAIService } from '../services/google-genai-service';
+import { GeminiLiveService } from '../services/gemini-live-service';
+import { workflowService } from '../services/workflow-service';
+import { sourceAdapterRegistry } from '../services/research-adapters/source-adapter-registry';
+import { promptLibraryService } from '../services/prompt-library-service';
+import { batchProcessorService } from '../services/batch-processor-service';
+import { agentAvatarService } from '../services/agent-avatar-service';
 
 export const registerPhase6: Phase = (helpers, ctx) => {
     const { register, asDeps } = helpers;
 
-    register('chatService', (c) =>
-        new ChatService(
-            asDeps<ConstructorParameters<typeof ChatService>[0]>({
-                eventBus: c.get<IEventBus>('eventBus'),
-                keyService: c.get<KeyService>('keyService'),
-                virtualKeyService: c.get<VirtualKeyService>('virtualKeyService'),
-                settingsService: c.get<SettingsService>('settingsService'),
-                routerService: c.get<RouterService>('routerService'),
-                raceExecutor: c.get<RaceExecutor>('raceExecutor'),
-                cacheService: c.get<CacheService>('cacheService'),
-                policyService: c.get<PolicyService>('policyService'),
-                freeTierLimits: c.get('freeTierLimits'),
-                providerRuntime: c.get<ProviderRuntimeService>('providerRuntimeService'),
-                routingPolicyService: c.get<RoutingPolicyService>('routingPolicyService'),
-                getProviderState: (provider: string) => {
-                    const state = c.get<SystemKernel>('kernel').getState();
-                    return state.providers[provider] ?? state.providers[provider.toLowerCase()];
-                },
-                logger: c.get<LoggerService>('logger'),
-                llmClient: c.get<LLMClientService>('llmClientService'),
-                executionGovernor: (() => {
-                    try {
-                        return ctx.container.get<IExecutionGovernor>('executionGovernor');
-                    } catch {
-                        return undefined;
-                    }
-                })(),
-            }),
-        ),
+    register(
+        'chatService',
+        (c) =>
+            new ChatService(
+                asDeps<ConstructorParameters<typeof ChatService>[0]>({
+                    eventBus: c.get<IEventBus>('eventBus'),
+                    keyService: c.get<KeyService>('keyService'),
+                    virtualKeyService: c.get<VirtualKeyService>('virtualKeyService'),
+                    settingsService: c.get<SettingsService>('settingsService'),
+                    routerService: c.get<RouterService>('routerService'),
+                    raceExecutor: c.get<RaceExecutor>('raceExecutor'),
+                    cacheService: c.get<CacheService>('cacheService'),
+                    policyService: c.get<PolicyService>('policyService'),
+                    freeTierLimits: c.get('freeTierLimits'),
+                    providerRuntime: c.get<ProviderRuntimeService>('providerRuntimeService'),
+                    routingPolicyService: c.get<RoutingPolicyService>('routingPolicyService'),
+                    getProviderState: (provider: string) => {
+                        const state = c.get<SystemKernel>('kernel').getState();
+                        return state.providers[provider] ?? state.providers[provider.toLowerCase()];
+                    },
+                    logger: c.get<LoggerService>('logger'),
+                    llmClient: c.get<LLMClientService>('llmClientService'),
+                    executionGovernor: (() => {
+                        try {
+                            return ctx.container.get<IExecutionGovernor>('executionGovernor');
+                        } catch {
+                            return undefined;
+                        }
+                    })(),
+                }),
+            ),
     );
 
     // A-04: workspaceRepo extracted inside factory (lazy)
     register('workspaceService', (c) => {
-        const workspaceRepo = c
-            .get<DataAccessLayer>('dal')
+        const workspaceRepo = c.get<DataAccessLayer>('dal')
             .workspace as import('../dal/workspace-repository').WorkspaceRepository;
-        return new WorkspaceService({ eventBus: c.get<IEventBus>('eventBus'), repo: workspaceRepo });
+        return new WorkspaceService({
+            eventBus: c.get<IEventBus>('eventBus'),
+            repo: workspaceRepo,
+        });
     });
 
-    register('probeService', (c) =>
-        new ProbeService(
-            asDeps<ConstructorParameters<typeof ProbeService>[0]>({
+    register(
+        'probeService',
+        (c) =>
+            new ProbeService(
+                asDeps<ConstructorParameters<typeof ProbeService>[0]>({
+                    keyService: c.get<KeyService>('keyService'),
+                    adapterRegistry: c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
+                    keyStateStore: c.get<KeyStateStore>('keyStateStore'),
+                    eventBus: c.get<IEventBus>('eventBus'),
+                }),
+            ),
+    );
+
+    register(
+        'autoDebateService',
+        (c) =>
+            new AutoDebateService({
                 keyService: c.get<KeyService>('keyService'),
-                adapterRegistry: c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
-                keyStateStore: c.get<KeyStateStore>('keyStateStore'),
-                eventBus: c.get<IEventBus>('eventBus'),
+                getKeyStateStore: () => c.get<KeyStateStore>('keyStateStore'),
+                getAdapterRegistry: () => c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
+                debateService: {
+                    startDebate: (topic, participants, strategy, maxRounds, config) =>
+                        c
+                            .get<DebateService>('debateService')
+                            .startDebate(
+                                topic,
+                                participants,
+                                strategy as Parameters<DebateService['startDebate']>[2],
+                                maxRounds,
+                                config as Parameters<DebateService['startDebate']>[4],
+                            ),
+                },
             }),
-        ),
     );
 
-    register('autoDebateService', (c) =>
-        new AutoDebateService({
-            keyService: c.get<KeyService>('keyService'),
-            getKeyStateStore: () => c.get<KeyStateStore>('keyStateStore'),
-            getAdapterRegistry: () => c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
-            debateService: {
-                startDebate: (topic, participants, strategy, maxRounds, config) =>
-                    c.get<DebateService>('debateService').startDebate(
-                        topic,
-                        participants,
-                        strategy as Parameters<DebateService['startDebate']>[2],
-                        maxRounds,
-                        config as Parameters<DebateService['startDebate']>[4],
-                    ),
-            },
-        }),
+    register(
+        'eventSourcingService',
+        (c) =>
+            new EventRecorder(
+                undefined,
+                c.get<DataAccessLayer>('dal').eventLog,
+                undefined,
+                c.get<DataAccessLayer>('dal').kv,
+            ),
     );
 
-    register('eventSourcingService', (c) =>
-        new EventRecorder(
-            undefined,
-            c.get<DataAccessLayer>('dal').eventLog,
-            undefined,
-            c.get<DataAccessLayer>('dal').kv,
-        ),
+    register(
+        'notificationWebhookService',
+        (c) =>
+            new NotificationWebhookService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                database: c.get<IDatabaseService>('database'),
+            }),
     );
 
-    register('notificationWebhookService', (c) =>
-        new NotificationWebhookService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            database: c.get<IDatabaseService>('database'),
-        }),
-    );
-
-    register('compromiseWebhookService', (c) =>
-        new CompromiseWebhookService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            keyService: c.get<KeyService>('keyService'),
-        }),
+    register(
+        'compromiseWebhookService',
+        (c) =>
+            new CompromiseWebhookService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                keyService: c.get<KeyService>('keyService'),
+            }),
     );
 
     register('consistencyChecker', (_c) => new ConsistencyChecker());
@@ -183,37 +208,45 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         );
     }
 
-    register('topologyManager', (c) =>
-        new TopologyManager({
-            eventBus: c.get<IEventBus>('eventBus'),
-            orchestrator: c.get<OrchestrationService>('orchestrator'),
-            agentHealthMonitor: c.get<AgentHealthMonitor>('agentHealthMonitor'),
-            agentService: c.get<AgentService>('agentService'),
-            metricsService: c.get<MetricsService>('metricsService'),
-        }),
+    register(
+        'topologyManager',
+        (c) =>
+            new TopologyManager({
+                eventBus: c.get<IEventBus>('eventBus'),
+                orchestrator: c.get<OrchestrationService>('orchestrator'),
+                agentHealthMonitor: c.get<AgentHealthMonitor>('agentHealthMonitor'),
+                agentService: c.get<AgentService>('agentService'),
+                metricsService: c.get<MetricsService>('metricsService'),
+            }),
     );
 
-    register('workforceFederation', (c) =>
-        new WorkforceFederation({
-            eventBus: c.get<IEventBus>('eventBus'),
-            agentService: c.get<AgentService>('agentService'),
-        }),
+    register(
+        'workforceFederation',
+        (c) =>
+            new WorkforceFederation({
+                eventBus: c.get<IEventBus>('eventBus'),
+                agentService: c.get<AgentService>('agentService'),
+            }),
     );
 
-    register('agentMarketplace', (c) =>
-        new AgentMarketplace({ eventBus: c.get<IEventBus>('eventBus') }),
+    register(
+        'agentMarketplace',
+        (c) => new AgentMarketplace({ eventBus: c.get<IEventBus>('eventBus') }),
     );
 
     register('eloService', (_c) => eloRatingService);
 
-    register('chatSummarizerService', (c) =>
-        new ChatSummarizerService(c.get<LLMClientService>('llmClientService')),
+    register(
+        'chatSummarizerService',
+        (c) => new ChatSummarizerService(c.get<LLMClientService>('llmClientService')),
     );
-    register('agentWizardService', (c) =>
-        new AgentWizardService(c.get<LLMClientService>('llmClientService')),
+    register(
+        'agentWizardService',
+        (c) => new AgentWizardService(c.get<LLMClientService>('llmClientService')),
     );
-    register('roleTestingSandboxService', (c) =>
-        new RoleTestingSandboxService(c.get<LLMClientService>('llmClientService')),
+    register(
+        'roleTestingSandboxService',
+        (c) => new RoleTestingSandboxService(c.get<LLMClientService>('llmClientService')),
     );
 
     // A-04: personaService.setDatabase() moved inside factory
@@ -243,7 +276,14 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Topology Template Service ─────────────────────────
     register('topologyTemplateService', (_c) => new TopologyTemplateService());
     // ── Key Usage Analytics Service ───────────────────────
-    register('keyUsageAnalyticsService', (_c) => new KeyUsageAnalyticsService());
+    register(
+        'keyUsageAnalyticsService',
+        (c) =>
+            new KeyUsageAnalyticsService({
+                keyStateStore: c.get<KeyStateStore>('keyStateStore'),
+                providerTracker: c.get<ProviderTracker>('providerTracker'),
+            }),
+    );
     // ── Prompt Version Service ──────────────────────────
     register('promptVersionService', (_c) => new PromptVersionService());
     // ── Provider Migration Service ─────────────────────────
@@ -272,6 +312,20 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     register('timeMachineService', (_c) => new TimeMachineService());
     // ── Contribution Service ──────────────────────────
     register('contributionService', (_c) => new ContributionService());
+    // ── Prompt Security Service ─────────────────────────
+    register('promptSecurityService', (_c) => promptSecurityService);
+    // ── Google GenAI Service ───────────────────────────
+    register('googleGenAIService', (_c) => googleGenAIService);
+    // ── Workflow Service ───────────────────────────────
+    register('workflowService', (_c) => workflowService);
+    // ── Source Adapter Registry ────────────────────────
+    register('sourceAdapterRegistry', (_c) => sourceAdapterRegistry);
+    // ── Prompt Library Service ─────────────────────────
+    register('promptLibraryService', (_c) => promptLibraryService);
+    // ── Batch Processor Service ────────────────────────
+    register('batchProcessorService', (_c) => batchProcessorService);
+    // ── Agent Avatar Service ───────────────────────────
+    register('agentAvatarService', (_c) => agentAvatarService);
     // ── Meta-Learning / Self-Improvement Service ─────
     register('metaLearningService', (_c) => new MetaLearningService());
     // ── Quantum Inspiration Service ─────────────────
@@ -283,7 +337,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Gemini Cache Service ─────────────────────
     register('geminiCacheService', (_c) => new GeminiCacheService());
     // ── Provider Achievement Service ──────────────
-    register('providerAchievementService', (c) =>
-        new ProviderAchievementService(c.get<IDatabaseService>('database')),
+    register(
+        'providerAchievementService',
+        (c) => new ProviderAchievementService(c.get<IDatabaseService>('database')),
     );
+    // ── Gemini Live Service ───────────────────────
+    register('geminiLiveService', (_c) => new GeminiLiveService());
 };

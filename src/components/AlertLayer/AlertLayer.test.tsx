@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-const mockOn = vi.fn(() => vi.fn());
-const mockGetAlerts = vi.fn(() => []);
+const mockOn = vi.fn(() => vi.fn()) as unknown as (...args: unknown[]) => ReturnType<typeof vi.fn>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockGetAlerts = vi.fn(() => [] as any[]);
 
 vi.mock('../../kernel/events/event-bus', () => ({
     eventBus: {

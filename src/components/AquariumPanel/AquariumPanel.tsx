@@ -323,7 +323,7 @@ const AquariumPanel: React.FC = () => {
                     </p>
                     <button
                         onClick={() => {
-                            eventBus.emit(EVENTS.NAVIGATE, 'providers');
+                            eventBus.emit(EVENTS.NAVIGATE, 'keys');
                         }}
                         className="btn-primary"
                         style={{ padding: '0.7rem 1.5rem', borderRadius: 12 }}
@@ -792,7 +792,7 @@ const AquariumPanel: React.FC = () => {
 
                                     <button
                                         onClick={() => {
-                                            eventBus.emit(EVENTS.NAVIGATE, 'providers');
+                                            eventBus.emit(EVENTS.NAVIGATE, 'keys');
                                             eventBus.emit(EVENTS.SELECT_MODEL, {
                                                 provider: selectedKeyData.provider,
                                                 model:

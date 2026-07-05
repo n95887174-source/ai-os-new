@@ -6,7 +6,9 @@ import type {
 } from '../../contracts/debate-types';
 import { buildDebateState, buildDebateStatePrompt } from './debate-state-builder';
 
-export const DEFAULT_LANGUAGE = 'Russian';
+import { DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
+
+export const DEFAULT_LANGUAGE = DEFAULT_DEBATE_LANGUAGE;
 
 function stableSelectIndex(seed: string, size: number): number {
     let hash = 0;

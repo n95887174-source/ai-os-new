@@ -135,7 +135,7 @@ export type {
     PressureMapSnapshot,
     ProviderPressure,
     GlobalPressure,
-    PressureLevel,
+    AdvisorPressureLevel,
     DiagnosticFinding,
     ProviderDiagnostic,
     WhatIfScenario,
@@ -172,11 +172,7 @@ export type {
     PricingCapability,
     CostCalculationError,
 } from './contracts/pricing';
-export type {
-    ProviderCapability,
-    RequestClassification,
-    RouterDecision,
-} from './contracts/provider';
+export type { RequestClassification, RouterDecision } from './contracts/provider';
 export type { IMemoryEngine, MemoryCapability, MemoryQuery } from './contracts/memory';
 export type { ITimelineContract } from './contracts/observability';
 

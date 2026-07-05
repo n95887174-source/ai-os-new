@@ -7,9 +7,9 @@ import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
 import { estimateTokenCount } from '../utils/token-counter';
 import type { OpenRouterUsage } from './openrouter-types';
 import { OpenRouterResponseSchema } from './openrouter-types';
-import { rootLogger } from '../../kernel/services/logger-service';
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
 
-const LOGGER = rootLogger.child('OpenRouter');
+const LOGGER = FALLBACK_LOGGER.child('OpenRouter');
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
@@ -162,11 +162,11 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
         if (!res.ok) {
             const errorText = await res.text();
-            console.warn(`[OpenRouter] doSendMessage full error (${res.status}):`, errorText);
+            const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
             if (res.status === 429 || res.status >= 500) {
                 const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
                 throw new RetryableError(
-                    `OpenRouter Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
+                    `OpenRouter Error: ${res.status} - ${sanitized}`,
                     'openrouter',
                     res.status,
                     undefined,
@@ -174,7 +174,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
                 );
             }
             throw new LLMError(
-                `OpenRouter Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
+                `OpenRouter Error: ${res.status} - ${sanitized}`,
                 'openrouter',
                 res.status,
             );
@@ -204,11 +204,11 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
         if (!res.ok) {
             const errorText = await res.text();
-            console.warn(`[OpenRouter] doStreamMessage full error (${res.status}):`, errorText);
+            const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
             if (res.status === 429 || res.status >= 500) {
                 const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
                 throw new RetryableError(
-                    `OpenRouter Stream Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
+                    `OpenRouter Stream Error: ${res.status} - ${sanitized}`,
                     'openrouter',
                     res.status,
                     undefined,
@@ -216,7 +216,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
                 );
             }
             throw new LLMError(
-                `OpenRouter Stream Error: ${res.status} - ${sanitizeError(Array.from(errorText).slice(0, 200).join(''))}`,
+                `OpenRouter Stream Error: ${res.status} - ${sanitized}`,
                 'openrouter',
                 res.status,
             );

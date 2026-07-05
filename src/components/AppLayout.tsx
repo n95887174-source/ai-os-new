@@ -16,7 +16,7 @@ import { settingsService, groupManager } from '../kernel/instances';
 import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
-import { NAV_SECTIONS, type UserLevel } from '../routes';
+import { NAV_SECTIONS, type UserLevel } from '../route-registry';
 import { LayoutProvider } from './Layout/LayoutContext';
 import { LayoutSelector } from './Layout/LayoutSelector';
 import { NextActionPredictions } from './Layout/NextActionPredictions';
@@ -50,7 +50,9 @@ export const AppLayout: React.FC = () => {
             const s = settingsService.getSettings();
             if (s.theme !== newTheme)
                 settingsService.updateSettings({ theme: newTheme as typeof s.theme });
-        } catch {}
+        } catch {
+            /* settingsService may not be ready */
+        }
     }, []);
     const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
         () => structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,

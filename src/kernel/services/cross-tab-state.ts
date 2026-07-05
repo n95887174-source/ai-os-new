@@ -3,6 +3,11 @@ import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+import type {
+    ICrossTabStateSync,
+    CircuitBreakerState,
+    RateLimitState,
+} from '../contracts/cross-tab-state';
 
 const CHANNEL_NAME = 'provider-state-sync';
 const LOGGER = rootLogger.child('CrossTabStateSync');
@@ -34,21 +39,6 @@ export interface DebateSyncPayload {
     round: number;
 }
 
-export type CircuitBreakerState = {
-    provider: string;
-    keyId: string;
-    status: 'closed' | 'half-open' | 'open';
-    failureCount: number;
-    lastFailure: number;
-};
-
-export type RateLimitState = {
-    provider: string;
-    keyId: string;
-    remaining: number;
-    resetAt: number;
-};
-
 export type ErrorEntry = {
     provider: string;
     keyId: string;
@@ -57,7 +47,7 @@ export type ErrorEntry = {
     statusCode?: number;
 };
 
-class CrossTabStateSync {
+class CrossTabStateSync implements ICrossTabStateSync {
     private channel: BroadcastChannel | null = null;
     private tabId: string;
     private tabTimestamp: number;
@@ -289,6 +279,7 @@ class CrossTabStateSync {
                 break;
             case 'key-update':
                 LOGGER.debug('CrossTabStateSync', 'Cross-tab key update, refreshing local state');
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 eventBus.emit(EVENTS.KEY_UPDATED, message.payload as any);
                 break;
             case 'kernel-state-update':
@@ -296,6 +287,7 @@ class CrossTabStateSync {
                     'CrossTabStateSync',
                     'Cross-tab kernel update, refreshing local state',
                 );
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 eventBus.emit(EVENTS.KERNEL_UPDATED, message.payload as any);
                 break;
             case 'chat-session-update':
@@ -310,6 +302,7 @@ class CrossTabStateSync {
                     'CrossTabStateSync',
                     'Cross-tab settings update, refreshing local state',
                 );
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 eventBus.emit(EVENTS.SETTINGS_UPDATED, message.payload as any);
                 break;
         }

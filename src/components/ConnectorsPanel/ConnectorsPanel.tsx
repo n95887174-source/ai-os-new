@@ -1,5 +1,4 @@
 import { genId } from '../../utils/gen-id';
-import { storageAdapter } from '../../kernel/instances';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, Plus, Globe } from 'lucide-react';
@@ -7,7 +6,7 @@ import { eventBus, EVENTS } from '../../kernel/events/event-bus';
 import { db as databaseService } from '../../kernel/services/database-service';
 import { useTranslation } from '../../i18n/useTranslation';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
-import { DEFAULT_CONNECTORS, STORAGE_KEY } from './connector-constants';
+import { DEFAULT_CONNECTORS } from './connector-constants';
 import ConnectorHeader from './ConnectorHeader';
 import ConnectorControls from './ConnectorControls';
 import ConnectorCard from './ConnectorCard';
@@ -44,32 +43,36 @@ const ConnectorsPanel: React.FC = () => {
         const load = async () => {
             try {
                 const count = await databaseService.connectors.count();
-                if (count > 0) {
-                    const saved = await databaseService.connectors.toArray();
-                    if (isMountedRef.current) setConnectors(saved);
-                } else {
-                    const stored = storageAdapter.getItem(STORAGE_KEY);
-                    if (stored) {
-                        try {
-                            const parsed = safeJsonParse(stored);
-                            if (Array.isArray(parsed)) {
-                                await databaseService.connectors.bulkPut(parsed);
-                                if (isMountedRef.current) setConnectors(parsed);
-                                storageAdapter.removeItem(STORAGE_KEY);
-                            } else throw new Error('Invalid connector data');
-                        } catch (e) {
-                            console.warn(`[${id}] Failed to migrate connectors:`, e);
-                            await databaseService.connectors.bulkPut(DEFAULT_CONNECTORS);
-                            if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
-                            if (isMountedRef.current) {
-                                setErrorMsg('Corrupted storage – using defaults');
-                                clearErrorAfterDelay();
+                if (count === 0) {
+                    try {
+                        const saved = await databaseService.getAllConnectors();
+                        if (saved.length === 0) {
+                            try {
+                                const res = await fetch('/connectors-defaults.json');
+                                if (res.ok) {
+                                    const parsed: Connector[] =
+                                        safeJsonParse(await res.text()) ?? [];
+                                    if (Array.isArray(parsed) && parsed.length) {
+                                        await databaseService.bulkPutConnectors(parsed);
+                                        setConnectors(parsed);
+                                        return;
+                                    }
+                                }
+                            } catch {
+                                /* ignore */
                             }
+                            await databaseService.bulkPutConnectors(DEFAULT_CONNECTORS);
+                            setConnectors(DEFAULT_CONNECTORS);
+                        } else {
+                            setConnectors(saved);
                         }
-                    } else {
-                        await databaseService.connectors.bulkPut(DEFAULT_CONNECTORS);
-                        if (isMountedRef.current) setConnectors(DEFAULT_CONNECTORS);
+                    } catch {
+                        await databaseService.bulkPutConnectors(DEFAULT_CONNECTORS);
+                        setConnectors(DEFAULT_CONNECTORS);
                     }
+                } else {
+                    const all = await databaseService.getAllConnectors();
+                    setConnectors(all);
                 }
             } catch (e) {
                 console.warn(`[${id}] Failed to load connectors:`, e);
@@ -93,7 +96,7 @@ const ConnectorsPanel: React.FC = () => {
         async (updated: Connector[]) => {
             if (!isMountedRef.current) return;
             try {
-                await databaseService.connectors.bulkPut(updated);
+                await databaseService.bulkPutConnectors(updated);
             } catch (e) {
                 console.warn('[ConnectorsPanel] Failed to save:', e);
                 if (isMountedRef.current) {

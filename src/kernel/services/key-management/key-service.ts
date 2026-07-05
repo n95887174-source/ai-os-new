@@ -1110,11 +1110,7 @@ export class KeyService implements IKeyRotationManager {
     async setLatencyThreshold(threshold: number) {
         this._latencyThreshold = threshold;
         await this.saveConfig();
-        await this.deps.database.db.keyValue.put({
-            id: 'latency_threshold',
-            value: threshold,
-            createdAt: Date.now(),
-        });
+        await this.deps.database.setKv('latency_threshold', threshold);
         this.deps.eventBus.emit(EVENTS.SETTINGS_LATENCY_THRESHOLD, { threshold });
     }
 

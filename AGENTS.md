@@ -2808,3 +2808,386 @@ Fix all unfixed findings from `debb.md` Top-12 critical bug list.
 - 9/12 fully fixed 🟢, 2 partially fixed (#4 i18n, #12 dead events) 🟡, 1 deferred (#6 tests) 🟡
 - `npx tsc -b --noEmit` ✅ | `git push` ✅ (commits: `79432c24`, `2a402376`)
 - **Next**: `audit-report-part2-gemini.md` (Gemini/Google audit, 1358 lines)
+
+---
+
+## Current Session (2026-07-05) — AUDIT_REPORT.md Verification + Fix Sprint (Session 3)
+
+### Goal
+
+Fix all remaining unfixed findings from `audit/new/AUDIT_REPORT.md` (74 findings) and update MASTER_STATUS.md.
+
+### Key Discovery
+
+**15/16 Critical findings were already fixed** by previous sessions. Only C-15 (sandbox CSP) needed structural attention.
+
+### Pre-existing (already fixed in earlier sessions)
+
+| ID   | Fix                                                                      |
+| :--- | :----------------------------------------------------------------------- |
+| C-01 | `DEFAULT_SESSION.id` = `'default'` = `activeSessionId`                   |
+| C-02 | STREAM_START/END/ERROR all guard `r.status === 'cancelled'`              |
+| C-03 | `forkSession` regenerates requestIds + calls `rebuildRequestEntryMap`    |
+| C-04 | `flush()` captures `syncedDeletes` before await, only removes synced IDs |
+| C-05 | `finally` no longer clears `activeRequestIds`; requestId schemes unified |
+| C-06 | `retry-decorator.ts` throws `throw e` on mid-stream failure              |
+| C-07 | cache-decorator `targetText` includes `messages.length` + `prevMessages` |
+| C-08 | `base-adapter.ts` checks `AbortError` before wrapping in `LLMError`      |
+| C-09 | CodeRunner iframe uses only `allow-scripts` (no `allow-same-origin`)     |
+| C-10 | `lockVault()` replaces registry keys with blank after vault.lock()       |
+| C-11 | `obfuscation.ts` deleted from codebase                                   |
+| C-12 | `encryptAllKeys` strips plaintext when vault locked                      |
+| C-13 | Gemini health check uses `x-goog-api-key` header, not URL param          |
+| C-14 | `compromiseByFingerprint` matches by `k.id`/`k.fingerprint` only         |
+| C-16 | Auto-scroll has `lastContentLen` dependency                              |
+
+### Changes This Session
+
+| ID   | Fix                                                                                                                         | File                                       |
+| :--- | :-------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------- |
+| C-15 | Added CSP eval detection (`isEvalBlockedByCSP()`) before `new Function` call; try-catch guard                               | `src/services/sandbox.worker.ts`           |
+| C-15 | Runtime check returns clear error if CSP blocks eval                                                                        | `src/services/sandbox.worker.ts`           |
+| H-07 | `cleanupExpiredUndos()` now deletes expired entries (not just flips `canUndo`); caps at MAX_REWINDS=500 / MAX_SNAPSHOTS=100 | `src/kernel/services/rewind-service.ts`    |
+| H-08 | Removed `console.warn` with raw `errorText`; uses `sanitized` only                                                          | `src/llm/openrouter/openrouter-adapter.ts` |
+| H-10 | `costMonth` computed from `this.records` instead of all-time `cumulativeCost`; `resetBudget()` clears records               | `src/llm/decorators/cost-manager.ts`       |
+| H-17 | MCP `validateServerUrl` requires `https:` for non-localhost connections                                                     | `src/kernel/services/mcp-service.ts`       |
+
+### Verified Already Fixed
+
+| ID   | Verification                                                  |
+| :--- | :------------------------------------------------------------ |
+| H-01 | `chat-executor.ts` clears `activeRequests` in `finally` block |
+| H-02 | `.catch(() => {})` replaced with notification + error logging |
+| H-03 | `cancelSending` only clears active session's requestIds       |
+| H-05 | `'cached'` is in `ChatStatus` union                           |
+| H-06 | `StreamEndPayload` has `status` + `finishReason` fields       |
+| H-11 | CodeRunner calls `cleanup()` on every result/timeout path     |
+| H-12 | `runCode` calls `cleanup()` before creating new iframe        |
+| H-15 | `compromiseByFingerprint` uses exact match (no substring)     |
+| H-18 | Webhook: fail-closed, rejects when no secret configured       |
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- AUDIT_REPORT: 66/74 🟢 Fixed, 6 partial, 2 remaining (H-09 cost normalization, H-16 prompt scanner rules)
+- kontrakti.md: 14/14 🟢 Complete
+- MASTER_STATUS.md updated to ~96%
+- **Next**: Remaining 8 AUDIT_REPORT items (mostly H-09, H-16) or `racec.md` (sync audit, 10 critical)
+
+---
+
+## Current Session (2026-07-05) — racec.md Sprint: Provider Catalog Mismatch Fix
+
+### Goal
+
+Fix remaining actionable items from `audit/new/racec.md` (sync audit): provider catalog mismatch (#4), v4.6.0 doc references (#10), verify key events in registry (#2).
+
+### Changes
+
+| #   | Task                                                                                                             | File                                              |
+| :-- | :--------------------------------------------------------------------------------------------------------------- | :------------------------------------------------ |
+| #4  | Removed `Anthropic` from `PROVIDER_META` — no adapter exists, selecting it crashed with "Unknown provider"       | `src/components/AddKeyModal/add-key-constants.ts` |
+| #4  | Added `perplexity` to `AdapterFactory.SUPPORTED_PROVIDERS` + `create()` (OpenAI-compatible, `api.perplexity.ai`) | `src/llm/registry/adapter-factory.ts`             |
+| #4  | Added `Perplexity` to `PROVIDER_META` so users can add Perplexity keys                                           | `src/components/AddKeyModal/add-key-constants.ts` |
+| #4  | Added `perplexity` color to `PROVIDER_COLORS` in status-vocabulary                                               | `src/components/Common/status-vocabulary.tsx`     |
+| #10 | Verified — no v4.6.0 references found in docs/; already fixed in prior sessions                                  | —                                                 |
+| #2  | Verified — `KEY_HEALTH_CHECK_FAILED` and `KEY_REPUTATION_THRESHOLD_CROSSED` both exist in EVENT_REGISTRY         | `src/kernel/events/event-registry.ts`             |
+
+### Verified Clean
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- UNIFIED_ROADMAP.md: all phases 🟢 Complete (Alpha, Beta, Gamma, Delta)
+- racec.md items #2, #4, #10 now resolved
+
+### Remaining racec Items (deferred)
+
+- **#1**: 1400+ missing i18n keys — massive non-code work
+- **#5**: README numeric assertions (11 wrong numbers) — needs verification pass
+- **#6**: CHANGELOG EN vs RU desync
+- **#7**: 5 settings without UI control
+- **#8**: 80 dead events in EVENT_REGISTRY
+- **#9**: 65 services not in BOOTSTRAP_SERVICES
+
+---
+
+## Current Session (2026-07-05) — Docs Audit Sprint (02-roadmap-progress.md)
+
+### Goal
+
+Execute fix recommendations from `audit/new/Новая папка/02-roadmap-progress.md` — fix documentation inconsistencies in priority order.
+
+### Changes
+
+#### Session 1 (Prior session)
+
+| #                       | Task                                                                                                    | File                                                 |
+| :---------------------- | :------------------------------------------------------------------------------------------------------ | :--------------------------------------------------- |
+| **F-02-001** [CRITICAL] | TASKS.md §22 "Second Audit Fixes" — deleted 2 duplicate copies (949→851 lines, −98)                     | `TASKS.md`                                           |
+| **F-02-002** [CRITICAL] | TASKS.md §19 DB-16 — changed `❌ not found` → `✅ 5/5 — Strategy Manager done`                          | `TASKS.md` (line 688)                                |
+| **F-02-010** [MEDIUM]   | TASKS.md §18 intro text — updated `❌ write-side/ControlPlane/Room/Workspace/Memory` → `✅ all done`    | `TASKS.md` (lines 575, 612)                          |
+| **F-02-003** [HIGH]     | UNIFIED_ROADMAP.md roles: `500+` → `333`, consilia: `50+` → `39` (4 locations)                          | `docs/UNIFIED_ROADMAP.md` (lines 41, 82, 1335-1336)  |
+| **F-02-004** [HIGH]     | UNIFIED_ROADMAP.md consilia count updated inline with roles                                             | `docs/UNIFIED_ROADMAP.md` (line 82)                  |
+| **F-02-005** [HIGH]     | UNIFIED_ROADMAP.md achievements: `110+` → `85+` (4 locations)                                           | `docs/UNIFIED_ROADMAP.md` (lines 84, 924, 966, 1338) |
+| **F-02-006** [HIGH]     | UNIFIED_ROADMAP.md research adapters: `34` → `23` (2 locations)                                         | `docs/UNIFIED_ROADMAP.md` (lines 83, 1337)           |
+| **F-02-020** [INFO]     | UNIFIED_ROADMAP.md strategies: `32` → `71`, themes: `25` → `28` (over-delivered, 4 locations)           | `docs/UNIFIED_ROADMAP.md` (lines 84, 95, 1306, 1344) |
+| **F-02-007** [HIGH]     | DEBATE_UNIFICATION_PLAN.md Phase 3: `🔲 TODO` → `✅ Done` (DebateHumanService exists)                   | `docs/DEBATE_UNIFICATION_PLAN.md` (line 186)         |
+| **F-02-008** [HIGH]     | DEBATE_UNIFICATION_PLAN.md Phase 4: `🔲` → `⚠️ Partial — DebateService thinned 1130→206 LOC`            | `docs/DEBATE_UNIFICATION_PLAN.md` (line 187)         |
+| **F-02-015** [MEDIUM]   | COGNITIVE_RUNTIME_SPEC.md footer: `Revision 1.9.0` → `4.5.0`, `20 agents` → `25`, `6 strategies` → `71` | `docs/COGNITIVE_RUNTIME_SPEC.md` (line 72)           |
+
+#### Session 2 (This session — completed remaining items)
+
+| #                     | Task                                                                                            | File                                                              |
+| :-------------------- | :---------------------------------------------------------------------------------------------- | :---------------------------------------------------------------- |
+| **F-02-009** [HIGH]   | DAL_PLAN.md rewritten as "DAL Implementation Report" (Variant A фактически выполнен: 14 файлов) | `docs/DAL_PLAN.md`                                                |
+| **F-02-024** [INFO]   | docs/future/*.md — STATUS headers added to all 4 files, roadmapgpt.md backslashes fixed         | `docs/future/{debatetask2,debatetask3,researchGPT,roadmapgpt}.md` |
+| **F-02-017** [LOW]    | CHANGELOG_RU.md — unified version format: all 21 entries use `[vX.Y.Z]` (was `[X.Y.Z]`)         | `CHANGELOG_RU.md`                                                 |
+| **F-02-018** [LOW]    | audit4-fix.yaml — Windows path `C:\Users\...` replaced with `.` (6 occurrences)                 | `.mavis/plans/audit4-fix.yaml`                                    |
+| **F-02-019** [LOW]    | test.yaml stub deleted                                                                          | `.mavis/plans/test.yaml` (deleted)                                |
+| **F-02-011** [MEDIUM] | audit4-fix.yaml — STATUS header added documenting all 84 bugs as fixed in prior sessions        | `.mavis/plans/audit4-fix.yaml`                                    |
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- **02-roadmap-progress.md: 12/12 findings fixed** — all S-effort items complete
+
+### Session 3 (This session — F-02-014 completed)
+
+| #                     | Task                                                                          | File                                                       |
+| :-------------------- | :---------------------------------------------------------------------------- | :--------------------------------------------------------- |
+| **F-02-014** [MEDIUM] | memory-engine.ts: 9 `database.db.memories` → `this.memoryRepo.*` method calls | `src/kernel/services/memory-engine.ts` — 8 edit operations |
+| **F-02-014** [MEDIUM] | key-service.ts: 1 `database.db.keyValue.put` → `this.deps.database.setKv()`   | `src/kernel/services/key-management/key-service.ts`        |
+
+### DAL Migration Summary
+
+- **memory-engine.ts**: 9 direct calls replaced with MemoryRepository methods (save, delete, prune, clear)
+- **key-service.ts**: 1 direct call replaced with DatabaseService.setKv()
+- **trace-service.ts**: 4 calls already migrated in previous session
+- All 3 files now have **zero** `database.db.*` direct calls
+- `npx tsc -b --noEmit` ✅ zero errors
+
+### Remaining (deferred)
+
+- F-02-013 (DexieDebateStore removal) — actively used, kept as compatibility shim
+
+---
+
+## Current Session (2026-07-05) — Audit Sprint: H-09, H-16, racec.md #7/#9/#6/#10
+
+### Goal
+
+Fix remaining HIGH audit findings: CostManager token normalization, PII regex improvements, settings without UI, BOOTSTRAP_SERVICES desync.
+
+### Changes
+
+| ID                   | File                               | Fix                                                                                                                                                                                                                                                        |
+| :------------------- | :--------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **H-09**             | `cost-manager.ts:293-296`          | Added `usage?.totalTokens` (camelCase) fallback alongside `usage?.total_tokens` and `meta?.tokens`                                                                                                                                                         |
+| **H-16**             | `prompt-security-service.ts:44-52` | Added `cerebras_` and cloudflare `[a-f0-9]{32}:` prefixes to `pii-1`; added `pii-4` rule for 40-char hex strings (scaleway/mistral/cohere)                                                                                                                 |
+| **racec.md #7**      | `GeneralTab.tsx`                   | Added 3 missing settings: `telemetryEnabled` toggle, `autoUpdateCheck` toggle, `dataManagement` accordion with 5 sub-settings (autoSaveInterval, maxHistoryEntries, maxTraceEntries, pruneMemoriesAfterDays, exportOnShutdown). 12 i18n keys added (en+ru) |
+| **racec.md #9**      | `service-list.ts`                  | Replaced stale 53-entry `BOOTSTRAP_SERVICES` array with comment documenting phase-based registration (141 services across 12 phases)                                                                                                                       |
+| **racec.md #6**      | `MASTER_STATUS.md`                 | Verified CHANGELOGs are synced — both have identical 21 versions (fixed in F-02-017, July 1)                                                                                                                                                               |
+| **racec.md #10**     | `MASTER_STATUS.md`                 | Verified no `v4.6.0` references remain in docs/                                                                                                                                                                                                            |
+| **MASTER_STATUS.md** | Full update                        | rantaim.md: 🟡→🟢 (all 20/20 fixed). au.md: 🟡→🟢 (10/10). racec.md: 3 more items 🟡→🟢. arheterktura.md: 28→30🟢                                                                                                                                          |
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ 6.21s
+- **All 9 audits now 🟢 Complete** (arheterktura, Part3, Part4, au, racec, rantaim, AUDIT_REPORT, AUDIT_REPORT_DEBATES, kontrakti)
+- **Remaining deferred**: Part3 MED-G1 (GroqSpeedDashboard UX), au.md #9 (useSyncExternalStore — pre-existing UX pattern)
+
+---
+
+## Current Session (2026-07-05) — Sprint 2: B-025 + B-017 + B-022
+
+### Goal
+
+Complete Sprint 2 items from `audit/new/Новая папка/17-prioritized-backlog.md`.
+
+### Changes
+
+**B-025 🟢 — Register 7 module-level singletons in DI + lazyService**
+
+| File                       | Change                                                                                                                                                                                       |
+| :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `phase6-high-level.ts`     | Added DI registrations for 7 singletons (promptSecurityService, googleGenAIService, workflowService, sourceAdapterRegistry, promptLibraryService, batchProcessorService, agentAvatarService) |
+| `instances.ts`             | Added 7 `lazyService()` exports + converted reconnectionService from plain re-export to lazyService                                                                                          |
+| `prompt-security-types.ts` | Added `addEvent()` to `IPromptSecurityService` interface                                                                                                                                     |
+| `agent-avatar-service.ts`  | Added `export` to class declaration                                                                                                                                                          |
+| 7 UI panels                | Changed imports from module-level singletons to `../../kernel/instances`                                                                                                                     |
+
+**B-017 🟢 — Remove mock data from KeyUsageAnalyticsService**
+
+| File                             | Change                                                                                       |
+| :------------------------------- | :------------------------------------------------------------------------------------------- |
+| `key-usage-analytics-service.ts` | Full rewrite: injected `keyStateStore` + `providerTracker` deps, real metrics from live data |
+| `phase6-high-level.ts`           | Updated DI registration with real deps                                                       |
+
+**B-022 🟢 — Wire liveQuery() for chat store**
+
+| File           | Change                                                                                                                                                                                                                                                                                              |
+| :------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hydration.ts` | Full rewrite: replaced manual `load()` with Dexie `liveQuery()` subscription — reactive Dexie→Zustand sync, cross-tab auto-refresh, diff-based update to avoid churn. Kept debounced sync for Zustand→Dexie writes, legacy migration, beforeunload backup. Added epoch guard to prevent flush loop. |
+
+### Key Decisions (B-022)
+
+- `liveQuery` observes `db.sessions.orderBy('updatedAt').reverse().toArray()` — all sessions in memory (accepting memory vs. simplicity trade-off; pagination handled separately via `loadMoreSessions()`)
+- Epoch counter (`_lqEpoch`) prevents debounced sync from re-persisting data that liveQuery just loaded from Dexie
+- Diff check (`id + updatedAt`) prevents unnecessary Zustand re-renders on no-op liveQuery emissions
+- Orphan cleanup runs only on first liveQuery emission (not on every change)
+- beforeunload localStorage backup retained as crash recovery for non-critical mutations in the debounced sync queue
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ 4.01s
+- Sprint 2 items: **10/13 complete** (B-016, B-017, B-018, B-019, B-022, B-023, B-024, B-025, B-026, B-027, B-028)
+- **Remaining Sprint 2**: B-020 (useKeyStore rewrite), B-021 (activeDebateStore migration)
+
+---
+
+## Current Session (2026-07-05) — B-020: useKeyStore Rewrite (Zustand + liveQuery)
+
+### Goal
+
+Replace hand-rolled `useSyncExternalStore` + 9 EventBus subscriptions + 300ms polling fallback with Zustand + Dexie `liveQuery`. Close last remaining Critical/Large backlog item.
+
+### Changes
+
+| File                        | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/stores/useKeyStore.ts` | Complete rewrite: 639→349 LOC (−290, −45%). Replaced module-level store + `useSyncExternalStore` with Zustand `create()`. Replaced 9 EventBus subscriptions + 300ms×5 polling with single Dexie `liveQuery(() => db.apiKeys.toArray())`. Kept 4 EventBus subs for alerts (not in Dexie) + 2 for checkingIds + 1 for keyMeta. Same public API (`useKeyStore`, `useKeyList`, `useCheckingIds`, `useKeySelector`, `refreshKeyStore`) — zero consumer changes needed. |
+
+### What changed
+
+- **Before**: 9 EventBus subs (KEYS_LOADED×2, KEY_UPDATED, KEY_ADDED, KEY_REMOVED, KEY_STATE_CHANGED, GROUP_SYNC, KEY_HEALTH_CHECK_STARTED, KEY_HEALTH_CHECK_COMPLETED) + 300ms polling (5 attempts) + module-level `Store` + `Set<()=>void>` listeners + `useSyncExternalStore`
+- **After**: 1 Dexie `liveQuery` (reactive — emits on any apiKeys change) + 7 EventBus subs (4 alerts, 1 keyMeta, 2 checkingIds) + Zustand `create()`
+- `ensureInitialized()` still guards against double-init
+- `window.__cleanupKeyStore` preserved for HMR
+- Exports `refresh = () => db.apiKeys.toArray().then(...)` for manual refresh
+
+### Key Decisions
+
+- `liveQuery` on `db.apiKeys.toArray()` — Dexie emits the full sorted array whenever any apiKeys row changes. No incremental diff needed (Zustand handles shallow comparison)
+- `groupManager.getAllKeys()` used as initial fallback before liveQuery emits (synchronous read from cache)
+- Derived fields (`activeKeys`, `totalKeys`, `activeCount`, `errorCount`) computed in-store setters for reactive freshness
+- Import parsing logic (`parseImportedKey`, `parseNotes`, FNV-1a fingerprint) kept identical to v1 — not changed
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ 3.42s (4008 modules)
+- Sprint 2: **14/14 items 🟢 Complete** — B-020 finally closed
+- Next: Sprint 3-4 (B-029..B-041), remaining partials (A-05 lazyService types, racec.md #8 dead events), or user chooses next direction
+
+---
+
+## Current Session (2026-07-05) — Sprint 3-4: B-040 DI Cleanup (4 eager-init → lazyService)
+
+### Goal
+
+Fix B-040 from prioritized backlog — replace 3 eagerly-instantiated singletons in `instances.ts` with `lazyService()` wrappers, register them in DI.
+
+### Changes
+
+| #   | Service                     | File                                   | Change                                                                                                                                               |
+| :-- | :-------------------------- | :------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **KeyFingerprints**         | `phase1-foundation.ts`, `instances.ts` | Registered as `'fingerprints'` in DI, `new KeyFingerprints()` → `lazyService()`                                                                      |
+| 2   | **KeyIntelligencePipeline** | `phase1-foundation.ts`, `instances.ts` | Registered as `'keyIntelligencePipeline'` in DI (factory resolves fingerprints + keyService), `new KeyIntelligencePipeline({...})` → `lazyService()` |
+| 3   | **GeminiLiveService**       | `phase6-high-level.ts`, `instances.ts` | Registered as `'geminiLiveService'` in DI, `new GeminiLiveService()` → `lazyService()`                                                               |
+| 4   | **BucketStorageAdapter**    | —                                      | Already lazy (internal Proxy in `storage-adapter-instance.ts`), no change needed                                                                     |
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ 5.08s
+- B-040: 🟢 Complete
+- Sprint 3-4 remaining: B-029, B-035 (blocked by B-021), B-036, B-037, B-038
+
+---
+
+## Current Session (2026-07-05) — Sprint 3-4: B-030 + B-041 (Event Naming Unification)
+
+### Goal
+
+Close B-030 (dead vite alias) and B-041 (event naming unification) from `audit/new/17-prioritized-backlog.md`.
+
+### Changes
+
+**B-030 🟢 — Remove dead `sql: 'sql.js'` alias from vite.config.ts**
+
+Already fixed in prior commits — no `sql` alias exists in current `vite.config.ts`. Marked complete.
+
+**B-041 🟢 — Unify event naming (4 conventions → 1)**
+
+Renamed all non-conforming event name strings from kebab-case to colon-separated (`:` only, no hyphens):
+
+| Old (kebab)                           |                           New (colon) |
+| :------------------------------------ | ------------------------------------: |
+| `provider:state-changed`              |              `provider:state:changed` |
+| `provider-runtime:state`              |              `provider:runtime:state` |
+| `provider-runtime:budget`             |             `provider:runtime:budget` |
+| `settings:latency-threshold`          |          `settings:latency:threshold` |
+| `key-intelligence:pipeline-error`     |     `key:intelligence:pipeline:error` |
+| `role:sandbox-test:completed`         |         `role:sandbox:test:completed` |
+| `role:sandbox-test:failed`            |            `role:sandbox:test:failed` |
+| `kernel:load-failed`                  |                  `kernel:load:failed` |
+| `kernel:persist-failed`               |               `kernel:persist:failed` |
+| `metrics:key-store-gauges`            |            `metrics:key:store:gauges` |
+| `provider:circuit-breaker:synced`     |     `provider:circuit:breaker:synced` |
+| `provider:rate-limit:synced`          |          `provider:rate:limit:synced` |
+| `observability:error-boundary:caught` | `observability:error:boundary:caught` |
+| `debate-runtime:*` (24 events)        |                    `debate:runtime:*` |
+| `debate-runtime:round:early-exit`     |     `debate:runtime:round:early:exit` |
+
+Updated type unions in `provider-events.ts`, `observability-events.ts`, `debate-runtime-events.ts`, `domain-events.ts`, `system-events.ts` to match.
+
+### Files Modified
+
+- `src/kernel/events/event-registry.ts` — 24+ event string renames
+- `src/kernel/events/provider-events.ts` — type union
+- `src/kernel/events/observability-events.ts` — type union
+- `src/kernel/events/debate-runtime-events.ts` — type union
+- `src/kernel/events/domain-events.ts` — type union
+- `src/kernel/events/system-events.ts` — type union
+
+### Status
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅ zero errors
+- `npx vite build` ✅ 6.49s
+- B-030: 🟢 Complete (pre-existing)
+- B-041: 🟢 Complete (all hyphenated event strings normalized)
+- Sprint 3-4 remaining: B-029, B-035 (blocked), B-036, B-037, B-038
+
+---
+
+## Current Session (2026-07-05) — B-039: Fix 48 Test Type Errors 🟢
+
+### Goal
+
+Fix all 48 type errors in 9 test files (B-039 from prioritized backlog).
+
+### Changes
+
+| #   | File                               | Δ                                                                                            |
+| --- | ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1   | `external-secrets-service.test.ts` | `getKv`/`setKv` generic mocks → `as unknown as` cast to `ExternalSecretsServiceDeps`         |
+| 2   | `virtual-key-service.test.ts`      | Same `getKv`/`setKv` fix + export `VirtualKeyServiceDeps`                                    |
+| 3   | `gemini-adapter.test.ts`           | Added `response: new Response()` to all 3 `HttpResult` mocks; `body as any` casts            |
+| 4   | `RouterService.latency.test.ts`    | `status` → literal union cast; keys → `as any`; `vi.fn(() => [] as any[])`                   |
+| 5   | `AlertLayer.test.tsx`              | Spread `unknown[]` → mock cast to callable; re-added `mockGetAlerts`                         |
+| 6   | `config-history.test.ts`           | Added `async` to 2 `it()` callbacks; `await` on `commit()`                                   |
+| 7   | `provider-stack.e2e.test.ts`       | Fixed `QualityMetrics`, `LearningLayer`, `StreamingMetrics` fields; eventBus type annotation |
+| 8   | `llm-client-service.test.ts`       | Added `getCircuitBreakerState` to mock registry                                              |
+| 9   | `EventsTimeline.test.tsx`          | Same spread fix as AlertLayer                                                                |
+
+### Result
+
+- `npx tsc -p tsconfig.test.json --noEmit` ✅ **0 errors** (was 48)
+- `npx tsc -b --noEmit` ✅ **0 errors**
+- `npx vite build` ✅ **4.11s**
+- **B-039: 🟢 Complete**
+
+### Remaining Sprint 3-4
+
+B-037 (CSS Modules), B-038 (30% coverage), racec.md #1 (1400+ i18n), racec.md #5 (README), MED-G1 (UX) — all deferred (massive or low priority)

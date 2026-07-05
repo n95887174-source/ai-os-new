@@ -790,6 +790,22 @@ export class DatabaseService {
         });
     }
 
+    async bulkPutConnectors(connectors: Connector[]): Promise<void> {
+        await getDexieDb().connectors.bulkPut(connectors);
+    }
+
+    async getAllConnectors(): Promise<Connector[]> {
+        return getDexieDb().connectors.toArray();
+    }
+
+    async saveWorkflow(topology: unknown): Promise<void> {
+        await getDexieDb().keyValue.put({
+            id: 'saved_workflow',
+            value: topology,
+            createdAt: Date.now(),
+        });
+    }
+
     async exportToJson(includeSecrets = false): Promise<Record<string, unknown[]>> {
         // AUDIT FIX: Include debateSessions, debateVerdicts, eventLog (were missing)
         const [

@@ -1,5 +1,5 @@
 import { AuthError, RetryableError, LLMError } from '../core/errors';
-export { sanitizeObject, sanitizeError, sanitizeApiKey } from '../../kernel/utils/sanitize';
+export { sanitizeObject, sanitizeError, sanitizeApiKey } from '../../shared/utils/sanitize';
 
 export interface HttpResult {
     data: unknown;

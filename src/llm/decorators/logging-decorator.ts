@@ -5,10 +5,10 @@ import type {
     SendMessageOptions,
 } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
-import { rootLogger } from '../../kernel/services/logger-service';
-import { sanitizeError } from '../http/llm-http-client';
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
+import { sanitizeError } from '../../shared/utils/sanitize';
 
-const LOGGER = rootLogger.child('LoggingDecorator');
+const LOGGER = FALLBACK_LOGGER.child('LoggingDecorator');
 
 export class LoggingDecorator extends BaseDecorator {
     async sendMessage(

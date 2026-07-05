@@ -3,7 +3,7 @@ import type {
     PressureMapSnapshot,
     ProviderPressure,
     GlobalPressure,
-    PressureLevel,
+    AdvisorPressureLevel,
 } from '../../contracts/advisor';
 
 export interface PressureEngineDeps {
@@ -94,7 +94,7 @@ export class PressureEngine implements IPressureEngine {
         this.deps = deps;
     }
 
-    private getPressureLevel(score: number): PressureLevel {
+    private getPressureLevel(score: number): AdvisorPressureLevel {
         if (score >= 80) return 'critical';
         if (score >= 60) return 'high';
         if (score >= 35) return 'medium';

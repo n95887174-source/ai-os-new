@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
 import {
     GripVertical,
     PowerOff,
@@ -123,13 +124,9 @@ const ProviderTableRow: React.FC<
         const start = Date.now();
         let isDone = false;
 
-        let defaultModel = 'auto';
         const p = apiKey.provider.toLowerCase();
-        if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
-        else if (p === 'openrouter') defaultModel = 'openrouter/auto';
-        else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
-        else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
-        else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+        const defaultModel =
+            p === 'openrouter' ? 'openrouter/auto' : PROVIDER_DEFAULT_MODELS[p] || 'auto';
 
         const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
 

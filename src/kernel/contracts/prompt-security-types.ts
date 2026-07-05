@@ -38,10 +38,11 @@ export interface SecurityScanEvent {
     blocked: boolean;
 }
 
-export interface PromptSecurityService {
+export interface IPromptSecurityService {
     scan(prompt: string): PromptScanResult;
     getConfig(): SecurityScanConfig;
     updateConfig(config: Partial<SecurityScanConfig>): void;
+    addEvent(event: SecurityScanEvent): Promise<void>;
     getHistory(): Promise<SecurityScanEvent[]>;
     clearHistory(): Promise<void>;
 }

@@ -74,6 +74,30 @@ export class ChatExecutor {
                 const agentId = req.options?.metadata?.agentId as string | undefined;
 
                 const promptText = messages.map((m) => m.content).join(' ');
+
+                // B-016: Security scan before any LLM call
+                const scanResult = promptSecurityService.scan(promptText);
+                if (
+                    !scanResult.safe &&
+                    scanResult.score >= promptSecurityService.getConfig().blockOnScore
+                ) {
+                    this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+                        type: 'warning',
+                        message: `Prompt blocked by security scan: ${scanResult.summary}`,
+                    });
+                    promptSecurityService.addEvent({
+                        timestamp: Date.now(),
+                        prompt: promptText.slice(0, 200),
+                        result: scanResult,
+                        blocked: true,
+                    });
+                    throw new LLMError(
+                        'SecurityError',
+                        `Prompt blocked: ${scanResult.summary}`,
+                        400,
+                    );
+                }
+
                 const useRace =
                     req.options?.strategy === 'race' ||
                     (req.provider && req.provider.toLowerCase() === 'race');

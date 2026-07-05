@@ -4,7 +4,7 @@ import { EVENTS } from '../../events/event-names';
 import type {
     StorageLayer,
     KeyStore,
-    MemoryStore,
+    DexieMemoryStore,
     TraceStore,
     SessionStore,
     ConfigStore,
@@ -73,7 +73,7 @@ class DexieKeyStore implements KeyStore {
     }
 }
 
-class DexieMemoryStore implements MemoryStore {
+class DexieMemoryStoreImpl implements DexieMemoryStore {
     async saveEntry(entry: MemoryEntry): Promise<void> {
         await getDexieDb().memories.put(entry);
     }
@@ -244,8 +244,16 @@ class DexieSessionStore implements SessionStore {
             .toArray();
     }
 
+    async listAll(): Promise<ChatSession[]> {
+        return getDexieDb().sessions.toArray();
+    }
+
     async deleteSession(id: string): Promise<void> {
         await getDexieDb().sessions.delete(id);
+    }
+
+    async updateSession(id: string, changes: Partial<ChatSession>): Promise<void> {
+        await getDexieDb().sessions.update(id, changes);
     }
 
     async bulkPut(sessions: ChatSession[]): Promise<void> {
@@ -457,6 +465,10 @@ class DexieDebateStore implements DebateStore {
         return records;
     }
 
+    async listAllSessions(): Promise<DebateSessionRecord[]> {
+        return getDexieDb().debateSessions.toArray();
+    }
+
     async deleteSession(id: string): Promise<void> {
         await getDexieDb().debateSessions.delete(id);
     }
@@ -481,7 +493,7 @@ export function createDexieStorage(): StorageLayer {
     if (!_instance) {
         _instance = {
             keys: new DexieKeyStore(),
-            memory: new DexieMemoryStore(),
+            memory: new DexieMemoryStoreImpl(),
             traces: new DexieTraceStore(),
             sessions: new DexieSessionStore(),
             config: new DexieConfigStore(),

@@ -1,9 +1,9 @@
 import type { HealthCheckResult } from '../core/types';
 import type { LLMHttpClient } from '../http/llm-http-client';
 import { AuthError } from '../core/errors';
-import { rootLogger } from '../../kernel/services/logger-service';
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
 
-const LOGGER = rootLogger.child('GeminiHealth');
+const LOGGER = FALLBACK_LOGGER.child('GeminiHealth');
 
 export class GeminiHealthCheck {
     readonly #httpClient: LLMHttpClient;

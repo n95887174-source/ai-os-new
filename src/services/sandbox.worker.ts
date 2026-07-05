@@ -223,10 +223,34 @@ self.onunhandledrejection = (event: PromiseRejectionEvent) => {
     });
 };
 
+/* ---------- CSP Eval Detection ---------- */
+
+let _cspBlockedEval: boolean | null = null;
+function isEvalBlockedByCSP(): boolean {
+    if (_cspBlockedEval !== null) return _cspBlockedEval;
+    try {
+        new Function('');
+        _cspBlockedEval = false;
+    } catch {
+        _cspBlockedEval = true;
+    }
+    return _cspBlockedEval;
+}
+
 /* ---------- Main handler ---------- */
 
 self.onmessage = async (event: MessageEvent) => {
     const { code, data, timeout } = event.data;
+    if (isEvalBlockedByCSP()) {
+        self.postMessage({
+            error:
+                'Sandbox execution is blocked by Content Security Policy — ' +
+                'new Function()/eval() is disabled in this worker context. ' +
+                'To use sandbox, ensure the worker script is served without CSP that blocks eval, ' +
+                'or set VITE_SANDBOX_ENABLED=false.',
+        });
+        return;
+    }
     const EXEC_TIMEOUT = typeof timeout === 'number' && timeout > 0 ? timeout : 5000;
 
     const os = {
@@ -308,9 +332,22 @@ self.onmessage = async (event: MessageEvent) => {
             code +
             '}catch(e){return{__error:e.message}}})();';
 
-        const fn = new Function('data', 'os', 'proxySelf', 'freeze', 'func', sandboxBody);
+        let fn: (...args: unknown[]) => unknown;
+        try {
+            fn = new Function('data', 'os', 'proxySelf', 'freeze', 'func', sandboxBody) as (
+                ...args: unknown[]
+            ) => unknown;
+        } catch (evalBlocked: unknown) {
+            self.postMessage({
+                error:
+                    'Failed to create execution context: ' +
+                    (evalBlocked instanceof Error ? evalBlocked.message : String(evalBlocked)) +
+                    '. Check CSP / unsafe-eval.',
+            });
+            return;
+        }
 
-        const execPromise = fn(data, os, sandboxProxy, Object.freeze, Function);
+        const execPromise = fn(data, os, sandboxProxy, Object.freeze, Function) as Promise<unknown>;
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(
                 () => reject(new Error(`Execution timed out after ${EXEC_TIMEOUT}ms`)),

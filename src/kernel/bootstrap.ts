@@ -7,7 +7,6 @@ import { EVENTS } from './events/event-names';
 import { getDexieDb } from './services/database-service';
 import { AuditorTopology } from './state/topology-defaults';
 import { ConfigService } from './services/config-service';
-import { debateService } from './services/debate-runtime/debate-service';
 import { KeyService } from './services/key-management/key-service';
 import { KeyStateStore } from './services/key-state-store';
 import { ProviderRuntimeService } from './services/provider-runtime/provider-service';
@@ -38,11 +37,7 @@ export class SystemBootstrap implements IBootstrap {
     private eventBus: IEventBus;
     private lifecycle = new LifecycleManager();
     private logger: LoggerService;
-    private memoryWatchdog = new MemoryWatchdog({
-        intervalMs: 5000,
-        thresholdMB: 100,
-        absoluteThresholdMB: 1500,
-    });
+    private memoryWatchdog?: MemoryWatchdog;
 
     constructor(container: IContainer, eventBus: IEventBus) {
         this.container = container;
@@ -69,6 +64,13 @@ export class SystemBootstrap implements IBootstrap {
         this.logger.info('Bootstrap', 'Initializing Super-Agents OS Runtime...');
 
         this.phase = 'kernel';
+
+        this.memoryWatchdog = new MemoryWatchdog({
+            intervalMs: 5000,
+            thresholdMB: 100,
+            absoluteThresholdMB: 1500,
+        });
+        this.memoryWatchdog.start();
 
         this.registerMigratedServices();
 
@@ -99,8 +101,6 @@ export class SystemBootstrap implements IBootstrap {
         g.__BOOTSTRAP_PHASE__ = false;
         g.__BOOTSTRAP_KEY_COUNT__ = 0;
         clearBootstrapSnapshot();
-
-        this.memoryWatchdog.start();
 
         this.isStarted = true;
         return this.getReport();
@@ -145,7 +145,7 @@ export class SystemBootstrap implements IBootstrap {
             /* ignore */
         }
 
-        this.memoryWatchdog.stop();
+        this.memoryWatchdog?.stop();
         await this.lifecycle.shutdown();
 
         this.lifecycle.clearStatuses();
@@ -158,42 +158,7 @@ export class SystemBootstrap implements IBootstrap {
     private async initServices(): Promise<boolean> {
         this.phase = 'services';
 
-        // BR-14: Heap logging only in DEV — 14 calls across init(), spam in prod
-        const memBefore: number | undefined = import.meta.env.DEV
-            ? (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
-                  ?.usedJSHeapSize
-            : undefined;
-        if (import.meta.env.DEV) {
-            this.logger.info('Bootstrap', 'Initializing all lifecycle services...', {
-                memMB: memBefore ? Math.round(memBefore / 1024 / 1024) : 'n/a',
-            });
-        }
-
-        // BR-11: Use single initAll() instead of hardcoded SERVICE_PHASES —
-        // services are registered in dependency order by phase files (0-11),
-        // so registration order === correct init order.
         await this.lifecycle.initAll();
-
-        if (import.meta.env.DEV) {
-            const memAfter = (performance as unknown as { memory?: { usedJSHeapSize: number } })
-                .memory?.usedJSHeapSize;
-            this.logger.info('Bootstrap', 'All lifecycle services initialized', {
-                memMB: memAfter ? Math.round(memAfter / 1024 / 1024) : 'n/a',
-                deltaMB:
-                    memBefore && memAfter
-                        ? Math.round((memAfter - memBefore) / 1024 / 1024)
-                        : 'n/a',
-            });
-        }
-
-        // C-08: Restore active debate session on bootstrap
-        try {
-            await debateService.init();
-        } catch (e) {
-            this.logger.warn('Bootstrap', 'Failed to restore active debate session', {
-                error: String(e),
-            });
-        }
 
         // Check for critical service failures
         for (const status of this.lifecycle.getStatuses()) {
@@ -227,14 +192,6 @@ export class SystemBootstrap implements IBootstrap {
 
         this.phase = 'topology';
 
-        const memPreEventSourcing = (
-            performance as unknown as { memory?: { usedJSHeapSize: number } }
-        ).memory?.usedJSHeapSize;
-        this.logger.info(
-            'Bootstrap',
-            `Before eventSourcing init, memMB: ${memPreEventSourcing ? Math.round(memPreEventSourcing / 1024 / 1024) : 'n/a'}`,
-        );
-
         await this.lifecycle.tryInit('eventSourcingService', () => {
             return this.container
                 .get<EventRecorder>('eventSourcingService')
@@ -242,14 +199,6 @@ export class SystemBootstrap implements IBootstrap {
                     this.eventBus.subscribeAll(cb),
                 );
         });
-
-        const memPreProviderRuntime = (
-            performance as unknown as { memory?: { usedJSHeapSize: number } }
-        ).memory?.usedJSHeapSize;
-        this.logger.info(
-            'Bootstrap',
-            `After eventSourcing, before providerRuntime, memMB: ${memPreProviderRuntime ? Math.round(memPreProviderRuntime / 1024 / 1024) : 'n/a'}`,
-        );
 
         await this.lifecycle.tryInit('providerRuntime', () => {
             const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');
@@ -267,44 +216,15 @@ export class SystemBootstrap implements IBootstrap {
             }
         });
 
-        const memPreRotation = (performance as unknown as { memory?: { usedJSHeapSize: number } })
-            .memory?.usedJSHeapSize;
-        this.logger.info(
-            'Bootstrap',
-            `After providerRuntime, before rotation, memMB: ${memPreRotation ? Math.round(memPreRotation / 1024 / 1024) : 'n/a'}`,
-        );
-
         await this.lifecycle.tryInit('rotationService', async () => {
             const svc = this.container.get<RotationService>('rotationService');
             return svc.init();
         });
 
-        const memPostRotation = (performance as unknown as { memory?: { usedJSHeapSize: number } })
-            .memory?.usedJSHeapSize;
-        this.logger.info(
-            'Bootstrap',
-            `After rotation, before orchestrator, memMB: ${memPostRotation ? Math.round(memPostRotation / 1024 / 1024) : 'n/a'}`,
-        );
-
-        const memBeforeOrch = (performance as unknown as { memory?: { usedJSHeapSize: number } })
-            .memory?.usedJSHeapSize;
-        this.logger.info(
-            'Bootstrap',
-            `Before orchestrator + topology, memMB: ${memBeforeOrch ? Math.round(memBeforeOrch / 1024 / 1024) : 'n/a'}`,
-        );
-
         try {
             const orch = this.container.get<Orchestrator>('orchestrator');
             orch.mount(AuditorTopology);
             await orch.init();
-
-            const memAfterMount = (
-                performance as unknown as { memory?: { usedJSHeapSize: number } }
-            ).memory?.usedJSHeapSize;
-            this.logger.info(
-                'Bootstrap',
-                `After topology mount, memMB: ${memAfterMount ? Math.round(memAfterMount / 1024 / 1024) : 'n/a'}`,
-            );
         } catch (e) {
             this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
         }

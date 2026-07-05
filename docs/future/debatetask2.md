@@ -1,3 +1,6 @@
+> **STATUS:** 🟢 Implemented 2026-06 — все ключевые концепты реализованы: DebateRoom (`debate-room.ts`), Workspace (`debate-workspace.ts`), Memory Graph (`debate-memory-graph.ts`), Memory Extractor (`debate-memory-extractor.ts`), RAG Retriever (`debate-rag-retriever.ts`).
+> **Источник:** Дизайн-нотация, предшествовавшая реализации. Сохранена как архив.
+
 Да, логирование — это как раз следующий слой, но в таких системах обычно есть не просто “логи”, а **3 разных уровня фиксации происходящего**. И это важно не перепутать, иначе дебаты снова станут “чёрным ящиком”.
 
 Разложу по слоям.
@@ -20,17 +23,17 @@ AgentEvent {
 
 ### Что сюда пишется:
 
-* каждый шаг агента
-* каждый запрос/ответ LLM
-* tool calls
-* переключения моделей
-* ошибки / retries
+- каждый шаг агента
+- каждый запрос/ответ LLM
+- tool calls
+- переключения моделей
+- ошибки / retries
 
 ### Это даёт:
 
-* диагностику
-* восстановление проблем
-* аудит
+- диагностику
+- восстановление проблем
+- аудит
 
 ---
 
@@ -52,8 +55,8 @@ TimelineEntry {
 
 ### Отличие от логов:
 
-* лог = “что произошло”
-* timeline = “что было сказано и почему это важно”
+- лог = “что произошло”
+- timeline = “что было сказано и почему это важно”
 
 ---
 
@@ -73,9 +76,9 @@ CognitiveTrace {
 
 ### Это даёт:
 
-* почему агент пришёл к выводу
-* где были альтернативы
-* где он “сомневался”
+- почему агент пришёл к выводу
+- где были альтернативы
+- где он “сомневался”
 
 ---
 
@@ -99,9 +102,9 @@ Cognitive Trace → мышление агентов
 
 А с этим ты получаешь:
 
-* воспроизводимость (Event Log)
-* анализ (Timeline)
-* улучшение интеллектов (Cognitive Trace)
+- воспроизводимость (Event Log)
+- анализ (Timeline)
+- улучшение интеллектов (Cognitive Trace)
 
 ---
 
@@ -129,9 +132,9 @@ compare rounds 3 vs 7 reasoning drift
 
 ## 3. Agent Memory Layer (не RAG, а внутренняя память дебатов)
 
-* что агент “запомнил” из прошлых дебатов
-* какие паттерны он выучил
-* какие стратегии использует
+- что агент “запомнил” из прошлых дебатов
+- какие паттерны он выучил
+- какие стратегии использует
 
 ---
 
@@ -178,6 +181,7 @@ Debate Engine
 
 там уже появляется branching моделей, parallel timelines и “merge reasoning”.
 --------------------------------------------------------
+
 Вот это уже следующий уровень — ты по сути хочешь не “добавить админку”, а сделать **control surface над живой multi-agent системой**. Это важно различать: админка как UI и “административный контур управления системой в рантайме”.
 
 Разложу как это обычно строят в таких архитектурах.
@@ -192,25 +196,25 @@ Debate Engine
 
 ## 1) Execution Plane (исполнение)
 
-* агенты
-* дебаты
-* LLM вызовы
-* таймлайн
+- агенты
+- дебаты
+- LLM вызовы
+- таймлайн
 
 ## 2) Control Plane (управление)
 
-* параметры системы
-* вмешательство
-* правила
-* бюджеты
-* маршрутизация
+- параметры системы
+- вмешательство
+- правила
+- бюджеты
+- маршрутизация
 
 ## 3) Observation Plane (наблюдение)
 
-* логи
-* replay
-* графы
-* метрики
+- логи
+- replay
+- графы
+- метрики
 
 ---
 
@@ -228,10 +232,10 @@ Debate Engine
 
 ## Примитивный уровень (что у тебя, скорее всего, уже есть частично)
 
-* pause / resume
-* stop debate
-* switch model
-* adjust budget
+- pause / resume
+- stop debate
+- switch model
+- adjust budget
 
 ---
 
@@ -250,10 +254,10 @@ DebateOverride {
 
 Примеры:
 
-* уменьшить “креативность” одного агента
-* усилить критика
-* отключить конкретного агента в дебате
-* поменять provider прямо в середине
+- уменьшить “креативность” одного агента
+- усилить критика
+- отключить конкретного агента в дебате
+- поменять provider прямо в середине
 
 ---
 
@@ -296,47 +300,47 @@ Control Layer → Validation → Runtime Patch → Apply
 
 ## 1) Agent Control
 
-* enable / disable агента
-* приоритет агента
-* bias (pro / con / neutral)
-* temperature / creativity
-* max tokens per round
+- enable / disable агента
+- приоритет агента
+- bias (pro / con / neutral)
+- temperature / creativity
+- max tokens per round
 
 ---
 
 ## 2) Debate Control
 
-* pause / resume
-* force next round
-* restart from snapshot
-* fork debate
-* inject message
+- pause / resume
+- force next round
+- restart from snapshot
+- fork debate
+- inject message
 
 ---
 
 ## 3) Routing Control
 
-* выбрать модель для агента
-* запретить provider
-* cost cap
-* latency mode (fast / quality)
+- выбрать модель для агента
+- запретить provider
+- cost cap
+- latency mode (fast / quality)
 
 ---
 
 ## 4) Consensus Control
 
-* threshold (например 0.85 → 0.7)
-* voting weights
-* override consensus decision
+- threshold (например 0.85 → 0.7)
+- voting weights
+- override consensus decision
 
 ---
 
 ## 5) Memory Control
 
-* reset agent memory
-* inject context
-* lock memory (read-only mode)
-* isolate agent memory (sandbox debate)
+- reset agent memory
+- inject context
+- lock memory (read-only mode)
+- isolate agent memory (sandbox debate)
 
 ---
 
@@ -348,19 +352,19 @@ Control Layer → Validation → Runtime Patch → Apply
 
 ```ts id="ie1"
 inject({
-  type: "MESSAGE",
-  target: "agent_critic",
-  content: "you are missing security risks"
-})
+  type: 'MESSAGE',
+  target: 'agent_critic',
+  content: 'you are missing security risks',
+});
 ```
 
 или:
 
 ```ts id="ie2"
 inject({
-  type: "POLICY_CHANGE",
-  value: { temperature: 0.1 }
-})
+  type: 'POLICY_CHANGE',
+  value: { temperature: 0.1 },
+});
 ```
 
 ---
@@ -389,9 +393,9 @@ inject({
 
 Если сделать неправильно, получится хаос:
 
-* агенты начнут менять друг друга
-* дебаты станут недетерминированными
-* replay сломается
+- агенты начнут менять друг друга
+- дебаты станут недетерминированными
+- replay сломается
 
 ---
 
@@ -415,10 +419,10 @@ inject({
 
 Где ты можешь:
 
-* вмешиваться в мышление системы
-* менять правила на лету
-* наблюдать последствия
-* откатывать состояния
+- вмешиваться в мышление системы
+- менять правила на лету
+- наблюдать последствия
+- откатывать состояния
 
 ---
 
@@ -426,15 +430,15 @@ inject({
 
 Твои текущие 18-ые задачи дают:
 
-* состояние
-* историю
-* replay
+- состояние
+- историю
+- replay
 
 А control plane добавляет:
 
-* вмешательство
-* динамическое изменение поведения
-* управление стратегией
+- вмешательство
+- динамическое изменение поведения
+- управление стратегией
 
 ---
 
@@ -458,6 +462,7 @@ inject({
 
 **как сделать “Policy Engine”, который управляет агентами как Kubernetes управляет контейнерами (но для мышления)**
 -----------------------------------------------------
+
 Вот это уже следующий уровень — ты по сути хочешь не “добавить админку”, а сделать **control surface над живой multi-agent системой**. Это важно различать: админка как UI и “административный контур управления системой в рантайме”.
 
 Разложу как это обычно строят в таких архитектурах.
@@ -472,25 +477,25 @@ inject({
 
 ## 1) Execution Plane (исполнение)
 
-* агенты
-* дебаты
-* LLM вызовы
-* таймлайн
+- агенты
+- дебаты
+- LLM вызовы
+- таймлайн
 
 ## 2) Control Plane (управление)
 
-* параметры системы
-* вмешательство
-* правила
-* бюджеты
-* маршрутизация
+- параметры системы
+- вмешательство
+- правила
+- бюджеты
+- маршрутизация
 
 ## 3) Observation Plane (наблюдение)
 
-* логи
-* replay
-* графы
-* метрики
+- логи
+- replay
+- графы
+- метрики
 
 ---
 
@@ -508,10 +513,10 @@ inject({
 
 ## Примитивный уровень (что у тебя, скорее всего, уже есть частично)
 
-* pause / resume
-* stop debate
-* switch model
-* adjust budget
+- pause / resume
+- stop debate
+- switch model
+- adjust budget
 
 ---
 
@@ -530,10 +535,10 @@ DebateOverride {
 
 Примеры:
 
-* уменьшить “креативность” одного агента
-* усилить критика
-* отключить конкретного агента в дебате
-* поменять provider прямо в середине
+- уменьшить “креативность” одного агента
+- усилить критика
+- отключить конкретного агента в дебате
+- поменять provider прямо в середине
 
 ---
 
@@ -576,47 +581,47 @@ Control Layer → Validation → Runtime Patch → Apply
 
 ## 1) Agent Control
 
-* enable / disable агента
-* приоритет агента
-* bias (pro / con / neutral)
-* temperature / creativity
-* max tokens per round
+- enable / disable агента
+- приоритет агента
+- bias (pro / con / neutral)
+- temperature / creativity
+- max tokens per round
 
 ---
 
 ## 2) Debate Control
 
-* pause / resume
-* force next round
-* restart from snapshot
-* fork debate
-* inject message
+- pause / resume
+- force next round
+- restart from snapshot
+- fork debate
+- inject message
 
 ---
 
 ## 3) Routing Control
 
-* выбрать модель для агента
-* запретить provider
-* cost cap
-* latency mode (fast / quality)
+- выбрать модель для агента
+- запретить provider
+- cost cap
+- latency mode (fast / quality)
 
 ---
 
 ## 4) Consensus Control
 
-* threshold (например 0.85 → 0.7)
-* voting weights
-* override consensus decision
+- threshold (например 0.85 → 0.7)
+- voting weights
+- override consensus decision
 
 ---
 
 ## 5) Memory Control
 
-* reset agent memory
-* inject context
-* lock memory (read-only mode)
-* isolate agent memory (sandbox debate)
+- reset agent memory
+- inject context
+- lock memory (read-only mode)
+- isolate agent memory (sandbox debate)
 
 ---
 
@@ -628,19 +633,19 @@ Control Layer → Validation → Runtime Patch → Apply
 
 ```ts id="ie1"
 inject({
-  type: "MESSAGE",
-  target: "agent_critic",
-  content: "you are missing security risks"
-})
+  type: 'MESSAGE',
+  target: 'agent_critic',
+  content: 'you are missing security risks',
+});
 ```
 
 или:
 
 ```ts id="ie2"
 inject({
-  type: "POLICY_CHANGE",
-  value: { temperature: 0.1 }
-})
+  type: 'POLICY_CHANGE',
+  value: { temperature: 0.1 },
+});
 ```
 
 ---
@@ -669,9 +674,9 @@ inject({
 
 Если сделать неправильно, получится хаос:
 
-* агенты начнут менять друг друга
-* дебаты станут недетерминированными
-* replay сломается
+- агенты начнут менять друг друга
+- дебаты станут недетерминированными
+- replay сломается
 
 ---
 
@@ -695,10 +700,10 @@ inject({
 
 Где ты можешь:
 
-* вмешиваться в мышление системы
-* менять правила на лету
-* наблюдать последствия
-* откатывать состояния
+- вмешиваться в мышление системы
+- менять правила на лету
+- наблюдать последствия
+- откатывать состояния
 
 ---
 
@@ -706,15 +711,15 @@ inject({
 
 Твои текущие 18-ые задачи дают:
 
-* состояние
-* историю
-* replay
+- состояние
+- историю
+- replay
 
 А control plane добавляет:
 
-* вмешательство
-* динамическое изменение поведения
-* управление стратегией
+- вмешательство
+- динамическое изменение поведения
+- управление стратегией
 
 ---
 
@@ -738,6 +743,7 @@ inject({
 
 **как сделать “Policy Engine”, который управляет агентами как Kubernetes управляет контейнерами (но для мышления)**
 ------------------------------------------------------
+
 Почти, но есть важное различие — и если его не зафиксировать, архитектура потом начнёт “плыть”.
 
 ---
@@ -756,11 +762,11 @@ inject({
 
 Это **живой runtime-объект**:
 
-* активный дебат
-* агенты сейчас работают
-* есть state
-* есть очередь
-* есть текущий snapshot
+- активный дебат
+- агенты сейчас работают
+- есть state
+- есть очередь
+- есть текущий snapshot
 
 ```text id="r1"
 DebateRoom {
@@ -834,8 +840,8 @@ History table — это не “место хранения комнат”.
 
 То есть:
 
-* комната = “живой процесс”
-* history = “его зафиксированная версия”
+- комната = “живой процесс”
+- history = “его зафиксированная версия”
 
 ---
 
@@ -843,10 +849,10 @@ History table — это не “место хранения комнат”.
 
 Судя по твоей системе, у тебя:
 
-* timeline живёт в runtime
-* snapshot есть, но не всегда persist
-* history частично в localStorage / KV
-* нет единой таблицы
+- timeline живёт в runtime
+- snapshot есть, но не всегда persist
+- history частично в localStorage / KV
+- нет единой таблицы
 
 👉 Поэтому возникает ощущение:
 “где вообще находится дебат?”
@@ -901,9 +907,9 @@ HistoryRecord
 
 Запомни так:
 
-* **Room = live CPU process**
-* **History = disk snapshot + logs**
-* **Branch = fork process from snapshot**
+- **Room = live CPU process**
+- **History = disk snapshot + logs**
+- **Branch = fork process from snapshot**
 
 ---
 
@@ -923,6 +929,7 @@ HistoryRecord
 
 **как связать комнаты + history + branching так, чтобы у тебя получился “git для дебатов” (очень мощная штука)**
 ---------------------
+
 Да, сейчас у тебя в задачах есть “движок дебатов”, но нет одной критически важной сущности — **живого контейнера, в котором этот движок существует**.
 
 ---
@@ -964,13 +971,13 @@ DebateRoom {
 
 ### Он отвечает за:
 
-* запуск дебата
-* остановку / паузу
-* выполнение графа (очередь агентов)
-* хранение runtime state
-* управление snapshot’ами
-* управление переходами фаз
-* подключение/отключение агентов
+- запуск дебата
+- остановку / паузу
+- выполнение графа (очередь агентов)
+- хранение runtime state
+- управление snapshot’ами
+- управление переходами фаз
+- подключение/отключение агентов
 
 ---
 
@@ -978,12 +985,12 @@ DebateRoom {
 
 Сейчас у тебя всё размыто:
 
-* DebateEngine
-* DebateService
-* Runtime
-* Timeline
-* Snapshot
-* Agents
+- DebateEngine
+- DebateService
+- Runtime
+- Timeline
+- Snapshot
+- Agents
 
 👉 Они существуют, но нет **центральной “точки жизни”**
 
@@ -1020,11 +1027,11 @@ DebateRoom (центр всего)
 
 ### 1) Container (состояние)
 
-* хранит всё
+- хранит всё
 
 ### 2) Process (поведение)
 
-* умеет выполнять дебат
+- умеет выполнять дебат
 
 ---
 
@@ -1032,18 +1039,18 @@ DebateRoom (центр всего)
 
 ```ts id="a1"
 class DebateRoom {
-  start()
-  pause()
-  resume()
-  stop()
+  start();
+  pause();
+  resume();
+  stop();
 
-  injectEvent(event)
-  applyOverride(override)
+  injectEvent(event);
+  applyOverride(override);
 
-  getSnapshot()
-  restore(snapshot)
+  getSnapshot();
+  restore(snapshot);
 
-  step() // один шаг графа
+  step(); // один шаг графа
 }
 ```
 
@@ -1055,10 +1062,10 @@ class DebateRoom {
 
 ### Перед этим у тебя:
 
-* Snapshot system
-* Timeline
-* Replay engine
-* History tables
+- Snapshot system
+- Timeline
+- Replay engine
+- History tables
 
 ### Но не хватает:
 
@@ -1084,11 +1091,11 @@ class DebateRoom {
 
 ### Было:
 
-* multi-agent chat system
+- multi-agent chat system
 
 ### Станет:
 
-* **multi-agent execution runtime**
+- **multi-agent execution runtime**
 
 ---
 
@@ -1102,19 +1109,19 @@ class DebateRoom {
 
 **DR-01: Introduce DebateRoom entity**
 
-* central runtime container for debate session
+- central runtime container for debate session
 
 **DR-02: Move execution control into DebateRoom**
 
-* start/pause/resume/stop lifecycle
+- start/pause/resume/stop lifecycle
 
 **DR-03: Attach Engine to DebateRoom**
 
-* engine becomes internal execution layer
+- engine becomes internal execution layer
 
 **DR-04: Bind Timeline + Snapshot to DebateRoom**
 
-* single source of truth per room
+- single source of truth per room
 
 ---
 
@@ -1140,6 +1147,7 @@ DebateRoom = Runtime + State + Control + History binding
 
 **как сделать так, чтобы несколько DebateRoom могли взаимодействовать (multi-room reasoning / federation / tournament layer)**
 -------------------------------------
+
 Да, это уже следующий обязательный слой — **Debate Workspace (как ChatGPT sidebar, но для дебатов)**.
 
 И важно: это уже не про движок, а про **продуктовую оболочку над Room’ами**.
@@ -1222,16 +1230,16 @@ Workspace.loadRoom(roomId)
 
 ## 1) DebateRoom (живой)
 
-* сейчас работает
+- сейчас работает
 
 ## 2) History Table (данные)
 
-* хранение снапшотов
+- хранение снапшотов
 
 ## 3) Workspace (навигация)
 
-* список комнат
-* создание / переключение
+- список комнат
+- создание / переключение
 
 ---
 
@@ -1270,10 +1278,10 @@ History Table (persisted)
 
 То есть:
 
-* несколько дебатов параллельно
-* переключение между ними
-* продолжение старых
-* форки позже (branching)
+- несколько дебатов параллельно
+- переключение между ними
+- продолжение старых
+- форки позже (branching)
 
 ---
 
@@ -1285,26 +1293,26 @@ History Table (persisted)
 
 **DW-01: Create DebateWorkspace**
 
-* list of DebateRooms
-* active room pointer
+- list of DebateRooms
+- active room pointer
 
 **DW-02: New Debate flow**
 
-* create room + register in workspace
+- create room + register in workspace
 
 **DW-03: Debate list UI (sidebar)**
 
-* recent debates
-* grouping by date
+- recent debates
+- grouping by date
 
 **DW-04: Room switching**
 
-* save current state
-* restore target room
+- save current state
+- restore target room
 
 **DW-05: Workspace persistence**
 
-* store index of rooms (not full data)
+- store index of rooms (not full data)
 
 ---
 
@@ -1342,7 +1350,9 @@ Timeline / Snapshot / History
 
 **как сделать “ChatGPT-like memory + search across all debates (RAG по твоим дебатам)”**
 -------------
----------------------------------------------------------------
+
+---
+
 Это уже уровень, где твоя система превращается из “набора дебатов” в **единый интеллект с памятью по всем сессиям**.
 
 Разберём правильно, без магии.
@@ -1355,13 +1365,13 @@ Timeline / Snapshot / History
 
 ## 1) Memory (как ChatGPT)
 
-* система “помнит” прошлые дебаты
-* может использовать их в новых
+- система “помнит” прошлые дебаты
+- может использовать их в новых
 
 ## 2) Search / RAG по дебатам
 
-* искать аргументы, решения, паттерны
-* доставать релевантные куски из истории
+- искать аргументы, решения, паттерны
+- доставать релевантные куски из истории
 
 ---
 
@@ -1383,9 +1393,9 @@ Timeline / Snapshot / History
 DebateRoom + Timeline + Snapshot
 ```
 
-* всё как есть
-* неизменяемое
-* источник истины
+- всё как есть
+- неизменяемое
+- источник истины
 
 ---
 
@@ -1399,10 +1409,10 @@ MemoryIndex {
 }
 ```
 
-* разбитые куски дебатов
-* аргументы агентов
-* решения
-* споры
+- разбитые куски дебатов
+- аргументы агентов
+- решения
+- споры
 
 ---
 
@@ -1412,8 +1422,8 @@ MemoryIndex {
 Vector DB + Retriever
 ```
 
-* отвечает на запросы
-* возвращает релевантные дебаты
+- отвечает на запросы
+- возвращает релевантные дебаты
 
 ---
 
@@ -1427,31 +1437,31 @@ Vector DB + Retriever
 
 ## A) Аргументы
 
-* claim
-* counterclaim
-* reasoning
+- claim
+- counterclaim
+- reasoning
 
 ---
 
 ## B) Решения
 
-* final consensus
-* verdict
+- final consensus
+- verdict
 
 ---
 
 ## C) Конфликты
 
-* disagreement points
-* contradictions
+- disagreement points
+- contradictions
 
 ---
 
 ## D) Инсайты
 
-* “math check failed”
-* “critic was wrong”
-* “security risk found”
+- “math check failed”
+- “critic was wrong”
+- “security risk found”
 
 ---
 
@@ -1508,9 +1518,9 @@ User: "дебат про архитектуру системы"
 
 ## 3. Returns:
 
-* похожие архитектурные дебаты
-* прошлые ошибки
-* сильные аргументы
+- похожие архитектурные дебаты
+- прошлые ошибки
+- сильные аргументы
 
 ---
 
@@ -1535,16 +1545,16 @@ System prompt += retrieved memory
 
 ## 1) Episodic Memory
 
-* конкретные дебаты
+- конкретные дебаты
 
 ## 2) Semantic Memory
 
-* обобщённые знания из дебатов
+- обобщённые знания из дебатов
 
 ## 3) Procedural Memory
 
-* “как система решает задачи”
-* паттерны дебатов
+- “как система решает задачи”
+- паттерны дебатов
 
 ---
 
@@ -1588,8 +1598,8 @@ DebateRoom → Timeline → Snapshot
 
 ## Debate Memory Graph
 
-* узлы = идеи
-* связи = “опроверг”, “улучшил”, “зависит от”
+- узлы = идеи
+- связи = “опроверг”, “улучшил”, “зависит от”
 
 Это уже не RAG.
 
@@ -1605,26 +1615,26 @@ DebateRoom → Timeline → Snapshot
 
 ## 🔴 P0 — Memory Foundation
 
-* MemoryExtractor (from Timeline)
-* Chunk schema
-* Embedding pipeline
-* Vector store (per debate + global)
+- MemoryExtractor (from Timeline)
+- Chunk schema
+- Embedding pipeline
+- Vector store (per debate + global)
 
 ---
 
 ## 🟠 P1 — RAG Layer
 
-* retrieveRelevantDebates(query)
-* injectMemoryIntoDebate()
-* similarity scoring
+- retrieveRelevantDebates(query)
+- injectMemoryIntoDebate()
+- similarity scoring
 
 ---
 
 ## 🟡 P2 — Memory UI
 
-* “Related debates” panel
-* “Why system suggested this”
-* search across debates
+- “Related debates” panel
+- “Why system suggested this”
+- search across debates
 
 ---
 

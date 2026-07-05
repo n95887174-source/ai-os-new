@@ -38,7 +38,6 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'src'),
-            sql: 'sql.js',
         },
     },
     build: {
@@ -82,9 +81,6 @@ export default defineConfig({
                         }
                         if (id.includes('meriyah')) {
                             return 'vendor-ast';
-                        }
-                        if (id.includes('sql.js')) {
-                            return 'vendor-sqlite';
                         }
                     }
                 },

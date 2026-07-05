@@ -118,6 +118,41 @@ export class MemoryRepository {
         this.cache.delete(id);
     }
 
+    /** Get total count of stored memories */
+    async getCount(): Promise<number> {
+        return this.db.memories.count();
+    }
+
+    /** Partially update a memory entry */
+    async update(id: string, changes: Partial<MemoryEntry>): Promise<void> {
+        await this.db.memories.update(id, changes as Partial<MemoryEntry>);
+        if (this.cache.has(id)) {
+            const existing = this.cache.get(id)!;
+            this.cache.set(id, { ...existing, ...changes });
+        }
+    }
+
+    /** Save an entry with its existing ID (unlike store() which generates a new ID) */
+    async save(entry: MemoryEntry): Promise<void> {
+        await this.db.memories.put(entry);
+        this.cache.set(entry.id, entry);
+        await this.enforceLimit();
+    }
+
+    /** Store multiple entries in batch */
+    async storeBatch(entries: Omit<MemoryEntry, 'id'>[]): Promise<MemoryEntry[]> {
+        const newEntries: MemoryEntry[] = entries.map((e) => ({
+            ...e,
+            id: crypto.randomUUID(),
+        })) as MemoryEntry[];
+        await Promise.all(newEntries.map((e) => this.db.memories.put(e)));
+        for (const entry of newEntries) {
+            this.cache.set(entry.id, entry);
+        }
+        await this.enforceLimit();
+        return newEntries;
+    }
+
     /** Search memories by keyword (simple substring match) */
     async search(query: string, options?: { limit?: number }): Promise<MemoryEntry[]> {
         await this.ensureCache();

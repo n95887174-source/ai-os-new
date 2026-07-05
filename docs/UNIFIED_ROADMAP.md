@@ -38,7 +38,7 @@
 - **Ареной дебатов** — полноценная сцена с 30+ стратегиями, 50+ персонами, зрителями, эмоциями
 - **Экосистемой провайдеров** — 7 хранителей, фракции, метафоры, мульти-провайдерный роутинг
 - **Памятью уровня человека** — забывание, консолидация, эмоциональные якоря, чертоги разума
-- **500+ ролей и 50+ консилий** — агенты, работающие как настоящие организации
+- **333+ роли и 39+ консилий** — агенты, работающие как настоящие организации
 - **200+ новых модулей** — от социальной инженерии до квантового вдохновения
 
 ### Маскоты системы
@@ -76,13 +76,13 @@
 
 **Фокус:** Память, роли, аквариум, Research Engine.
 
-| Месяц   | Ключевые задачи                                                                          |
-| ------- | ---------------------------------------------------------------------------------------- |
-| Январь  | **Memory v1** — 7-store архитектура, forgetting curve, consolidation                     | 🟢 Complete — 7 stores (working/episodic/semantic/procedural/emotional/social/spatial), SleepEngine with micro+nightly consolidation, MemoryPalace visualization, MemoryOrchestrator with cross-store recall. Panel at `/memory-palace`                                                                                                                                                                                                                                                                                          |
-| Февраль | **Roles & Consortia** — Unified Registry, 500+ ролей, 50+ consilia, 114+ group templates | 🟢 Complete — UnifiedRoleRegistry contract+service, 500+ roles (25 categories), 37+ consilia (10 types), 50+ group templates (9 categories). Panel at `/roles-consortia` with 3 tabs (Roles/Consilia/Templates), search + category filter                                                                                                                                                                                                                                                                                        |
-| Март    | **Research Engine** — Epistemic loop, 30+ external APIs, citation graph                  | 🟢 Complete — IResearchEngine contract, ResearchEngineService (epistemic loop: question → search → extract → synthesize → new questions), **34 API source adapters** (ISourceAdapter contract + SourceAdapterRegistry: ArXiv, PubMed, Semantic Scholar, OpenAlex, Crossref, DBLP, GitHub, Stack Overflow, News API, etc.), ResearchEnginePanel at `/research-engine` with source config panel (enable/disable per source), session CRUD, loop expansion, status tracking, sources/claims/synthesis display. DI phase9 registered |
-| Апрель  | **Аквариум** — Ecosystem engine, 25+ themes, 50+ creatures, 110+ achievements            | 🟢 Complete — IEcosystemEngine contract, EcosystemEngine service (tick, feed, unlock, achievements), 52 creatures (6 rarities), 25 themes (6 categories), 110 achievements (7 categories). Panel at `/ecosystem` with creature/achievement/theme tabs, stat cards. DI phase10 registered                                                                                                                                                                                                                                         |
-| Май     | **Живые панели Wave 2** — Техники, Research, Memory Palace, Roles Sandbox                | 🟢 Complete — ResearchEnginePanel at `/research-engine` (March), MemoryPalacePanel at `/memory-palace` (January), RolesConsortiaPanel at `/roles-consortia` (February), ForgettingCurvePanel in MemoryPanel. Remainder: Techniques panel                                                                                                                                                                                                                                                                                         |
+| Месяц   | Ключевые задачи                                                                      |
+| ------- | ------------------------------------------------------------------------------------ |
+| Январь  | **Memory v1** — 7-store архитектура, forgetting curve, consolidation                 | 🟢 Complete — 7 stores (working/episodic/semantic/procedural/emotional/social/spatial), SleepEngine with micro+nightly consolidation, MemoryPalace visualization, MemoryOrchestrator with cross-store recall. Panel at `/memory-palace`                                                                                                                                                                                                                                                                                          |
+| Февраль | **Roles & Consortia** — Unified Registry, 333 роли, 39 consilia, 55+ group templates | 🟢 Complete — UnifiedRoleRegistry contract+service, 333 roles (25 categories), 39 consilia (10 types), 55+ group templates (9 categories). Panel at `/roles-consortia` with 3 tabs (Roles/Consilia/Templates), search + category filter                                                                                                                                                                                                                                                                                          |
+| Март    | **Research Engine** — Epistemic loop, 30+ external APIs, citation graph              | 🟢 Complete — IResearchEngine contract, ResearchEngineService (epistemic loop: question → search → extract → synthesize → new questions), **23 API source adapters** (ISourceAdapter contract + SourceAdapterRegistry: ArXiv, PubMed, Semantic Scholar, OpenAlex, Crossref, DBLP, GitHub, Stack Overflow, News API, etc.), ResearchEnginePanel at `/research-engine` with source config panel (enable/disable per source), session CRUD, loop expansion, status tracking, sources/claims/synthesis display. DI phase9 registered |
+| Апрель  | **Аквариум** — Ecosystem engine, 28 themes, 52 creatures, 85 achievements            | 🟢 Complete — IEcosystemEngine contract, EcosystemEngine service (tick, feed, unlock, achievements), 52 creatures (6 rarities), 28 themes (6 categories), 85 achievements (7 categories). Panel at `/ecosystem` with creature/achievement/theme tabs, stat cards. DI phase10 registered                                                                                                                                                                                                                                          |
+| Май     | **Живые панели Wave 2** — Техники, Research, Memory Palace, Roles Sandbox            | 🟢 Complete — ResearchEnginePanel at `/research-engine` (March), MemoryPalacePanel at `/memory-palace` (January), RolesConsortiaPanel at `/roles-consortia` (February), ForgettingCurvePanel in MemoryPanel. Remainder: Techniques panel                                                                                                                                                                                                                                                                                         |
 
 **Milestone Beta:** Память + роли + research работают как единая экосистема.
 
@@ -92,7 +92,7 @@
 
 | Месяц    | Ключевые задачи                                                                                                    |
 | -------- | ------------------------------------------------------------------------------------------------------------------ |
-| Июнь     | **Дебаты: продвинутые стратегии** — 30+ (Socratic, Argument Tree, Constrained, Policy, Role-play)                  | 🟢 Done — 32 strategies (6 base + 26 advanced: brainstorming, delphi, debate-athon, meta-debate, autopsy, simulated-negotiation, premortem, red-teaming, rhetorical-triangle, evidence-based-policy, principle-based-negotiation, uncertainty-quantification, multi-criteria, stakeholder-mapping, cross-examination, trial, parliamentary, oxford-union, lincoln-douglas, spontaneous-argumentation, asynchronous-marathon, flash-debate, collaborative-consensus, scenario-testing, hypothesis-testing, contest-mode) |
+| Июнь     | **Дебаты: продвинутые стратегии** — 70+ (Socratic, Argument Tree, Constrained, Policy, Role-play)                  | 🟢 Done — 71 strategies (6 base + 65 advanced: brainstorming, delphi, debate-athon, meta-debate, autopsy, simulated-negotiation, premortem, red-teaming, rhetorical-triangle, evidence-based-policy, principle-based-negotiation, uncertainty-quantification, multi-criteria, stakeholder-mapping, cross-examination, trial, parliamentary, oxford-union, lincoln-douglas, spontaneous-argumentation, asynchronous-marathon, flash-debate, collaborative-consensus, scenario-testing, hypothesis-testing, contest-mode) |
 | Июль     | **Дебаты: социальное** — Audience (зрители, реакции), Leaderboard, Tournaments                                     | 🟢 Done — AudienceSystem: 30 zombie archetypes, react-polling-sidechat-sentiment, `/audience` panel. Tournaments + Leaderboard pre-existing (TournamentPanel, EloLeaderboard, autoDebateService.runTournament)                                                                                                                                                                                                                                                                                                          |
 | Август   | **Редакторы** — TipTap (текст), Monaco (код), DSL Canvas (топологии), JSON Schema (конфиги)                        | 🟢 Done — RichTextEditor (TipTap + toolbar), CodeEditor (Monaco + 9 languages), DslCanvas (@xyflow/react + 6 node types), JsonSchemaEditor (form from schema defs). `/editors` route in TOOLS section                                                                                                                                                                                                                                                                                                                   |
 | Сентябрь | **Google Integration** — multimodal I/O, Thinking, Grounding (phases 1-4: SDK + Multimodal + Thinking + Grounding) | 🟢 Done — GoogleGenAIService (SDK), multimodal inlineData, Thinking config, Google Search Grounding. GoogleStudioPanel at `/google-studio`                                                                                                                                                                                                                                                                                                                                                                              |
@@ -921,9 +921,9 @@ interface UnifiedRoleEntry {
 - `EcosystemEngine` — ядро (состояние, тики, правила)
 - `CreatureRegistry` — все существа
 - `EnvironmentRegistry` — темы и параметры среды
-- `AchievementRegistry` — 110+ ачивок
+- `AchievementRegistry` — 85+ ачивок
 
-### 9.2 Темы аквариума (25+)
+### 9.2 Темы аквариума (28)
 
 | Тема        | Цвета               | Существа                   | Музыка        |
 | ----------- | ------------------- | -------------------------- | ------------- |
@@ -943,7 +943,7 @@ interface UnifiedRoleEntry {
 | Steampunk   | Медь, коричневый    | Gear-fish, Airship         | Steam         |
 | Pixel       | 8-bit цвета         | Pixel-fish, Block-creature | Chiptune      |
 
-### 9.3 Существа (50+)
+### 9.3 Существа (52)
 
 **Механика существ:**
 
@@ -963,7 +963,7 @@ interface UnifiedRoleEntry {
 | Epic      | Whale Shark, Giant Squid, Phoenix, Dragon        |
 | Legendary | Kraken, Leviathan, Great Dragon, Celestial Whale |
 
-### 9.4 Ачивки (110+)
+### 9.4 Ачивки (85+)
 
 **Категории ачивок:**
 
@@ -1303,7 +1303,7 @@ interface PrismaFlow {
 
 **P2 (делать в Gamma):**
 
-- 30+ стратегий дебатов — Medium/High
+- 70+ стратегий дебатов — Medium/High
 - Audience System — Medium/High
 - Редакторы (TipTap, Monaco) — Medium/High
 - Emotion System — Medium/Medium
@@ -1332,16 +1332,16 @@ interface PrismaFlow {
 **Beta (Q1 2027):**
 
 - 7-store память работает
-- 500+ ролей в registry
-- 50+ консилий доступно
-- Research Engine: 30+ API
-- Аквариум: 25 тем, 50 существ, 110 ачивок
+- 333+ роли в registry
+- 39+ консилий доступно
+- Research Engine: 23+ API
+- Аквариум: 28 тем, 52 существа, 85 ачивок
 - Живые панели Wave 2 (3 панели)
 - Bundle: < 2MB main JS
 
 **Gamma (Q2 2027):**
 
-- 30+ стратегий дебатов
+- 70+ стратегий дебатов
 - Audience: 100+ зрителей
 - Редакторы: TipTap + Monaco + DSL Canvas
 - Google: multimodal + thinking + grounding

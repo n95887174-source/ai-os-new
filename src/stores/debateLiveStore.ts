@@ -91,7 +91,7 @@ function computeEmotion(
 export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     const subs = [
         eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>(
-            'debate-runtime:agent:chunk',
+            EVENTS.DEBATE_AGENT_CHUNK,
             (d) => {
                 const key = `${d.sessionId}:${d.agentId}`;
                 set((s) => {
@@ -109,7 +109,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             },
         ),
         eventBus.onSafe<{ sessionId: string; agentId: string }>(
-            'debate-runtime:agent:thinking',
+            EVENTS.DEBATE_AGENT_THINKING,
             (d) => {
                 const event: DebateAgentEvent = {
                     sessionId: d.sessionId,
@@ -141,7 +141,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             },
         ),
         eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>(
-            'debate-runtime:agent:responded',
+            EVENTS.DEBATE_AGENT_RESPONDED,
             (d) => {
                 const event: DebateAgentEvent = {
                     sessionId: d.sessionId,
@@ -173,7 +173,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             },
         ),
         eventBus.onSafe<{ sessionId: string; agentId: string; error: string }>(
-            'debate-runtime:agent:error',
+            EVENTS.DEBATE_AGENT_ERROR,
             (d) => {
                 const event: DebateAgentEvent = {
                     sessionId: d.sessionId,
@@ -205,7 +205,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             },
         ),
         eventBus.onSafe<{ sessionId: string; agentId: string; timeoutMs: number }>(
-            'debate-runtime:agent:timeout',
+            EVENTS.DEBATE_AGENT_TIMEOUT,
             (d) => {
                 const event: DebateAgentEvent = {
                     sessionId: d.sessionId,
@@ -241,7 +241,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             agentId: string;
             fromProvider: string;
             toProvider: string;
-        }>('debate-runtime:agent:fallback', (d) => {
+        }>(EVENTS.DEBATE_AGENT_FALLBACK, (d) => {
             const event: DebateAgentEvent = {
                 sessionId: d.sessionId,
                 agentId: d.agentId,
@@ -272,7 +272,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             });
         }),
         eventBus.onSafe<{ sessionId: string; round: number; nodes: string[] }>(
-            'debate-runtime:round:started',
+            EVENTS.DEBATE_ROUND_STARTED,
             (d) => {
                 set((s) => ({
                     roundEvents: [
@@ -287,7 +287,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 }));
             },
         ),
-        eventBus.onSafe<{ sessionId: string; round: number }>('debate-runtime:round:ended', (d) => {
+        eventBus.onSafe<{ sessionId: string; round: number }>(EVENTS.DEBATE_ROUND_ENDED, (d) => {
             set((s) => ({
                 roundEvents: [
                     ...s.roundEvents,
@@ -296,7 +296,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             }));
         }),
         eventBus.onSafe<{ sessionId: string; agentId: string; claim: string }>(
-            'debate-runtime:memory:claim',
+            EVENTS.DEBATE_MEMORY_CLAIM,
             (d) => {
                 set((s) => {
                     const ek = `${d.sessionId}:${d.agentId}`;
@@ -318,7 +318,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             confidence: number;
             agreements: number;
             conflicts: number;
-        }>('debate-runtime:consensus:reached', (d) => {
+        }>(EVENTS.DEBATE_CONSENSUS_REACHED, (d) => {
             set({
                 judgeWeights: {
                     pro: d.agreements,

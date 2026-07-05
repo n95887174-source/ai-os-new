@@ -28,8 +28,15 @@ export type {
     PricingCapability,
     CostCalculationError,
 } from './pricing';
-export type { ProviderCapability, RequestClassification, RouterDecision } from './provider';
+export type { RequestClassification, RouterDecision } from './provider';
 export type { IMemoryEngine, MemoryCapability, MemoryQuery } from './memory';
+export type {
+    IMemoryStore,
+    MemoryStoreQuery,
+    MemoryStoreSnapshot,
+    ConsolidationReport,
+} from './memory-store';
+export { MemoryStoreType, computeRetention, computeHalfLife } from './memory-store';
 
 export type {
     TimelineEvent,
@@ -238,7 +245,7 @@ export type { IPoolSelectorService, PoolStrategy } from './pool-selector';
 export type {
     StorageLayer,
     KeyStore,
-    MemoryStore,
+    DexieMemoryStore,
     TraceStore,
     SessionStore,
     ConfigStore,
@@ -309,6 +316,7 @@ export type {
     IWhatIfEngine,
     LLMAnalysisResult,
     IInsightEngine,
+    AdvisorPressureLevel,
     AdvisorMetrics,
     AdvisorConfig,
     SuggestionType,

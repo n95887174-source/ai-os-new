@@ -1,6 +1,6 @@
 import type { DebateSession, HumanVote } from '../contracts/debate-types';
 import { EVENTS } from '../events/event-names';
-import { getActiveDebateSession } from './debate-runtime/active-debate-store';
+import { useActiveDebateStore } from '../../stores/activeDebateStore';
 
 export type CollabRole = 'pro' | 'con' | 'judge' | 'neutral';
 
@@ -44,7 +44,7 @@ export class CollaborativeService {
         }
         if (session.participants.some((p) => p.userName === userName)) return false;
         session.participants.push({ userName, role, joinedAt: Date.now() });
-        this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, getActiveDebateSession());
+        this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, useActiveDebateStore.getState().session);
         return true;
     }
 
@@ -53,7 +53,7 @@ export class CollaborativeService {
         if (!session) return;
         session.participants = session.participants.filter((p) => p.userName !== userName);
         if (session.participants.length === 0) this.sessions.delete(sessionId);
-        this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, getActiveDebateSession());
+        this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, useActiveDebateStore.getState().session);
     }
 
     getParticipants(sessionId: string): HumanParticipant[] {
@@ -69,7 +69,7 @@ export class CollaborativeService {
             participant.role === 'judge'
                 ? ('neutral' as const)
                 : (participant.role as 'pro' | 'con');
-        const active = getActiveDebateSession();
+        const active = useActiveDebateStore.getState().session;
         if (!active) return false;
         await this.deps.humanService.addArgument(active, userName, content, 1.0, { position });
         return true;
@@ -82,7 +82,7 @@ export class CollaborativeService {
         score: number,
     ): Promise<void> {
         const vote: HumanVote = {
-            round: getActiveDebateSession()?.currentRound ?? 0,
+            round: useActiveDebateStore.getState().session?.currentRound ?? 0,
             voter: 'human',
             votedAgentId,
             score,
@@ -92,7 +92,7 @@ export class CollaborativeService {
     }
 
     getCollabDebateSessionId(): string | null {
-        const s = getActiveDebateSession();
+        const s = useActiveDebateStore.getState().session;
         return s?.id ?? null;
     }
 }

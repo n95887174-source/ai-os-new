@@ -2,9 +2,8 @@ import { LLMError } from '../core/errors';
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
-import { CONFIG } from '../../kernel/services/config-registry';
-import { rootLogger } from '../../kernel/services/logger-service';
-const LOGGER = rootLogger.child('RetryDecorator');
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
+const LOGGER = FALLBACK_LOGGER.child('RetryDecorator');
 
 export class RetryDecorator extends BaseDecorator {
     readonly #maxRetries: number;
@@ -12,8 +11,8 @@ export class RetryDecorator extends BaseDecorator {
 
     constructor(
         inner: import('../core/types').LLMProviderAdapter,
-        maxRetries = CONFIG?.llm?.retry?.maxRetries ?? 3,
-        baseDelayMs = CONFIG?.llm?.retry?.baseDelayMs ?? 1000,
+        maxRetries = 3,
+        baseDelayMs = 1000,
     ) {
         super(inner);
         this.#maxRetries = maxRetries;

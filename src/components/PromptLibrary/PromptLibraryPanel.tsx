@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { promptLibraryService } from '../../kernel/services/prompt-library-service';
+import { promptLibraryService } from '../../kernel/instances';
 import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 import { useTranslation } from '../../i18n/useTranslation';

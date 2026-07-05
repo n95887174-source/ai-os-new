@@ -1,7 +1,7 @@
-import { CONFIG } from './config-registry';
 import type { IAdapterRegistry, IProviderAdapter } from '../contracts/provider-adapter';
 import { AdapterFactory } from '../../llm/registry/adapter-factory';
 import type { AdapterFactoryConfig } from '../../llm/registry/adapter-factory';
+import type { LLMContext } from '../contracts/llm-context';
 
 export interface ProviderRuntimeStatus {
     circuitOpen: boolean;
@@ -12,39 +12,42 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     private factory: AdapterFactory;
     private adapters = new Map<string, IProviderAdapter>();
 
-    constructor(config?: AdapterFactoryConfig | AdapterFactory) {
-        this.factory =
-            config instanceof AdapterFactory
-                ? config
-                : new AdapterFactory(
-                      config ?? {
-                          logging: true,
-                          cache: true,
-                          cacheTtlMs: CONFIG.llm.cache.defaultTTLMs,
-                          cacheMaxEntries: CONFIG.llm.cache.maxEntries,
-                          circuitBreaker: true,
-                          circuitBreakerFailureThreshold:
-                              CONFIG.llm.circuitBreaker.failureThreshold,
-                          circuitBreakerSuccessThreshold:
-                              CONFIG.llm.circuitBreaker.successThreshold,
-                          circuitBreakerOpenTimeoutMs: CONFIG.llm.circuitBreaker.openTimeoutMs,
-                          circuitBreakerHalfOpenMaxRequests:
-                              CONFIG.llm.circuitBreaker.halfOpenMaxRequests,
-                          retry: true,
-                          retryMax: CONFIG.llm.retry.maxRetries,
-                          retryBaseDelayMs: CONFIG.llm.retry.baseDelayMs,
-                          rateLimit: true,
-                          rateLimitMaxTokens: CONFIG.llm.rateLimiter.maxTokens,
-                          rateLimitRefillRate: CONFIG.llm.rateLimiter.refillRate,
-                          rateLimitRefillIntervalMs: CONFIG.llm.rateLimiter.refillIntervalMs,
-                          priorityQueue: true,
-                          priorityQueueConfig: {
-                              maxConcurrency: CONFIG.llm.priorityQueue.maxConcurrency,
-                              lowPriorityDelayMs: CONFIG.llm.priorityQueue.lowPriorityDelayMs,
-                          },
-                          costManager: true,
-                      },
-                  );
+    constructor(config?: AdapterFactoryConfig | AdapterFactory | LLMContext, ...rest: unknown[]) {
+        if (config && 'logging' in config) {
+            const ctx = rest[0] as LLMContext | undefined;
+            this.factory = new AdapterFactory(config as AdapterFactoryConfig, ctx);
+        } else if (config instanceof AdapterFactory) {
+            this.factory = config;
+        } else {
+            const ctx = config as LLMContext | undefined;
+            this.factory = new AdapterFactory(
+                {
+                    logging: true,
+                    cache: true,
+                    cacheTtlMs: 60000,
+                    cacheMaxEntries: 100,
+                    circuitBreaker: true,
+                    circuitBreakerFailureThreshold: 5,
+                    circuitBreakerSuccessThreshold: 2,
+                    circuitBreakerOpenTimeoutMs: 30000,
+                    circuitBreakerHalfOpenMaxRequests: 1,
+                    retry: true,
+                    retryMax: 3,
+                    retryBaseDelayMs: 1000,
+                    rateLimit: true,
+                    rateLimitMaxTokens: 60,
+                    rateLimitRefillRate: 60,
+                    rateLimitRefillIntervalMs: 60000,
+                    priorityQueue: true,
+                    priorityQueueConfig: {
+                        maxConcurrency: 4,
+                        lowPriorityDelayMs: 200,
+                    },
+                    costManager: true,
+                },
+                ctx,
+            );
+        }
     }
 
     getAdapter(provider: string): IProviderAdapter | undefined {

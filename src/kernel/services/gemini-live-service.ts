@@ -1,6 +1,7 @@
 import type { IGeminiLiveService, GeminiLiveSession } from '../contracts/gemini-live';
 import { googleGenAIService } from './google-genai-service';
 import { rootLogger } from './logger-service';
+import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
 
 const LOGGER = rootLogger.child('GeminiLive');
 
@@ -125,7 +126,7 @@ export class GeminiLiveService implements IGeminiLiveService {
                 (chunk) => {
                     fullText += chunk;
                 },
-                'gemini-2.5-flash',
+                PROVIDER_DEFAULT_MODELS.gemini,
             );
 
             const responseText = result.content || result.error || '(no response)';

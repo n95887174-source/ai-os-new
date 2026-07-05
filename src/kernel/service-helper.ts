@@ -3,7 +3,7 @@ import type { IContainer } from './container';
 
 let _container: IContainer;
 const resolved = new Map<string, unknown>();
-const boundMethods = new WeakMap<object, Map<string | symbol, unknown>>();
+let boundMethods = new WeakMap<object, Map<string | symbol, unknown>>();
 const notFoundCache = new Map<string, number>();
 const NOT_FOUND_TTL = 1000;
 
@@ -66,6 +66,13 @@ export function lazyService<T extends object>(
 /** Invalidate cached "not found" for a service — call after container.register(). */
 export function invalidateLazyServiceNotFound(name: string): void {
     notFoundCache.delete(name);
+}
+
+/** Clear all resolved service caches — call on shutdown to prevent stale refs on restart. */
+export function clearResolvedServices(): void {
+    resolved.clear();
+    notFoundCache.clear();
+    boundMethods = new WeakMap();
 }
 
 export function getContainer() {

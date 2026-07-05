@@ -25,7 +25,12 @@ import { KeyService } from '../services/key-management/key-service';
 import { GroupManagerService } from '../services/group-manager';
 import { SessionManagerService } from '../services/session-manager-service';
 import { ExecutionGovernorService } from '../services/execution-governor';
+import { KeyFingerprints } from '../services/key-management/key-fingerprints';
+import { KeyIntelligencePipeline } from '../services/key-intelligence-pipeline';
 import { initCostOptimization } from '../services/cost-optimization-service';
+import { SessionLinkRepository } from '../dal/session-link-repository';
+import { DebateTimelineRepository } from '../dal/debate-timeline-repository';
+import { DebateOverrideRepository } from '../dal/debate-override-repository';
 import type { AdvisorService } from '../services/advisor-service';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from '../services/logger-service';
@@ -75,28 +80,33 @@ export const registerPhase1: Phase = (helpers, ctx) => {
                   } satisfies KeyStore;
               })();
 
-    register('settingsService', (c) =>
-        new SettingsService({
-            database: c.get<IDatabaseService>('database'),
-            eventBus: c.get<IEventBus>('eventBus'),
-            get routerService() {
-                return c.get<SettingsServiceDeps['routerService']>('routerService');
-            },
-            get kernel() {
-                return c.get<SettingsServiceDeps['kernel']>('kernel');
-            },
-        }),
+    register(
+        'settingsService',
+        (c) =>
+            new SettingsService({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+                get routerService() {
+                    return c.get<SettingsServiceDeps['routerService']>('routerService');
+                },
+                get kernel() {
+                    return c.get<SettingsServiceDeps['kernel']>('kernel');
+                },
+            }),
     );
 
-    register('pricingService', (c) =>
-        new PricingService({
-            database: c.get<IDatabaseService>('database'),
-            eventBus: c.get<IEventBus>('eventBus'),
-        }),
+    register(
+        'pricingService',
+        (c) =>
+            new PricingService({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+            }),
     );
 
-    register('keyStateStore', (c) =>
-        new KeyStateStore(c.get<IEventBus>('eventBus'), c.get<IDatabaseService>('database')),
+    register(
+        'keyStateStore',
+        (c) => new KeyStateStore(c.get<IEventBus>('eventBus'), c.get<IDatabaseService>('database')),
     );
 
     // A-04: tracker.start() called inside factory — instance exists at that point.
@@ -110,23 +120,25 @@ export const registerPhase1: Phase = (helpers, ctx) => {
         return tracker;
     });
 
-    register('kernel', (c) =>
-        new SystemKernel({
-            database: c.get<IDatabaseService>('database'),
-            eventBus: c.get<IEventBus>('eventBus'),
-            providerTracker: c.get<ProviderTracker>('providerTracker'),
-        }),
+    register(
+        'kernel',
+        (c) =>
+            new SystemKernel({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+                providerTracker: c.get<ProviderTracker>('providerTracker'),
+            }),
     );
 
-    register('metricsService', (c) =>
-        new MetricsService({
-            database: c.get<IDatabaseService>('database'),
-            eventBus: c.get<IEventBus>('eventBus'),
-            kernel: c.get<SystemKernel>('kernel'),
-        }),
+    register(
+        'metricsService',
+        (c) =>
+            new MetricsService({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+                kernel: c.get<SystemKernel>('kernel'),
+            }),
     );
-
-    register('providerAdapterRegistry', (_c) => new ProviderAdapterRegistry());
 
     // A-04: Registry is created inside factory so we can subscribe to events.
     register('providerAdapterRegistry', (c) => {
@@ -149,48 +161,93 @@ export const registerPhase1: Phase = (helpers, ctx) => {
         return registry;
     });
 
-    register('keyService', (c) =>
-        new KeyService(
-            asDeps<ConstructorParameters<typeof KeyService>[0]>({
-                database: c.get<IDatabaseService>('database'),
-                keyStore: safeKeyStore,
-                eventBus: c.get<IEventBus>('eventBus'),
-                securityService: c.get<ISecurityService>('securityService'),
-                pricingService: c.get<PricingService>('pricingService'),
-                providerAdapterRegistry: c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
-                keyStateStore: c.get<KeyStateStore>('keyStateStore'),
-                get advisorService() {
-                    return c.get<AdvisorService>('advisorService');
-                },
-            }),
-        ),
-    );
-
-    register('groupManagerService', (c) =>
-        new GroupManagerService(
-            asDeps<ConstructorParameters<typeof GroupManagerService>[0]>({
-                keyService: c.get<KeyService>('keyService'),
-                eventBus: c.get<IEventBus>('eventBus'),
-                storage: {
-                    getKv: async <T>(id: string) =>
-                        configStore ? configStore.get<T>(id) : null,
-                    setKv: async <T>(id: string, value: T) => {
-                        if (configStore) await configStore.set(id, value);
+    register(
+        'keyService',
+        (c) =>
+            new KeyService(
+                asDeps<ConstructorParameters<typeof KeyService>[0]>({
+                    database: c.get<IDatabaseService>('database'),
+                    keyStore: safeKeyStore,
+                    eventBus: c.get<IEventBus>('eventBus'),
+                    securityService: c.get<ISecurityService>('securityService'),
+                    pricingService: c.get<PricingService>('pricingService'),
+                    providerAdapterRegistry:
+                        c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
+                    keyStateStore: c.get<KeyStateStore>('keyStateStore'),
+                    get advisorService() {
+                        return c.get<AdvisorService>('advisorService');
                     },
-                },
-            }),
-        ),
+                }),
+            ),
     );
 
-    register('sessionManagerService', (c) =>
-        new SessionManagerService(
-            c.get<DatabaseService>('database'),
-            c.get<IEventBus>('eventBus'),
-            storageLayer.debates,
-        ),
+    register(
+        'groupManagerService',
+        (c) =>
+            new GroupManagerService(
+                asDeps<ConstructorParameters<typeof GroupManagerService>[0]>({
+                    keyService: c.get<KeyService>('keyService'),
+                    eventBus: c.get<IEventBus>('eventBus'),
+                    storage: {
+                        getKv: async <T>(id: string) =>
+                            configStore ? configStore.get<T>(id) : null,
+                        setKv: async <T>(id: string, value: T) => {
+                            if (configStore) await configStore.set(id, value);
+                        },
+                    },
+                }),
+            ),
     );
+
+    register('sessionManagerService', (c) => {
+        const db = c.get<DatabaseService>('database');
+        return new SessionManagerService(
+            storageLayer.sessions,
+            storageLayer.debates,
+            c.get<IEventBus>('eventBus'),
+            new DebateTimelineRepository(db),
+            new DebateOverrideRepository(db),
+            new SessionLinkRepository(db),
+        );
+    });
 
     register('executionGovernor', (_c) => new ExecutionGovernorService());
+
+    // ── Key Fingerprints ─────────────────────────────────────
+    register('fingerprints', (_c) => new KeyFingerprints());
+
+    // ── Key Intelligence Pipeline ────────────────────────────
+    register('keyIntelligencePipeline', (c) => {
+        const fps = c.get<KeyFingerprints>('fingerprints');
+        return new KeyIntelligencePipeline({
+            fingerprints: fps,
+            getExistingKeys: () => c.get<KeyService>('keyService').getKeys(),
+            verifyKey: async (provider, apiKey) => {
+                const adapter = c
+                    .get<ProviderAdapterRegistry>('providerAdapterRegistry')
+                    .getAdapter(provider);
+                if (!adapter)
+                    return {
+                        valid: false,
+                        latency: 0,
+                        models: [],
+                        error: `No adapter for ${provider}`,
+                    };
+                const start = performance.now();
+                try {
+                    const models = await adapter.getAvailableModels(apiKey);
+                    return { valid: true, latency: Math.round(performance.now() - start), models };
+                } catch (err: unknown) {
+                    return {
+                        valid: false,
+                        latency: Math.round(performance.now() - start),
+                        models: [],
+                        error: err instanceof Error ? err.message : String(err),
+                    };
+                }
+            },
+        });
+    });
 
     // A-04: initCostOptimization() called after all its deps are registered.
     // It only registers adapters in providerTracker; no circular dependency.

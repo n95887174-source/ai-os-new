@@ -1,4 +1,7 @@
-\\\\\\\\Да — это хороший признак того, что фундамент наконец стал устойчивым.
+> **STATUS:** 🟢 Implemented 2026-06 — Session Affinity Store, Key Health состояния, transparent retry в debate-engine.
+> **Источник:** Дизайн-нотация, предшествовавшая реализации. Сохранена как архив.
+
+Да — это хороший признак того, что фундамент наконец стал устойчивым.
 
 Сейчас у тебя уже не режим аварийного ремонта, а нормальная развилка развития.
 
@@ -59,11 +62,11 @@ key failed = dead
 
 а рейтинг:
 
-* healthy
-* warm
-* degraded
-* cooling
-* quarantined
+- healthy
+- warm
+- degraded
+- cooling
+- quarantined
 
 Тогда плохой ключ временно уходит из ротации и потом может вернуться.
 
@@ -94,9 +97,9 @@ timeout
 
 При смене ключа новый запрос должен получить:
 
-* весь текущий state
-* историю ветки
-* активную позицию агента
+- весь текущий state
+- историю ветки
+- активную позицию агента
 
 Иначе дебат “ломается характером”.
 
@@ -108,10 +111,10 @@ timeout
 
 Если orchestration хороший, этого достаточно для:
 
-* балансировки
-* fallback
-* provider rotation
-* recovery
+- балансировки
+- fallback
+- provider rotation
+- recovery
 
 Добавление новых ключей сейчас даст меньше эффекта, чем улучшение failover.
 
@@ -143,32 +146,32 @@ timeout
 
 Это на неделю работы минимум. С чего хочешь начать?
 
---------------
+---
 
 Этот roadmap описывает 4 стадии. Вот как они выглядят сейчас с учётом уже сделанного:
 
 Стадия 1. Sticky session routing — ~80% готово
-Подзадача	Статус
-SessionAffinityStore (bind/get/unbind/evict)	✅
-ProviderRouter интеграция (sessionId param)	✅
-DebateService binding после callLLM	✅
-Projection-driven eviction с hysteresis	✅
-Grace fallback routing (degraded/limited)	✅
-Same-provider fallback (при отказе — сначала другой ключ того же провайдера, потом другой провайдер)	❌
+Подзадача Статус
+SessionAffinityStore (bind/get/unbind/evict) ✅
+ProviderRouter интеграция (sessionId param) ✅
+DebateService binding после callLLM ✅
+Projection-driven eviction с hysteresis ✅
+Grace fallback routing (degraded/limited) ✅
+Same-provider fallback (при отказе — сначала другой ключ того же провайдера, потом другой провайдер) ❌
 Стадия 2. Health decay — 0%
-Подзадача	Статус
-KeyStateStore: status из enum → шкала 0–100	❌
-ProbeResult: ready/limited/broken → числовой score	❌
-Routing scoring: weighted by health score	❌
-Recovery timer: degraded ключи возвращаются после N минут	❌
+Подзадача Статус
+KeyStateStore: status из enum → шкала 0–100 ❌
+ProbeResult: ready/limited/broken → числовой score ❌
+Routing scoring: weighted by health score ❌
+Recovery timer: degraded ключи возвращаются после N минут ❌
 Стадия 3. Transparent retry — 0%
-Подзадача	Статус
-Перехват ошибки в executeArgumentRound	❌
-Поиск нового ключа без потери round	❌
-Replay context на новом ключе	❌
-UI-propagated retry без остановки дебата	❌
+Подзадача Статус
+Перехват ошибки в executeArgumentRound ❌
+Поиск нового ключа без потери round ❌
+Replay context на новом ключе ❌
+UI-propagated retry без остановки дебата ❌
 Стадия 4. Context continuity — 0%
-Подзадача	Статус
-DebateContext сериализация	❌
-System prompt preservation при смене адаптера	❌
-Передача полного контекста в sendMessage	❌
+Подзадача Статус
+DebateContext сериализация ❌
+System prompt preservation при смене адаптера ❌
+Передача полного контекста в sendMessage ❌

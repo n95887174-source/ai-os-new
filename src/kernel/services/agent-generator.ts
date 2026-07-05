@@ -1,4 +1,6 @@
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { sanitizePromptVar } from '../../kernel/utils/sanitize';
+import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
 const GENERATION_PROMPT = `You are an AI agent configuration generator. Given a natural language description, generate a complete agent configuration.
 
 Respond with ONLY a JSON object (no markdown, no explanation) in this exact format:
@@ -61,13 +63,18 @@ export class AgentGenerator {
               : 'openrouter';
         const model =
             provider === 'groq'
-                ? 'llama-3.1-8b-instant'
+                ? PROVIDER_DEFAULT_MODELS.groq
                 : provider === 'gemini'
-                  ? 'gemini-2.0-flash'
+                  ? PROVIDER_DEFAULT_MODELS.gemini_flash
                   : 'meta-llama/llama-3.3-70b-instruct';
 
         const response = await this.deps.sendMessage(
-            [{ role: 'user', content: `${GENERATION_PROMPT}\n\nDescription: ${description}` }],
+            [
+                {
+                    role: 'user',
+                    content: `${GENERATION_PROMPT}\n\nDescription: ${sanitizePromptVar(description)}`,
+                },
+            ],
             model,
             apiKey,
         );
@@ -118,9 +125,9 @@ export class AgentGenerator {
               : 'openrouter';
         const model =
             provider === 'groq'
-                ? 'llama-3.1-8b-instant'
+                ? PROVIDER_DEFAULT_MODELS.groq
                 : provider === 'gemini'
-                  ? 'gemini-2.0-flash'
+                  ? PROVIDER_DEFAULT_MODELS.gemini_flash
                   : 'meta-llama/llama-3.3-70b-instruct';
 
         const prompt = `You are an AI agent configuration editor. Here is the current configuration:

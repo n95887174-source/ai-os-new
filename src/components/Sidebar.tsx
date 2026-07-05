@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, X, PanelRightOpen, PanelRightClose, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { TranslationKey } from '../i18n/translations';
-import { NAV_SECTIONS, type UserLevel } from '../routes';
+import { NAV_SECTIONS, type UserLevel } from '../route-registry';
 import {
     getPinned,
     savePinned,

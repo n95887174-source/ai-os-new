@@ -152,7 +152,7 @@ const CognitiveBuilder: React.FC = () => {
                 label: e.data?.label as string | undefined,
             })),
         };
-        db.setKv('saved_workflow', topology)
+        db.saveWorkflow(topology)
             .then(() => {
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Workflow saved locally',

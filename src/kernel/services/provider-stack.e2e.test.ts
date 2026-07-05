@@ -38,8 +38,29 @@ function mockKey(overrides?: Partial<ApiKey>): ApiKey {
                 state: 'active' as const,
                 activeSLA: 'BALANCED' as const,
                 traces: [],
-                quality: { coherence: 1, relevance: 1, fluency: 1, instructionFollowing: 1 },
-                streaming: { avgChunkTime: 0, chunkCount: 0, ttfb: 0 },
+                quality: {
+                    score: 1,
+                    semanticDrift: 0,
+                    instructionFollowing: 1,
+                    structureConsistency: 1,
+                },
+                learning: {
+                    specialization: [],
+                    performanceByTask: {},
+                    taskMatrix: {},
+                    advisorInsights: { recommendedFor: [], avoidFor: [], confidence: 0 },
+                    lastFiveResults: [],
+                },
+                currentConcurrentRequests: 0,
+                alerts: [],
+                streaming: {
+                    chunkStability: 0,
+                    streamGaps: 0,
+                    realtimeTokensPerSec: 0,
+                    avgChunkLatency: 0,
+                    maxChunkGap: 0,
+                    jitter: 0,
+                },
                 usageToday: { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 },
                 usageMonthly: { tokens: 0, requests: 0, estimatedCost: 0 },
                 latencyBreakdown: { ttft: 0, total: 0, tokensPerSec: 0 },
@@ -86,17 +107,21 @@ function mockRegistry(adapter?: IProviderAdapter): IAdapterRegistry {
     return {
         getAdapter: vi.fn(() => adapter ?? mockAdapter()),
         hasAdapter: vi.fn(() => true),
-        registerAdapter: vi.fn(),
-        removeAdapter: vi.fn(),
-        listAdapters: vi.fn(),
+        getOrCreateWithFallback: vi.fn(() => adapter ?? mockAdapter()),
+        getAllProviders: vi.fn(() => []),
+        getProviderRuntimeStatus: vi.fn(() => ({ circuitOpen: false, rateLimited: false })),
+        getCircuitBreakerState: vi.fn(() => 'closed' as const),
+        resetCircuitBreaker: vi.fn(),
+        syncCircuitBreakerState: vi.fn(),
+        syncRateLimitState: vi.fn(),
     };
 }
 
 describe('Provider Stack E2E', () => {
     let eventBus: {
-        emit: ReturnType<typeof vi.fn>;
-        on: ReturnType<typeof vi.fn>;
-        off: ReturnType<typeof vi.fn>;
+        emit: (event: string, data?: unknown) => void;
+        on: (event: string, handler: (...args: unknown[]) => void) => () => void;
+        off: () => void;
     };
     let eventHandlers: Record<string, Array<(...args: unknown[]) => void>>;
     let eventSourcing: EventRecorder;
@@ -121,7 +146,7 @@ describe('Provider Stack E2E', () => {
                 return () => {
                     eventHandlers[event] = eventHandlers[event].filter((h) => h !== handler);
                 };
-            }),
+            }) as unknown as (event: string, handler: (...args: unknown[]) => void) => () => void,
             off: vi.fn(),
         };
 
@@ -134,7 +159,10 @@ describe('Provider Stack E2E', () => {
                     recordedEvents.push(payload);
                     cb(payload);
                 };
-                const unsub = eventBus.on('*', wrapped as (...args: unknown[]) => void);
+                const unsub = eventBus.on(
+                    '*',
+                    wrapped as (...args: unknown[]) => void,
+                ) as unknown as () => void;
                 return unsub;
             },
         );

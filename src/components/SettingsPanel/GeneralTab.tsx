@@ -8,6 +8,10 @@ import {
     MessageSquare,
     Sliders,
     Waves,
+    Shield,
+    RefreshCw,
+    Database,
+    Circle,
 } from 'lucide-react';
 import { CONFIG } from '../../kernel/services/config-registry';
 import { setFeatureFlag } from '../../kernel/services/config-mutations';
@@ -106,6 +110,205 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                     onChange={(v) => updateSetting('notifications', v)}
                 />
             </SettingRow>
+            <SettingRow
+                icon={<Shield size={20} aria-hidden="true" />}
+                title={t('settings.telemetry_enabled')}
+                description={t('settings.telemetry_enabled_desc')}
+            >
+                <Toggle
+                    checked={settings.telemetryEnabled}
+                    onChange={(v) => updateSetting('telemetryEnabled', v)}
+                />
+            </SettingRow>
+            <SettingRow
+                icon={<RefreshCw size={20} aria-hidden="true" />}
+                title={t('settings.auto_update_check')}
+                description={t('settings.auto_update_check_desc')}
+            >
+                <Toggle
+                    checked={settings.autoUpdateCheck}
+                    onChange={(v) => updateSetting('autoUpdateCheck', v)}
+                />
+            </SettingRow>
+            <details style={{ ...detailsContainer, marginTop: '0.5rem' }}>
+                <summary style={detailsSummary}>
+                    <Database size={16} color="#3b82f6" /> {t('settings.data_management')}
+                </summary>
+                <div
+                    style={{
+                        padding: '0 1.5rem 1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem',
+                    }}
+                >
+                    <SettingRow
+                        icon={<Circle size={16} fill="#3b82f6" color="#3b82f6" />}
+                        title={t('settings.auto_save_interval')}
+                        description={t('settings.auto_save_interval_desc')}
+                    >
+                        <select
+                            value={settings.dataManagement.autoSaveInterval}
+                            onChange={(e) => {
+                                try {
+                                    const next = {
+                                        ...settings.dataManagement,
+                                        autoSaveInterval: Number(e.target.value),
+                                    };
+                                    setSettings((prev) => ({
+                                        ...prev,
+                                        dataManagement: next,
+                                    }));
+                                    settingsService.updateSettings({ dataManagement: next });
+                                } catch (e) {
+                                    console.warn(
+                                        '[SettingsPanel] Failed to update autoSaveInterval:',
+                                        e,
+                                    );
+                                }
+                            }}
+                            style={settingSelect}
+                            aria-label={t('settings.auto_save_interval')}
+                        >
+                            <option value={5000}>5s</option>
+                            <option value={15000}>15s</option>
+                            <option value={30000}>30s</option>
+                            <option value={60000}>60s</option>
+                        </select>
+                    </SettingRow>
+                    <SettingRow
+                        icon={<Circle size={16} fill="#3b82f6" color="#3b82f6" />}
+                        title={t('settings.max_history_entries')}
+                        description={t('settings.max_history_entries_desc')}
+                    >
+                        <select
+                            value={settings.dataManagement.maxHistoryEntries}
+                            onChange={(e) => {
+                                try {
+                                    const next = {
+                                        ...settings.dataManagement,
+                                        maxHistoryEntries: Number(e.target.value),
+                                    };
+                                    setSettings((prev) => ({
+                                        ...prev,
+                                        dataManagement: next,
+                                    }));
+                                    settingsService.updateSettings({ dataManagement: next });
+                                } catch (e) {
+                                    console.warn(
+                                        '[SettingsPanel] Failed to update maxHistoryEntries:',
+                                        e,
+                                    );
+                                }
+                            }}
+                            style={settingSelect}
+                            aria-label={t('settings.max_history_entries')}
+                        >
+                            <option value={100}>100</option>
+                            <option value={500}>500</option>
+                            <option value={1000}>1000</option>
+                            <option value={5000}>5000</option>
+                        </select>
+                    </SettingRow>
+                    <SettingRow
+                        icon={<Circle size={16} fill="#3b82f6" color="#3b82f6" />}
+                        title={t('settings.max_trace_entries')}
+                        description={t('settings.max_trace_entries_desc')}
+                    >
+                        <select
+                            value={settings.dataManagement.maxTraceEntries}
+                            onChange={(e) => {
+                                try {
+                                    const next = {
+                                        ...settings.dataManagement,
+                                        maxTraceEntries: Number(e.target.value),
+                                    };
+                                    setSettings((prev) => ({
+                                        ...prev,
+                                        dataManagement: next,
+                                    }));
+                                    settingsService.updateSettings({ dataManagement: next });
+                                } catch (e) {
+                                    console.warn(
+                                        '[SettingsPanel] Failed to update maxTraceEntries:',
+                                        e,
+                                    );
+                                }
+                            }}
+                            style={settingSelect}
+                            aria-label={t('settings.max_trace_entries')}
+                        >
+                            <option value={100}>100</option>
+                            <option value={500}>500</option>
+                            <option value={1000}>1000</option>
+                            <option value={5000}>5000</option>
+                        </select>
+                    </SettingRow>
+                    <SettingRow
+                        icon={<Circle size={16} fill="#3b82f6" color="#3b82f6" />}
+                        title={t('settings.prune_memories_days')}
+                        description={t('settings.prune_memories_days_desc')}
+                    >
+                        <select
+                            value={settings.dataManagement.pruneMemoriesAfterDays}
+                            onChange={(e) => {
+                                try {
+                                    const next = {
+                                        ...settings.dataManagement,
+                                        pruneMemoriesAfterDays: Number(e.target.value),
+                                    };
+                                    setSettings((prev) => ({
+                                        ...prev,
+                                        dataManagement: next,
+                                    }));
+                                    settingsService.updateSettings({ dataManagement: next });
+                                } catch (e) {
+                                    console.warn(
+                                        '[SettingsPanel] Failed to update pruneMemoriesAfterDays:',
+                                        e,
+                                    );
+                                }
+                            }}
+                            style={settingSelect}
+                            aria-label={t('settings.prune_memories_days')}
+                        >
+                            <option value={7}>7</option>
+                            <option value={14}>14</option>
+                            <option value={30}>30</option>
+                            <option value={60}>60</option>
+                            <option value={90}>90</option>
+                        </select>
+                    </SettingRow>
+                    <SettingRow
+                        icon={<Circle size={16} fill="#3b82f6" color="#3b82f6" />}
+                        title={t('settings.export_on_shutdown')}
+                        description={t('settings.export_on_shutdown_desc')}
+                    >
+                        <Toggle
+                            checked={settings.dataManagement.exportOnShutdown}
+                            onChange={(v) => {
+                                try {
+                                    const next = {
+                                        ...settings.dataManagement,
+                                        exportOnShutdown: v,
+                                    };
+                                    setSettings((prev) => ({
+                                        ...prev,
+                                        dataManagement: next,
+                                    }));
+                                    settingsService.updateSettings({ dataManagement: next });
+                                } catch (e) {
+                                    console.warn(
+                                        '[SettingsPanel] Failed to update exportOnShutdown:',
+                                        e,
+                                    );
+                                }
+                            }}
+                            accent="#3b82f6"
+                        />
+                    </SettingRow>
+                </div>
+            </details>
 
             <details style={detailsContainer}>
                 <summary style={detailsSummary}>

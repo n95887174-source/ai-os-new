@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { workflowService } from '../../kernel/services/workflow-service';
+import { workflowService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import {
     Play,

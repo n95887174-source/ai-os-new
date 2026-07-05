@@ -48,6 +48,7 @@ describe('GeminiAdapter', () => {
         vi.mocked(mockHttpClient.post).mockResolvedValue({
             data: mockResponse,
             latency: 120,
+            response: new Response(),
         });
 
         const result = await adapter.sendMessage(
@@ -78,8 +79,10 @@ describe('GeminiAdapter', () => {
         expect(mockHttpClient.post).toHaveBeenCalled();
         const [path, body, apiKey] = vi.mocked(mockHttpClient.post).mock.calls[0];
         expect(path).toContain('gemini-2.5-flash:generateContent');
-        expect(body.tools[0].functionDeclarations[0].name).toBe('get_weather');
-        expect(body.tools[0].functionDeclarations[0].parameters.type).toBe('OBJECT');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((body as any).tools[0].functionDeclarations[0].name).toBe('get_weather');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((body as any).tools[0].functionDeclarations[0].parameters.type).toBe('OBJECT');
         expect(apiKey).toBe('fake-api-key');
 
         expect(result.finishReason).toBe('TOOL_CALLS');
@@ -99,6 +102,7 @@ describe('GeminiAdapter', () => {
                 ],
             },
             latency: 50,
+            response: new Response(),
         });
 
         await adapter.sendMessage(messages, 'gemini-2.5-flash', 'fake-api-key', undefined, {
@@ -114,8 +118,10 @@ describe('GeminiAdapter', () => {
         });
 
         const [, body] = vi.mocked(mockHttpClient.post).mock.calls[1];
-        expect(body.generationConfig.responseMimeType).toBe('application/json');
-        expect(body.generationConfig.responseSchema.type).toBe('OBJECT');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((body as any).generationConfig.responseMimeType).toBe('application/json');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((body as any).generationConfig.responseSchema.type).toBe('OBJECT');
     });
 
     it('should handle G4 safety settings', async () => {
@@ -127,6 +133,7 @@ describe('GeminiAdapter', () => {
                 candidates: [{ content: { parts: [{ text: 'Safe' }] }, finishReason: 'STOP' }],
             },
             latency: 50,
+            response: new Response(),
         });
 
         await adapter.sendMessage(messages, 'gemini-2.5-flash', 'fake-api-key', undefined, {
@@ -136,8 +143,11 @@ describe('GeminiAdapter', () => {
         });
 
         const [, body] = vi.mocked(mockHttpClient.post).mock.calls[2];
-        expect(body.safetySettings).toBeDefined();
-        expect(body.safetySettings[0].category).toBe('HARM_CATEGORY_DANGEROUS_CONTENT');
-        expect(body.safetySettings[0].threshold).toBe('BLOCK_LOW_AND_ABOVE');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((body as any).safetySettings).toBeDefined();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((body as any).safetySettings[0].category).toBe('HARM_CATEGORY_DANGEROUS_CONTENT');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((body as any).safetySettings[0].threshold).toBe('BLOCK_LOW_AND_ABOVE');
     });
 });

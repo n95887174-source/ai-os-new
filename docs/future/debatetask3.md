@@ -1,3 +1,6 @@
+> **STATUS:** 🟢 Implemented 2026-06 — все ключевые концепты реализованы: Memory Extractor, Embedding Pipeline, RAG Retriever, Memory Graph.
+> **Источник:** Дизайн-нотация, предшествовавшая реализации. Сохранена как архив.
+
 Это уже уровень, где твоя система превращается из “набора дебатов” в **единый интеллект с памятью по всем сессиям**.
 
 Разберём правильно, без магии.
@@ -10,13 +13,13 @@
 
 ## 1) Memory (как ChatGPT)
 
-* система “помнит” прошлые дебаты
-* может использовать их в новых
+- система “помнит” прошлые дебаты
+- может использовать их в новых
 
 ## 2) Search / RAG по дебатам
 
-* искать аргументы, решения, паттерны
-* доставать релевантные куски из истории
+- искать аргументы, решения, паттерны
+- доставать релевантные куски из истории
 
 ---
 
@@ -38,9 +41,9 @@
 DebateRoom + Timeline + Snapshot
 ```
 
-* всё как есть
-* неизменяемое
-* источник истины
+- всё как есть
+- неизменяемое
+- источник истины
 
 ---
 
@@ -54,10 +57,10 @@ MemoryIndex {
 }
 ```
 
-* разбитые куски дебатов
-* аргументы агентов
-* решения
-* споры
+- разбитые куски дебатов
+- аргументы агентов
+- решения
+- споры
 
 ---
 
@@ -67,8 +70,8 @@ MemoryIndex {
 Vector DB + Retriever
 ```
 
-* отвечает на запросы
-* возвращает релевантные дебаты
+- отвечает на запросы
+- возвращает релевантные дебаты
 
 ---
 
@@ -82,31 +85,31 @@ Vector DB + Retriever
 
 ## A) Аргументы
 
-* claim
-* counterclaim
-* reasoning
+- claim
+- counterclaim
+- reasoning
 
 ---
 
 ## B) Решения
 
-* final consensus
-* verdict
+- final consensus
+- verdict
 
 ---
 
 ## C) Конфликты
 
-* disagreement points
-* contradictions
+- disagreement points
+- contradictions
 
 ---
 
 ## D) Инсайты
 
-* “math check failed”
-* “critic was wrong”
-* “security risk found”
+- “math check failed”
+- “critic was wrong”
+- “security risk found”
 
 ---
 
@@ -163,9 +166,9 @@ User: "дебат про архитектуру системы"
 
 ## 3. Returns:
 
-* похожие архитектурные дебаты
-* прошлые ошибки
-* сильные аргументы
+- похожие архитектурные дебаты
+- прошлые ошибки
+- сильные аргументы
 
 ---
 
@@ -190,16 +193,16 @@ System prompt += retrieved memory
 
 ## 1) Episodic Memory
 
-* конкретные дебаты
+- конкретные дебаты
 
 ## 2) Semantic Memory
 
-* обобщённые знания из дебатов
+- обобщённые знания из дебатов
 
 ## 3) Procedural Memory
 
-* “как система решает задачи”
-* паттерны дебатов
+- “как система решает задачи”
+- паттерны дебатов
 
 ---
 
@@ -243,8 +246,8 @@ DebateRoom → Timeline → Snapshot
 
 ## Debate Memory Graph
 
-* узлы = идеи
-* связи = “опроверг”, “улучшил”, “зависит от”
+- узлы = идеи
+- связи = “опроверг”, “улучшил”, “зависит от”
 
 Это уже не RAG.
 
@@ -260,26 +263,26 @@ DebateRoom → Timeline → Snapshot
 
 ## 🔴 P0 — Memory Foundation
 
-* MemoryExtractor (from Timeline)
-* Chunk schema
-* Embedding pipeline
-* Vector store (per debate + global)
+- MemoryExtractor (from Timeline)
+- Chunk schema
+- Embedding pipeline
+- Vector store (per debate + global)
 
 ---
 
 ## 🟠 P1 — RAG Layer
 
-* retrieveRelevantDebates(query)
-* injectMemoryIntoDebate()
-* similarity scoring
+- retrieveRelevantDebates(query)
+- injectMemoryIntoDebate()
+- similarity scoring
 
 ---
 
 ## 🟡 P2 — Memory UI
 
-* “Related debates” panel
-* “Why system suggested this”
-* search across debates
+- “Related debates” panel
+- “Why system suggested this”
+- search across debates
 
 ---
 

@@ -2,8 +2,13 @@
 export type { ChatEntry, ChatSession, ChatStoreShape } from './chat/types';
 export { DEFAULT_HISTORY } from './chat/types';
 export { useChatStore } from './chat/store';
-export { useActiveSessionHistory, useSessions, useActiveSessionId, useSystemPrompt, useHasMoreSessions } from './chat/hooks';
+export {
+    useActiveSessionHistory,
+    useSessions,
+    useActiveSessionId,
+    useSystemPrompt,
+    useHasMoreSessions,
+} from './chat/hooks';
 export { useChatStoreHydration } from './chat/hydration';
 
-// Trigger module-level subscriptions (event bus listeners + requestEntryMap rebuild)
-import './chat/subscriptions';
+// subscriptions.ts was deleted in Sprint 1 (B-014) — triggers were dead code

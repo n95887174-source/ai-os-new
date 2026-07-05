@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion';
 import { RefreshCw, Send, MessageSquare } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
 import type { ApiKey } from '../../types/metrics';
 
 interface SandboxTabProps {
@@ -165,13 +166,9 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
         setInput('');
         setStatus('loading');
         setError(null);
-        let defaultModel = 'auto';
         const p = apiKey.provider.toLowerCase();
-        if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
-        else if (p === 'openrouter') defaultModel = 'openrouter/auto';
-        else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
-        else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
-        else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+        const defaultModel =
+            p === 'openrouter' ? 'openrouter/auto' : PROVIDER_DEFAULT_MODELS[p] || 'auto';
 
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,

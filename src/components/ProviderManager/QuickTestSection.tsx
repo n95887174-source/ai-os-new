@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Loader2, Send } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
 import { eventBus, EVENTS } from '../../kernel/events/event-bus';
+import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
 import { useTranslation } from '../../i18n/useTranslation';
 import {
     successBox,
@@ -44,13 +45,9 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
         const start = Date.now();
         let isDone = false;
 
-        let defaultModel = 'auto';
         const p = apiKey.provider.toLowerCase();
-        if (p === 'groq') defaultModel = 'llama-3.1-8b-instant';
-        else if (p === 'openrouter') defaultModel = 'openrouter/auto';
-        else if (p === 'gemini') defaultModel = 'gemini-3.1-flash-lite';
-        else if (p === 'anthropic') defaultModel = 'claude-3-haiku-20240307';
-        else if (p === 'openai') defaultModel = 'gpt-4o-mini';
+        const defaultModel =
+            p === 'openrouter' ? 'openrouter/auto' : PROVIDER_DEFAULT_MODELS[p] || 'auto';
 
         const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
 

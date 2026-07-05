@@ -1,5 +1,17 @@
-export type { LLMProviderAdapter, ChatMessage, ProviderResponse, HealthCheckResult, SafetyRating } from './core/types';
-export { LLMError, RetryableError, SafetyError, AuthError, ModelValidationError } from './core/errors';
+export type {
+    LLMProviderAdapter,
+    ChatMessage,
+    ProviderResponse,
+    HealthCheckResult,
+    SafetyRating,
+} from './core/types';
+export {
+    LLMError,
+    RetryableError,
+    SafetyError,
+    AuthError,
+    ModelValidationError,
+} from './core/errors';
 export { BaseLLMAdapter } from './core/base-adapter';
 export type { SendMessageOptions } from './core/base-adapter';
 
@@ -16,7 +28,7 @@ export type { Priority, PriorityQueueConfig } from './decorators/priority-queue'
 export { CanaryRouterDecorator } from './decorators/canary-router';
 export type { CanaryRouterConfig, CanaryResult } from './decorators/canary-router';
 export { CostManagerDecorator } from './decorators/cost-manager';
-export type { CostManagerConfig, ModelPricing, CostRecord, CostSummary } from './decorators/cost-manager';
+export type { CostManagerConfig, CostRecord, CostSummary } from './decorators/cost-manager';
 
 export { GeminiAdapter } from './gemini/gemini-adapter';
 export { OpenRouterAdapter } from './openrouter/openrouter-adapter';

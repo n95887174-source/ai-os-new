@@ -79,8 +79,8 @@ export async function init() {
     const loaded = await loadActiveSession(_deps.debateStore);
     _syncManager.activeSession = loaded;
     if (loaded) {
-        const { setActiveDebateSession } = await import('./active-debate-store');
-        setActiveDebateSession(loaded);
+        const { useActiveDebateStore } = await import('../../../stores/activeDebateStore');
+        useActiveDebateStore.getState().setSession(loaded);
     }
     _deps.eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
         const payload = data as { sessionId: string; verdict: DebateVerdict };

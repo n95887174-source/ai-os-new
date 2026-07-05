@@ -20,12 +20,11 @@ const ShadowPanel: React.FC = () => {
             setRouterReport(rReport);
 
             if (rReport.driftScore > 0)
-                eventBus.emit(EVENTS.SHADOW_DRIFT, {
+                console.info('[ShadowPanel] Router drift', {
                     driftScore: rReport.driftScore,
                     criticalCount: rReport.criticalCount,
                     mismatchCount: rReport.mismatches.length,
                     type: 'router',
-                    timestamp: Date.now(),
                 });
         } catch (e) {
             console.error('[ShadowPanel] Diff failed:', e);

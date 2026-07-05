@@ -30,7 +30,7 @@ async function createRouterService() {
     };
 
     const mockKeyService = {
-        getKeys: vi.fn(() => []),
+        getKeys: vi.fn(() => [] as any[]),
         selectFromPool: vi.fn(),
         canUseKey: vi.fn(() => ({ can: true, reason: null })),
         getPoolKeys: vi.fn(() => []),
@@ -106,7 +106,8 @@ async function createRouterService() {
                         avgTTFT: v.avgTTFT ?? 100,
                         avgTPS: v.avgTPS ?? 50,
                         reliability: v.reliability ?? 0.95,
-                        status: v.status ?? 'healthy',
+                        status: (v.status ?? 'healthy') as
+                            'healthy' | 'degraded' | 'offline' | 'unknown',
                         stabilityIndex: v.stabilityIndex ?? 1.0,
                         reputationScore: v.reputationScore ?? 100,
                         totalRequests: 0,
@@ -249,7 +250,7 @@ describe('RouterService latency balancing', () => {
                         maxLatency: 100,
                     },
                     availableModels: ['llama-3.3-70b'],
-                },
+                } as any,
                 {
                     id: 'key-2',
                     provider: 'Gemini',
@@ -265,7 +266,7 @@ describe('RouterService latency balancing', () => {
                         maxLatency: 600,
                     },
                     availableModels: ['gemini-3.1-flash-lite'],
-                },
+                } as any,
                 {
                     id: 'key-3',
                     provider: 'OpenRouter',
@@ -281,7 +282,7 @@ describe('RouterService latency balancing', () => {
                         maxLatency: 120,
                     },
                     availableModels: ['claude-3.5-sonnet'],
-                },
+                } as any,
             ]);
 
             const ranked = router.getRankedProviders('auto', 'test prompt', 'normal');
@@ -314,7 +315,7 @@ describe('RouterService latency balancing', () => {
                         maxLatency: 100,
                     },
                     availableModels: ['llama-3.3-70b'],
-                },
+                } as any,
                 {
                     id: 'key-2',
                     provider: 'Gemini',
@@ -330,7 +331,7 @@ describe('RouterService latency balancing', () => {
                         maxLatency: 80,
                     },
                     availableModels: ['gemini-3.1-flash-lite'],
-                },
+                } as any,
             ]);
 
             const ranked = router.getRankedProviders('auto', 'test', 'normal');

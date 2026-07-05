@@ -135,30 +135,11 @@ import type { AgentJournalService as AgentJournalServiceType } from './services/
 export const agentJournalService = lazyService<AgentJournalServiceType>('agentJournalService');
 
 // ── Key Intelligence Pipeline ─────────────────────────
-import { KeyFingerprints } from './services/key-management/key-fingerprints';
-import { KeyIntelligencePipeline } from './services/key-intelligence-pipeline';
-export const fingerprints = new KeyFingerprints();
-export const keyIntelligencePipeline = new KeyIntelligencePipeline({
-    fingerprints,
-    getExistingKeys: () => keyService.getKeys(),
-    verifyKey: async (provider, apiKey) => {
-        const adapter = adapterRegistry.getAdapter(provider);
-        if (!adapter)
-            return { valid: false, latency: 0, models: [], error: `No adapter for ${provider}` };
-        const start = performance.now();
-        try {
-            const models = await adapter.getAvailableModels(apiKey);
-            return { valid: true, latency: Math.round(performance.now() - start), models };
-        } catch (err: unknown) {
-            return {
-                valid: false,
-                latency: Math.round(performance.now() - start),
-                models: [],
-                error: err instanceof Error ? err.message : String(err),
-            };
-        }
-    },
-});
+import type { KeyFingerprints as KeyFingerprintsType } from './services/key-management/key-fingerprints';
+import type { IKeyIntelligencePipeline } from './contracts/key-intelligence';
+export const fingerprints = lazyService<KeyFingerprintsType>('fingerprints');
+export const keyIntelligencePipeline =
+    lazyService<IKeyIntelligencePipeline>('keyIntelligencePipeline');
 export const sessionAffinityStore = lazyService<SessionAffinityStore>('sessionAffinityStore');
 export const executionGovernor = lazyService<IExecutionGovernor>('executionGovernor');
 import type { PersonaService as PersonaServiceType } from './services/persona-service';
@@ -366,7 +347,8 @@ export const roleTeamService = lazyService<IRoleTeamService>('roleTeamService');
 export const ecosystemEngine = lazyService<IEcosystemEngine>('ecosystemEngine');
 
 // ── Reconnection Service ──────────────────────────────────────
-export { reconnectionService } from './services/reconnection-service';
+import type { ReconnectionService } from './services/reconnection-service';
+export const reconnectionService = lazyService<ReconnectionService>('reconnectionService');
 
 // ── Research Engine ──────────────────────────────────────────
 import type { IResearchEngine } from './contracts/research-engine';
@@ -481,8 +463,8 @@ import type { IContributionService } from './contracts/contribution';
 export const contributionService = lazyService<IContributionService>('contributionService');
 
 // ── Gemini Live Service ────────────────────────────
-import { GeminiLiveService } from './services/gemini-live-service';
-export const geminiLiveService = new GeminiLiveService();
+import type { IGeminiLiveService } from './contracts/gemini-live';
+export const geminiLiveService = lazyService<IGeminiLiveService>('geminiLiveService');
 
 // ── Meta-Learning Service ──────────────────────────
 import type { IMetaLearningService } from './contracts/meta-learning';
@@ -512,3 +494,33 @@ import type { IProviderAchievementService } from './contracts/provider-achieveme
 export const providerAchievementService = lazyService<IProviderAchievementService>(
     'providerAchievementService',
 );
+
+// ── Prompt Security Service ──────────────────────
+import type { IPromptSecurityService } from './contracts/prompt-security-types';
+export const promptSecurityService = lazyService<IPromptSecurityService>('promptSecurityService');
+
+// ── Google GenAI Service ─────────────────────────
+import type { GoogleGenAIService as GoogleGenAIServiceType } from './services/google-genai-service';
+export const googleGenAIService = lazyService<GoogleGenAIServiceType>('googleGenAIService');
+
+// ── Workflow Service ─────────────────────────────
+import type { WorkflowService as WorkflowServiceType } from './services/workflow-service';
+export const workflowService = lazyService<WorkflowServiceType>('workflowService');
+
+// ── Source Adapter Registry ──────────────────────
+import type { SourceAdapterRegistry as SourceAdapterRegistryType } from './services/research-adapters/source-adapter-registry';
+export const sourceAdapterRegistry =
+    lazyService<SourceAdapterRegistryType>('sourceAdapterRegistry');
+
+// ── Prompt Library Service ───────────────────────
+import type { PromptLibraryService as PromptLibraryServiceType } from './services/prompt-library-service';
+export const promptLibraryService = lazyService<PromptLibraryServiceType>('promptLibraryService');
+
+// ── Batch Processor Service ──────────────────────
+import type { BatchProcessorService as BatchProcessorServiceType } from './services/batch-processor-service';
+export const batchProcessorService =
+    lazyService<BatchProcessorServiceType>('batchProcessorService');
+
+// ── Agent Avatar Service ─────────────────────────
+import type { AgentAvatarService } from './services/agent-avatar-service';
+export const agentAvatarService = lazyService<AgentAvatarService>('agentAvatarService');

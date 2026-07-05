@@ -1,8 +1,8 @@
 import { LLMError } from '../core/errors';
-import { rootLogger } from '../../kernel/services/logger-service';
-import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
+import { safeJsonParse } from '../../shared/utils/safe-json';
 
-const LOGGER = rootLogger.child('SSEParser');
+const LOGGER = FALLBACK_LOGGER.child('SSEParser');
 
 export interface SSCOptions {
     idleTimeoutMs?: number;

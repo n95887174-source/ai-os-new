@@ -1,12 +1,10 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
-import { CONFIG } from '../../kernel/services/config-registry';
 import { LLMError } from '../core/errors';
 import { estimateTokenCount } from '../utils/token-counter';
-import { rootLogger } from '../../kernel/services/logger-service';
-export type { ModelPricing } from '../../kernel/services/pricing-service';
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
 
-const LOGGER = rootLogger.child('CostManagerDecorator');
+const LOGGER = FALLBACK_LOGGER.child('CostManagerDecorator');
 
 export interface CostManagerPricing {
     inputPer1K: number;
@@ -42,13 +40,11 @@ export interface CostSummary {
     >;
 }
 
-const DEFAULT_PRICING: Record<string, CostManagerPricing> = {
-    ...(CONFIG?.llm?.pricing as Record<string, CostManagerPricing> | undefined),
-};
+const DEFAULT_PRICING: Record<string, CostManagerPricing> = {};
 
 const FALLBACK_PRICING: CostManagerPricing = {
-    inputPer1K: CONFIG?.llm?.pricingFallback?.inputPer1K ?? 0.002,
-    outputPer1K: CONFIG?.llm?.pricingFallback?.outputPer1K ?? 0.008,
+    inputPer1K: 0.002,
+    outputPer1K: 0.008,
 };
 
 export class CostManagerDecorator extends BaseDecorator {
@@ -88,14 +84,16 @@ export class CostManagerDecorator extends BaseDecorator {
         const day = 86400000;
         const week = 7 * day;
 
+        const month = 30 * day;
         let costDay = 0,
-            costWeek = 0;
+            costWeek = 0,
+            costMonth = 0;
         for (const r of this.records) {
             const age = now - r.timestamp;
+            if (age < month) costMonth += r.cost;
             if (age < week) costWeek += r.cost;
             if (age < day) costDay += r.cost;
         }
-        const costMonth = this.cumulativeCost;
 
         const exceeded =
             (this.config.dailyBudget !== undefined && costDay >= this.config.dailyBudget) ||
@@ -173,6 +171,8 @@ export class CostManagerDecorator extends BaseDecorator {
 
     resetBudget(): void {
         this.budgetExceeded = false;
+        this.records = this.records.slice(-100); // Keep last 100 records as buffer
+        this.cumulativeCost = 0;
     }
 
     clearRecords(): void {
@@ -286,8 +286,13 @@ export class CostManagerDecorator extends BaseDecorator {
                 signal,
                 options,
             );
+            const usage = finalMeta?.usage as
+                { total_tokens?: number; totalTokens?: number } | undefined;
             const totalTokens =
-                (finalMeta?.usage as { total_tokens?: number })?.total_tokens ?? outputTokens;
+                (finalMeta?.tokens as number) ??
+                usage?.total_tokens ??
+                usage?.totalTokens ??
+                outputTokens;
             const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
             const actualCost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
             this.cumulativeCost += actualCost - estimatedCost;

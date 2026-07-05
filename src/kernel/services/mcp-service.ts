@@ -112,17 +112,18 @@ export class MCPService {
     private validateServerUrl(url: string): void {
         try {
             const parsed = new URL(url);
+            const host = parsed.hostname.toLowerCase();
+            const isLocalhost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+            // Require https: for non-localhost connections — http: exposes API keys and
+            // tool schemas to network interception (MITM on open Wi-Fi, corporate proxy).
+            if (!isLocalhost && parsed.protocol !== 'https:') {
+                throw new Error(`MCP server requires https: for non-localhost URLs: ${url}`);
+            }
             if (!['http:', 'https:'].includes(parsed.protocol)) {
                 throw new Error(`Protocol ${parsed.protocol} not allowed for MCP server`);
             }
             // MCP is a local protocol — block only non-localhost private IPs
-            const host = parsed.hostname.toLowerCase();
-            if (
-                host !== 'localhost' &&
-                host !== '127.0.0.1' &&
-                host !== '::1' &&
-                isPrivateIP(host)
-            ) {
+            if (!isLocalhost && isPrivateIP(host)) {
                 throw new Error(`MCP server URL points to private/internal network: ${url}`);
             }
         } catch {

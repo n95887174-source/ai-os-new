@@ -8,6 +8,7 @@ import type { ILLMClientService } from '../contracts/provider-adapter';
 import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { sanitizePromptVar } from '../utils/sanitize';
 
 const LOGGER = rootLogger.child('AgentWizard');
 
@@ -106,7 +107,7 @@ Current agent:
 - Temperature: ${currentConfig.temperature}
 - Tools: ${currentConfig.tools.join(', ')}
 
-Feedback: "${feedback}"
+Feedback: "${sanitizePromptVar(feedback)}"
 
 Respond with a JSON object:
 {
@@ -159,7 +160,7 @@ Respond ONLY with the JSON object.`;
 
         const prompt = `Match the following agent description to one of these existing roles:
 
-Description: "${description}"
+Description: "${sanitizePromptVar(description)}"
 
 Available roles:
 ${existingRoles.map((r) => `- ${r.name}: ${r.systemPrompt.substring(0, 100)}...`).join('\n')}
@@ -199,7 +200,7 @@ Respond with JSON:
      * Generate a name suggestion
      */
     async suggestName(description: string): Promise<string> {
-        const prompt = `Generate a short, memorable name for an AI agent with this purpose: "${description}"
+        const prompt = `Generate a short, memorable name for an AI agent with this purpose: "${sanitizePromptVar(description)}"
 
 Respond with just the name, no explanation. Keep it under 30 characters. Use 1-3 words.`;
 
@@ -224,7 +225,7 @@ Respond with just the name, no explanation. Keep it under 30 characters. Use 1-3
     ): string {
         let prompt = `Generate a complete AI agent configuration from this description:
 
-"${description}"
+"${sanitizePromptVar(description)}"
 
 `;
 

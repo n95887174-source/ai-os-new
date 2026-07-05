@@ -67,12 +67,12 @@ export const SocratesMascot: React.FC<Props> = ({ hidden }) => {
     useEffect(() => {
         const subs = [
             eventBus.onSafe<{ agentId: string; content: string }>(
-                'debate-runtime:agent:responded',
+                EVENTS.DEBATE_AGENT_RESPONDED,
                 () => {
                     if (emotion !== 'bored') showQuote('approving');
                 },
             ),
-            eventBus.onSafe<{ agentId: string; error: string }>('debate-runtime:agent:error', () =>
+            eventBus.onSafe<{ agentId: string; error: string }>(EVENTS.DEBATE_AGENT_ERROR, () =>
                 showQuote('concerned'),
             ),
             eventBus.onSafe<{ sessionId: string; type: string }>(EVENTS.DEBATE_UPDATED, (d) => {

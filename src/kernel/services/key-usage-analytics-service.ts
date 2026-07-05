@@ -4,67 +4,104 @@ import type {
     ProviderUsageBreakdown,
     UsageTrend,
 } from '../contracts/key-usage-analytics';
+import type { KeyState } from '../contracts/key-state';
+import type { ProviderRanking } from './provider-tracker';
+
+export interface KeyUsageAnalyticsDeps {
+    keyStateStore: {
+        getAll(): KeyState[];
+    };
+    providerTracker: {
+        getProviderRankings(catalogProviders?: string[]): ProviderRanking[];
+    };
+}
 
 export class KeyUsageAnalyticsService implements IKeyUsageAnalyticsService {
+    private deps: KeyUsageAnalyticsDeps;
+
+    constructor(deps: KeyUsageAnalyticsDeps) {
+        this.deps = deps;
+    }
+
     getSummary(): KeyUsageSummary {
+        const allKeys = this.deps.keyStateStore.getAll();
+        const rankings = this.deps.providerTracker.getProviderRankings();
+
+        const totalKeys = allKeys.length;
+        const activeKeys = allKeys.filter(
+            (k) => k.status === 'ready' || k.status === 'limited',
+        ).length;
+
+        let totalRequests = 0;
+        let totalCost = 0;
+        let totalLatencyMs = 0;
+        let providersWithData = 0;
+        let topProvider = '';
+        let maxRequests = 0;
+
+        for (const r of rankings) {
+            totalRequests += r.requests;
+            const cost = r.requests * r.costPerRequest;
+            totalCost += cost;
+            if (r.requests > 0) {
+                totalLatencyMs += r.avgLatency;
+                providersWithData++;
+            }
+            if (r.requests > maxRequests) {
+                maxRequests = r.requests;
+                topProvider = r.provider;
+            }
+        }
+
+        const avgLatency =
+            providersWithData > 0 ? Math.round(totalLatencyMs / providersWithData) : 0;
+
         return {
-            totalKeys: 12,
-            activeKeys: 8,
-            totalRequests: 15234,
-            totalTokens: 8912345,
-            totalCost: 47.23,
-            avgLatency: 843,
-            topProvider: 'Groq',
+            totalKeys,
+            activeKeys,
+            totalRequests,
+            totalTokens: Math.round(totalCost * 200000),
+            totalCost: Math.round(totalCost * 100) / 100,
+            avgLatency,
+            topProvider: topProvider || '—',
         };
     }
 
     getProviderBreakdown(): ProviderUsageBreakdown[] {
-        return [
-            {
-                provider: 'Groq',
-                requestCount: 6234,
-                tokenCount: 3210456,
-                cost: 12.45,
-                avgLatency: 287,
-                errorRate: 1.2,
-            },
-            {
-                provider: 'Gemini',
-                requestCount: 4123,
-                tokenCount: 2890123,
-                cost: 18.9,
-                avgLatency: 1245,
-                errorRate: 3.4,
-            },
-            {
-                provider: 'NVIDIA',
-                requestCount: 2890,
-                tokenCount: 1567890,
-                cost: 8.34,
-                avgLatency: 567,
-                errorRate: 0.8,
-            },
-            {
-                provider: 'OpenRouter',
-                requestCount: 1987,
-                tokenCount: 1243876,
-                cost: 7.54,
-                avgLatency: 1876,
-                errorRate: 5.1,
-            },
-        ];
+        const rankings = this.deps.providerTracker.getProviderRankings();
+        const breakdown: ProviderUsageBreakdown[] = [];
+
+        for (const r of rankings) {
+            if (r.requests === 0) continue;
+            breakdown.push({
+                provider: r.provider,
+                requestCount: r.requests,
+                tokenCount: Math.round(r.requests * r.costPerRequest * 200000),
+                cost: Math.round(r.requests * r.costPerRequest * 100) / 100,
+                avgLatency: r.avgLatency,
+                errorRate: Math.round((1 - r.reliability) * 1000) / 10,
+            });
+        }
+
+        return breakdown.sort((a, b) => b.requestCount - a.requestCount);
     }
 
     getTrends(days = 7): UsageTrend[] {
+        const rankings = this.deps.providerTracker.getProviderRankings();
+        const totalRequests = rankings.reduce((s, r) => s + r.requests, 0);
+        const totalCost = rankings.reduce((s, r) => s + r.requests * r.costPerRequest, 0);
+        const totalTokens = Math.round(totalCost * 200000);
+
         const trends: UsageTrend[] = [];
         const now = Date.now();
         for (let i = days - 1; i >= 0; i--) {
             const date = new Date(now - i * 86400000);
+            const weight = days > 0 ? 1 / days : 1;
             trends.push({
                 date: date.toISOString().slice(0, 10),
-                requests: Math.round(1500 + Math.random() * 2000),
-                tokens: Math.round(500000 + Math.random() * 1500000),
-                cost: Math.round((3 + Math.random() * 8) * 100) / 100,
+                requests: Math.round(totalRequests * weight),
+                tokens: Math.round(totalTokens * weight),
+                cost: Math.round(totalCost * weight * 100) / 100,
             });
         }
         return trends;

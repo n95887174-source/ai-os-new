@@ -178,13 +178,13 @@ DebateRuntimePanel → DebateEngine (напрямую)
 
 ## Статус выполнения
 
-| Фаза | Описание                                   | Статус  |
-| :--- | :----------------------------------------- | :-----: |
-| 0    | Анализ                                     | ✅ Done |
-| 1    | Post-processing → DebatePostProcessor      | ✅ Done |
-| 2    | History → SessionManagerService            | ✅ Done |
-| 3    | Human-in-loop → DebateHumanService         |   🔲    |
-| 4    | Удалить DebateService, перевести consumers |   🔲    |
+| Фаза | Описание                                   |                              Статус                               |
+| :--- | :----------------------------------------- | :---------------------------------------------------------------: |
+| 0    | Анализ                                     |                              ✅ Done                              |
+| 1    | Post-processing → DebatePostProcessor      |                              ✅ Done                              |
+| 2    | History → SessionManagerService            |                              ✅ Done                              |
+| 3    | Human-in-loop → DebateHumanService         |                                ✅                                 |
+| 4    | Удалить DebateService, перевести consumers | ⚠️ Partial — DebateService thinned 1130→206 LOC, deletion pending |
 
 ## Риски
 

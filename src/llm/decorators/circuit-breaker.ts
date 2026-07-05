@@ -6,11 +6,10 @@ import type {
 } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { LLMError, RetryableError } from '../core/errors';
-import { CONFIG } from '../../kernel/services/config-registry';
-import { crossTabStateSync } from '../../kernel/services/cross-tab-state';
-import { eventBus, EVENTS } from '../../kernel/events/event-bus';
-import { rootLogger } from '../../kernel/services/logger-service';
-const LOGGER = rootLogger.child('CircuitBreaker');
+import { FALLBACK_LOGGER } from '../../shared/utils/logger';
+import type { ICrossTabStateSync } from '../../kernel/contracts/cross-tab-state';
+import type { IEventBus } from '../../kernel/types/interfaces';
+const LOGGER = FALLBACK_LOGGER.child('CircuitBreaker');
 
 type CircuitState = 'closed' | 'open' | 'half-open';
 
@@ -22,10 +21,10 @@ interface CircuitConfig {
 }
 
 const DEFAULT_CONFIG: CircuitConfig = {
-    failureThreshold: CONFIG?.llm?.circuitBreaker?.failureThreshold ?? 5,
-    successThreshold: CONFIG?.llm?.circuitBreaker?.successThreshold ?? 2,
-    openTimeoutMs: CONFIG?.llm?.circuitBreaker?.openTimeoutMs ?? 30000,
-    halfOpenMaxRequests: CONFIG?.llm?.circuitBreaker?.halfOpenMaxRequests ?? 1,
+    failureThreshold: 5,
+    successThreshold: 2,
+    openTimeoutMs: 30000,
+    halfOpenMaxRequests: 1,
 };
 
 // 402 = Payment Required (no credits). Fail fast — don't retry, don't accumulate circuit failures.
@@ -59,28 +58,30 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
     readonly #config: CircuitConfig;
 
+    #crossTabStateSync?: ICrossTabStateSync;
+    #eventBus?: IEventBus;
+
     constructor(
         inner: import('../core/types').LLMProviderAdapter,
         config: CircuitConfig = DEFAULT_CONFIG,
+        crossTabStateSync?: ICrossTabStateSync,
+        eventBus?: IEventBus,
     ) {
         super(inner);
         this.#config = config;
+        this.#crossTabStateSync = crossTabStateSync;
+        this.#eventBus = eventBus;
+        if (eventBus) this.listenToCrossTabSync();
     }
 
     get id(): string {
         return `${this.inner.id}[cb]`;
     }
 
-    private get config(): CircuitConfig {
-        return CONFIG?.llm?.circuitBreaker || this.#config;
-    }
-
     private updateAndGetState(): CircuitState {
         if (this.state.state === 'open') {
-            // LLM-C02: Atomic OPEN→HALF_OPEN transition.
-            // If another caller is already transitioning (timer + concurrent call), skip.
             if (this.transitioningToHalfOpen) return this.state.state;
-            const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
+            const timeout = this.state.currentTimeoutMs ?? this.#config.openTimeoutMs;
             if (Date.now() - this.state.openSince >= timeout) {
                 // LLM-L04: Use try/finally so flag is always cleared even if state
                 // assignment throws — prevents permanent half-open lockout.
@@ -121,9 +122,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     forceOpen(): void {
         this.state.state = 'open';
         this.state.openSince = Date.now();
-        this.state.currentTimeoutMs = this.config.openTimeoutMs;
+        this.state.currentTimeoutMs = this.#config.openTimeoutMs;
         this.transitioningToHalfOpen = false;
-        crossTabStateSync.updateCircuitBreaker({
+        this.#crossTabStateSync?.updateCircuitBreaker({
             provider: this.getProviderId(),
             keyId: this.inner.id,
             status: 'open',
@@ -135,7 +136,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     private async callWithCircuit<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
         const circuitState = this.updateAndGetState();
         if (circuitState === 'open') {
-            const timeout = this.state.currentTimeoutMs ?? this.config.openTimeoutMs;
+            const timeout = this.state.currentTimeoutMs ?? this.#config.openTimeoutMs;
             throw new LLMError(
                 `Circuit breaker is OPEN for ${this.inner.id}. Retry in ${timeout - (Date.now() - this.state.openSince)}ms`,
                 this.inner.id,
@@ -144,7 +145,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         }
         const isHalfOpen = circuitState === 'half-open';
         if (isHalfOpen) {
-            if (this.inFlightHalfOpen >= this.config.halfOpenMaxRequests) {
+            if (this.inFlightHalfOpen >= this.#config.halfOpenMaxRequests) {
                 throw new LLMError(
                     `Circuit breaker is HALF-OPEN for ${this.inner.id}, max concurrent test requests reached`,
                     this.inner.id,
@@ -205,9 +206,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         if (capturedState === 'half-open') {
             if (this.state.state !== 'half-open') return;
             this.state.successes++;
-            if (this.state.successes >= this.config.successThreshold) {
+            if (this.state.successes >= this.#config.successThreshold) {
                 this.reset();
-                crossTabStateSync.updateCircuitBreaker({
+                this.#crossTabStateSync?.updateCircuitBreaker({
                     provider: this.getProviderId(),
                     keyId: this.inner.id,
                     status: 'closed',
@@ -258,7 +259,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
             this.state.state === 'half-open' ||
             isRateLimit ||
             serverErrorThresholdReached ||
-            this.state.failures >= this.config.failureThreshold
+            this.state.failures >= this.#config.failureThreshold
         ) {
             const prev = this.state.state;
             this.state.state = 'open';
@@ -271,7 +272,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
                 rateLimit: isRateLimit,
             });
 
-            crossTabStateSync.updateCircuitBreaker({
+            this.#crossTabStateSync?.updateCircuitBreaker({
                 provider: this.getProviderId(),
                 keyId: this.inner.id,
                 status: 'open',
@@ -306,16 +307,17 @@ export class CircuitBreakerDecorator extends BaseDecorator {
 
     listenToCrossTabSync(): void {
         const key = `${this.getProviderId()}:${this.inner.id}`;
-        this.unsubSync = eventBus.on(EVENTS.PROVIDER_CIRCUIT_BREAKER_SYNCED, (state: unknown) => {
-            const s = state as { provider: string; keyId: string; status: string };
-            const syncKey = `${s.provider}:${s.keyId}`;
-            if (syncKey !== key) return;
-            if (s.status === 'open') {
-                this.forceOpen();
-            } else if (s.status === 'closed') {
-                this.reset();
-            }
-        });
+        this.unsubSync =
+            this.#eventBus?.on('provider:circuit-breaker:synced', (state: unknown) => {
+                const s = state as { provider: string; keyId: string; status: string };
+                const syncKey = `${s.provider}:${s.keyId}`;
+                if (syncKey !== key) return;
+                if (s.status === 'open') {
+                    this.forceOpen();
+                } else if (s.status === 'closed') {
+                    this.reset();
+                }
+            }) ?? null;
     }
 
     destroy(): void {

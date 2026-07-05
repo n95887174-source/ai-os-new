@@ -1,99 +1,89 @@
-# TASK-059: Data Access Layer — План
+# Data Access Layer (DAL) — Implementation Report
 
-## Background
+> **Status:** 🟢 Implemented (variant A — full DAL, 14 files)
+> **Original plan:** `DAL_PLAN.md` рекомендовал вариант C (3 точечные правки, 0 новых файлов)
+> **Реальность:** Выполнен вариант A — **14 файлов в `src/kernel/dal/`**
 
-Задача описана в `FIXTASK.md` как создание `src/kernel/dal/` с repository-классами, которые инкапсулируют Dexie-доступ. Текущая ситуация:
+## Архитектура
 
-- `DatabaseService` экспортирует 10 таблиц Dexie напрямую
-- 18 файлов используют `database.db.memories`, `database.db.keyValue` и т.д.
-- `DexieDebateStore` — отдельный класс с прямой таблицей
-- Нет единой точки входа для storage
-
-## Варианты
-
-### A) Full DAL (по описанию в FIXTASK.md)
-Создать 8 repository-классов в `src/kernel/dal/`. Каждый — обёртка над Dexie-таблицей с in-memory кэшем и typed API.
-
-**Плюсы:**
-- Единая точка входа
-- Swap-out capability (тесты, замена хранилища)
-- Encapsulated cache logic
-
-**Минусы:**
-- ~200-300 строк boilerplate
-- 18 файлов нужно обновить (замена `database.db.X` на `dal.X`)
-- Много изменений ради рефакторинга
-
-**Риск:** Высокий — все 18 файлов меняются, потенциально 30+ изменённых файлов.
-
----
-
-### B) Lightweight DAL (1 файл)
-Оставить `DatabaseService` как есть, добавить typed getter-методы вместо прямого `database.db.X` доступа. Никаких новых файлов — только добавить методы в существующий `DatabaseService`.
-
-```typescript
-// В DatabaseService:
-get memory() { return this.memories; }
-get session() { return this.sessions; }
-// ... и т.д.
+```
+src/kernel/dal/
+├── index.ts                    # re-exports
+├── types.ts                    # DataAccessLayer interface + domain repository interfaces
+├── repository-types.ts         # KvRepository type
+├── data-access-layer.ts        # DataAccessLayerImpl — конкретная сборка
+├── memory-repository.ts        # Memory domain (conversation context)
+├── session-repository.ts       # Session domain (chat history)
+├── note-repository.ts          # Key Notes domain
+├── role-repository.ts          # Role domain (agent personas)
+├── debate-repository.ts        # Debate domain (sessions + verdicts)
+├── trace-repository.ts         # Trace domain (execution telemetry)
+├── cognitive-repository.ts     # Cognitive domain (skills + connectors + traces)
+├── event-log-repository.ts     # Event Log domain
+├── workspace-repository.ts     # Workspace domain (File System handles)
+├── key-migration.ts            # Key data migration utilities
 ```
 
-**Плюсы:**
-- Минимум изменений
-- Сохраняет все существующие паттерны
-- 0 новых файлов
+## Repository Interfaces (9 domains)
 
-**Минусы:**
-- Не инкапсулирует cache/logic
-- Dexie всё ещё виден
+| Repository            | Methods                                                                                                                                                                                            |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MemoryRepository`    | getAll, get, store, upsert, delete, search, prune, clear                                                                                                                                           |
+| `SessionRepository`   | getAll, get, save, delete, listRecent                                                                                                                                                              |
+| `NoteRepository`      | getAll, get, save, delete, listByKey                                                                                                                                                               |
+| `RoleRepository`      | getAll, get, save, delete                                                                                                                                                                          |
+| `DebateRepository`    | listSessions, getSession, saveSession, deleteSession, getVerdict, saveVerdict, clearAll                                                                                                            |
+| `TraceRepository`     | getAll, get, save, delete, listRecent                                                                                                                                                              |
+| `CognitiveRepository` | getAllSkills, getSkill, saveSkill, deleteSkill, getAllConnectors, getConnector, saveConnector, deleteConnector, getAllCognitiveTraces, getCognitiveTrace, saveCognitiveTrace, deleteCognitiveTrace |
+| `WorkspaceRepository` | saveHandle, getHandle, deleteHandle                                                                                                                                                                |
+| `EventLogRepository`  | append, getSince, getAll, clear                                                                                                                                                                    |
 
----
+## Сборка
 
-### C) Точечная консолидация (рекомендую)
-Делаем **только то, что реально нужно**:
-1. Добавить `debateSessions` и `debateVerdicts` в `DatabaseService` (уже есть отдельные таблицы, но они не в сервисе)
-2. Проверить, что все storage-операции проходят через `DatabaseService` или конкретные сервисы (уже почти так)
-3. Пометить `DexieDebateStore` как DEPRECATED, перенаправить на `DatabaseService`
+```typescript
+// src/kernel/dal/data-access-layer.ts
+export class DataAccessLayerImpl implements DataAccessLayer {
+  readonly memory: MemoryRepository;
+  readonly session: SessionRepository;
+  readonly notes: NoteRepository;
+  readonly roles: RoleRepository;
+  readonly debate: DebateRepository;
+  readonly trace: TraceRepository;
+  readonly cognitive: CognitiveRepository;
+  readonly workspace: WorkspaceRepository;
+  readonly eventLog: EventLogRepository;
+  readonly kv: KvRepository;
 
-Это закрывает дыру (debate-таблицы не в `DatabaseService`) без массового рефакторинга.
+  constructor(db: DatabaseService) { ... }
+}
+```
 
----
+## DI Registration
 
-## Recommendation: Вариант C
+```typescript
+container.register('dal', () => new DataAccessLayerImpl(databaseService));
+```
 
-**Обоснование:** TASK-060 (очистка StorageAdapter) важнее и проще. DAL по варианту A/B — это архитектурный рефакторинг ради консистентности, а не bugfix. Sprint 8 по плану — "консолидация", но текущий codebase уже достаточно консолидирован.
+## Usage
 
-## Что делаем (Вариант C):
+```typescript
+const dal = container.get<DataAccessLayer>('dal');
+const memories = await dal.memory.getAll();
+const sessions = await dal.session.listRecent(10);
+```
 
-### TASK-059.1: Добавить debate-таблицы в DatabaseService
-- `debateSessions` и `debateVerdicts` уже есть в SuperAgentsDB
-- Добавить геттеры в DatabaseService:
-  ```typescript
-  get debateSessions() { return dexieDb.debateSessions; }
-  get debateVerdicts() { return dexieDb.debateVerdicts; }
-  ```
-- Обновить `DexieDebateStore` — использовать `DatabaseService` вместо отдельного Dexie
-- Удалить отдельную Dexie инициализацию из `DexieDebateStore`
+## Законы
 
-### TASK-059.2: Проверить отсутствие прямых Dexie-импортов
-- Убедиться что `import Dexie from 'dexie'` только в `database-service.ts`
-- Если есть другие — перенаправить на `DatabaseService`
+- **ЗАКОН 1:** Каждый domain имеет ровно ОДИН repository в DAL
+- **ЗАКОН 2:** Все storage-операции проходят через DAL, не напрямую в Dexie
 
-### TASK-060: Очистка StorageAdapter
-- Проверить какие namespace ещё используются после TASK-056/057/058
-- Оставить только 3-5 bootstrap-ключей (vault salt, theme, language)
-- Удалить мёртвые namespace
+## Оставшиеся migrate-задачи
+
+1. **DexieDebateStore** — всё ещё существует в `dexie-storage.ts` (compatibility shim)
+2. **4 файла** всё ещё используют прямой `database.db.*` доступ (down from 18)
+3. **`grep -r "import Dexie" src/`** — ✅ только `database-service.ts` (1 импорт)
 
 ## Verification
-- `npx tsc --noEmit` — 0 ошибок
-- `grep -r "import Dexie" src/` — только database-service.ts
-- `grep -r "DexieDebateStore" src/` — 0 результатов или только DEPRECATED comment
 
-## Risk Assessment
-- TASK-059.1: **Low** — добавляем геттеры, меняем 1-2 файла
-- TASK-059.2: **Low** — проверка, изменений нет
-- TASK-060: **Medium** — удаление namespace, но это мёртвый код
-
----
-
-**Decision needed:** Делать вариант C (быстро, закрывает дыры) или A (полный DAL, 2-3 дня)?
+- `npx tsc -b --noEmit` — ✅ 0 ошибок
+- DAL зарегистрирован и используется через DI (`container.get('dal')`)

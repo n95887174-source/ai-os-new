@@ -76,6 +76,9 @@ const EMPTY_DEBATE_STORE: DebateStore = {
     listSessions: async () => {
         throw new Error('DebateStore not available — storageLayer not configured');
     },
+    listAllSessions: async () => {
+        throw new Error('DebateStore not available — storageLayer not configured');
+    },
     deleteSession: async () => {
         throw new Error('DebateStore not available — storageLayer not configured');
     },
@@ -135,91 +138,105 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     }
     register('debateService', (_c) => debateServiceModule);
 
-    register('collaborativeService', (c) =>
-        new CollaborativeService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            get humanService() {
-                return c.get<
-                    import('../services/debate-runtime/debate-human-service').DebateHumanService
-                >('debateHumanService');
-            },
-        }),
+    register(
+        'collaborativeService',
+        (c) =>
+            new CollaborativeService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                get humanService() {
+                    return c.get<
+                        import('../services/debate-runtime/debate-human-service').DebateHumanService
+                    >('debateHumanService');
+                },
+            }),
     );
 
-    register('debateApiService', (c) =>
-        new DebateApiService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            debateService: c.get<typeof debateServiceModule>('debateService'),
-            get orchestrator() {
-                return c.get<OrchestrationService>('orchestrator');
-            },
-            get sessionManager() {
-                return c.get<ISessionManager>('sessionManagerService');
-            },
-        }),
+    register(
+        'debateApiService',
+        (c) =>
+            new DebateApiService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                debateService: c.get<typeof debateServiceModule>('debateService'),
+                get orchestrator() {
+                    return c.get<OrchestrationService>('orchestrator');
+                },
+                get sessionManager() {
+                    return c.get<ISessionManager>('sessionManagerService');
+                },
+            }),
     );
 
-    register('debateKnowledgeSync', (c) =>
-        new DebateKnowledgeSyncService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            memoryService: c.get<MemoryService>('memoryService'),
-        }),
+    register(
+        'debateKnowledgeSync',
+        (c) =>
+            new DebateKnowledgeSyncService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                memoryService: c.get<MemoryService>('memoryService'),
+            }),
     );
 
-    register('hypothesisService', (c) =>
-        new HypothesisService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            database: c.get<IDatabaseService>('database'),
-        }),
+    register(
+        'hypothesisService',
+        (c) =>
+            new HypothesisService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                database: c.get<IDatabaseService>('database'),
+            }),
     );
 
-    register('researchRunService', (c) =>
-        new ResearchRunService({
-            database: c.get<IDatabaseService>('database'),
-        }),
+    register(
+        'researchRunService',
+        (c) =>
+            new ResearchRunService({
+                database: c.get<IDatabaseService>('database'),
+            }),
     );
 
     register('architectureReviewService', (_c) => new ArchitectureReviewService());
 
-    register('promptAuditService', (c) =>
-        new PromptAuditService({
-            get getAllRoles() {
-                return () => c.get<RoleService>('roleService').getAllRoles();
-            },
-        }),
+    register(
+        'promptAuditService',
+        (c) =>
+            new PromptAuditService({
+                get getAllRoles() {
+                    return () => c.get<RoleService>('roleService').getAllRoles();
+                },
+            }),
     );
 
-    register('routingExperimentsService', (c) =>
-        new RoutingExperimentsService({
-            database: c.get<IDatabaseService>('database'),
-            resolveApiKey: (provider: string) => {
-                const keyService = c.get<KeyService>('keyService');
-                const keys = keyService.getKeysByProvider(provider);
-                return keys?.[0]?.key ?? '';
-            },
-            getAdapter: (provider: string) => {
-                const registry = c.get<ProviderAdapterRegistry>('providerAdapterRegistry');
-                const adapter = registry.getAdapter(provider);
-                if (!adapter) return null;
-                return {
-                    sendMessage: async (
-                        messages: Array<{ role: string; content: string }>,
-                        model: string,
-                        apiKey: string,
-                        temperature?: number,
-                        maxTokens?: number,
-                    ) => {
-                        return adapter.sendMessage(
-                            messages as ChatMessage[],
-                            model,
-                            apiKey,
-                            undefined,
-                            { temperature, maxOutputTokens: maxTokens },
-                        ) as Promise<{ content?: string }>;
-                    },
-                };
-            },
-        }),
+    register(
+        'routingExperimentsService',
+        (c) =>
+            new RoutingExperimentsService({
+                database: c.get<IDatabaseService>('database'),
+                resolveApiKey: (provider: string) => {
+                    const keyService = c.get<KeyService>('keyService');
+                    const keys = keyService.getKeysByProvider(provider);
+                    return keys?.[0]?.key ?? '';
+                },
+                getAdapter: (provider: string) => {
+                    const registry = c.get<ProviderAdapterRegistry>('providerAdapterRegistry');
+                    const adapter = registry.getAdapter(provider);
+                    if (!adapter) return null;
+                    return {
+                        sendMessage: async (
+                            messages: Array<{ role: string; content: string }>,
+                            model: string,
+                            apiKey: string,
+                            temperature?: number,
+                            maxTokens?: number,
+                        ) => {
+                            return adapter.sendMessage(
+                                messages as ChatMessage[],
+                                model,
+                                apiKey,
+                                undefined,
+                                { temperature, maxOutputTokens: maxTokens },
+                            ) as Promise<{ content?: string }>;
+                        },
+                    };
+                },
+            }),
     );
 
     register('debatePolicyEngine', (_c) => new DebatePolicyEngine());
@@ -249,9 +266,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             },
             get getKeyStateStore() {
                 const getter = (): {
-                    get: (
-                        id: string,
-                    ) =>
+                    get: (id: string) =>
                         | {
                               flags: {
                                   authFailed: boolean;
@@ -266,16 +281,14 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                         return c.get<import('../services/key-state-store').KeyStateStore>(
                             'keyStateStore',
                         ) as unknown as {
-                            get: (
-                                id: string,
-                            ) =>
+                            get: (id: string) =>
                                 | {
                                       flags: {
                                           authFailed: boolean;
                                           circuitOpen: boolean;
                                           rateLimited: boolean;
-                                  };
-                              }
+                                      };
+                                  }
                                 | undefined;
                             update: (id: string, patch: { flags: Record<string, boolean> }) => void;
                         };
@@ -296,49 +309,59 @@ export const registerPhase3: Phase = (helpers, ctx) => {
         });
     });
 
-    register('debateHumanService', (c) =>
-        c.get<typeof debateServiceModule>('debateService').humanService,
+    register(
+        'debateHumanService',
+        (c) => c.get<typeof debateServiceModule>('debateService').humanService,
     );
     register('strategyManager', (_c) => new StrategyManager(storageLayer.config));
     register('debateModeManager', (_c) => new DebateModeManagerPersistent(storageLayer));
 
-    register('debateWorkspace', (c) =>
-        new DebateWorkspace({
-            getRoom: () => undefined,
-            getEngine: () => c.get<DebateEngine>('debateEngine'),
-            storage: storageLayer,
-        }),
+    register(
+        'debateWorkspace',
+        (c) =>
+            new DebateWorkspace({
+                getRoom: () => undefined,
+                getEngine: () => c.get<DebateEngine>('debateEngine'),
+                storage: storageLayer,
+            }),
     );
 
-    register('cognitiveIntelligenceService', (c) =>
-        new CognitiveIntelligenceService(c.get<IEventBus>('eventBus')),
+    register(
+        'cognitiveIntelligenceService',
+        (c) => new CognitiveIntelligenceService(c.get<IEventBus>('eventBus')),
     );
 
-    register('whatIfService', (c) =>
-        new WhatIfService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
-                'cognitiveIntelligenceService',
-            ),
-        }),
+    register(
+        'whatIfService',
+        (c) =>
+            new WhatIfService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
+                    'cognitiveIntelligenceService',
+                ),
+            }),
     );
 
-    register('pressureMapService', (c) =>
-        new PressureMapService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
-                'cognitiveIntelligenceService',
-            ),
-        }),
+    register(
+        'pressureMapService',
+        (c) =>
+            new PressureMapService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
+                    'cognitiveIntelligenceService',
+                ),
+            }),
     );
 
-    register('diagnosticService', (c) =>
-        new DiagnosticService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
-                'cognitiveIntelligenceService',
-            ),
-        }),
+    register(
+        'diagnosticService',
+        (c) =>
+            new DiagnosticService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                cognitiveIntelligenceService: c.get<CognitiveIntelligenceService>(
+                    'cognitiveIntelligenceService',
+                ),
+            }),
     );
 
     // A-04: setEngine() is imperative — wire debateEngine to debateService.

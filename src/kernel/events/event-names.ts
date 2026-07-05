@@ -5,5 +5,4 @@
  * `import { EVENTS } from './events/event-names'` imports continue to work.
  */
 export { EVENTS } from './event-registry';
-export type { CognitiveEventMap } from './cognitive-events';
 export type { DomainEventMap } from './domain-events';

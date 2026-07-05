@@ -326,6 +326,9 @@ export const CONFIG_DEFAULTS: Readonly<ConfigRegistry> = new Proxy(
 
 /** Frozen public API — all mutations must go through config service.
  *  Proxy traps prevent accidental direct mutation at runtime. */
+/** Default language for debate prompts when not explicitly configured */
+export const DEFAULT_DEBATE_LANGUAGE: string = 'Russian';
+
 export const CONFIG: Readonly<ConfigRegistry> = new Proxy(rawConfig, {
     set: () => {
         throw new Error('CONFIG is read-only — use setConfig() or replaceConfig()');
