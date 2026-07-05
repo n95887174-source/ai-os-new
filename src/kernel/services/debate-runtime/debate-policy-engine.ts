@@ -105,6 +105,9 @@ export class DebatePolicyEngine {
     private firings = new Map<string, number[]>();
     private _onRuleFired?: (result: PolicyFireResult) => void;
 
+    /** ILifecycle — stateless, no async work needed. */
+    init(): void | Promise<void> {}
+
     setFireListener(cb: (result: PolicyFireResult) => void): void {
         this._onRuleFired = cb;
     }

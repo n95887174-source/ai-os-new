@@ -65,6 +65,9 @@ export class ProviderTracker implements IProviderTracker {
         this.database = deps?.database;
     }
 
+    /** ILifecycle — no async work needed; start() handles subscriptions. */
+    init(): void | Promise<void> {}
+
     start(eventBus: IEventBus): void {
         this.unsubs.push(
             eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
