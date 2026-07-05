@@ -226,6 +226,7 @@ export class SystemBootstrap implements IBootstrap {
             orch.mount(AuditorTopology);
             await orch.init();
         } catch (e) {
+            console.error('[BOOTSTRAP] Failed to mount topology:', e);
             this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
         }
 
