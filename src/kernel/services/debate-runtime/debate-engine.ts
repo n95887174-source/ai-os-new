@@ -1104,6 +1104,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                             !this.providerResolver.isKeyAuthFailed(k.id),
                     );
                     if (altKey) {
+                        this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_FALLBACK, {
+                            sessionId,
+                            agentId: participant.agentId,
+                            fromProvider: resolvedKey!.provider,
+                            toProvider: altKey.provider,
+                        });
                         triedModels.clear();
                         continue;
                     }
@@ -1111,6 +1117,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 }
 
                 if (isTimeout) {
+                    this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_TIMEOUT, {
+                        sessionId,
+                        agentId: participant.agentId,
+                        timeoutMs: DEBATE_TIMEOUT_MS,
+                    });
                     retries++;
                     if (retries > MAX_RETRIES) {
                         this.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);

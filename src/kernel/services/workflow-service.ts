@@ -245,5 +245,3 @@ export class WorkflowService {
         this.currentAbort = null;
     }
 }
-
-export const workflowService = new WorkflowService();

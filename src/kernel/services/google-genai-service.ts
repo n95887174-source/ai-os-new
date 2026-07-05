@@ -410,5 +410,3 @@ export class GoogleGenAIService {
         }
     }
 }
-
-export const googleGenAIService = new GoogleGenAIService();

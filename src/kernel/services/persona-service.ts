@@ -9,6 +9,7 @@ import { BucketStorageAdapter } from './storage-adapter';
 import { EventBus } from '../instances';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
+// Note: rootLogger is re-exported from ../instances for DI consumers
 
 const LOGGER = rootLogger.child('PersonaService');
 
@@ -446,12 +447,6 @@ export class PersonaService {
         }
     }
 }
-
-// Singleton instance (database injected via registration in phase6-high-level.ts)
-export const personaService = new PersonaService();
-
-// Initialize on module load
-personaService.init().catch((e) => LOGGER.error('PersonaService', 'Init failed', { error: e }));
 
 // Export tone presets for UI
 export const TONE_PRESETS = Object.keys(TONE_PROMPTS) as TonePreset[];

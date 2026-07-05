@@ -5,7 +5,7 @@
  * Uses Dexie as the backing store with read-through caching.
  */
 
-import { getDexieDb, type DatabaseService } from '../services/database-service';
+import type { DatabaseService } from '../services/database-service';
 import type { MemoryEntry } from '../types/memory-types';
 import { rootLogger } from '../services/logger-service';
 
@@ -94,14 +94,15 @@ export class MemoryRepository {
         const id = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
         const existed = this.cache.has(id);
         // H4: Wrap in Dexie transaction to prevent TOCTOU race
-        await getDexieDb().transaction('rw', getDexieDb().memories, async () => {
-            const existing = await getDexieDb().memories.get(id);
+        const dexie = this.db.db;
+        await dexie.transaction('rw', dexie.memories, async () => {
+            const existing = await this.db.memories.get(id);
             const m: MemoryEntry = existing
                 ? { ...existing, ...entry, id, vector: entry.vector ?? existing.vector }
                 : ({ ...entry, id } as MemoryEntry);
-            await getDexieDb().memories.put(m);
+            await this.db.memories.put(m);
         });
-        const merged = await getDexieDb().memories.get(id);
+        const merged = await this.db.memories.get(id);
         if (!merged) {
             LOGGER.error('MemoryRepository', 'upsert: record vanished after write', { id });
             return entry as MemoryEntry;

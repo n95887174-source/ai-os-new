@@ -121,5 +121,3 @@ export class ReconnectionService {
         }, delay);
     }
 }
-
-export const reconnectionService = new ReconnectionService();

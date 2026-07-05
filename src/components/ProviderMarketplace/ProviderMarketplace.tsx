@@ -3,7 +3,14 @@ import { ThumbsUp, ThumbsDown, Minus, Lightbulb, RefreshCcw } from 'lucide-react
 import { kernel, keyService, adapterRegistry } from '../../kernel/instances';
 import type { ProviderRanking } from '../../kernel/types/interfaces';
 import PanelLoader from '../PanelLoader';
-import { glassPanel, glassPanelPad15r, flexBetween } from '../../styles/common';
+import {
+    glassPanel,
+    glassPanelPad15r,
+    flexBetween,
+    emptyState,
+    emptyStateTitle,
+    emptyStateSubtitle,
+} from '../../styles/common';
 import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { PROVIDER_META } from '../AddKeyModal/add-key-constants';
@@ -24,6 +31,7 @@ const REC_BADGES = {
 const ProviderMarketplace: React.FC = () => {
     const [rankings, setRankings] = useState<ProviderRanking[]>([]);
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     const catalog = useMemo(() => adapterRegistry.getAllProviders(), []);
     const [keyVersion, setKeyVersion] = useState(0);
@@ -41,8 +49,13 @@ const ProviderMarketplace: React.FC = () => {
     }, [keyVersion]);
 
     const refresh = useCallback(() => {
-        setRankings(kernel.getProviderRankings(catalog));
-        setSuggestions(kernel.getCollaborativeSuggestions(installed));
+        try {
+            setRankings(kernel.getProviderRankings(catalog));
+            setSuggestions(kernel.getCollaborativeSuggestions(installed));
+            setError(null);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to load marketplace');
+        }
     }, [catalog, installed]);
 
     useEffect(() => {
@@ -74,6 +87,26 @@ const ProviderMarketplace: React.FC = () => {
         const metaKey = alias[provider] || key;
         return PROVIDER_META[metaKey];
     };
+
+    if (rankings.length === 0 && catalog.length === 0) {
+        return (
+            <PanelLoader title="Provider Marketplace">
+                <div style={error ? { ...emptyState, color: '#ef4444' } : emptyState}>
+                    {error ? (
+                        <>
+                            <p style={emptyStateTitle}>Failed to load marketplace</p>
+                            <p style={emptyStateSubtitle}>{error}</p>
+                        </>
+                    ) : (
+                        <>
+                            <p style={emptyStateTitle}>No providers available</p>
+                            <p style={emptyStateSubtitle}>The provider catalog is empty.</p>
+                        </>
+                    )}
+                </div>
+            </PanelLoader>
+        );
+    }
 
     return (
         <PanelLoader title="Provider Marketplace">

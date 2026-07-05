@@ -43,13 +43,13 @@ import { ConsistencyChecker } from '../services/consistency-checker';
 import { TopologyManager } from '../services/topology-manager';
 import { WorkforceFederation } from '../services/workforce-federation';
 import { AgentMarketplace } from '../services/agent-marketplace';
-import { eloRatingService } from '../services/elo/elo-service';
+import { EloRatingService } from '../services/elo/elo-service';
 import { ChatSummarizerService } from '../services/chat-summarizer-service';
 import { AgentWizardService } from '../services/agent-wizard-service';
 import { RoleTestingSandboxService } from '../services/role-testing-sandbox';
-import { personaService } from '../services/persona-service';
+import { PersonaService } from '../services/persona-service';
 import { BridgeKeeperService } from '../services/guardian-registry';
-import { reconnectionService } from '../services/reconnection-service';
+import { ReconnectionService } from '../services/reconnection-service';
 import { AudienceService } from '../services/audience-service';
 import { TutorialService } from '../services/tutorial-service';
 import { TeamCollaborationService } from '../services/team-collaboration-service';
@@ -80,14 +80,14 @@ import { SmartRoutingService } from '../services/smart-routing-service';
 import { NvidiaEnterpriseService } from '../services/nvidia-enterprise-service';
 import { GeminiCacheService } from '../services/gemini-cache-service';
 import { ProviderAchievementService } from '../services/provider-achievement-service';
-import { promptSecurityService } from '../services/prompt-security-service';
-import { googleGenAIService } from '../services/google-genai-service';
+import { PromptSecurityService } from '../services/prompt-security-service';
+import { GoogleGenAIService } from '../services/google-genai-service';
 import { GeminiLiveService } from '../services/gemini-live-service';
-import { workflowService } from '../services/workflow-service';
-import { sourceAdapterRegistry } from '../services/research-adapters/source-adapter-registry';
-import { promptLibraryService } from '../services/prompt-library-service';
-import { batchProcessorService } from '../services/batch-processor-service';
-import { agentAvatarService } from '../services/agent-avatar-service';
+import { WorkflowService } from '../services/workflow-service';
+import { SourceAdapterRegistry } from '../services/research-adapters/source-adapter-registry';
+import { PromptLibraryService } from '../services/prompt-library-service';
+import { BatchProcessorService } from '../services/batch-processor-service';
+import { AgentAvatarService } from '../services/agent-avatar-service';
 
 export const registerPhase6: Phase = (helpers, ctx) => {
     const { register, asDeps } = helpers;
@@ -234,7 +234,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         (c) => new AgentMarketplace({ eventBus: c.get<IEventBus>('eventBus') }),
     );
 
-    register('eloService', (_c) => eloRatingService);
+    register('eloService', (_c) => new EloRatingService());
 
     register(
         'chatSummarizerService',
@@ -249,16 +249,16 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         (c) => new RoleTestingSandboxService(c.get<LLMClientService>('llmClientService')),
     );
 
-    // A-04: personaService.setDatabase() moved inside factory
     register('personaService', (c) => {
-        personaService.setDatabase(c.get<IDatabaseService>('database'));
-        return personaService;
+        const svc = new PersonaService();
+        svc.setDatabase(c.get<IDatabaseService>('database'));
+        return svc;
     });
 
     // ── Bridge-Keeper System ─────────────────────────────────────
     register('bridgeKeeperService', (_c) => new BridgeKeeperService());
     // ── Reconnection Service ─────────────────────────────────────
-    register('reconnectionService', (_c) => reconnectionService);
+    register('reconnectionService', (_c) => new ReconnectionService());
     // ── Audience Service ──────────────────────────────────────────
     register('audienceService', (_c) => new AudienceService());
     // ── Tutorial Service ─────────────────────────────────────────
@@ -313,19 +313,19 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Contribution Service ──────────────────────────
     register('contributionService', (_c) => new ContributionService());
     // ── Prompt Security Service ─────────────────────────
-    register('promptSecurityService', (_c) => promptSecurityService);
+    register('promptSecurityService', (_c) => new PromptSecurityService());
     // ── Google GenAI Service ───────────────────────────
-    register('googleGenAIService', (_c) => googleGenAIService);
+    register('googleGenAIService', (_c) => new GoogleGenAIService());
     // ── Workflow Service ───────────────────────────────
-    register('workflowService', (_c) => workflowService);
+    register('workflowService', (_c) => new WorkflowService());
     // ── Source Adapter Registry ────────────────────────
-    register('sourceAdapterRegistry', (_c) => sourceAdapterRegistry);
+    register('sourceAdapterRegistry', (_c) => new SourceAdapterRegistry());
     // ── Prompt Library Service ─────────────────────────
-    register('promptLibraryService', (_c) => promptLibraryService);
+    register('promptLibraryService', (_c) => new PromptLibraryService());
     // ── Batch Processor Service ────────────────────────
-    register('batchProcessorService', (_c) => batchProcessorService);
+    register('batchProcessorService', (_c) => new BatchProcessorService());
     // ── Agent Avatar Service ───────────────────────────
-    register('agentAvatarService', (_c) => agentAvatarService);
+    register('agentAvatarService', (_c) => new AgentAvatarService());
     // ── Meta-Learning / Self-Improvement Service ─────
     register('metaLearningService', (_c) => new MetaLearningService());
     // ── Quantum Inspiration Service ─────────────────

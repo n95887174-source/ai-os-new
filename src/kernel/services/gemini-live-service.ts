@@ -1,5 +1,5 @@
 import type { IGeminiLiveService, GeminiLiveSession } from '../contracts/gemini-live';
-import { googleGenAIService } from './google-genai-service';
+import { googleGenAIService } from '../instances';
 import { rootLogger } from './logger-service';
 import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
 

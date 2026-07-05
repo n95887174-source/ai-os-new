@@ -89,7 +89,16 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
     };
 
     return (
-        <div className="provider-modal-backdrop" onClick={onClose} aria-label="Close modal">
+        <div
+            className="provider-modal-backdrop"
+            onClick={onClose}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') onClose();
+            }}
+            aria-label="Close modal"
+        >
             <motion.div
                 initial={{ y: 30, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}

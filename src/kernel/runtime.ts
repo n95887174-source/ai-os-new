@@ -7,7 +7,7 @@ function getLogger() {
     return rootLogger?.child('Runtime');
 }
 import { db as coreDatabase } from './services/database-service';
-import { securityService as coreSecurity } from './security';
+import { SecurityService } from './security';
 import { createDexieStorage } from './services/storage/dexie-storage';
 import { initSchedulerService } from './services/scheduler-service';
 import { crossTabStateSync } from './services/cross-tab-state';
@@ -220,7 +220,7 @@ export class RuntimeManager {
         this.container.register('dal', new DataAccessLayerImpl(coreDatabase));
         this.container.register('eventBus', coreEventBus);
         coreEventBus.setLogger(rootLogger);
-        this.container.register('securityService', coreSecurity);
+        this.container.register('securityService', new SecurityService());
         this.container.register('BucketStorageAdapter', localStorageAdapter);
         const schedulerService = initSchedulerService(coreDatabase);
         this.container.register('schedulerService', schedulerService);

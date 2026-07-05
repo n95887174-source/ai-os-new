@@ -278,5 +278,3 @@ export class PromptSecurityService implements IPromptSecurityService {
         await this.persist();
     }
 }
-
-export const promptSecurityService = new PromptSecurityService();

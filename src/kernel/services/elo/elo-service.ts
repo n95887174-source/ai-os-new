@@ -364,5 +364,3 @@ export class EloRatingService {
         );
     }
 }
-
-export const eloRatingService = new EloRatingService();

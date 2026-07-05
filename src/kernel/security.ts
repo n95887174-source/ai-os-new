@@ -25,5 +25,3 @@ export class SecurityService implements ISecurityService {
         /* vault system removed — no-op */
     }
 }
-
-export const securityService = new SecurityService();

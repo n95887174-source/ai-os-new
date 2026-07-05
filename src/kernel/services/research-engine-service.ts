@@ -37,7 +37,7 @@ import type {
 } from '../contracts/research-engine';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import { sourceAdapterRegistry } from './research-adapters/source-adapter-registry';
+import { sourceAdapterRegistry } from '../instances';
 import type { SourceAdapterConfig } from '../contracts/research-adapter';
 import type { SourceType } from '../contracts/research-engine';
 

@@ -3027,6 +3027,30 @@ Fix remaining HIGH audit findings: CostManager token normalization, PII regex im
 
 ---
 
+## Current Session (2026-07-06) — D-14: .tsx → .ts renaming
+
+### Goal
+
+Rename 5 `.tsx` files without JSX to `.ts` (D-14 from REMAINING_WORK.md).
+
+### Changes
+
+| #   | File                                                              | Old  | New |
+| :-- | :---------------------------------------------------------------- | :--- | :-- |
+| 1   | `src/components/AgentsPanel/AgentsPanel.tsx`                      | .tsx | .ts |
+| 2   | `src/components/ProviderManager/ProviderManager.tsx`              | .tsx | .ts |
+| 3   | `src/components/DebateResearch/obs-gaps-constants.tsx`            | .tsx | .ts |
+| 4   | `src/components/DebateResearch/routing-experiments-constants.tsx` | .tsx | .ts |
+| 5   | `src/data/RoleLibrary.tsx`                                        | .tsx | .ts |
+
+### Result
+
+- No import path changes needed (all imports use extensionless paths)
+- `npx tsc --noEmit --project tsconfig.app.json` ✅ exit code 0
+- No more candidates found (original "9" estimate was inaccurate — 4 already removed in earlier sprints)
+
+---
+
 ## Current Session (2026-07-05) — Sprint 2: B-025 + B-017 + B-022
 
 ### Goal
@@ -3220,3 +3244,43 @@ Fix all 48 type errors in 9 test files (B-039 from prioritized backlog).
 ### Remaining Sprint 3-4
 
 B-037 (CSS Modules), B-038 (30% coverage), racec.md #1 (1400+ i18n), racec.md #5 (README), MED-G1 (UX) — all deferred (massive or low priority)
+
+---
+
+## Current Session (2026-07-06) — Sprint A Cleanup (REMAINING_WORK.md)
+
+### Goal
+
+Execute and verify Sprint A items from REMAINING_WORK.md — quick cleanup wins derived from audit backlog.
+
+### Changes
+
+| #    | Item               | Status          | Details                                                                                                                                                                                                                                                             |
+| ---- | ------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A-01 | 38 orphan files    | 🟢 Pre-existing | Deleted in Sprint 1-2; verified all 5 sample paths don't exist                                                                                                                                                                                                      |
+| A-02 | CI YAML branches   | 🟢 Pre-existing | `branches: [main, master]` already correct                                                                                                                                                                                                                          |
+| A-03 | Stray root scripts | 🟢 Done         | `migrate_eventbus.py` deleted; `.dependency-cruiser.cjs` kept (in use by `check:deps`)                                                                                                                                                                              |
+| A-04 | nginx.conf.legacy  | 🟢 Pre-existing | Not found — already removed                                                                                                                                                                                                                                         |
+| A-05 | Unused deps        | 🟢 Pre-existing | `leveldown/levelup/idb/react-is` all removed from package.json                                                                                                                                                                                                      |
+| A-06 | Duplicate mdc      | 🟢 Done         | Root copy already deleted; `.opencode/rules/` copy is legitimate (keep)                                                                                                                                                                                             |
+| A-07 | `<div onClick>`    | 🟢 Done         | Fixed 4/6: GroupsPanel.tsx ×2 (error toasts → `<button>`), ChatSessionsManagerPanel.tsx (title edit → `<button>`), ProviderDetailModal.tsx (backdrop → `role=button tabIndex onKeyDown`). 2 kept: useConfirm has keyboard support, PrimitiveCard is stopPropagation |
+| A-08 | 21 orphan events   | 🟡 Partial      | 14 already removed from event-registry.ts in Sprint 1-2. 5 remain with orphan handlers (need wire-up or removal): PROVIDER_STATE_CHANGED, PROVIDER_RATE_LIMIT_SYNCED, PROVIDER_ERROR_SYNCED, DEBATE_AGENT_FALLBACK, DEBATE_AGENT_TIMEOUT                            |
+| A-09 | prompt-vault/      | 🟢 Pre-existing | Not found — already removed                                                                                                                                                                                                                                         |
+
+### Files Changed
+
+- `src/components/GroupsPanel/GroupsPanel.tsx` — 2× error toast `<div>` → `<button>` (A-07)
+- `src/components/ChatSessionsManager/ChatSessionsManagerPanel.tsx` — title edit `<div>` → `<button>` (A-07)
+- `src/components/ProviderManager/ProviderDetailModal.tsx` — backdrop add `role=button tabIndex onKeyDown` (A-07)
+- `REMAINING_WORK.md` — full rewrite with verified statuses (Sprint A 🟢, Sprint B 🟡 Next)
+- `migrate_eventbus.py` — deleted (A-03)
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ passes
+- All Sprint A items verified: 7 🟢 Done + 2 🟢 Pre-existing + 1 🟡 Partial (orphan events deferred to Sprint B)
+
+### Next
+
+Sprint B — Architecture (DAL consolidation, LLM→Kernel inversion, orphan events wire-up, dead code removal)

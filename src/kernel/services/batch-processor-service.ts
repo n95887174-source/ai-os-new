@@ -176,5 +176,3 @@ export class BatchProcessorService {
         await d.setKv(STORAGE_KEY, []);
     }
 }
-
-export const batchProcessorService = new BatchProcessorService();

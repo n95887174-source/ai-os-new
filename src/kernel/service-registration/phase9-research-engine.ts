@@ -6,7 +6,7 @@
 import type { Phase } from './helpers';
 import { ResearchEngineService } from '../services/research-engine-service';
 import { GeminiAugmentedResearchService } from '../services/gemini-research-service';
-import { googleGenAIService } from '../services/google-genai-service';
+import { googleGenAIService } from '../instances';
 
 export const registerPhase9: Phase = ({ register }) => {
     register('researchEngine', (c) => {

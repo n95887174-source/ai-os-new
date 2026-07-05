@@ -408,6 +408,10 @@ class CrossTabStateSync implements ICrossTabStateSync {
             tabId: this.tabId,
             payload: { provider: state.provider, keyId: state.keyId },
         });
+        eventBus.emit(EVENTS.PROVIDER_STATE_CHANGED, {
+            provider: state.provider,
+            status: state.status,
+        });
     }
 
     updateRateLimit(state: RateLimitState): void {
@@ -418,6 +422,12 @@ class CrossTabStateSync implements ICrossTabStateSync {
             timestamp: Date.now(),
             tabId: this.tabId,
             payload: { provider: state.provider, keyId: state.keyId },
+        });
+        eventBus.emit(EVENTS.PROVIDER_RATE_LIMIT_SYNCED, {
+            provider: state.provider,
+            keyId: state.keyId,
+            remaining: state.remaining,
+            resetAt: state.resetAt,
         });
     }
 
@@ -437,6 +447,13 @@ class CrossTabStateSync implements ICrossTabStateSync {
                 error: entry.error,
                 statusCode: entry.statusCode,
             },
+        });
+        eventBus.emit(EVENTS.PROVIDER_ERROR_SYNCED, {
+            provider: entry.provider,
+            keyId: entry.keyId,
+            error: entry.error,
+            statusCode: entry.statusCode ?? 0,
+            timestamp: entry.timestamp,
         });
     }
 

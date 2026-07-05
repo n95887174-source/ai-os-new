@@ -214,6 +214,3 @@ export class AgentAvatarService {
         LOGGER.info('AgentAvatar', 'All custom avatars cleared');
     }
 }
-
-// Singleton instance
-export const agentAvatarService = new AgentAvatarService();

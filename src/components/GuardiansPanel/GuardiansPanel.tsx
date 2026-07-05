@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Shield, Zap, Sparkles, DollarSign, Mountain, Ghost } from 'lucide-react';
 import { t as translate } from '../../i18n/translations';
 import type { GuardianAspect, IGuardian } from '../../kernel/contracts/guardian';
-import { BridgeKeeperService } from '../../kernel/services/guardian-registry';
+import { bridgeKeeperService } from '../../kernel/instances';
 
 const ASPECT_ICONS: Record<GuardianAspect, React.ReactNode> = {
     speed: <Zap size={20} />,
@@ -24,7 +24,7 @@ const ASPECT_COLORS: Record<GuardianAspect, string> = {
     creativity: '#ec4899',
 };
 
-const bridgeKeeper = new BridgeKeeperService();
+const bridgeKeeper = bridgeKeeperService;
 
 const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
     const status = guardian.getStatus();

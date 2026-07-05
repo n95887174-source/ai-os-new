@@ -1464,5 +1464,3 @@ export class SourceAdapterRegistry {
         return results;
     }
 }
-
-export const sourceAdapterRegistry = new SourceAdapterRegistry();

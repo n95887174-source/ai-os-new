@@ -109,5 +109,3 @@ export class PromptLibraryService {
         return [...cats].sort();
     }
 }
-
-export const promptLibraryService = new PromptLibraryService();

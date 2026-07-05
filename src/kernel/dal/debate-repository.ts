@@ -4,7 +4,7 @@
  * Provides typed access to structured multi-agent discussions.
  */
 
-import { getDexieDb, type DatabaseService } from '../services/database-service';
+import type { DatabaseService } from '../services/database-service';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 import type { DebateTimelineEntry, DebateOverride } from '../contracts/session-manager';
 
@@ -74,21 +74,22 @@ export class DebateRepository {
     // ── Clear All ───────────────────────────────────────────────────────
 
     async clearAll(): Promise<void> {
-        await getDexieDb().transaction(
+        const dexie = this.db.db;
+        await dexie.transaction(
             'rw',
             [
-                getDexieDb().debateSessions,
-                getDexieDb().debateVerdicts,
-                getDexieDb().debateTimeline,
-                getDexieDb().debateOverrides,
-                getDexieDb().sessionLinks,
+                this.db.debateSessions,
+                this.db.debateVerdicts,
+                this.db.debateTimeline,
+                this.db.debateOverrides,
+                this.db.sessionLinks,
             ],
             async () => {
-                await getDexieDb().debateSessions.clear();
-                await getDexieDb().debateVerdicts.clear();
-                await getDexieDb().debateTimeline.clear();
-                await getDexieDb().debateOverrides.clear();
-                await getDexieDb().sessionLinks.clear();
+                await this.db.debateSessions.clear();
+                await this.db.debateVerdicts.clear();
+                await this.db.debateTimeline.clear();
+                await this.db.debateOverrides.clear();
+                await this.db.sessionLinks.clear();
             },
         );
     }

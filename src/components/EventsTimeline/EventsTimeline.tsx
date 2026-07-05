@@ -190,6 +190,29 @@ const EventsTimeline: React.FC = () => {
         }
     };
 
+    if (events.length === 0) {
+        return (
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                    height: '100%',
+                    padding: 16,
+                }}
+            >
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                    <p style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                        No events yet
+                    </p>
+                    <p style={{ fontSize: '0.85rem' }}>
+                        System events will appear here as they occur.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
             <div
