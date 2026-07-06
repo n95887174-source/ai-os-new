@@ -77,30 +77,36 @@ export async function getSummary(period: '7d' | '30d' | 'all' = '30d'): Promise<
 }
 
 export async function getRecommendations(): Promise<CostRecommendation[]> {
-    if (!_tracker) return [];
+    if (!_tracker || !_pricing) return [];
 
     const rankings = _tracker.getProviderRankings();
     const recs: CostRecommendation[] = [];
     let id = 0;
 
-    // Cheaper alternatives
-    for (const r of rankings) {
-        if (r.requests === 0 || _dismissed.has(`alt-${r.provider}`)) continue;
-        const cheaper = CHEAPER_MAP[r.provider];
-        if (cheaper) {
-            recs.push({
-                id: `cost-opt-${++id}`,
-                type: 'cheaper_alternative',
-                title: `Switch to ${cheaper[0].model}`,
-                description: `${r.provider} costs $${r.costPerRequest.toFixed(4)}/req. ${cheaper[0].model} on ${cheaper[0].provider} costs significantly less (${cheaper[0].savings}).`,
-                potentialSavings: r.costPerRequest * r.requests * 0.8,
-                provider: r.provider,
-                suggestedModel: cheaper[0].model,
-                suggestedProvider: cheaper[0].provider,
-                severity: r.costPerRequest > 0.01 ? 'high' : 'medium',
-                action: `Consider switching from ${r.provider} to ${cheaper[0].model} on ${cheaper[0].provider}.`,
-            });
-        }
+    // Cheaper alternatives — iterate over PRICING models, not provider rankings
+    // CHEAPER_MAP is keyed by model name; find providers that use each model
+    const seenProvider = new Set<string>();
+    const allPrices = _pricing.getAllPrices();
+    for (const [model, price] of Object.entries(allPrices)) {
+        const cheaper = CHEAPER_MAP[model];
+        if (!cheaper) continue;
+        const provider = (price.provider || '').toLowerCase();
+        if (!provider || seenProvider.has(provider) || _dismissed.has(`alt-${provider}`)) continue;
+        const ranking = rankings.find((r) => r.provider.toLowerCase() === provider);
+        if (!ranking || ranking.requests === 0) continue;
+        seenProvider.add(provider);
+        recs.push({
+            id: `cost-opt-${++id}`,
+            type: 'cheaper_alternative',
+            title: `Switch from ${model} to ${cheaper[0].model}`,
+            description: `${provider} costs $${ranking.costPerRequest.toFixed(4)}/req via ${model}. ${cheaper[0].model} on ${cheaper[0].provider} costs significantly less (${cheaper[0].savings}).`,
+            potentialSavings: ranking.costPerRequest * ranking.requests * 0.8,
+            provider,
+            suggestedModel: cheaper[0].model,
+            suggestedProvider: cheaper[0].provider,
+            severity: ranking.costPerRequest > 0.01 ? 'high' : 'medium',
+            action: `Consider switching from ${model} to ${cheaper[0].model} on ${cheaper[0].provider}.`,
+        });
     }
 
     // Overpriced

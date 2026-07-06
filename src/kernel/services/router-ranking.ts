@@ -99,7 +99,10 @@ export class RouterRankingService {
                 if (boundKey) {
                     const ks = this.deps.keyStateStore?.get(boundKey.id);
                     const healthOk = ks
-                        ? ks.healthScore >= 75
+                        ? ks.healthScore >= 75 &&
+                          !ks.flags.circuitOpen &&
+                          !ks.flags.rateLimited &&
+                          !ks.flags.authFailed
                         : boundKey.status === 'active' &&
                           !this.deps.keyService.isKeyInBackoff(boundKey.id).backoff &&
                           !this.deps.keyService.isProviderCircuitOpen(boundKey.provider) &&
@@ -117,7 +120,10 @@ export class RouterRankingService {
                         return false;
                     const kks = this.deps.keyStateStore?.get(k.id);
                     return kks
-                        ? kks.healthScore >= 75
+                        ? kks.healthScore >= 75 &&
+                              !kks.flags.circuitOpen &&
+                              !kks.flags.rateLimited &&
+                              !kks.flags.authFailed
                         : k.status === 'active' &&
                               !this.deps.keyService.isKeyInBackoff(k.id).backoff &&
                               !this.deps.keyService.isProviderCircuitOpen(k.provider) &&
@@ -140,13 +146,22 @@ export class RouterRankingService {
         const activeKeys = allKeys.filter((k) => {
             const ks = this.deps.keyStateStore?.get(k.id);
             if (ks) {
-                if (ks.healthScore < 75) {
+                const flagReasons: string[] = [];
+                if (ks.flags.circuitOpen) flagReasons.push('Circuit breaker open');
+                if (ks.flags.rateLimited) flagReasons.push('Rate limited');
+                if (ks.flags.authFailed) flagReasons.push('Auth failed');
+                if (ks.healthScore < 75) flagReasons.push(`Health score: ${ks.healthScore}/100`);
+                if (flagReasons.length > 0) {
                     skipped.push({
                         provider: k.provider,
                         keyLabel: k.label,
                         keyId: k.id,
-                        reason: `Health score: ${ks.healthScore}/100`,
-                        stage: 'status',
+                        reason: flagReasons.join('; '),
+                        stage: ks.flags.circuitOpen
+                            ? 'circuit'
+                            : ks.flags.rateLimited
+                              ? 'ratelimit'
+                              : 'status',
                     });
                     return false;
                 }
@@ -350,9 +365,8 @@ export class RouterRankingService {
                 : latValues[Math.floor(latValues.length / 2)] || 0;
 
         const sc = profile.scoring;
-        const uniqueKeys = this.deduplicateCandidates(keys, skipped);
 
-        const rankedItems = [...uniqueKeys]
+        const rankedItems = [...keys]
             .map((key) => {
                 const providerId = key.provider.toLowerCase();
                 const m = state.providers[providerId];
@@ -565,37 +579,8 @@ export class RouterRankingService {
         return rankedItems.map((item) => item.key);
     }
 
-    private deduplicateCandidates(keys: ApiKey[], skipped: SkippedKeyEntry[]): ApiKey[] {
-        const bestPerProvider = new Map<string, ApiKey>();
-        for (const k of keys) {
-            const existing = bestPerProvider.get(k.provider);
-            if (!existing) {
-                bestPerProvider.set(k.provider, k);
-                continue;
-            }
-            const existingRep = existing.stats?.extended?.reputationScore ?? 100;
-            const currentRep = k.stats?.extended?.reputationScore ?? 100;
-            if (currentRep > existingRep) {
-                skipped.push({
-                    provider: existing.provider,
-                    keyLabel: existing.label,
-                    keyId: existing.id,
-                    reason: `Deduplicated: lower reputation (${existingRep}) vs ${currentRep}`,
-                    stage: 'normalization',
-                });
-                bestPerProvider.set(k.provider, k);
-            } else {
-                skipped.push({
-                    provider: k.provider,
-                    keyLabel: k.label,
-                    keyId: k.id,
-                    reason: `Deduplicated: lower reputation (${currentRep}) vs ${existingRep}`,
-                    stage: 'normalization',
-                });
-            }
-        }
-        return Array.from(bestPerProvider.values());
-    }
+    // C-78: removed deduplicateCandidates — return ALL usable keys ranked by score
+    // so callers can fall through multiple keys per provider if the first fails
 
     private getBudgetPenalty(provider: string): number {
         const info = this.deps.budgetService.getBudgetInfo();

@@ -356,18 +356,9 @@ export class ChatExecutor {
                                 }
                             }
 
-                            const session = this.deps.providerRuntime?.createSession(
-                                currentProvider,
-                                currentProvider,
-                                effectiveModel,
-                            );
-                            if (session) {
-                                session.activate();
-                                session.complete(latencyMs);
-                                session.recordTokens(result.tokens || 0, result.tokens || 0);
-                                const cost = (result.tokens || 0) * 0.000002;
-                                session.recordCost(cost);
-                            }
+                            // C-69: removed per-request session creation — sessions leaked
+                            // ProviderRuntime.createSession() is for long-lived connections,
+                            // not per-request tracking. Cost tracking via STREAM_END → BudgetService.
 
                             this.deps.eventBus.emit(EVENTS.STREAM_END, {
                                 requestId,
