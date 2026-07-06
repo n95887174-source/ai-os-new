@@ -34,7 +34,6 @@ const AlertLayer: React.FC = () => {
     const [alerts, setAlerts] = useState<ProviderAlert[]>([]);
     const [expanded, setExpanded] = useState(false);
     const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-    const inNotification = useRef(false);
 
     const addToast = useCallback((type: Toast['type'], title: string, message: string) => {
         const id = genId();
@@ -50,17 +49,7 @@ const AlertLayer: React.FC = () => {
                 timers.current.delete(id);
             }, TOAST_DURATION),
         );
-        // OBS-88: emit metrics event for critical/warning toasts
-        // Guard: prevent infinite loop when emit triggers another NOTIFICATION handler
-        if ((type === 'error' || type === 'warning') && !inNotification.current) {
-            inNotification.current = true;
-            eventBus.emit(EVENTS.NOTIFICATION, {
-                message: title,
-                type: type === 'error' ? 'error' : 'warning',
-                source: 'AlertLayer',
-            });
-            inNotification.current = false;
-        }
+        // C-97: removed re-emit — caused double toasts (NOTIFICATION → addToast → NOTIFICATION → addToast)
     }, []);
 
     const dismissToast = useCallback((id: string) => {

@@ -72,6 +72,26 @@ export class ChatExecutor {
 
                 const agentId = req.options?.metadata?.agentId as string | undefined;
 
+                // C-83: Policy check on ALL paths, not just race
+                const checkProvider =
+                    req.provider && req.provider !== 'auto' && req.provider !== 'race'
+                        ? req.provider
+                        : undefined;
+                if (agentId && checkProvider) {
+                    const policyCheck = this.deps.policyService.checkAgentPolicy(
+                        agentId,
+                        checkProvider,
+                        req.model,
+                    );
+                    if (!policyCheck.allowed) {
+                        throw new LLMError(
+                            'PolicyError',
+                            policyCheck.reason || 'Agent policy blocked provider',
+                            403,
+                        );
+                    }
+                }
+
                 const promptText = messages.map((m) => m.content).join(' ');
 
                 // B-016: Security scan before any LLM call

@@ -198,6 +198,10 @@ export class PromptSecurityService implements IPromptSecurityService {
     }
 
     scan(prompt: string): PromptScanResult {
+        // C-86: respect global enabled flag
+        if (!this.config.enabled) {
+            return { safe: true, score: 0, findings: [], summary: 'Scan disabled' };
+        }
         if (!prompt) return { safe: true, score: 0, findings: [], summary: 'Empty prompt' };
 
         const findings: SecurityFinding[] = [];

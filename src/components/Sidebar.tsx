@@ -176,7 +176,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         const levelRank = { L0: 0, L1: 1, L2: 2 } as const;
                         const minRank = levelRank[userLevel];
                         const q = sidebarSearchQuery.toLowerCase();
-                        const hasSearch = q.length > 0 || sectionCollapsed;
+                        const hasSearch = q.length > 0;
+                        const showItems = hasSearch || !sectionCollapsed;
                         const visibleItems = section.items.filter((item) => {
                             if (levelRank[item.level || 'L2'] > minRank) return false;
                             if (
@@ -225,7 +226,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         />
                                     </div>
                                 )}
-                                {(hasSearch || sectionCollapsed) &&
+                                {showItems &&
                                     visibleItems.map((item) => {
                                         const isDisabled = !!(
                                             item.featureFlag && !featureFlags[item.featureFlag]

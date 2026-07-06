@@ -437,7 +437,9 @@ export class AdminService {
 
     private verifyAdminToken(token?: string): boolean {
         const expected = CONFIG.security?.adminToken;
-        if (!expected || !token) return false;
+        // C-88: no token configured → allow all (open admin)
+        if (!expected) return true;
+        if (!token) return false;
         return this.constantTimeEqual(token, expected);
     }
 
