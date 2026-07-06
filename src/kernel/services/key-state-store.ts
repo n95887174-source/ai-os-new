@@ -105,11 +105,23 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
      * Seed the store with all existing keys before the first probe runs.
      * Call this from bootstrap / after keyService is ready.
      */
+    purgeOrphans(activeKeyIds: Set<string>): void {
+        let removed = 0;
+        for (const id of this.states.keys()) {
+            if (!activeKeyIds.has(id)) {
+                this.states.delete(id);
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            LOGGER.info('KeyStateStore', `Purged ${removed} orphan state entries`);
+            this.persist();
+        }
+    }
+
     seedFromKeys(keys: ApiKey[]): void {
         const currentIds = new Set(keys.map((k) => k.id));
-        for (const id of this.states.keys()) {
-            if (!currentIds.has(id)) this.states.delete(id);
-        }
+        this.purgeOrphans(currentIds);
         for (const key of keys) {
             if (!this.states.has(key.id)) {
                 const status: KeyStatus =
@@ -136,6 +148,8 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         }
         this.persist();
     }
+    private _purgeTimer: ReturnType<typeof setInterval> | null = null;
+
     async start(): Promise<void> {
         if (this._started) return;
         this._started = true;
@@ -147,6 +161,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
             });
         }
         if (!this.eventBus) return;
+
+        // Periodic orphan cleanup every 5min
+        this._purgeTimer = setInterval(() => {
+            const ids = new Set<string>();
+            for (const id of this.states.keys()) ids.add(id);
+            if (ids.size > 0) this.purgeOrphans(new Set(ids));
+        }, 300000);
 
         this.unsubs.push(
             this.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
@@ -379,6 +400,10 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     }
     async destroy(): Promise<void> {
         this._started = false;
+        if (this._purgeTimer) {
+            clearInterval(this._purgeTimer);
+            this._purgeTimer = null;
+        }
         if (this.persistPromise) await this.persistPromise;
         for (const unsub of this.unsubs) unsub();
         this.unsubs = [];

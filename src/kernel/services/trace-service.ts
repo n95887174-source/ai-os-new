@@ -216,6 +216,28 @@ export class TraceService {
         );
 
         this.unsubs.push(
+            this.deps.eventBus.onSafe<{ requestId: string; provider: string; error: string }>(
+                EVENTS.STREAM_ERROR,
+                (d) => {
+                    const trace = this.activeTraces.get(d.requestId);
+                    if (!trace) return;
+                    trace.status = 'failed';
+                    trace.endTime = Date.now();
+                    trace.output = d.error;
+                    const step = trace.steps.find((s: TraceStep) => s.status === 'active');
+                    if (step) {
+                        step.status = 'error';
+                        step.duration = Date.now() - step.timestamp;
+                        step.output = d.error;
+                    }
+                    this.activeTraces.delete(d.requestId);
+                    this.persist(trace);
+                    this.throttledEmit();
+                },
+            ),
+        );
+
+        this.unsubs.push(
             this.deps.eventBus.onSafe<{
                 requestId: string;
                 fullContent: string;

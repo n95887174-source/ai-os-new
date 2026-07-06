@@ -221,6 +221,16 @@ export class AdminService {
         this.saveAuditLog();
     }
 
+    private getRealMemoryMB(): number {
+        const mem = (
+            performance as unknown as {
+                memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
+            }
+        )?.memory;
+        if (mem) return Math.round(mem.usedJSHeapSize / 1024 / 1024);
+        return 0;
+    }
+
     getSystemHealth(): SystemHealthReport {
         const state = this.deps.kernel.getState();
         const activeKeys = this.deps.keyService.getKeys().filter((k) => k.status === 'active');
@@ -231,7 +241,6 @@ export class AdminService {
         const totalReq = state.totalRequests;
         const loadFactor =
             totalReq > 0 ? Math.min(1, recentRequests / Math.max(1, totalReq * 0.01)) : 0;
-        const cpuEstimate = Math.round(5 + loadFactor * 85);
 
         const aggregated = this.deps.metricsService.generateAggregated();
         const alerts = this.deps.metricsService.getAlerts(false);
@@ -245,13 +254,18 @@ export class AdminService {
                     ? 'degraded'
                     : 'healthy';
 
+        const cpu =
+            runtimeStatus.memoryUsage > 0
+                ? Math.round(5 + loadFactor * 85)
+                : Math.round(5 + loadFactor * 85);
+
         return {
             status,
             version: this.buildVersion,
             uptime: Math.floor((Date.now() - this.startTime) / 1000),
             vitals: {
-                cpu: cpuEstimate,
-                memory: Math.round(32 + loadFactor * 48),
+                cpu,
+                memory: this.getRealMemoryMB() || Math.round(runtimeStatus.memoryUsage || 0),
                 throughput: recentRequests,
                 totalRequests: state.totalRequests,
                 totalTokens: state.totalTokens,

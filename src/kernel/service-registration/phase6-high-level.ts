@@ -289,7 +289,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Provider Migration Service ─────────────────────────
     register('providerMigrationService', (_c) => new ProviderMigrationService());
     // ── Health SLA Service ──────────────────────────────
-    register('healthSlaService', (_c) => new HealthSlaService());
+    register(
+        'healthSlaService',
+        (c) => new HealthSlaService({ providerTracker: c.get('providerTracker') }),
+    );
     // ── Research Report Service ─────────────────────────
     register('researchReportService', (_c) => new ResearchReportService());
     // ── Voice Input Service ─────────────────────────────

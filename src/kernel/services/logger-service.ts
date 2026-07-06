@@ -9,16 +9,65 @@ type LoggerState = {
     seq: number;
 };
 
+export interface LoggerPersistenceDeps {
+    getKv: <T>(id: string) => Promise<T | null>;
+    setKv: <T>(id: string, value: T) => Promise<void>;
+}
+
 export class LoggerService implements ILogger {
     private state: LoggerState;
     private readonly maxBuffer = CONFIG?.services?.logger?.maxBuffer ?? 500;
     private minLevel: number;
     private minLevelName: LogLevel;
+    private persistDeps?: LoggerPersistenceDeps;
+    private persistTimer: ReturnType<typeof setInterval> | null = null;
+    private persistDirty = false;
 
     constructor(_service: string = 'system', minLevel: LogLevel = 'info', state?: LoggerState) {
         this.minLevel = LEVELS[minLevel];
         this.minLevelName = minLevel;
         this.state = state ?? { buffer: [], seq: 0 };
+    }
+
+    init(deps?: LoggerPersistenceDeps): void {
+        this.persistDeps = deps;
+        if (deps) {
+            this.restorePersisted();
+            this.persistTimer = setInterval(() => this.flushPersist(), 30000);
+        }
+    }
+
+    destroy(): void {
+        if (this.persistTimer) {
+            clearInterval(this.persistTimer);
+            this.persistTimer = null;
+        }
+        if (this.persistDeps && this.persistDirty) this.flushPersist();
+    }
+
+    private async restorePersisted(): Promise<void> {
+        if (!this.persistDeps) return;
+        try {
+            const saved = await this.persistDeps.getKv<LogEntry[]>('logger:buffer');
+            if (saved && Array.isArray(saved)) {
+                for (const entry of saved) {
+                    this.state.buffer.push(entry);
+                    if (this.state.buffer.length > this.maxBuffer) this.state.buffer.shift();
+                }
+                if (saved.length > 0) {
+                    const lastSeq = Math.max(...saved.map((l: LogEntry) => l.seq ?? 0));
+                    if (lastSeq > this.state.seq) this.state.seq = lastSeq + 1;
+                }
+            }
+        } catch {
+            /* best-effort */
+        }
+    }
+
+    private flushPersist(): void {
+        if (!this.persistDeps || !this.persistDirty) return;
+        this.persistDirty = false;
+        this.persistDeps.setKv('logger:buffer', this.state.buffer.slice(-500)).catch(() => {});
     }
 
     setTraceContext(tc?: ITraceContext) {
@@ -73,6 +122,7 @@ export class LoggerService implements ILogger {
 
         this.state.buffer.push(entry);
         if (this.state.buffer.length > this.maxBuffer) this.state.buffer.shift();
+        this.persistDirty = true;
 
         switch (level) {
             case 'error':
@@ -88,7 +138,7 @@ export class LoggerService implements ILogger {
     }
 
     getBuffer(): ReadonlyArray<LogEntry> {
-        return this.state.buffer;
+        return this.state.buffer.slice();
     }
 
     query(filter?: Partial<{ service: string; level: LogLevel; traceId: string }>): LogEntry[] {

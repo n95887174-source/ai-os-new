@@ -29,7 +29,9 @@ export const LogsPanel: React.FC = () => {
 
     useEffect(() => {
         const id = setInterval(() => {
-            setEntries(rootLogger.getBuffer());
+            const buf = rootLogger.getBuffer();
+            const bufLen = buf.length;
+            setEntries(bufLen > 0 ? buf.slice() : []);
         }, 1000);
         return () => clearInterval(id);
     }, []);

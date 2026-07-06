@@ -20,6 +20,7 @@ export interface CheckpointPersistenceStore {
 
 import { rootLogger } from '../logger-service';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
+import { ssrSafeStorage } from '../../../kernel/utils/ssr-storage';
 
 const LOGGER = rootLogger.child('CheckpointStore');
 
@@ -49,6 +50,7 @@ export class CheckpointStore {
         } catch (e) {
             LOGGER.warn('CheckpointStore', 'Failed to restore persisted checkpoints', { error: e });
         }
+        await this.recoverFromWal();
     }
 
     create(
@@ -177,13 +179,59 @@ export class CheckpointStore {
     private schedulePersist(): void {
         if (!this.store || this.persistQueued) return;
         this.persistQueued = true;
+        // Write to WAL immediately for crash recovery
+        const walKey = 'checkpoint-store:wal';
+        try {
+            ssrSafeStorage.setItem(walKey, JSON.stringify(this.checkpoints));
+        } catch {
+            /* best-effort */
+        }
         queueMicrotask(() => {
             this.persistQueued = false;
             this.store
                 ?.save([...this.checkpoints])
+                .then(() => {
+                    // Clear WAL after successful persist
+                    try {
+                        ssrSafeStorage.removeItem(walKey);
+                    } catch {
+                        /* best-effort */
+                    }
+                })
                 .catch((e) =>
                     LOGGER.warn('CheckpointStore', 'Failed to persist checkpoints', { error: e }),
                 );
         });
+    }
+
+    /** Call from init() to recover any WAL data from a prior tab-close */
+    async recoverFromWal(): Promise<void> {
+        const walKey = 'checkpoint-store:wal';
+        try {
+            const wal = ssrSafeStorage.getItem(walKey);
+            if (wal) {
+                ssrSafeStorage.removeItem(walKey);
+                const recovered = safeJsonParse(wal) as Checkpoint[] | null;
+                if (recovered && Array.isArray(recovered) && recovered.length > 0) {
+                    for (const cp of recovered) {
+                        if (!this.checkpoints.some((c) => c.id === cp.id)) {
+                            this.checkpoints.push(cp);
+                        }
+                    }
+                    if (this.checkpoints.length > this.config.maxCheckpoints) {
+                        this.checkpoints = this.checkpoints.slice(-this.config.maxCheckpoints);
+                    }
+                    if (this.store) {
+                        await this.store.save([...this.checkpoints]);
+                    }
+                    LOGGER.info(
+                        'CheckpointStore',
+                        `Recovered ${recovered.length} checkpoints from WAL`,
+                    );
+                }
+            }
+        } catch {
+            /* best-effort */
+        }
     }
 }

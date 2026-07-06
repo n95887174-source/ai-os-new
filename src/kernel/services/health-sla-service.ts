@@ -1,7 +1,12 @@
 import type { IHealthSlaService, SlaProfile, SlaRule } from '../contracts/health-sla';
+import type { IProviderTracker } from '../types/interfaces';
 
 const genId = () => crypto.randomUUID();
 const genRuleId = () => crypto.randomUUID();
+
+export interface HealthSlaServiceDeps {
+    providerTracker: IProviderTracker;
+}
 
 export class HealthSlaService implements IHealthSlaService {
     private profiles: SlaProfile[] = [
@@ -76,6 +81,11 @@ export class HealthSlaService implements IHealthSlaService {
             updatedAt: Date.now() - 86400000,
         },
     ];
+    private deps: HealthSlaServiceDeps;
+
+    constructor(deps: HealthSlaServiceDeps) {
+        this.deps = deps;
+    }
 
     getProfiles(): SlaProfile[] {
         return [...this.profiles];
@@ -139,7 +149,52 @@ export class HealthSlaService implements IHealthSlaService {
         const profile = this.profiles.find((p) => p.id === profileId);
         if (!profile) throw new Error(`Profile ${profileId} not found`);
         return profile.rules.map((rule) => {
-            const actual = rule.threshold * 0.8;
+            let actual: number;
+            switch (rule.metric) {
+                case 'latency': {
+                    const latencies: number[] = [];
+                    for (const prov of profile.providers) {
+                        const m = this.deps.providerTracker.getMetrics(prov, '');
+                        if (m) latencies.push(m.avgLatency);
+                    }
+                    actual =
+                        latencies.length > 0
+                            ? latencies.reduce((a, b) => a + b, 0) / latencies.length
+                            : 0;
+                    break;
+                }
+                case 'error_rate': {
+                    const rates: number[] = [];
+                    for (const prov of profile.providers) {
+                        const m = this.deps.providerTracker.getMetrics(prov, '');
+                        if (m && m.totalRequests > 0)
+                            rates.push((m.errors / m.totalRequests) * 100);
+                    }
+                    actual = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+                    break;
+                }
+                case 'uptime': {
+                    const ups: number[] = [];
+                    for (const prov of profile.providers) {
+                        const m = this.deps.providerTracker.getMetrics(prov, '');
+                        if (m && m.totalRequests > 0)
+                            ups.push(((m.totalRequests - m.errors) / m.totalRequests) * 100);
+                    }
+                    actual = ups.length > 0 ? ups.reduce((a, b) => a + b, 0) / ups.length : 100;
+                    break;
+                }
+                case 'throughput': {
+                    const tps: number[] = [];
+                    for (const prov of profile.providers) {
+                        const m = this.deps.providerTracker.getMetrics(prov, '');
+                        if (m) tps.push(m.totalRequests);
+                    }
+                    actual = tps.length > 0 ? tps.reduce((a, b) => a + b, 0) / tps.length : 0;
+                    break;
+                }
+                default:
+                    actual = 0;
+            }
             const passed =
                 rule.operator === 'lt'
                     ? actual < rule.threshold

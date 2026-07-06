@@ -12,17 +12,35 @@ export class LLMHttpClient {
     readonly #defaultHeaders: Record<string, string>;
     readonly #authHeaderName: string;
     readonly #provider: string;
+    readonly #timeoutMs: number;
 
     constructor(
         baseUrl: string,
         defaultHeaders: Record<string, string> = {},
         authHeaderName = 'x-goog-api-key',
         provider = 'unknown',
+        timeoutMs = 60000,
     ) {
         this.#baseUrl = baseUrl;
         this.#defaultHeaders = defaultHeaders;
         this.#authHeaderName = authHeaderName;
         this.#provider = provider;
+        this.#timeoutMs = timeoutMs;
+    }
+
+    #withTimeout(signal?: AbortSignal): AbortSignal {
+        if (!signal) return AbortSignal.timeout(this.#timeoutMs);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(
+            () => controller.abort(new DOMException('Timeout', 'TimeoutError')),
+            this.#timeoutMs,
+        );
+        const onAbort = () => {
+            controller.abort(signal.reason);
+            clearTimeout(timeoutId);
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+        return controller.signal;
     }
 
     async post(
@@ -32,6 +50,7 @@ export class LLMHttpClient {
         signal?: AbortSignal,
     ): Promise<HttpResult> {
         const start = Date.now();
+        const mergedSignal = this.#withTimeout(signal);
         const res = await fetch(`${this.#baseUrl}${path}`, {
             method: 'POST',
             headers: {
@@ -40,14 +59,10 @@ export class LLMHttpClient {
                 [this.#authHeaderName]: apiKey,
             },
             body: JSON.stringify(body),
-            signal,
-            // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
-            // Remove it for regular API calls. Use only for beacon/analytics where response doesn't matter.
+            signal: mergedSignal,
         });
 
-        // MED-5: If signal was aborted just after fetch() resolved, cancel the response body
-        // to prevent a leaked ReadableStream (TOCTOU race between abort and fetch resolution).
-        if (signal?.aborted) {
+        if (mergedSignal.aborted) {
             res.body?.cancel()?.catch(() => {});
             throw new DOMException('Aborted', 'AbortError');
         }
@@ -98,18 +113,17 @@ export class LLMHttpClient {
 
     async get(path: string, apiKey: string, signal?: AbortSignal): Promise<HttpResult> {
         const start = Date.now();
+        const mergedSignal = this.#withTimeout(signal);
         const res = await fetch(`${this.#baseUrl}${path}`, {
             method: 'GET',
             headers: {
                 ...this.#defaultHeaders,
                 [this.#authHeaderName]: apiKey,
             },
-            signal,
-            // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
+            signal: mergedSignal,
         });
 
-        // MED-5: cancel body if signal was aborted just after fetch resolved
-        if (signal?.aborted) {
+        if (mergedSignal.aborted) {
             res.body?.cancel()?.catch(() => {});
             throw new DOMException('Aborted', 'AbortError');
         }
@@ -153,6 +167,7 @@ export class LLMHttpClient {
         apiKey: string,
         signal?: AbortSignal,
     ): Promise<Response> {
+        const mergedSignal = this.#withTimeout(signal);
         const res = await fetch(`${this.#baseUrl}${path}`, {
             method: 'POST',
             headers: {
@@ -161,12 +176,10 @@ export class LLMHttpClient {
                 [this.#authHeaderName]: apiKey,
             },
             body: JSON.stringify(body),
-            signal,
-            // LLM-H12: keepalive: true causes response truncation on large LLM payloads (>64KB per spec).
+            signal: mergedSignal,
         });
 
-        // MED-5: cancel body if signal was aborted just after fetch resolved
-        if (signal?.aborted) {
+        if (mergedSignal.aborted) {
             res.body?.cancel()?.catch(() => {});
             throw new DOMException('Aborted', 'AbortError');
         }
