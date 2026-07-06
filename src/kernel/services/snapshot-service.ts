@@ -52,7 +52,7 @@ export interface SnapshotServiceDeps {
         mount: (topology: ISTopology) => void;
         isNodeDisabled: (id: string) => boolean;
         clearCache?: () => void;
-        disableNode?: (id: string) => void;
+        setNodeDisabled?: (id: string, disabled: boolean) => void;
     };
 }
 
@@ -203,9 +203,17 @@ export class SnapshotService {
                 this.deps.orchestrator.mount(snapshot.runtime.topology as ISTopology);
             }
             this.deps.orchestrator.clearCache?.();
-            if (snapshot.runtime.disabledNodes?.length) {
+            // C-82: restore disabled nodes — first re-enable nodes that should be active, then disable
+            const newTop = this.deps.orchestrator.getActiveTopology();
+            if (newTop && snapshot.runtime.disabledNodes?.length) {
+                const disabledSet = new Set(snapshot.runtime.disabledNodes);
+                for (const node of newTop.nodes) {
+                    if (!disabledSet.has(node.id)) {
+                        this.deps.orchestrator.setNodeDisabled?.(node.id, false);
+                    }
+                }
                 for (const nodeId of snapshot.runtime.disabledNodes) {
-                    this.deps.orchestrator.disableNode?.(nodeId);
+                    this.deps.orchestrator.setNodeDisabled?.(nodeId, true);
                 }
             }
             this.deps.eventBus.emit(EVENTS.CACHE_INVALIDATED, { reason: 'snapshot:restore' });

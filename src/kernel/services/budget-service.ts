@@ -191,12 +191,9 @@ export class BudgetService implements IBudgetService {
                 }
                 this.saveHistory();
                 this.budgetInfoCache = null;
-                this.checkThresholds(
-                    'global',
-                    'global',
-                    this.computeCurrentSpend(),
-                    this.monthlyBudget,
-                );
+                // C-91: compute current spend ONCE per STREAM_END — avoids 3x scan of 10K costHistory
+                const monthlySpend = this.computeCurrentSpend();
+                this.checkThresholds('global', 'global', monthlySpend, this.monthlyBudget);
                 if (provider) {
                     const pBudget = this.providerBudgets[provider.toLowerCase()] || 0;
                     if (pBudget > 0) {
@@ -206,7 +203,28 @@ export class BudgetService implements IBudgetService {
                 }
                 this.deps.eventBus.emit(EVENTS.BUDGET_ALERT, {
                     type: 'spend_updated',
-                    summary: this.getSpendSummary(),
+                    summary: {
+                        global: {
+                            budget: this.monthlyBudget,
+                            spent: monthlySpend,
+                            remaining: Math.max(0, this.monthlyBudget - monthlySpend),
+                            pct:
+                                this.monthlyBudget > 0
+                                    ? Math.round((monthlySpend / this.monthlyBudget) * 100)
+                                    : 0,
+                        },
+                        providers: Object.entries(this.providerBudgets).map(([p, budget]) => ({
+                            provider: p,
+                            budget,
+                            spent: this.computeProviderSpend(p),
+                            remaining: Math.max(0, budget - this.computeProviderSpend(p)),
+                            pct:
+                                budget > 0
+                                    ? Math.round((this.computeProviderSpend(p) / budget) * 100)
+                                    : 0,
+                        })),
+                        agents: [],
+                    } as SpendSummary,
                 });
             }),
         );

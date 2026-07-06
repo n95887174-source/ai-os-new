@@ -105,8 +105,10 @@ export class ConfigHistoryService {
 
         const nextConfig = structuredClone(target.configSnapshot);
 
-        // Record in history FIRST, then replace live config.
-        // If commit fails, config is unchanged and audit trail is clean.
+        // C-80: apply config FIRST, then record in history.
+        // Old order (commit then replaceConfig) discarded overlays made since the rollback target.
+        replaceConfig(nextConfig);
+
         try {
             await this.commit(
                 nextConfig,
@@ -115,10 +117,9 @@ export class ConfigHistoryService {
             );
         } catch (e) {
             LOGGER.error('ConfigHistory', 'Failed to record rollback in history', { error: e });
-            throw e;
+            // Config is already applied — non-fatal, history entry is just a record
         }
 
-        replaceConfig(nextConfig);
         return CONFIG;
     }
 

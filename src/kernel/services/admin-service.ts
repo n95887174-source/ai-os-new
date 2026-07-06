@@ -65,6 +65,10 @@ export interface AdminServiceDeps {
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
     };
+    database: {
+        getKv: <T>(id: string) => Promise<T | null>;
+        setKv: <T>(id: string, value: T) => Promise<void>;
+    };
     keyService: {
         getKeys: () => KeyInfo[];
         updateKeyStatus: (id: string, status: string, latency?: number) => void;
@@ -133,6 +137,8 @@ export interface AdminServiceDeps {
 
 const APP_VERSION = '2.1.0';
 
+const AUDIT_LOG_KEY = 'super_agents_admin_audit_log';
+
 export class AdminService {
     private startTime = Date.now();
     private auditLog: AdminAuditEntry[] = [];
@@ -148,6 +154,7 @@ export class AdminService {
     async init() {
         if (this._initialized) return;
         this._initialized = true;
+        await this.loadAuditLog();
         this.setupListeners();
     }
 
@@ -155,6 +162,24 @@ export class AdminService {
         this._initialized = false;
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
+    }
+
+    // C-87: persist audit log to database
+    private async loadAuditLog() {
+        try {
+            const saved = await this.deps.database.getKv<AdminAuditEntry[]>(AUDIT_LOG_KEY);
+            if (saved) this.auditLog = saved;
+        } catch (e) {
+            LOGGER.warn('AdminService', 'Failed to load audit log', { error: e });
+        }
+    }
+
+    private async saveAuditLog() {
+        try {
+            await this.deps.database.setKv(AUDIT_LOG_KEY, this.auditLog);
+        } catch (e) {
+            LOGGER.warn('AdminService', 'Failed to save audit log', { error: e });
+        }
     }
 
     private setupListeners() {
@@ -192,6 +217,8 @@ export class AdminService {
         });
         if (this.auditLog.length > (CONFIG?.services?.admin?.maxAuditEntries ?? 5000))
             this.auditLog.shift();
+        // C-87: persist audit log to database
+        this.saveAuditLog();
     }
 
     getSystemHealth(): SystemHealthReport {

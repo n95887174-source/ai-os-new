@@ -791,16 +791,43 @@ export class KeyRegistry {
             const label = (item as Record<string, unknown>).label;
             if (typeof id !== 'string' || typeof provider !== 'string' || typeof label !== 'string')
                 continue;
+            // C-90: validate provider is known
+            const VALID_PROVIDERS = [
+                'groq',
+                'gemini',
+                'openrouter',
+                'nvidia',
+                'openai',
+                'anthropic',
+                'perplexity',
+                'cerebras',
+                'cloudflare',
+            ];
+            const normalizedProvider = provider.toLowerCase();
+            if (!VALID_PROVIDERS.includes(normalizedProvider)) {
+                LOGGER.warn('KeyRegistry', `importKeys: skipping unknown provider "${provider}"`, {
+                    id,
+                });
+                continue;
+            }
             const exists = newKeys.some((k) => k.id === id);
             if (!exists) {
+                const rawKey = ((item as Record<string, unknown>).key as string) || '';
+                // C-90: validate key is not empty
+                if (!rawKey.trim()) {
+                    LOGGER.warn('KeyRegistry', `importKeys: skipping empty key for "${provider}"`, {
+                        id,
+                    });
+                    continue;
+                }
                 const rawHistory =
                     ((item as Record<string, unknown>).history as Array<unknown>) || [];
                 const cappedHistory = rawHistory.slice(-100);
                 newKeys.push({
                     id: id as string,
-                    provider: provider as string,
+                    provider: normalizedProvider,
                     label: label as string,
-                    key: ((item as Record<string, unknown>).key as string) || '',
+                    key: rawKey,
                     isEncrypted:
                         ((item as Record<string, unknown>).isEncrypted as boolean) ?? false,
                     stats:
@@ -812,7 +839,7 @@ export class KeyRegistry {
                             id: crypto.randomUUID(),
                             timestamp: now,
                             action: 'added' as const,
-                            detail: `Imported key for ${provider as string}`,
+                            detail: `Imported key for ${normalizedProvider}`,
                         },
                     ],
                 } as ApiKey);
@@ -826,22 +853,28 @@ export class KeyRegistry {
         return count;
     }
 
-    async exportKeys(_encryptFn: (plaintext: string) => Promise<string | null>): Promise<string> {
-        const exportData = this.keys.map((k) => ({
-            id: k.id,
-            provider: k.provider,
-            group: k.group,
-            account: k.account,
-            key: k.key,
-            label: k.label,
-            tags: k.tags,
-            status: k.status,
-            isEncrypted: false,
-            availableModels: k.availableModels,
-            notes: k.notes,
-            stats: k.stats,
-            history: k.history,
-        }));
+    async exportKeys(encryptFn: (plaintext: string) => Promise<string | null>): Promise<string> {
+        const exportData = await Promise.all(
+            this.keys.map(async (k) => {
+                const encryptedKey = encryptFn ? await encryptFn(k.key) : null;
+                return {
+                    id: k.id,
+                    provider: k.provider,
+                    group: k.group,
+                    account: k.account,
+                    // C-89: actually use the encryptFn to encrypt the key before export
+                    key: encryptedKey || k.key,
+                    label: k.label,
+                    tags: k.tags,
+                    status: k.status,
+                    isEncrypted: !!encryptedKey,
+                    availableModels: k.availableModels,
+                    notes: k.notes,
+                    stats: k.stats,
+                    history: k.history,
+                };
+            }),
+        );
         return JSON.stringify(exportData, null, 2);
     }
 
