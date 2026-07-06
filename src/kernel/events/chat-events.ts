@@ -63,6 +63,8 @@ export interface StreamChunkPayload {
     keyId?: string;
 }
 
+export type StreamEndStatus = 'timeout' | 'done' | 'cancelled' | 'error';
+
 export interface StreamEndPayload {
     requestId: string;
     fullContent: string;
@@ -73,7 +75,7 @@ export interface StreamEndPayload {
     keyId?: string;
     ttft?: number;
     tps?: number;
-    status?: string;
+    status?: StreamEndStatus;
     finishReason?: string;
 }
 

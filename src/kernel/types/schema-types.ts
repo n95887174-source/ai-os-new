@@ -238,20 +238,63 @@ export const MemoryEntrySchema = z.object({
     score: z.number().optional(),
 });
 
+export const MemoryStatsSchema = z.object({
+    totalEntries: z.number(),
+    totalTokens: z.number(),
+    uniqueSources: z.number(),
+    byType: z.record(z.string(), z.number()),
+    byImportance: z.record(z.string(), z.number()),
+    avgImportance: z.number(),
+    oldestEntry: z.number(),
+    newestEntry: z.number(),
+    totalStorageBytes: z.number(),
+    lastPruned: z.number().nullable(),
+});
+
 export const CognitiveTraceSchema = z.object({
     id: z.string(),
-    traceId: z.string().optional(),
+    traceId: z.string(),
     startTime: z.number(),
     endTime: z.number().optional(),
     input: z.string(),
     output: z.string().optional(),
     status: z.enum(['running', 'completed', 'failed']),
     steps: z.array(z.record(z.string(), z.unknown())),
-    decisionGraph: z.record(z.string(), z.unknown()).optional(),
-    totalLatency: z.number().optional(),
-    totalTokens: z.number().optional(),
-    estimatedCost: z.number().optional(),
-    semanticConfidence: z.number().optional(),
+    decisionGraph: z.object({
+        nodes: z.array(z.string()),
+        edges: z.array(
+            z.object({
+                from: z.string(),
+                to: z.string(),
+                type: z.enum(['causal', 'data']),
+            }),
+        ),
+    }),
+    totalLatency: z.number(),
+    totalTokens: z.number(),
+    estimatedCost: z.number(),
+    semanticConfidence: z.number(),
+    dataQuality: z
+        .object({
+            tokenCount: z
+                .object({
+                    source: z.enum(['actual', 'estimated']),
+                    method: z.string().optional(),
+                    divisor: z.number().optional(),
+                    note: z.string().optional(),
+                })
+                .optional(),
+            retention: z
+                .object({
+                    inMemoryLimit: z.number(),
+                    dbLoadLimit: z.number(),
+                    policy: z.literal('newest-first'),
+                    evictedOlderEntries: z.boolean().optional(),
+                })
+                .optional(),
+        })
+        .optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const CognitiveSkillSchema = z.object({

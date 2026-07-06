@@ -197,7 +197,7 @@ export class SystemBootstrap implements IBootstrap {
         await this.lifecycle.tryInit('eventSourcingService', () => {
             return this.container
                 .get<EventRecorder>('eventSourcingService')
-                .init((cb: (payload: { event: string; data: Record<string, unknown> }) => void) =>
+                .init((cb: (payload: { event: string; data: unknown }) => void) =>
                     this.eventBus.subscribeAll(cb),
                 );
         });

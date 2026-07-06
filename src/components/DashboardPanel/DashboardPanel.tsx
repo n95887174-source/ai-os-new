@@ -211,15 +211,19 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
         // Надёжная подписка на все события
         let unsubscribeAll: (() => void) | undefined;
-        const handler = ({ event, data }: { event: string; data: Record<string, unknown> }) => {
+        const handler = ({ event, data }: { event: string; data: unknown }) => {
             if (!isMountedRef.current) return;
             try {
+                const eventDataType =
+                    typeof data === 'object' && data
+                        ? (data as Record<string, unknown>).type
+                        : undefined;
                 const severity: RecentEvent['severity'] =
-                    event.includes('error') || data?.type === 'error'
+                    event.includes('error') || eventDataType === 'error'
                         ? 'error'
-                        : event.includes('violation') || data?.type === 'warning'
+                        : event.includes('violation') || eventDataType === 'warning'
                           ? 'warning'
-                          : event.includes('end') || data?.type === 'success'
+                          : event.includes('end') || eventDataType === 'success'
                             ? 'success'
                             : 'info';
 
@@ -235,7 +239,9 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                                 second: '2-digit',
                             }),
                             event,
-                            summary: summarizeEvent(data),
+                            summary: summarizeEvent(
+                                data as Record<string, unknown> | string | null | undefined,
+                            ),
                             severity,
                         },
                         ...prev,

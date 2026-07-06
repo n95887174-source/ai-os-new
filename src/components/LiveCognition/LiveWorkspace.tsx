@@ -46,20 +46,14 @@ const LiveWorkspace: React.FC = () => {
             }
         });
         let unsubscribeAll: (() => void) | undefined;
-        const eventHandler = ({
-            event,
-            data,
-        }: {
-            event: string;
-            data: Record<string, unknown>;
-        }) => {
+        const eventHandler = ({ event, data }: { event: string; data: unknown }) => {
             if (!isMountedRef.current) return;
             try {
                 setLogs((prev) =>
                     [
                         {
                             time: new Date().toLocaleTimeString(),
-                            event: `${event}: ${(data?.output as string)?.substring(0, 50) || (data?.message as string) || 'Activity detected'}`,
+                            event: `${event}: ${((data as Record<string, unknown>)?.output as string)?.substring(0, 50) || ((data as Record<string, unknown>)?.message as string) || 'Activity detected'}`,
                             type: event.includes('error')
                                 ? 'warning'
                                 : event.includes('success')

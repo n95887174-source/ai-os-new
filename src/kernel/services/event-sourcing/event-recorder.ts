@@ -97,9 +97,7 @@ export class EventRecorder {
     }
 
     async init(
-        subscribeAll: (
-            cb: (payload: { event: string; data: Record<string, unknown> }) => void,
-        ) => () => void,
+        subscribeAll: (cb: (payload: { event: string; data: unknown }) => void) => () => void,
     ): Promise<void> {
         if (this.unsub) return;
         if (this.store) {

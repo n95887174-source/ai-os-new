@@ -14,9 +14,7 @@ export interface IEventBus {
     emit(event: string, data?: unknown): void;
     onSafe<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): () => void;
     onSafe<T>(event: string, callback: (data: T) => void): () => void;
-    subscribeAll(
-        callback: (payload: { event: string; data: Record<string, unknown> }) => void,
-    ): () => void;
+    subscribeAll(callback: (payload: { event: string; data: unknown }) => void): () => void;
 }
 
 export interface IDatabaseService {

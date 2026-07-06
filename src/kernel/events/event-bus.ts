@@ -255,7 +255,7 @@ export class EventBus implements IEventBus {
         };
     }
 
-    subscribeAll(callback: (payload: { event: string; data: Record<string, unknown> }) => void) {
+    subscribeAll(callback: (payload: { event: string; data: unknown }) => void) {
         return this.on('*', callback as Callback<EventMap['*']>);
     }
 

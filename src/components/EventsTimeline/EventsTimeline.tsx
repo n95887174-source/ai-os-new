@@ -104,12 +104,14 @@ const EventsTimeline: React.FC = () => {
         timelineIsMountedRef.current = true;
         const unsub = eventBus.subscribeAll(({ event, data }) => {
             if (isPaused) return;
+            const d =
+                typeof data === 'object' && data ? (data as Record<string, unknown>) : undefined;
             const severity: TimelineEvent['severity'] =
-                event.includes('error') || data?.type === 'error'
+                event.includes('error') || d?.type === 'error'
                     ? 'error'
-                    : event.includes('violation') || data?.type === 'warning'
+                    : event.includes('violation') || d?.type === 'warning'
                       ? 'warning'
-                      : event.includes('end') || data?.type === 'success'
+                      : event.includes('end') || d?.type === 'success'
                         ? 'success'
                         : 'info';
 
@@ -124,7 +126,9 @@ const EventsTimeline: React.FC = () => {
                 }),
                 timestamp: now,
                 event,
-                summary: summarizeEvent(data),
+                summary: summarizeEvent(
+                    data as Record<string, unknown> | string | null | undefined,
+                ),
                 severity,
             };
 

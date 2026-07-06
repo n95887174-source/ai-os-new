@@ -268,6 +268,8 @@ export const EVENT_REGISTRY = {
                     isCode: z.boolean(),
                     isLong: z.boolean(),
                     isMultimodal: z.boolean(),
+                    intent: z.string().optional(),
+                    language: z.string().optional(),
                 })
                 .optional(),
             weights: z.unknown(),

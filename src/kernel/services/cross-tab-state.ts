@@ -3,6 +3,9 @@ import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+import { ApiKeySchema, SystemStateSchema } from '../types/schema-types';
+import { EVENT_REGISTRY } from '../events/event-registry';
+import { z } from 'zod';
 import type {
     ICrossTabStateSync,
     CircuitBreakerState,
@@ -290,19 +293,29 @@ class CrossTabStateSync implements ICrossTabStateSync {
             case 'debate-update':
                 this.handleDebateUpdate(message.payload as DebateSyncPayload);
                 break;
-            case 'key-update':
+            case 'key-update': {
                 LOGGER.debug('CrossTabStateSync', 'Cross-tab key update, refreshing local state');
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                eventBus.emit(EVENTS.KEY_UPDATED, message.payload as any);
+                const keyPayload = z.array(ApiKeySchema).safeParse(message.payload);
+                if (keyPayload.success) eventBus.emit(EVENTS.KEY_UPDATED, keyPayload.data);
+                else
+                    LOGGER.warn('CrossTabStateSync', 'malformed key-update payload', {
+                        issues: keyPayload.error.issues,
+                    });
                 break;
-            case 'kernel-state-update':
+            }
+            case 'kernel-state-update': {
                 LOGGER.debug(
                     'CrossTabStateSync',
                     'Cross-tab kernel update, refreshing local state',
                 );
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                eventBus.emit(EVENTS.KERNEL_UPDATED, message.payload as any);
+                const kernelPayload = SystemStateSchema.safeParse(message.payload);
+                if (kernelPayload.success) eventBus.emit(EVENTS.KERNEL_UPDATED, kernelPayload.data);
+                else
+                    LOGGER.warn('CrossTabStateSync', 'malformed kernel-state-update payload', {
+                        issues: kernelPayload.error.issues,
+                    });
                 break;
+            }
             case 'chat-session-update':
                 LOGGER.debug(
                     'CrossTabStateSync',
@@ -310,14 +323,21 @@ class CrossTabStateSync implements ICrossTabStateSync {
                 );
                 eventBus.emit(EVENTS.CHAT_FORKED, message.payload);
                 break;
-            case 'settings-update':
+            case 'settings-update': {
                 LOGGER.debug(
                     'CrossTabStateSync',
                     'Cross-tab settings update, refreshing local state',
                 );
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                eventBus.emit(EVENTS.SETTINGS_UPDATED, message.payload as any);
+                const settingsSchema = EVENT_REGISTRY.SETTINGS_UPDATED.schema;
+                const settingsPayload = settingsSchema.safeParse(message.payload);
+                if (settingsPayload.success)
+                    eventBus.emit(EVENTS.SETTINGS_UPDATED, settingsPayload.data);
+                else
+                    LOGGER.warn('CrossTabStateSync', 'malformed settings-update payload', {
+                        issues: settingsPayload.error.issues,
+                    });
                 break;
+            }
         }
 
         const listeners = this.listeners.get(message.type);
