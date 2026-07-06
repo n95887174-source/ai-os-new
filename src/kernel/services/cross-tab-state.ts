@@ -59,8 +59,6 @@ class CrossTabStateSync implements ICrossTabStateSync {
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private syncTimer: ReturnType<typeof setInterval> | null = null;
     private storageHandler: ((event: StorageEvent) => void) | null = null;
-    private keyRemovedUnsub?: () => void;
-    private debateUnsub?: () => void;
     private localDebateVersions: Map<string, { updatedAt: number; phase: string; round: number }> =
         new Map();
 
@@ -77,81 +75,95 @@ class CrossTabStateSync implements ICrossTabStateSync {
         this.init();
     }
 
+    private unsubs: Array<() => void> = []; // H-35: track all EventBus subscriptions
+
     private init(): void {
         // STATE-C4: Clean up circuit-breaker / rate-limit state when a key is removed.
         // Without this, deleted keys leave orphaned entries keyed by `${provider}:${keyId}`
         // that block new keys with the same ID on re-add, and leak memory.
-        this.keyRemovedUnsub = eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-            const keyId = String(id);
-            for (const key of this.localCircuitBreakers.keys()) {
-                if (key.endsWith(`:${keyId}`)) this.localCircuitBreakers.delete(key);
-            }
-            for (const key of this.localRateLimits.keys()) {
-                if (key.endsWith(`:${keyId}`)) this.localRateLimits.delete(key);
-            }
-            this.localErrors = this.localErrors.filter((e) => !e.keyId.endsWith(`:${keyId}`));
-            LOGGER.debug('CrossTabStateSync', 'key removed', {
-                keyId,
-                cleanedCircuitBreakers: true,
-                cleanedRateLimits: true,
-            });
-        });
+        this.unsubs.push(
+            eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
+                const keyId = String(id);
+                for (const key of this.localCircuitBreakers.keys()) {
+                    if (key.endsWith(`:${keyId}`)) this.localCircuitBreakers.delete(key);
+                }
+                for (const key of this.localRateLimits.keys()) {
+                    if (key.endsWith(`:${keyId}`)) this.localRateLimits.delete(key);
+                }
+                this.localErrors = this.localErrors.filter((e) => !e.keyId.endsWith(`:${keyId}`));
+                LOGGER.debug('CrossTabStateSync', 'key removed', {
+                    keyId,
+                    cleanedCircuitBreakers: true,
+                    cleanedRateLimits: true,
+                });
+            }),
+        );
 
-        this.debateUnsub = eventBus.on(EVENTS.DEBATE_UPDATED, (raw: unknown) => {
-            const data = raw as { id: string; phase: string; round: number };
-            this.localDebateVersions.set(data.id, {
-                updatedAt: Date.now(),
-                phase: data.phase,
-                round: data.round,
-            });
-            this.broadcast({
-                type: 'debate-update',
-                timestamp: Date.now(),
-                tabId: this.tabId,
-                payload: {
-                    sessionId: data.id,
+        this.unsubs.push(
+            eventBus.on(EVENTS.DEBATE_UPDATED, (raw: unknown) => {
+                const data = raw as { id: string; phase: string; round: number };
+                this.localDebateVersions.set(data.id, {
                     updatedAt: Date.now(),
                     phase: data.phase,
                     round: data.round,
-                },
-            });
-        });
+                });
+                this.broadcast({
+                    type: 'debate-update',
+                    timestamp: Date.now(),
+                    tabId: this.tabId,
+                    payload: {
+                        sessionId: data.id,
+                        updatedAt: Date.now(),
+                        phase: data.phase,
+                        round: data.round,
+                    },
+                });
+            }),
+        );
 
-        eventBus.on(EVENTS.KEY_UPDATED, () => {
-            this.broadcast({
-                type: 'key-update',
-                timestamp: Date.now(),
-                tabId: this.tabId,
-                payload: null,
-            });
-        });
+        this.unsubs.push(
+            eventBus.on(EVENTS.KEY_UPDATED, () => {
+                this.broadcast({
+                    type: 'key-update',
+                    timestamp: Date.now(),
+                    tabId: this.tabId,
+                    payload: null,
+                });
+            }),
+        );
 
-        eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
-            this.broadcast({
-                type: 'settings-update',
-                timestamp: Date.now(),
-                tabId: this.tabId,
-                payload: null,
-            });
-        });
+        this.unsubs.push(
+            eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
+                this.broadcast({
+                    type: 'settings-update',
+                    timestamp: Date.now(),
+                    tabId: this.tabId,
+                    payload: null,
+                });
+            }),
+        );
 
-        eventBus.on(EVENTS.KERNEL_UPDATED, () => {
-            this.broadcast({
-                type: 'kernel-state-update',
-                timestamp: Date.now(),
-                tabId: this.tabId,
-                payload: null,
-            });
-        });
+        this.unsubs.push(
+            eventBus.on(EVENTS.KERNEL_UPDATED, () => {
+                this.broadcast({
+                    type: 'kernel-state-update',
+                    timestamp: Date.now(),
+                    tabId: this.tabId,
+                    payload: null,
+                });
+            }),
+        );
 
-        eventBus.on(EVENTS.CHAT_FORKED, () => {
-            this.broadcast({
-                type: 'chat-session-update',
-                timestamp: Date.now(),
-                tabId: this.tabId,
-                payload: null,
-            });
-        });
+        this.unsubs.push(
+            eventBus.on(EVENTS.CHAT_FORKED, () => {
+                this.broadcast({
+                    type: 'chat-session-update',
+                    timestamp: Date.now(),
+                    tabId: this.tabId,
+                    payload: null,
+                });
+            }),
+        );
 
         if (typeof BroadcastChannel !== 'undefined') {
             try {
@@ -235,19 +247,20 @@ class CrossTabStateSync implements ICrossTabStateSync {
             case 'heartbeat':
                 break;
             case 'invalidate-circuit-breaker': {
-                const cbPayload = message.payload as { provider: string; keyId: string };
-                const cbKey = `${cbPayload.provider}:${cbPayload.keyId}`;
-                this.localCircuitBreakers.delete(cbKey);
-                LOGGER.debug('CrossTabStateSync', 'Circuit breaker invalidated from another tab', {
+                const cbState = message.payload as CircuitBreakerState;
+                const cbKey = `${cbState.provider}:${cbState.keyId}`;
+                this.localCircuitBreakers.set(cbKey, cbState); // H-36: Set, not delete
+                LOGGER.debug('CrossTabStateSync', 'Circuit breaker synced from another tab', {
                     key: cbKey,
+                    status: cbState.status,
                 });
                 break;
             }
             case 'invalidate-rate-limit': {
-                const rlPayload = message.payload as { provider: string; keyId: string };
-                const rlKey = `${rlPayload.provider}:${rlPayload.keyId}`;
-                this.localRateLimits.delete(rlKey);
-                LOGGER.debug('CrossTabStateSync', 'Rate limit invalidated from another tab', {
+                const rlState = message.payload as RateLimitState;
+                const rlKey = `${rlState.provider}:${rlState.keyId}`;
+                this.localRateLimits.set(rlKey, rlState); // H-36: Set, not delete
+                LOGGER.debug('CrossTabStateSync', 'Rate limit synced from another tab', {
                     key: rlKey,
                 });
                 break;
@@ -406,7 +419,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
             type: 'invalidate-circuit-breaker',
             timestamp: Date.now(),
             tabId: this.tabId,
-            payload: { provider: state.provider, keyId: state.keyId },
+            payload: state, // H-36: Send full state so receiver sets, not deletes
         });
         eventBus.emit(EVENTS.PROVIDER_STATE_CHANGED, {
             provider: state.provider,
@@ -421,7 +434,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
             type: 'invalidate-rate-limit',
             timestamp: Date.now(),
             tabId: this.tabId,
-            payload: { provider: state.provider, keyId: state.keyId },
+            payload: state, // H-36: Send full state so receiver sets, not deletes
         });
         eventBus.emit(EVENTS.PROVIDER_RATE_LIMIT_SYNCED, {
             provider: state.provider,
@@ -521,8 +534,9 @@ class CrossTabStateSync implements ICrossTabStateSync {
     }
 
     destroy(): void {
-        this.keyRemovedUnsub?.();
-        this.debateUnsub?.();
+        // H-35: Unsubscribe ALL EventBus listeners
+        for (const unsub of this.unsubs) unsub();
+        this.unsubs = [];
         this.channel?.close();
         this.channel = null;
 

@@ -524,11 +524,12 @@ export class ChatExecutor {
         const { requestId } = req;
         const controller = new AbortController();
 
+        let onParentAbort: (() => void) | null = null;
         if (parentSignal) {
             if (parentSignal.aborted) {
                 controller.abort();
             } else {
-                const onParentAbort = () => controller.abort();
+                onParentAbort = () => controller.abort();
                 parentSignal.addEventListener('abort', onParentAbort, { once: true });
             }
         }
@@ -616,6 +617,10 @@ export class ChatExecutor {
             });
             return false;
         } finally {
+            // H-34: Remove parent abort listener to prevent leak
+            if (parentSignal && onParentAbort) {
+                parentSignal.removeEventListener('abort', onParentAbort);
+            }
             controller.abort();
         }
     }

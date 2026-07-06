@@ -95,11 +95,9 @@ const CachePanel: React.FC = () => {
         setClearing(true);
         try {
             if (modelFilter.trim()) {
-                (cacheService as unknown as Record<string, (model?: string) => void>).invalidate(
-                    modelFilter.trim(),
-                );
+                cacheService.invalidate(modelFilter.trim());
             } else {
-                (cacheService as unknown as Record<string, () => void>).invalidate();
+                cacheService.invalidate();
             }
             loadStats();
             eventBus.emit(EVENTS.NOTIFICATION, { message: t('cache.cleared'), type: 'success' });

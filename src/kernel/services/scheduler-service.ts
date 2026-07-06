@@ -49,6 +49,7 @@ class SchedulerService {
     private intervalId: ReturnType<typeof setInterval> | null = null;
     private checkIntervalMs = 60000; // Check every minute
     private isRunning = false;
+    private _checkingSchedules = false; // H-30: re-entrancy guard
     lastCheckTime = 0; // OBS-96: public for external watchdog
     private _database: IDatabaseService | null = null;
 
@@ -257,14 +258,21 @@ class SchedulerService {
      * Check and run due schedules
      */
     private async checkSchedules(): Promise<void> {
-        this.lastCheckTime = Date.now();
-        LOGGER.debug('SchedulerService', 'Heartbeat', { lastCheckTime: this.lastCheckTime });
-        EventBus.emit(EVENTS.SCHEDULER_HEARTBEAT, { lastCheckTime: this.lastCheckTime });
+        // H-30: re-entrancy guard — prevent double-execution when runSchedule takes > 60s
+        if (this._checkingSchedules) return;
+        this._checkingSchedules = true;
+        try {
+            this.lastCheckTime = Date.now();
+            LOGGER.debug('SchedulerService', 'Heartbeat', { lastCheckTime: this.lastCheckTime });
+            EventBus.emit(EVENTS.SCHEDULER_HEARTBEAT, { lastCheckTime: this.lastCheckTime });
 
-        const due = this.getDueSchedules();
+            const due = this.getDueSchedules();
 
-        for (const schedule of due) {
-            await this.runSchedule(schedule);
+            for (const schedule of due) {
+                await this.runSchedule(schedule);
+            }
+        } finally {
+            this._checkingSchedules = false;
         }
     }
 
@@ -279,12 +287,13 @@ class SchedulerService {
         });
 
         try {
-            // Update schedule first (before emitting trigger)
+            // H-30: Read current schedule from Map for atomic runCount increment
+            const current = this.schedules.get(schedule.id) ?? schedule;
             const now = Date.now();
             await this.update(schedule.id, {
                 lastRun: now,
                 nextRun: this.getNextRunTime(schedule.cronExpression),
-                runCount: schedule.runCount + 1,
+                runCount: current.runCount + 1,
             });
 
             // Emit event to trigger agent (after schedule is updated)

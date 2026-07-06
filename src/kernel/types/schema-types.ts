@@ -274,22 +274,22 @@ export const RoleSchema = z.object({
     icon: z.string().optional(),
     priority: z.number().optional(),
     parentRoleId: z.string().optional(),
-    capabilities: z.array(z.string()).optional().default([]),
-    permissions: z.array(z.string()).optional(),
+    capabilities: z.array(z.string()).default([]),
+    permissions: z.array(z.string()).default([]),
+    deniedPermissions: z.array(z.string()).optional(),
     metadata: z
         .object({
             category: z.string().optional(),
             created: z.number().optional(),
             updated: z.number().optional(),
-            tags: z.array(z.string()).optional(),
+            tags: z.array(z.string()).default([]),
             author: z.string().optional(),
             version: z.string().optional(),
             avatar: z.string().optional(),
             avatarShape: z.string().optional(),
             avatarColor: z.string().optional(),
         })
-        .optional()
-        .default({}),
+        .default({ tags: [] }),
     isBuiltin: z.boolean().optional().default(false),
 });
 

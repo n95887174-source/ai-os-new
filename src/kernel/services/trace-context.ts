@@ -13,7 +13,7 @@ export class TraceContext {
         return ctx?.traceId ?? null;
     }
 
-    static run(trace: Partial<ITraceContext>, fn: () => void): void {
+    static run<T>(trace: Partial<ITraceContext>, fn: () => T): T {
         const parent = this.current;
         const traceId = trace.traceId ?? parent?.traceId ?? crypto.randomUUID();
         const ctx: ITraceContext = {
@@ -29,12 +29,23 @@ export class TraceContext {
         }
         this.contextStack.push(ctx);
         stack.push(ctx);
-        try {
-            fn();
-        } finally {
+        const doExit = () => {
             this.contextStack.pop();
-            stack.pop();
-            if (stack.length === 0) this.stacks.delete(traceId);
+            stack!.pop();
+            if (stack!.length === 0) this.stacks.delete(traceId);
+        };
+        let isAsync = false;
+        try {
+            const result = fn();
+            // H-31: Handle async functions — defer cleanup to promise.finally
+            if (result instanceof Promise) {
+                isAsync = true;
+                (result as Promise<unknown>).finally(doExit);
+            }
+            return result;
+        } finally {
+            // H-31: If fn was sync, cleanup now. If async, cleanup is deferred.
+            if (!isAsync) doExit();
         }
     }
 

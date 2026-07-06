@@ -235,6 +235,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     async init(): Promise<void> {}
     private _started = false;
     private _beforeUnloadHandler?: () => void;
+    private _visibilityHandler?: () => void; // H-33: stored for cleanup in destroy()
     async start(): Promise<void> {
         if (this._started) return;
         this._started = true;
@@ -243,7 +244,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         // snapshots before tab close. Also keep a sync localStorage fallback for
         // beforeunload since async saveSnapshot may not complete in time.
         if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-            document.addEventListener('visibilitychange', () => {
+            this._visibilityHandler = () => {
                 if (document.hidden) {
                     for (const sessionId of this.sessions.keys()) {
                         this.saveSnapshot(sessionId).catch((e) =>
@@ -254,7 +255,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                         );
                     }
                 }
-            });
+            };
+            document.addEventListener('visibilitychange', this._visibilityHandler);
             this._beforeUnloadHandler = () => {
                 for (const sessionId of this.sessions.keys()) {
                     this.saveSnapshot(sessionId);
@@ -1582,6 +1584,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (typeof window !== 'undefined' && this._beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this._beforeUnloadHandler);
             this._beforeUnloadHandler = undefined;
+        }
+        // H-33: Remove visibilitychange handler stored in start()
+        if (typeof document !== 'undefined' && this._visibilityHandler) {
+            document.removeEventListener('visibilitychange', this._visibilityHandler);
+            this._visibilityHandler = undefined;
         }
         this._started = false;
     }

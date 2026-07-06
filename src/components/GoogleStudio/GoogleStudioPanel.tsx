@@ -69,7 +69,7 @@ export function GoogleStudioPanel() {
     );
     const [vertexResult, setVertexResult] = useState<ProviderResponse | null>(null);
     const [vertexLoading, setVertexLoading] = useState(false);
-    const abortRef = useRef<AbortController | null>(null);
+    const abortControllers = useRef<Set<AbortController>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -103,7 +103,7 @@ export function GoogleStudioPanel() {
         setLoading(true);
 
         const abort = new AbortController();
-        abortRef.current = abort;
+        abortControllers.current.add(abort);
 
         const chatMessages: ChatMessage[] = [
             {
@@ -136,12 +136,13 @@ export function GoogleStudioPanel() {
         } finally {
             setStreaming(false);
             setLoading(false);
-            abortRef.current = null;
+            abortControllers.current.delete(abort);
         }
     }, [input, model, thinkingEnabled, groundingEnabled, imageBase64, imageMime]);
 
     const handleStop = useCallback(() => {
-        abortRef.current?.abort();
+        for (const c of abortControllers.current) c.abort();
+        abortControllers.current.clear();
         setStreaming(false);
         setLoading(false);
     }, []);
@@ -150,7 +151,7 @@ export function GoogleStudioPanel() {
         setLoading(true);
         setError('');
         const abort = new AbortController();
-        abortRef.current = abort;
+        abortControllers.current.add(abort);
 
         const testMessages: ChatMessage[] = [
             {
@@ -170,7 +171,7 @@ export function GoogleStudioPanel() {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setLoading(false);
-            abortRef.current = null;
+            abortControllers.current.delete(abort);
         }
     }, [model]);
 
@@ -192,7 +193,7 @@ export function GoogleStudioPanel() {
         setVertexLoading(true);
         setError('');
         const abort = new AbortController();
-        abortRef.current = abort;
+        abortControllers.current.add(abort);
 
         const testMessages: ChatMessage[] = [
             {
@@ -221,7 +222,7 @@ export function GoogleStudioPanel() {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setVertexLoading(false);
-            abortRef.current = null;
+            abortControllers.current.delete(abort);
         }
     }, [model, vertexDatastore, vertexDynamicMode, vertexDynamicThreshold]);
 
@@ -229,7 +230,7 @@ export function GoogleStudioPanel() {
         setLoading(true);
         setError('');
         const abort = new AbortController();
-        abortRef.current = abort;
+        abortControllers.current.add(abort);
 
         const testMessages: ChatMessage[] = [
             {
@@ -250,7 +251,7 @@ export function GoogleStudioPanel() {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setLoading(false);
-            abortRef.current = null;
+            abortControllers.current.delete(abort);
         }
     }, [model]);
 
