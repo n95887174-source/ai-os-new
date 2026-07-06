@@ -10,6 +10,7 @@ const MAX_ENTRIES = CONFIG?.services?.debate?.timelineMaxEntries ?? 500;
 export class DebateTimeline implements IDebateTimeline {
     private entries: TimelineEntry[] = [];
     private cursor = 0;
+    private warned = false;
 
     record(entry: Omit<TimelineEntry, 'id' | 'timestamp'>): void {
         const full: TimelineEntry = {
@@ -21,6 +22,12 @@ export class DebateTimeline implements IDebateTimeline {
         if (this.entries.length < MAX_ENTRIES) {
             this.entries.push(full);
         } else {
+            if (!this.warned) {
+                console.warn(
+                    `[DebateTimeline] Circular buffer full at ${MAX_ENTRIES} — overwriting oldest entries`,
+                );
+                this.warned = true;
+            }
             this.entries[this.cursor % MAX_ENTRIES] = full;
         }
         this.cursor++;

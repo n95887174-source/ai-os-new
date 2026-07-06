@@ -276,7 +276,7 @@ export class AdapterFactory {
         const cb = this.#circuitBreakers.get(normalized);
         const rl = this.#rateLimiters.get(normalized);
         return {
-            circuitOpen: cb ? cb.peekState() === 'open' : false,
+            circuitOpen: cb ? cb.getState() === 'open' : false,
             rateLimited: rl ? !rl.canSend() : false,
         };
     }
@@ -284,15 +284,25 @@ export class AdapterFactory {
     getCircuitBreakerState(provider: string): string {
         const normalized = provider.toLowerCase();
         const cb = this.#circuitBreakers.get(normalized);
-        return cb ? cb.peekState() : 'closed';
+        return cb ? cb.getState() : 'closed';
     }
 
     invalidateCache(provider?: string): void {
         if (provider) {
-            this.adapters.delete(provider.toLowerCase());
-            this.#rateLimiters.delete(provider.toLowerCase());
-            this.#circuitBreakers.delete(provider.toLowerCase());
+            const key = provider.toLowerCase();
+            const adapter = this.adapters.get(key);
+            if (adapter && typeof (adapter as { destroy?: () => void }).destroy === 'function') {
+                (adapter as { destroy: () => void }).destroy();
+            }
+            this.adapters.delete(key);
+            this.#rateLimiters.delete(key);
+            this.#circuitBreakers.delete(key);
         } else {
+            for (const adapter of this.adapters.values()) {
+                if (typeof (adapter as { destroy?: () => void }).destroy === 'function') {
+                    (adapter as { destroy: () => void }).destroy();
+                }
+            }
             this.adapters.clear();
             this.#rateLimiters.clear();
             this.#circuitBreakers.clear();

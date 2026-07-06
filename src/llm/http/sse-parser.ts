@@ -58,7 +58,7 @@ export async function parseSSEStream(
                         idleTimer.signal.addEventListener(
                             'abort',
                             () => {
-                                reject(new Error('idle timeout'));
+                                reject(new LLMError('SSE idle timeout', 'sse'));
                             },
                             { once: true },
                         );
@@ -173,7 +173,7 @@ export async function parseSSEStream(
                 // that cross read() boundaries.
             } catch (e) {
                 // L9-03: Cancel bodyReader before erroring on idle timeout
-                if (e instanceof Error && e.message === 'idle timeout') {
+                if (e instanceof LLMError && e.message === 'SSE idle timeout') {
                     // M10-04 (SSE): cancel() may throw during abort — expected, swallow it
                     await bodyReader.cancel('idle timeout').catch(() => {});
                 }

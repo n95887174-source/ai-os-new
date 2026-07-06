@@ -20,6 +20,20 @@ export class RouterLatencyMonitor {
 
     constructor(private deps: LatencyMonitorDeps) {}
 
+    private getConfig(): RouterConfig | null {
+        try {
+            const activeProfile = this.deps.getActiveProfile();
+            if (activeProfile && activeProfile.name) {
+                return {
+                    latency: { degradationRatio: 2, monitorIntervalMs: 30000 },
+                } as RouterConfig;
+            }
+        } catch {
+            /* ignore */
+        }
+        return null;
+    }
+
     startMonitoring(config: RouterConfig): void {
         if (this.monitorInterval || this.latencyUnsub) {
             this.stopMonitoring();
@@ -27,13 +41,17 @@ export class RouterLatencyMonitor {
         this.latencyUnsub = this.deps.eventBus.onSafe<{ provider: string }>(
             EVENTS.KEY_LATENCY_BURST,
             () => {
-                this.checkLatencyHealth(config);
+                const current = this.getConfig() ?? config;
+                this.checkLatencyHealth(current);
             },
         );
 
+        const intervalMs =
+            this.getConfig()?.latency?.monitorIntervalMs ?? config.latency.monitorIntervalMs;
         this.monitorInterval = setInterval(() => {
-            this.checkLatencyHealth(config);
-        }, config.latency.monitorIntervalMs);
+            const current = this.getConfig() ?? config;
+            this.checkLatencyHealth(current);
+        }, intervalMs);
     }
 
     private checkLatencyHealth(config: RouterConfig): void {

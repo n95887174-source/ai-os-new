@@ -198,7 +198,8 @@ export class PromptSecurityService implements IPromptSecurityService {
     }
 
     scan(prompt: string): PromptScanResult {
-        // C-86: respect global enabled flag
+        // H-105: ensure config loaded before scan
+        this.ensureLoaded().catch(() => {});
         if (!this.config.enabled) {
             return { safe: true, score: 0, findings: [], summary: 'Scan disabled' };
         }

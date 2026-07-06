@@ -25,7 +25,7 @@ export const DebateLivePanel: React.FC = () => {
     const currentThinking = useDebateLiveStore((s) => s.currentThinking);
     void agentEvents;
 
-    const sessions = React.useMemo(() => debateEngine.getAllSessions(), []);
+    const sessions = debateEngine.getAllSessions();
     const [activeSessionId, setActiveSessionId] = React.useState<string | null>(() =>
         sessions.length > 0 ? sessions[sessions.length - 1].id : null,
     );

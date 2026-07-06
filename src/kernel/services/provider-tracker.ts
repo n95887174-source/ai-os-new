@@ -268,7 +268,7 @@ export class ProviderTracker implements IProviderTracker {
             const latencyPenalty = Math.min(1, p.avgTTFT / 3000);
             const hasTraffic = p.totalRequests > 0;
             const score = hasTraffic
-                ? reliability * 0.5 + (1 - latencyPenalty) * 0.3 + (p.selectionRate || 0) * 0.2
+                ? reliability * 0.6 + (1 - latencyPenalty) * 0.4
                 : installed.has(norm)
                   ? 0.45
                   : 0;

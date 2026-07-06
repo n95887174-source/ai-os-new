@@ -8,14 +8,21 @@ export function checkDebatePreflight(
     const activeKeys = deps.keyService.getActiveKeys();
     if (activeKeys.length === 0) throw new Error('No active API keys available');
     const availableProviders = new Set(activeKeys.map((k) => k.provider));
-    const hasDebateProvider = [
+    const DEBATE_PROVIDERS = [
         'groq',
         'gemini',
         'openrouter',
         'nvidia',
         'cerebras',
         'cloudflare',
-    ].some((p) => availableProviders.has(p));
+        'deepseek',
+        'cohere',
+        'scaleway',
+        'github',
+        'blackboxapi',
+        'cometapi',
+    ];
+    const hasDebateProvider = DEBATE_PROVIDERS.some((p) => availableProviders.has(p));
     if (!hasDebateProvider) {
         throw new Error(
             `No debate-capable provider with active keys. Active: ${[...availableProviders].join(', ') || 'none'}`,

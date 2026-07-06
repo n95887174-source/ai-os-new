@@ -198,6 +198,10 @@ export class PriorityQueueDecorator extends BaseDecorator {
     ): Promise<ProviderResponse> {
         const priority = this.getPriority(apiKey, messages, options);
 
+        if (signal?.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
+        }
+
         if (priority === 'high' && this.activeSends < Math.max(1, this.config.maxConcurrency - 1)) {
             this.activeSends++;
             this.sendProcessed++;
@@ -254,6 +258,10 @@ export class PriorityQueueDecorator extends BaseDecorator {
         options?: SendMessageOptions,
     ): Promise<void> {
         const priority = this.getPriority(apiKey, messages, options);
+
+        if (signal?.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
+        }
 
         if (
             priority === 'high' &&
@@ -331,7 +339,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
     private delayWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             if (signal?.aborted) {
-                reject(new Error('Aborted'));
+                reject(new DOMException('Aborted', 'AbortError'));
                 return;
             }
             let onAbort: (() => void) | null = null;
@@ -342,7 +350,7 @@ export class PriorityQueueDecorator extends BaseDecorator {
             if (signal) {
                 onAbort = () => {
                     clearTimeout(timer);
-                    reject(new Error('Aborted'));
+                    reject(new DOMException('Aborted', 'AbortError'));
                 };
                 signal.addEventListener('abort', onAbort, { once: true });
             }

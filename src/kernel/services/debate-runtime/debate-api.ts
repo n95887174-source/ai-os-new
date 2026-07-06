@@ -158,7 +158,20 @@ export class DebateApiService {
         return this.deps.sessionManager.getDebateHistory().find((s) => s.id === id) ?? null;
     }
 
-    subscribeStream(sessionId: string, onEvent: (event: DebateApiStreamEvent) => void): () => void {
+    subscribeStream(
+        sessionId: string,
+        onEvent: (event: DebateApiStreamEvent) => void,
+        _authToken?: string,
+    ): () => void {
+        if (!this.getSession(sessionId)) {
+            onEvent({
+                type: 'error',
+                sessionId,
+                payload: 'Session not found',
+                timestamp: Date.now(),
+            });
+            return () => {};
+        }
         const sub: StreamSubscriber = {
             push: onEvent,
             close: () => {},
@@ -251,7 +264,11 @@ export class DebateApiService {
         const subs = this.subscribers.get(sessionId);
         if (subs) {
             for (const sub of subs) {
-                sub.push(event);
+                try {
+                    sub.push(event);
+                } catch (e) {
+                    console.warn('[DebateApi] broadcast skipped bad subscriber', e);
+                }
             }
         }
     }

@@ -127,6 +127,9 @@ export class AudienceService implements IAudienceService {
     private totalEngagement = 0;
     private memberTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
     private pollTimer: ReturnType<typeof setTimeout> | null = null;
+    private _lastReactionTime = 0;
+    private _lastMsgTime = 0;
+    private readonly RATE_LIMIT_MS = 200;
 
     async init(): Promise<void> {}
 
@@ -258,7 +261,20 @@ export class AudienceService implements IAudienceService {
         return this.activePoll;
     }
 
+    vote(memberId: string, option: string): boolean {
+        const member = this.members.find((m) => m.id === memberId);
+        if (!member || !this.activePoll || this.activePoll.closed || member.hasVoted) return false;
+        if (!this.activePoll.votes.hasOwnProperty(option)) return false;
+        member.hasVoted = true;
+        this.activePoll.votes[option] = (this.activePoll.votes[option] || 0) + 1;
+        this.activePoll.totalVotes++;
+        return true;
+    }
+
     triggerReaction(reaction: AudienceReaction, intensity = 0.5, targetAgentId?: string): void {
+        const now = Date.now();
+        if (now - this._lastReactionTime < this.RATE_LIMIT_MS) return;
+        this._lastReactionTime = now;
         const reactingMembers = this.members.filter(
             (m) => Math.random() < this.getReactionProbability(m, reaction),
         );
@@ -284,6 +300,9 @@ export class AudienceService implements IAudienceService {
     }
 
     addMessage(memberId: string, text: string): void {
+        const now = Date.now();
+        if (now - this._lastMsgTime < this.RATE_LIMIT_MS) return;
+        this._lastMsgTime = now;
         const member = this.members.find((m) => m.id === memberId);
         if (!member) return;
         const msg: AudienceSideChatMessage = {

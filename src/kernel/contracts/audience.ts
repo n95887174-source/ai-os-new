@@ -80,6 +80,7 @@ export interface IAudienceService extends ILifecycle {
     getDominantReaction(): { reaction: AudienceReaction; intensity: number } | null;
     startPoll(question: string, options: string[]): AudiencePoll;
     closePoll(): AudiencePoll | null;
+    vote(memberId: string, option: string): boolean;
     triggerReaction(reaction: AudienceReaction, intensity?: number, targetAgentId?: string): void;
     addMessage(memberId: string, text: string): void;
     processArgument(agentId: string, agentName: string, text: string): void;

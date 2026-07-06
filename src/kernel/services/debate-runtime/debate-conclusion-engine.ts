@@ -35,11 +35,20 @@ function combineSignals(...signals: AbortSignal[]): AbortSignal {
     return controller.signal;
 }
 
+const MAX_ENHANCED_SESSIONS = 500;
+
 export class DebateConclusionEngine {
     private feedbackLog: VerdictFeedback[] = [];
     private enhancedSessions = new Set<string>();
     private enhancementInFlight = false;
     private enhancementRetryAfter = 0;
+
+    private pruneEnhancedSessions(): void {
+        if (this.enhancedSessions.size > MAX_ENHANCED_SESSIONS) {
+            const entries = Array.from(this.enhancedSessions);
+            this.enhancedSessions = new Set(entries.slice(-MAX_ENHANCED_SESSIONS));
+        }
+    }
 
     constructor(private llmCall?: LlmCallFn) {}
 
@@ -249,6 +258,7 @@ export class DebateConclusionEngine {
             clearTimeout(timeoutId);
             const enhanced = this.parseLLMResponse(response, base);
             this.enhancedSessions.add(snapshot.id);
+            this.pruneEnhancedSessions();
             return enhanced;
         } catch (e) {
             if (signal?.aborted) {
@@ -256,6 +266,7 @@ export class DebateConclusionEngine {
                 return base;
             }
             this.enhancedSessions.add(snapshot.id);
+            this.pruneEnhancedSessions();
             this.enhancementRetryAfter = Date.now() + 10 * 60 * 1000;
             LOGGER.warn(
                 'DebateConclusionEngine',

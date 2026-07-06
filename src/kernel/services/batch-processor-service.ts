@@ -101,6 +101,7 @@ export class BatchProcessorService {
         await this.persist();
 
         const allKeys = keyService.getKeys();
+        const keyRotationIndex: Record<string, number> = {};
 
         for (let i = 0; i < job.tasks.length; i++) {
             if (abortController.signal.aborted) {
@@ -115,8 +116,12 @@ export class BatchProcessorService {
                 const adapter = adapterRegistry.getAdapter(task.provider);
                 if (!adapter) throw new Error(`Adapter not found for provider: ${task.provider}`);
 
-                const key = allKeys.find((k) => k.provider === task.provider);
-                if (!key) throw new Error(`No key found for provider: ${task.provider}`);
+                const providerKeys = allKeys.filter((k) => k.provider === task.provider);
+                if (providerKeys.length === 0)
+                    throw new Error(`No key found for provider: ${task.provider}`);
+                const idx = (keyRotationIndex[task.provider] ?? 0) % providerKeys.length;
+                keyRotationIndex[task.provider] = idx + 1;
+                const key = providerKeys[idx];
 
                 const response = await adapter.sendMessage(
                     [{ role: 'user', content: task.prompt }],

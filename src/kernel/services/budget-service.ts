@@ -135,6 +135,7 @@ export class BudgetService implements IBudgetService {
                     outputCost: c.outputCost,
                     totalCost: c.totalCost,
                     timestamp: c.timestamp,
+                    agentId: (c as { agentId?: string }).agentId,
                 }));
             }
         } catch (e) {

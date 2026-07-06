@@ -261,6 +261,12 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
         const mgr = sm();
         if (!mgr) return;
         await mgr.pause(id);
+        try {
+            const { debateEngine } = await import('../../kernel/instances');
+            if (debateEngine?.pauseSession) debateEngine.pauseSession(id);
+        } catch {
+            /* engine not available */
+        }
         set((s) => ({
             sessions: s.sessions.map((ss) =>
                 ss.id === id ? { ...ss, phase: 'paused' as const } : ss,
@@ -272,6 +278,12 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
         const mgr = sm();
         if (!mgr) return;
         await mgr.resume(id);
+        try {
+            const { debateEngine } = await import('../../kernel/instances');
+            if (debateEngine?.resumeSession) debateEngine.resumeSession(id);
+        } catch {
+            /* engine not available */
+        }
         set((s) => ({
             sessions: s.sessions.map((ss) =>
                 ss.id === id ? { ...ss, phase: 'active' as const } : ss,
