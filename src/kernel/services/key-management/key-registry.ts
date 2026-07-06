@@ -44,6 +44,11 @@ export interface KeyRegistryDeps {
 export class KeyRegistry {
     private keys: ApiKey[] = [];
     #keyMap = new Map<string, number>();
+    /** @internal Cached frozen snapshot for getKeys() — invalidated on every mutation */
+    #frozenSnapshot: readonly ApiKey[] | null = null;
+    private invalidateSnapshot(): void {
+        this.#frozenSnapshot = null;
+    }
     private unsubs: Array<() => void> = [];
     private deps: KeyRegistryDeps;
 
@@ -52,19 +57,23 @@ export class KeyRegistry {
     }
 
     getKeys(): ApiKey[] {
-        // Return deep clones so consumers can't accidentally mutate the
-        // canonical state, and so KeyVault.lock()/stripPlaintextKeys can't
-        // wipe a key value out from under an in-flight LLM request that
-        // captured a reference to the same object. structuredClone is
-        // ~100x faster than JSON round-trip and preserves Date/Map/Set.
-        return this.keys.map((k) => structuredClone(k));
+        // C-92: Use a lazily-built snapshot cache instead of cloning every call.
+        // structuredClone is used ONCE between mutations; subsequent calls get a
+        // cheap spread copy of the cached snapshot. Each key in the snapshot is
+        // Object.freeze'd to prevent accidental mutation of canonical state.
+        if (!this.#frozenSnapshot) {
+            this.#frozenSnapshot = this.keys.map((k) => Object.freeze(structuredClone(k)));
+        }
+        return [...this.#frozenSnapshot];
     }
 
     getKey(id: string): ApiKey | undefined {
         const idx = this.#keyMap.get(id);
-        // C2: Return deep clone like getKeys() — callers must not mutate canonical state.
-        // Use modifyKey() or updateKey() for writes.
-        return idx !== undefined ? structuredClone(this.keys[idx]) : undefined;
+        if (idx === undefined) return undefined;
+        // Return from frozen snapshot — cached clone, no per-call structuredClone.
+        const key = this.#frozenSnapshot?.[idx];
+        if (key) return { ...key };
+        return structuredClone(this.keys[idx]);
     }
 
     getKeysByProvider(provider: string): ApiKey[] {
@@ -652,12 +661,14 @@ export class KeyRegistry {
         const preAddSnapshot = [...this.keys];
         this.keys.push(newKey);
         this.#keyMap.set(newKey.id, this.keys.length - 1);
+        this.invalidateSnapshot();
         try {
             await this.saveKeys();
         } catch (e) {
             // P0-11: rollback in-memory state on persist failure — prevent phantom key
             this.keys = preAddSnapshot;
             this.#keyMap = new Map(preAddSnapshot.map((k, i) => [k.id, i]));
+            this.invalidateSnapshot();
             throw e;
         }
         return newKey;
@@ -761,6 +772,7 @@ export class KeyRegistry {
 
         this.keys = Array.isArray(newKeys) ? [...newKeys] : [];
         this.#keyMap = new Map(this.keys.map((k, i) => [k.id, i]));
+        this.invalidateSnapshot();
     }
 
     updateKey(id: string, updates: Partial<ApiKey>): void {

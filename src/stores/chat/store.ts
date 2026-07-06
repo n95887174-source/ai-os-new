@@ -31,16 +31,46 @@ function resolveSessionStore(): SessionStore | null {
     return _sessionStore;
 }
 
+/** C-93: Helper to update a single session by findIndex instead of map-all. */
+function updateSessionInList(
+    sessions: ChatSession[],
+    id: string,
+    patch: Partial<ChatSession>,
+): ChatSession[] {
+    const idx = sessions.findIndex((s) => s.id === id);
+    if (idx === -1) return sessions;
+    const next = [...sessions];
+    next[idx] = { ...next[idx], ...patch, updatedAt: Date.now() };
+    return next;
+}
+
+/** C-93: Helper to update a single chat entry inside a session by entry id. */
+function updateEntryInSession(
+    sessions: ChatSession[],
+    sessionId: string,
+    entryId: string,
+    entryUpdater: (entry: ChatEntry) => ChatEntry,
+): ChatSession[] {
+    const sessIdx = sessions.findIndex((s) => s.id === sessionId);
+    if (sessIdx === -1) return sessions;
+    const session = sessions[sessIdx];
+    const entryIdx = session.history.findIndex((e) => e.id === entryId);
+    if (entryIdx === -1) return sessions;
+    const next = [...sessions];
+    const nextHistory = [...session.history];
+    nextHistory[entryIdx] = entryUpdater(nextHistory[entryIdx]);
+    next[sessIdx] = { ...session, history: nextHistory, updatedAt: Date.now() };
+    return next;
+}
+
 const updateActiveSession =
     (set: ZustandSet, get: ZustandGet) =>
     (updater: (history: ChatEntry[]) => ChatEntry[]): void => {
         const id = get().activeSessionId;
         set((s) => ({
-            sessions: s.sessions.map((sess) =>
-                sess.id === id
-                    ? { ...sess, history: updater(sess.history), updatedAt: Date.now() }
-                    : sess,
-            ),
+            sessions: updateSessionInList(s.sessions, id, {
+                history: updater(s.sessions.find((x) => x.id === id)?.history ?? []),
+            }),
         }));
     };
 
@@ -65,26 +95,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 newActiveIds.delete(res.requestId);
             }
             return {
-                sessions: s.sessions.map((sess) =>
-                    sess.id === ref.sessionId
-                        ? {
-                              ...sess,
-                              updatedAt: Date.now(),
-                              history: sess.history.map((entry) =>
-                                  entry.id === ref.entryId
-                                      ? {
-                                            ...entry,
-                                            responses: entry.responses.map((r) =>
-                                                r.requestId === res.requestId
-                                                    ? { ...r, ...res }
-                                                    : r,
-                                            ),
-                                        }
-                                      : entry,
-                              ),
-                          }
-                        : sess,
-                ),
+                sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
+                    ...entry,
+                    responses: entry.responses.map((r) =>
+                        r.requestId === res.requestId ? { ...r, ...res } : r,
+                    ),
+                })),
                 activeRequestIds: newActiveIds,
             };
         });
@@ -94,25 +110,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         const ref = requestEntryMap.get(payload.requestId);
         if (!ref) return;
         set((s) => ({
-            sessions: s.sessions.map((sess) =>
-                sess.id === ref.sessionId
-                    ? {
-                          ...sess,
-                          history: sess.history.map((entry) =>
-                              entry.id === ref.entryId
-                                  ? {
-                                        ...entry,
-                                        responses: entry.responses.map((r) =>
-                                            r.requestId === payload.requestId
-                                                ? { ...r, status: 'streaming' as const }
-                                                : r,
-                                        ),
-                                    }
-                                  : entry,
-                          ),
-                      }
-                    : sess,
-            ),
+            sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
+                ...entry,
+                responses: entry.responses.map((r) =>
+                    r.requestId === payload.requestId ? { ...r, status: 'streaming' as const } : r,
+                ),
+            })),
         }));
     });
 
@@ -120,25 +123,14 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         const ref = requestEntryMap.get(payload.requestId);
         if (!ref) return;
         set((s) => ({
-            sessions: s.sessions.map((sess) =>
-                sess.id === ref.sessionId
-                    ? {
-                          ...sess,
-                          history: sess.history.map((entry) =>
-                              entry.id === ref.entryId
-                                  ? {
-                                        ...entry,
-                                        responses: entry.responses.map((r) =>
-                                            r.requestId === payload.requestId
-                                                ? { ...r, content: r.content + payload.chunk }
-                                                : r,
-                                        ),
-                                    }
-                                  : entry,
-                          ),
-                      }
-                    : sess,
-            ),
+            sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
+                ...entry,
+                responses: entry.responses.map((r) =>
+                    r.requestId === payload.requestId
+                        ? { ...r, content: r.content + payload.chunk }
+                        : r,
+                ),
+            })),
         }));
     });
 
@@ -150,31 +142,20 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             const newActiveIds = new Set(s.activeRequestIds);
             newActiveIds.delete(payload.requestId);
             return {
-                sessions: s.sessions.map((sess) =>
-                    sess.id === ref.sessionId
-                        ? {
-                              ...sess,
-                              history: sess.history.map((entry) =>
-                                  entry.id === ref.entryId
-                                      ? {
-                                            ...entry,
-                                            responses: entry.responses.map((r) =>
-                                                r.requestId === payload.requestId
-                                                    ? {
-                                                          ...r,
-                                                          content: payload.fullContent || r.content,
-                                                          latency: payload.latency || r.latency,
-                                                          tokens: payload.tokens ?? r.tokens,
-                                                          status: 'done' as const,
-                                                      }
-                                                    : r,
-                                            ),
-                                        }
-                                      : entry,
-                              ),
-                          }
-                        : sess,
-                ),
+                sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
+                    ...entry,
+                    responses: entry.responses.map((r) =>
+                        r.requestId === payload.requestId
+                            ? {
+                                  ...r,
+                                  content: payload.fullContent || r.content,
+                                  latency: payload.latency || r.latency,
+                                  tokens: payload.tokens ?? r.tokens,
+                                  status: 'done' as const,
+                              }
+                            : r,
+                    ),
+                })),
                 activeRequestIds: newActiveIds,
             };
         });
@@ -187,30 +168,14 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             const newActiveIds = new Set(s.activeRequestIds);
             newActiveIds.delete(payload.requestId);
             return {
-                sessions: s.sessions.map((sess) =>
-                    sess.id === ref.sessionId
-                        ? {
-                              ...sess,
-                              history: sess.history.map((entry) =>
-                                  entry.id === ref.entryId
-                                      ? {
-                                            ...entry,
-                                            responses: entry.responses.map((r) =>
-                                                r.requestId === payload.requestId
-                                                    ? {
-                                                          ...r,
-                                                          content: '',
-                                                          error: payload.error,
-                                                          status: 'error' as const,
-                                                      }
-                                                    : r,
-                                            ),
-                                        }
-                                      : entry,
-                              ),
-                          }
-                        : sess,
-                ),
+                sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
+                    ...entry,
+                    responses: entry.responses.map((r) =>
+                        r.requestId === payload.requestId
+                            ? { ...r, content: '', error: payload.error, status: 'error' as const }
+                            : r,
+                    ),
+                })),
                 activeRequestIds: newActiveIds,
             };
         });
@@ -409,17 +374,15 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 // P0-5: persist to Dexie BEFORE Zustand update — crash-safe write-through
                 const sStore = resolveSessionStore();
                 if (sStore) {
+                    const currentSessions = get().sessions;
                     const stateWithNew = {
                         ...get(),
-                        sessions: get().sessions.map((sess) =>
-                            sess.id === sessionId
-                                ? {
-                                      ...sess,
-                                      history: [...sess.history, newEntry],
-                                      updatedAt: Date.now(),
-                                  }
-                                : sess,
-                        ),
+                        sessions: updateSessionInList(currentSessions, sessionId, {
+                            history: [
+                                ...(currentSessions.find((x) => x.id === sessionId)?.history ?? []),
+                                newEntry,
+                            ],
+                        }),
                     };
                     await sStore.syncSessions(stateWithNew.sessions, []).catch((e) => {
                         console.error(
@@ -435,15 +398,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 }
 
                 set((s) => ({
-                    sessions: s.sessions.map((sess) =>
-                        sess.id === sessionId
-                            ? {
-                                  ...sess,
-                                  history: [...sess.history, newEntry].slice(-MAX_HISTORY),
-                                  updatedAt: Date.now(),
-                              }
-                            : sess,
-                    ),
+                    sessions: updateSessionInList(s.sessions, sessionId, {
+                        history: [
+                            ...(s.sessions.find((x) => x.id === sessionId)?.history ?? []),
+                            newEntry,
+                        ].slice(-MAX_HISTORY),
+                    }),
                 }));
 
                 targets.forEach((t, idx) => {
@@ -503,21 +463,16 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 }
                 return {
                     activeRequestIds: newActiveIds,
-                    sessions: s.sessions.map((sess) =>
-                        sess.id === sessionId
-                            ? {
-                                  ...sess,
-                                  history: sess.history.map((e) => ({
-                                      ...e,
-                                      responses: e.responses.map((r) =>
-                                          r.status === 'loading' || r.status === 'streaming'
-                                              ? { ...r, status: 'cancelled' as const }
-                                              : r,
-                                      ),
-                                  })),
-                              }
-                            : sess,
-                    ),
+                    sessions: updateSessionInList(s.sessions, sessionId, {
+                        history: session.history.map((e) => ({
+                            ...e,
+                            responses: e.responses.map((r) =>
+                                r.status === 'loading' || r.status === 'streaming'
+                                    ? { ...r, status: 'cancelled' as const }
+                                    : r,
+                            ),
+                        })),
+                    }),
                 };
             });
         },
@@ -679,7 +634,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         },
 
         renameSession: (id, title) => {
-            set((s) => ({ sessions: s.sessions.map((x) => (x.id === id ? { ...x, title } : x)) }));
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { title }),
+            }));
             sessionManager.updateMeta(id, { title }).catch((e) => {
                 console.error('[ChatStore] Failed to persist session rename', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
@@ -691,22 +648,26 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
 
         archiveSession: (id) => {
             set((s) => ({
-                sessions: s.sessions.map((x) => (x.id === id ? { ...x, isArchived: true } : x)),
+                sessions: updateSessionInList(s.sessions, id, { isArchived: true }),
             }));
         },
 
         unarchiveSession: (id) => {
             set((s) => ({
-                sessions: s.sessions.map((x) => (x.id === id ? { ...x, isArchived: false } : x)),
+                sessions: updateSessionInList(s.sessions, id, { isArchived: false }),
             }));
         },
 
         tagSession: (id, tags) => {
-            set((s) => ({ sessions: s.sessions.map((x) => (x.id === id ? { ...x, tags } : x)) }));
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { tags }),
+            }));
         },
 
         moveToFolder: (id, folder) => {
-            set((s) => ({ sessions: s.sessions.map((x) => (x.id === id ? { ...x, folder } : x)) }));
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { folder }),
+            }));
         },
 
         pinSession: (id) => {
@@ -721,7 +682,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     });
                 });
                 return {
-                    sessions: s.sessions.map((x) => (x.id === id ? { ...x, isPinned: next } : x)),
+                    sessions: updateSessionInList(s.sessions, id, { isPinned: next }),
                 };
             });
         },
@@ -767,16 +728,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 });
             }
             set((s) => ({
-                sessions: s.sessions.map((x) =>
-                    x.id === sessionId
-                        ? {
-                              ...x,
-                              currentProvider: provider,
-                              currentModel: model,
-                              updatedAt: Date.now(),
-                          }
-                        : x,
-                ),
+                sessions: updateSessionInList(s.sessions, sessionId, {
+                    currentProvider: provider,
+                    currentModel: model,
+                }),
             }));
             const sStore = resolveSessionStore();
             if (sStore) {
@@ -811,9 +766,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             }
             const sessionId = get().activeSessionId;
             set((s) => ({
-                sessions: s.sessions.map((x) =>
-                    x.id === sessionId ? { ...x, currentKeyId: keyId, updatedAt: Date.now() } : x,
-                ),
+                sessions: updateSessionInList(s.sessions, sessionId, { currentKeyId: keyId }),
             }));
             const sStore2 = resolveSessionStore();
             if (sStore2) {

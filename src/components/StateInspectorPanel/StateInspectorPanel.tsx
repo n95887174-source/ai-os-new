@@ -43,11 +43,9 @@ export const StateInspectorPanel: React.FC = () => {
     useEffect(() => {
         isMountedRef.current = true;
         refresh();
-        const interval = setInterval(refresh, 2000);
         const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, refresh);
         return () => {
             isMountedRef.current = false;
-            clearInterval(interval);
             unsub();
         };
     }, [refresh]);

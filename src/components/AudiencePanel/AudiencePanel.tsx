@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { audienceService } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 import type {
     AudienceMember,
     AudienceReaction,
@@ -239,9 +240,10 @@ export const AudiencePanel: React.FC = () => {
             audienceService.populate(size);
         }
         refresh();
-        const interval = setInterval(refresh, 1500);
-        return () => clearInterval(interval);
     }, [size]);
+
+    // C-95: usePolling gates on document.hidden
+    usePolling(refresh, 1500);
 
     const handlePopulate = () => {
         audienceService.populate(size);

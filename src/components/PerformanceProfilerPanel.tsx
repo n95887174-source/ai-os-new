@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Gauge, Activity, Clock, Zap, BarChart3, X, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNow } from '../hooks/useNow';
 import { rootLogger } from '../kernel/instances';
 import { useTranslation } from '../i18n/useTranslation';
+import { usePolling } from './Common/usePolling';
 import { errorContainer, dismissBtnRed, textMutedXs } from '../styles/common';
 import type { LogEntry } from '../kernel/contracts/logger';
 import { aggregate } from './PerformanceProfilerPanel/profiler-utils';
@@ -18,18 +19,10 @@ export const PerformanceProfilerPanel: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const isMountedRef = useRef(true);
 
-    useEffect(() => {
-        isMountedRef.current = true;
-        const update = () => {
-            if (isMountedRef.current) setEntries(rootLogger.getBuffer());
-        };
-        update();
-        const interval = setInterval(update, 1500);
-        return () => {
-            isMountedRef.current = false;
-            clearInterval(interval);
-        };
-    }, []);
+    // C-95: usePolling gates on document.hidden
+    usePolling(() => {
+        if (isMountedRef.current) setEntries(rootLogger.getBuffer());
+    }, 1500);
 
     const stats = useMemo(() => aggregate(entries), [entries]);
     const totalSamples = stats.reduce((s, x) => s + x.count, 0);

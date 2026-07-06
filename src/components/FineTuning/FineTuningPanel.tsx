@@ -13,6 +13,7 @@ import {
     Database,
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
+import { usePolling } from '../Common/usePolling';
 import { fineTuningService } from '../../kernel/instances';
 import type {
     FineTuningJob,
@@ -62,10 +63,10 @@ const FineTuningPanel: React.FC = () => {
     };
 
     useEffect(() => {
-        const interval = setInterval(refresh, 3000);
         refresh();
-        return () => clearInterval(interval);
     }, []);
+
+    usePolling(refresh, 3000);
 
     const handleMethodChange = (method: FineTuningMethod) => {
         setSelectedMethod(method);

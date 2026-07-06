@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Brain, Lightbulb, TrendingUp, TrendingDown, Minus, RefreshCw, Zap } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { metaLearningService } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 import type { MetaLearningState, LearnedPattern } from '../../kernel/contracts/meta-learning';
 
 const MetaLearningPanelContent: React.FC = () => {
@@ -15,10 +16,8 @@ const MetaLearningPanelContent: React.FC = () => {
         setSuggestions(metaLearningService.getSuggestions());
     }, []);
 
-    useEffect(() => {
-        const id = setInterval(refresh, 2000);
-        return () => clearInterval(id);
-    }, [refresh]);
+    // C-95: usePolling gates on document.hidden
+    usePolling(refresh, 2000);
 
     return (
         <div style={{ padding: 16, height: '100%', overflowY: 'auto' }}>

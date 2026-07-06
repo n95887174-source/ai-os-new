@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Square, Send, Loader2, Volume2, AlertCircle } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { geminiLiveService } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 import type { GeminiLiveSession } from '../../kernel/contracts/gemini-live';
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
@@ -17,18 +18,13 @@ const GeminiLivePanelContent: React.FC = () => {
     const [textInput, setTextInput] = useState('');
     const [supported] = useState(() => geminiLiveService.isSupported());
     const endRef = useRef<HTMLDivElement>(null);
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const poll = useCallback(() => {
         setSession(geminiLiveService.getSession());
     }, []);
 
-    useEffect(() => {
-        pollRef.current = setInterval(poll, 300);
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current);
-        };
-    }, [poll]);
+    // C-95: usePolling gates on document.hidden — pauses when tab is backgrounded
+    usePolling(poll, 300);
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: 'smooth' });

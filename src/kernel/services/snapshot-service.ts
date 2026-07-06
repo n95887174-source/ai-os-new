@@ -67,6 +67,12 @@ export class SnapshotService {
     private autoCaptureInterval: ReturnType<typeof setInterval> | null = null;
     private deps: SnapshotServiceDeps;
     private _pendingSave: Promise<void> = Promise.resolve();
+    /** @internal C-94: Debounce guard — only one save() every 2s */
+    private _saveQueued = false;
+    /** @internal C-94: Throttle guard — skip duplicate (traceId, nodeId) within 1s */
+    private _lastStepTimestamps = new Map<string, number>();
+    /** Max step captures per second — prevents burst from COGNITIVE_STEP_COMPLETED */
+    private static readonly STEP_THROTTLE_MS = 1000;
 
     constructor(deps: SnapshotServiceDeps) {
         this.deps = deps;
@@ -159,7 +165,39 @@ export class SnapshotService {
         }
     }
 
+    /** @internal C-94: Debounced persistence — coalesces multiple captures into one write */
+    private scheduleSave(): void {
+        if (this._saveQueued) return;
+        this._saveQueued = true;
+        setTimeout(() => {
+            this._saveQueued = false;
+            this._pendingSave = this.save();
+        }, 2000);
+    }
+
+    /** @internal C-94: Throttle check — skip if same (traceId, stepId) within 1s */
+    private shouldThrottleStep(traceId: string, stepId: string): boolean {
+        const key = `${traceId}::${stepId}`;
+        const last = this._lastStepTimestamps.get(key);
+        const now = Date.now();
+        if (last && now - last < SnapshotService.STEP_THROTTLE_MS) return true;
+        this._lastStepTimestamps.set(key, now);
+        // Prune stale entries once every 50 inserts
+        if (this._lastStepTimestamps.size > 50) {
+            const cutoff = now - 5000;
+            for (const [k, ts] of this._lastStepTimestamps) {
+                if (ts < cutoff) this._lastStepTimestamps.delete(k);
+            }
+        }
+        return false;
+    }
+
     async capture(traceId: string, stepId: string, label?: string): Promise<SystemSnapshot> {
+        // C-94: Throttle — skip duplicate events within 1s
+        if (this.shouldThrottleStep(traceId, stepId)) {
+            return this.snapshots[this.snapshots.length - 1];
+        }
+
         const top = this.deps.orchestrator.getActiveTopology();
         const disabledNodes =
             top?.nodes
@@ -186,14 +224,20 @@ export class SnapshotService {
             this.snapshots = this.snapshots.slice(-MAX_SNAPSHOTS);
         }
 
-        this._pendingSave = this.save();
-        await this._pendingSave;
+        // C-94: Debounce persistence instead of writing every capture
+        this.scheduleSave();
         this.deps.eventBus.emit(EVENTS.SNAPSHOT_CAPTURED, snapshot);
         return snapshot;
     }
 
     async flush(): Promise<void> {
-        await this._pendingSave;
+        // C-94: Flush the debounced save if queued
+        if (this._saveQueued) {
+            this._saveQueued = false;
+            await this.save();
+        } else {
+            await this._pendingSave;
+        }
     }
 
     restore(snapshot: SystemSnapshot): boolean {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import PanelLoader from '../PanelLoader';
 import { tutorialService } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 import type { Tutorial, TutorialProgress } from '../../kernel/contracts/tutorial';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -167,10 +168,11 @@ const TutorialPanel: React.FC = () => {
     };
 
     useEffect(() => {
-        const interval = setInterval(refresh, 2000);
         refresh();
-        return () => clearInterval(interval);
     }, []);
+
+    // C-95: usePolling gates on document.hidden
+    usePolling(refresh, 2000);
 
     const handleStart = (tutorialId: string) => {
         tutorialService?.startTutorial(tutorialId);

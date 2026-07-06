@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
+import { usePolling } from './Common/usePolling';
 import { errorContainer, dismissBtnRed } from '../styles/common';
 import { useConfirm } from '../hooks/useConfirm';
 import { STORAGE_KEY, MAX_DECISIONS, loadFromStorage } from './DecisionLogPanel/decision-log-types';
@@ -38,12 +39,12 @@ const DecisionLogPanel: React.FC = () => {
         isMountedRef.current = true;
         refresh();
         setLoading(false);
-        const interval = setInterval(refresh, 3000);
         return () => {
             isMountedRef.current = false;
-            clearInterval(interval);
         };
     }, [refresh]);
+
+    usePolling(refresh, 3000);
 
     const handleExport = useCallback(() => {
         try {

@@ -222,13 +222,9 @@ const ArgumentGraphPanel: React.FC = () => {
             eventBus.on(EVENTS.DEBATE_STARTED, handler),
         ];
 
-        // Poll every 2s as safety net
-        const interval = setInterval(handler, 2000);
-
         return () => {
             isMountedRef.current = false;
             unsubs.forEach((u) => u());
-            clearInterval(interval);
         };
     }, []);
 
