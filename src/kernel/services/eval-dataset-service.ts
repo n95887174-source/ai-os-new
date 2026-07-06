@@ -159,6 +159,7 @@ export class EvalDatasetService implements IEvalDatasetService {
 
             const idx = all.findIndex((d) => d.id === datasetId);
             all[idx].runs.push(run);
+            if (all[idx].runs.length > 50) all[idx].runs = all[idx].runs.slice(-50);
             all[idx].updatedAt = Date.now();
             await saveDatasets(all);
 

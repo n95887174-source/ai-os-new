@@ -131,7 +131,7 @@ export class ResearchEngineService implements IResearchEngine {
         };
         this.sessions.set(id, session);
         this.trimSessions();
-        this.deps.eventBus.emit(EVENTS.HYPOTHESES_UPDATED, {
+        this.deps.eventBus.emit(EVENTS.RESEARCH_SESSION_UPDATED, {
             action: 'session_started',
             sessionId: id,
         });
@@ -196,7 +196,10 @@ export class ResearchEngineService implements IResearchEngine {
         session.loops.push(result);
         session.status = result.status;
         session.updatedAt = Date.now();
-        this.deps.eventBus.emit(EVENTS.HYPOTHESES_UPDATED, { action: 'loop_completed', sessionId });
+        this.deps.eventBus.emit(EVENTS.RESEARCH_SESSION_UPDATED, {
+            action: 'loop_completed',
+            sessionId,
+        });
         return result;
     }
 
@@ -211,7 +214,7 @@ export class ResearchEngineService implements IResearchEngine {
         this.citationExports.delete(id);
         this.peerReviews.delete(id);
         this.researchReports.delete(id);
-        this.deps.eventBus.emit(EVENTS.HYPOTHESES_UPDATED, {
+        this.deps.eventBus.emit(EVENTS.RESEARCH_SESSION_UPDATED, {
             action: 'session_deleted',
             sessionId: id,
         });
@@ -488,6 +491,10 @@ export class ResearchEngineService implements IResearchEngine {
         const allSources = session.loops.flatMap((l) => l.sources);
         const sourceMap = new Map(allSources.map((s) => [s.id, s]));
 
+        const totalClaims = allClaims.length;
+        if (totalClaims > 30) {
+            LOGGER.warn('ResearchEngine', `runFactCheck truncated ${totalClaims} to 30 claims`);
+        }
         const checks: FactCheckResult[] = allClaims.slice(0, 30).map((claim) => {
             const contradictingIds = claim.contradictions;
             const contradictingSources = contradictingIds
@@ -497,10 +504,12 @@ export class ResearchEngineService implements IResearchEngine {
                 })
                 .filter((s): s is ResearchSource => !!s);
 
-            const supportingSources =
-                claim.confidence > 0.6
-                    ? [sourceMap.get(claim.sourceId)].filter((s): s is ResearchSource => !!s)
-                    : [];
+            const supportingIds = allClaims.filter(
+                (c) => c.id !== claim.id && c.text.includes(claim.text.slice(0, 50)),
+            );
+            const supportingSources = supportingIds
+                .map((c) => sourceMap.get(c.sourceId))
+                .filter((s): s is ResearchSource => !!s && s.id !== claim.sourceId);
 
             let status: FactCheckResult['status'];
             if (contradictingSources.length > 0 && supportingSources.length === 0) {

@@ -325,7 +325,7 @@ export class OrchestrationService {
 
         output = this.deps.policyService.sanitizeOutput(node.id, output);
         this.recordRateLimitUsage(node, output);
-        this.transitionLifecycle(node, 'idle');
+        this.transitionLifecycle(node, status === 'error' ? 'errored' : 'idle');
 
         const duration = Date.now() - startTime;
         if (status === 'done') this.executionStats.completedNodes++;

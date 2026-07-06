@@ -341,6 +341,7 @@ export class AgentService {
         }
         this.persist();
         this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_REMOVED, { id: agentId });
+        this.stats.delete(agentId);
     }
 
     toggleAgent(id: string) {
@@ -409,6 +410,7 @@ export class AgentService {
             const ALLOWED_NODE_TYPES = ['agent', 'router', 'tool', 'input', 'output'];
             const ALLOWED_CONFIG_KEYS = [
                 'roleName',
+                'roleId',
                 'prompt',
                 'tools',
                 'temperature',

@@ -26,6 +26,7 @@ export interface LearnedPattern {
     affectedValue: number;
     observationCount: number;
     lastUpdated: number;
+    timesApplied?: number;
 }
 
 export interface MetaLearningState {

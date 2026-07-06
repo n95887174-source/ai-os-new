@@ -66,6 +66,7 @@ export const DomainEvents = {
     QUEUE_TASK_FAILED: EVENT_REGISTRY.QUEUE_TASK_FAILED.name,
     DEBATE_HUMAN_VOTE: EVENT_REGISTRY.DEBATE_HUMAN_VOTE.name,
     HYPOTHESES_UPDATED: EVENT_REGISTRY.HYPOTHESES_UPDATED.name,
+    RESEARCH_SESSION_UPDATED: EVENT_REGISTRY.RESEARCH_SESSION_UPDATED.name,
     KEY_INTELLIGENCE_PIPELINE_ERROR: EVENT_REGISTRY.KEY_INTELLIGENCE_PIPELINE_ERROR.name,
 } as const;
 
@@ -136,5 +137,6 @@ export type DomainEventMap = Pick<
     | 'topology:evaluated'
     | 'queue:task:failed'
     | 'hypotheses:updated'
+    | 'research:session:updated'
     | 'key:intelligence:pipeline:error'
 >;

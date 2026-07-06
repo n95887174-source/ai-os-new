@@ -101,8 +101,12 @@ export class MemoryService implements IMemoryEngine {
     private async pruneOldEntries() {
         try {
             const cutoff = Date.now() - MEMORY_TTL_MS;
+            const removed = this.memories.filter((m) => (m.metadata.timestamp ?? 0) < cutoff);
             await this.memoryRepo.prune(cutoff);
             this.memories = this.memories.filter((m) => (m.metadata.timestamp ?? 0) >= cutoff);
+            for (const m of removed) {
+                this.sendToWorker('remove', { id: m.id }).catch(() => {});
+            }
             this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
         } catch (e) {
             LOGGER.error('MemoryEngine', 'Prune cycle failed', { error: e });
@@ -606,9 +610,12 @@ export class MemoryService implements IMemoryEngine {
             avgImportance: this.memories.length > 0 ? totalImportance / this.memories.length : 0,
             oldestEntry:
                 this.memories.length > 0
-                    ? this.memories[this.memories.length - 1]?.metadata.timestamp
+                    ? Math.min(...this.memories.map((m) => m.metadata.timestamp ?? 0))
                     : 0,
-            newestEntry: this.memories.length > 0 ? this.memories[0]?.metadata.timestamp : 0,
+            newestEntry:
+                this.memories.length > 0
+                    ? Math.max(...this.memories.map((m) => m.metadata.timestamp ?? 0))
+                    : 0,
             totalStorageBytes: this.memories.reduce(
                 (s, m) => s + new TextEncoder().encode(m.content).length,
                 0,

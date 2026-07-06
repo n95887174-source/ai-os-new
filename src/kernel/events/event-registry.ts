@@ -849,8 +849,9 @@ export const EVENT_REGISTRY = {
     CHAT_BOOKMARK_REMOVED: event('chat:bookmark:removed', z.unknown()),
     CHAT_BOOKMARK_CLEARED: event('chat:bookmark:cleared', z.unknown()),
 
-    // ── Experiment / Hypothesis ───────────────────────────────────────────
+    // ── Experiment / Hypothesis / Research ────────────────────────────────
     HYPOTHESES_UPDATED: event('hypotheses:updated', z.unknown()),
+    RESEARCH_SESSION_UPDATED: event('research:session:updated', z.unknown()),
 
     // ── Key Rotation ──────────────────────────────────────────────────────
     KEY_ROTATION_TRIGGERED: event(

@@ -489,7 +489,6 @@ export class RoleService {
             }
         }
         this.deps.eventBus.emit(EVENTS.ROLE_DELETED, { id, name: role?.name });
-        this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
 
         this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
@@ -686,12 +685,12 @@ export class RoleService {
                 const avgLatencyWeight = Math.max(0, 1 - (s.avgLatency || 0) / 10000);
                 const feedbackScore =
                     s.feedbackCount > 0 ? (s.feedbackScore / s.feedbackCount + 1) / 2 : 0.5;
-                const recencyWeight = Math.min(1, (Date.now() - s.lastUsed) / 86400000 / 30);
+                const stalenessWeight = Math.min(1, (Date.now() - s.lastUsed) / (30 * 86400000));
                 const elo = Math.round(
                     successRate * 400 +
                         avgLatencyWeight * 200 +
                         feedbackScore * 200 +
-                        (1 - recencyWeight) * 200,
+                        (1 - stalenessWeight) * 200,
                 );
                 return {
                     id: r.id,

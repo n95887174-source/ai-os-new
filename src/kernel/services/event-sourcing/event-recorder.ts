@@ -395,6 +395,10 @@ export class EventRecorder {
         if (!this.store || this.persistQueued) return;
         this.persistQueued = true;
         this._pendingPersistData = { events: [...this.events], sequence: this.sequence };
+        // Synchronous WAL write — survives tab close
+        try {
+            ssrSafeStorage.setItem('event-recorder:wal', JSON.stringify(this._pendingPersistData));
+        } catch {}
         queueMicrotask(() => {
             this.persistQueued = false;
             const data = this._pendingPersistData;

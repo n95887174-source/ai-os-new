@@ -61,6 +61,17 @@ export class MetaLearningService implements IMetaLearningService {
         const pattern = this.patterns.find((p) => p.id === patternId);
         if (!pattern) throw new Error(`Pattern ${patternId} not found`);
         this.adjustmentsApplied++;
+        if (pattern.affectedParam === 'learningRate') {
+            this._learningRate = Number(pattern.affectedValue);
+        } else if (pattern.affectedParam === 'explorationRate') {
+            this._explorationRate = Number(pattern.affectedValue);
+        } else if (pattern.affectedParam === 'temperature' || pattern.affectedParam === 'model') {
+            LOGGER.info('MetaLearning', 'Parameter requires external action', {
+                param: pattern.affectedParam,
+                value: pattern.affectedValue,
+            });
+        }
+        pattern.timesApplied = (pattern.timesApplied || 0) + 1;
         LOGGER.info('MetaLearning', 'Suggestion applied', {
             pattern: pattern.description,
             param: pattern.affectedParam,

@@ -182,6 +182,11 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                         import('../services/debate-runtime/debate-human-service').DebateHumanService
                     >('debateHumanService');
                 },
+                get debateApiService() {
+                    return c.get<import('../services/debate-runtime/debate-api').DebateApiService>(
+                        'debateApiService',
+                    );
+                },
             }),
     );
 

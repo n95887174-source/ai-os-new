@@ -26,6 +26,7 @@ export interface Tutorial {
 export interface TutorialProgress {
     tutorialId: string;
     completedSteps: string[];
+    skippedSteps?: string[];
     startedAt: number;
     completedAt: number | null;
 }

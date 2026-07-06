@@ -192,7 +192,8 @@ const MemoryPanel: React.FC = () => {
 
     const handleExportVectors = async () => {
         try {
-            const exportData = JSON.stringify(memories, null, 2);
+            const allMemories = memoryService.getMemories();
+            const exportData = JSON.stringify(allMemories, null, 2);
             const blob = new Blob([exportData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -357,10 +358,10 @@ const MemoryPanel: React.FC = () => {
                             <input
                                 type="range"
                                 min={0}
-                                max={10}
-                                step={1}
+                                max={1}
+                                step={0.1}
                                 value={importanceFilter}
-                                onChange={(e) => setImportanceFilter(parseInt(e.target.value))}
+                                onChange={(e) => setImportanceFilter(parseFloat(e.target.value))}
                                 style={{ flex: 1, accentColor: '#a855f7' }}
                                 aria-label={t('memory.importance_min')}
                             />

@@ -92,7 +92,6 @@ export class HypothesisService implements IHypothesisService {
             createdAt: Date.now(),
             sourceFile: input.sourceFile?.trim() || undefined,
             evidenceRefs: input.evidenceRefs ?? [],
-            metricsDelta: this.mockImpact(input.category),
         };
         this.hypotheses = [hypothesis, ...this.hypotheses];
         await this.persist();
@@ -152,15 +151,5 @@ export class HypothesisService implements IHypothesisService {
             gov: 'Governance',
         };
         return `${labels[category]} improvement for ${file}: ${snippet}${description.length > 48 ? '…' : ''}`;
-    }
-
-    private mockImpact(category: HypothesisCategory): string {
-        const impacts: Record<HypothesisCategory, string> = {
-            arch: 'Maintainability +15%, file size -30%',
-            prompt: 'Token usage -10%, strategy clarity +20%',
-            routing: 'Failed requests -25%, latency P95 -12%',
-            gov: 'Policy violations -40%, audit coverage +25%',
-        };
-        return impacts[category];
     }
 }

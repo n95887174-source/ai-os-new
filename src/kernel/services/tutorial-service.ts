@@ -6,6 +6,7 @@ import type {
 } from '../contracts/tutorial';
 import { BUILTIN_TUTORIALS } from './tutorial-definitions';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+import { rootLogger } from './logger-service';
 
 export class TutorialService implements ITutorialService {
     private tutorials: Map<string, Tutorial> = new Map();
@@ -58,6 +59,8 @@ export class TutorialService implements ITutorialService {
     completeStep(tutorialId: string, stepId: string): void {
         const t = this.tutorials.get(tutorialId);
         if (!t) return;
+        const validStep = t.steps.find((s) => s.id === stepId);
+        if (!validStep) return;
         const prog = this.getProgress(tutorialId);
         if (prog.completedSteps.includes(stepId)) return;
         if (prog.startedAt === 0) prog.startedAt = Date.now();
@@ -71,7 +74,21 @@ export class TutorialService implements ITutorialService {
     }
 
     skipStep(tutorialId: string, stepId: string): void {
-        this.completeStep(tutorialId, stepId);
+        const t = this.tutorials.get(tutorialId);
+        if (!t) return;
+        const validStep = t.steps.find((s) => s.id === stepId);
+        if (!validStep) return;
+        const prog = this.getProgress(tutorialId);
+        if (prog.skippedSteps?.includes(stepId) || prog.completedSteps.includes(stepId)) return;
+        if (prog.startedAt === 0) prog.startedAt = Date.now();
+        if (!prog.skippedSteps) prog.skippedSteps = [];
+        prog.skippedSteps.push(stepId);
+        this.progress.set(tutorialId, prog);
+
+        if (this.isTutorialCompleted(tutorialId)) {
+            prog.completedAt = Date.now();
+        }
+        this.saveProgress();
     }
 
     completeTutorial(tutorialId: string): void {
@@ -113,7 +130,7 @@ export class TutorialService implements ITutorialService {
 
     getOverallProgress(): number {
         const tutorials = this.getTutorials();
-        if (tutorials.length === 0) return 100;
+        if (tutorials.length === 0) return 0;
         let total = 0;
         let completed = 0;
         for (const t of tutorials) {
@@ -138,7 +155,9 @@ export class TutorialService implements ITutorialService {
                     this.progress.set(p.tutorialId, p);
                 }
             }
-        } catch {}
+        } catch (e) {
+            rootLogger.warn('TutorialService', 'Failed to load progress', { error: e });
+        }
     }
 
     private saveProgress(): void {
@@ -147,6 +166,8 @@ export class TutorialService implements ITutorialService {
                 this.storageKey,
                 JSON.stringify(Array.from(this.progress.values())),
             );
-        } catch {}
+        } catch (e) {
+            rootLogger.warn('TutorialService', 'Failed to save progress', { error: e });
+        }
     }
 }
