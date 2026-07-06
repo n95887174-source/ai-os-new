@@ -155,31 +155,34 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         );
 
         this.unsubs.push(
-            this.eventBus.onSafe<{
-                key: { id: string; provider: string; label?: string; status: string };
-            }>(EVENTS.KEY_UPDATED, (payload) => {
-                if (!payload?.key?.id) return;
-                const s = this.states.get(payload.key.id);
-                if (s) {
-                    const status: KeyStatus =
-                        payload.key.status === 'active'
-                            ? 'ready'
-                            : payload.key.status === 'error'
-                              ? 'broken'
-                              : 'unknown';
-                    const flags =
-                        status === 'ready'
-                            ? { circuitOpen: false, rateLimited: false, authFailed: false }
-                            : s.flags;
-                    this.update(payload.key.id, {
-                        status,
-                        provider: payload.key.provider,
-                        label: payload.key.label ?? payload.key.provider,
-                        flags,
-                    });
-                    this.recomputeRouting(payload.key.id);
-                }
-            }),
+            this.eventBus.onSafe<import('../types/metrics-types').ApiKey[]>(
+                EVENTS.KEY_UPDATED,
+                (keys) => {
+                    if (!Array.isArray(keys)) return;
+                    for (const key of keys) {
+                        const s = this.states.get(key.id);
+                        if (s) {
+                            const status: KeyStatus =
+                                key.status === 'active'
+                                    ? 'ready'
+                                    : key.status === 'error'
+                                      ? 'broken'
+                                      : 'unknown';
+                            const flags =
+                                status === 'ready'
+                                    ? { circuitOpen: false, rateLimited: false, authFailed: false }
+                                    : s.flags;
+                            this.update(key.id, {
+                                status,
+                                provider: key.provider,
+                                label: key.label || key.provider,
+                                flags,
+                            });
+                            this.recomputeRouting(key.id);
+                        }
+                    }
+                },
+            ),
         );
 
         this.unsubs.push(

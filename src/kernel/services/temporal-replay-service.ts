@@ -275,7 +275,9 @@ export class TemporalReplayService implements ITemporalReplayService {
         });
 
         // Step 3: build initial provider metrics from before.keyState
-        const initialKeyState = (trace.before?.keyState?.data ?? {}) as Record<string, unknown>;
+        const initialKeyState = structuredClone(
+            (trace.before?.keyState?.data ?? {}) as Record<string, unknown>,
+        );
         const providerMetrics = keyStateToProviderMetrics(initialKeyState);
 
         // Step 4: walk events chronologically, building frames

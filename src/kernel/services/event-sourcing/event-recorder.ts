@@ -282,10 +282,10 @@ export class EventRecorder {
         });
     }
 
-    importSession(json: string): { events: number; checkpoints: number } {
+    async importSession(json: string): Promise<{ events: number; checkpoints: number }> {
         try {
             const data = safeJsonParse(json) as Record<string, unknown> | undefined;
-            const events = this.importLog(
+            const events = await this.importLog(
                 ((data as Record<string, unknown>)?.events as string) ?? '{}',
             );
             const checkpoints = this.checkpoints.importCheckpoints(
@@ -328,7 +328,7 @@ export class EventRecorder {
         return JSON.stringify({ events: this.events, sequence: this.sequence });
     }
 
-    importLog(json: string): number {
+    async importLog(json: string): Promise<number> {
         try {
             const data = safeJsonParse(json) as Record<string, unknown> | undefined;
             const imported: RecordedEvent[] =
@@ -338,6 +338,18 @@ export class EventRecorder {
             for (const ev of imported) {
                 if (!ev.checksum || !hex32.test(ev.checksum)) {
                     LOGGER.warn('EventRecorder', 'Import skipping event with invalid checksum', {
+                        event: ev.event,
+                        seq: ev.sequence,
+                    });
+                    continue;
+                }
+                const expectedChecksum = await this.boundedChecksum(
+                    ev.event,
+                    ev.data,
+                    ev.timestamp,
+                );
+                if (ev.checksum !== expectedChecksum) {
+                    LOGGER.warn('EventRecorder', 'Import skipping event with checksum mismatch', {
                         event: ev.event,
                         seq: ev.sequence,
                     });

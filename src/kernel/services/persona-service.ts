@@ -153,9 +153,18 @@ export class PersonaService {
         this._database = database ?? null;
     }
 
-    /** Inject database after construction (for DI registration) */
+    /** Inject database after construction (for DI registration).
+     *  If already initialized, reloads custom personas from the new database. */
     setDatabase(db: IDatabaseService): void {
         this._database = db;
+        if (this.isInitialized) {
+            this.isInitialized = false;
+            this.init().catch((e) =>
+                LOGGER.error('PersonaService', 'reload after setDatabase failed', {
+                    error: String(e),
+                }),
+            );
+        }
     }
 
     private get db(): IDatabaseService | null {

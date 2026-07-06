@@ -43,25 +43,8 @@ export class SleepEngine {
 
     private async runMicroConsolidation(): Promise<void> {
         const episodic = this.stores.get(MemoryStoreType.EPISODIC);
-        const semantic = this.stores.get(MemoryStoreType.SEMANTIC);
         if (episodic) {
-            const report = await episodic.consolidate();
-            if (report.entriesForgotten > 0 || report.newSemanticEntries > 0) {
-                const recentForgotten = report.entriesForgotten;
-                if (recentForgotten > 0 && semantic) {
-                    for (let i = 0; i < Math.min(recentForgotten, 5); i++) {
-                        await semantic.store({
-                            content: `[Consolidated] Episodic memory snapshot at ${new Date().toISOString()}`,
-                            metadata: {
-                                source: 'consolidation',
-                                type: 'summary',
-                                timestamp: Date.now(),
-                                importance: 3,
-                            },
-                        });
-                    }
-                }
-            }
+            await episodic.consolidate();
         }
     }
 

@@ -109,19 +109,24 @@ export class AgentJournalService {
     }
 
     private subscribe(): void {
-        const off1 = this.deps.eventBus.on(EVENTS.AGENT_TASK_COMPLETED, (raw: unknown) => {
-            if (typeof raw !== 'object' || raw === null) return;
-            const e = raw as Partial<JournalEntry> & { agentId: string; taskType: string };
+        const off1 = this.deps.eventBus.on(EVENTS.COGNITIVE_STEP_COMPLETED, (raw: unknown) => {
+            const e = raw as {
+                nodeId: string;
+                status: 'done' | 'error';
+                duration: number;
+                output?: string;
+                fullContent?: string;
+            };
+            if (!e?.nodeId) return;
             this.record({
-                agentId: e.agentId,
-                agentName: e.agentName ?? e.agentId,
-                taskType: e.taskType,
-                taskDescription: e.taskDescription ?? '',
-                outcome: e.outcome ?? 'success',
-                durationMs: e.durationMs ?? 0,
-                tokensUsed: e.tokensUsed ?? 0,
-                notes: e.notes,
-                tags: e.tags ?? [],
+                agentId: e.nodeId,
+                agentName: e.nodeId,
+                taskType: 'cognitive_step',
+                taskDescription: (e.output ?? '').slice(0, 200),
+                outcome: e.status === 'done' ? 'success' : ('failure' as const),
+                durationMs: e.duration ?? 0,
+                tokensUsed: 0,
+                tags: [],
             }).catch((err) =>
                 this.deps.logger?.error('AgentJournal', 'record failed', { error: String(err) }),
             );

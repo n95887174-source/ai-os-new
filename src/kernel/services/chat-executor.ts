@@ -68,7 +68,7 @@ export class ChatExecutor {
 
         try {
             while (depth < this.MAX_429_RETRIES) {
-                const { requestId, model, messages, keyId } = req;
+                const { requestId, messages, keyId } = req;
 
                 const agentId = req.options?.metadata?.agentId as string | undefined;
 
@@ -163,7 +163,7 @@ export class ChatExecutor {
                         continue;
                     }
 
-                    const effectiveModel = model || 'default';
+                    const effectiveModel = req.model || 'default';
                     const effectiveMessages = messages;
 
                     const startTime = performance.now();
@@ -370,6 +370,8 @@ export class ChatExecutor {
                             }
 
                             this.deps.eventBus.emit(EVENTS.STREAM_END, {
+                                requestId,
+                                fullContent: result.content,
                                 provider: currentProvider,
                                 model: effectiveModel,
                                 latency: latencyMs,

@@ -23,6 +23,18 @@ const LOGGER = rootLogger.child('DebateConclusionEngine');
 
 export type LlmCallFn = (prompt: string, signal?: AbortSignal) => Promise<string>;
 
+function combineSignals(...signals: AbortSignal[]): AbortSignal {
+    const controller = new AbortController();
+    for (const sig of signals) {
+        if (sig.aborted) {
+            controller.abort();
+            return controller.signal;
+        }
+        sig.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+    return controller.signal;
+}
+
 export class DebateConclusionEngine {
     private feedbackLog: VerdictFeedback[] = [];
     private enhancedSessions = new Set<string>();
@@ -226,8 +238,15 @@ export class DebateConclusionEngine {
 
         this.enhancementInFlight = true;
         try {
+            const timeoutMs = 30_000;
+            const timeoutController = new AbortController();
+            const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+            const combinedSignal = signal
+                ? combineSignals(signal, timeoutController.signal)
+                : timeoutController.signal;
             const prompt = this.buildLLMPrompt(base, snapshot);
-            const response = await this.llmCall(prompt, signal);
+            const response = await this.llmCall(prompt, combinedSignal);
+            clearTimeout(timeoutId);
             const enhanced = this.parseLLMResponse(response, base);
             this.enhancedSessions.add(snapshot.id);
             return enhanced;

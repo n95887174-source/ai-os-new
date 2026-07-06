@@ -410,8 +410,23 @@ export class AutoDebateService implements IAutoDebateService {
                 await this.waitForSessionCompletion(session);
 
                 const consensusText = (session.consensus ?? '').toLowerCase();
-                const proWon = consensusText.includes(pA.name.toLowerCase());
-                const conWon = consensusText.includes(pB.name.toLowerCase());
+                const proId = pA.id.toLowerCase();
+                const proName = pA.name.toLowerCase();
+                const conId = pB.id.toLowerCase();
+                const conName = pB.name.toLowerCase();
+                const count = (haystack: string, needle: string) => {
+                    let c = 0,
+                        idx = 0;
+                    while ((idx = haystack.indexOf(needle, idx)) !== -1) {
+                        c++;
+                        idx += needle.length;
+                    }
+                    return c;
+                };
+                const proScore = count(consensusText, proId) + count(consensusText, proName);
+                const conScore = count(consensusText, conId) + count(consensusText, conName);
+                const proWon = proScore > conScore;
+                const conWon = conScore > proScore;
 
                 matches.push({
                     pairId: `match-${m}`,
@@ -419,7 +434,7 @@ export class AutoDebateService implements IAutoDebateService {
                     participantB: pB.name,
                     topic,
                     winner: proWon ? pA.name : conWon ? pB.name : null,
-                    draw: !proWon && !conWon,
+                    draw: proScore === conScore,
                     completed: session.status === 'completed',
                     durationMs: Date.now() - pairStart,
                 });

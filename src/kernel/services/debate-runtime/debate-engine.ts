@@ -101,8 +101,17 @@ function snapshotToSession(
         strategy: ctx.strategy,
         maxRounds: ctx.maxRounds,
         currentRound: round,
-        participants:
-            participants as unknown as import('../../contracts/debate-types').DebateParticipant[],
+        participants: participants.map(
+            (p) =>
+                ({
+                    id: p.agentId,
+                    name: p.agentId,
+                    role: p.role || 'proponent',
+                    provider: p.provider,
+                    modelId: p.modelId,
+                    systemPrompt: p.systemPrompt,
+                }) as import('../../contracts/debate-types').DebateParticipant,
+        ),
         arguments: args,
         convergenceScore: 0,
         openingStatements: args.filter((a) => a.round === 0),

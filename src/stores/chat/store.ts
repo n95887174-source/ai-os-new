@@ -20,6 +20,7 @@ import {
     DELETED_IDS_TTL,
     genId,
     rebuildRequestEntryMap,
+    requestEntryMap,
 } from './types';
 
 let _sessionStore: SessionStore | null = null;
@@ -47,6 +48,173 @@ let _sendLock = false;
 
 export const useChatStore = create<ChatStoreShape>((set, get) => {
     const uas = updateActiveSession(set, get);
+
+    // Subscribe to response events (set up once, per closure over set/get)
+    // These bridge SEND_MESSAGE → ChatExecutor → response events
+    eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: ChatResponse) => {
+        const ref = requestEntryMap.get(res.requestId);
+        if (!ref) return;
+        set((s) => {
+            const newActiveIds = new Set(s.activeRequestIds);
+            if (
+                res.status === 'done' ||
+                res.status === 'error' ||
+                res.status === 'cancelled' ||
+                res.status === 'timeout'
+            ) {
+                newActiveIds.delete(res.requestId);
+            }
+            return {
+                sessions: s.sessions.map((sess) =>
+                    sess.id === ref.sessionId
+                        ? {
+                              ...sess,
+                              updatedAt: Date.now(),
+                              history: sess.history.map((entry) =>
+                                  entry.id === ref.entryId
+                                      ? {
+                                            ...entry,
+                                            responses: entry.responses.map((r) =>
+                                                r.requestId === res.requestId
+                                                    ? { ...r, ...res }
+                                                    : r,
+                                            ),
+                                        }
+                                      : entry,
+                              ),
+                          }
+                        : sess,
+                ),
+                activeRequestIds: newActiveIds,
+            };
+        });
+    });
+
+    eventBus.on(EVENTS.STREAM_START, (payload) => {
+        const ref = requestEntryMap.get(payload.requestId);
+        if (!ref) return;
+        set((s) => ({
+            sessions: s.sessions.map((sess) =>
+                sess.id === ref.sessionId
+                    ? {
+                          ...sess,
+                          history: sess.history.map((entry) =>
+                              entry.id === ref.entryId
+                                  ? {
+                                        ...entry,
+                                        responses: entry.responses.map((r) =>
+                                            r.requestId === payload.requestId
+                                                ? { ...r, status: 'streaming' as const }
+                                                : r,
+                                        ),
+                                    }
+                                  : entry,
+                          ),
+                      }
+                    : sess,
+            ),
+        }));
+    });
+
+    eventBus.on(EVENTS.STREAM_CHUNK, (payload) => {
+        const ref = requestEntryMap.get(payload.requestId);
+        if (!ref) return;
+        set((s) => ({
+            sessions: s.sessions.map((sess) =>
+                sess.id === ref.sessionId
+                    ? {
+                          ...sess,
+                          history: sess.history.map((entry) =>
+                              entry.id === ref.entryId
+                                  ? {
+                                        ...entry,
+                                        responses: entry.responses.map((r) =>
+                                            r.requestId === payload.requestId
+                                                ? { ...r, content: r.content + payload.chunk }
+                                                : r,
+                                        ),
+                                    }
+                                  : entry,
+                          ),
+                      }
+                    : sess,
+            ),
+        }));
+    });
+
+    eventBus.on(EVENTS.STREAM_END, (payload) => {
+        if (!payload.requestId) return;
+        const ref = requestEntryMap.get(payload.requestId);
+        if (!ref) return;
+        set((s) => {
+            const newActiveIds = new Set(s.activeRequestIds);
+            newActiveIds.delete(payload.requestId);
+            return {
+                sessions: s.sessions.map((sess) =>
+                    sess.id === ref.sessionId
+                        ? {
+                              ...sess,
+                              history: sess.history.map((entry) =>
+                                  entry.id === ref.entryId
+                                      ? {
+                                            ...entry,
+                                            responses: entry.responses.map((r) =>
+                                                r.requestId === payload.requestId
+                                                    ? {
+                                                          ...r,
+                                                          content: payload.fullContent || r.content,
+                                                          latency: payload.latency || r.latency,
+                                                          tokens: payload.tokens ?? r.tokens,
+                                                          status: 'done' as const,
+                                                      }
+                                                    : r,
+                                            ),
+                                        }
+                                      : entry,
+                              ),
+                          }
+                        : sess,
+                ),
+                activeRequestIds: newActiveIds,
+            };
+        });
+    });
+
+    eventBus.on(EVENTS.STREAM_ERROR, (payload) => {
+        const ref = requestEntryMap.get(payload.requestId);
+        if (!ref) return;
+        set((s) => {
+            const newActiveIds = new Set(s.activeRequestIds);
+            newActiveIds.delete(payload.requestId);
+            return {
+                sessions: s.sessions.map((sess) =>
+                    sess.id === ref.sessionId
+                        ? {
+                              ...sess,
+                              history: sess.history.map((entry) =>
+                                  entry.id === ref.entryId
+                                      ? {
+                                            ...entry,
+                                            responses: entry.responses.map((r) =>
+                                                r.requestId === payload.requestId
+                                                    ? {
+                                                          ...r,
+                                                          content: '',
+                                                          error: payload.error,
+                                                          status: 'error' as const,
+                                                      }
+                                                    : r,
+                                            ),
+                                        }
+                                      : entry,
+                              ),
+                          }
+                        : sess,
+                ),
+                activeRequestIds: newActiveIds,
+            };
+        });
+    });
 
     return {
         sessions: [DEFAULT_SESSION],
@@ -288,6 +456,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                         options: { temperature, maxTokens },
                     });
                 });
+
+                // Track requestIds so response event subscriptions can find the entry
+                for (const resp of loadingResponses) {
+                    requestEntryMap.set(resp.requestId, { sessionId, entryId });
+                }
+
                 govOp.complete();
             } catch (e) {
                 requestIdsToTrack?.forEach((rid) => get().removeActiveRequestId(rid));
@@ -604,6 +778,16 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                         : x,
                 ),
             }));
+            const sStore = resolveSessionStore();
+            if (sStore) {
+                const session = get().sessions.find((s) => s.id === sessionId);
+                if (session)
+                    sStore
+                        .put({ ...session, currentProvider: provider, currentModel: model })
+                        .catch((e) => {
+                            console.error('[ChatStore] Failed to persist switchModel', e);
+                        });
+            }
             uas((prev) => [
                 ...prev,
                 {
@@ -631,6 +815,14 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     x.id === sessionId ? { ...x, currentKeyId: keyId, updatedAt: Date.now() } : x,
                 ),
             }));
+            const sStore2 = resolveSessionStore();
+            if (sStore2) {
+                const session = get().sessions.find((s) => s.id === sessionId);
+                if (session)
+                    sStore2.put({ ...session, currentKeyId: keyId }).catch((e) => {
+                        console.error('[ChatStore] Failed to persist switchKey', e);
+                    });
+            }
             const keyLabel = keyId?.slice(0, 8) ?? '';
             uas((prev) => [
                 ...prev,

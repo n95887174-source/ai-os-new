@@ -14,8 +14,12 @@ export interface FinalizerDeps {
     eventBus: IEventBus;
 }
 
+const ACTIVE_STATUSES = new Set(['active', 'deliberating', 'consensus', 'summarizing']);
+
 export function finalizeDebate(session: DebateSession, deps: FinalizerDeps): void {
-    session.status = 'completed';
+    if (ACTIVE_STATUSES.has(session.status)) {
+        session.status = 'completed';
+    }
     const metrics = computeGraphMetrics(session.arguments, session.strategy);
     if (metrics) session.graphMetrics = metrics;
     const activity = computeActivityMetrics(session.arguments, session.participants);

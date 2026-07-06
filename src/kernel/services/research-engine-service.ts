@@ -247,7 +247,7 @@ export class ResearchEngineService implements IResearchEngine {
             authors: s.authors && s.authors.length > 0 ? s.authors : ['Unknown'],
             year: s.year ?? new Date(s.timestamp).getFullYear(),
             source: s.sourceType,
-            citationsCount: s.citationCount ?? Math.floor(Math.random() * 50),
+            citationsCount: s.citationCount ?? 0,
             influenceScore:
                 s.relevanceScore *
                 (allClaims.filter((c) => c.sourceId === s.id).length /
@@ -276,7 +276,7 @@ export class ResearchEngineService implements IResearchEngine {
                 nodes.length > 0
                     ? nodes.reduce((s, n) => s + n.influenceScore, 0) / nodes.length
                     : 0,
-            hIndex: Math.floor(nodes.length / 2),
+            hIndex: 0,
         };
 
         this.citationGraphs.set(sessionId, citationGraph);
@@ -1034,6 +1034,9 @@ export class ResearchEngineService implements IResearchEngine {
         return claims;
     }
 
+    /** EXPERIMENTAL: Detects potential contradictions via high lexical overlap
+     *  (Jaccard > 0.6, < 0.95). This is a heuristic — real contradiction detection
+     *  requires semantic analysis. Results are directional hints, not verified claims. */
     private detectContradictions(claims: ResearchClaim[]): void {
         for (let i = 0; i < claims.length; i++) {
             for (let j = i + 1; j < claims.length; j++) {
@@ -1042,7 +1045,7 @@ export class ResearchEngineService implements IResearchEngine {
                 const overlap = [...wordsA].filter((w) => wordsB.has(w)).length;
                 const total = new Set([...wordsA, ...wordsB]).size;
                 const jaccard = total > 0 ? overlap / total : 0;
-                if (jaccard > 0.3 && jaccard < 0.8) {
+                if (jaccard > 0.6 && jaccard < 0.95) {
                     claims[i].contradictions.push(claims[j].id);
                     claims[j].contradictions.push(claims[i].id);
                 }

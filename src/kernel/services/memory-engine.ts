@@ -460,16 +460,39 @@ export class MemoryService implements IMemoryEngine {
     async updateMemory(id: string, content: string) {
         const entry = this.memories.find((m) => m.id === id);
         if (!entry) return;
-        const updated = { ...entry, content };
-        try {
-            await this.memoryRepo.save(updated);
-        } catch (e) {
-            LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', {
-                error: e,
-            });
-            return;
+        const source = entry.metadata.source ?? 'unknown';
+        const type = entry.metadata.type ?? 'generic';
+        const newId = await this.computeId(content, source, type);
+        if (newId === id) {
+            const updated = { ...entry, content };
+            try {
+                await this.memoryRepo.save(updated);
+            } catch (e) {
+                LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', {
+                    error: e,
+                });
+                return;
+            }
+            Object.assign(entry, updated);
+        } else {
+            const newEntry: MemoryEntry = {
+                ...entry,
+                id: newId,
+                content,
+                metadata: { ...entry.metadata, originalId: id },
+            } as MemoryEntry;
+            try {
+                await this.memoryRepo.delete(id);
+                await this.memoryRepo.save(newEntry);
+            } catch (e) {
+                LOGGER.error('MemoryEngine', 'Dexie update failed — in-memory unchanged', {
+                    error: e,
+                });
+                return;
+            }
+            const idx = this.memories.findIndex((m) => m.id === id);
+            if (idx !== -1) this.memories[idx] = newEntry;
         }
-        Object.assign(entry, updated);
         if (!this.worker) {
             await this.ensureWorker().catch((e) =>
                 LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
@@ -477,7 +500,16 @@ export class MemoryService implements IMemoryEngine {
         }
         if (this.worker)
             this.sendToWorker('remove', { id })
-                .then(() => this.sendToWorker('insert', { entry, generateEmbedding: false }))
+                .then(() => {
+                    const workerEntry: MemoryEntry =
+                        newId === id
+                            ? (entry as MemoryEntry)
+                            : ({ ...entry, id: newId, content } as MemoryEntry);
+                    return this.sendToWorker('insert', {
+                        entry: workerEntry,
+                        generateEmbedding: false,
+                    });
+                })
                 .catch((e) => LOGGER.warn('MemoryEngine', 'Worker update failed', { error: e }));
         this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     }
