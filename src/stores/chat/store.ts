@@ -650,24 +650,52 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             set((s) => ({
                 sessions: updateSessionInList(s.sessions, id, { isArchived: true }),
             }));
+            sessionManager.updateMeta(id, { isArchived: true }).catch((e) => {
+                console.error('[ChatStore] Failed to persist archive state', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to archive session',
+                    type: 'error',
+                });
+            });
         },
 
         unarchiveSession: (id) => {
             set((s) => ({
                 sessions: updateSessionInList(s.sessions, id, { isArchived: false }),
             }));
+            sessionManager.updateMeta(id, { isArchived: false }).catch((e) => {
+                console.error('[ChatStore] Failed to persist unarchive state', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to unarchive session',
+                    type: 'error',
+                });
+            });
         },
 
         tagSession: (id, tags) => {
             set((s) => ({
                 sessions: updateSessionInList(s.sessions, id, { tags }),
             }));
+            sessionManager.updateMeta(id, { tags }).catch((e) => {
+                console.error('[ChatStore] Failed to persist tags', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to save tags',
+                    type: 'error',
+                });
+            });
         },
 
         moveToFolder: (id, folder) => {
             set((s) => ({
                 sessions: updateSessionInList(s.sessions, id, { folder }),
             }));
+            sessionManager.updateMeta(id, { folder }).catch((e) => {
+                console.error('[ChatStore] Failed to persist folder', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to save folder',
+                    type: 'error',
+                });
+            });
         },
 
         pinSession: (id) => {

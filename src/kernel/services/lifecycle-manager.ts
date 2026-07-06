@@ -22,6 +22,8 @@ interface LifecycleEntry {
 export class LifecycleManager {
     private entries: LifecycleEntry[] = [];
     private statuses: InitStatus[] = [];
+    private _initializing = false;
+    private _shuttingDown = false;
 
     register(name: string, service: ILifecycle): void {
         if (this.entries.some((e) => e.name === name)) return;
@@ -29,12 +31,19 @@ export class LifecycleManager {
     }
 
     async initAll(): Promise<void> {
-        for (const entry of this.entries) {
-            await this.tryInit(entry.name, () => entry.service.init());
+        if (this._initializing) return;
+        this._initializing = true;
+        try {
+            for (const entry of this.entries) {
+                await this.tryInit(entry.name, () => entry.service.init());
+            }
+        } finally {
+            this._initializing = false;
         }
     }
 
     async startAll(): Promise<void> {
+        if (this._initializing || this._shuttingDown) return;
         let lastError: Error | undefined;
         for (const entry of this.entries) {
             if (!this.statuses.some((s) => s.name === entry.name && s.status === 'ok')) {
@@ -55,15 +64,31 @@ export class LifecycleManager {
     }
 
     async shutdown(): Promise<void> {
-        for (const entry of this.entries.slice().reverse()) {
-            try {
-                await entry.service.destroy();
-            } catch (e) {
-                LOGGER.error('LifecycleManager', `Error destroying ${entry.name}`, { error: e });
+        if (this._shuttingDown) return;
+        this._shuttingDown = true;
+        try {
+            for (const entry of this.entries.slice().reverse()) {
+                const status = this.statuses.find((s) => s.name === entry.name);
+                if (status && status.status !== 'ok') {
+                    LOGGER.warn(
+                        'LifecycleManager',
+                        `Skipping destroy() for ${entry.name} — init failed or was skipped`,
+                    );
+                    continue;
+                }
+                try {
+                    await entry.service.destroy();
+                } catch (e) {
+                    LOGGER.error('LifecycleManager', `Error destroying ${entry.name}`, {
+                        error: e,
+                    });
+                }
             }
+        } finally {
+            this.entries = [];
+            this.statuses = [];
+            this._shuttingDown = false;
         }
-        this.entries = [];
-        this.statuses = [];
     }
 
     async tryInit(name: string, fn: () => Promise<void> | void, retries = 3): Promise<boolean> {

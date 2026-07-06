@@ -532,6 +532,7 @@ export const SystemSnapshotSchema = z.object({
     traceId: z.string(),
     stepId: z.string(),
     timestamp: z.number(),
+    schemaVersion: z.number().default(0),
     label: z.string().optional(),
     tags: z.array(z.string()).optional(),
     runtime: RuntimeStateSchema,

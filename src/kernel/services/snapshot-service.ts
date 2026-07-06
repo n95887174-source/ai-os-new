@@ -19,11 +19,14 @@ export interface SystemSnapshot {
     traceId: string;
     stepId: string;
     timestamp: number;
+    schemaVersion: number;
     label?: string;
     tags?: string[];
     runtime: RuntimeState;
     metadata?: Record<string, unknown>;
 }
+
+const CURRENT_SCHEMA_VERSION = 1;
 
 export interface SnapshotDiff {
     id: string;
@@ -216,6 +219,7 @@ export class SnapshotService {
             traceId,
             stepId,
             timestamp: Date.now(),
+            schemaVersion: CURRENT_SCHEMA_VERSION,
             label,
             runtime,
         };
@@ -243,6 +247,19 @@ export class SnapshotService {
 
     restore(snapshot: SystemSnapshot): boolean {
         try {
+            if (snapshot.schemaVersion > CURRENT_SCHEMA_VERSION) {
+                LOGGER.error(
+                    'SnapshotService',
+                    `Cannot restore snapshot from future schema v${snapshot.schemaVersion} (current: v${CURRENT_SCHEMA_VERSION})`,
+                );
+                return false;
+            }
+            if (snapshot.schemaVersion !== CURRENT_SCHEMA_VERSION) {
+                LOGGER.warn(
+                    'SnapshotService',
+                    `Restoring snapshot with schema v${snapshot.schemaVersion} (current: v${CURRENT_SCHEMA_VERSION})`,
+                );
+            }
             this.deps.kernel.loadState(JSON.stringify({ state: snapshot.runtime.kernel }));
             if (snapshot.runtime.topology) {
                 this.deps.orchestrator.mount(snapshot.runtime.topology as ISTopology);

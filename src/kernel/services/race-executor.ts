@@ -90,7 +90,14 @@ export class RaceExecutor {
         let timeoutId: ReturnType<typeof setTimeout> = null as unknown as ReturnType<
             typeof setTimeout
         >;
+        let rejectTimeoutPromise: ((reason: unknown) => void) | undefined;
+        const onParentAbort = () => {
+            clearTimeout(timeoutId);
+            controllers.forEach((c) => c.abort());
+            rejectTimeoutPromise?.(new Error('Race aborted'));
+        };
         const timeoutPromise = new Promise<never>((_, reject) => {
+            rejectTimeoutPromise = reject;
             if (options?.signal?.aborted) {
                 reject(new Error('Aborted'));
                 return;
@@ -101,15 +108,7 @@ export class RaceExecutor {
                 reject(new Error(`Race timed out after ${timeout}ms`));
             }, timeout);
             if (options?.signal) {
-                options.signal.addEventListener(
-                    'abort',
-                    () => {
-                        clearTimeout(timeoutId);
-                        controllers.forEach((c) => c.abort());
-                        reject(new Error('Race aborted'));
-                    },
-                    { once: true },
-                );
+                options.signal.addEventListener('abort', onParentAbort, { once: true });
             }
         });
 
@@ -143,6 +142,10 @@ export class RaceExecutor {
             };
         } finally {
             clearTimeout(timeoutId);
+            // H-26: Remove the parent abort listener to prevent leak
+            if (options?.signal) {
+                options.signal.removeEventListener('abort', onParentAbort);
+            }
             // In the timeout/no-winner path, abort ALL controllers
             if (winnerIndex === -1) {
                 controllers.forEach((c) => c.abort());

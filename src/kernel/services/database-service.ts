@@ -782,11 +782,14 @@ export class DatabaseService {
     }
 
     async setKv<T>(id: string, value: T): Promise<void> {
-        const existing = await getDexieDb().keyValue.get(id);
-        await getDexieDb().keyValue.put({
-            id,
-            value,
-            createdAt: existing?.createdAt ?? Date.now(),
+        const dexie = getDexieDb();
+        await dexie.transaction('rw', dexie.keyValue, async () => {
+            const existing = await dexie.keyValue.get(id);
+            await dexie.keyValue.put({
+                id,
+                value,
+                createdAt: existing?.createdAt ?? Date.now(),
+            });
         });
     }
 
