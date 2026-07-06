@@ -305,6 +305,20 @@ export class TraceService {
     destroy() {
         this._initialized = false;
         this.unsubs.forEach((u) => u());
+        this.activeTraces.clear();
+    }
+
+    sweepStaleTraces(maxAgeMs = 5 * 60 * 1000): void {
+        const now = Date.now();
+        for (const [id, trace] of this.activeTraces) {
+            if (now - (trace.startTime || 0) > maxAgeMs) {
+                LOGGER.warn('TraceService', 'Sweeping orphaned active trace', {
+                    traceId: id,
+                    ageMs: now - (trace.startTime || 0),
+                });
+                this.activeTraces.delete(id);
+            }
+        }
     }
 
     getTraces(): ExecutionTrace[] {

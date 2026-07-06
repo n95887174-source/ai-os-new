@@ -21,6 +21,9 @@ export class RouterLatencyMonitor {
     constructor(private deps: LatencyMonitorDeps) {}
 
     startMonitoring(config: RouterConfig): void {
+        if (this.monitorInterval || this.latencyUnsub) {
+            this.stopMonitoring();
+        }
         this.latencyUnsub = this.deps.eventBus.onSafe<{ provider: string }>(
             EVENTS.KEY_LATENCY_BURST,
             () => {

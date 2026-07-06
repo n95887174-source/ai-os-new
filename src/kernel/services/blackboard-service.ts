@@ -17,6 +17,7 @@ export interface BlackboardServiceDeps {
 }
 
 export class BlackboardService {
+    private static MAX_ENTRIES = 5000;
     private deps: BlackboardServiceDeps;
     private entries: Map<string, BlackboardEntry> = new Map();
     private subscribers: Array<(entry: BlackboardEntry) => void> = [];
@@ -51,6 +52,10 @@ export class BlackboardService {
             visibility: opts?.visibility || 'public',
         };
         this.entries.set(key, entry);
+        if (this.entries.size > BlackboardService.MAX_ENTRIES) {
+            const oldest = this.entries.keys().next().value;
+            if (oldest !== undefined) this.entries.delete(oldest);
+        }
         this.deps.eventBus.emit(EVENTS.AGENT_BLACKBOARD_UPDATED, { agentId: agentId, key, value });
         this.subscribers.forEach((cb) => cb(entry));
     }

@@ -16,6 +16,7 @@ function getSpeechRecognition(): { new (): SpeechRecognition } | null {
 }
 
 export class GeminiLiveService implements IGeminiLiveService {
+    private static MAX_MESSAGES = 100;
     private session: GeminiLiveSession = {
         id: genId(),
         status: 'idle',
@@ -48,6 +49,13 @@ export class GeminiLiveService implements IGeminiLiveService {
         if (!googleGenAIService.isConfigured) {
             this.session = { ...this.session, status: 'error', error: 'Set Google API key first' };
             return;
+        }
+        if (this.recognition) {
+            LOGGER.warn(
+                'GeminiLive',
+                'start() called while already running — stopping previous session',
+            );
+            this.stop();
         }
         this.aborted = false;
         this.session = { id: genId(), status: 'listening', messages: [], startedAt: Date.now() };
@@ -107,10 +115,11 @@ export class GeminiLiveService implements IGeminiLiveService {
     }
 
     private async handleUserInput(text: string): Promise<void> {
-        const msgs = [
-            ...this.session.messages,
-            { role: 'user' as const, text, timestamp: Date.now() },
-        ];
+        const recentMessages =
+            this.session.messages.length >= GeminiLiveService.MAX_MESSAGES
+                ? this.session.messages.slice(-GeminiLiveService.MAX_MESSAGES + 2)
+                : this.session.messages;
+        const msgs = [...recentMessages, { role: 'user' as const, text, timestamp: Date.now() }];
         this.session = { ...this.session, messages: msgs, status: 'thinking' };
 
         if (this.synth?.speaking) {

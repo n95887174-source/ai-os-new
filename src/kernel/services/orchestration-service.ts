@@ -99,6 +99,11 @@ export class OrchestrationService {
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
         this.queue.clear();
+        this.rateLimitTimestamps.clear();
+        this.rateLimitTokenRecords.clear();
+        this.rateLimitCostRecords.clear();
+        this.lifecycleStates.clear();
+        this.disabledNodes.clear();
     }
 
     setNodeDisabled(nodeId: string, disabled: boolean) {

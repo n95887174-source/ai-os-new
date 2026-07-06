@@ -96,11 +96,23 @@ export class ReconnectionService {
 
         state.timer = setTimeout(async () => {
             if (state.destroyed) return;
+            const reconnectTimeout = setTimeout(() => {
+                LOGGER.warn(
+                    'ReconnectionService',
+                    `onReconnect timed out for stream ${state.config.streamId}`,
+                );
+                if (this.streams.get(state.config.streamId) === state) {
+                    this.streams.delete(state.config.streamId);
+                }
+                state.config.onGiveUp(state.config.streamId, state.config.provider);
+            }, 30000);
             try {
                 const success = await state.config.onReconnect(
                     state.config.streamId,
                     state.config.provider,
                 );
+                clearTimeout(reconnectTimeout);
+                if (state.destroyed) return;
                 if (success) {
                     LOGGER.info(
                         'ReconnectionService',
@@ -114,6 +126,7 @@ export class ReconnectionService {
                     this.scheduleRetry(state);
                 }
             } catch (e) {
+                clearTimeout(reconnectTimeout);
                 LOGGER.warn(
                     'ReconnectionService',
                     `Reconnect attempt ${state.attempt} failed for stream ${state.config.streamId}`,
