@@ -72,11 +72,12 @@ export class MemoryRepository {
         return entry;
     }
 
-    /** Store a new memory entry */
+    /** Store a new memory entry with deterministic ID */
     async store(entry: Omit<MemoryEntry, 'id'>): Promise<MemoryEntry> {
+        const id = await this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
         const newEntry: MemoryEntry = {
             ...entry,
-            id: crypto.randomUUID(),
+            id,
         } as MemoryEntry;
 
         // Dexie first (source of truth)
@@ -91,7 +92,7 @@ export class MemoryRepository {
 
     /** Update or insert a memory entry with deterministic ID */
     async upsert(entry: Omit<MemoryEntry, 'id'>): Promise<MemoryEntry> {
-        const id = this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
+        const id = await this.computeId(entry.content, entry.metadata.source, entry.metadata.type);
         const existed = this.cache.has(id);
         // H4: Wrap in Dexie transaction to prevent TOCTOU race
         const dexie = this.db.db;
@@ -140,13 +141,18 @@ export class MemoryRepository {
         await this.enforceLimit();
     }
 
-    /** Store multiple entries in batch */
+    /** Store multiple entries in batch (atomic via Dexie transaction) */
     async storeBatch(entries: Omit<MemoryEntry, 'id'>[]): Promise<MemoryEntry[]> {
-        const newEntries: MemoryEntry[] = entries.map((e) => ({
-            ...e,
-            id: crypto.randomUUID(),
-        })) as MemoryEntry[];
-        await Promise.all(newEntries.map((e) => this.db.memories.put(e)));
+        const dexie = this.db.db;
+        const newEntries = (await Promise.all(
+            entries.map(async (e) => ({
+                ...e,
+                id: await this.computeId(e.content, e.metadata.source, e.metadata.type),
+            })),
+        )) as MemoryEntry[];
+        await dexie.transaction('rw', dexie.memories, async () => {
+            await dexie.memories.bulkPut(newEntries);
+        });
         for (const entry of newEntries) {
             this.cache.set(entry.id, entry);
         }
@@ -219,26 +225,16 @@ export class MemoryRepository {
         }
     }
 
-    // C-9: Make computeId truly deterministic — no crypto.randomUUID().
-    // The hash of (content, source, type) produces the same ID for the same triple,
-    // so upsert() can correctly detect existing entries instead of always inserting.
-    // Uses two independent FNV-1a hashes (64 bits total) to reduce collision
-    // probability below 10^-9 at the 1000-entry MAX_ENTRIES limit.
-    private computeId(content: string, source: string, type: string): string {
-        const seed = `${content}|${source}|${type}`;
-        let hash1 = 0x811c9dc5;
-        let hash2 = 0x6b8b4567;
-        for (let i = 0; i < seed.length; i++) {
-            const c = seed.charCodeAt(i);
-            hash1 ^= c;
-            hash1 = (hash1 * 0x01000193) >>> 0;
-            hash2 ^= c;
-            hash2 = (hash2 * 0x0163a1cd) >>> 0;
-        }
-        hash1 ^= seed.length;
-        hash1 = (hash1 * 0x85ebca6b) >>> 0;
-        hash2 ^= seed.length;
-        hash2 = (hash2 * 0x85ebca6b) >>> 0;
-        return `mem-${seed.length.toString(16).padStart(4, '0')}-${hash2.toString(16).padStart(8, '0')}${hash1.toString(16).padStart(8, '0')}`;
+    // H-16: Align with MemoryEngine.computeId — use SHA-256, same `mem-${12hex}` format
+    private async computeId(content: string, source: string, type: string): Promise<string> {
+        const raw = `${source}:${type}:${content}`;
+        const encoder = new TextEncoder();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(raw));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')
+            .slice(0, 12);
+        return `mem-${hashHex}`;
     }
 }

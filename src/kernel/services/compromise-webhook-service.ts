@@ -9,6 +9,16 @@ import type {
 
 const LOGGER = rootLogger.child('CompromiseWebhook');
 
+// H-11: Warn at startup if webhook secret is unconfigured
+void import('./config-registry').then(({ CONFIG }) => {
+    if (!CONFIG.security?.webhookSecret) {
+        LOGGER.warn(
+            'CompromiseWebhook',
+            'Webhook secret not configured — compromise detection is DISABLED. Set CONFIG.security.webhookSecret to enable.',
+        );
+    }
+});
+
 export interface CompromiseWebhookServiceDeps {
     eventBus: { emit: (event: string, data?: unknown) => void };
     keyService: { compromiseByFingerprint: (keyIdOrLabel: string, source: string) => boolean };

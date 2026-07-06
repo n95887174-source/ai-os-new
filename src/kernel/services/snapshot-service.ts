@@ -3,6 +3,7 @@ import type { SystemState } from '../types/metrics-types';
 import type { ISTopology } from '../contracts/topology';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { SystemSnapshotSchema } from '../types/schema-types';
 
 const LOGGER = rootLogger.child('SnapshotService');
 
@@ -407,8 +408,15 @@ export class SnapshotService {
             const imported = ((data as Record<string, unknown>)?.snapshots as unknown[]) || [];
             let count = 0;
             for (const snap of imported) {
-                if (!this.snapshots.some((s) => s.id === (snap as SystemSnapshot).id)) {
-                    this.snapshots.push(snap as SystemSnapshot);
+                const parsed = SystemSnapshotSchema.safeParse(snap);
+                if (!parsed.success) {
+                    LOGGER.warn('SnapshotService', 'Skipping invalid snapshot during import', {
+                        error: parsed.error,
+                    });
+                    continue;
+                }
+                if (!this.snapshots.some((s) => s.id === parsed.data.id)) {
+                    this.snapshots.push(parsed.data as unknown as SystemSnapshot);
                     count++;
                 }
             }

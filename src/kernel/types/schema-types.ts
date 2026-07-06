@@ -519,3 +519,21 @@ export const DebateVerdictRecordSchema = z.object({
     roundsTotal: z.number().int().min(0),
     totalTokens: z.number().min(0),
 });
+
+export const RuntimeStateSchema = z.object({
+    kernel: z.record(z.string(), z.unknown()),
+    topology: z.unknown(),
+    disabledNodes: z.array(z.string()),
+    memoryCount: z.number(),
+});
+
+export const SystemSnapshotSchema = z.object({
+    id: z.string(),
+    traceId: z.string(),
+    stepId: z.string(),
+    timestamp: z.number(),
+    label: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    runtime: RuntimeStateSchema,
+    metadata: z.record(z.string(), z.unknown()).optional(),
+});
