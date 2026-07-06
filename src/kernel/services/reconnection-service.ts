@@ -106,7 +106,10 @@ export class ReconnectionService {
                         'ReconnectionService',
                         `Reconnected stream ${state.config.streamId} on attempt ${state.attempt}`,
                     );
-                    this.streams.delete(state.config.streamId);
+                    // C-25: only delete if this state is still the current one for this streamId
+                    if (this.streams.get(state.config.streamId) === state) {
+                        this.streams.delete(state.config.streamId);
+                    }
                 } else {
                     this.scheduleRetry(state);
                 }

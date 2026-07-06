@@ -538,8 +538,9 @@ export class KeyService implements IKeyRotationManager {
         this.registry.pushHistory(keyId, action, detail);
     }
 
-    updateKey(id: string, data: Partial<ApiKey>) {
+    async updateKey(id: string, data: Partial<ApiKey>): Promise<void> {
         this.registry.updateKey(id, data);
+        await this.registry.saveKeys();
         this.notify();
     }
 
@@ -1115,24 +1116,26 @@ export class KeyService implements IKeyRotationManager {
         try {
             const { getDexieDb } = await import('../database-service');
             const db = getDexieDb();
-            await Promise.allSettled([
-                db.keyValue.clear(),
-                db.apiKeys.clear(),
-                db.memories.clear(),
-                db.sessions.clear(),
-                db.roles.clear(),
-                db.cognitiveTraces.clear(),
-                db.traces.clear(),
-                db.skills.clear(),
-                db.connectors.clear(),
-                db.debateSessions.clear(),
-                db.debateVerdicts.clear(),
-                db.debateTimeline.clear(),
-                db.debateOverrides.clear(),
-                db.sessionLinks.clear(),
-                db.eventLog.clear(),
-                db.notes.clear(),
-            ]);
+            await db.transaction('rw', db.tables, async () => {
+                await Promise.all([
+                    db.keyValue.clear(),
+                    db.apiKeys.clear(),
+                    db.memories.clear(),
+                    db.sessions.clear(),
+                    db.roles.clear(),
+                    db.cognitiveTraces.clear(),
+                    db.traces.clear(),
+                    db.skills.clear(),
+                    db.connectors.clear(),
+                    db.debateSessions.clear(),
+                    db.debateVerdicts.clear(),
+                    db.debateTimeline.clear(),
+                    db.debateOverrides.clear(),
+                    db.sessionLinks.clear(),
+                    db.eventLog.clear(),
+                    db.notes.clear(),
+                ]);
+            });
         } catch (e) {
             rootLogger
                 ?.child('KeyService')
@@ -1157,6 +1160,7 @@ export class KeyService implements IKeyRotationManager {
                 previousState,
             });
         });
+        void this.registry.saveKeys();
         this.lifecycle.onError(keyId);
     }
 

@@ -66,6 +66,7 @@ export class SnapshotService {
     private unsubs: Array<() => void> = [];
     private autoCaptureInterval: ReturnType<typeof setInterval> | null = null;
     private deps: SnapshotServiceDeps;
+    private _pendingSave: Promise<void> = Promise.resolve();
 
     constructor(deps: SnapshotServiceDeps) {
         this.deps = deps;
@@ -82,7 +83,7 @@ export class SnapshotService {
 
     async destroy() {
         this._initialized = false;
-        await this.save();
+        await this.flush();
         this.unsubs.forEach((u) => u());
         if (this.autoCaptureInterval) {
             clearInterval(this.autoCaptureInterval);
@@ -93,9 +94,13 @@ export class SnapshotService {
         this.unsubs.push(
             this.deps.eventBus.onSafe<{ traceId: string; nodeId: string }>(
                 EVENTS.COGNITIVE_STEP_COMPLETED,
-                (d) => {
+                async (d) => {
                     if (d.traceId && d.nodeId) {
-                        this.capture(d.traceId, d.nodeId);
+                        try {
+                            await this.capture(d.traceId, d.nodeId);
+                        } catch (e) {
+                            LOGGER.warn('SnapshotService', 'Auto-capture failed', { error: e });
+                        }
                     }
                 },
             ),
@@ -104,8 +109,16 @@ export class SnapshotService {
 
     startAutoCapture(intervalMs = 60000) {
         this.stopAutoCapture();
-        this.autoCaptureInterval = setInterval(() => {
-            this.capture('auto', 'auto', `Auto-snapshot ${new Date().toLocaleTimeString()}`);
+        this.autoCaptureInterval = setInterval(async () => {
+            try {
+                await this.capture(
+                    'auto',
+                    'auto',
+                    `Auto-snapshot ${new Date().toLocaleTimeString()}`,
+                );
+            } catch (e) {
+                LOGGER.warn('SnapshotService', 'Auto-capture failed', { error: e });
+            }
         }, intervalMs);
     }
 
@@ -146,7 +159,7 @@ export class SnapshotService {
         }
     }
 
-    capture(traceId: string, stepId: string, label?: string): SystemSnapshot {
+    async capture(traceId: string, stepId: string, label?: string): Promise<SystemSnapshot> {
         const top = this.deps.orchestrator.getActiveTopology();
         const disabledNodes =
             top?.nodes
@@ -173,9 +186,14 @@ export class SnapshotService {
             this.snapshots = this.snapshots.slice(-MAX_SNAPSHOTS);
         }
 
-        void this.save();
+        this._pendingSave = this.save();
+        await this._pendingSave;
         this.deps.eventBus.emit(EVENTS.SNAPSHOT_CAPTURED, snapshot);
         return snapshot;
+    }
+
+    async flush(): Promise<void> {
+        await this._pendingSave;
     }
 
     restore(snapshot: SystemSnapshot): boolean {
@@ -350,7 +368,7 @@ export class SnapshotService {
         }
     }
 
-    createSnapshot(label: string): SystemSnapshot {
+    async createSnapshot(label: string): Promise<SystemSnapshot> {
         return this.capture('admin', 'backup', label);
     }
 }

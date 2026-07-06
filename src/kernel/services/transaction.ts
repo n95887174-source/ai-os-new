@@ -15,6 +15,7 @@ export class TransactionContext implements ITransaction {
     private _committed = false;
     private _rolledBack = false;
     private _committing = false;
+    private _commitPromise: Promise<void> | null = null;
 
     readonly source: string;
 
@@ -49,7 +50,15 @@ export class TransactionContext implements ITransaction {
 
     async commit(eventBus?: { emit: (event: string, data?: unknown) => void }): Promise<void> {
         if (this._committed || this._rolledBack) return;
+        if (this._commitPromise) return this._commitPromise;
         this._committing = true;
+        this._commitPromise = this._doCommit(eventBus);
+        return this._commitPromise;
+    }
+
+    private async _doCommit(eventBus?: {
+        emit: (event: string, data?: unknown) => void;
+    }): Promise<void> {
         const completed: number[] = [];
         try {
             for (let i = 0; i < this.pendingPersists.length; i++) {
@@ -80,6 +89,7 @@ export class TransactionContext implements ITransaction {
             throw e;
         } finally {
             this._committing = false;
+            this._commitPromise = null;
         }
         this._committed = true;
         for (const { event, data } of this.pendingEmits) {
@@ -91,6 +101,7 @@ export class TransactionContext implements ITransaction {
     async rollback(eventBus?: { emit: (event: string, data?: unknown) => void }): Promise<void> {
         if (this._committed || this._rolledBack) return;
         this._rolledBack = true;
+        this._commitPromise = null;
 
         const emitCount = this.pendingEmits.length;
         const persistCount = this.pendingPersists.length;

@@ -397,9 +397,7 @@ export class MemoryService implements IMemoryEngine {
             await Promise.all(newEntries.map((e) => this.memoryRepo.save(e)));
             this.memories = [...newEntries, ...this.memories];
             if (this.memories.length > MAX_MEMORY_ENTRIES) {
-                const excess = this.memories.slice(MAX_MEMORY_ENTRIES);
                 this.memories = this.memories.slice(0, MAX_MEMORY_ENTRIES);
-                await Promise.all(excess.map((e) => this.memoryRepo.delete(e.id)));
             }
             this.ensureWorker()
                 .then(() => {

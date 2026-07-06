@@ -334,16 +334,17 @@ export class PriorityQueueDecorator extends BaseDecorator {
                 reject(new Error('Aborted'));
                 return;
             }
-            const timer = setTimeout(resolve, ms);
+            let onAbort: (() => void) | null = null;
+            const timer = setTimeout(() => {
+                if (onAbort && signal) signal.removeEventListener('abort', onAbort);
+                resolve();
+            }, ms);
             if (signal) {
-                signal.addEventListener(
-                    'abort',
-                    () => {
-                        clearTimeout(timer);
-                        reject(new Error('Aborted'));
-                    },
-                    { once: true },
-                );
+                onAbort = () => {
+                    clearTimeout(timer);
+                    reject(new Error('Aborted'));
+                };
+                signal.addEventListener('abort', onAbort, { once: true });
             }
         });
     }
@@ -355,7 +356,13 @@ export class PriorityQueueDecorator extends BaseDecorator {
 
     flushAll(): void {
         const error = new Error('Queue flushed');
-        for (const item of this.sendQueue.splice(0)) item.reject(error);
-        for (const item of this.streamQueue.splice(0)) item.reject(error);
+        for (const item of this.sendQueue.splice(0)) {
+            item.cleanup?.();
+            item.reject(error);
+        }
+        for (const item of this.streamQueue.splice(0)) {
+            item.cleanup?.();
+            item.reject(error);
+        }
     }
 }

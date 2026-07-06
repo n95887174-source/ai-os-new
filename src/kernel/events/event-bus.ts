@@ -300,8 +300,8 @@ export class EventBus implements IEventBus {
                 return;
             }
             this.hotEmitDepth++;
-            const handlers = this.listenerMap.get(event);
-            const globalHandlers = this.listenerMap.get('*');
+            const handlers = this.listenerMap.get(event)?.slice();
+            const globalHandlers = this.listenerMap.get('*')?.slice();
             try {
                 if (handlers) {
                     for (const cb of handlers) {
@@ -373,8 +373,8 @@ export class EventBus implements IEventBus {
         }
         this.emitDepth++;
 
-        const handlers = this.listenerMap.get(event);
-        const globalHandlers = this.listenerMap.get('*');
+        const handlers = this.listenerMap.get(event)?.slice();
+        const globalHandlers = this.listenerMap.get('*')?.slice();
         const subscriberCount =
             (handlers?.length ?? 0) + (globalHandlers && event !== '*' ? globalHandlers.length : 0);
 

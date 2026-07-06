@@ -821,6 +821,7 @@ export class KeyRegistry {
         }
         if (count > 0) {
             this.setKeysInternal('importKeys', newKeys);
+            await this.saveKeys();
         }
         return count;
     }

@@ -444,14 +444,8 @@ export class ChatExecutor {
                             if (fallback) {
                                 excludedProviders.add(fallback.provider);
                                 currentProvider = fallback.provider;
-                                const session = this.deps.providerRuntime?.createSession(
-                                    currentProvider,
-                                    currentProvider,
-                                    effectiveModel,
-                                );
-                                if (session) {
-                                    session.activate();
-                                }
+                                // C-23: no session creation in fallback path —
+                                // session is created only on actual success (line ~359)
                                 continue;
                             }
                         }

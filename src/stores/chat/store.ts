@@ -247,7 +247,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                             sess.id === sessionId
                                 ? {
                                       ...sess,
-                                      history: [...sess.history, newEntry].slice(-MAX_HISTORY),
+                                      history: [...sess.history, newEntry],
                                       updatedAt: Date.now(),
                                   }
                                 : sess,
@@ -376,9 +376,29 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                         : e,
                 ),
             );
+            const sStore = resolveSessionStore();
+            if (sStore) {
+                const sessionId = get().activeSessionId;
+                const session = get().sessions.find((s) => s.id === sessionId);
+                if (session)
+                    sStore.put(session).catch((e) => {
+                        console.error('[ChatStore] Failed to persist editEntry', e);
+                    });
+            }
         },
 
-        clearHistory: () => uas(() => []),
+        clearHistory: () => {
+            uas(() => []);
+            const sStore = resolveSessionStore();
+            if (sStore) {
+                const sessionId = get().activeSessionId;
+                const session = get().sessions.find((s) => s.id === sessionId);
+                if (session)
+                    sStore.put(session).catch((e) => {
+                        console.error('[ChatStore] Failed to persist clearHistory', e);
+                    });
+            }
+        },
 
         createSession: async (title = 'New Chat') => {
             const id = await sessionManager

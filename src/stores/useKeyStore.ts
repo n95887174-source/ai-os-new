@@ -274,6 +274,16 @@ function ensureInitialized(
         };
     }
 
+    if (import.meta.hot) {
+        import.meta.hot.dispose(() => {
+            liveSub?.unsubscribe();
+            liveSub = null;
+            for (const u of unsubs) u();
+            unsubs.length = 0;
+            initialized = false;
+        });
+    }
+
     const latestKeys = groupManager?.getAllKeys?.() || [];
     if (latestKeys.length > 0) {
         set(() => ({

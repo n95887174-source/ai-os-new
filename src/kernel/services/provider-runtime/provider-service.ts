@@ -144,10 +144,12 @@ export class ProviderRuntimeService {
         const session = this.sessions.get(sessionId);
         if (!session) return undefined;
 
+        // C-24: only release instance if session was active/pending (not already completed/failed/cancelled)
+        const wasActive = session.status === 'active' || session.status === 'pending';
         session.cancel();
 
         const instance = this.instances.get(session.instanceId);
-        if (instance) {
+        if (instance && wasActive) {
             instance.release();
         }
 

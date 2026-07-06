@@ -21,6 +21,7 @@ import { rootLogger } from '../logger-service';
 import { CheckpointStore, type Checkpoint, type CheckpointStoreConfig } from './checkpoint-store';
 import type { KvRepository } from '../../dal/repository-types';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
+import { ssrSafeStorage } from '../../../kernel/utils/ssr-storage';
 
 const LOGGER = rootLogger.child('EventRecorder');
 
@@ -40,6 +41,8 @@ export class EventRecorder {
     private static readonly MAX_INFLIGHT_CHECKSUMS = 50;
     private pendingChecksums = new Map<number, () => void>();
     private checksumSeq = 0;
+    private _pendingPersistData: { events: RecordedEvent[]; sequence: number } | null = null;
+    private unsubCallbacks: Array<() => void> = [];
 
     readonly checkpoints: CheckpointStore;
     private restoreHandler: ((checkpoint: Checkpoint) => boolean) | null = null;
@@ -99,8 +102,65 @@ export class EventRecorder {
         ) => () => void,
     ): Promise<void> {
         if (this.unsub) return;
-        if (this.store) await this.restore();
+        if (this.store) {
+            await this.restore();
+            // C-20: recover events lost from unflushed queueMicrotask on previous session
+            const walKey = 'event-recorder:wal';
+            try {
+                const wal = ssrSafeStorage.getItem(walKey);
+                if (wal) {
+                    ssrSafeStorage.removeItem(walKey);
+                    const recovered = safeJsonParse(wal) as {
+                        events: RecordedEvent[];
+                        sequence: number;
+                    } | null;
+                    if (
+                        recovered &&
+                        Array.isArray(recovered.events) &&
+                        recovered.events.length > 0
+                    ) {
+                        const before = this.events.length;
+                        for (const ev of recovered.events) {
+                            if (!this.events.some((e) => e.sequence === ev.sequence)) {
+                                this.events.push(ev);
+                            }
+                        }
+                        this.sequence = Math.max(this.sequence, recovered.sequence);
+                        this.events.sort((a, b) => a.sequence - b.sequence);
+                        LOGGER.info(
+                            'EventRecorder',
+                            `Recovered ${this.events.length - before} events from WAL`,
+                        );
+                        await this.store.save({
+                            events: [...this.events],
+                            sequence: this.sequence,
+                        });
+                    }
+                }
+            } catch (e) {
+                LOGGER.warn('EventRecorder', 'WAL recovery failed', { error: e });
+            }
+        }
         await this.checkpoints.init();
+
+        // C-20: beforeunload WAL flush — synchronously persist pending events to localStorage
+        const walKey = 'event-recorder:wal';
+        const beforeUnloadHandler = () => {
+            if (this._pendingPersistData) {
+                try {
+                    ssrSafeStorage.setItem(walKey, JSON.stringify(this._pendingPersistData));
+                } catch {
+                    // localStorage full — non-critical
+                }
+            }
+        };
+        if (typeof window !== 'undefined') {
+            window.addEventListener('beforeunload', beforeUnloadHandler);
+            this.unsubCallbacks.push(() =>
+                window.removeEventListener('beforeunload', beforeUnloadHandler),
+            );
+        }
+
         this.unsub = subscribeAll(async (payload) => {
             if (!this.config.enabled) return;
             if (payload.event === 'cognitive:trace:updated') return;
@@ -324,10 +384,14 @@ export class EventRecorder {
     private schedulePersist(): void {
         if (!this.store || this.persistQueued) return;
         this.persistQueued = true;
+        this._pendingPersistData = { events: [...this.events], sequence: this.sequence };
         queueMicrotask(() => {
             this.persistQueued = false;
+            const data = this._pendingPersistData;
+            this._pendingPersistData = null;
+            if (!data) return;
             this.store
-                ?.save({ events: [...this.events], sequence: this.sequence })
+                ?.save(data)
                 .catch((e) => LOGGER.warn('EventRecorder', 'Failed to persist log', { error: e }));
         });
     }
