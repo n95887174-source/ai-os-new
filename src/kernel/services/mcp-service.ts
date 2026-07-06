@@ -51,6 +51,8 @@ export class MCPService {
     private servers: MCPServerConfig[] = [];
     private rpcId = 0;
     private connectionRetries = new Map<string, number>();
+    private static readonly MAX_RETRIES = 5;
+    private static readonly BASE_BACKOFF_MS = 2000;
     private deps: MCPServiceDeps;
 
     constructor(deps: MCPServiceDeps) {
@@ -173,6 +175,16 @@ export class MCPService {
         const server = this.servers.find((s) => s.id === serverId);
         if (!server) throw new Error(`Server ${serverId} not found`);
 
+        const retries = this.connectionRetries.get(serverId) || 0;
+        if (retries >= MCPService.MAX_RETRIES) {
+            throw new Error(`MCP ${server.name} max retries (${MCPService.MAX_RETRIES}) exceeded`);
+        }
+        if (retries > 0) {
+            const backoff = MCPService.BASE_BACKOFF_MS * Math.pow(2, retries - 1);
+            const jitter = Math.random() * backoff * 0.1;
+            await new Promise((r) => setTimeout(r, backoff + jitter));
+        }
+
         try {
             server.status = 'connected';
             server.error = undefined;
@@ -191,7 +203,6 @@ export class MCPService {
         } catch (err) {
             server.status = 'error';
             server.error = err instanceof Error ? err.message : String(err);
-            const retries = this.connectionRetries.get(serverId) || 0;
             this.connectionRetries.set(serverId, retries + 1);
             this.save();
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
@@ -304,6 +315,20 @@ export class MCPService {
     ): Promise<unknown> {
         const server = this.servers.find((s) => s.id === serverId);
         if (!server) throw new Error(`Server ${serverId} not found`);
+        const tools = await this.listTools(serverId);
+        const tool = tools.find((t) => t.name === toolName);
+        if (tool?.inputSchema && args) {
+            if (tool.inputSchema.required) {
+                const required = tool.inputSchema.required as string[];
+                for (const field of required) {
+                    if (!(field in args)) {
+                        throw new Error(
+                            `Missing required argument "${field}" for tool "${toolName}"`,
+                        );
+                    }
+                }
+            }
+        }
         return await this.rpc(server, 'tools/call', { name: toolName, arguments: args });
     }
 

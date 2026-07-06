@@ -144,6 +144,7 @@ export class AgentJournalService {
         }
         this.unsubs = [];
         this.cache.clear();
+        this.initialized = false;
     }
 
     async record(input: Omit<JournalEntry, 'id' | 'timestamp'>): Promise<JournalEntry> {
@@ -153,6 +154,13 @@ export class AgentJournalService {
             timestamp: Date.now(),
         };
         this.cache.set(entry.id, entry);
+        if (this.cache.size > 1000) {
+            const entries = Array.from(this.cache.entries()).sort(
+                ([, a], [, b]) => a.timestamp - b.timestamp,
+            );
+            const toRemove = entries.slice(0, Math.min(100, entries.length - 800));
+            for (const [id] of toRemove) this.cache.delete(id);
+        }
         try {
             await this.storage.save(entry);
         } catch (err) {

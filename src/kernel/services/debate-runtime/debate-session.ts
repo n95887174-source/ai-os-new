@@ -10,6 +10,7 @@ import type {
 import type { ITransaction } from '../../contracts/transaction';
 import { DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
 import { rootLogger } from '../logger-service';
+import { EVENTS } from '../../events/event-registry';
 
 const LOGGER = rootLogger.child('DebateSession');
 
@@ -23,8 +24,8 @@ const VALID_TRANSITIONS: Record<DebatePhase, DebatePhase[]> = {
     consensus: ['summarizing', 'deliberating', 'failed', 'cancelled'],
     summarizing: ['completed', 'failed', 'cancelled'],
     completed: [],
-    failed: ['created'],
-    cancelled: ['created'],
+    failed: [],
+    cancelled: [],
 };
 
 export class DebateSession implements IDebateSession {
@@ -126,7 +127,7 @@ export class DebateSession implements IDebateSession {
             LOGGER.warn('DebateSession', msg);
             if (tx && 'deferEmit' in tx) {
                 (tx as unknown as { deferEmit: (e: string, d: unknown) => void }).deferEmit(
-                    'debate:transition:invalid',
+                    EVENTS.DEBATE_TRANSITION_INVALID,
                     { from: this._phase, to, sessionId: this.id },
                 );
             }

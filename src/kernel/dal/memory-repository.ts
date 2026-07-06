@@ -127,7 +127,10 @@ export class MemoryRepository {
 
     /** Partially update a memory entry */
     async update(id: string, changes: Partial<MemoryEntry>): Promise<void> {
-        await this.db.memories.update(id, changes as Partial<MemoryEntry>);
+        const modified = await this.db.memories.update(id, changes as Partial<MemoryEntry>);
+        if (modified === 0) {
+            LOGGER.warn('MemoryRepository', 'update: id not found', { id });
+        }
         if (this.cache.has(id)) {
             const existing = this.cache.get(id)!;
             this.cache.set(id, { ...existing, ...changes });

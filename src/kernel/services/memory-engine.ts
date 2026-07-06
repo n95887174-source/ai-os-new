@@ -176,7 +176,10 @@ export class MemoryService implements IMemoryEngine {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await this.memoryRepo.update(id, { vector } as any);
             const mem = this.memories.find((m) => m.id === id);
-            if (mem) mem.vector = vector;
+            if (mem) {
+                const idx = this.memories.indexOf(mem);
+                if (idx >= 0) this.memories[idx] = { ...mem, vector };
+            }
         } catch (e) {
             LOGGER.warn('MemoryEngine', 'Failed to persist embedding vector', { error: e });
         }
@@ -676,6 +679,7 @@ export class MemoryService implements IMemoryEngine {
 
     async clear() {
         this.memories = [];
+        this.semanticReady = false;
         await this.memoryRepo.clear();
         if (this.worker)
             this.sendToWorker('init', { memories: [] }).catch((e) =>

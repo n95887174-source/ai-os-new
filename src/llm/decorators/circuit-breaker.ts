@@ -118,7 +118,9 @@ export class CircuitBreakerDecorator extends BaseDecorator {
     peekState(apiKey?: string): CircuitState {
         if (!apiKey) return this.hasAnyOpenCircuit() ? 'open' : 'closed';
         const key = this.getKeyId(apiKey);
-        return this.states.get(key)?.state ?? 'closed';
+        if (!this.states.has(key)) return 'closed';
+        // Use updateAndGetState to auto-transition open→half-open when timeout has expired
+        return this.updateAndGetState(key);
     }
 
     getState(apiKey?: string): CircuitState {

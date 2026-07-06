@@ -6,7 +6,6 @@ import type { DebateEmotion } from '../kernel/contracts/debate-emotion';
 const MAX_AGENT_EVENTS = 500;
 const MAX_ROUND_EVENTS = 200;
 const METRICS_INTERVAL_MS = 30_000;
-
 export interface DebateAgentEvent {
     sessionId: string;
     agentId: string;
@@ -43,6 +42,8 @@ export interface DebateLiveState {
         }
     >;
     judgeWeights: { pro: number; con: number; neutral: number };
+    agentTimeoutSeconds: number;
+    setAgentTimeout: (seconds: number) => void;
     addAgentEvent: (event: DebateAgentEvent) => void;
     addRoundEvent: (event: DebateRoundEvent) => void;
     clearSession: (sessionId: string) => void;
@@ -130,7 +131,10 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                         computeEmotion(ek, 'thinking', s.agentEvents),
                     );
                     const cd = new Map(s.agentCountdowns);
-                    cd.set(ek, { secondsLeft: 30, secondsTotal: 30 });
+                    cd.set(ek, {
+                        secondsLeft: get().agentTimeoutSeconds,
+                        secondsTotal: get().agentTimeoutSeconds,
+                    });
                     return {
                         agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
                         currentThinking: m,
@@ -373,6 +377,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         agentAddressing: new Map(),
         memoryBubbles: new Map(),
         judgeWeights: { pro: 0, con: 0, neutral: 0 },
+        agentTimeoutSeconds: 30,
+        setAgentTimeout: (seconds) => set({ agentTimeoutSeconds: seconds }),
         addAgentEvent: (event) => {
             set((s) => ({ agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS) }));
         },

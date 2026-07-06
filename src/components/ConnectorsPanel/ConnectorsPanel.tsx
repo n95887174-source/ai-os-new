@@ -1,7 +1,7 @@
 import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X, Plus, Globe } from 'lucide-react';
+import { AlertTriangle, X, Plus, Globe, Info } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { database as databaseService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -45,31 +45,20 @@ const ConnectorsPanel: React.FC = () => {
                 const allConns = (await databaseService.getAllConnectors()) as Connector[];
                 if (allConns.length === 0) {
                     try {
-                        const saved = (await databaseService.getAllConnectors()) as Connector[];
-                        if (saved.length === 0) {
-                            try {
-                                const res = await fetch('/connectors-defaults.json');
-                                if (res.ok) {
-                                    const parsed: Connector[] =
-                                        safeJsonParse(await res.text()) ?? [];
-                                    if (Array.isArray(parsed) && parsed.length) {
-                                        await databaseService.bulkPutConnectors(parsed);
-                                        setConnectors(parsed);
-                                        return;
-                                    }
-                                }
-                            } catch {
-                                /* ignore */
+                        const res = await fetch('/connectors-defaults.json');
+                        if (res.ok) {
+                            const parsed: Connector[] = safeJsonParse(await res.text()) ?? [];
+                            if (Array.isArray(parsed) && parsed.length) {
+                                await databaseService.bulkPutConnectors(parsed);
+                                setConnectors(parsed);
+                                return;
                             }
-                            await databaseService.bulkPutConnectors(DEFAULT_CONNECTORS);
-                            setConnectors(DEFAULT_CONNECTORS);
-                        } else {
-                            setConnectors(saved);
                         }
                     } catch {
-                        await databaseService.bulkPutConnectors(DEFAULT_CONNECTORS);
-                        setConnectors(DEFAULT_CONNECTORS);
+                        /* ignore */
                     }
+                    await databaseService.bulkPutConnectors(DEFAULT_CONNECTORS);
+                    setConnectors(DEFAULT_CONNECTORS);
                 } else {
                     setConnectors(allConns);
                 }
@@ -152,7 +141,7 @@ const ConnectorsPanel: React.FC = () => {
             });
             setConfirmDisconnect(null);
             eventBus.emit(EVENTS.NOTIFICATION, {
-                message: `OAuth token for ${id} revoked.`,
+                message: `Disconnected from ${id}.`,
                 type: 'info',
             });
         },
@@ -222,6 +211,25 @@ const ConnectorsPanel: React.FC = () => {
                     />
                 </div>
             )}
+
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: 8,
+                    background: 'rgba(59,130,246,0.1)',
+                    border: '1px solid rgba(59,130,246,0.2)',
+                    color: '#93c5fd',
+                    fontSize: '0.8rem',
+                }}
+            >
+                <Info size={14} />
+                <span>
+                    Connectors panel — preview. Actual OAuth flows coming in a future update.
+                </span>
+            </div>
 
             <ConnectorControls
                 searchQuery={searchQuery}

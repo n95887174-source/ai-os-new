@@ -21,6 +21,7 @@ export class ExecutionQueue {
         background: [],
     };
     private inFlight = 0;
+    private _draining = false;
     private maxConcurrency: number;
     private schedulerTimer: ReturnType<typeof setTimeout> | null = null;
     private processor: (task: QueueTask) => Promise<void>;
@@ -50,37 +51,43 @@ export class ExecutionQueue {
     }
 
     private drain() {
-        while (this.inFlight < this.maxConcurrency) {
-            const task = this.dequeueHighest();
-            if (!task) break;
-            this.inFlight++;
-            this.processor(task)
-                .then(() => {
-                    this.totalProcessed++;
-                })
-                .catch((err) => {
-                    this.totalErrors++;
-                    LOGGER.error('ExecutionQueue', 'Task failed', {
-                        taskId: task.id,
-                        priority: task.priority,
-                        age: Date.now() - task.enqueuedAt,
-                        error: err,
+        if (this._draining) return;
+        this._draining = true;
+        try {
+            while (this.inFlight < this.maxConcurrency) {
+                const task = this.dequeueHighest();
+                if (!task) break;
+                this.inFlight++;
+                this.processor(task)
+                    .then(() => {
+                        this.totalProcessed++;
+                    })
+                    .catch((err) => {
+                        this.totalErrors++;
+                        LOGGER.error('ExecutionQueue', 'Task failed', {
+                            taskId: task.id,
+                            priority: task.priority,
+                            age: Date.now() - task.enqueuedAt,
+                            error: err,
+                        });
+                        EventBus.emit(EVENTS.QUEUE_TASK_FAILED, {
+                            taskId: task.id,
+                            priority: task.priority,
+                            error: String(err),
+                            timestamp: Date.now(),
+                        });
+                    })
+                    .finally(() => {
+                        this.inFlight--;
+                        try {
+                            this.drain();
+                        } catch (e) {
+                            LOGGER.error('ExecutionQueue', 'drain failed', { error: e });
+                        }
                     });
-                    EventBus.emit(EVENTS.QUEUE_TASK_FAILED, {
-                        taskId: task.id,
-                        priority: task.priority,
-                        error: String(err),
-                        timestamp: Date.now(),
-                    });
-                })
-                .finally(() => {
-                    this.inFlight--;
-                    try {
-                        this.drain();
-                    } catch (e) {
-                        LOGGER.error('ExecutionQueue', 'drain failed', { error: e });
-                    }
-                });
+            }
+        } finally {
+            this._draining = false;
         }
     }
 

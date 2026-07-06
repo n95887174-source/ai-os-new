@@ -475,6 +475,10 @@ export const EVENT_REGISTRY = {
         'debate:runtime:agent:phase:changed',
         z.object({ sessionId: z.string(), agentId: z.string(), from: z.string(), to: z.string() }),
     ),
+    DEBATE_TRANSITION_INVALID: event(
+        'debate:transition:invalid',
+        z.object({ from: z.string(), to: z.string(), sessionId: z.string() }),
+    ),
     // ── Observability Events ──────────────────────────────────────────────
     TIMELINE_EVENT_ADDED: event(
         'observability:timeline:event:added',
@@ -835,7 +839,6 @@ export const EVENT_REGISTRY = {
 
     // ── Achievement / Agent Delegation ────────────────────────────────────
     AGENT_WIZARD_CONFIG_GENERATED: event('agent:wizard:config-generated', z.unknown()),
-    AGENT_TASK_COMPLETED: event('agent:task:completed', z.unknown()),
     AGENT_JOURNAL_ADDED: event('agent:journal:added', z.unknown()),
     AGENT_JOURNAL_REMOVED: event('agent:journal:removed', z.unknown()),
     AGENT_JOURNAL_CLEARED: event('agent:journal:cleared', z.unknown()),

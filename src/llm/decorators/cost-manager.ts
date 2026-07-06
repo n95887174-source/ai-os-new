@@ -49,10 +49,8 @@ const FALLBACK_PRICING: CostManagerPricing = {
 
 export class CostManagerDecorator extends BaseDecorator {
     private records: CostRecord[] = [];
-    private cumulativeCost = 0;
     private config: CostManagerConfig;
     private budgetExceeded = false;
-    private static readonly MAX_OUTPUT_ESTIMATE = 4096;
 
     constructor(
         inner: import('../core/types').LLMProviderAdapter,
@@ -171,8 +169,7 @@ export class CostManagerDecorator extends BaseDecorator {
 
     resetBudget(): void {
         this.budgetExceeded = false;
-        this.records = this.records.slice(-100); // Keep last 100 records as buffer
-        this.cumulativeCost = 0;
+        this.records = []; // Clear records so budget check doesn't immediately re-trip
     }
 
     clearRecords(): void {
@@ -197,12 +194,6 @@ export class CostManagerDecorator extends BaseDecorator {
             throw new LLMError(`Budget exceeded for ${this.id}. Request blocked.`, this.id, 429);
 
         const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
-        // H-04: Pre-reserve estimated max cost BEFORE await to prevent concurrent request races.
-        // Two concurrent calls could both pass checkBudget() before either calls record().
-        const estimatedOutput =
-            options?.maxOutputTokens ?? CostManagerDecorator.MAX_OUTPUT_ESTIMATE;
-        const estimatedCost = this.calculateCost(resolvedModel, inputTokens, estimatedOutput);
-        this.cumulativeCost += estimatedCost;
 
         try {
             const res = await this.inner.sendMessage(
@@ -214,7 +205,6 @@ export class CostManagerDecorator extends BaseDecorator {
             );
             const outputTokens = Math.max(0, (res.tokens ?? 0) - inputTokens);
             const actualCost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
-            this.cumulativeCost += actualCost - estimatedCost;
             this.records.push({
                 timestamp: Date.now(),
                 model: resolvedModel,
@@ -236,7 +226,6 @@ export class CostManagerDecorator extends BaseDecorator {
             this.checkBudget();
             return res;
         } catch (e) {
-            this.cumulativeCost -= estimatedCost;
             throw e;
         }
     }
@@ -260,11 +249,6 @@ export class CostManagerDecorator extends BaseDecorator {
             throw new LLMError(`Budget exceeded for ${this.id}. Request blocked.`, this.id, 429);
 
         const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
-        // H-04: Pre-reserve estimated max cost BEFORE await to prevent concurrent request races.
-        const estimatedOutput =
-            options?.maxOutputTokens ?? CostManagerDecorator.MAX_OUTPUT_ESTIMATE;
-        const estimatedCost = this.calculateCost(resolvedModel, inputTokens, estimatedOutput);
-        this.cumulativeCost += estimatedCost;
 
         let outputTokens = 0;
         let finalMeta: Record<string, unknown> | undefined;
@@ -295,7 +279,6 @@ export class CostManagerDecorator extends BaseDecorator {
                 outputTokens;
             const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
             const actualCost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
-            this.cumulativeCost += actualCost - estimatedCost;
             this.records.push({
                 timestamp: Date.now(),
                 model: resolvedModel,
@@ -316,7 +299,6 @@ export class CostManagerDecorator extends BaseDecorator {
                 );
             this.checkBudget();
         } catch (e) {
-            this.cumulativeCost -= estimatedCost;
             throw e;
         }
     }

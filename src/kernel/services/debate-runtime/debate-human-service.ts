@@ -69,6 +69,21 @@ export class DebateHumanService implements IDebateHumanService {
         void persistActiveSession(this.debateStore, session);
     }
 
+    removeHumanVote(
+        session: DebateSession | null,
+        round: number,
+        voter: string,
+        votedAgentId: string,
+    ): void {
+        if (!session?.roundVotes) return;
+        const list = [...(session.roundVotes[round] || [])];
+        const idx = list.findIndex((v) => v.voter === voter && v.votedAgentId === votedAgentId);
+        if (idx >= 0) list.splice(idx, 1);
+        session.roundVotes[round] = list;
+        this.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+        void persistActiveSession(this.debateStore, session);
+    }
+
     getHumanVotes(session: DebateSession | null): HumanVote[] {
         if (!session?.roundVotes) return [];
         return Object.values(session.roundVotes).flat();

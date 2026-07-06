@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useVisibilityInterval } from '../../utils/visibility-interval';
 import {
     BookOpen,
     GitBranch,
@@ -209,7 +210,6 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
     });
 
     const engineRef = useRef<IResearchEngine>(researchEngine);
-    const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const refresh = useCallback(() => {
         setSessions(engineRef.current.getAllSessions());
@@ -217,11 +217,8 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
 
     useEffect(() => {
         refresh();
-        refreshRef.current = setInterval(refresh, 3000);
-        return () => {
-            if (refreshRef.current) clearInterval(refreshRef.current);
-        };
     }, [refresh]);
+    useVisibilityInterval(refresh, 3000);
 
     const selectedSession = sessions.find((s) => s.id === selectedSessionId);
     const allSourcesCount = selectedSession

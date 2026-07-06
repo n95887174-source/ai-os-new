@@ -32,6 +32,9 @@ const STUDENT_ARCHITECTURES = [
     { id: 'qwen-0.5b', name: 'Qwen 0.5B', params: '0.5B' },
 ];
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class DistillationService implements IDistillationService {
     private jobs: DistillationJob[] = [];
     private timers = new Map<string, ReturnType<typeof setInterval>>();

@@ -47,4 +47,7 @@ export const FALLBACK_LOGGER: ILogger = {
     },
     clear(): void {},
     setTraceContext(_tc?: ITraceContext): void {},
+    exportLogs(): string {
+        return '';
+    },
 };

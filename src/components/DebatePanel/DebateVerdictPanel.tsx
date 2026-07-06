@@ -193,7 +193,7 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({
                     <div
                         style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}
                     >
-                        {Math.round(verdict.confidence * 100)}%
+                        {Math.round((verdict.confidence ?? 0) * 100)}%
                     </div>
                 </div>
             </div>
@@ -284,7 +284,7 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({
                     >
                         {verdict.keyArguments.slice(0, 5).map((arg, _i) => (
                             <div
-                                key={`${arg.agentName}-${arg.stance}`}
+                                key={`${arg.agentName}-${arg.stance}-${_i}`}
                                 style={{
                                     padding: '0.5rem 0.75rem',
                                     borderRadius: 8,

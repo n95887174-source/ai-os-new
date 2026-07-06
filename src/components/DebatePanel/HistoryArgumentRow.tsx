@@ -67,7 +67,7 @@ const HistoryArgumentRow: React.FC<HistoryArgumentRowProps> = ({ arg }) => (
                 </span>
                 <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Round {arg.round}</span>
                 <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
-                    {Math.round(arg.confidence * 100)}%
+                    {Math.round((arg.confidence ?? 0) * 100)}%
                 </span>
                 {arg.provider && (
                     <span style={{ fontSize: '0.62rem', color: '#475569' }}>

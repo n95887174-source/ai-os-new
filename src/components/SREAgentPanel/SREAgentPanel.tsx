@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Bot, TrendingUp, Shield } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
+import { usePolling } from '../Common/usePolling';
 import { t } from '../../i18n/translations';
 import { emptyStateCenter, emptyStateTitle } from '../../styles/common';
 import { advisorService } from '../../kernel/instances';
@@ -85,7 +86,6 @@ const SREAgentPanel: React.FC = () => {
         const unsub1 = eventBus.on(EVENTS.ADVISOR_SUGGESTION, refreshData);
         const unsub2 = eventBus.on(EVENTS.ADVISOR_SUGGESTION_EXECUTED, refreshData);
         const unsub3 = eventBus.on(EVENTS.ADVISOR_SUGGESTION_DISMISSED, refreshData);
-        const interval = setInterval(refreshData, 5000);
         tryRefresh();
 
         return () => {
@@ -93,9 +93,11 @@ const SREAgentPanel: React.FC = () => {
             unsub1();
             unsub2();
             unsub3();
-            clearInterval(interval);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refreshData]);
+    // C-95: usePolling gates on document.hidden
+    usePolling(refreshData, 5000);
 
     const handleExecute = useCallback((id: string) => {
         setExecutingId(id);

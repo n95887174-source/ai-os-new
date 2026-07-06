@@ -9,6 +9,17 @@ import { logDexieIdentityWithCount, verifyDexieInstance } from '../dexie-identit
 import { isBootstrapPhase, getBootstrapSnapshot } from '../../bootstrap-state';
 import { rootLogger } from '../logger-service';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
+import { z } from 'zod';
+
+const ImportKeySchema = z.object({
+    id: z.string().min(1),
+    provider: z.string().min(1),
+    key: z.string().min(1),
+    label: z.string().min(1),
+    isEncrypted: z.boolean().optional(),
+    stats: z.record(z.string(), z.unknown()).optional(),
+    history: z.array(z.record(z.string(), z.unknown())).optional(),
+});
 
 const LOGGER = rootLogger.child('KeyRegistry');
 
@@ -237,10 +248,7 @@ export class KeyRegistry {
                     // ── STAGE: normalize (map) ──────────────────────────────
                     const mapped: ApiKey[] = snapshot.map((k: ApiKey) => {
                         // Diagnostic: log first key structure
-                        if (snapshot.indexOf(k) === 0) {
-                            console.log('[KEY_REGISTRY] First key structure (full):', k);
-                            console.log('[KEY_REGISTRY] First key keys:', Object.keys(k));
-                        }
+                        // Diagnostic removed — use traceKeyDrop below
                         const stats = k.stats || this.initStats();
                         if (!stats.extended) stats.extended = this.initExtendedStats();
                         return {
@@ -334,10 +342,7 @@ export class KeyRegistry {
             // ── STAGE: map (normalize stats) ────────────────────────────
             const loaded: ApiKey[] = dexieKeys.map((k) => {
                 // Diagnostic: log first key structure for non-bootstrap
-                if (dexieKeys.indexOf(k) === 0) {
-                    console.log('[KEY_REGISTRY] Normal load first key (full):', k);
-                    console.log('[KEY_REGISTRY] Normal load first key keys:', Object.keys(k));
-                }
+                // Diagnostic removed
                 const stats = k.stats || this.initStats();
                 if (!stats.extended) stats.extended = this.initExtendedStats();
                 return {
@@ -792,18 +797,19 @@ export class KeyRegistry {
     async importKeys(jsonData: string): Promise<number> {
         const result = safeJsonParse(jsonData);
         if (!result || !Array.isArray(result)) throw new Error('Invalid JSON data');
-        const imported: unknown[] = result as unknown[];
         let count = 0;
         const now = Date.now();
         const newKeys = [...this.keys];
-        for (const item of imported) {
-            if (typeof item !== 'object' || item === null) continue;
-            const id = (item as Record<string, unknown>).id;
-            const provider = (item as Record<string, unknown>).provider;
-            const label = (item as Record<string, unknown>).label;
-            if (typeof id !== 'string' || typeof provider !== 'string' || typeof label !== 'string')
+        for (const item of result) {
+            const parsed = ImportKeySchema.safeParse(item);
+            if (!parsed.success) {
+                LOGGER.warn('KeyRegistry', 'importKeys: skipping invalid entry', {
+                    error: parsed.error?.message ?? 'unknown',
+                });
                 continue;
-            // C-90: validate provider is known
+            }
+            const { id, provider, key, label, isEncrypted, stats, history } = parsed.data;
+            const normalizedProvider = provider.toLowerCase();
             const VALID_PROVIDERS = [
                 'groq',
                 'gemini',
@@ -815,7 +821,6 @@ export class KeyRegistry {
                 'cerebras',
                 'cloudflare',
             ];
-            const normalizedProvider = provider.toLowerCase();
             if (!VALID_PROVIDERS.includes(normalizedProvider)) {
                 LOGGER.warn('KeyRegistry', `importKeys: skipping unknown provider "${provider}"`, {
                     id,
@@ -824,29 +829,16 @@ export class KeyRegistry {
             }
             const exists = newKeys.some((k) => k.id === id);
             if (!exists) {
-                const rawKey = ((item as Record<string, unknown>).key as string) || '';
-                // C-90: validate key is not empty
-                if (!rawKey.trim()) {
-                    LOGGER.warn('KeyRegistry', `importKeys: skipping empty key for "${provider}"`, {
-                        id,
-                    });
-                    continue;
-                }
-                const rawHistory =
-                    ((item as Record<string, unknown>).history as Array<unknown>) || [];
-                const cappedHistory = rawHistory.slice(-100);
+                const cappedHistory = (history ?? []).slice(-100) as unknown as KeyHistoryEntry[];
                 newKeys.push({
-                    id: id as string,
+                    id,
                     provider: normalizedProvider,
-                    label: label as string,
-                    key: rawKey,
-                    isEncrypted:
-                        ((item as Record<string, unknown>).isEncrypted as boolean) ?? false,
-                    stats:
-                        ((item as Record<string, unknown>).stats as Record<string, unknown>) ||
-                        this.initStats(),
+                    label,
+                    key,
+                    isEncrypted: isEncrypted ?? false,
+                    stats: (stats as ApiKey['stats']) ?? this.initStats(),
                     history: [
-                        ...(cappedHistory as KeyHistoryEntry[]),
+                        ...cappedHistory,
                         {
                             id: crypto.randomUUID(),
                             timestamp: now,

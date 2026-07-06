@@ -157,6 +157,9 @@ const MOCK_PERSONAS: PersonaListing[] = [
     },
 ];
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class PersonaMarketplaceService implements IPersonaMarketplaceService {
     private listings: PersonaListing[] = MOCK_PERSONAS.map((p) => ({ ...p }));
 

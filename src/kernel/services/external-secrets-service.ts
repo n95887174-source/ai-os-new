@@ -99,7 +99,9 @@ export class ExternalSecretsService {
         const store = this.backends.get(this.activeBackend);
         if (!store) return null;
 
+        let threw = false;
         let value = await store.get(ref).catch((e) => {
+            threw = true;
             LOGGER.warn('ExternalSecretsService', 'Active backend get failed:', { error: e });
             this.deps.eventBus.emit(EVENTS.SECRETS_LOOKUP_FAILED, {
                 backend: this.activeBackend,
@@ -108,7 +110,9 @@ export class ExternalSecretsService {
             });
             return null;
         });
-        if (value == null && this.activeBackend !== 'local') {
+        // Only fallback to local when active backend is unreachable (threw),
+        // not when the key genuinely doesn't exist (returns null)
+        if (value == null && threw && this.activeBackend !== 'local') {
             const local = this.backends.get('local');
             if (local) {
                 value = await local.get(ref).catch((e) => {

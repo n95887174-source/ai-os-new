@@ -393,7 +393,9 @@ export class CacheDecorator extends BaseDecorator {
 
         if (chunks.length > 0) {
             const content = chunks.join('');
-            const response: ProviderResponse = { content, tokens: 0, latency: 0 };
+            const latency = Date.now() - now;
+            const tokens = content.split(/\s+/).filter(Boolean).length;
+            const response: ProviderResponse = { content, tokens, latency };
             const entry: {
                 response: ProviderResponse;
                 timestamp: number;

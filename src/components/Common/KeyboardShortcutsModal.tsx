@@ -1,35 +1,139 @@
 import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Zap } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface ShortcutEntry {
     keys: string;
-    label: string;
+    labelKey: string;
     category: string;
+    categoryKey: string;
     icon?: React.ReactNode;
 }
 
 const SHORTCUTS: ShortcutEntry[] = [
-    { keys: 'Ctrl+K / ⌘K', label: 'Command palette', category: 'Global', icon: <Zap size={14} /> },
-    { keys: '?', label: 'Toggle this legend', category: 'Global' },
-    { keys: 'Escape', label: 'Cancel / Close panel', category: 'Global' },
-    { keys: 'Ctrl+,', label: 'Open Settings', category: 'Global' },
-    { keys: 'Enter', label: 'Send message', category: 'Chat', icon: <Send size={14} /> },
-    { keys: 'Ctrl+Shift+N', label: 'New chat session', category: 'Chat' },
-    { keys: 'Ctrl+Shift+F', label: 'Search messages', category: 'Chat' },
-    { keys: 'Ctrl+Shift+E', label: 'Export chat', category: 'Chat' },
-    { keys: 'Ctrl+Shift+D', label: 'Start debate', category: 'Debate' },
-    { keys: 'Ctrl+Shift+P', label: 'Pause / Resume debate', category: 'Debate' },
-    { keys: 'Ctrl+Shift+S', label: 'Save debate snapshot', category: 'Debate' },
-    { keys: 'Ctrl+Shift+H', label: 'Toggle health panel', category: 'Providers' },
-    { keys: 'Ctrl+Shift+K', label: 'Toggle key manager', category: 'Providers' },
-    { keys: 'Ctrl+Shift+T', label: 'Open traces panel', category: 'Diagnostics' },
-    { keys: 'Ctrl+Shift+L', label: 'Open logs panel', category: 'Diagnostics' },
-    { keys: 'Ctrl+Shift+M', label: 'Open memory panel', category: 'Knowledge' },
-    { keys: 'Ctrl+Shift+R', label: 'Open routing trace', category: 'Diagnostics' },
-    { keys: 'Ctrl+Shift+W', label: 'Toggle workspace explorer', category: 'Tools' },
-    { keys: 'Ctrl+Shift+C', label: 'Open cache panel', category: 'Tools' },
-    { keys: 'Ctrl+Shift+B', label: 'Toggle sidebar', category: 'Global' },
+    {
+        keys: 'Ctrl+K / ⌘K',
+        labelKey: 'shortcuts.command_palette',
+        category: 'Global',
+        categoryKey: 'shortcuts.category_global',
+        icon: <Zap size={14} />,
+    },
+    {
+        keys: '?',
+        labelKey: 'shortcuts.toggle_legend',
+        category: 'Global',
+        categoryKey: 'shortcuts.category_global',
+    },
+    {
+        keys: 'Escape',
+        labelKey: 'shortcuts.cancel_close',
+        category: 'Global',
+        categoryKey: 'shortcuts.category_global',
+    },
+    {
+        keys: 'Ctrl+,',
+        labelKey: 'shortcuts.open_settings',
+        category: 'Global',
+        categoryKey: 'shortcuts.category_global',
+    },
+    {
+        keys: 'Enter',
+        labelKey: 'shortcuts.send_message',
+        category: 'Chat',
+        categoryKey: 'shortcuts.category_chat',
+        icon: <Send size={14} />,
+    },
+    {
+        keys: 'Ctrl+Shift+N',
+        labelKey: 'shortcuts.new_chat',
+        category: 'Chat',
+        categoryKey: 'shortcuts.category_chat',
+    },
+    {
+        keys: 'Ctrl+Shift+F',
+        labelKey: 'shortcuts.search_messages',
+        category: 'Chat',
+        categoryKey: 'shortcuts.category_chat',
+    },
+    {
+        keys: 'Ctrl+Shift+E',
+        labelKey: 'shortcuts.export_chat',
+        category: 'Chat',
+        categoryKey: 'shortcuts.category_chat',
+    },
+    {
+        keys: 'Ctrl+Shift+D',
+        labelKey: 'shortcuts.start_debate',
+        category: 'Debate',
+        categoryKey: 'shortcuts.category_debate',
+    },
+    {
+        keys: 'Ctrl+Shift+P',
+        labelKey: 'shortcuts.pause_resume',
+        category: 'Debate',
+        categoryKey: 'shortcuts.category_debate',
+    },
+    {
+        keys: 'Ctrl+Shift+S',
+        labelKey: 'shortcuts.save_snapshot',
+        category: 'Debate',
+        categoryKey: 'shortcuts.category_debate',
+    },
+    {
+        keys: 'Ctrl+Shift+H',
+        labelKey: 'shortcuts.toggle_health',
+        category: 'Providers',
+        categoryKey: 'shortcuts.category_providers',
+    },
+    {
+        keys: 'Ctrl+Shift+K',
+        labelKey: 'shortcuts.toggle_keys',
+        category: 'Providers',
+        categoryKey: 'shortcuts.category_providers',
+    },
+    {
+        keys: 'Ctrl+Shift+T',
+        labelKey: 'shortcuts.open_traces',
+        category: 'Diagnostics',
+        categoryKey: 'shortcuts.category_diagnostics',
+    },
+    {
+        keys: 'Ctrl+Shift+L',
+        labelKey: 'shortcuts.open_logs',
+        category: 'Diagnostics',
+        categoryKey: 'shortcuts.category_diagnostics',
+    },
+    {
+        keys: 'Ctrl+Shift+M',
+        labelKey: 'shortcuts.open_memory',
+        category: 'Knowledge',
+        categoryKey: 'shortcuts.category_knowledge',
+    },
+    {
+        keys: 'Ctrl+Shift+R',
+        labelKey: 'shortcuts.open_routing',
+        category: 'Diagnostics',
+        categoryKey: 'shortcuts.category_diagnostics',
+    },
+    {
+        keys: 'Ctrl+Shift+W',
+        labelKey: 'shortcuts.toggle_workspace',
+        category: 'Tools',
+        categoryKey: 'shortcuts.category_tools',
+    },
+    {
+        keys: 'Ctrl+Shift+C',
+        labelKey: 'shortcuts.open_cache',
+        category: 'Tools',
+        categoryKey: 'shortcuts.category_tools',
+    },
+    {
+        keys: 'Ctrl+Shift+B',
+        labelKey: 'shortcuts.toggle_sidebar',
+        category: 'Global',
+        categoryKey: 'shortcuts.category_global',
+    },
 ];
 
 interface KeyboardShortcutsModalProps {
@@ -41,6 +145,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
     isOpen,
     onClose,
 }) => {
+    const { t } = useTranslation();
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -69,7 +174,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        zIndex: 9998,
+                        zIndex: 10000,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -106,7 +211,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                             }}
                         >
                             <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
-                                Keyboard Shortcuts
+                                {t('shortcuts.title')}
                             </h2>
                             <button
                                 onClick={onClose}
@@ -130,80 +235,86 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                                 gap: '1.25rem',
                             }}
                         >
-                            {categories.map((cat) => (
-                                <div key={cat}>
-                                    <div
-                                        style={{
-                                            fontSize: '0.65rem',
-                                            fontWeight: 800,
-                                            color: '#64748b',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.08em',
-                                            marginBottom: '0.5rem',
-                                        }}
-                                    >
-                                        {cat}
-                                    </div>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '0.35rem',
-                                        }}
-                                    >
-                                        {SHORTCUTS.filter((s) => s.category === cat).map((s) => (
-                                            <div
-                                                key={s.keys}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    padding: '0.4rem 0.5rem',
-                                                    borderRadius: 8,
-                                                    background: 'rgba(255,255,255,0.02)',
-                                                }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: 8,
-                                                        fontSize: '0.85rem',
-                                                        color: '#e2e8f0',
-                                                    }}
-                                                >
-                                                    {s.icon && (
-                                                        <span
+                            {categories.map((cat) => {
+                                const first = SHORTCUTS.find((s) => s.category === cat);
+                                return (
+                                    <div key={cat}>
+                                        <div
+                                            style={{
+                                                fontSize: '0.65rem',
+                                                fontWeight: 800,
+                                                color: '#64748b',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.08em',
+                                                marginBottom: '0.5rem',
+                                            }}
+                                        >
+                                            {t(first?.categoryKey || cat)}
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.35rem',
+                                            }}
+                                        >
+                                            {SHORTCUTS.filter((s) => s.category === cat).map(
+                                                (s) => (
+                                                    <div
+                                                        key={s.keys}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            padding: '0.4rem 0.5rem',
+                                                            borderRadius: 8,
+                                                            background: 'rgba(255,255,255,0.02)',
+                                                        }}
+                                                    >
+                                                        <div
                                                             style={{
-                                                                color: '#64748b',
                                                                 display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 8,
+                                                                fontSize: '0.85rem',
+                                                                color: '#e2e8f0',
                                                             }}
                                                         >
-                                                            {s.icon}
-                                                        </span>
-                                                    )}
-                                                    <span>{s.label}</span>
-                                                </div>
-                                                <kbd
-                                                    style={{
-                                                        padding: '0.2rem 0.5rem',
-                                                        background: 'rgba(255,255,255,0.06)',
-                                                        borderRadius: 4,
-                                                        fontSize: '0.7rem',
-                                                        fontFamily: 'monospace',
-                                                        color: '#a855f7',
-                                                        border: '1px solid rgba(168,85,247,0.2)',
-                                                        fontWeight: 700,
-                                                        whiteSpace: 'nowrap',
-                                                    }}
-                                                >
-                                                    {s.keys}
-                                                </kbd>
-                                            </div>
-                                        ))}
+                                                            {s.icon && (
+                                                                <span
+                                                                    style={{
+                                                                        color: '#64748b',
+                                                                        display: 'flex',
+                                                                    }}
+                                                                >
+                                                                    {s.icon}
+                                                                </span>
+                                                            )}
+                                                            <span>{t(s.labelKey)}</span>
+                                                        </div>
+                                                        <kbd
+                                                            style={{
+                                                                padding: '0.2rem 0.5rem',
+                                                                background:
+                                                                    'rgba(255,255,255,0.06)',
+                                                                borderRadius: 4,
+                                                                fontSize: '0.7rem',
+                                                                fontFamily: 'monospace',
+                                                                color: '#a855f7',
+                                                                border: '1px solid rgba(168,85,247,0.2)',
+                                                                fontWeight: 700,
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            {s.keys}
+                                                        </kbd>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </motion.div>
                 </motion.div>

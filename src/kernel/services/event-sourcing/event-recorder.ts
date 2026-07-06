@@ -353,7 +353,14 @@ export class EventRecorder {
                     });
                     continue;
                 }
-                if (!this.events.some((e) => e.sequence === ev.sequence)) {
+                if (
+                    !this.events.some(
+                        (e) =>
+                            e.sequence === ev.sequence &&
+                            e.event === ev.event &&
+                            e.checksum === ev.checksum,
+                    )
+                ) {
                     this.events.push(ev);
                     valid++;
                 }

@@ -91,7 +91,15 @@ export class ChatExecutor {
                     }
                 }
 
-                const promptText = messages.map((m) => m.content).join(' ');
+                const promptText = messages
+                    .map((m) => {
+                        if (typeof m.content === 'string') return m.content;
+                        if (m.content && typeof m.content === 'object' && 'text' in m.content)
+                            return String((m.content as { text: string }).text);
+                        return '';
+                    })
+                    .filter(Boolean)
+                    .join(' ');
 
                 // B-016: Security scan before any LLM call
                 const scanResult = promptSecurityService.scan(promptText);
@@ -495,6 +503,7 @@ export class ChatExecutor {
                                 this.deps.routerService.getDowngradedModel(effectiveModel);
                             if (downgraded) {
                                 req = { ...req, model: downgraded, provider: currentProvider };
+                                excludedProviders.delete(currentProvider);
                                 attemptsForProvider = 0;
                                 continue;
                             }

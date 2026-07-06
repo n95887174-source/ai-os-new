@@ -150,6 +150,8 @@ export class AudienceService implements IAudienceService {
     }
 
     populate(size: number): void {
+        this.memberTimers.forEach((t) => clearTimeout(t));
+        this.memberTimers.clear();
         this.members = [];
         this.messages = [];
         this.reactions = [];

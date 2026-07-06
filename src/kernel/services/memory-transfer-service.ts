@@ -7,6 +7,10 @@ import type {
 
 const genId = () => crypto.randomUUID();
 
+/**
+ * @deprecated MOCK — export() generates placeholder text, import() never writes to DB.
+ * No real memory integration. Do not ship — mark as EXPERIMENTAL in UI.
+ */
 export class MemoryTransferService implements IMemoryTransferService {
     private exports: MemoryExport[] = [];
     private imports: MemoryImport[] = [];

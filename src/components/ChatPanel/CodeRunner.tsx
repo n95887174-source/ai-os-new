@@ -176,7 +176,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
 
             const safeBody = sanitizeAllowedHtml(code);
             iframe.srcdoc =
-                `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${safeBody}<script>parent.postMessage({type:'sandbox-result',body:document.body.innerText},'${expectedOrigin}');</scr` +
+                `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${safeBody}<script>parent.postMessage({type:'sandbox-result',body:document.body.innerText},${JSON.stringify(expectedOrigin)});</scr` +
                 `ipt></body></html>`;
             timeoutRef.current = setTimeout(() => {
                 setOutput('(rendered — check iframe for visual output)');

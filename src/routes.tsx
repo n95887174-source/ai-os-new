@@ -13,6 +13,19 @@ import MCPPanel from './components/MCPPanel/MCPPanel';
 import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 import EventsTimeline from './components/EventsTimeline/EventsTimeline';
 
+function Panel(key: string): React.ComponentType<any> {
+    const component = PANEL_COMPONENTS[key];
+    if (!component) {
+        const Fallback: React.FC = () => (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                Panel "{key}" not found
+            </div>
+        );
+        return Fallback;
+    }
+    return component;
+}
+
 // Legacy routes NOT in sidebar (keep for deep-link compat):
 // /events     → EventsPanel (replaced by /logs)
 // /timeline   → EventsTimeline (merged into events surface)
@@ -70,7 +83,7 @@ const NotFound: React.FC = () => {
                 404
             </div>
             <div style={{ fontSize: '1.2rem', color: '#94a3b8', fontWeight: 600 }}>
-                Page not found
+                {translate('not_found.title')}
             </div>
             <div
                 style={{
@@ -80,19 +93,7 @@ const NotFound: React.FC = () => {
                     textAlign: 'center',
                 }}
             >
-                The page{' '}
-                <code
-                    style={{
-                        color: '#ef4444',
-                        background: 'rgba(239,68,68,0.1)',
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        fontSize: '0.75rem',
-                    }}
-                >
-                    {location.pathname}
-                </code>{' '}
-                doesn't exist.
+                {translate('not_found.description', undefined, { path: location.pathname })}
             </div>
             <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
                 <Search
@@ -109,7 +110,7 @@ const NotFound: React.FC = () => {
                 <input
                     value={searchVal}
                     onChange={(e) => setSearchVal(e.target.value)}
-                    placeholder="Search pages..."
+                    placeholder={translate('not_found.search_placeholder')}
                     autoFocus
                     style={{
                         width: '100%',
@@ -261,7 +262,7 @@ export const AppRoutes: React.FC = () => {
                 path="/debates/arena"
                 element={
                     <PanelLoader name="DebateArena">
-                        {React.createElement(PANEL_COMPONENTS['debate']!)}
+                        {React.createElement(Panel('debate'))}
                     </PanelLoader>
                 }
             />
@@ -269,7 +270,7 @@ export const AppRoutes: React.FC = () => {
                 path="/debates/live"
                 element={
                     <PanelLoader name="DebateLive">
-                        {React.createElement(PANEL_COMPONENTS['debate-live']!)}
+                        {React.createElement(Panel('debate-live'))}
                     </PanelLoader>
                 }
             />
@@ -277,7 +278,7 @@ export const AppRoutes: React.FC = () => {
                 path="/debates/replay"
                 element={
                     <PanelLoader name="DebateReplay">
-                        {React.createElement(PANEL_COMPONENTS['debate-replay']!)}
+                        {React.createElement(Panel('debate-replay'))}
                     </PanelLoader>
                 }
             />
@@ -285,7 +286,7 @@ export const AppRoutes: React.FC = () => {
                 path="/debates/tournament"
                 element={
                     <PanelLoader name="Tournament">
-                        {React.createElement(PANEL_COMPONENTS['debate-tournament']!)}
+                        {React.createElement(Panel('debate-tournament'))}
                     </PanelLoader>
                 }
             />
@@ -293,7 +294,7 @@ export const AppRoutes: React.FC = () => {
                 path="/audience"
                 element={
                     <PanelLoader name="Audience">
-                        {React.createElement(PANEL_COMPONENTS['audience']!)}
+                        {React.createElement(Panel('audience'))}
                     </PanelLoader>
                 }
             />
@@ -301,7 +302,7 @@ export const AppRoutes: React.FC = () => {
                 path="/editors"
                 element={
                     <PanelLoader name="Editors">
-                        {React.createElement(PANEL_COMPONENTS['editors']!)}
+                        {React.createElement(Panel('editors'))}
                     </PanelLoader>
                 }
             />
@@ -309,7 +310,7 @@ export const AppRoutes: React.FC = () => {
                 path="/debates/history"
                 element={
                     <PanelLoader name="DebateHistory">
-                        {React.createElement(PANEL_COMPONENTS['debate-history']!)}
+                        {React.createElement(Panel('debate-history'))}
                     </PanelLoader>
                 }
             />
@@ -317,7 +318,7 @@ export const AppRoutes: React.FC = () => {
                 path="/debates/analysis"
                 element={
                     <PanelLoader name="DebateAnalysis">
-                        {React.createElement(PANEL_COMPONENTS['debate-analysis']!)}
+                        {React.createElement(Panel('debate-analysis'))}
                     </PanelLoader>
                 }
             />
@@ -325,16 +326,14 @@ export const AppRoutes: React.FC = () => {
                 path="/debates/graph"
                 element={
                     <PanelLoader name="ArgumentGraph">
-                        {React.createElement(PANEL_COMPONENTS['argument-graph']!)}
+                        {React.createElement(Panel('argument-graph'))}
                     </PanelLoader>
                 }
             />
             <Route
                 path="/debates/topics"
                 element={
-                    <PanelLoader name="Topics">
-                        {React.createElement(PANEL_COMPONENTS['topics']!)}
-                    </PanelLoader>
+                    <PanelLoader name="Topics">{React.createElement(Panel('topics'))}</PanelLoader>
                 }
             />
 
@@ -342,24 +341,20 @@ export const AppRoutes: React.FC = () => {
             <Route
                 path="/diagnostics/logs"
                 element={
-                    <PanelLoader name="Logs">
-                        {React.createElement(PANEL_COMPONENTS['logs']!)}
-                    </PanelLoader>
+                    <PanelLoader name="Logs">{React.createElement(Panel('logs'))}</PanelLoader>
                 }
             />
             <Route
                 path="/diagnostics/health"
                 element={
-                    <PanelLoader name="Health">
-                        {React.createElement(PANEL_COMPONENTS['health']!)}
-                    </PanelLoader>
+                    <PanelLoader name="Health">{React.createElement(Panel('health'))}</PanelLoader>
                 }
             />
             <Route
                 path="/diagnostics/system"
                 element={
                     <PanelLoader name="SystemHealth">
-                        {React.createElement(PANEL_COMPONENTS['system-health']!)}
+                        {React.createElement(Panel('system-health'))}
                     </PanelLoader>
                 }
             />
@@ -367,23 +362,21 @@ export const AppRoutes: React.FC = () => {
                 path="/diagnostics/traces"
                 element={
                     <PanelLoader name="Traces">
-                        {React.createElement(PANEL_COMPONENTS['debugger']!)}
+                        {React.createElement(Panel('debugger'))}
                     </PanelLoader>
                 }
             />
             <Route
                 path="/diagnostics/memory"
                 element={
-                    <PanelLoader name="Memory">
-                        {React.createElement(PANEL_COMPONENTS['memory']!)}
-                    </PanelLoader>
+                    <PanelLoader name="Memory">{React.createElement(Panel('memory'))}</PanelLoader>
                 }
             />
             <Route
                 path="/diagnostics/aquarium"
                 element={
                     <PanelLoader name="Aquarium">
-                        {React.createElement(PANEL_COMPONENTS['aquarium']!)}
+                        {React.createElement(Panel('aquarium'))}
                     </PanelLoader>
                 }
             />

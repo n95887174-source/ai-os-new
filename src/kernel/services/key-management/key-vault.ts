@@ -1,46 +1,155 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { IKeyVaultService } from '../../contracts/key-vault';
 
-/** @deprecated Vault system removed — all methods are no-ops. Keys stored as plaintext in IndexedDB. */
+const ALGORITHM = 'AES-GCM';
+const KEY_USAGE: KeyUsage[] = ['encrypt', 'decrypt'];
+const KEY_LENGTH = 256;
+const ITERATIONS = 100_000;
+const SALT_LENGTH = 16;
+const IV_LENGTH = 12;
+
+function bytesToHex(bytes: Uint8Array): string {
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+    }
+    return bytes;
+}
+
+// TS strict-mode ArrayBuffer compat
+function asBuf(data: Uint8Array): ArrayBuffer {
+    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+}
+
 export class KeyVault implements IKeyVaultService {
+    private masterKey: CryptoKey | null = null;
+    private _locked = true;
+
     constructor() {}
-    async unlock(_password: string): Promise<boolean> {
-        return true;
+
+    async unlock(password: string): Promise<boolean> {
+        try {
+            const stored = localStorage.getItem('key-vault:salt');
+            const salt = stored
+                ? hexToBytes(stored)
+                : crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+            if (!stored) {
+                localStorage.setItem('key-vault:salt', bytesToHex(salt));
+            }
+            const baseKey = await crypto.subtle.importKey(
+                'raw',
+                new TextEncoder().encode(password),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveKey'],
+            );
+            this.masterKey = await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: asBuf(salt),
+                    iterations: ITERATIONS,
+                    hash: 'SHA-256',
+                },
+                baseKey,
+                { name: ALGORITHM, length: KEY_LENGTH },
+                false,
+                KEY_USAGE,
+            );
+            this._locked = false;
+            return true;
+        } catch {
+            return false;
+        }
     }
 
-    lock(_keys?: ApiKey[]): void {
-        /* vault system removed — no-op */
+    lock(keys?: ApiKey[]): void {
+        this.masterKey = null;
+        this._locked = true;
+        if (keys) {
+            for (const k of keys) {
+                k.key = '[VAULT LOCKED]';
+            }
+        }
     }
 
     isLocked(): boolean {
-        return false;
+        return this._locked;
     }
 
     async encryptKey(plaintext: string): Promise<string | null> {
-        return plaintext;
+        if (this._locked || !this.masterKey) return plaintext;
+        try {
+            const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+            const encoded = new TextEncoder().encode(plaintext);
+            const encrypted = await crypto.subtle.encrypt(
+                { name: ALGORITHM, iv: asBuf(iv) },
+                this.masterKey,
+                encoded,
+            );
+            const combined = new Uint8Array(iv.length + encrypted.byteLength);
+            combined.set(iv);
+            combined.set(new Uint8Array(encrypted), iv.length);
+            return bytesToHex(combined);
+        } catch {
+            return null;
+        }
     }
 
     async decryptKey(ciphertext: string): Promise<string | null> {
-        return ciphertext;
+        if (this._locked || !this.masterKey) return ciphertext;
+        try {
+            const combined = hexToBytes(ciphertext);
+            const iv = combined.slice(0, IV_LENGTH);
+            const data = combined.slice(IV_LENGTH);
+            const decrypted = await crypto.subtle.decrypt(
+                { name: ALGORITHM, iv: asBuf(iv) },
+                this.masterKey,
+                data,
+            );
+            return new TextDecoder().decode(decrypted);
+        } catch {
+            return null;
+        }
     }
 
     async decryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
-        return keys;
+        if (this._locked || !this.masterKey) return keys;
+        const out: ApiKey[] = [];
+        for (const k of keys) {
+            const decrypted = k.key.startsWith('[VAULT')
+                ? k.key
+                : ((await this.decryptKey(k.key)) ?? k.key);
+            out.push({ ...k, key: decrypted });
+        }
+        return out;
     }
 
     async encryptAllKeys(keys: ApiKey[]): Promise<ApiKey[]> {
-        return keys;
+        if (this._locked || !this.masterKey) return keys;
+        const out: ApiKey[] = [];
+        for (const k of keys) {
+            const encrypted = await this.encryptKey(k.key);
+            out.push({ ...k, key: encrypted ?? k.key });
+        }
+        return out;
     }
 
     stripPlaintextKeys(keys: ApiKey[]): ApiKey[] {
+        if (this._locked) {
+            return keys.map((k) => ({ ...k, key: '[REDACTED]' }));
+        }
         return keys;
     }
 
     purgeKey(_key: ApiKey): void {
-        /* vault system removed — no-op */
+        /* vault system — no purge needed */
     }
 
     purgeAll(_keys: ApiKey[]): void {
-        /* vault system removed — no-op */
+        /* vault system — no purge needed */
     }
 }

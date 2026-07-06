@@ -769,16 +769,6 @@ export class DatabaseService implements IDatabaseService {
     async getKv<T>(id: string): Promise<T | null> {
         const record = await getDexieDb().keyValue.get(id);
         if (!record) return null;
-        // N-07: log instead of silently dropping uncloneable values
-        try {
-            structuredClone(record.value);
-        } catch (e) {
-            LOGGER.warn(
-                'DatabaseService',
-                `getKv(${id}): value not cloneable — returning directly`,
-                { error: e },
-            );
-        }
         return record.value as T;
     }
 

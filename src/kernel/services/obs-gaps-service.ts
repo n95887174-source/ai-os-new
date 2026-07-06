@@ -388,6 +388,9 @@ function buildRecommendations(
     return recs;
 }
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class ObsGapsService implements IObsGapsService {
     getStaticInventory(): ServiceObsInfo[] {
         return STATIC_SERVICES.map((s) => ({ ...s }));

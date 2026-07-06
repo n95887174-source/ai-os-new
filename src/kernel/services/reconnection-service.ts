@@ -104,6 +104,8 @@ export class ReconnectionService {
                 if (this.streams.get(state.config.streamId) === state) {
                     this.streams.delete(state.config.streamId);
                 }
+                // C-25: only fire onGiveUp if this state is still the current one for this streamId
+                if (this.streams.get(state.config.streamId) !== state) return;
                 state.config.onGiveUp(state.config.streamId, state.config.provider);
             }, 30000);
             try {

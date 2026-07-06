@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { usePolling } from '../Common/usePolling';
 import {
     Activity,
     AlertTriangle,
@@ -59,11 +60,7 @@ const DiagnosticPanel: React.FC = () => {
         }
     }, []);
 
-    useEffect(() => {
-        refresh();
-        const interval = setInterval(refresh, 15000);
-        return () => clearInterval(interval);
-    }, [refresh]);
+    usePolling(refresh, 15000);
 
     const handleRunDiagnostic = async () => {
         setRunning(true);

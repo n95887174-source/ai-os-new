@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 
 import { debateEngine } from '../kernel/instances';
 import type { DebateSessionSnapshot, TimelineEntry } from '../kernel/contracts/debate-runtime';
+import { usePolling } from './Common/usePolling';
 import PanelLoader from './PanelLoader';
 import { TimelinePlayer, toTimelineEvent, statusColor } from './DebateReplayTypes';
 import DebateReplaySidebar from './DebateReplaySidebar';
@@ -24,14 +25,12 @@ const DebateReplayPanel: React.FC = () => {
     const engineRef = useRef<TimelinePlayer | null>(null);
 
     useEffect(() => {
-        const refresh = () => setSessions(debateEngine.getAllSessions() ?? []);
-        refresh();
-        const interval = setInterval(refresh, 5000);
         return () => {
-            clearInterval(interval);
             engineRef.current?.destroy();
         };
     }, []);
+
+    usePolling(() => setSessions(debateEngine.getAllSessions() ?? []), 5000);
 
     const selectSession = useCallback((id: string) => {
         setSelectedId(id);

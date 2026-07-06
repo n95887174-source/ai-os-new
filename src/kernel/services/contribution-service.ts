@@ -27,6 +27,9 @@ function generateYearOfContributions(): ContributionGraph {
     return { weeks, totalContributions: total, currentStreak: 5, longestStreak: 23 };
 }
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class ContributionService implements IContributionService {
     private graph: ContributionGraph = generateYearOfContributions();
 

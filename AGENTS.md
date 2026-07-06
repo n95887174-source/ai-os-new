@@ -3284,3 +3284,33 @@ Execute and verify Sprint A items from REMAINING_WORK.md — quick cleanup wins 
 ### Next
 
 Sprint B — Architecture (DAL consolidation, LLM→Kernel inversion, orphan events wire-up, dead code removal)
+
+---
+
+## Current Session (2026-07-06) — HML Audit Batch 8 Completion
+
+### Goal
+
+Fix remaining 9 Batch 8 items from the HML audit (`audit/newww/STATUS_HML.md`).
+
+### Changes
+
+| #   | Audit | ID     | Fix                                                                                                                                               | File                                                                                 |
+| --- | ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 1   | `1b`  | M-8    | Reject `CORS_ORIGIN=*` wildcard to prevent open relay                                                                                             | `scripts/cors-proxy.mjs`                                                             |
+| 2   | `1e`  | M2     | `validateCron()` — added per-field range validation (minute 0-59, hour 0-23, day 1-31, month 1-12, dow 0-7)                                       | `src/kernel/services/scheduler-service.ts`                                           |
+| 3   | `2a`  | M-3    | `executeGroup()` consensus heuristic uses `Promise.allSettled` `r.status === 'fulfilled'` instead of `!r.includes('error')`                       | `src/kernel/services/agent-service.ts`                                               |
+| 4   | `3b`  | M13    | Created `shared/utils/format-cost.ts` with locale-aware `Intl.NumberFormat` + `common.cost_negligible` i18n key. Applied to `ProviderManagerView` | `src/shared/utils/format-cost.ts` (new), `ProviderManagerView.tsx`, `en.ts`, `ru.ts` |
+| 5   | `3b`  | M23    | `ContextMenu.tsx` — added ArrowDown/ArrowUp/Enter/Space keyboard nav, `focusIndex` state, auto-focus                                              | `src/components/Common/ContextMenu.tsx`                                              |
+| 6   | `3e`  | L-M-7  | `resetBudget()` clears all records instead of `slice(-100)` to prevent re-trip                                                                    | `src/llm/decorators/cost-manager.ts`                                                 |
+| 7   | `3e`  | A-M-6  | AquariumPanel info panel `role="dialog"` → `role="region"`                                                                                        | `src/components/AquariumPanel/AquariumPanel.tsx`                                     |
+| 8   | `3e`  | R-M-10 | Added `ROUND_DELAY_MS` (1s default) with delay in `round:end` handler between rounds                                                              | `src/kernel/services/debate-runtime/debate-engine.ts`                                |
+| —   | `1c`  | M7     | Pre-existing — MemoryRepository.update() already has existence check/warning ✅                                                                   | —                                                                                    |
+| —   | —     | —      | Removed unused `streamIdx` variable from `DebateRuntimePanel.tsx`                                                                                 | `src/components/DebateRuntimePanel/DebateRuntimePanel.tsx`                           |
+
+### Status
+
+- Fixed: 8 new + 1 pre-existing = 9 items resolved
+- `npx vite build` ✅ 8.24s
+- HML audit total: **79/459 fixed (17.2%)** — 62 Medium, 7 High, 10 Low
+- Remaining: 379 unfixed (incl. 131+ `$` currency occurrences for incremental fix)

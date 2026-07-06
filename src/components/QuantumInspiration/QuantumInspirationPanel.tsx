@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { usePolling } from '../Common/usePolling';
 import { Atom, Zap, BarChart3 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { quantumInspirationService } from '../../kernel/instances';
@@ -39,10 +40,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
         setStatus(quantumInspirationService.getStatus());
     }, []);
 
-    useEffect(() => {
-        const id = setInterval(refresh, 3000);
-        return () => clearInterval(id);
-    }, [refresh]);
+    usePolling(refresh, 3000);
 
     const handleSolve = () => {
         const result = quantumInspirationService.solve(problem, selectedSolver);

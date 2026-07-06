@@ -24,6 +24,9 @@ const NOOP_LOGGER: ILogger = {
     },
     clear() {},
     setTraceContext() {},
+    exportLogs() {
+        return '';
+    },
 };
 
 let cachedLogger: ILogger | null = null;
@@ -236,7 +239,7 @@ export class EventBus implements IEventBus {
         // (up to 1MB each × 100 = 100MB memory leak). See git history for removed code.
 
         const trace = TraceContext.current;
-        if (import.meta.env.DEV) {
+        if (import.meta.env.DEV && !this.hotEvents.has(eventStr)) {
             getLogger().debug('EventBus', `EMIT: ${eventStr}`, {
                 payload: sanitizeObject(payload) as Record<string, unknown>,
                 trace: (trace ?? {}) as Record<string, unknown>,

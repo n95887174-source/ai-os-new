@@ -251,6 +251,21 @@ export const MemoryStatsSchema = z.object({
     lastPruned: z.number().nullable(),
 });
 
+const CognitiveStepSchema = z.object({
+    id: z.string(),
+    nodeId: z.string().optional(),
+    type: z.enum(['routing', 'retrieval', 'reasoning', 'action', 'verification']),
+    label: z.string(),
+    status: z.enum(['pending', 'active', 'done', 'error']),
+    timestamp: z.number(),
+    duration: z.number().optional(),
+    decision: z.record(z.string(), z.unknown()).optional(),
+    thoughts: z.array(z.string()).optional(),
+    observations: z.string().optional(),
+    tools_used: z.array(z.string()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const CognitiveTraceSchema = z.object({
     id: z.string(),
     traceId: z.string(),
@@ -259,7 +274,7 @@ export const CognitiveTraceSchema = z.object({
     input: z.string(),
     output: z.string().optional(),
     status: z.enum(['running', 'completed', 'failed']),
-    steps: z.array(z.record(z.string(), z.unknown())),
+    steps: z.array(CognitiveStepSchema),
     decisionGraph: z.object({
         nodes: z.array(z.string()),
         edges: z.array(

@@ -76,6 +76,13 @@ export function GoogleStudioPanel() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    useEffect(() => {
+        return () => {
+            for (const c of abortControllers.current) c.abort();
+            abortControllers.current.clear();
+        };
+    }, []);
+
     const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;

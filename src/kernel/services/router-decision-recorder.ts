@@ -1,6 +1,11 @@
 import type { ApiKey, SystemState } from '../types/metrics-types';
 
-import type { SkippedKeyEntry, RouterDecision, RoutingStrategy } from './router-types';
+import type {
+    SkippedKeyEntry,
+    RouterDecision,
+    RoutingStrategy,
+    RequestClassification,
+} from './router-types';
 import { getEffectiveWeights } from './router-scoring';
 import type { WeightProfile } from '../types/routing-types';
 
@@ -32,17 +37,22 @@ export class RouterDecisionRecorder {
         );
     }
 
-    logDebateSkip(key: ApiKey, reason: string, stage: SkippedKeyEntry['stage']): void {
+    logDebateSkip(
+        key: ApiKey,
+        reason: string,
+        stage: SkippedKeyEntry['stage'],
+        classification?: Partial<RequestClassification>,
+    ): void {
         this.lastDecisions.unshift({
             requestId: crypto.randomUUID(),
             strategy: 'latency',
             classification: {
-                complexity: 'simple',
-                isCode: false,
-                isLong: false,
-                isMultimodal: false,
-                intent: 'general' as const,
-                language: 'en' as const,
+                complexity: classification?.complexity ?? 'simple',
+                isCode: classification?.isCode ?? false,
+                isLong: classification?.isLong ?? false,
+                isMultimodal: classification?.isMultimodal ?? false,
+                intent: classification?.intent ?? 'general',
+                language: classification?.language ?? 'en',
             },
             weights: getEffectiveWeights(
                 'latency',
@@ -75,17 +85,18 @@ export class RouterDecisionRecorder {
         skipped: SkippedKeyEntry[];
         selected: string;
         prompt: string;
+        classification?: Partial<RequestClassification>;
     }): void {
         this.lastDecisions.unshift({
             requestId: crypto.randomUUID(),
             strategy: opts.strategy,
             classification: {
-                complexity: 'simple',
-                isCode: false,
-                isLong: false,
-                isMultimodal: false,
-                intent: 'general' as const,
-                language: 'en' as const,
+                complexity: opts.classification?.complexity ?? 'simple',
+                isCode: opts.classification?.isCode ?? false,
+                isLong: opts.classification?.isLong ?? false,
+                isMultimodal: opts.classification?.isMultimodal ?? false,
+                intent: opts.classification?.intent ?? 'general',
+                language: opts.classification?.language ?? 'en',
             },
             weights: getEffectiveWeights(
                 opts.strategy,

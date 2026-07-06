@@ -205,6 +205,9 @@ const MOCK_FEATURES: EnterpriseFeature[] = [
     },
 ];
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class NvidiaEnterpriseService implements INvidiaEnterpriseService {
     private config: NvidiaEnterpriseConfig = { ...DEFAULT_CONFIG };
     private features: EnterpriseFeature[] = MOCK_FEATURES.map((f) => ({ ...f }));

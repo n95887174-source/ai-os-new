@@ -16,6 +16,7 @@ export type {
     KeyExtendedStats,
     StabilityForecast,
     RouterWeights,
+    KeyHistoryEntry,
     ProviderState,
     ProviderMetrics,
     RuntimeAggregate,

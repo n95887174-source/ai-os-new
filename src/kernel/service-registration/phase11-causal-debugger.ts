@@ -43,7 +43,7 @@ export const registerPhase11: Phase = ({ register }) => {
             return causalScopeManager;
         } catch (e) {
             LOGGER.warn(SVC, 'CausalScopeManager failed (non-critical)', { error: e });
-            return undefined as unknown as CausalScopeManager;
+            return null as unknown as CausalScopeManager;
         }
     });
 
@@ -52,6 +52,10 @@ export const registerPhase11: Phase = ({ register }) => {
         LOGGER.info(SVC, 'CausalTimelineService starting');
         try {
             const causalScopeManager = c.get<CausalScopeManager>('causalScopeManager');
+            if (!causalScopeManager) {
+                LOGGER.warn(SVC, 'causalScopeManager unavailable — skipping CausalTimelineService');
+                return null as unknown as CausalTimelineService;
+            }
             const kss = c.get<KeyStateStore>('keyStateStore');
             const routerProjection = c.get<RouterProjection>('routerProjection');
             const eventBus = c.get<import('../types/interfaces').IEventBus>('eventBus');
@@ -68,7 +72,7 @@ export const registerPhase11: Phase = ({ register }) => {
             return svc;
         } catch (e) {
             LOGGER.warn(SVC, 'CausalTimelineService failed (non-critical)', { error: e });
-            return undefined as unknown as CausalTimelineService;
+            return null as unknown as CausalTimelineService;
         }
     });
 
@@ -84,7 +88,7 @@ export const registerPhase11: Phase = ({ register }) => {
             return engine;
         } catch (e) {
             LOGGER.warn(SVC, 'CounterfactualEngine failed (non-critical)', { error: e });
-            return undefined as unknown as CounterfactualEngine;
+            return null as unknown as CounterfactualEngine;
         }
     });
 
@@ -102,7 +106,7 @@ export const registerPhase11: Phase = ({ register }) => {
             LOGGER.warn(SVC, 'CounterfactualExplanationService failed (non-critical)', {
                 error: e,
             });
-            return undefined as unknown as CounterfactualExplanationService;
+            return null as unknown as CounterfactualExplanationService;
         }
     });
 
@@ -118,7 +122,7 @@ export const registerPhase11: Phase = ({ register }) => {
             return svc;
         } catch (e) {
             LOGGER.warn(SVC, 'CounterfactualNarrativeService failed (non-critical)', { error: e });
-            return undefined as unknown as CounterfactualNarrativeService;
+            return null as unknown as CounterfactualNarrativeService;
         }
     });
 
@@ -130,13 +134,17 @@ export const registerPhase11: Phase = ({ register }) => {
             const routerService = c.get<RouterService>('routerService');
             const eventSourcing = c.get<EventRecorder>('eventSourcingService');
             const scopeManager = c.get<ICausalScopeManager>('causalScopeManager');
+            if (!scopeManager) {
+                LOGGER.warn(SVC, 'causalScopeManager unavailable — skipping TemporalReplayService');
+                return null as unknown as TemporalReplayService;
+            }
             const svc = new TemporalReplayService(eventSourcing, routerService, scopeManager);
             const memAfter = getHeapMB();
             LOGGER.info(SVC, 'TemporalReplayService done', { deltaMB: memAfter - memBefore });
             return svc;
         } catch (e) {
             LOGGER.warn(SVC, 'TemporalReplayService failed (non-critical)', { error: e });
-            return undefined as unknown as TemporalReplayService;
+            return null as unknown as TemporalReplayService;
         }
     });
 
@@ -151,7 +159,7 @@ export const registerPhase11: Phase = ({ register }) => {
             return svc;
         } catch (e) {
             LOGGER.warn(SVC, 'TruthConsistencyMonitor failed (non-critical)', { error: e });
-            return undefined as unknown as TruthConsistencyMonitor;
+            return null as unknown as TruthConsistencyMonitor;
         }
     });
 };

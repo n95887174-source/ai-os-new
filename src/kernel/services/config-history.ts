@@ -70,7 +70,9 @@ export class ConfigHistoryService {
         // JSON round-trip (not structuredClone) because CONFIG is a Proxy that throws DATA_CLONE_ERR
         let snapshot: ConfigRegistry;
         try {
-            snapshot = JSON.parse(JSON.stringify(config)) as ConfigRegistry;
+            snapshot = JSON.parse(
+                JSON.stringify(config, (_k, v) => (typeof v === 'undefined' ? null : v)),
+            ) as ConfigRegistry;
         } catch {
             snapshot = {} as ConfigRegistry;
         }
@@ -83,9 +85,9 @@ export class ConfigHistoryService {
             comment,
             configSnapshot: snapshot,
         };
+        await this.persist();
         this.history.push(newVersion);
         if (this.history.length > MAX_HISTORY) this.history.shift();
-        await this.persist();
         return newVersion;
     }
 

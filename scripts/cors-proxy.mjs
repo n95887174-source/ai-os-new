@@ -13,6 +13,12 @@ if (!CORS_ORIGIN) {
     );
     process.exit(1);
 }
+if (CORS_ORIGIN === '*') {
+    console.error(
+        '[cors-proxy] FATAL: CORS_ORIGIN cannot be "*" (open relay). Set a specific origin.',
+    );
+    process.exit(1);
+}
 const MAX_SIZE = 100 * 1024 * 1024; // 100MB limit — N-08
 
 function isPrivateIP(ip) {

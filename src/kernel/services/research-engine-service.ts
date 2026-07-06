@@ -38,11 +38,26 @@ import type {
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { sourceAdapterRegistry } from '../instances';
+import { BucketStorageAdapter } from './storage-adapter';
 import type { SourceAdapterConfig } from '../contracts/research-adapter';
 import type { SourceType } from '../contracts/research-engine';
 
 const LOGGER = rootLogger.child('ResearchEngine');
 const MAX_SESSIONS = 50;
+
+interface ResearchEngineState {
+    sessions: Record<string, ResearchSession>;
+    citationGraphs: Record<string, CitationGraph>;
+    knowledgeGraphs: Record<string, KnowledgeGraph>;
+    systematicReviews: Record<string, SystematicReview>;
+    factCheckReports: Record<string, FactCheckReport>;
+    anomalyReports: Record<string, AnomalyReport>;
+    summarizations: Record<string, SummarizationResult[]>;
+    citationExports: Record<string, CitationExport>;
+    peerReviews: Record<string, PeerReview>;
+    researchReports: Record<string, ResearchReport>;
+    discoveryResult: DiscoveryResult | null;
+}
 
 export class ResearchEngineService implements IResearchEngine {
     private sessions: Map<string, ResearchSession> = new Map();
@@ -57,6 +72,7 @@ export class ResearchEngineService implements IResearchEngine {
     private _discoveryResult: DiscoveryResult | null = null;
     private researchReports: Map<string, ResearchReport> = new Map();
     private _initialized = false;
+    private _storageLoaded = false;
 
     constructor(
         private deps: {
@@ -65,6 +81,49 @@ export class ResearchEngineService implements IResearchEngine {
     ) {
         // Source adapter registry is initialized as a singleton
         // Can be configured via updateSourceConfig()
+    }
+
+    async #ensureLoaded(): Promise<void> {
+        if (this._storageLoaded) return;
+        this._storageLoaded = true;
+        try {
+            const raw =
+                await BucketStorageAdapter.RESEARCH.get<ResearchEngineState>('research_engine_v1');
+            if (!raw) return;
+            this.sessions = new Map(Object.entries(raw.sessions ?? {}));
+            this.citationGraphs = new Map(Object.entries(raw.citationGraphs ?? {}));
+            this.knowledgeGraphs = new Map(Object.entries(raw.knowledgeGraphs ?? {}));
+            this.systematicReviews = new Map(Object.entries(raw.systematicReviews ?? {}));
+            this.factCheckReports = new Map(Object.entries(raw.factCheckReports ?? {}));
+            this.anomalyReports = new Map(Object.entries(raw.anomalyReports ?? {}));
+            this.summarizations = new Map(Object.entries(raw.summarizations ?? {}));
+            this.citationExports = new Map(Object.entries(raw.citationExports ?? {}));
+            this.peerReviews = new Map(Object.entries(raw.peerReviews ?? {}));
+            this.researchReports = new Map(Object.entries(raw.researchReports ?? {}));
+            this._discoveryResult = raw.discoveryResult ?? null;
+            LOGGER.info('ResearchEngine', 'State loaded from storage', {
+                sessions: this.sessions.size,
+            });
+        } catch (e) {
+            LOGGER.warn('ResearchEngine', 'Failed to load state from storage', { error: e });
+        }
+    }
+
+    async #persistState(): Promise<void> {
+        const state: ResearchEngineState = {
+            sessions: Object.fromEntries(this.sessions),
+            citationGraphs: Object.fromEntries(this.citationGraphs),
+            knowledgeGraphs: Object.fromEntries(this.knowledgeGraphs),
+            systematicReviews: Object.fromEntries(this.systematicReviews),
+            factCheckReports: Object.fromEntries(this.factCheckReports),
+            anomalyReports: Object.fromEntries(this.anomalyReports),
+            summarizations: Object.fromEntries(this.summarizations),
+            citationExports: Object.fromEntries(this.citationExports),
+            peerReviews: Object.fromEntries(this.peerReviews),
+            researchReports: Object.fromEntries(this.researchReports),
+            discoveryResult: this._discoveryResult,
+        };
+        await BucketStorageAdapter.RESEARCH.set('research_engine_v1', state);
     }
 
     getSourceAdapterRegistry() {
@@ -96,7 +155,10 @@ export class ResearchEngineService implements IResearchEngine {
     async init(): Promise<void> {
         if (this._initialized) return;
         this._initialized = true;
-        LOGGER.info('ResearchEngine', 'Research Engine initialized');
+        await this.#ensureLoaded();
+        LOGGER.info('ResearchEngine', 'Research Engine initialized', {
+            sessions: this.sessions.size,
+        });
     }
 
     async start(): Promise<void> {
@@ -105,6 +167,7 @@ export class ResearchEngineService implements IResearchEngine {
 
     async destroy(): Promise<void> {
         this._initialized = false;
+        await this.#persistState();
         this.sessions.clear();
         this.citationGraphs.clear();
         this.knowledgeGraphs.clear();
@@ -119,6 +182,7 @@ export class ResearchEngineService implements IResearchEngine {
     }
 
     async startSession(title: string, question: string): Promise<string> {
+        await this.#ensureLoaded();
         const id = genId('rs');
         const session: ResearchSession = {
             id,
@@ -131,6 +195,7 @@ export class ResearchEngineService implements IResearchEngine {
         };
         this.sessions.set(id, session);
         this.trimSessions();
+        await this.#persistState();
         this.deps.eventBus.emit(EVENTS.RESEARCH_SESSION_UPDATED, {
             action: 'session_started',
             sessionId: id,
@@ -147,6 +212,7 @@ export class ResearchEngineService implements IResearchEngine {
     }
 
     async runLoop(sessionId: string): Promise<EpistemicLoopResult> {
+        await this.#ensureLoaded();
         const session = this.sessions.get(sessionId);
         if (!session) throw new Error(`Session ${sessionId} not found`);
 
@@ -196,6 +262,7 @@ export class ResearchEngineService implements IResearchEngine {
         session.loops.push(result);
         session.status = result.status;
         session.updatedAt = Date.now();
+        await this.#persistState();
         this.deps.eventBus.emit(EVENTS.RESEARCH_SESSION_UPDATED, {
             action: 'loop_completed',
             sessionId,
@@ -203,7 +270,8 @@ export class ResearchEngineService implements IResearchEngine {
         return result;
     }
 
-    deleteSession(id: string): void {
+    async deleteSession(id: string): Promise<void> {
+        await this.#ensureLoaded();
         this.sessions.delete(id);
         this.citationGraphs.delete(id);
         this.knowledgeGraphs.delete(id);
@@ -214,13 +282,15 @@ export class ResearchEngineService implements IResearchEngine {
         this.citationExports.delete(id);
         this.peerReviews.delete(id);
         this.researchReports.delete(id);
+        await this.#persistState();
         this.deps.eventBus.emit(EVENTS.RESEARCH_SESSION_UPDATED, {
             action: 'session_deleted',
             sessionId: id,
         });
     }
 
-    clearHistory(): void {
+    async clearHistory(): Promise<void> {
+        await this.#ensureLoaded();
         this.sessions.clear();
         this.citationGraphs.clear();
         this.knowledgeGraphs.clear();
@@ -231,6 +301,7 @@ export class ResearchEngineService implements IResearchEngine {
         this.citationExports.clear();
         this.peerReviews.clear();
         this.researchReports.clear();
+        await this.#persistState();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -238,6 +309,7 @@ export class ResearchEngineService implements IResearchEngine {
     // ═══════════════════════════════════════════════════════════
 
     async buildCitationGraph(sessionId: string): Promise<CitationGraph> {
+        await this.#ensureLoaded();
         const session = this.sessions.get(sessionId);
         if (!session) throw new Error(`Session ${sessionId} not found`);
 
@@ -283,6 +355,7 @@ export class ResearchEngineService implements IResearchEngine {
         };
 
         this.citationGraphs.set(sessionId, citationGraph);
+        await this.#persistState();
         return citationGraph;
     }
 
@@ -295,6 +368,7 @@ export class ResearchEngineService implements IResearchEngine {
     // ═══════════════════════════════════════════════════════════
 
     async buildKnowledgeGraph(sessionId: string): Promise<KnowledgeGraph> {
+        await this.#ensureLoaded();
         const session = this.sessions.get(sessionId);
         if (!session) throw new Error(`Session ${sessionId} not found`);
 
@@ -356,6 +430,7 @@ export class ResearchEngineService implements IResearchEngine {
         };
 
         this.knowledgeGraphs.set(sessionId, knowledgeGraph);
+        await this.#persistState();
         return knowledgeGraph;
     }
 

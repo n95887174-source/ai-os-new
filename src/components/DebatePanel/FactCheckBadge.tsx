@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { usePolling } from '../Common/usePolling';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Loader2 } from 'lucide-react';
 import { debateService } from '../../kernel/instances';
@@ -83,16 +84,11 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
         };
     }, [expanded]);
 
-    useEffect(() => {
-        if (!expanded) return;
-        const check = () => {
-            const fc = debateService.factCheckService.getForArgument(argumentId);
-            if (fc) setResults(fc.results);
-        };
-        check();
-        const interval = setInterval(check, 10000);
-        return () => clearInterval(interval);
-    }, [argumentId, expanded]);
+    const check = useCallback(() => {
+        const fc = debateService.factCheckService.getForArgument(argumentId);
+        if (fc) setResults(fc.results);
+    }, [argumentId]);
+    usePolling(check, 10000, expanded);
 
     if (!results) return null;
 
@@ -205,7 +201,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
                                                 marginLeft: 'auto',
                                             }}
                                         >
-                                            {Math.round(r.confidence * 100)}%
+                                            {Math.round((r.confidence ?? 0) * 100)}%
                                         </span>
                                     </div>
                                     <div

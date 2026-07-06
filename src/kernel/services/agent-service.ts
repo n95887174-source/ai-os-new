@@ -98,6 +98,16 @@ export class AgentService {
             clearTimeout(this.persistDebounceTimer);
             this.persistDebounceTimer = null;
         }
+        this.deps.database
+            .setKv(STATS_KEY, Object.fromEntries(this.stats))
+            .catch((e) =>
+                LOGGER.error('AgentService', 'Failed to flush stats on destroy:', { error: e }),
+            );
+        this.deps.database
+            .setKv(GROUPS_KEY, this.groups)
+            .catch((e) =>
+                LOGGER.error('AgentService', 'Failed to flush groups on destroy:', { error: e }),
+            );
     }
 
     private async load() {
@@ -383,6 +393,7 @@ export class AgentService {
         this.stats.set(agentId, this.emptyStats());
         this.deps.orchestrator.setNodeDisabled(agentId, false);
         await new Promise((r) => setTimeout(r, 500));
+        if (!this.lifecycleStates.has(agentId)) return;
         this.transitionLifecycle(agentId, 'initializing', 'ready');
         this.deps.eventBus.emit(EVENTS.AGENT_RESTARTED, { id: agentId });
     }
@@ -607,13 +618,13 @@ export class AgentService {
                     this.executeSingleNode(n, { ...baseCtx, traceId: `group-${groupId}-${n.id}` }),
                 ),
             );
-            const results = outputs.map((r, i) =>
+            const results: string[] = outputs.map((r, i) =>
                 r.status === 'fulfilled' ? r.value : `[${nodes[i].label}] error`,
             );
             if (pattern === 'consensus') {
                 const threshold = group.consensusThreshold || 0.5;
-                const agreement =
-                    results.filter((r) => !r.includes('error')).length / results.length;
+                const succeeded = outputs.filter((r) => r.status === 'fulfilled').length;
+                const agreement = succeeded / results.length;
                 return agreement >= threshold ? results : ['[consensus] No agreement reached'];
             }
             return results;

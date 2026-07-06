@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { usePolling } from '../Common/usePolling';
 import { Thermometer, Gauge, Server, MessageCircle, RefreshCw } from 'lucide-react';
 import { pressureMapService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -49,11 +50,7 @@ const PressureMapPanel: React.FC = () => {
         }
     }, []);
 
-    useEffect(() => {
-        refresh();
-        const interval = setInterval(refresh, 10000);
-        return () => clearInterval(interval);
-    }, [refresh]);
+    usePolling(refresh, 10000);
 
     const handleAck = useCallback((id: string) => {
         pressureMapService.acknowledgeAlert(id);

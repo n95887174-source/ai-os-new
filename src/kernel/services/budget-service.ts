@@ -37,6 +37,8 @@ export class BudgetService implements IBudgetService {
     private _costDedupSet?: Set<string>;
     private budgetInfoCache: { result: BudgetInfo; timestamp: number } | null = null;
     private readonly BUDGET_CACHE_TTL = 1000;
+    /** C-91: Month-filtered cost cache — avoids 5+ full scans of costHistory per STREAM_END */
+    private _monthFiltered: { start: number; entries: CostEstimate[] } | null = null;
 
     constructor(deps: BudgetServiceDeps) {
         this.deps = deps;
@@ -138,6 +140,7 @@ export class BudgetService implements IBudgetService {
                     agentId: (c as { agentId?: string }).agentId,
                 }));
             }
+            this._invalidateMonthFiltered();
         } catch (e) {
             LOGGER.warn('BudgetService', 'Failed to load cost history', { error: e });
         }
@@ -170,7 +173,8 @@ export class BudgetService implements IBudgetService {
                     d.provider || (d.model.includes('/') ? d.model.split('/')[0] : d.model)
                 ).toLowerCase();
                 const now = Date.now();
-                const dedupKey = `stream:${now}-${d.model}`;
+                // C-67: use requestId for dedup key (stable, not time-based) — prevents silent cost duplication
+                const dedupKey = `stream:${d.requestId || `${now}-${d.model}`}`;
                 if (this._costDedupSet?.has(dedupKey)) return;
                 if (!this._costDedupSet) this._costDedupSet = new Set<string>();
                 this._costDedupSet.add(dedupKey);
@@ -184,10 +188,14 @@ export class BudgetService implements IBudgetService {
                     totalCost: cost,
                     timestamp: now,
                 });
+                this._invalidateMonthFiltered();
                 if (this.costHistory.length > 10000) {
                     this.costHistory = this.costHistory.slice(-10000);
+                    this._invalidateMonthFiltered();
                     this._costDedupSet = new Set(
-                        this.costHistory.map((e) => `stream:${e.timestamp}-${e.model}`),
+                        this.costHistory.map(
+                            (e) => `stream:${e.timestamp}-${e.model}-${e.provider}`,
+                        ),
                     );
                 }
                 this.saveHistory();
@@ -202,6 +210,11 @@ export class BudgetService implements IBudgetService {
                         this.checkThresholds('provider', provider, pSpent, pBudget);
                     }
                 }
+                // C-91: Pre-compute provider spends once to avoid 3× scan per provider in emit
+                const providerSpends = Object.entries(this.providerBudgets).map(([p, budget]) => {
+                    const spent = this.computeProviderSpend(p);
+                    return { provider: p, budget, spent };
+                });
                 this.deps.eventBus.emit(EVENTS.BUDGET_ALERT, {
                     type: 'spend_updated',
                     summary: {
@@ -214,15 +227,12 @@ export class BudgetService implements IBudgetService {
                                     ? Math.round((monthlySpend / this.monthlyBudget) * 100)
                                     : 0,
                         },
-                        providers: Object.entries(this.providerBudgets).map(([p, budget]) => ({
+                        providers: providerSpends.map(({ provider: p, budget, spent }) => ({
                             provider: p,
                             budget,
-                            spent: this.computeProviderSpend(p),
-                            remaining: Math.max(0, budget - this.computeProviderSpend(p)),
-                            pct:
-                                budget > 0
-                                    ? Math.round((this.computeProviderSpend(p) / budget) * 100)
-                                    : 0,
+                            spent,
+                            remaining: Math.max(0, budget - spent),
+                            pct: budget > 0 ? Math.round((spent / budget) * 100) : 0,
                         })),
                         agents: [],
                     } as SpendSummary,
@@ -231,18 +241,30 @@ export class BudgetService implements IBudgetService {
         );
     }
 
+    /** C-91: Invalidate month cache on costHistory mutation */
+    private _invalidateMonthFiltered(): void {
+        this._monthFiltered = null;
+    }
+
+    /** C-91: Get pre-filtered month entries — single scan, cached for repeat calls */
+    private _getMonthFiltered(): CostEstimate[] {
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+        if (this._monthFiltered && this._monthFiltered.start === monthStart) {
+            return this._monthFiltered.entries;
+        }
+        const entries = this.costHistory.filter((c) => c.timestamp >= monthStart);
+        this._monthFiltered = { start: monthStart, entries };
+        return entries;
+    }
+
     private computeCurrentSpend(): number {
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-        return this.costHistory
-            .filter((c) => c.timestamp >= startOfMonth)
-            .reduce((s, c) => s + c.totalCost, 0);
+        return this._getMonthFiltered().reduce((s, c) => s + c.totalCost, 0);
     }
 
     private computeProviderSpend(provider: string): number {
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
         const normalized = provider.toLowerCase();
-        return this.costHistory
-            .filter((c) => c.timestamp >= startOfMonth && c.provider.toLowerCase() === normalized)
+        return this._getMonthFiltered()
+            .filter((c) => c.provider.toLowerCase() === normalized)
             .reduce((s, c) => s + c.totalCost, 0);
     }
 
@@ -296,14 +318,12 @@ export class BudgetService implements IBudgetService {
     }
 
     getSpendSummary(): SpendSummary {
+        const spentGlobal = this.computeCurrentSpend();
         const global = {
             budget: this.monthlyBudget,
-            spent: this.computeCurrentSpend(),
-            remaining: Math.max(0, this.monthlyBudget - this.computeCurrentSpend()),
-            pct:
-                this.monthlyBudget > 0
-                    ? Math.round((this.computeCurrentSpend() / this.monthlyBudget) * 100)
-                    : 0,
+            spent: spentGlobal,
+            remaining: Math.max(0, this.monthlyBudget - spentGlobal),
+            pct: this.monthlyBudget > 0 ? Math.round((spentGlobal / this.monthlyBudget) * 100) : 0,
         };
 
         const providers = Object.entries(this.providerBudgets).map(([provider, budget]) => {
@@ -360,9 +380,19 @@ export class BudgetService implements IBudgetService {
             timestamp: Date.now(),
             agentId: agentId || undefined,
         });
-        if (this.costHistory.length > 10000) this.costHistory = this.costHistory.slice(-10000);
+        this._invalidateMonthFiltered();
+        if (this.costHistory.length > 10000) {
+            this.costHistory = this.costHistory.slice(-10000);
+            this._invalidateMonthFiltered();
+        }
         this.saveHistory();
         this.budgetInfoCache = null;
+        // C-68: check provider budget threshold
+        const pBudget = this.providerBudgets[provider.toLowerCase()] || 0;
+        if (pBudget > 0) {
+            const pSpent = this.computeProviderSpend(provider);
+            this.checkThresholds('provider', provider, pSpent, pBudget);
+        }
         // Agent-level tracking
         if (agentId && amount > 0) {
             this.agentSpend[agentId] = (this.agentSpend[agentId] || 0) + amount;
@@ -558,6 +588,7 @@ export class BudgetService implements IBudgetService {
 
     clearHistory() {
         this.costHistory = [];
+        this._invalidateMonthFiltered();
         this.saveHistory();
     }
 

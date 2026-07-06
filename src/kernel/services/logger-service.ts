@@ -152,6 +152,36 @@ export class LoggerService implements ILogger {
     clear(): void {
         this.state.buffer.length = 0;
     }
+
+    /** C-107: Export logs as formatted string for download */
+    exportLogs(
+        format: 'json' | 'text' | 'csv' = 'text',
+        filter?: Partial<{ service: string; level: LogLevel; traceId: string }>,
+    ): string {
+        const entries = filter ? this.query(filter) : this.state.buffer.slice();
+        if (entries.length === 0) return '';
+
+        switch (format) {
+            case 'json':
+                return JSON.stringify(entries, null, 2);
+            case 'csv': {
+                const header = 'timestamp,level,service,traceId,message';
+                const rows = entries.map((e) =>
+                    [
+                        new Date(e.timestamp).toISOString(),
+                        e.level,
+                        `"${e.service}"`,
+                        e.traceId || '',
+                        `"${e.message.replace(/"/g, '""')}"`,
+                    ].join(','),
+                );
+                return [header, ...rows].join('\n');
+            }
+            case 'text':
+            default:
+                return entries.map((e) => formatLog(e)).join('\n');
+        }
+    }
 }
 
 function formatLog(entry: LogEntry): string {
@@ -161,7 +191,6 @@ function formatLog(entry: LogEntry): string {
     let error = '';
     if (entry.error instanceof Error) {
         error = `: ${entry.error.message}`;
-        if (entry.level === 'error') error += `\n${entry.error.stack}`;
     } else if (entry.error) {
         error = `: ${String(entry.error).slice(0, 120)}`;
     }

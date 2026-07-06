@@ -34,13 +34,19 @@ export class KeyUsageAnalyticsService implements IKeyUsageAnalyticsService {
 
         let totalRequests = 0;
         let totalCost = 0;
+        let totalTokens = 0;
         let totalLatencyMs = 0;
         let providersWithData = 0;
         let topProvider = '';
         let maxRequests = 0;
 
+        // H-170: Use real token counts from keyStateStore instead of fabricated formula
+        for (const k of allKeys) {
+            totalTokens += k.quota.usedTokens || 0;
+            totalRequests += k.quota.usedRequests || 0;
+        }
+
         for (const r of rankings) {
-            totalRequests += r.requests;
             const cost = r.requests * r.costPerRequest;
             totalCost += cost;
             if (r.requests > 0) {
@@ -60,7 +66,7 @@ export class KeyUsageAnalyticsService implements IKeyUsageAnalyticsService {
             totalKeys,
             activeKeys,
             totalRequests,
-            totalTokens: Math.round(totalCost * 200000),
+            totalTokens,
             totalCost: Math.round(totalCost * 100) / 100,
             avgLatency,
             topProvider: topProvider || '—',
@@ -68,15 +74,23 @@ export class KeyUsageAnalyticsService implements IKeyUsageAnalyticsService {
     }
 
     getProviderBreakdown(): ProviderUsageBreakdown[] {
+        const allKeys = this.deps.keyStateStore.getAll();
         const rankings = this.deps.providerTracker.getProviderRankings();
         const breakdown: ProviderUsageBreakdown[] = [];
+
+        // H-170: Group real token counts by provider
+        const providerTokens: Record<string, number> = {};
+        for (const k of allKeys) {
+            const p = k.provider.toLowerCase();
+            providerTokens[p] = (providerTokens[p] || 0) + (k.quota.usedTokens || 0);
+        }
 
         for (const r of rankings) {
             if (r.requests === 0) continue;
             breakdown.push({
                 provider: r.provider,
                 requestCount: r.requests,
-                tokenCount: Math.round(r.requests * r.costPerRequest * 200000),
+                tokenCount: providerTokens[r.provider] || 0,
                 cost: Math.round(r.requests * r.costPerRequest * 100) / 100,
                 avgLatency: r.avgLatency,
                 errorRate: Math.round((1 - r.reliability) * 1000) / 10,

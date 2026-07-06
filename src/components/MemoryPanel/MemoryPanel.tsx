@@ -48,6 +48,16 @@ const MemoryPanel: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        setSemanticMode(!!CONFIG?.services?.memory?.semanticEnabled);
+        const unsub = eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
+            setSemanticMode(!!CONFIG?.services?.memory?.semanticEnabled);
+        });
+        return () => {
+            if (unsub) unsub();
+        };
+    }, []);
+
+    useEffect(() => {
         const unsub = eventBus.onSafe<MemoryEntry[]>('memory:updated', (data) => {
             if (!isMountedRef.current) return;
             setMemories([...data]);
@@ -192,8 +202,7 @@ const MemoryPanel: React.FC = () => {
 
     const handleExportVectors = async () => {
         try {
-            const allMemories = memoryService.getMemories();
-            const exportData = JSON.stringify(allMemories, null, 2);
+            const exportData = JSON.stringify(filteredMemories, null, 2);
             const blob = new Blob([exportData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');

@@ -1,63 +1,93 @@
+import { EVENTS } from '../events/event-names';
 import type { ITimeMachineService, TimeSnapshot, SnapshotScope } from '../contracts/time-machine';
 
 const genId = () => crypto.randomUUID();
 
+export interface TimeMachineServiceDeps {
+    eventBus?: {
+        emit: (event: string, data?: unknown) => void;
+        on?: (event: string, cb: (...args: unknown[]) => void) => () => void;
+    };
+}
+
+/**
+ * @deprecated MOCK — This service does NOT actually restore any system state.
+ * restoreSnapshot() only appends a log entry and emits an event.
+ * Real snapshot restore is in SnapshotService.restoreById().
+ * Do not ship — mark as EXPERIMENTAL in UI.
+ */
 export class TimeMachineService implements ITimeMachineService {
-    private snapshots: TimeSnapshot[] = [
-        {
-            id: genId(),
-            label: 'Before config change',
-            scope: 'config',
-            timestamp: Date.now() - 86400000 * 3,
-            size: 1240,
-            changes: ['Changed SLA mode to ECONOMY', 'Updated base weights'],
-        },
-        {
-            id: genId(),
-            label: 'Pre-debate session',
-            scope: 'full',
-            timestamp: Date.now() - 86400000 * 2,
-            size: 4800,
-            changes: ['Created debate session', 'Added 5 participants'],
-        },
-        {
-            id: genId(),
-            label: 'Key rotation backup',
-            scope: 'keys',
-            timestamp: Date.now() - 86400000,
-            size: 890,
-            changes: ['Rotated API keys', 'Updated key metadata'],
-        },
-    ];
+    private snapshots: TimeSnapshot[] = [];
+    private deps: TimeMachineServiceDeps;
+    /** Track which snapshot is currently restored */
+    private _lastRestoredId: string | null = null;
+    constructor(deps?: TimeMachineServiceDeps) {
+        this.deps = deps ?? {};
+    }
 
     getSnapshots(): TimeSnapshot[] {
         return [...this.snapshots].sort((a, b) => b.timestamp - a.timestamp);
     }
 
     createSnapshot(label: string, scope: SnapshotScope): TimeSnapshot {
+        const changes: string[] = [];
+        switch (scope) {
+            case 'full':
+                changes.push('Full system state captured');
+                break;
+            case 'config':
+                changes.push('Configuration state captured');
+                break;
+            case 'memory':
+                changes.push('Memory state captured');
+                break;
+            case 'keys':
+                changes.push('Key management state captured');
+                break;
+            case 'debates':
+                changes.push('Debate sessions state captured');
+                break;
+        }
         const snap: TimeSnapshot = {
             id: genId(),
             label,
             scope,
             timestamp: Date.now(),
-            size: Math.floor(Math.random() * 5000) + 100,
-            changes: [`${scope} snapshot created`],
+            size: changes.join('').length + 64,
+            changes,
         };
         this.snapshots.push(snap);
+        this.deps.eventBus?.emit(EVENTS.SNAPSHOT_CAPTURED, {
+            snapshotId: snap.id,
+            label: snap.label,
+            scope: snap.scope,
+            timestamp: snap.timestamp,
+        });
         return { ...snap };
     }
 
     restoreSnapshot(id: string): void {
         const snap = this.snapshots.find((s) => s.id === id);
         if (!snap) throw new Error(`Snapshot ${id} not found`);
+        this._lastRestoredId = id;
         snap.changes = [
             ...snap.changes,
             `Restored to ${snap.label} (${new Date().toLocaleString()})`,
         ];
+        this.deps.eventBus?.emit(EVENTS.SNAPSHOT_RESTORED, {
+            snapshotId: id,
+            label: snap.label,
+            scope: snap.scope,
+            timestamp: Date.now(),
+            changes: snap.changes,
+        });
     }
 
     deleteSnapshot(id: string): void {
         this.snapshots = this.snapshots.filter((s) => s.id !== id);
+        if (this._lastRestoredId === id) {
+            this._lastRestoredId = null;
+        }
     }
 
     compareSnapshots(id1: string, id2: string): { key: string; before: string; after: string }[] {
@@ -74,5 +104,9 @@ export class TimeMachineService implements ITimeMachineService {
                 after: new Date(s2.timestamp).toLocaleString(),
             },
         ];
+    }
+
+    getLastRestoredId(): string | null {
+        return this._lastRestoredId;
     }
 }

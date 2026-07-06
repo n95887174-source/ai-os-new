@@ -515,7 +515,7 @@ const AquariumPanel: React.FC = () => {
                                 animate={{ opacity: 1, x: 0, scale: 1 }}
                                 exit={{ opacity: 0, x: 30, scale: 0.9 }}
                                 className="aquarium-info-panel"
-                                role="dialog"
+                                role="region"
                                 aria-label="Info Panel"
                             >
                                 <div

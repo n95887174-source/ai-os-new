@@ -17,17 +17,42 @@ const card: React.CSSProperties = {
 const MemoryPalacePanel: React.FC = () => {
     const { t } = useTranslation();
     const [state, setState] = useState<PalaceState | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         (async () => {
             try {
+                setLoading(true);
+                setError(null);
                 const m = await import('../../kernel/instances');
                 const orch: { getPalaceState: () => Promise<PalaceState> } | undefined = (m as any)
                     .memoryOrchestrator;
                 if (orch) setState(await orch.getPalaceState());
-            } catch {}
+                else setError(t('memory_palace.service_unavailable'));
+            } catch {
+                setError(t('memory_palace.load_error'));
+            } finally {
+                setLoading(false);
+            }
         })();
-    }, []);
+    }, [t]);
+
+    if (loading) {
+        return (
+            <div style={{ padding: 24, maxWidth: 900 }}>
+                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>{t('common.loading')}</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{ padding: 24, maxWidth: 900 }}>
+                <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>{error}</div>
+            </div>
+        );
+    }
 
     return (
         <div style={{ padding: 24, maxWidth: 900 }}>

@@ -8,8 +8,11 @@ import { EventBus } from '../instances';
 import { EVENTS } from '../events/event-names';
 import type { ILLMClientService } from '../contracts/provider-adapter';
 import { sanitizePromptVar } from '../utils/sanitize';
+import { BucketStorageAdapter } from './storage-adapter';
 
 const LOGGER = rootLogger.child('ChatSummarizer');
+
+const STORAGE_KEY = 'chat_summaries_v1';
 
 export interface ChatSummary {
     sessionId: string;
@@ -47,10 +50,28 @@ export class ChatSummarizerService {
     private config: SummarizationConfig;
     private summaries: Map<string, ChatSummary> = new Map();
     private llmClient: ILLMClientService;
+    private loaded = false;
 
     constructor(llmClient: ILLMClientService, config: Partial<SummarizationConfig> = {}) {
         this.llmClient = llmClient;
         this.config = { ...DEFAULT_CONFIG, ...config };
+    }
+
+    async #ensureLoaded(): Promise<void> {
+        if (this.loaded) return;
+        const raw = await BucketStorageAdapter.UI.get<Record<string, ChatSummary>>(STORAGE_KEY);
+        if (raw) {
+            this.summaries = new Map(Object.entries(raw));
+        }
+        this.loaded = true;
+    }
+
+    async #persist(): Promise<void> {
+        const obj: Record<string, ChatSummary> = {};
+        for (const [k, v] of this.summaries) {
+            obj[k] = v;
+        }
+        await BucketStorageAdapter.UI.set(STORAGE_KEY, obj);
     }
 
     /**
@@ -67,6 +88,7 @@ export class ChatSummarizerService {
         sessionId: string,
         messages: SummarizerMessage[],
     ): Promise<ChatSummary | null> {
+        await this.#ensureLoaded();
         if (messages.length < 10) {
             LOGGER.debug('ChatSummarizer', 'Not enough messages to summarize', {
                 sessionId,
@@ -107,8 +129,11 @@ UNRESOLVED: [questions or topics that remain open]`;
             // Parse the response
             const summary = this.parseSummaryResponse(sessionId, summaryText, messages.length);
 
-            // Cache the summary
+            // Cache and persist the summary
             this.summaries.set(sessionId, summary);
+            this.#persist().catch((e) =>
+                LOGGER.error('ChatSummarizer', 'Persist failed', { sessionId, error: e }),
+            );
 
             LOGGER.info('ChatSummarizer', 'Summary generated', {
                 sessionId,
@@ -205,7 +230,8 @@ UNRESOLVED: [questions or topics that remain open]`;
     /**
      * Get cached summary for a session
      */
-    getSummary(sessionId: string): ChatSummary | undefined {
+    async getSummary(sessionId: string): Promise<ChatSummary | undefined> {
+        await this.#ensureLoaded();
         return this.summaries.get(sessionId);
     }
 
@@ -220,16 +246,20 @@ UNRESOLVED: [questions or topics that remain open]`;
         sessionId: string,
         messages: SummarizerMessage[],
     ): Promise<ChatSummary | null> {
-        if (!this.shouldSummarize(sessionId, messages.length))
-            return this.getSummary(sessionId) ?? null;
+        if (!this.shouldSummarize(sessionId, messages.length)) {
+            const existing = await this.getSummary(sessionId);
+            return existing ?? null;
+        }
         return this.generateSummary(sessionId, messages);
     }
 
     /**
      * Delete summary for a session
      */
-    deleteSummary(sessionId: string): void {
+    async deleteSummary(sessionId: string): Promise<void> {
+        await this.#ensureLoaded();
         this.summaries.delete(sessionId);
+        await this.#persist();
     }
 
     /**
@@ -254,14 +284,16 @@ UNRESOLVED: [questions or topics that remain open]`;
     /**
      * Get all cached summaries
      */
-    getAllSummaries(): Map<string, ChatSummary> {
+    async getAllSummaries(): Promise<Map<string, ChatSummary>> {
+        await this.#ensureLoaded();
         return new Map(this.summaries);
     }
 
     /**
      * Clear old summaries (older than 7 days)
      */
-    cleanup(maxAgeDays = 7): number {
+    async cleanup(maxAgeDays = 7): Promise<number> {
+        await this.#ensureLoaded();
         const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
         let removed = 0;
 
@@ -271,6 +303,8 @@ UNRESOLVED: [questions or topics that remain open]`;
                 removed++;
             }
         }
+
+        if (removed > 0) await this.#persist();
 
         LOGGER.info('ChatSummarizer', 'Cleaned up old summaries', { removed });
         return removed;

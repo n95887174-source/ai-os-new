@@ -58,13 +58,22 @@ const VotePanelSection: React.FC<Props> = ({
                                         v.votedAgentId === agentId &&
                                         v.score === 5,
                                 );
-                                debateHumanService.recordHumanVote(getActiveDebateSession(), {
-                                    round: showVotePanel,
-                                    voter: 'human',
-                                    votedAgentId: agentId,
-                                    score: wasBest ? 0 : 5,
-                                    timestamp: Date.now(),
-                                });
+                                if (wasBest) {
+                                    debateHumanService.removeHumanVote(
+                                        getActiveDebateSession(),
+                                        showVotePanel,
+                                        'human',
+                                        agentId,
+                                    );
+                                } else {
+                                    debateHumanService.recordHumanVote(getActiveDebateSession(), {
+                                        round: showVotePanel,
+                                        voter: 'human',
+                                        votedAgentId: agentId,
+                                        score: 5,
+                                        timestamp: Date.now(),
+                                    });
+                                }
                                 setHumanVotes(
                                     debateHumanService.getHumanVotes(getActiveDebateSession()),
                                 );

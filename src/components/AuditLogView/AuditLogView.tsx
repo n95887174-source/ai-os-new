@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Terminal, AlertTriangle, Info, Zap, Activity, Search } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { usePolling } from '../Common/usePolling';
+import { Terminal, AlertTriangle, Info, Zap, Activity, Search, Download } from 'lucide-react';
 import { adminService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import type { AdminAuditEntry } from '../../kernel/instances';
@@ -15,16 +16,25 @@ const AuditLogView: React.FC = () => {
     const [severityFilter, setSeverityFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
 
+    const refresh = useCallback(() => setEntries(adminService.getAuditLog(200) ?? []), []);
+
     useEffect(() => {
-        const refresh = () => setEntries(adminService.getAuditLog(200) ?? []);
         refresh();
         const unsub = eventBus.on(EVENTS.NOTIFICATION, refresh);
-        const interval = setInterval(refresh, 5000);
-        return () => {
-            unsub();
-            clearInterval(interval);
-        };
-    }, []);
+        return () => unsub();
+    }, [refresh]);
+    usePolling(refresh, 5000);
+
+    const handleExport = useCallback(() => {
+        const json = JSON.stringify(entries, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-log-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [entries]);
 
     const filtered = useMemo(() => {
         let result = entries;
@@ -124,6 +134,25 @@ const AuditLogView: React.FC = () => {
                             </button>
                         ))}
                     </div>
+                    <button
+                        onClick={handleExport}
+                        title="Export as JSON"
+                        style={{
+                            padding: '0.4rem 0.6rem',
+                            borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            background: 'rgba(0,0,0,0.3)',
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: '0.65rem',
+                        }}
+                    >
+                        <Download size={12} />
+                        Export
+                    </button>
                 </div>
             </div>
 

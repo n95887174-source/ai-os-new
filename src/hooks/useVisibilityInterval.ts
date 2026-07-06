@@ -1,31 +1,31 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * C-95: Polling hook that auto-pauses when the browser tab is hidden.
- * Clears interval when hidden, restarts when visible.
- * @param callback — the function to call on each tick (stable reference preferred)
- * @param intervalMs — polling interval in milliseconds
- * @param enabled — optionally disable polling entirely (default true)
+ * C-95: setInterval variant that respects document.visibilityState.
+ * Pauses when the tab is hidden, resumes (and optionally fires immediately)
+ * when the tab becomes visible again.
  */
-export function usePolling(callback: () => void, intervalMs: number, enabled = true): void {
+export function useVisibilityInterval(
+    callback: () => void,
+    delayMs: number,
+    options?: { immediateOnVisible?: boolean },
+): void {
     const savedCallback = useRef(callback);
+    const savedOptions = useRef(options);
 
     useEffect(() => {
         savedCallback.current = callback;
-    });
+        savedOptions.current = options;
+    }, [callback, options]);
 
     useEffect(() => {
-        if (!enabled || intervalMs <= 0) return;
-
-        const tick = () => {
-            savedCallback.current();
-        };
+        if (delayMs <= 0) return;
 
         let id: ReturnType<typeof setInterval> | null = null;
 
         function start() {
             if (id !== null) clearInterval(id);
-            id = setInterval(tick, intervalMs);
+            id = setInterval(() => savedCallback.current(), delayMs);
         }
 
         function stop() {
@@ -37,6 +37,9 @@ export function usePolling(callback: () => void, intervalMs: number, enabled = t
 
         function onVisibilityChange() {
             if (document.visibilityState === 'visible') {
+                if (savedOptions.current?.immediateOnVisible) {
+                    savedCallback.current();
+                }
                 start();
             } else {
                 stop();
@@ -44,14 +47,11 @@ export function usePolling(callback: () => void, intervalMs: number, enabled = t
         }
 
         document.addEventListener('visibilitychange', onVisibilityChange);
-        if (document.visibilityState === 'visible') {
-            tick();
-            start();
-        }
+        if (document.visibilityState === 'visible') start();
 
         return () => {
             stop();
             document.removeEventListener('visibilitychange', onVisibilityChange);
         };
-    }, [intervalMs, enabled]);
+    }, [delayMs]);
 }

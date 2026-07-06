@@ -2,6 +2,9 @@ import type { IProviderMigrationService, MigrationPlan } from '../contracts/prov
 
 const genId = () => crypto.randomUUID();
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class ProviderMigrationService implements IProviderMigrationService {
     private plans: MigrationPlan[] = [
         {

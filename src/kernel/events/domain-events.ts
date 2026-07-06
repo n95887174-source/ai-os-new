@@ -55,7 +55,6 @@ export const DomainEvents = {
     AGENT_JOURNAL_ADDED: EVENT_REGISTRY.AGENT_JOURNAL_ADDED.name,
     AGENT_JOURNAL_REMOVED: EVENT_REGISTRY.AGENT_JOURNAL_REMOVED.name,
     AGENT_JOURNAL_CLEARED: EVENT_REGISTRY.AGENT_JOURNAL_CLEARED.name,
-    AGENT_TASK_COMPLETED: EVENT_REGISTRY.AGENT_TASK_COMPLETED.name,
     WHATIF_SIMULATION_COMPLETED: EVENT_REGISTRY.WHATIF_SIMULATION_COMPLETED.name,
     PRESSURE_MAP_UPDATED: EVENT_REGISTRY.PRESSURE_MAP_UPDATED.name,
     PRESSURE_ALERT_RAISED: EVENT_REGISTRY.PRESSURE_ALERT_RAISED.name,
@@ -107,7 +106,6 @@ export type DomainEventMap = Pick<
     | 'agent:rate:limited'
     | 'agent:blackboard:updated'
     | 'agent:handoff:initiated'
-    | 'agent:task:completed'
     | 'router:signal'
     | 'advisor:suggestion'
     | 'advisor:suggestion:executed'

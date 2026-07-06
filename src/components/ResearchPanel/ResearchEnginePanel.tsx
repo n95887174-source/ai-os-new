@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useVisibilityInterval } from '../../utils/visibility-interval';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search,
@@ -669,38 +670,14 @@ export const ResearchEnginePanel: React.FC = () => {
     const [enabledSources, setEnabledSources] = useState<SourceType[]>(
         sourceAdapterRegistry.getConfig().enabledSources,
     );
-    const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const engineRef = useRef<IResearchEngine>(researchEngine);
-
-    const sourceStats = sourceAdapterRegistry.getAllAdapters().reduce(
-        (acc, a) => {
-            acc.total++;
-            acc.byCategory[a.category] = (acc.byCategory[a.category] || 0) + 1;
-            if (enabledSources.includes(a.name)) acc.enabled++;
-            return acc;
-        },
-        { total: 0, enabled: 0, byCategory: {} as Record<string, number> },
-    );
-
-    const toggleSource = useCallback((type: SourceType) => {
-        setEnabledSources((prev) => {
-            const next = prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type];
-            sourceAdapterRegistry.updateConfig({ enabledSources: next });
-            return next;
-        });
-    }, []);
-
     const refresh = useCallback(() => {
         setSessions(engineRef.current.getAllSessions());
     }, []);
 
     useEffect(() => {
         refresh();
-        refreshRef.current = setInterval(refresh, 2000);
-        return () => {
-            if (refreshRef.current) clearInterval(refreshRef.current);
-        };
     }, [refresh]);
+    useVisibilityInterval(refresh, 2000);
 
     const handleCreate = async () => {
         if (!newTitle.trim() || !newQuestion.trim()) return;

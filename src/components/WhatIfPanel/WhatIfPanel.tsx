@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { usePolling } from '../Common/usePolling';
 import {
     GitBranch,
     Users,
@@ -95,15 +96,10 @@ const WhatIfPanel: React.FC = () => {
     const [currStrategy, setCurrStrategy] = useState('balanced');
     const [propStrategy, setPropStrategy] = useState('cost');
 
-    useEffect(() => {
-        const refresh = () => {
-            const sessions_ = debateEngine.getActiveSessions() ?? [];
-            setSessions(sessions_.map((s) => ({ id: s.id, topic: s.topic ?? '' })));
-        };
-        refresh();
-        const interval = setInterval(refresh, 10000);
-        return () => clearInterval(interval);
-    }, []);
+    usePolling(() => {
+        const sessions_ = debateEngine.getActiveSessions() ?? [];
+        setSessions(sessions_.map((s) => ({ id: s.id, topic: s.topic ?? '' })));
+    }, 10000);
 
     const runSim = useCallback(async (type: SimType, label: string, fn: () => Promise<unknown>) => {
         setRunning(type);

@@ -140,7 +140,11 @@ const AgentJournalPanel: React.FC = () => {
                 }))
             )
                 return;
-            await service.remove(id);
+            try {
+                await service.remove(id);
+            } catch (e) {
+                setError(String(e));
+            }
         },
         [confirm],
     );
@@ -154,7 +158,11 @@ const AgentJournalPanel: React.FC = () => {
             }))
         )
             return;
-        await service.clear();
+        try {
+            await service.clear();
+        } catch (e) {
+            setError(String(e));
+        }
     }, [t, confirm]);
 
     const allTags = service.getAllTags();
@@ -178,6 +186,16 @@ const AgentJournalPanel: React.FC = () => {
             totalDuration: entries.reduce((s, e) => s + e.durationMs, 0),
             totalTokens: entries.reduce((s, e) => s + e.tokensUsed, 0),
         };
+    }, [entries]);
+
+    const agentStatsMap = React.useMemo(() => {
+        const map = new Map<string, number>();
+        for (const e of entries) {
+            if (!map.has(e.agentId)) {
+                map.set(e.agentId, service.getAgentStats(e.agentId).totalTasks);
+            }
+        }
+        return map;
     }, [entries]);
 
     if (loading) {
@@ -358,7 +376,7 @@ const AgentJournalPanel: React.FC = () => {
                             fontSize: '0.7rem',
                         }}
                     >
-                        ✕ {activeAgent}
+                        ✕ {entries.find((e) => e.agentId === activeAgent)?.agentName || activeAgent}
                     </button>
                 )}
             </div>
@@ -392,7 +410,7 @@ const AgentJournalPanel: React.FC = () => {
                     <JournalEntryCard
                         key={e.id}
                         entry={e}
-                        totalTasks={service.getAgentStats(e.agentId).totalTasks}
+                        totalTasks={agentStatsMap.get(e.agentId) ?? 0}
                         onFilterByAgent={setActiveAgent}
                         onDelete={handleDelete}
                     />

@@ -99,6 +99,12 @@ export class TraceService {
         }
     }
 
+    private markTraceFailed(trace: ExecutionTrace, error: string): void {
+        trace.status = 'failed';
+        trace.endTime = Date.now();
+        trace.output = error;
+    }
+
     private setupListeners() {
         this.unsubs.push(
             this.deps.eventBus.onSafe<{ requestId: string; messages: { content?: string }[] }>(
@@ -175,6 +181,10 @@ export class TraceService {
                     step.status = status === 'done' ? 'done' : 'error';
                     step.duration = duration ?? Date.now() - step.timestamp;
                     step.output = output?.slice?.(0, 2000) ?? output;
+                }
+                // C-110: propagate step error to parent trace status
+                if (status === 'error' && trace.status !== 'failed') {
+                    this.markTraceFailed(trace, output || 'Cognitive step error');
                 }
                 this.persist(trace);
                 heapLog(`COGNITIVE_STEP_COMPLETED emit: ${d.nodeId}`);
@@ -316,6 +326,11 @@ export class TraceService {
                     traceId: id,
                     ageMs: now - (trace.startTime || 0),
                 });
+                // C-110: mark as failed and persist before removing from active
+                if (trace.status === 'running') {
+                    this.markTraceFailed(trace, 'Swept: trace did not complete within timeout');
+                    this.persist(trace);
+                }
                 this.activeTraces.delete(id);
             }
         }

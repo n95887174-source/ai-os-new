@@ -3,104 +3,109 @@ import { genId } from '../../utils/gen-id';
 const LOGGER = rootLogger.child('ResearchRunService');
 
 export interface ResearchRun {
-  id: string;
-  module: string;
-  parameters: Record<string, unknown>;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  startedAt: number;
-  completedAt?: number;
-  findings?: string[];
-  summary?: string;
-  error?: string;
+    id: string;
+    module: string;
+    parameters: Record<string, unknown>;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    startedAt: number;
+    completedAt?: number;
+    findings?: string[];
+    summary?: string;
+    error?: string;
 }
 
 interface ResearchRunServiceDeps {
-  database: {
-    getKv: <T>(id: string) => Promise<T | null>;
-    setKv: <T>(id: string, value: T) => Promise<void>;
-  };
+    database: {
+        getKv: <T>(id: string) => Promise<T | null>;
+        setKv: <T>(id: string, value: T) => Promise<void>;
+    };
 }
 
 const STORAGE_KEY = 'research_run_history';
 
 export class ResearchRunService {
-  private runs: ResearchRun[] = [];
-  private deps: ResearchRunServiceDeps;
-  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+    private runs: ResearchRun[] = [];
+    private deps: ResearchRunServiceDeps;
+    private persistTimer: ReturnType<typeof setTimeout> | null = null;
+    private static readonly MAX_RUNS = 200;
 
-  constructor(deps: ResearchRunServiceDeps) {
-    this.deps = deps;
-  }
-
-  async init() {
-    try {
-      const stored = await this.deps.database.getKv<ResearchRun[]>(STORAGE_KEY);
-      if (stored) this.runs = stored;
-    } catch (e) {
-      LOGGER.error('ResearchRunService', 'Failed to load', { error: e });
+    constructor(deps: ResearchRunServiceDeps) {
+        this.deps = deps;
     }
-  }
 
-  startRun(module: string, parameters: Record<string, unknown>): ResearchRun {
-    const run: ResearchRun = {
-      id: genId(),
-      module,
-      parameters,
-      status: 'running',
-      startedAt: Date.now(),
-    };
-    this.runs.unshift(run);
-    void this.persist(); // B10-153: Fire-and-forget; persist() uses internal timer + catch
-    return run;
-  }
-
-  completeRun(id: string, findings: string[], summary: string) {
-    const run = this.runs.find(r => r.id === id);
-    if (run) {
-      run.status = 'completed';
-      run.completedAt = Date.now();
-      run.findings = findings;
-      run.summary = summary;
-      void this.persist(); // B10-153
+    async init() {
+        try {
+            const stored = await this.deps.database.getKv<ResearchRun[]>(STORAGE_KEY);
+            if (stored) this.runs = stored;
+        } catch (e) {
+            LOGGER.error('ResearchRunService', 'Failed to load', { error: e });
+        }
     }
-  }
 
-  failRun(id: string, error: string) {
-    const run = this.runs.find(r => r.id === id);
-    if (run) {
-      run.status = 'failed';
-      run.completedAt = Date.now();
-      run.error = error;
-      void this.persist(); // B10-153
+    startRun(module: string, parameters: Record<string, unknown>): ResearchRun {
+        const run: ResearchRun = {
+            id: genId(),
+            module,
+            parameters,
+            status: 'running',
+            startedAt: Date.now(),
+        };
+        this.runs.unshift(run);
+        if (this.runs.length > ResearchRunService.MAX_RUNS)
+            this.runs.length = ResearchRunService.MAX_RUNS;
+        void this.persist(); // B10-153
+        return run;
     }
-  }
 
-  getAllRuns(): ResearchRun[] {
-    return [...this.runs];
-  }
+    completeRun(id: string, findings: string[], summary: string) {
+        const run = this.runs.find((r) => r.id === id);
+        if (run) {
+            run.status = 'completed';
+            run.completedAt = Date.now();
+            run.findings = findings;
+            run.summary = summary;
+            void this.persist(); // B10-153
+        }
+    }
 
-  getRunsByModule(module: string): ResearchRun[] {
-    return this.runs.filter(r => r.module === module);
-  }
+    failRun(id: string, error: string) {
+        const run = this.runs.find((r) => r.id === id);
+        if (run) {
+            run.status = 'failed';
+            run.completedAt = Date.now();
+            run.error = error;
+            void this.persist(); // B10-153
+        }
+    }
 
-  getRecentRuns(limit = 10): ResearchRun[] {
-    return this.runs.slice(0, limit);
-  }
+    getAllRuns(): ResearchRun[] {
+        return [...this.runs];
+    }
 
-  deleteRun(id: string) {
-    this.runs = this.runs.filter(r => r.id !== id);
-    void this.persist(); // B10-153
-  }
+    getRunsByModule(module: string): ResearchRun[] {
+        return this.runs.filter((r) => r.module === module);
+    }
 
-  clearAll() {
-    this.runs = [];
-    void this.persist(); // B10-153
-  }
+    getRecentRuns(limit = 10): ResearchRun[] {
+        return this.runs.slice(0, limit);
+    }
 
-  private persist() {
-    if (this.persistTimer) clearTimeout(this.persistTimer);
-    this.persistTimer = setTimeout(() => {
-      this.deps.database.setKv(STORAGE_KEY, this.runs).catch(e => LOGGER.error('ResearchRunService', 'Persist failed', { error: e }));
-    }, 1000);
-  }
+    deleteRun(id: string) {
+        this.runs = this.runs.filter((r) => r.id !== id);
+        void this.persist(); // B10-153
+    }
+
+    clearAll() {
+        this.runs = [];
+        void this.persist(); // B10-153
+    }
+
+    private persist() {
+        if (this.persistTimer) clearTimeout(this.persistTimer);
+        this.persistTimer = setTimeout(() => {
+            this.deps.database
+                .setKv(STORAGE_KEY, this.runs)
+                .catch((e) => LOGGER.error('ResearchRunService', 'Persist failed', { error: e }));
+        }, 1000);
+    }
 }

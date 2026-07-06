@@ -8,6 +8,8 @@ import type {
 const genId = () => crypto.randomUUID();
 const genAttachId = () => crypto.randomUUID();
 
+const MAX_SESSIONS = 50;
+
 export class VoiceInputService implements IVoiceInputService {
     private sessions: VoiceInputSession[] = [];
     private attachments: MultimodalAttachment[] = [
@@ -43,6 +45,9 @@ export class VoiceInputService implements IVoiceInputService {
             startedAt: Date.now(),
         };
         this.sessions.push(session);
+        if (this.sessions.length > MAX_SESSIONS) {
+            this.sessions = this.sessions.slice(-MAX_SESSIONS);
+        }
         return session;
     }
 

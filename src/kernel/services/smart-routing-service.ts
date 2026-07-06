@@ -19,6 +19,9 @@ const DEFAULT_CONFIG: SmartRoutingConfig = {
 
 let nextId = 1;
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class SmartRoutingService implements ISmartRoutingService {
     private config: SmartRoutingConfig = { ...DEFAULT_CONFIG };
     private rules: RoutingRule[] = [];

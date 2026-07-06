@@ -78,9 +78,22 @@ export class TraceContext {
     }
 
     static wrap<T>(fn: () => T, trace?: Partial<ITraceContext>): T {
+        try {
+            this.enter(trace);
+            return fn();
+        } finally {
+            this.exit();
+        }
+    }
+
+    /**
+     * Explicit async variant of `run()`. Returns `Promise<T>`.
+     * Context cleanup is deferred until the promise settles.
+     */
+    static async runAsync<T>(trace: Partial<ITraceContext>, fn: () => Promise<T>): Promise<T> {
         this.enter(trace);
         try {
-            return fn();
+            return await fn();
         } finally {
             this.exit();
         }

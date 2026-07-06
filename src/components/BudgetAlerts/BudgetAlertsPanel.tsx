@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../Common/usePolling';
 import {
     Bell,
     Plus,
@@ -58,14 +59,7 @@ const BudgetAlertsPanelContent: React.FC = () => {
         setHistory(budgetAlertService.getAlertHistory());
     };
 
-    useEffect(() => {
-        refresh();
-        const interval = setInterval(() => {
-            budgetAlertService.evaluate();
-            refresh();
-        }, 15000);
-        return () => clearInterval(interval);
-    }, []);
+    usePolling(refresh, 15000);
 
     const handleAdd = () => {
         if (!name.trim()) return;

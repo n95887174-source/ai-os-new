@@ -4,6 +4,9 @@ import { MemoryStoreType } from '../../contracts/memory-store';
 const MICRO_CONSOLIDATION_TRIGGER = 10;
 const NIGHTLY_IDLE_MS = 15 * 60 * 1000;
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class SleepEngine {
     private microCounter = 0;
     private nightlyTimer: ReturnType<typeof setTimeout> | null = null;

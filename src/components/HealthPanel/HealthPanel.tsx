@@ -62,16 +62,26 @@ const HealthPanel: React.FC = () => {
     const totalActive =
         (health as { runtime?: { totalActive?: number } })?.runtime?.totalActive ?? 0;
 
+    const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const handleRefresh = useCallback(() => {
         setIsLoading(true);
         setIsRefreshing(true);
         try {
-            setHealth(adminService.getSystemHealth());
+            const result = adminService.getSystemHealth();
+            if (result instanceof Promise) {
+                result.catch(() => {
+                    setError(t('health.error_refresh'));
+                    clearError();
+                });
+            }
+            setHealth(result);
         } catch {
             setError(t('health.error_refresh'));
             clearError();
         }
-        setTimeout(() => {
+        if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = setTimeout(() => {
             setIsRefreshing(false);
             setIsLoading(false);
         }, 500);
@@ -91,7 +101,6 @@ const HealthPanel: React.FC = () => {
 
     const isMountedRef = useRef(true);
     const allAlerts = useMemo(() => keyService.getAlerts(), []);
-    const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         const currentRefreshTimeout = refreshTimeoutRef.current;

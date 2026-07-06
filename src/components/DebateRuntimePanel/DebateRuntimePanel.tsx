@@ -146,43 +146,32 @@ const DebateRuntimePanel: React.FC = () => {
                 (d) => {
                     const streamKey = `streaming-${d.agentId}`;
                     const existing = argsRef.current.get(d.sessionId) || [];
-                    const streamIdx = existing.findIndex((a) => a.id === streamKey);
                     // D-H-16: Resolve real round and position from session snapshot
                     const snap = debateEngine.getSession(d.sessionId);
+                    const agentNode = snap?.topology.nodes.find(
+                        (n: { id: string }) => n.id === d.agentId,
+                    );
+                    const realAgentName = agentNode?.label ?? d.agentId;
                     const realRound = snap?.round ?? 1;
                     const realPosition = (snap?.participants?.find(
                         (p: { agentId?: string; nodeId?: string; role?: string }) =>
                             p.agentId === d.agentId || p.nodeId === d.agentId,
                     )?.role ?? 'neutral') as DebateArgument['position'];
-                    if (streamIdx >= 0) {
-                        const updated = [...existing];
-                        updated[streamIdx] = {
-                            ...updated[streamIdx],
-                            content: updated[streamIdx].content + d.chunk,
-                            round: realRound,
-                            position: realPosition,
-                        };
-                        const next = new Map(argsRef.current);
-                        next.set(d.sessionId, updated);
-                        argsRef.current = next;
-                        setSessionArgs(next);
-                    } else {
-                        const partial: DebateArgument = {
-                            id: streamKey,
-                            agentId: d.agentId,
-                            agentName: d.agentId,
-                            content: d.chunk,
-                            confidence: 0.5,
-                            timestamp: Date.now(),
-                            round: realRound,
-                            position: realPosition,
-                            source: 'llm',
-                        };
-                        const next = new Map(argsRef.current);
-                        next.set(d.sessionId, [...existing, partial]);
-                        argsRef.current = next;
-                        setSessionArgs(next);
-                    }
+                    const partial: DebateArgument = {
+                        id: streamKey,
+                        agentId: d.agentId,
+                        agentName: realAgentName,
+                        content: d.chunk,
+                        confidence: 0.5,
+                        timestamp: Date.now(),
+                        round: realRound,
+                        position: realPosition,
+                        source: 'llm',
+                    };
+                    const next = new Map(argsRef.current);
+                    next.set(d.sessionId, [...existing, partial]);
+                    argsRef.current = next;
+                    setSessionArgs(next);
                 },
             ),
             eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>(
@@ -194,6 +183,10 @@ const DebateRuntimePanel: React.FC = () => {
                     // D-H-16: Resolve real round and position from session snapshot
                     const snap = debateEngine.getSession(d.sessionId);
                     const realRound = snap?.round ?? 1;
+                    const agentNode = snap?.topology.nodes.find(
+                        (n: { id: string }) => n.id === d.agentId,
+                    );
+                    const realAgentName = agentNode?.label ?? d.agentId;
                     const realPosition = (snap?.participants?.find(
                         (p: { agentId?: string; nodeId?: string; role?: string }) =>
                             p.agentId === d.agentId || p.nodeId === d.agentId,
@@ -201,7 +194,7 @@ const DebateRuntimePanel: React.FC = () => {
                     const arg: DebateArgument = {
                         id: `runtime-${Date.now()}-${clean.length}`,
                         agentId: d.agentId,
-                        agentName: d.agentId,
+                        agentName: realAgentName,
                         content: d.content,
                         confidence: 0.7,
                         timestamp: Date.now(),

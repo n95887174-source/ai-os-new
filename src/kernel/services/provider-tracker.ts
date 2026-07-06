@@ -87,7 +87,10 @@ export class ProviderTracker implements IProviderTracker {
                     fullContent?: string;
                     model?: string;
                     ttft?: number;
+                    requestId?: string;
                 };
+                // H-167: Skip probe events to avoid polluting real provider metrics
+                if (data?.requestId?.startsWith('probe-')) return;
                 if (data?.provider) this.handleMetricUpdate(data as ProviderMetricData);
             }),
             bus.on(EVENTS.STREAM_ERROR, (raw: unknown) => {
@@ -166,11 +169,13 @@ export class ProviderTracker implements IProviderTracker {
             prev.reliability > 0.8 ? 'healthy' : prev.reliability > 0.4 ? 'degraded' : 'offline';
         prev.totalRequests++;
 
-        if (this.costCalculator && data.model) {
+        if (data.model) {
             const model = data.model.toLowerCase();
             const inputTokens = Math.ceil(tokens * 0.3);
             const outputTokens = tokens - inputTokens;
-            const requestCost = this.costCalculator.calculateCost(model, inputTokens, outputTokens);
+            const requestCost = this.costCalculator
+                ? this.costCalculator.calculateCost(model, inputTokens, outputTokens)
+                : (inputTokens * 0.002 + outputTokens * 0.008) / 1000; // $0.002/1K in + $0.008/1K out fallback
             prev.estimatedCost = (prev.estimatedCost || 0) + requestCost;
         }
 

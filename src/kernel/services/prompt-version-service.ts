@@ -178,6 +178,9 @@ export class PromptVersionService implements IPromptVersionService {
             comment,
         };
         this.versions.push(v);
+        if (this.versions.length > 1000) {
+            this.versions = this.versions.slice(-1000);
+        }
         this.persist();
         return v;
     }

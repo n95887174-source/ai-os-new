@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useVisibilityInterval } from '../../utils/visibility-interval';
 import {
     Rocket,
     Plus,
@@ -75,10 +76,9 @@ const DeployPanelContent: React.FC = () => {
     };
 
     useEffect(() => {
-        const interval = setInterval(refresh, 3000);
         refresh();
-        return () => clearInterval(interval);
     }, []);
+    useVisibilityInterval(refresh, 3000);
 
     const filteredDeployments = deployments.filter((d) => d.environment === selectedEnv);
 

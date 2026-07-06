@@ -47,10 +47,11 @@ export class RouterFallbackResolver {
         excludeProviders?: Set<string> | string,
         excludeKeyId?: string,
     ): { key: ApiKey; provider: string } | null {
-        const excludedSet =
+        const rawSet =
             typeof excludeProviders === 'string'
                 ? new Set([excludeProviders])
                 : (excludeProviders ?? new Set());
+        const excludedSet = new Set(Array.from(rawSet).map((p) => p.toLowerCase()));
         const chain = this.getFallbackChain(strategy);
         for (const link of chain) {
             if (excludedSet.has(link.provider.toLowerCase())) {

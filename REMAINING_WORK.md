@@ -68,7 +68,7 @@
 | D-03 | 60% test coverage                                                                                                                     | XL      |
 | D-04 | 1400+ missing i18n keys                                                                                                               | XL      |
 | D-05 | Race conditions fix                                                                                                                   | M       |
-| D-06 | 122 events without subscribers                                                                                                        | M       |
+| D-06 | 122 events without subscribers (1 truly dead removed: AGENT_TASK_COMPLETED; 101 emit-only kept as API surface)                        | 🟢 Done |
 | D-07 | 8 prompt injection points → sanitize                                                                                                  | M       |
 | D-08 | 41 `key={i}` anti-pattern                                                                                                             | M       |
 | D-09 | 4 broken navigate() calls                                                                                                             | S       |

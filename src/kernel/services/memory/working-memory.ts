@@ -1,4 +1,5 @@
 import type { MemoryEntry, MemoryStats } from '../../types/memory-types';
+import { computeMemoryStats } from '../../types/memory-types';
 import type {
     IMemoryStore,
     MemoryStoreQuery,
@@ -63,10 +64,7 @@ export class WorkingMemoryStore implements IMemoryStore {
     }
 
     async getStats(): Promise<MemoryStats> {
-        return {
-            totalEntries: this.entries.length,
-            ...(await this.snapshot()),
-        } as unknown as MemoryStats;
+        return computeMemoryStats(this.entries);
     }
 
     async snapshot(): Promise<MemoryStoreSnapshot> {

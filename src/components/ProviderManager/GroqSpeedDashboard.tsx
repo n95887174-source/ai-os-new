@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { usePolling } from '../Common/usePolling';
 import { PersonalityCard } from './PersonalityCard';
 import { AchievementList } from './AchievementList';
 import { keyService, providerAchievementService } from '../../kernel/instances';
@@ -30,34 +31,34 @@ export default function GroqSpeedDashboard() {
     const [avgTtft, setAvgTtft] = useState(0);
     const [keys, setKeys] = useState<GroqKey[]>([]);
 
-    useEffect(() => {
-        const load = async () => {
-            const k = (await keyService.getKeys()) as GroqKey[];
-            const groqKeys = k.filter((x) => x.provider === 'groq');
-            setKeys(groqKeys);
+    const load = useCallback(async () => {
+        const k = (await keyService.getKeys()) as GroqKey[];
+        const groqKeys = k.filter((x) => x.provider === 'groq');
+        setKeys(groqKeys);
 
-            const records: SpeedRecord[] = groqKeys
-                .filter((x) => x.stats?.extended?.latencyBreakdown)
-                .map((x) => ({
-                    timestamp: Date.now(),
-                    tokensPerSec: x.stats!.extended!.latencyBreakdown!.tokensPerSec ?? 0,
-                    ttft: x.stats!.extended!.latencyBreakdown!.ttft ?? 0,
-                    latency: x.stats!.avgLatency ?? 0,
-                }));
-            setSpeedHistory(records);
+        const records: SpeedRecord[] = groqKeys
+            .filter((x) => x.stats?.extended?.latencyBreakdown)
+            .map((x) => ({
+                timestamp: Date.now(),
+                tokensPerSec: x.stats!.extended!.latencyBreakdown!.tokensPerSec ?? 0,
+                ttft: x.stats!.extended!.latencyBreakdown!.ttft ?? 0,
+                latency: x.stats!.avgLatency ?? 0,
+            }));
+        setSpeedHistory(records);
 
-            const tpsValues = records.map((r) => r.tokensPerSec);
-            const ttftValues = records.map((r) => r.ttft);
-            if (tpsValues.length) {
-                setCurrentTps(tpsValues[tpsValues.length - 1]);
-                setPeakTps(Math.max(...tpsValues));
-                setAvgTtft(ttftValues.reduce((a, b) => a + b, 0) / ttftValues.length);
-            }
-        };
-        load();
-        const iv = setInterval(load, 5000);
-        return () => clearInterval(iv);
+        const tpsValues = records.map((r) => r.tokensPerSec);
+        const ttftValues = records.map((r) => r.ttft);
+        if (tpsValues.length) {
+            setCurrentTps(tpsValues[tpsValues.length - 1]);
+            setPeakTps(Math.max(...tpsValues));
+            setAvgTtft(ttftValues.reduce((a, b) => a + b, 0) / ttftValues.length);
+        }
     }, []);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+    usePolling(load, 5000);
 
     const currentTpsRounded = Math.round(currentTps);
     const peakTpsRounded = Math.round(peakTps);

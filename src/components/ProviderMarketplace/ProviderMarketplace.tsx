@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ThumbsUp, ThumbsDown, Minus, Lightbulb, RefreshCcw } from 'lucide-react';
 import { kernel, keyService, adapterRegistry } from '../../kernel/instances';
 import type { ProviderRanking } from '../../kernel/types/interfaces';
+import { usePolling } from '../Common/usePolling';
 import PanelLoader from '../PanelLoader';
 import {
     glassPanel,
@@ -59,14 +60,11 @@ const ProviderMarketplace: React.FC = () => {
     }, [catalog, installed]);
 
     useEffect(() => {
-        refresh();
-        const interval = setInterval(refresh, 15000);
         const unsub = eventBus.on(EVENTS.KERNEL_UPDATED, refresh);
-        return () => {
-            clearInterval(interval);
-            unsub();
-        };
+        return () => unsub();
     }, [refresh]);
+
+    usePolling(refresh, 15000);
 
     const getScoreColor = (s: number) =>
         s > 0.8 ? '#10b981' : s > 0.6 ? '#3b82f6' : s > 0.3 ? '#f59e0b' : '#ef4444';

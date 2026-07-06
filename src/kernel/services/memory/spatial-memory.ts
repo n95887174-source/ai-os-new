@@ -1,4 +1,5 @@
 import type { MemoryEntry, MemoryStats } from '../../types/memory-types';
+import { computeMemoryStats } from '../../types/memory-types';
 import type {
     IMemoryStore,
     MemoryStoreQuery,
@@ -81,7 +82,7 @@ export class SpatialMemoryStore implements IMemoryStore {
     }
 
     async getStats(): Promise<MemoryStats> {
-        return {} as MemoryStats;
+        return computeMemoryStats(this.entries);
     }
 
     async snapshot(): Promise<MemoryStoreSnapshot> {

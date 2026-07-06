@@ -52,7 +52,6 @@ export class DebateSyncManager {
     private _initUnsubs: Array<() => void> = [];
     private _heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private _durationTimer: ReturnType<typeof setTimeout> | null = null;
-    private _pauseController: AbortController | null = null;
     private readonly _interpreter = new DebateInterpreter();
     private _engineOnly = false;
     private _governorState: GovernorState | null = null;
@@ -219,8 +218,6 @@ export class DebateSyncManager {
 
     setupDurationTimer(sessionConfig: DebateConfig): void {
         const maxDuration = sessionConfig.maxDurationMs ?? 1_800_000;
-        const controller = new AbortController();
-        this._pauseController = controller;
         this._durationTimer = setTimeout(() => {
             if (this.activeSession?.status === 'active') {
                 LOGGER.warn('DebateSyncManager', 'Debate timed out', { maxDuration });
@@ -447,8 +444,6 @@ export class DebateSyncManager {
             clearTimeout(this._durationTimer);
             this._durationTimer = null;
         }
-        this._pauseController?.abort();
-        this._pauseController = null;
     }
 
     private clearListeners(): void {

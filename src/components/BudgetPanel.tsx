@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { usePolling } from './Common/usePolling';
 import { DollarSign, AlertTriangle, X, BarChart3 } from 'lucide-react';
 import { PanelSkeleton } from './Common/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,15 +38,15 @@ const BudgetPanel: React.FC = () => {
 
     useEffect(() => {
         isMountedRef.current = true;
-        load();
-        const interval = setInterval(load, 30000);
         return () => {
             isMountedRef.current = false;
-            clearInterval(interval);
         };
-    }, [load]);
+    }, []);
+
+    usePolling(load, 30000);
 
     const handleClearAlerts = () => {
+        if (!window.confirm(t('budget.confirm_clear_alerts'))) return;
         try {
             budgetService.clearAlerts();
             setAlerts([]);

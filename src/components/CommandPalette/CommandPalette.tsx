@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, ArrowRight, Clock, X } from 'lucide-react';
@@ -105,11 +105,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, t
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
-    const allItems = buildItems(t);
-    const recentPaths = getRecent();
-    const recentItems = recentPaths
-        .map((p) => allItems.find((i) => i.path === p))
-        .filter(Boolean) as PaletteItem[];
+    const allItems = useMemo(() => buildItems(t), [t]);
+    const recentPaths = useMemo(() => getRecent(), []);
+    const recentItems = useMemo(
+        () =>
+            recentPaths
+                .map((p) => allItems.find((i) => i.path === p))
+                .filter(Boolean) as PaletteItem[],
+        [recentPaths, allItems],
+    );
 
     const filtered = query.trim()
         ? allItems

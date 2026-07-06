@@ -18,6 +18,7 @@ export class RateLimitDecorator extends BaseDecorator {
     readonly #crossTabStateSync?: ICrossTabStateSync;
     #global: TokenBucket;
     #perProvider: Map<string, TokenBucket>;
+    #manualLimited = false;
     private static readonly MAX_PROVIDERS = 100;
 
     constructor(
@@ -78,11 +79,13 @@ export class RateLimitDecorator extends BaseDecorator {
     forceLimited(): void {
         this.#global.tokens = 0;
         this.#perProvider.clear();
+        this.#manualLimited = true;
     }
 
     reset(): void {
         this.#global.tokens = this.#maxTokens;
         this.#global.lastRefill = Date.now();
+        this.#manualLimited = false;
     }
 
     canSend(): boolean {
@@ -105,6 +108,9 @@ export class RateLimitDecorator extends BaseDecorator {
     }
 
     private async checkRate(): Promise<void> {
+        if (this.#manualLimited) {
+            throw new RetryableError('Rate limit manually forced', this.inner.id, 429);
+        }
         const providerId = this.getProviderId();
         if (!this.#perProvider.has(providerId)) {
             this.cleanupProviders();

@@ -212,7 +212,7 @@ export function parseRetryAfterHeader(header: string | null): number | undefined
     if (!isNaN(seconds) && seconds > 0) return seconds * 1000;
     const parsed = Date.parse(header);
     if (!isNaN(parsed)) return Math.max(0, parsed - Date.now());
-    return 5000;
+    return undefined;
 }
 
 function parseRetryAfter(res: Response): number | undefined {

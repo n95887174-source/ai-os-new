@@ -197,6 +197,7 @@ const DEBATE_MAX_DURATION_MS = CONFIG?.services?.debate?.maxDurationMs ?? 1_800_
 const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
 const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
 const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
+const ROUND_DELAY_MS = CONFIG?.services?.debate?.roundDelayMs ?? 1000;
 
 export class DebateEngine implements IDebateEngine, ILifecycle {
     private sessionContexts = new Map<string, DebateSessionContext>();
@@ -481,6 +482,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 new DebateOrchestrator(this.topologyService),
             );
             this.sessionContexts.set(sessionId, ctx);
+            ctx.timeline.loadPersisted(sessionId).catch((e) =>
+                LOGGER.warn('DebateEngine', `Failed to load timeline for ${sessionId}`, {
+                    error: e,
+                }),
+            );
         }
         return ctx;
     }
@@ -817,6 +823,28 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                         });
                                         earlyExit = true;
                                     }
+                                }
+
+                                // Rate-limit backoff between rounds
+                                if (!earlyExit && ROUND_DELAY_MS > 0) {
+                                    const acMap = engine.sessionAbortControllers.get(sessionId);
+                                    const anySignal = acMap?.values().next().value?.signal;
+                                    await new Promise<void>((resolve, reject) => {
+                                        const timer = setTimeout(resolve, ROUND_DELAY_MS);
+                                        const onAbort2 = () => {
+                                            clearTimeout(timer);
+                                            reject(
+                                                new Error('Debate cancelled during round delay'),
+                                            );
+                                        };
+                                        if (anySignal)
+                                            anySignal.addEventListener('abort', onAbort2, {
+                                                once: true,
+                                            });
+                                    }).catch(() => {
+                                        earlyExit = true;
+                                        return;
+                                    });
                                 }
 
                                 if (engine.deps.policyEngine && !earlyExit) {
@@ -1361,6 +1389,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }
         const newVersion = await store.saveSnapshot(record);
         session.incrementVersion?.(newVersion);
+        const ctx = this.sessionContexts.get(sessionId);
+        if (ctx) {
+            ctx.timeline.persist(sessionId).catch((e) =>
+                LOGGER.warn('DebateEngine', `Failed to persist timeline for ${sessionId}`, {
+                    error: e,
+                }),
+            );
+        }
     }
 
     async restoreSession(sessionId: string): Promise<DebateSessionSnapshot | null> {

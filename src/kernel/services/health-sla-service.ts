@@ -8,6 +8,9 @@ export interface HealthSlaServiceDeps {
     providerTracker: IProviderTracker;
 }
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class HealthSlaService implements IHealthSlaService {
     private profiles: SlaProfile[] = [
         {

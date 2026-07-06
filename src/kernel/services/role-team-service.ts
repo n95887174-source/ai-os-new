@@ -19,6 +19,9 @@ const genExecId = () => crypto.randomUUID();
 const TEAMS_STORAGE_KEY = 'role_teams_v1';
 const EXECUTIONS_STORAGE_KEY = 'role_team_executions_v1';
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class RoleTeamService implements IRoleTeamService {
     private teams = new Map<string, RoleTeam>();
     private executions = new Map<string, TeamExecution>();

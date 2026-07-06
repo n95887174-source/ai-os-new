@@ -372,6 +372,7 @@ export class PolicyService {
 
     // ── Migrated from legacy: content safety ──────────────────────────
 
+    /** @deprecated C-84: Dead code — content safety is handled by PromptSecurityService + orchestration pipeline */
     checkContentSafety(data: { nodeId: string; output?: string }): ContentSafetyResult {
         const policy = this.activePolicies.find((p) => p.type === 'content');
         if (!policy || policy.action === 'warn') return { blocked: false };
@@ -404,6 +405,7 @@ export class PolicyService {
 
     // ── Migrated from legacy: rate limiting ───────────────────────────
 
+    /** @deprecated C-84: Dead code — rate limiting is handled by RateLimitDecorator + tool-executor.checkRateLimit */
     checkRateLimit(data: { nodeId: string; requestCount?: number }): boolean {
         const policy = this.activePolicies.find((p) => p.type === 'rate_limit');
         if (!policy) return true;
@@ -426,6 +428,7 @@ export class PolicyService {
 
     // ── Migrated from legacy: model blacklist ─────────────────────────
 
+    /** @deprecated C-84: Dead code — model blocking handled by checkAgentPolicy + router-level filtering */
     checkModelBlacklist(model: string, nodeId: string): boolean {
         const policy = this.activePolicies.find(
             (p) => p.type === 'custom' && p.value === 'BLOCKED_MODELS',
@@ -635,7 +638,10 @@ export class PolicyService {
 
     resolveViolation(id: string) {
         const v = this.violations.find((v) => v.id === id);
-        if (v) v.resolved = true;
+        if (v) {
+            v.resolved = true;
+            this.persist();
+        }
     }
 
     clearViolations(adminToken?: string) {
@@ -645,6 +651,7 @@ export class PolicyService {
             adminToken,
         );
         this.violations = [];
+        this.persist();
     }
 
     setPatterns(patterns: SecurityPattern[], adminToken?: string) {

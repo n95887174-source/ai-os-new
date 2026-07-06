@@ -54,13 +54,19 @@ const ResponseCard: React.FC<ResponseCardProps> = memo(
 
         const handleCopy = useCallback(() => {
             if (!res) return;
-            navigator.clipboard.writeText(res.content);
-            setCopied(true);
-            if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-            copyTimeoutRef.current = setTimeout(() => {
-                setCopied(false);
-                copyTimeoutRef.current = null;
-            }, 2000);
+            navigator.clipboard
+                .writeText(res.content)
+                .then(() => {
+                    setCopied(true);
+                    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+                    copyTimeoutRef.current = setTimeout(() => {
+                        setCopied(false);
+                        copyTimeoutRef.current = null;
+                    }, 2000);
+                })
+                .catch(() => {
+                    // clipboard write failed — no false "Copied!" shown
+                });
         }, [res]);
 
         return (
@@ -297,7 +303,7 @@ const ResponseCard: React.FC<ResponseCardProps> = memo(
                                     }}
                                 >
                                     <span style={flexCenterSmGap}>
-                                        <Zap size={12} color={color} /> {res.ttft || res.latency}
+                                        <Zap size={12} color={color} /> {res.ttft ?? res.latency}
                                         {t('chat.latency_ms')} {t('chat.ttft_label')}
                                     </span>
                                     <span style={flexCenterSmGap}>

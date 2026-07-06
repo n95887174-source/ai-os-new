@@ -13,7 +13,6 @@ const ROUTE_MAP: Partial<Record<keyof typeof EVENTS, string[]>> = {
     KEY_HEALTH_CHECK_FAILED: ['providers'],
     WEBHOOK_DELIVERY_FAILED: ['webhooks'],
     QUEUE_TASK_FAILED: ['tools'],
-    AGENT_TASK_COMPLETED: ['agents'],
     ADVISOR_SUGGESTION: ['system'],
 };
 

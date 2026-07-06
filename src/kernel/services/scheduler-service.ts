@@ -416,15 +416,56 @@ class SchedulerService {
     }
 
     /**
-     * Validate cron expression
+     * Validate cron expression with range checking
      */
     validateCron(cron: string): boolean {
         const parts = cron.split(/\s+/);
         if (parts.length < 5) return false;
 
-        // Basic validation - check each part is valid
-        const validPart = /^(\*|[\d,\-/]+)$/;
-        return parts.every((p) => validPart.test(p));
+        const ranges = [
+            { min: 0, max: 59, name: 'minute' },
+            { min: 0, max: 23, name: 'hour' },
+            { min: 1, max: 31, name: 'day of month' },
+            { min: 1, max: 12, name: 'month' },
+            { min: 0, max: 7, name: 'day of week' },
+        ];
+
+        for (let i = 0; i < 5; i++) {
+            const part = parts[i];
+            if (part === '*') continue;
+            const validPart = /^[\d,\-/]+$/;
+            if (!validPart.test(part)) return false;
+            const values = part.split(',');
+            for (const v of values) {
+                if (v.includes('/')) {
+                    const [, step] = v.split('/');
+                    if (!/^\d+$/.test(step) || parseInt(step) < 1) return false;
+                    if (v.startsWith('/')) return false;
+                }
+                if (v.includes('-')) {
+                    const [lo, hi] = v.split('-');
+                    if (!/^\d+$/.test(lo) || !/^\d+$/.test(hi)) return false;
+                    const nlo = parseInt(lo);
+                    const nhi = parseInt(hi);
+                    if (nlo < ranges[i].min || nhi > ranges[i].max || nlo > nhi) return false;
+                }
+                if (/^\d+$/.test(v)) {
+                    const n = parseInt(v);
+                    if (n < ranges[i].min || n > ranges[i].max) return false;
+                }
+            }
+        }
+
+        // Allow 6th field (year) if present
+        if (parts.length > 5) {
+            const yearPart = parts[5];
+            if (yearPart !== '*') {
+                const validYear = /^[\d,\-/]+$/;
+                if (!validYear.test(yearPart)) return false;
+            }
+        }
+
+        return true;
     }
 
     /**

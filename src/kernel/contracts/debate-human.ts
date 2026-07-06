@@ -11,6 +11,13 @@ export interface IDebateHumanService {
 
     recordHumanVote(session: DebateSession | null, vote: HumanVote): void;
 
+    removeHumanVote(
+        session: DebateSession | null,
+        round: number,
+        voter: string,
+        votedAgentId: string,
+    ): void;
+
     getHumanVotes(session: DebateSession | null): HumanVote[];
 
     getVoteAlignmentSummary(session: DebateSession | null): Array<{

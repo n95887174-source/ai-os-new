@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Terminal, Search, Filter, Trash2 } from 'lucide-react';
+import { usePolling } from '../Common/usePolling';
+import { Terminal, Search, Filter, Trash2, Download } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { rootLogger } from '../../kernel/instances';
 import type { LogEntry, LogLevel } from '../../kernel/contracts/logger';
@@ -27,14 +28,11 @@ export const LogsPanel: React.FC = () => {
     const [autoScroll, setAutoScroll] = useState(true);
     const parentRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const id = setInterval(() => {
-            const buf = rootLogger.getBuffer();
-            const bufLen = buf.length;
-            setEntries(bufLen > 0 ? buf.slice() : []);
-        }, 1000);
-        return () => clearInterval(id);
-    }, []);
+    usePolling(() => {
+        const buf = rootLogger.getBuffer();
+        const bufLen = buf.length;
+        setEntries(bufLen > 0 ? buf.slice() : []);
+    }, 1000);
 
     const services = useMemo(() => {
         const s = new Set<string>();
@@ -76,6 +74,25 @@ export const LogsPanel: React.FC = () => {
             virtualizer.scrollToOffset(filtered.length - 1);
         }
     }, [entries, autoScroll, virtualizer, filtered.length]);
+
+    const [exportFormat, setExportFormat] = useState<'json' | 'csv' | 'text'>('text');
+
+    const handleExport = useCallback(() => {
+        const content = rootLogger.exportLogs(exportFormat, {
+            ...(levelFilter !== 'all'
+                ? { level: levelFilter as 'debug' | 'info' | 'warn' | 'error' }
+                : {}),
+            ...(serviceFilter !== 'all' ? { service: serviceFilter } : {}),
+        });
+        if (!content) return;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `logs-${new Date().toISOString().slice(0, 10)}.${exportFormat}`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [exportFormat, levelFilter, serviceFilter]);
 
     const handleClear = useCallback(() => {
         rootLogger.clear();
@@ -241,6 +258,43 @@ export const LogsPanel: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                    <select
+                        value={exportFormat}
+                        onChange={(e) => setExportFormat(e.target.value as 'json' | 'csv' | 'text')}
+                        style={{
+                            padding: '0.3rem 0.5rem',
+                            borderRadius: 6,
+                            fontSize: '0.7rem',
+                            background: 'rgba(0,0,0,0.3)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            color: '#f8fafc',
+                            outline: 'none',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <option value="text">TXT</option>
+                        <option value="json">JSON</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                    <button
+                        onClick={handleExport}
+                        title="Export logs"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '0.4rem 0.75rem',
+                            borderRadius: 8,
+                            border: '1px solid rgba(59,130,246,0.2)',
+                            background: 'rgba(59,130,246,0.1)',
+                            color: '#93c5fd',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                        }}
+                    >
+                        <Download size={14} /> Export
+                    </button>
                     <label
                         style={{
                             display: 'flex',

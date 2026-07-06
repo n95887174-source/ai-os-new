@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X, AlertTriangle, Info, CheckCircle, Activity } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { keyService } from '../../kernel/instances';
+import { t as translate } from '../../i18n/translations';
 import type { ProviderAlert } from '../../types/metrics';
 
 interface Toast {
@@ -34,6 +35,8 @@ const AlertLayer: React.FC = () => {
     const [alerts, setAlerts] = useState<ProviderAlert[]>([]);
     const [expanded, setExpanded] = useState(false);
     const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+    const handleViewAllAlerts = useCallback(() => setExpanded(true), []);
 
     const addToast = useCallback((type: Toast['type'], title: string, message: string) => {
         const id = genId();
@@ -211,7 +214,7 @@ const AlertLayer: React.FC = () => {
                     </div>
                     <button
                         onClick={() => dismissToast(t.id)}
-                        aria-label="Close notification"
+                        aria-label={translate('common.close')}
                         style={{
                             background: 'none',
                             border: 'none',
@@ -299,16 +302,21 @@ const AlertLayer: React.FC = () => {
                                 </div>
                             ))}
                             {alerts.length > 8 && (
-                                <div
+                                <button
+                                    onClick={handleViewAllAlerts}
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: '#60a5fa',
                                         textAlign: 'center',
                                         padding: '0.25rem',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        width: '100%',
                                     }}
                                 >
-                                    +{alerts.length - 8} more
-                                </div>
+                                    View all {alerts.length} alerts →
+                                </button>
                             )}
                         </div>
                     )}

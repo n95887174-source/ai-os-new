@@ -94,7 +94,7 @@ export default defineConfig({
                 "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; " +
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
                 "font-src 'self' data: https://fonts.gstatic.com; " +
-                "connect-src 'self' https://api.allorigins.win https://generativelanguage.googleapis.com https://openrouter.ai https://integrate.api.nvidia.com https://api.groq.com https://api.cerebras.ai https://api.cloudflare.com https://api.openai.com; " +
+                "connect-src 'self' https://generativelanguage.googleapis.com https://openrouter.ai https://integrate.api.nvidia.com https://api.groq.com https://api.cerebras.ai https://api.cloudflare.com https://api.openai.com; " +
                 "worker-src 'self' blob:; " +
                 "img-src 'self' data: blob:;",
         },
@@ -142,10 +142,13 @@ export default defineConfig({
                 rewrite: (path) => path.replace(/^\/proxy\/openai/, ''),
                 secure: true,
             }),
+            // SEC-07: Fetch proxy for sandboxed URL fetching.
+            // Default to the local CORS proxy (npm run proxy → :3002).
+            // api.allorigins.win was removed as default — it's a privacy leak.
             '/proxy/fetch': {
-                target: process.env.VITE_PROXY_FETCH || 'https://api.allorigins.win/get',
+                target: process.env.VITE_PROXY_FETCH || 'http://localhost:3002/fetch',
                 changeOrigin: true,
-                secure: true,
+                secure: false,
             },
             '/api': {
                 target: process.env.VITE_API_UPSTREAM || 'https://api.openrouter.ai',

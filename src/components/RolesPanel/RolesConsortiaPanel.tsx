@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import {
     Users,
@@ -154,11 +154,18 @@ const RolesConsortiaPanel: React.FC = () => {
         [taskInputs, teamSvc],
     );
 
+    const isMountedRef = useRef(true);
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
     useEffect(() => {
         (async () => {
             try {
                 const m = await import('../../kernel/instances');
-                setSvc((m as any).unifiedRoleRegistry);
+                if (isMountedRef.current) setSvc((m as any).unifiedRoleRegistry);
             } catch {}
         })();
     }, []);
@@ -168,7 +175,7 @@ const RolesConsortiaPanel: React.FC = () => {
             try {
                 await (teamSvc as any).init();
             } catch {}
-            setTeams(teamSvc.listTeams());
+            if (isMountedRef.current) setTeams(teamSvc.listTeams());
         })();
     }, [teamSvc]);
 

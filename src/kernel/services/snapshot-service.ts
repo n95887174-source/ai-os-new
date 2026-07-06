@@ -4,6 +4,7 @@ import type { ISTopology } from '../contracts/topology';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { SystemSnapshotSchema } from '../types/schema-types';
+import { ssrSafeStorage } from '../utils/ssr-storage';
 
 const LOGGER = rootLogger.child('SnapshotService');
 
@@ -171,6 +172,18 @@ export class SnapshotService {
 
     /** @internal C-94: Debounced persistence — coalesces multiple captures into one write */
     private scheduleSave(): void {
+        // C-19: Write-ahead log — update on every call (even if already queued) so WAL is never stale
+        try {
+            ssrSafeStorage.setItem(
+                'snapshots:wal',
+                JSON.stringify({
+                    snapshots: this.snapshots,
+                    diffs: this.diffs,
+                }),
+            );
+        } catch {
+            /* localStorage full — non-critical */
+        }
         if (this._saveQueued) return;
         this._saveQueued = true;
         setTimeout(() => {
@@ -301,13 +314,18 @@ export class SnapshotService {
         a: unknown,
         b: unknown,
         differences: SnapshotDiff['differences'],
+        visited?: Set<object>,
     ): void {
         if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
+            if (!visited) visited = new Set<object>();
+            if (visited.has(a as object) || visited.has(b as object)) return;
+            visited.add(a as object);
+            visited.add(b as object);
             const aObj = a as Record<string, unknown>;
             const bObj = b as Record<string, unknown>;
             const allKeys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
             for (const key of allKeys) {
-                this.deepDiff(`${path}.${key}`, aObj[key], bObj[key], differences);
+                this.deepDiff(`${path}.${key}`, aObj[key], bObj[key], differences, visited);
             }
             return;
         }
@@ -328,14 +346,14 @@ export class SnapshotService {
         }
 
         const diff: SnapshotDiff = {
-            id: `diff-${Date.now()}`,
+            id: `diff-${crypto.randomUUID()}`,
             snapshotA: snapshotAId,
             snapshotB: snapshotBId,
             timestamp: Date.now(),
             differences,
         };
         this.diffs.push(diff);
-        void this.save();
+        void this.scheduleSave();
         return diff;
     }
 
@@ -354,7 +372,7 @@ export class SnapshotService {
         const snapshot = this.snapshots.find((s) => s.id === id);
         if (snapshot) {
             snapshot.tags = [...new Set([...(snapshot.tags || []), ...tags])];
-            void this.save();
+            void this.scheduleSave();
         }
     }
 
@@ -378,7 +396,7 @@ export class SnapshotService {
         this.snapshots = [];
         this.diffs = [];
         this.replayIndex = -1;
-        void this.save();
+        void this.scheduleSave();
     }
 
     startReplay(): boolean {
@@ -412,7 +430,7 @@ export class SnapshotService {
 
     removeSnapshot(id: string) {
         this.snapshots = this.snapshots.filter((s) => s.id !== id);
-        void this.save();
+        void this.scheduleSave();
     }
 
     exportSnapshots(): string {
@@ -437,7 +455,7 @@ export class SnapshotService {
                     count++;
                 }
             }
-            void this.save();
+            void this.scheduleSave();
             return count;
         } catch (e) {
             LOGGER.warn('SnapshotService', 'Failed to import snapshots', { error: e });

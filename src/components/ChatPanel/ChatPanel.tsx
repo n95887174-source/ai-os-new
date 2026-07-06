@@ -180,11 +180,15 @@ const ChatPanel: React.FC = () => {
     const activeModel = activeConfig?.model || selectedModel;
 
     const handleNewChat = useCallback(async () => {
-        const newId = await createSession();
-        setActiveSessionId(newId);
-        setEditingEntryId(null);
-        setShowSidebar(true);
-        autoExpandedGroupRef.current = true;
+        try {
+            const newId = await createSession();
+            setActiveSessionId(newId);
+            setEditingEntryId(null);
+            setShowSidebar(true);
+            autoExpandedGroupRef.current = true;
+        } catch {
+            // session creation failed — error logged by createSession
+        }
     }, [createSession, setActiveSessionId]);
 
     const handleSidebarSessionClick = useCallback(

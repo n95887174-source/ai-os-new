@@ -252,9 +252,23 @@ const BookmarksPanel: React.FC = () => {
                         textAlign: 'center',
                     }}
                 >
-                    <BookmarkPlus size={48} color="#475569" />
-                    <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>{t('bookmarks.empty')}</p>
-                    <p style={textMutedXs}>{t('bookmarks.empty_hint')}</p>
+                    {search || activeTag ? (
+                        <>
+                            <Search size={48} color="#475569" />
+                            <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
+                                {t('bookmarks.no_matches')}
+                            </p>
+                            <p style={textMutedXs}>{t('bookmarks.no_matches_hint')}</p>
+                        </>
+                    ) : (
+                        <>
+                            <BookmarkPlus size={48} color="#475569" />
+                            <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
+                                {t('bookmarks.empty')}
+                            </p>
+                            <p style={textMutedXs}>{t('bookmarks.empty_hint')}</p>
+                        </>
+                    )}
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { usePolling } from '../Common/usePolling';
 import {
     Activity,
     DollarSign,
@@ -142,24 +143,18 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         };
     }, []);
 
-    // P1-13: replaced health polling with kernel:updated / SYSTEM_HEALTH_CHANGED subscriptions
-    // Keep lightweight timer for currentTime + router decisions (no event-driven refresh)
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (isMountedRef.current && !document.hidden) {
-                setCurrentTime(Date.now());
-                try {
-                    const result = routerService?.getDecisionHistory?.();
-                    if (Array.isArray(result) && result.length > 0) {
-                        setRouterDecisions(result.slice(0, 60));
-                    }
-                } catch {
-                    /* not critical */
-                }
+    usePolling(() => {
+        if (!isMountedRef.current) return;
+        setCurrentTime(Date.now());
+        try {
+            const result = routerService?.getDecisionHistory?.();
+            if (Array.isArray(result) && result.length > 0) {
+                setRouterDecisions(result.slice(0, 60));
             }
-        }, 10000);
-        return () => clearInterval(interval);
-    }, []);
+        } catch {
+            /* not critical */
+        }
+    }, 10000);
 
     useEffect(() => {
         const unsubscribeKernel = eventBus.on(EVENTS.KERNEL_UPDATED, (state) => {

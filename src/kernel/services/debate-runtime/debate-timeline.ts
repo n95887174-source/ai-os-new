@@ -5,12 +5,43 @@ import type {
     ReasoningTrace,
 } from '../../contracts/debate-runtime';
 
-const MAX_ENTRIES = CONFIG?.services?.debate?.timelineMaxEntries ?? 500;
+const MAX_ENTRIES = CONFIG?.services?.debate?.timelineMaxEntries ?? 5000;
+
+function storageKey(sessionId: string): string {
+    return `debate_timeline_${sessionId}`;
+}
 
 export class DebateTimeline implements IDebateTimeline {
     private entries: TimelineEntry[] = [];
     private cursor = 0;
     private warned = false;
+    private loadedSessions = new Set<string>();
+
+    async loadPersisted(sessionId: string): Promise<void> {
+        if (this.loadedSessions.has(sessionId)) return;
+        this.loadedSessions.add(sessionId);
+        try {
+            const { BucketStorageAdapter } = await import('../storage-adapter');
+            const saved = await BucketStorageAdapter.RESEARCH.get<TimelineEntry[]>(
+                storageKey(sessionId),
+            );
+            if (saved && Array.isArray(saved)) {
+                this.entries.push(...saved);
+            }
+        } catch (e) {
+            console.warn('[DebateTimeline] Failed to load persisted entries', e);
+        }
+    }
+
+    async persist(sessionId: string): Promise<void> {
+        try {
+            const sessionEntries = this.entries.filter((e) => e.sessionId === sessionId);
+            const { BucketStorageAdapter } = await import('../storage-adapter');
+            await BucketStorageAdapter.RESEARCH.set(storageKey(sessionId), sessionEntries);
+        } catch (e) {
+            console.warn('[DebateTimeline] Failed to persist entries', e);
+        }
+    }
 
     record(entry: Omit<TimelineEntry, 'id' | 'timestamp'>): void {
         const full: TimelineEntry = {

@@ -272,7 +272,13 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Deploy to Production Service ─────────────────────────
     register('deployService', (_c) => new DeployService());
     // ── Budget Alert Service ────────────────────────────
-    register('budgetAlertService', (_c) => new BudgetAlertService());
+    register('budgetAlertService', (c) => {
+        const svc = new BudgetAlertService();
+        svc.setBudgetService(
+            c.get<import('../services/budget-service').BudgetService>('budgetService'),
+        );
+        return svc;
+    });
     // ── Topology Template Service ─────────────────────────
     register('topologyTemplateService', (_c) => new TopologyTemplateService());
     // ── Key Usage Analytics Service ───────────────────────
@@ -312,7 +318,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Aquarium Trading Service ──────────────────────
     register('aquariumTradingService', (_c) => new AquariumTradingService());
     // ── Time Machine Service ──────────────────────────
-    register('timeMachineService', (_c) => new TimeMachineService());
+    register('timeMachineService', (c) => new TimeMachineService({ eventBus: c.get('eventBus') }));
     // ── Contribution Service ──────────────────────────
     register('contributionService', (_c) => new ContributionService());
     // ── Prompt Security Service ─────────────────────────

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../Common/usePolling';
 import { DollarSign, TrendingUp, BarChart3, Activity, ShieldAlert } from 'lucide-react';
 import { budgetService } from '../../kernel/instances';
 import PanelLoader from '../PanelLoader';
@@ -44,27 +45,23 @@ const CostAnalyticsPanel: React.FC = () => {
     } | null>(null);
     const [days, setDays] = useState(30);
 
-    useEffect(() => {
-        const refresh = () => {
-            setDailyCosts(budgetService.getDailyCosts(days));
-            setTrend(budgetService.getCostTrend());
-            setAnomalies(budgetService.detectAnomalies());
-            setByProvider(budgetService.getCostByProvider());
-            setByModel(budgetService.getCostByModel());
-            setByAgent(budgetService.getCostByAgent());
-            const bi = budgetService.getBudgetInfo();
-            setBudget({
-                spentThisMonth: bi.spentThisMonth,
-                monthlyBudget: bi.monthlyBudget,
-                projectedMonthly: bi.projectedMonthly,
-            });
-        };
-        refresh();
-        const interval = setInterval(refresh, 10000);
-        return () => clearInterval(interval);
-    }, [days]);
+    usePolling(() => {
+        setDailyCosts(budgetService.getDailyCosts(days));
+        setTrend(budgetService.getCostTrend());
+        setAnomalies(budgetService.detectAnomalies());
+        setByProvider(budgetService.getCostByProvider());
+        setByModel(budgetService.getCostByModel());
+        setByAgent(budgetService.getCostByAgent());
+        const bi = budgetService.getBudgetInfo();
+        setBudget({
+            spentThisMonth: bi.spentThisMonth,
+            monthlyBudget: bi.monthlyBudget,
+            projectedMonthly: bi.projectedMonthly,
+        });
+    }, 10000);
 
-    const totalCost = Object.values(byProvider).reduce((s, v) => s + v, 0);
+    const totalCost =
+        budget?.spentThisMonth ?? Object.values(byProvider).reduce((s, v) => s + v, 0);
 
     const renderSparkline = (data: DailyCost[]) => {
         if (data.length < 2) return null;

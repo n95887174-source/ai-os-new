@@ -108,10 +108,12 @@ export class ProviderRuntimeService {
         const session = this.sessions.get(sessionId);
         if (!session) return undefined;
 
+        // C-24: only release instance if session was active/pending (not already terminal)
+        const wasActive = session.status === 'active' || session.status === 'pending';
         session.complete(latency);
 
         const instance = this.instances.get(session.instanceId);
-        if (instance) {
+        if (instance && wasActive) {
             instance.recordSuccess(latency);
             instance.release();
         }
@@ -126,12 +128,13 @@ export class ProviderRuntimeService {
         const session = this.sessions.get(sessionId);
         if (!session) return undefined;
 
+        // C-24: only release instance if session was active/pending (not already terminal)
+        const wasActive = session.status === 'active' || session.status === 'pending';
         session.fail(error);
 
         const instance = this.instances.get(session.instanceId);
-        if (instance) {
+        if (instance && wasActive) {
             instance.recordError();
-            instance.release();
         }
 
         // C5: Schedule deletion after retention period

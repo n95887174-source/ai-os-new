@@ -34,7 +34,10 @@ export function sanitizeObject(obj: unknown): unknown {
     if (obj instanceof Set) {
         return [...obj].map(sanitizeObject);
     }
-    if (obj instanceof Date || obj instanceof RegExp) {
+    if (obj instanceof Date) {
+        return obj.toISOString();
+    }
+    if (obj instanceof RegExp) {
         return obj;
     }
     if (typeof obj === 'object') {

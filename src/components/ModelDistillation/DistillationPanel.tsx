@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useVisibilityInterval } from '../../utils/visibility-interval';
 import {
     FlaskConical,
     Play,
@@ -46,10 +47,9 @@ const DISTILLATION_PANEL: React.FC = () => {
 
     const refresh = () => setJobs(distillationService.getJobs());
     useEffect(() => {
-        const i = setInterval(refresh, 3000);
         refresh();
-        return () => clearInterval(i);
     }, []);
+    useVisibilityInterval(refresh, 3000);
 
     const handleMethodChange = (m: DistillationMethod) => {
         setMethod(m);

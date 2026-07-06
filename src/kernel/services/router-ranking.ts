@@ -292,18 +292,8 @@ export class RouterRankingService {
         keys = agentId ? filteredByPolicy : keys;
 
         if (strategy === 'free_first') {
-            const freeKeys = keys.filter(
-                (k) =>
-                    k.tags?.some((t) => t === 'tier:free') ||
-                    k.label.toLowerCase().includes('free'),
-            );
-            const paidKeys = keys.filter(
-                (k) =>
-                    !(
-                        k.tags?.some((t) => t === 'tier:free') ||
-                        k.label.toLowerCase().includes('free')
-                    ),
-            );
+            const freeKeys = keys.filter((k) => k.tags?.some((t) => t === 'tier:free'));
+            const paidKeys = keys.filter((k) => !k.tags?.some((t) => t === 'tier:free'));
             const usableFree = freeKeys.filter((k) => {
                 const u = this.deps.keyService.canUseKey(k.id);
                 if (!u.can)

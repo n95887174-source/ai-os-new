@@ -61,7 +61,6 @@ export class BlackboardService {
     }
 
     read(agentId?: string, _visibility?: 'public' | 'group' | 'private'): BlackboardEntry[] {
-        this.evictExpired();
         const all = Array.from(this.entries.values());
         return all
             .filter((e) => {
@@ -74,7 +73,6 @@ export class BlackboardService {
     }
 
     get(key: string): BlackboardEntry | undefined {
-        this.evictExpired();
         return this.entries.get(key);
     }
 

@@ -89,15 +89,9 @@ const AgentsPanelContainer: React.FC = () => {
 
     useEffect(() => {
         containerIsMountedRef.current = true;
-        const currentTopology = orchestrator.getActiveTopology();
-        console.log(
-            '[AgentsPanel] Mounted. Topology exists:',
-            !!currentTopology,
-            currentTopology?.name,
-        );
+        orchestrator.getActiveTopology();
 
         const unsubTopology = eventBus.on(EVENTS.SYSTEM_TOPOLOGY_MOUNTED, () => {
-            console.log('[AgentsPanel] Topology mounted event received');
             setAgents(getAgentsFromTopology());
             setIsLoading(false);
         });

@@ -177,14 +177,17 @@ function ensureInitialized(
     const observable = liveQuery(() => db.apiKeys.toArray());
     liveSub = observable.subscribe({
         next: (keys: ApiKey[]) => {
+            const activeCount = computeActiveCount(keys);
+            const errorCount = computeErrorCount(keys);
             set(() => ({
                 keys,
                 activeKeys: computeActiveKeys(keys),
                 isLoaded: true,
+                totalKeys: keys.length,
+                activeCount,
+                errorCount,
             }));
             try {
-                const activeCount = computeActiveCount(keys);
-                const errorCount = computeErrorCount(keys);
                 eventBus.emit(EVENTS.KEY_STORE_GAUGES, {
                     activeCount,
                     errorCount,
@@ -240,6 +243,7 @@ function ensureInitialized(
         }),
     );
 
+    const checkingTimers = new Map<string, ReturnType<typeof setTimeout>>();
     unsubs.push(
         eventBus.on(EVENTS.KEY_HEALTH_CHECK_STARTED, (data) => {
             if (typeof data === 'string') {
@@ -248,6 +252,19 @@ function ensureInitialized(
                     next.add(data);
                     return { checkingIds: next };
                 });
+                const existing = checkingTimers.get(data);
+                if (existing) clearTimeout(existing);
+                checkingTimers.set(
+                    data,
+                    setTimeout(() => {
+                        checkingTimers.delete(data);
+                        set((state) => {
+                            const next = new Set(state.checkingIds);
+                            next.delete(data);
+                            return { checkingIds: next };
+                        });
+                    }, 30000),
+                );
             }
         }),
     );
@@ -255,6 +272,11 @@ function ensureInitialized(
     unsubs.push(
         eventBus.onSafe<{ id: string }>(EVENTS.KEY_HEALTH_CHECK_COMPLETED, (data) => {
             if (data?.id) {
+                const timer = checkingTimers.get(data.id);
+                if (timer) {
+                    clearTimeout(timer);
+                    checkingTimers.delete(data.id);
+                }
                 set((state) => {
                     const next = new Set(state.checkingIds);
                     next.delete(data.id);
@@ -462,10 +484,15 @@ export const useKeyStore = create<Store>((set, get) => {
         refresh: () => {
             const db = getDexieDb();
             db.apiKeys.toArray().then((keys) => {
+                const activeCount = computeActiveCount(keys);
+                const errorCount = computeErrorCount(keys);
                 set(() => ({
                     keys,
                     activeKeys: computeActiveKeys(keys),
                     isLoaded: true,
+                    totalKeys: keys.length,
+                    activeCount,
+                    errorCount,
                 }));
             });
         },

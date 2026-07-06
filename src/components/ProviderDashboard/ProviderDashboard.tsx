@@ -9,6 +9,7 @@ import {
     Shield,
     DollarSign,
 } from 'lucide-react';
+import { usePolling } from '../Common/usePolling';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { kernel, keyStateStore } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -87,24 +88,22 @@ const ProviderDashboard: React.FC = () => {
 
     useEffect(() => {
         mountedRef.current = true;
-        const refresh = () => {
-            if (!mountedRef.current) return;
-            try {
-                setState(kernel.getState());
-                setHealthEvents(kernel.getHealthEvents());
-                setKeyStates(keyStateStore.getAll());
-                setLastUpdated(Date.now());
-            } catch {
-                /* kernel not ready */
-            }
-        };
-        refresh();
-        const interval = setInterval(refresh, 5000);
         return () => {
             mountedRef.current = false;
-            clearInterval(interval);
         };
     }, []);
+
+    usePolling(() => {
+        if (!mountedRef.current) return;
+        try {
+            setState(kernel.getState());
+            setHealthEvents(kernel.getHealthEvents());
+            setKeyStates(keyStateStore.getAll());
+            setLastUpdated(Date.now());
+        } catch {
+            /* kernel not ready */
+        }
+    }, 5000);
 
     const providers = useMemo(() => {
         const all = Object.entries(state?.providers || {}).map(([name, p]) => ({ name, ...p }));

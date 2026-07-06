@@ -67,6 +67,7 @@ export class CacheService implements ICacheService {
     async getOrFetch(
         key: string,
         fetchFn: () => Promise<CacheEntry | null>,
+        timeoutMs = 30000,
     ): Promise<CacheEntry | null> {
         const existing = this.get(key);
         if (existing !== null) return existing;
@@ -74,8 +75,13 @@ export class CacheService implements ICacheService {
         const pending = this.inFlight.get(key);
         if (pending) return pending;
 
+        const timer = setTimeout(() => {
+            this.inFlight.delete(key);
+        }, timeoutMs);
+
         const promise = fetchFn()
             .then((entry) => {
+                clearTimeout(timer);
                 this.inFlight.delete(key);
                 if (entry)
                     this.set(
@@ -90,6 +96,7 @@ export class CacheService implements ICacheService {
                 return entry;
             })
             .catch((e) => {
+                clearTimeout(timer);
                 this.inFlight.delete(key);
                 throw e;
             });

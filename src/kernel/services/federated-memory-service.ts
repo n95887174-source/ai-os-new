@@ -9,6 +9,11 @@ import type {
 const genId = () => crypto.randomUUID();
 const genSyncId = () => crypto.randomUUID();
 
+/**
+ * @deprecated MOCK — No real network sync occurs.
+ * syncNode() uses Math.random() for fake transfer counts and setTimeout(1200) for fake latency.
+ * Does NOT persist nodes or syncHistory. Do not ship — mark as EXPERIMENTAL in UI.
+ */
 export class FederatedMemoryService implements IFederatedMemoryService {
     private config: FederationConfig = {
         nodeId: genId(),

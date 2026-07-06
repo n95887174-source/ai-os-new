@@ -139,6 +139,9 @@ const APP_VERSION = '2.1.0';
 
 const AUDIT_LOG_KEY = 'super_agents_admin_audit_log';
 
+/**
+ * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ */
 export class AdminService {
     private startTime = Date.now();
     private auditLog: AdminAuditEntry[] = [];
