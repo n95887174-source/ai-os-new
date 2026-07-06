@@ -22,13 +22,12 @@ export class ChatExecutor {
     }
 
     handleMessage(req: QueuedRequest): void {
-        const joined = req.messages.map((m) => m.content).join('');
-        const fp = `${req.provider}:${req.model}:${joined}`;
-        if (this.executingMessages.has(fp)) return;
-        this.executingMessages.add(fp);
-        this.executeRequest({ ...req, requestId: req.requestId || crypto.randomUUID() })
+        const requestId = req.requestId || crypto.randomUUID();
+        if (this.executingMessages.has(requestId)) return;
+        this.executingMessages.add(requestId);
+        this.executeRequest({ ...req, requestId })
             .catch((e) => LOGGER.error('ChatExecutor', 'executeRequest failed', { error: e }))
-            .finally(() => this.executingMessages.delete(fp));
+            .finally(() => this.executingMessages.delete(requestId));
     }
 
     cancelRequest(requestId: string): void {

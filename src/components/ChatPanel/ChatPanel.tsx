@@ -117,7 +117,8 @@ const ChatPanel: React.FC = () => {
     const historyLen = activeSessionHistory?.length;
     const lastContentLen =
         activeSessionHistory && activeSessionHistory.length > 0
-            ? activeSessionHistory[activeSessionHistory.length - 1].responses?.[0]?.content?.length ?? 0
+            ? (activeSessionHistory[activeSessionHistory.length - 1].responses?.[0]?.content
+                  ?.length ?? 0)
             : 0;
     useEffect(() => {
         if (userScrolledUpRef.current) return;
@@ -127,7 +128,7 @@ const ChatPanel: React.FC = () => {
     const handleSend = useCallback(
         (text: string, _mode: ExecutionMode) => {
             sendMessage(
-                selectedKeys.map((id) => ({ provider: '', model: selectedModel, keyId: id })),
+                selectedKeys.map((id) => ({ provider: 'auto', model: selectedModel, keyId: id })),
                 text,
             );
         },
@@ -152,6 +153,9 @@ const ChatPanel: React.FC = () => {
         setEditingText('');
     }, [editingEntryId, editingText, editEntry]);
 
+    const activeSession = sessions.find((s) => s.id === activeSessionId);
+    const historyEntries = activeSessionHistory;
+
     const handleFork = useCallback(
         (entryId: string) => {
             forkSession(entryId);
@@ -161,17 +165,16 @@ const ChatPanel: React.FC = () => {
     );
 
     const handleRegenerate = useCallback(
-        (_entryId: string) => {
+        (entryId: string) => {
+            const entry = historyEntries?.find((e) => e.id === entryId);
+            const originalText = entry?.text || '';
             sendMessage(
-                selectedKeys.map((id) => ({ provider: '', model: selectedModel, keyId: id })),
-                '',
+                selectedKeys.map((id) => ({ provider: 'auto', model: selectedModel, keyId: id })),
+                originalText,
             );
         },
-        [sendMessage, selectedKeys, selectedModel],
+        [sendMessage, selectedKeys, selectedModel, historyEntries],
     );
-
-    const activeSession = sessions.find((s) => s.id === activeSessionId);
-    const historyEntries = activeSessionHistory;
 
     const activeConfig = activeSessionId ? getSessionConfig() : undefined;
     const activeModel = activeConfig?.model || selectedModel;
@@ -201,7 +204,11 @@ const ChatPanel: React.FC = () => {
             const q = searchWithinQuery.toLowerCase();
             const indices: number[] = [];
             historyEntries.forEach((entry, idx) => {
-                if (entry.text.toLowerCase().includes(q)) indices.push(idx);
+                const textMatch = entry.text.toLowerCase().includes(q);
+                const responseMatch = (entry.responses ?? []).some(
+                    (r) => r.content && r.content.toLowerCase().includes(q),
+                );
+                if (textMatch || responseMatch) indices.push(idx);
             });
             setSearchWithinResults(indices);
             setSearchWithinIndex(0);

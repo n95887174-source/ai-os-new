@@ -54,7 +54,13 @@ function createDbStorage(db: IDatabaseService): NonNullable<ChatBookmarksService
             const list = Array.isArray(all) ? all : [];
             const filtered = list.filter((b) => b.id !== bookmark.id);
             filtered.unshift(bookmark);
-            await db.setKv(STORAGE_KEY, filtered.slice(0, 500));
+            const truncated = filtered.slice(0, 500);
+            if (truncated.length < filtered.length) {
+                console.warn(
+                    `[ChatBookmarks] Truncated ${filtered.length - 500} bookmarks (max 500)`,
+                );
+            }
+            await db.setKv(STORAGE_KEY, truncated);
         },
         async delete(id: string): Promise<void> {
             const all = await db.getKv<ChatBookmark[]>(STORAGE_KEY);
@@ -106,8 +112,21 @@ export class ChatBookmarksService {
                 const data = args[0] as { sessionId?: string } | undefined;
                 if (data?.sessionId) {
                     const sessionId = data.sessionId;
+                    const toRemove: string[] = [];
                     for (const [id, b] of this.cache) {
-                        if (b.sessionId === sessionId) this.cache.delete(id);
+                        if (b.sessionId === sessionId) {
+                            toRemove.push(id);
+                            this.cache.delete(id);
+                        }
+                    }
+                    for (const id of toRemove) {
+                        this.storage
+                            .delete(id)
+                            .catch((err) =>
+                                this.deps.logger?.warn('ChatBookmarks', 'rewind delete failed', {
+                                    error: String(err),
+                                }),
+                            );
                     }
                 }
             }),

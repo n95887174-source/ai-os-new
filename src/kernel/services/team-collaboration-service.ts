@@ -9,6 +9,7 @@ import type {
 import { ssrSafeStorage } from '../utils/ssr-storage';
 
 const STORAGE_KEY = 'team_collaboration';
+const SYNC_CHANNEL = 'team-collab-sync';
 const INVITE_PREFIX = 'tc_';
 
 function generateCode(): string {
@@ -29,6 +30,8 @@ export class TeamCollaborationService implements ITeamCollaborationService {
     private teams: Team[] = [];
     private invites: InviteLink[] = [];
     private sharedSessions: SharedSession[] = [];
+    private bc: BroadcastChannel | null = null;
+    private reloadListeners: Array<() => void> = [];
 
     async init(): Promise<void> {
         try {
@@ -44,6 +47,16 @@ export class TeamCollaborationService implements ITeamCollaborationService {
             this.invites = [];
             this.sharedSessions = [];
         }
+        try {
+            this.bc = new BroadcastChannel(SYNC_CHANNEL);
+            const handler = () => this.reload();
+            this.bc.onmessage = handler;
+            this.reloadListeners.push(() => {
+                if (this.bc) this.bc.close();
+            });
+        } catch {
+            // BroadcastChannel not available
+        }
     }
 
     start(): Promise<void> {
@@ -54,21 +67,52 @@ export class TeamCollaborationService implements ITeamCollaborationService {
         this.teams = [];
         this.invites = [];
         this.sharedSessions = [];
+        for (const c of this.reloadListeners) c();
+        this.reloadListeners = [];
+        if (this.bc) {
+            this.bc.close();
+            this.bc = null;
+        }
+    }
+
+    private reload(): void {
+        try {
+            const raw = ssrSafeStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const data = JSON.parse(raw) as PersistedData;
+                this.teams = data.teams ?? [];
+                this.invites = data.invites ?? [];
+                this.sharedSessions = data.sharedSessions ?? [];
+            }
+        } catch {
+            /* ignore */
+        }
     }
 
     private persist(): void {
         try {
-            ssrSafeStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify({
-                    teams: this.teams,
-                    invites: this.invites,
-                    sharedSessions: this.sharedSessions,
-                } as PersistedData),
-            );
+            const data = JSON.stringify({
+                teams: this.teams,
+                invites: this.invites,
+                sharedSessions: this.sharedSessions,
+            } as PersistedData);
+            ssrSafeStorage.setItem(STORAGE_KEY, data);
+            if (this.bc) this.bc.postMessage('reload');
         } catch {
             /* silently fail */
         }
+    }
+
+    private isAdmin(teamId: string, callerId: string): boolean {
+        const team = this.getTeam(teamId);
+        if (!team) return false;
+        return team.members.some((m) => m.id === callerId && m.role === 'admin');
+    }
+
+    private isMember(teamId: string, callerId: string): boolean {
+        const team = this.getTeam(teamId);
+        if (!team) return false;
+        return team.members.some((m) => m.id === callerId);
     }
 
     getTeams(): Team[] {
@@ -93,14 +137,16 @@ export class TeamCollaborationService implements ITeamCollaborationService {
         return team;
     }
 
-    deleteTeam(id: string): void {
+    deleteTeam(id: string, callerId?: string): void {
+        if (callerId && !this.isAdmin(id, callerId)) return;
         this.teams = this.teams.filter((t) => t.id !== id);
         this.invites = this.invites.filter((i) => i.teamId !== id);
         this.sharedSessions = this.sharedSessions.filter((s) => s.teamId !== id);
         this.persist();
     }
 
-    addMember(teamId: string, member: Omit<TeamMember, 'joinedAt'>): boolean {
+    addMember(teamId: string, member: Omit<TeamMember, 'joinedAt'>, callerId?: string): boolean {
+        if (callerId && !this.isAdmin(teamId, callerId)) return false;
         const team = this.getTeam(teamId);
         if (!team) return false;
         if (team.members.some((m) => m.id === member.id)) return false;
@@ -109,14 +155,21 @@ export class TeamCollaborationService implements ITeamCollaborationService {
         return true;
     }
 
-    removeMember(teamId: string, memberId: string): void {
+    removeMember(teamId: string, memberId: string, callerId?: string): void {
+        if (callerId && !this.isAdmin(teamId, callerId)) return;
         const team = this.getTeam(teamId);
         if (!team) return;
         team.members = team.members.filter((m) => m.id !== memberId);
         this.persist();
     }
 
-    updateMemberRole(teamId: string, memberId: string, role: CollaborationPermission): void {
+    updateMemberRole(
+        teamId: string,
+        memberId: string,
+        role: CollaborationPermission,
+        callerId?: string,
+    ): void {
+        if (callerId && !this.isAdmin(teamId, callerId)) return;
         const team = this.getTeam(teamId);
         if (!team) return;
         const member = team.members.find((m) => m.id === memberId);
@@ -163,7 +216,8 @@ export class TeamCollaborationService implements ITeamCollaborationService {
         return team;
     }
 
-    revokeInvite(teamId: string, code: string): void {
+    revokeInvite(teamId: string, code: string, callerId?: string): void {
+        if (callerId && !this.isAdmin(teamId, callerId)) return;
         this.invites = this.invites.filter((i) => !(i.teamId === teamId && i.code === code));
         this.persist();
     }
@@ -179,7 +233,9 @@ export class TeamCollaborationService implements ITeamCollaborationService {
         resourceId: string,
         sharedBy: string,
         permission: CollaborationPermission,
+        callerId?: string,
     ): SharedSession {
+        if (callerId && !this.isMember(teamId, callerId)) throw new Error('Not a team member');
         const session: SharedSession = {
             id: generateId(),
             teamId,
@@ -195,7 +251,8 @@ export class TeamCollaborationService implements ITeamCollaborationService {
         return session;
     }
 
-    unshareSession(teamId: string, sessionId: string): void {
+    unshareSession(teamId: string, sessionId: string, callerId?: string): void {
+        if (callerId && !this.isMember(teamId, callerId)) return;
         this.sharedSessions = this.sharedSessions.filter(
             (s) => !(s.teamId === teamId && s.id === sessionId),
         );

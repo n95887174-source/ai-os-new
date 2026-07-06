@@ -49,16 +49,28 @@ const ChatExportPanel: React.FC = () => {
                 provider: last.currentProvider,
                 createdAt: last.createdAt,
                 updatedAt: last.updatedAt,
-                messages: last.history.map((m: { role?: string; text: string }) => ({
-                    role:
-                        m.role === 'user' ||
-                        m.role === 'assistant' ||
-                        m.role === 'system' ||
-                        m.role === 'tool'
-                            ? m.role
-                            : 'user',
-                    content: typeof m.text === 'string' ? m.text : '',
-                })),
+                messages: last.history.flatMap(
+                    (m: {
+                        role?: string;
+                        text: string;
+                        responses?: Array<{ provider: string; content: string }>;
+                    }) => {
+                        const userMsg = {
+                            role: (m.role === 'user' ||
+                            m.role === 'assistant' ||
+                            m.role === 'system' ||
+                            m.role === 'tool'
+                                ? m.role
+                                : 'user') as 'user' | 'assistant' | 'system' | 'tool',
+                            content: typeof m.text === 'string' ? m.text : '',
+                        };
+                        const responseMsgs = (m.responses ?? []).map((r) => ({
+                            role: 'assistant' as const,
+                            content: typeof r.content === 'string' ? r.content : '',
+                        }));
+                        return [userMsg, ...responseMsgs];
+                    },
+                ),
             });
             setSourceMode('session');
         } catch (err) {

@@ -61,6 +61,17 @@ const ChatAdminPanel: React.FC = () => {
     const handleImportSessions = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        const MAX_IMPORT_SIZE = 50 * 1024 * 1024;
+        if (file.size > MAX_IMPORT_SIZE) {
+            setError(`File too large (max ${MAX_IMPORT_SIZE / 1024 / 1024}MB)`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        if (file.size === 0) {
+            setError('File is empty');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
