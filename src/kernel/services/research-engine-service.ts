@@ -360,14 +360,15 @@ export class ResearchEngineService implements IResearchEngine {
         if (!session) throw new Error(`Session ${sessionId} not found`);
 
         const allClaims = session.loops.flatMap((l) => l.claims);
-        if (allClaims.length > 30) {
+        const MAX_FACT_CHECK = 100;
+        if (allClaims.length > MAX_FACT_CHECK) {
             LOGGER.warn(
                 'ResearchEngine',
-                `runFactCheck truncated ${allClaims.length} to 30 claims`,
+                `runFactCheck truncated ${allClaims.length} to ${MAX_FACT_CHECK} claims`,
             );
         }
 
-        const data = computeFactCheck(session, 30);
+        const data = computeFactCheck(session, MAX_FACT_CHECK);
         const report: FactCheckReport = { ...data, createdAt: Date.now() };
 
         this.factCheckReports.set(sessionId, report);

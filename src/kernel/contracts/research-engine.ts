@@ -184,6 +184,7 @@ export interface KnowledgeCluster {
 export interface PrismaFlow {
     identification: number;
     afterDedup: number;
+    dedupRemoved?: number;
     screened: number;
     excludedAtScreening: { reason: string; count: number }[];
     fullTextAssessed: number;

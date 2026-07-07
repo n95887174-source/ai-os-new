@@ -10,9 +10,9 @@ import {
     BookOpen,
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
-import { researchReportService } from '../../kernel/instances';
+import { researchReportService, researchEngine } from '../../kernel/instances';
 
-const FORMAT_OPTIONS = ['markdown', 'html', 'pdf', 'json'] as const;
+const FORMAT_OPTIONS = ['markdown', 'html', 'json'] as const;
 
 const ResearchReportPanelContent: React.FC = () => {
     const [reports, setReports] = useState(() => researchReportService.getReports());
@@ -21,16 +21,30 @@ const ResearchReportPanelContent: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const [title, setTitle] = useState('');
     const [topic, setTopic] = useState('');
-    const [format, setFormat] = useState<'markdown' | 'html' | 'pdf' | 'json'>('markdown');
+    const [format, setFormat] = useState<'markdown' | 'html' | 'json'>('markdown');
+    const [sessions, setSessions] = useState(() => researchEngine.getAllSessions());
+    const [selectedSessionId, setSelectedSessionId] = useState<string>('');
 
-    const refresh = () => setReports([...researchReportService.getReports()]);
+    const refresh = () => {
+        setReports([...researchReportService.getReports()]);
+        setSessions(researchEngine.getAllSessions());
+    };
 
-    const handleCreate = () => {
-        if (!title.trim() || !topic.trim()) return;
-        researchReportService.createReport(title, topic, format);
+    const handleCreate = async () => {
+        if (!title.trim() && !selectedSessionId) return;
+        if (selectedSessionId) {
+            await researchReportService.createFromSession(
+                selectedSessionId,
+                title.trim() || 'Research Report',
+                format,
+            );
+        } else {
+            researchReportService.createReport(title, topic || 'General', format);
+        }
         setShowForm(false);
         setTitle('');
         setTopic('');
+        setSelectedSessionId('');
         refresh();
     };
 
@@ -137,7 +151,7 @@ const ResearchReportPanelContent: React.FC = () => {
                         <input
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
-                            placeholder="Research topic..."
+                            placeholder="Or enter a topic (if no session selected)..."
                             style={{
                                 padding: '8px 10px',
                                 borderRadius: 6,
@@ -148,6 +162,26 @@ const ResearchReportPanelContent: React.FC = () => {
                                 outline: 'none',
                             }}
                         />
+                        <select
+                            value={selectedSessionId}
+                            onChange={(e) => setSelectedSessionId(e.target.value)}
+                            style={{
+                                padding: '8px 10px',
+                                borderRadius: 6,
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: '#0f172a',
+                                color: '#e2e8f0',
+                                fontSize: 13,
+                                outline: 'none',
+                            }}
+                        >
+                            <option value="">-- No session (manual topic) --</option>
+                            {sessions.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.title}
+                                </option>
+                            ))}
+                        </select>
                         <select
                             value={format}
                             onChange={(e) => setFormat(e.target.value as typeof format)}
@@ -170,7 +204,7 @@ const ResearchReportPanelContent: React.FC = () => {
                     </div>
                     <button
                         onClick={handleCreate}
-                        disabled={!title.trim() || !topic.trim()}
+                        disabled={!title.trim() && !selectedSessionId}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -183,10 +217,11 @@ const ResearchReportPanelContent: React.FC = () => {
                             color: '#a855f7',
                             fontSize: 13,
                             fontWeight: 600,
-                            opacity: title.trim() && topic.trim() ? 1 : 0.5,
+                            opacity: title.trim() || selectedSessionId ? 1 : 0.5,
                         }}
                     >
-                        <Plus size={14} /> Create Report
+                        <Plus size={14} />{' '}
+                        {selectedSessionId ? 'Create from Session' : 'Create Report'}
                     </button>
                 </div>
             )}

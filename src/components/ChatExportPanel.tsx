@@ -32,24 +32,25 @@ const ChatExportPanel: React.FC = () => {
 
     const loadFromSession = useCallback(() => {
         try {
-            const { sessions } = useChatStore.getState();
+            const { sessions, activeSessionId } = useChatStore.getState();
             if (!sessions || sessions.length === 0) {
                 setError(t('chat_export.no_sessions'));
                 return;
             }
-            const last = sessions[sessions.length - 1];
-            if (!last?.history || !Array.isArray(last.history)) {
+            const active = activeSessionId ? sessions.find((s) => s.id === activeSessionId) : null;
+            const session = active ?? sessions[0];
+            if (!session?.history || !Array.isArray(session.history)) {
                 setError(t('chat_export.invalid_session'));
                 return;
             }
             setChat({
-                id: last.id,
-                title: last.title ?? 'Chat',
-                model: last.currentModel,
-                provider: last.currentProvider,
-                createdAt: last.createdAt,
-                updatedAt: last.updatedAt,
-                messages: last.history.flatMap(
+                id: session.id,
+                title: session.title ?? 'Chat',
+                model: session.currentModel,
+                provider: session.currentProvider,
+                createdAt: session.createdAt,
+                updatedAt: session.updatedAt,
+                messages: session.history.flatMap(
                     (m: {
                         role?: string;
                         text: string;

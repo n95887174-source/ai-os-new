@@ -120,13 +120,11 @@ export class ChatBookmarksService {
                         }
                     }
                     for (const id of toRemove) {
-                        this.storage
-                            .delete(id)
-                            .catch((err) =>
-                                this.deps.logger?.warn('ChatBookmarks', 'rewind delete failed', {
-                                    error: String(err),
-                                }),
-                            );
+                        this.storage.delete(id).catch((err) =>
+                            this.deps.logger?.warn('ChatBookmarks', 'rewind delete failed', {
+                                error: String(err),
+                            }),
+                        );
                     }
                 }
             }),
@@ -157,6 +155,13 @@ export class ChatBookmarksService {
             createdAt: Date.now(),
         };
         this.cache.set(bookmark.id, bookmark);
+        if (this.cache.size > 500) {
+            const sorted = Array.from(this.cache.entries()).sort(
+                ([, a], [, b]) => b.createdAt - a.createdAt,
+            );
+            const toRemove = sorted.slice(500);
+            for (const [id] of toRemove) this.cache.delete(id);
+        }
         try {
             await this.storage.save(bookmark);
         } catch (err) {

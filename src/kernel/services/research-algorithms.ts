@@ -182,13 +182,16 @@ export function computeCitationGraph(
     }));
 
     const links: CitationLink[] = [];
-    for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-            const claimsI = allClaims.filter((c) => c.sourceId === nodes[i].id);
-            for (const ci of claimsI) {
-                if (ci.contradictions.length > 0) {
-                    links.push({ source: nodes[i].id, target: nodes[j].id, weight: 0.3 });
-                    break;
+    for (const claim of allClaims) {
+        if (claim.contradictions.length === 0) continue;
+        const sourceId = claim.sourceId;
+        for (const targetClaimId of claim.contradictions) {
+            const targetClaim = allClaims.find((c) => c.id === targetClaimId);
+            if (targetClaim && targetClaim.sourceId !== sourceId) {
+                if (
+                    !links.some((l) => l.source === sourceId && l.target === targetClaim.sourceId)
+                ) {
+                    links.push({ source: sourceId, target: targetClaim.sourceId, weight: 0.3 });
                 }
             }
         }
@@ -325,16 +328,35 @@ export function computeSystematicReview(
         }
     }
 
+    // Dedup sources by URL
+    const seenUrls = new Set<string>();
+    const deduped = allSources.filter((s) => {
+        if (!s.url) return true;
+        if (seenUrls.has(s.url)) return false;
+        seenUrls.add(s.url);
+        return true;
+    });
+    const dedupCount = total - deduped.length;
+
     const prismaFlow: PrismaFlow = {
         identification: total,
-        afterDedup: total,
-        screened: total,
+        afterDedup: deduped.length,
+        dedupRemoved: dedupCount,
+        screened: deduped.length,
         excludedAtScreening: Object.entries(exclusionReasons).map(([reason, count]) => ({
             reason,
             count,
         })),
         fullTextAssessed: includedSources.length,
-        excludedAtFullText: [],
+        excludedAtFullText:
+            includedSources.length < deduped.length
+                ? [
+                      {
+                          reason: 'Failed quality check',
+                          count: deduped.length - includedSources.length,
+                      },
+                  ]
+                : [],
         included: includedSources.length,
     };
 
@@ -372,7 +394,8 @@ export function computeFactCheck(
     const allSources = session.loops.flatMap((l) => l.sources);
     const sourceMap = new Map(allSources.map((s) => [s.id, s]));
 
-    const checks: FactCheckResult[] = allClaims.slice(0, maxClaims).map((claim) => {
+    const claimsToCheck = allClaims.length > maxClaims ? allClaims.slice(0, maxClaims) : allClaims;
+    const checks: FactCheckResult[] = claimsToCheck.map((claim) => {
         const contradictingIds = claim.contradictions;
         const contradictingSources = contradictingIds
             .map((cid) => {

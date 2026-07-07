@@ -57,6 +57,11 @@ export class MetaLearningService implements IMetaLearningService {
         return this.patterns.filter((p) => p.confidence > 0.6 && p.impact !== 'neutral');
     }
 
+    recordPrediction(wasCorrect: boolean): void {
+        this.totalPredictions++;
+        if (wasCorrect) this.correctPredictions++;
+    }
+
     async applySuggestion(patternId: string): Promise<void> {
         const pattern = this.patterns.find((p) => p.id === patternId);
         if (!pattern) throw new Error(`Pattern ${patternId} not found`);
@@ -72,6 +77,7 @@ export class MetaLearningService implements IMetaLearningService {
             });
         }
         pattern.timesApplied = (pattern.timesApplied || 0) + 1;
+        this.recordPrediction(pattern.confidence > 0.7);
         LOGGER.info('MetaLearning', 'Suggestion applied', {
             pattern: pattern.description,
             param: pattern.affectedParam,

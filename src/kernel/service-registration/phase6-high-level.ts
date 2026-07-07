@@ -12,6 +12,7 @@ import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { IMemoryEngine } from '../contracts/memory';
+import type { IResearchEngine } from '../contracts/research-engine';
 import type { LoggerService } from '../services/logger-service';
 import type { DataAccessLayer } from '../dal';
 import type { KeyService } from '../services/key-management/key-service';
@@ -305,7 +306,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         (c) => new HealthSlaService({ providerTracker: c.get('providerTracker') }),
     );
     // ── Research Report Service ─────────────────────────
-    register('researchReportService', (_c) => new ResearchReportService());
+    register(
+        'researchReportService',
+        (c) => new ResearchReportService(c.get<IResearchEngine>('researchEngine')),
+    );
     // ── Voice Input Service ─────────────────────────────
     register('voiceInputService', (_c) => new VoiceInputService());
     // ── Agent Protocol Service ─────────────────────────
