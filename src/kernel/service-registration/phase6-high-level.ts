@@ -232,7 +232,11 @@ export const registerPhase6: Phase = (helpers, ctx) => {
 
     register(
         'agentMarketplace',
-        (c) => new AgentMarketplace({ eventBus: c.get<IEventBus>('eventBus') }),
+        (c) =>
+            new AgentMarketplace({
+                eventBus: c.get<IEventBus>('eventBus'),
+                database: c.get<IDatabaseService>('database'),
+            }),
     );
 
     register('eloService', (_c) => new EloRatingService());

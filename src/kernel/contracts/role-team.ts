@@ -186,7 +186,7 @@ export interface IRoleTeamService {
     getTemplates(): TeamTemplate[];
     createFromTemplate(templateId: string, overrides?: Partial<RoleTeam>): RoleTeam;
 
-    executeTeam(teamId: string, task: string): TeamExecution;
+    executeTeam(teamId: string, task: string): Promise<TeamExecution>;
     getExecution(executionId: string): TeamExecution | undefined;
     abortExecution(executionId: string): void;
     getExecutionHistory(teamId: string): TeamExecution[];

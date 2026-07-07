@@ -17,8 +17,10 @@ import type {
     UnifiedRoleEntry,
     Consilium,
     GroupTemplate,
+    IUnifiedRoleRegistry,
 } from '../../kernel/contracts/unified-role';
 import type { RoleTeam, TeamExecution } from '../../kernel/contracts/role-team';
+import type { ILifecycle } from '../../kernel/contracts/lifecycle';
 import { roleTeamService } from '../../kernel/instances';
 import TeamWizard from './TeamWizard';
 import TeamPipeline from './TeamPipeline';
@@ -122,7 +124,7 @@ const RolesConsortiaPanel: React.FC = () => {
     const { t } = useTranslation();
     const [tab, setTab] = useState<Tab>('roles');
     const [search, setSearch] = useState('');
-    const [svc, setSvc] = useState<any>(null);
+    const [svc, setSvc] = useState<IUnifiedRoleRegistry | null>(null);
     const [filterCat, setFilterCat] = useState<string>('');
     const teamSvc = roleTeamService;
     const [teams, setTeams] = useState<RoleTeam[]>([]);
@@ -135,12 +137,12 @@ const RolesConsortiaPanel: React.FC = () => {
     const [teamsView, setTeamsView] = useState<'my-teams' | 'marketplace'>('my-teams');
 
     const executeTeam = useMemo(
-        () => (teamId: string) => {
+        () => async (teamId: string) => {
             const task = taskInputs[teamId]?.trim();
             if (!task) return;
             setExecutingTeams((prev) => new Set(prev).add(teamId));
             try {
-                const result = teamSvc.executeTeam(teamId, task);
+                const result = await teamSvc.executeTeam(teamId, task);
                 setExecResults((prev) => ({ ...prev, [teamId]: result }));
             } catch (e) {
                 console.error('Team execution failed:', e);
@@ -164,17 +166,22 @@ const RolesConsortiaPanel: React.FC = () => {
     useEffect(() => {
         (async () => {
             try {
-                const m = await import('../../kernel/instances');
-                if (isMountedRef.current) setSvc((m as any).unifiedRoleRegistry);
-            } catch {}
+                const m: { unifiedRoleRegistry: IUnifiedRoleRegistry } =
+                    await import('../../kernel/instances');
+                if (isMountedRef.current) setSvc(m.unifiedRoleRegistry);
+            } catch {
+                /* silent */
+            }
         })();
     }, []);
 
     useEffect(() => {
         (async () => {
             try {
-                await (teamSvc as any).init();
-            } catch {}
+                await (teamSvc as unknown as ILifecycle).init();
+            } catch {
+                /* silent */
+            }
             if (isMountedRef.current) setTeams(teamSvc.listTeams());
         })();
     }, [teamSvc]);
@@ -591,7 +598,7 @@ const RolesConsortiaPanel: React.FC = () => {
                             templates={teamTemplates}
                             roles={roles}
                             onSave={(teamData) => {
-                                teamSvc.createTeam(teamData as any);
+                                teamSvc.createTeam(teamData as Omit<RoleTeam, 'id'>);
                                 setTeams(teamSvc.listTeams());
                                 setShowWizard(false);
                             }}

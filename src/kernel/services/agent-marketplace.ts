@@ -1,8 +1,9 @@
 import type { ILifecycle } from '../contracts/lifecycle';
-import type { IEventBus } from '../types/interfaces';
+import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('AgentMarketplace');
+const STORAGE_KEY = 'agent_marketplace_items';
 
 export interface MarketplaceItem {
     id: string;
@@ -17,24 +18,49 @@ export interface MarketplaceItem {
 
 export interface AgentMarketplaceDeps {
     eventBus: IEventBus;
+    database: IDatabaseService;
 }
 
 export class AgentMarketplace implements ILifecycle {
     private items: MarketplaceItem[] = [];
+    private database: IDatabaseService;
 
-    constructor(_deps: AgentMarketplaceDeps) {
-        this.seedMockData();
+    constructor(deps: AgentMarketplaceDeps) {
+        this.database = deps.database;
     }
 
     async init() {
-        LOGGER.info('AgentMarketplace', 'init: no persistence — ephemeral mock data');
+        try {
+            const saved = await this.database.getKv<MarketplaceItem[]>(STORAGE_KEY);
+            if (saved && saved.length > 0) {
+                this.items = saved;
+            } else {
+                this.seedMockData();
+                await this.persist();
+            }
+        } catch (e) {
+            LOGGER.warn('init', 'Failed to load items, using defaults', { error: String(e) });
+            this.seedMockData();
+        }
     }
     async start() {
         LOGGER.info('AgentMarketplace', 'start: ready');
     }
-    destroy() {
-        LOGGER.info('AgentMarketplace', 'destroy: clearing items');
+    async destroy() {
         this.items = [];
+        try {
+            await this.database.setKv(STORAGE_KEY, []);
+        } catch {
+            /* ignore */
+        }
+    }
+
+    private async persist(): Promise<void> {
+        try {
+            await this.database.setKv(STORAGE_KEY, this.items);
+        } catch (e) {
+            LOGGER.warn('persist', 'Failed to persist items', { error: String(e) });
+        }
     }
 
     private seedMockData() {
@@ -101,14 +127,16 @@ export class AgentMarketplace implements ILifecycle {
             downloads: 0,
         };
         this.items.push(newItem);
-        return newItem;
+        void this.persist();
+        return { ...newItem };
     }
 
     install(itemId: string): MarketplaceItem | null {
         const item = this.items.find((i) => i.id === itemId);
         if (item) {
             item.downloads++;
-            return item;
+            void this.persist();
+            return { ...item };
         }
         return null;
     }

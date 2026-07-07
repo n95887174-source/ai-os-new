@@ -187,7 +187,7 @@ export class RoleTeamService implements IRoleTeamService {
     // Execution Engine
     // ════════════════════════════════════════════════
 
-    executeTeam(teamId: string, task: string): TeamExecution {
+    async executeTeam(teamId: string, task: string): Promise<TeamExecution> {
         const team = this.teams.get(teamId);
         if (!team) throw new Error(`Team "${teamId}" not found`);
         if (task.length < 2) throw new Error('Task must be at least 2 characters');
@@ -219,37 +219,37 @@ export class RoleTeamService implements IRoleTeamService {
         try {
             switch (team.coordinationStrategy) {
                 case 'parallel':
-                    this.executeParallel(execution, team);
+                    await this.executeParallel(execution, team);
                     break;
                 case 'sequential':
-                    this.executeSequential(execution, team);
+                    await this.executeSequential(execution, team);
                     break;
                 case 'pipeline':
-                    this.executePipeline(execution, team);
+                    await this.executePipeline(execution, team);
                     break;
                 case 'debate':
-                    this.executeDebate(execution, team);
+                    await this.executeDebate(execution, team);
                     break;
                 case 'consensus':
-                    this.executeConsensus(execution, team);
+                    await this.executeConsensus(execution, team);
                     break;
                 case 'hierarchical':
-                    this.executeHierarchical(execution, team);
+                    await this.executeHierarchical(execution, team);
                     break;
                 case 'swarm':
-                    this.executeSwarm(execution, team);
+                    await this.executeSwarm(execution, team);
                     break;
                 case 'tournament':
-                    this.executeTournament(execution, team);
+                    await this.executeTournament(execution, team);
                     break;
                 case 'round-robin':
-                    this.executeRoundRobin(execution, team);
+                    await this.executeRoundRobin(execution, team);
                     break;
                 case 'review':
-                    this.executeReview(execution, team);
+                    await this.executeReview(execution, team);
                     break;
             }
-        } catch (e) {
+        } catch {
             execution.status = 'failed';
         }
 
@@ -430,7 +430,11 @@ export class RoleTeamService implements IRoleTeamService {
         return this.abortTokens.has(executionId);
     }
 
-    private executeParallel(execution: TeamExecution, team: RoleTeam): void {
+    private async executeParallel(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeParallel for team ${team.name} — no real LLM calls`,
+        );
+        await new Promise((r) => setTimeout(r, 100));
         const roles = [...team.roleIds];
         for (const roleId of roles) {
             if (this.checkAborted(execution.id)) return;
@@ -438,7 +442,10 @@ export class RoleTeamService implements IRoleTeamService {
         }
     }
 
-    private executeSequential(execution: TeamExecution, team: RoleTeam): void {
+    private async executeSequential(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeSequential for team ${team.name} — no real LLM calls`,
+        );
         let context = '';
         for (const roleId of team.roleIds) {
             if (this.checkAborted(execution.id)) return;
@@ -449,22 +456,30 @@ export class RoleTeamService implements IRoleTeamService {
                 context,
             );
             context = execution.roleOutputs[roleId].output || '';
+            await new Promise((r) => setTimeout(r, 50));
         }
         execution.currentRoleId = undefined;
     }
 
-    private executePipeline(execution: TeamExecution, team: RoleTeam): void {
+    private async executePipeline(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executePipeline for team ${team.name} — no real LLM calls`,
+        );
         let pipelineInput = execution.task;
         for (const roleId of team.roleIds) {
             if (this.checkAborted(execution.id)) return;
             execution.currentRoleId = roleId;
             execution.roleOutputs[roleId] = this.simulateRoleOutput(roleId, pipelineInput);
             pipelineInput = execution.roleOutputs[roleId].output || pipelineInput;
+            await new Promise((r) => setTimeout(r, 50));
         }
         execution.currentRoleId = undefined;
     }
 
-    private executeDebate(execution: TeamExecution, team: RoleTeam): void {
+    private async executeDebate(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeDebate for team ${team.name} — no real LLM calls`,
+        );
         const maxRounds = team.executionConfig.maxRounds || 3;
         const debateLog: string[] = [execution.task];
         for (let round = 0; round < maxRounds; round++) {
@@ -486,7 +501,10 @@ export class RoleTeamService implements IRoleTeamService {
         execution.currentRoleId = undefined;
     }
 
-    private executeConsensus(execution: TeamExecution, team: RoleTeam): void {
+    private async executeConsensus(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeConsensus for team ${team.name} — no real LLM calls`,
+        );
         const threshold = team.executionConfig.consensusThreshold || 0.7;
         let votesFor = 0;
         const totalRoles = team.roleIds.length;
@@ -502,12 +520,16 @@ export class RoleTeamService implements IRoleTeamService {
                 (approves ? '✅ APPROVE' : '❌ REJECT') +
                 '\n' +
                 (execution.roleOutputs[roleId].output || '');
+            await new Promise((r) => setTimeout(r, 50));
         }
         const consensus = votesFor / totalRoles >= threshold;
         execution.synthesis = `Consensus ${consensus ? 'REACHED' : 'NOT REACHED'} — ${votesFor}/${totalRoles} approved (threshold: ${threshold})`;
     }
 
-    private executeHierarchical(execution: TeamExecution, team: RoleTeam): void {
+    private async executeHierarchical(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeHierarchical for team ${team.name} — no real LLM calls`,
+        );
         const leaderId = team.leaderRoleId || team.roleIds[0];
         const subRoles = team.roleIds.filter((r) => r !== leaderId);
         execution.currentRoleId = leaderId;
@@ -524,11 +546,15 @@ export class RoleTeamService implements IRoleTeamService {
                 roleId,
                 `Directive from ${leaderId}: ${leaderDirectives.slice(0, 100)}`,
             );
+            await new Promise((r) => setTimeout(r, 50));
         }
         execution.currentRoleId = undefined;
     }
 
-    private executeSwarm(execution: TeamExecution, team: RoleTeam): void {
+    private async executeSwarm(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeSwarm for team ${team.name} — no real LLM calls`,
+        );
         const maxMessages = team.executionConfig.maxRounds || 5;
         const messages: string[] = [execution.task];
         for (let i = 0; i < maxMessages; i++) {
@@ -545,12 +571,16 @@ export class RoleTeamService implements IRoleTeamService {
                         `[${roleId}]: ${execution.roleOutputs[roleId].output?.slice(0, 80)}`,
                     );
                 }
+                await new Promise((r) => setTimeout(r, 30));
             }
         }
         execution.currentRoleId = undefined;
     }
 
-    private executeTournament(execution: TeamExecution, team: RoleTeam): void {
+    private async executeTournament(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeTournament for team ${team.name} — no real LLM calls`,
+        );
         const roles = [...team.roleIds];
         let round = 1;
         let bracket = roles.map((id) => ({ id, score: Math.random() }));
@@ -574,6 +604,7 @@ export class RoleTeamService implements IRoleTeamService {
                 );
                 const winner = a.score > b.score ? a : b;
                 nextRound.push({ id: winner.id, score: winner.score + Math.random() * 0.1 });
+                await new Promise((r) => setTimeout(r, 30));
             }
             bracket = nextRound;
             round++;
@@ -583,7 +614,10 @@ export class RoleTeamService implements IRoleTeamService {
         }
     }
 
-    private executeRoundRobin(execution: TeamExecution, team: RoleTeam): void {
+    private async executeRoundRobin(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeRoundRobin for team ${team.name} — no real LLM calls`,
+        );
         const rounds = team.executionConfig.maxRounds || 3;
         for (let r = 0; r < rounds; r++) {
             if (this.checkAborted(execution.id)) return;
@@ -594,12 +628,16 @@ export class RoleTeamService implements IRoleTeamService {
                     execution.task,
                     `Round ${r + 1}/${rounds}`,
                 );
+                await new Promise((r2) => setTimeout(r2, 30));
             }
         }
         execution.currentRoleId = undefined;
     }
 
-    private executeReview(execution: TeamExecution, team: RoleTeam): void {
+    private async executeReview(execution: TeamExecution, team: RoleTeam): Promise<void> {
+        console.warn(
+            `[RoleTeamService] MOCK executeReview for team ${team.name} — no real LLM calls`,
+        );
         if (team.roleIds.length < 2) {
             execution.roleOutputs[team.roleIds[0]] = this.simulateRoleOutput(
                 team.roleIds[0],
@@ -622,6 +660,7 @@ export class RoleTeamService implements IRoleTeamService {
                 reviewerId,
                 `${execution.task}\nReview draft:\n${draft.slice(0, 200)}`,
             );
+            await new Promise((r2) => setTimeout(r2, 50));
         }
         execution.currentRoleId = authorId;
         execution.roleOutputs[authorId] = this.simulateRoleOutput(
