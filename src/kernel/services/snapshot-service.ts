@@ -51,6 +51,7 @@ export interface SnapshotServiceDeps {
         getKv: <T>(id: string) => Promise<T | null>;
         setKv: <T>(id: string, value: T) => Promise<void>;
     };
+    memoryStore?: { count(): Promise<number> };
     kernel: { getState: () => SystemState; loadState: (json: string) => void };
     orchestrator: {
         getActiveTopology: () => ISTopology | null;
@@ -224,7 +225,7 @@ export class SnapshotService {
             kernel: this.deps.kernel.getState(),
             topology: top,
             disabledNodes,
-            memoryCount: 0,
+            memoryCount: this.deps.memoryStore ? await this.deps.memoryStore.count() : 0,
         };
 
         const snapshot: SystemSnapshot = {

@@ -45,93 +45,110 @@ import { ProviderRuntimeService } from '../services/provider-runtime/provider-se
 export const registerPhase5: Phase = (helpers) => {
     const { register, asDeps } = helpers;
 
-    register('raceExecutor', (c) =>
-        new RaceExecutor(c.get<ProviderAdapterRegistry>('providerAdapterRegistry')),
+    register(
+        'raceExecutor',
+        (c) => new RaceExecutor(c.get<ProviderAdapterRegistry>('providerAdapterRegistry')),
     );
 
-    register('routerService', (c) =>
-        new RouterServiceClass(
-            asDeps<ConstructorParameters<typeof RouterServiceClass>[0]>({
-                kernel: c.get<SystemKernel>('kernel'),
-                keyService: c.get<KeyService>('keyService'),
-                pricingService: c.get<PricingService>('pricingService'),
-                eventBus: c.get<IEventBus>('eventBus'),
-                budgetService: c.get<BudgetService>('budgetService'),
-                policyService: c.get<PolicyService>('policyService'),
-                database: c.get<IDatabaseService>('database'),
-                routingPolicyService: c.get<RoutingPolicyService>('routingPolicyService'),
-                keyStateStore: c.get<KeyStateStore>('keyStateStore'),
-                sessionAffinityStore: c.get<SessionAffinityStore>('sessionAffinityStore'),
-            }),
-        ),
+    register(
+        'routerService',
+        (c) =>
+            new RouterServiceClass(
+                asDeps<ConstructorParameters<typeof RouterServiceClass>[0]>({
+                    kernel: c.get<SystemKernel>('kernel'),
+                    keyService: c.get<KeyService>('keyService'),
+                    pricingService: c.get<PricingService>('pricingService'),
+                    eventBus: c.get<IEventBus>('eventBus'),
+                    budgetService: c.get<BudgetService>('budgetService'),
+                    policyService: c.get<PolicyService>('policyService'),
+                    database: c.get<IDatabaseService>('database'),
+                    routingPolicyService: c.get<RoutingPolicyService>('routingPolicyService'),
+                    keyStateStore: c.get<KeyStateStore>('keyStateStore'),
+                    sessionAffinityStore: c.get<SessionAffinityStore>('sessionAffinityStore'),
+                }),
+            ),
     );
 
-    register('usageTracker', (c) => new UsageTracker({ database: c.get<IDatabaseService>('database') }));
-
-    register('cacheService', (c) =>
-        new CacheService({ database: c.get<IDatabaseService>('database') }),
+    register(
+        'usageTracker',
+        (c) => new UsageTracker({ database: c.get<IDatabaseService>('database') }),
     );
 
-    register('configService', (c) =>
-        new ConfigService({ database: c.get<IDatabaseService>('database') }),
+    register(
+        'cacheService',
+        (c) => new CacheService({ database: c.get<IDatabaseService>('database') }),
     );
 
-    register('snapshotService', (c) =>
-        new SnapshotServiceClass({
+    register(
+        'configService',
+        (c) => new ConfigService({ database: c.get<IDatabaseService>('database') }),
+    );
+
+    register('snapshotService', (c) => {
+        const storageLayer = c.get<{ memory: { count: () => Promise<number> } }>('storageLayer');
+        return new SnapshotServiceClass({
             eventBus: c.get<IEventBus>('eventBus'),
             database: c.get<IDatabaseService>('database'),
+            memoryStore: storageLayer?.memory,
             kernel: c.get<SystemKernel>('kernel'),
             orchestrator: c.get<OrchestrationService>('orchestrator'),
-        }),
+        });
+    });
+
+    register(
+        'advisorService',
+        (c) =>
+            new AdvisorService(
+                asDeps<ConstructorParameters<typeof AdvisorService>[0]>({
+                    eventBus: c.get<IEventBus>('eventBus'),
+                    database: c.get<IDatabaseService>('database'),
+                    kernel: c.get<SystemKernel>('kernel'),
+                    keyService: c.get<KeyService>('keyService'),
+                    routerService: c.get<RouterService>('routerService'),
+                    adapterRegistry: c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
+                    orchestrator: c.get<OrchestrationService>('orchestrator'),
+                    pricingService: c.get<PricingService>('pricingService'),
+                    budgetService: c.get<BudgetService>('budgetService'),
+                    metricsService: c.get<MetricsService>('metricsService'),
+                }),
+            ),
     );
 
-    register('advisorService', (c) =>
-        new AdvisorService(
-            asDeps<ConstructorParameters<typeof AdvisorService>[0]>({
+    register(
+        'adminService',
+        (c) =>
+            new AdminService(
+                asDeps<ConstructorParameters<typeof AdminService>[0]>({
+                    eventBus: c.get<IEventBus>('eventBus'),
+                    keyService: c.get<KeyService>('keyService'),
+                    kernel: c.get<SystemKernel>('kernel'),
+                    orchestrator: c.get<OrchestrationService>('orchestrator'),
+                    settingsService: c.get<SettingsService>('settingsService'),
+                    agentService: c.get<AgentService>('agentService'),
+                    metricsService: c.get<MetricsService>('metricsService'),
+                    toolService: c.get<ToolService>('toolService'),
+                    roleService: c.get<RoleService>('roleService'),
+                    snapshotService: c.get<SnapshotService>('snapshotService'),
+                    runtime: c.get<IRuntimeManager>('runtime'),
+                }),
+            ),
+    );
+
+    register(
+        'timelineService',
+        (c) => new TimelineService({ eventBus: c.get<IEventBus>('eventBus') }),
+    );
+
+    register(
+        'monitoringService',
+        (c) =>
+            new MonitoringService({
                 eventBus: c.get<IEventBus>('eventBus'),
-                database: c.get<IDatabaseService>('database'),
-                kernel: c.get<SystemKernel>('kernel'),
-                keyService: c.get<KeyService>('keyService'),
-                routerService: c.get<RouterService>('routerService'),
-                adapterRegistry: c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
-                orchestrator: c.get<OrchestrationService>('orchestrator'),
-                pricingService: c.get<PricingService>('pricingService'),
-                budgetService: c.get<BudgetService>('budgetService'),
+                traceService: c.get<TraceService>('traceService'),
                 metricsService: c.get<MetricsService>('metricsService'),
+                timelineService: c.get<TimelineService>('timelineService'),
+                routingPolicyService: c.get<RoutingPolicyService>('routingPolicyService'),
             }),
-        ),
-    );
-
-    register('adminService', (c) =>
-        new AdminService(
-            asDeps<ConstructorParameters<typeof AdminService>[0]>({
-                eventBus: c.get<IEventBus>('eventBus'),
-                keyService: c.get<KeyService>('keyService'),
-                kernel: c.get<SystemKernel>('kernel'),
-                orchestrator: c.get<OrchestrationService>('orchestrator'),
-                settingsService: c.get<SettingsService>('settingsService'),
-                agentService: c.get<AgentService>('agentService'),
-                metricsService: c.get<MetricsService>('metricsService'),
-                toolService: c.get<ToolService>('toolService'),
-                roleService: c.get<RoleService>('roleService'),
-                snapshotService: c.get<SnapshotService>('snapshotService'),
-                runtime: c.get<IRuntimeManager>('runtime'),
-            }),
-        ),
-    );
-
-    register('timelineService', (c) =>
-        new TimelineService({ eventBus: c.get<IEventBus>('eventBus') }),
-    );
-
-    register('monitoringService', (c) =>
-        new MonitoringService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            traceService: c.get<TraceService>('traceService'),
-            metricsService: c.get<MetricsService>('metricsService'),
-            timelineService: c.get<TimelineService>('timelineService'),
-            routingPolicyService: c.get<RoutingPolicyService>('routingPolicyService'),
-        }),
     );
 
     register('llmClientService', (c) => {
@@ -139,8 +156,7 @@ export const registerPhase5: Phase = (helpers) => {
         return new LLMClientService(
             {
                 resolveApiKey: (provider: string) => {
-                    const key =
-                        keySvc.selectWithBurst(provider) ?? keySvc.selectFromPool(provider);
+                    const key = keySvc.selectWithBurst(provider) ?? keySvc.selectFromPool(provider);
                     return key?.key;
                 },
             },
@@ -150,12 +166,14 @@ export const registerPhase5: Phase = (helpers) => {
 
     register('freeTierLimits', (_c) => FREE_TIER_LIMITS);
 
-    register('virtualKeyService', (c) =>
-        new VirtualKeyService({
-            database: c.get<IDatabaseService>('database'),
-            eventBus: c.get<IEventBus>('eventBus'),
-            keyService: c.get<KeyService>('keyService'),
-        }),
+    register(
+        'virtualKeyService',
+        (c) =>
+            new VirtualKeyService({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+                keyService: c.get<KeyService>('keyService'),
+            }),
     );
 
     register('providerRuntimeService', (_c) => new ProviderRuntimeService());

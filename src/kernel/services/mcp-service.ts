@@ -192,8 +192,8 @@ export class MCPService {
                 protocolVersion: '2025-03-26',
                 capabilities: {},
             })) as { capabilities?: Record<string, unknown> };
-            server.status = 'connected';
             server.capabilities = result.capabilities ? Object.keys(result.capabilities) : [];
+            server.status = 'connected';
             this.connectionRetries.delete(serverId);
             this.save();
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {

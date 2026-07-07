@@ -5,12 +5,10 @@ import { rawConfig } from './config-registry';
 
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
 export function replaceConfig(next: ConfigRegistry): void {
-    for (const key of Object.keys(rawConfig))
-        delete (rawConfig as unknown as Record<string, unknown>)[key];
-    for (const key of Object.keys(next))
-        (rawConfig as unknown as Record<string, unknown>)[key] = (
-            next as unknown as Record<string, unknown>
-        )[key];
+    const target = rawConfig as unknown as Record<string, unknown>;
+    const source = next as unknown as Record<string, unknown>;
+    // Update every key present in the snapshot — keep keys not in `next` (newer additions)
+    for (const key of Object.keys(source)) target[key] = source[key];
     eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
 }
 
