@@ -65,7 +65,7 @@ const ChatPanel: React.FC = () => {
             DEFAULT_MODELS[activeKeys[0]?.provider || ''] ||
             '';
         setSelectedModel(firstModel);
-    }, [activeKeys]);
+    }, [activeKeys]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const { t } = useTranslation();
     const [showSidebar, setShowSidebar] = useState(true);
@@ -117,8 +117,10 @@ const ChatPanel: React.FC = () => {
     const historyLen = activeSessionHistory?.length;
     const lastContentLen =
         activeSessionHistory && activeSessionHistory.length > 0
-            ? (activeSessionHistory[activeSessionHistory.length - 1].responses?.[0]?.content
-                  ?.length ?? 0)
+            ? (activeSessionHistory[activeSessionHistory.length - 1].responses?.reduce(
+                  (sum, r) => sum + (r.content?.length ?? 0),
+                  0,
+              ) ?? 0)
             : 0;
     useEffect(() => {
         if (userScrolledUpRef.current) return;

@@ -126,6 +126,46 @@ function mapDefaultModeToStrategy(mode: SystemSettings['defaultMode']): RoutingS
     return mode === 'smart' ? 'auto' : mode === 'single' ? 'performance' : 'broadcast';
 }
 
+function isValidThemeConfig(v: unknown): v is ThemeConfig {
+    if (!v || typeof v !== 'object') return false;
+    const o = v as Record<string, unknown>;
+    return (
+        (o.mode === 'dark' || o.mode === 'light') &&
+        typeof o.primaryColor === 'string' &&
+        typeof o.accentColor === 'string' &&
+        typeof o.fontFamily === 'string' &&
+        typeof o.borderRadius === 'number' &&
+        typeof o.reducedMotion === 'boolean' &&
+        typeof o.highContrast === 'boolean'
+    );
+}
+
+function isValidNotificationPrefs(v: unknown): v is NotificationPreferences {
+    if (!v || typeof v !== 'object') return false;
+    const o = v as Record<string, unknown>;
+    return (
+        typeof o.enabled === 'boolean' &&
+        typeof o.healthAlerts === 'boolean' &&
+        typeof o.routingDecisions === 'boolean' &&
+        typeof o.policyViolations === 'boolean' &&
+        typeof o.agentEvents === 'boolean' &&
+        typeof o.errorsOnly === 'boolean' &&
+        typeof o.soundEnabled === 'boolean'
+    );
+}
+
+function isValidDataManagement(v: unknown): v is DataManagementSettings {
+    if (!v || typeof v !== 'object') return false;
+    const o = v as Record<string, unknown>;
+    return (
+        typeof o.autoSaveInterval === 'number' &&
+        typeof o.maxHistoryEntries === 'number' &&
+        typeof o.maxTraceEntries === 'number' &&
+        typeof o.pruneMemoriesAfterDays === 'number' &&
+        typeof o.exportOnShutdown === 'boolean'
+    );
+}
+
 function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSettings> {
     const valid: Partial<SystemSettings> = {};
     if (updates.notifications !== undefined) valid.notifications = updates.notifications;
@@ -164,9 +204,11 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
     if (updates.fallbackChains !== undefined) valid.fallbackChains = updates.fallbackChains;
     if (updates.modelDowngradeChains !== undefined)
         valid.modelDowngradeChains = updates.modelDowngradeChains;
-    if (updates.themeConfig) valid.themeConfig = updates.themeConfig;
-    if (updates.notificationPrefs) valid.notificationPrefs = updates.notificationPrefs;
-    if (updates.dataManagement) valid.dataManagement = updates.dataManagement;
+    if (isValidThemeConfig(updates.themeConfig)) valid.themeConfig = updates.themeConfig;
+    if (isValidNotificationPrefs(updates.notificationPrefs))
+        valid.notificationPrefs = updates.notificationPrefs;
+    if (isValidDataManagement(updates.dataManagement))
+        valid.dataManagement = updates.dataManagement;
     if (updates.sidebarCollapsed !== undefined) valid.sidebarCollapsed = updates.sidebarCollapsed;
     if (updates.telemetryEnabled !== undefined) valid.telemetryEnabled = updates.telemetryEnabled;
     if (updates.autoUpdateCheck !== undefined) valid.autoUpdateCheck = updates.autoUpdateCheck;

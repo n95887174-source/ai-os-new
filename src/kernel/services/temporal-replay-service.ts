@@ -208,9 +208,7 @@ function rescore(
     };
 
     router.getRankedProviders(
-        String(
-            (original.decision as Record<string, unknown>).strategy ?? 'auto',
-        ) as RoutingStrategy,
+        String(original.decision.strategy ?? 'auto') as RoutingStrategy,
         '',
         'normal',
         undefined,
@@ -250,7 +248,7 @@ export class TemporalReplayService implements ITemporalReplayService {
         const causalId = trace.causalId;
         const scope = this.scopeManager.getScope(causalId);
         const providerIds = new Set(scope?.providerIds ?? []);
-        const decisionWinner = String((trace.decision as Record<string, unknown>).selected ?? '');
+        const decisionWinner = String(trace.decision.selected ?? '');
 
         // Step 1: get all events from EventRecorder within time window
         const allEvents = this.recorder.getAll();

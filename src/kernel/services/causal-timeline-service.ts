@@ -4,6 +4,7 @@ import type {
     ICausalScopeManager,
     CausalTraceEntry,
     CausalTrace,
+    DecisionSnapshot,
     EventRef,
     ProjectionSnapshot,
 } from '../contracts/causal-debugger';
@@ -140,7 +141,7 @@ export class CausalTimelineService implements ICausalTraceStore {
                 requestIds: [requestId],
                 logPos: 0,
                 before,
-                decision: { ...payload },
+                decision: payload as unknown as DecisionSnapshot,
                 after: {
                     keyState: takeKeySnapshot(),
                     routerState: snapshot(this.routerProjection),

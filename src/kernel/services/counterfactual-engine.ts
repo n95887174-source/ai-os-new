@@ -105,19 +105,18 @@ export class CounterfactualEngine implements ICounterfactualEngine {
         const start = performance.now();
 
         const original = toDecisionPayload({
-            requestId: (input.baseTrace.decision.requestId as string) ?? 'simulated',
-            strategy:
-                (input.baseTrace.decision.strategy as RoutingStrategy) ?? ('' as RoutingStrategy),
+            requestId: input.baseTrace.decision.requestId ?? 'simulated',
+            strategy: input.baseTrace.decision.strategy as RoutingStrategy,
             classification: input.baseTrace.decision
-                .classification as RouterDecision['classification'],
-            weights: input.baseTrace.decision.weights as unknown as RouterDecision['weights'],
-            selected: (input.baseTrace.decision.selected as string) ?? '',
-            secondBest: (input.baseTrace.decision.secondBest as string | null) ?? null,
-            scores: (input.baseTrace.decision.scores as RouterDecision['scores']) ?? [],
-            skipped: input.baseTrace.decision.skipped as RouterDecision['skipped'],
-            timestamp: (input.baseTrace.decision.timestamp as number) ?? Date.now(),
-            promptLength: (input.baseTrace.decision.promptLength as number) ?? 0,
-            estimatedCost: (input.baseTrace.decision.estimatedCost as number) ?? 0,
+                .classification as unknown as RouterDecision['classification'],
+            weights: input.baseTrace.decision.weights as RouterDecision['weights'],
+            selected: input.baseTrace.decision.selected ?? '',
+            secondBest: input.baseTrace.decision.secondBest ?? null,
+            scores: input.baseTrace.decision.scores as unknown as RouterDecision['scores'],
+            skipped: input.baseTrace.decision.skipped as unknown as RouterDecision['skipped'],
+            timestamp: input.baseTrace.decision.timestamp ?? Date.now(),
+            promptLength: input.baseTrace.decision.promptLength ?? 0,
+            estimatedCost: input.baseTrace.decision.estimatedCost ?? 0,
             steps: [],
             origin: 'simulation',
         });
