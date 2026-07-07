@@ -260,6 +260,14 @@ export class SnapshotService {
 
     restore(snapshot: SystemSnapshot): boolean {
         try {
+            // H-21: Validate snapshot shape via Zod before accessing fields
+            const parsed = SystemSnapshotSchema.safeParse(snapshot);
+            if (!parsed.success) {
+                LOGGER.error('SnapshotService', 'Restore failed — snapshot shape invalid', {
+                    errors: parsed.error.flatten(),
+                });
+                return false;
+            }
             if (snapshot.schemaVersion > CURRENT_SCHEMA_VERSION) {
                 LOGGER.error(
                     'SnapshotService',

@@ -144,8 +144,16 @@ const DebateRuntimePanel: React.FC = () => {
             eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>(
                 DebateRuntimeEvents.AGENT_CHUNK,
                 (d) => {
-                    const streamKey = `streaming-${d.agentId}`;
                     const existing = argsRef.current.get(d.sessionId) || [];
+                    // H-29: Skip chunk if AGENT_RESPONDED already fired for this agent (out-of-order delivery)
+                    if (
+                        existing.some(
+                            (a) => a.agentId === d.agentId && !a.id.startsWith('streaming-'),
+                        )
+                    ) {
+                        return;
+                    }
+                    const streamKey = `streaming-${d.agentId}`;
                     // D-H-16: Resolve real round and position from session snapshot
                     const snap = debateEngine.getSession(d.sessionId);
                     const agentNode = snap?.topology.nodes.find(

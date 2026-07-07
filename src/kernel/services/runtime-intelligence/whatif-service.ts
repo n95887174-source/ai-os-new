@@ -387,7 +387,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
             projectedImpact,
             blockedNodes,
         };
-        this.record('policy_dry_run', proposedPolicy, result);
+        this.record('policy_dry_run', { policy: proposedPolicy }, result);
         this.deps.eventBus.emit(EVENTS.WHATIF_SIMULATION_COMPLETED, {
             type: 'policy_dry_run',
             policyType: proposedPolicy.type,
@@ -405,12 +405,16 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
         this.history = [];
     }
 
-    private record<T>(type: SimulationRecord['type'], input: unknown, result: T): void {
+    private record<T>(
+        type: SimulationRecord['type'],
+        input: Record<string, unknown>,
+        result: T,
+    ): void {
         this.history.unshift({
             id: `sim_${++this.seq}`,
             type,
-            input: input as Record<string, unknown>,
-            result: result as Record<string, unknown>,
+            input,
+            result: result as unknown as Record<string, unknown>,
             timestamp: Date.now(),
         });
         if (this.history.length > MAX_HISTORY) this.history.pop();

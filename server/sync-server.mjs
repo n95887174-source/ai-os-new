@@ -84,6 +84,25 @@ if (!fs.existsSync(DATA_DIR)) {
 // Serialize writes to the file
 let writeQueue = Promise.resolve();
 
+// H-14: Track WebSocket connection rate per IP (separate from HTTP rate limit bucket)
+const WS_RATE_LIMIT_WINDOW_MS = 60_000;
+const WS_RATE_LIMIT_MAX_CONNECTIONS = 10;
+const wsRateLimits = new Map();
+
+function checkWsRateLimit(ip) {
+    const now = Date.now();
+    const entry = wsRateLimits.get(ip);
+    if (!entry || now - entry.windowStart > WS_RATE_LIMIT_WINDOW_MS) {
+        wsRateLimits.set(ip, { windowStart: now, count: 1 });
+        return true;
+    }
+    entry.count++;
+    if (entry.count > WS_RATE_LIMIT_MAX_CONNECTIONS) {
+        return false;
+    }
+    return true;
+}
+
 const server = http.createServer((req, res) => {
     const origin = req.headers['origin'] || '';
     const ip = getClientIP(req);
@@ -200,6 +219,12 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({
     server,
     verifyClient: (info, callback) => {
+        // H-14: Rate limit WebSocket connections per IP
+        const wsIp = getClientIP(info.req);
+        if (!checkWsRateLimit(wsIp)) {
+            callback(false, 429, 'Too many connections');
+            return;
+        }
         // SECURITY FIX: Check Sec-WebSocket-Protocol header first (preferred), then Authorization, then query param (deprecated fallback)
         // Sec-WebSocket-Protocol: first value is subprotocol name, second (if any) is the token
         const protocols = info.req.headers['sec-websocket-protocol'];

@@ -335,19 +335,17 @@ export const RoleSchema = z.object({
     capabilities: z.array(z.string()).default([]),
     permissions: z.array(z.string()).default([]),
     deniedPermissions: z.array(z.string()).optional(),
-    metadata: z
-        .object({
-            category: z.string().optional(),
-            created: z.number().optional(),
-            updated: z.number().optional(),
-            tags: z.array(z.string()).default([]),
-            author: z.string().optional(),
-            version: z.string().optional(),
-            avatar: z.string().optional(),
-            avatarShape: z.string().optional(),
-            avatarColor: z.string().optional(),
-        })
-        .default({ tags: [] }),
+    metadata: z.object({
+        category: z.enum(['creative', 'technical', 'analytical', 'management', 'custom']),
+        created: z.number(),
+        updated: z.number(),
+        tags: z.array(z.string()).default([]),
+        author: z.string().optional(),
+        version: z.string().optional(),
+        avatar: z.string().optional(),
+        avatarShape: z.string().optional(),
+        avatarColor: z.string().optional(),
+    }),
     isBuiltin: z.boolean().optional().default(false),
 });
 
