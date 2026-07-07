@@ -80,15 +80,35 @@ export class LLMClientService implements ILLMClientService {
                 );
 
                 const latency = Date.now() - startTime;
-                const adapterMeta = finalMeta as Partial<AdapterResponse> | undefined;
+                const meta = finalMeta as Record<string, unknown> | undefined;
+                const finishReasonRaw = meta?.finishReason;
+                const validFinishReasons: AdapterFinishReason[] = [
+                    'STOP',
+                    'MAX_TOKENS',
+                    'SAFETY',
+                    'RECITATION',
+                    'OTHER',
+                    'TOOL_CALLS',
+                ];
+                const finishReason =
+                    typeof finishReasonRaw === 'string' &&
+                    validFinishReasons.includes(finishReasonRaw as AdapterFinishReason)
+                        ? (finishReasonRaw as AdapterFinishReason)
+                        : undefined;
                 return {
-                    latency: adapterMeta?.latency ?? latency,
-                    tokens: adapterMeta?.tokens ?? Math.ceil(content.length / 4),
-                    finishReason: adapterMeta?.finishReason,
-                    toolCalls: adapterMeta?.toolCalls,
-                    safetyRatings: adapterMeta?.safetyRatings,
-                    groundingMetadata: adapterMeta?.groundingMetadata,
-                    reasoning: adapterMeta?.reasoning,
+                    latency: typeof meta?.latency === 'number' ? meta.latency : latency,
+                    tokens:
+                        typeof meta?.tokens === 'number'
+                            ? meta.tokens
+                            : Math.ceil(content.length / 4),
+                    finishReason,
+                    toolCalls: Array.isArray(meta?.toolCalls) ? meta.toolCalls : undefined,
+                    safetyRatings: Array.isArray(meta?.safetyRatings)
+                        ? meta.safetyRatings
+                        : undefined,
+                    groundingMetadata:
+                        meta?.groundingMetadata as AdapterResponse['groundingMetadata'],
+                    reasoning: typeof meta?.reasoning === 'string' ? meta.reasoning : undefined,
                     content,
                 };
             }

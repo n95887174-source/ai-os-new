@@ -59,10 +59,11 @@ export class BlackboardService {
         this.deps.eventBus.emit(EVENTS.AGENT_BLACKBOARD_UPDATED, { agentId: agentId, key, value });
     }
 
-    read(agentId?: string, _visibility?: 'public' | 'group' | 'private'): BlackboardEntry[] {
+    read(agentId?: string, visibility?: 'public' | 'group' | 'private'): BlackboardEntry[] {
         const all = Array.from(this.entries.values());
         return all
             .filter((e) => {
+                if (visibility && e.visibility !== visibility) return false;
                 if (e.visibility === 'public') return true;
                 if (e.visibility === 'private' && agentId && e.author === agentId) return true;
                 if (e.visibility === 'group') return true;

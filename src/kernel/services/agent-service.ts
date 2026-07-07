@@ -76,6 +76,7 @@ export class AgentService {
         spawnThreshold: 1, // Number of agents that must be busy/idle to trigger
         terminateAfterMs: 300000, // 5 minutes
     };
+    private autoCloneIds: Set<string> = new Set();
 
     constructor(deps: AgentServiceDeps) {
         this.deps = deps;
@@ -196,8 +197,8 @@ export class AgentService {
                 latency?: number;
             }>(EVENTS.STREAM_END, (d) => {
                 if (!d.requestId) return;
-                // Use keyId if available (maps to an agent), otherwise fall back to provider
-                const statsKey = d.keyId || d.provider || 'unknown';
+                // H-52: prefix stats key to avoid collision with agent-level stats from COGNITIVE_STEP_COMPLETED
+                const statsKey = d.keyId ? `key:${d.keyId}` : `provider:${d.provider || 'unknown'}`;
                 const cur = this.stats.get(statsKey) || this.emptyStats();
                 const tokens = d.tokens || estimateTokens(d.fullContent || '');
                 const cost = this.deps.pricingService.calculateCost(
@@ -352,6 +353,7 @@ export class AgentService {
         this.persist();
         this.deps.eventBus.emit(EVENTS.SYSTEM_NODE_REMOVED, { id: agentId });
         this.stats.delete(agentId);
+        this.autoCloneIds.delete(agentId);
     }
 
     toggleAgent(id: string) {
@@ -520,13 +522,14 @@ export class AgentService {
             busyCount === agentCount &&
             agentCount < this.autoSpawnConfig.maxAgents
         ) {
-            const sourceAgent = agents.find((n) => !n.label.includes('(Auto-clone)')) || agents[0];
+            const sourceAgent = agents.find((n) => !this.autoCloneIds.has(n.id)) || agents[0];
             if (sourceAgent) {
-                this.spawnAgent(
+                const newId = this.spawnAgent(
                     `${sourceAgent.label} (Auto-clone)`,
                     undefined,
                     structuredClone(sourceAgent.config),
                 );
+                if (newId) this.autoCloneIds.add(newId);
             }
         }
 
@@ -535,7 +538,7 @@ export class AgentService {
             for (const idle of idleAgents) {
                 if (now - idle.lastActive > this.autoSpawnConfig.terminateAfterMs) {
                     const node = agents.find((n) => n.id === idle.id);
-                    if (node && node.label.includes('(Auto-clone)')) {
+                    if (node && this.autoCloneIds.has(node.id)) {
                         this.deleteAgent(idle.id);
                     }
                 }
