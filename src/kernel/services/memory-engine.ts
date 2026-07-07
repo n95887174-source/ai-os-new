@@ -179,7 +179,11 @@ export class MemoryService implements IMemoryEngine {
             if (mem) {
                 const idx = this.memories.indexOf(mem);
                 if (idx >= 0) {
-                    this.memories[idx] = { ...mem, vector };
+                    this.memories = [
+                        ...this.memories.slice(0, idx),
+                        { ...mem, vector },
+                        ...this.memories.slice(idx + 1),
+                    ];
                     this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
                 }
             }

@@ -70,12 +70,16 @@ export class CustomMetricsService implements ICustomMetricsService {
             const rankings = this.providerTracker.getProviderRankings();
             const values: number[] = [];
             for (const r of rankings) {
-                const v = (r as any)[metric.field];
+                const v = (r as Record<string, unknown>)[metric.field];
                 if (typeof v === 'number') values.push(v);
             }
             if (values.length > 0) value = aggregate(values, metric.aggregation);
         } else {
-            value = Math.random() * 100;
+            throw new Error(
+                'Unsupported metric source: ' +
+                    metric.source +
+                    '. Only provider source is supported.',
+            );
         }
 
         const entry: MetricValue = { metricId, value, timestamp: Date.now() };

@@ -86,9 +86,9 @@ export class ConfigHistoryService {
             comment,
             configSnapshot: snapshot,
         };
-        await this.persist();
         this.history.push(newVersion);
         if (this.history.length > MAX_HISTORY) this.history.shift();
+        await this.persist();
         LOGGER.info('ConfigHistory', `Config committed by ${author}: ${comment}`, {
             versionString,
         });

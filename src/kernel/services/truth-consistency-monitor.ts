@@ -1,4 +1,5 @@
 import { rootLogger } from './logger-service';
+import type { ILifecycle } from '../contracts/lifecycle';
 import type {
     ITruthConsistencyMonitor,
     ConsistencyReport,
@@ -78,7 +79,58 @@ function classifyDrift(field: string, diff: number): DriftSeverity {
     return 'critical';
 }
 
-export class TruthConsistencyMonitor implements ITruthConsistencyMonitor {
+export class TruthConsistencyMonitor implements ITruthConsistencyMonitor, ILifecycle {
+    private checkTimer: ReturnType<typeof setInterval> | null = null;
+    private _started = false;
+    private deps?: {
+        eventBus: { emit: (event: string, data?: unknown) => void };
+        getKernelProviders: () => Record<
+            string,
+            { avgTTFT: number; reliability: number; status: string }
+        >;
+        getProjectionKeyStates: () => Record<string, unknown>;
+    };
+
+    setDeps(
+        deps: typeof TruthConsistencyMonitor.prototype.deps extends undefined
+            ? never
+            : Required<typeof TruthConsistencyMonitor.prototype.deps>,
+    ): void {
+        this.deps = deps;
+    }
+
+    async init(): Promise<void> {}
+
+    async start(): Promise<void> {
+        if (this._started || !this.deps) return;
+        this._started = true;
+        this.checkTimer = setInterval(() => {
+            try {
+                const report = this.check(
+                    this.deps!.getKernelProviders(),
+                    this.deps!.getProjectionKeyStates(),
+                );
+                if (report.status !== 'OK') {
+                    LOGGER.warn('TruthConsistencyMonitor', 'Auto-check detected drift', {
+                        status: report.status,
+                        driftScore: report.driftScore,
+                        mismatches: report.mismatches.length,
+                    });
+                    this.repair(report, this.deps!.eventBus);
+                }
+            } catch (e) {
+                LOGGER.error('TruthConsistencyMonitor', 'Auto-check failed', { error: e });
+            }
+        }, 300000); // every 5 minutes
+    }
+
+    async destroy(): Promise<void> {
+        if (this.checkTimer) {
+            clearInterval(this.checkTimer);
+            this.checkTimer = null;
+        }
+        this._started = false;
+    }
     check(
         kernelProviders: Record<string, { avgTTFT: number; reliability: number; status: string }>,
         projectionKeyStates: Record<string, unknown>,

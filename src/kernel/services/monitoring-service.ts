@@ -48,9 +48,9 @@ export interface MonitoringServiceDeps {
 
 export class MonitoringService {
     private deps: MonitoringServiceDeps;
-    private healthScore = 1.0;
+    private healthScore = 0;
     private issues: string[] = [];
-    private lastHealthCheck = Date.now();
+    private lastHealthCheck = 0;
     private lastStatus: SystemHealthStatus | null = null;
     private snapshotInterval: ReturnType<typeof setInterval> | null = null;
     private _initialized = false;

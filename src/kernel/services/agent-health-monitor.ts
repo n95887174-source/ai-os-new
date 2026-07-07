@@ -31,12 +31,14 @@ export interface AgentHealthMonitorDeps {
 
 const HEALTH_PERSIST_KEY = 'agent_health_monitor_state';
 const HEARTBEAT_INTERVAL_MS = 60000;
+const STEP_TIMEOUT_MS = 300000; // 5 minutes without completion = hung
 const AUTO_RECOVERY_UNHEALTHY_THRESHOLD = 3;
 
 export class AgentHealthMonitor implements ILifecycle {
     private deps: AgentHealthMonitorDeps;
     private records: StepRecord[] = [];
     private healthCache = new Map<string, AgentHealthSnapshot>();
+    private activeSteps = new Map<string, number>();
     private unsubs: Array<() => void> = [];
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private unhealthyCounters = new Map<string, number>();
@@ -58,7 +60,16 @@ export class AgentHealthMonitor implements ILifecycle {
             this.deps.eventBus.onSafe<{ nodeId: string; duration: number; status: string }>(
                 EVENTS.COGNITIVE_STEP_COMPLETED,
                 (data) => {
+                    this.activeSteps.delete(data.nodeId);
                     this.ingest(data.nodeId, data.duration, data.status !== 'error');
+                },
+            ),
+        );
+        this.unsubs.push(
+            this.deps.eventBus.onSafe<{ nodeId: string; startedAt?: number }>(
+                EVENTS.COGNITIVE_STEP_ACTIVE,
+                (data) => {
+                    this.activeSteps.set(data.nodeId, data.startedAt ?? Date.now());
                 },
             ),
         );
@@ -123,6 +134,17 @@ export class AgentHealthMonitor implements ILifecycle {
     }
 
     private heartbeat() {
+        const now = Date.now();
+        for (const [nodeId, startedAt] of this.activeSteps) {
+            if (now - startedAt > STEP_TIMEOUT_MS) {
+                this.activeSteps.delete(nodeId);
+                this.ingest(nodeId, STEP_TIMEOUT_MS, false);
+                LOGGER.warn('AgentHealthMonitor', 'Step timed out', {
+                    nodeId,
+                    duration: STEP_TIMEOUT_MS,
+                });
+            }
+        }
         const agentIds = new Set(this.records.map((r) => r.agentId));
         for (const agentId of agentIds) {
             this.recompute(agentId);
