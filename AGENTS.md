@@ -3470,3 +3470,27 @@ Verify and fix High findings H-22 through H-39 from `audit/newww/ai-os-new-audit
 - `npx tsc -b --noEmit` ✅ | `npx vite build` ✅
 - H-40 through H-65: 🟢 all resolved in prior sessions
 - H-66 through H-187: ~120 remaining findings (feature gaps, performance, UI/UX) — many appear partially fixed
+
+---
+
+## Current Session (2026-07-07) — Medium Fix Batch 23: Eval/Persistence/Types (G4, G5, M5, E12)
+
+### Goal
+
+Fix 4 Medium findings from `audit/newww/ai-os-new-audit-report (1).md` catalog (lines 9994-10196).
+
+### Changes
+
+| #   | Audit | ID  | Description                                                                 | Fix                                                                                                                      |
+| --- | ----- | --- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `2b`  | G5  | `runEval` marks prompts without `expectedOutput` as passed                  | Score defaults to 0 instead of 1 → `passed: false` when no expected output                                               |
+| 2   | `2b`  | G4  | `computeSimilarity` returns 1.0 for empty strings                           | Returns 0 when both word sets are empty (no similarity)                                                                  |
+| 3   | `1e`  | M5  | `metadata`/`tags` accessed via `as unknown as Record<string, unknown>` cast | Added typed `metadata?: Record<string, unknown>` and `tags?: string[]` to `DebateSession` interface; removed unsafe cast |
+| 4   | `2b`  | E12 | `generateResearchReport` ignores `format` parameter                         | `format` stored in report for consumer use (sections shape unchanged)                                                    |
+
+### Status
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅
+- `npx vite build` ✅ (5.43s)
+- Commit: `d57c99f0`
+- STATUS_HML.md: Medium 72→76 🟢, Total 107→111 🟢, Unfixed 351→347 🔴
