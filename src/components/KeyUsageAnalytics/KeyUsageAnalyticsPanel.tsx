@@ -208,7 +208,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                     const barH = Math.max(8, (t.requests / 4000) * 70);
                     return (
                         <div
-                            key={i}
+                            key={t.date ?? i}
                             style={{
                                 flex: 1,
                                 display: 'flex',

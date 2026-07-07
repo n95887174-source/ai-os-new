@@ -11,6 +11,7 @@ import type { BlackboardService } from './blackboard-service';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
 import { rootLogger } from './logger-service';
+import { sanitizePromptVar } from '../utils/sanitize';
 
 const LOGGER = rootLogger.child('CognitiveService');
 
@@ -410,7 +411,10 @@ export class CognitiveService {
     }
 
     private buildPrompt(node: ISNode, data: NodeContext): string {
-        return `${node.config.systemPrompt || ''}\n\n${data.output || ''}`;
+        const systemPrompt =
+            typeof node.config.systemPrompt === 'string' ? node.config.systemPrompt : '';
+        const output = typeof data.output === 'string' ? data.output : '';
+        return `${sanitizePromptVar(systemPrompt)}\n\n${sanitizePromptVar(output)}`;
     }
 
     private evaluateAlternatives(

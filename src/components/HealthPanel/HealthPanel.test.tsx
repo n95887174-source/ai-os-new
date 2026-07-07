@@ -105,6 +105,13 @@ vi.mock('../../kernel/instances', () => ({
     keyStateStore: {
         getAll: vi.fn(() => []),
     },
+    eventBus: {
+        emit: vi.fn(),
+        on: vi.fn(() => vi.fn()),
+        onSafe: vi.fn(() => vi.fn()),
+        off: vi.fn(),
+    },
+    EVENTS: { NOTIFICATION: 'system:notification' },
 }));
 
 describe('HealthPanel', () => {

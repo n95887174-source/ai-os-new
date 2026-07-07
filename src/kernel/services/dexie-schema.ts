@@ -1,0 +1,652 @@
+import Dexie, { type Table } from 'dexie';
+import type { KeyNote, ApiKey } from '../types/metrics-types';
+import type { MemoryEntry } from '../types/memory-types';
+import type { ChatSession } from '../contracts/storage/session-store';
+import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain-types';
+import type { ExecutionTrace } from '../contracts/observability';
+import type { Role } from '../types/role-types';
+import {
+    MemoryEntrySchema,
+    CognitiveTraceSchema,
+    ChatSessionSchema,
+    KeyNoteSchema,
+    RoleSchema,
+    ExecutionTraceSchema,
+    CognitiveSkillSchema,
+    ConnectorSchema,
+    KeyValueSchema,
+    ApiKeySchema,
+} from '../../types/schemas';
+import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
+import type {
+    DebateTimelineEntry,
+    DebateOverride,
+    SessionLink,
+} from '../contracts/session-manager';
+import { rootLogger } from './logger-service';
+import { safeJsonParse } from '../../kernel/utils/safe-json';
+
+const LOGGER = rootLogger.child('DatabaseService');
+
+export const REDACTED_MARKER = '[REDACTED]';
+
+export interface QueryResult<T> {
+    rows: T[];
+    affectedRows: number;
+}
+
+// Schema for EventRecorder persistence (Dexie store)
+export interface RecordedEventRow {
+    id?: number; // auto-increment
+    sequence: number;
+    event: string;
+    dataJson: string; // JSON.stringify(data)
+    checksum: string;
+    timestamp: number;
+}
+
+export class SuperAgentsDB extends Dexie {
+    notes!: Table<KeyNote>;
+    memories!: Table<MemoryEntry>;
+    apiKeys!: Table<ApiKey>;
+    sessions!: Table<ChatSession>;
+
+    roles!: Table<Role>;
+    cognitiveTraces!: Table<CognitiveTrace>;
+    traces!: Table<ExecutionTrace>;
+    skills!: Table<CognitiveSkill>;
+    connectors!: Table<Connector>;
+    keyValue!: Table<{ id: string; value: unknown; createdAt?: number }>;
+    debateSessions!: Table<DebateSessionRecord>;
+    debateVerdicts!: Table<DebateVerdictRecord>;
+
+    debateTimeline!: Table<DebateTimelineEntry>;
+    debateOverrides!: Table<DebateOverride>;
+    sessionLinks!: Table<SessionLink>;
+
+    eventLog!: Table<RecordedEventRow>;
+
+    constructor() {
+        super('super_agents_os_v4');
+
+        this.version(5).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id',
+        });
+
+        this.version(6)
+            .stores({
+                notes: 'id, keyId, type, timestamp',
+                memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                apiKeys: 'id, provider, status',
+                sessions: 'id, title, updatedAt',
+                roles: 'id, name, metadata.category',
+                cognitiveTraces: 'id, traceId, startTime, status',
+                traces: 'id, startTime, status',
+                skills: 'id, name, category, status',
+                connectors: 'id, name, type, status',
+                keyValue: 'id, createdAt',
+            })
+            .upgrade(async (tx) => {
+                const kvTable = tx.table('keyValue');
+                await kvTable.toCollection().modify((obj) => {
+                    if (!obj.createdAt) obj.createdAt = Date.now();
+                });
+            });
+
+        this.version(7).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id, createdAt',
+        });
+
+        this.version(8).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id, createdAt',
+        });
+
+        this.version(9)
+            .stores({
+                notes: 'id, keyId, type, timestamp',
+                memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                apiKeys: 'id, provider, status',
+                sessions: 'id, title, updatedAt',
+                roles: 'id, name, metadata.category',
+                cognitiveTraces: 'id, traceId, startTime, status',
+                traces: 'id, startTime, status',
+                skills: 'id, name, category, status',
+                connectors: 'id, name, type, status',
+                keyValue: 'id, createdAt',
+                debateSessions: 'id, phase, updatedAt',
+                debateVerdicts: 'sessionId',
+            })
+            .upgrade(async (tx) => {
+                const kvTable = tx.table('keyValue');
+                const oldIndex = await kvTable.get('debate:sessions:index');
+                if (oldIndex?.value && Array.isArray(oldIndex.value)) {
+                    const sessions = oldIndex.value as DebateSessionRecord[];
+                    const destTable = tx.table('debateSessions');
+                    await destTable.bulkPut(sessions);
+                    await kvTable.delete('debate:sessions:index');
+                }
+            });
+
+        this.version(10).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id, createdAt',
+            debateSessions: 'id, phase, updatedAt',
+            debateVerdicts: 'sessionId',
+            eventLog: '++id, sequence, event, timestamp',
+        });
+
+        this.version(11)
+            .stores({
+                notes: 'id, keyId, type, timestamp',
+                memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                apiKeys: 'id, provider, status',
+                sessions: 'id, title, updatedAt',
+                roles: 'id, name, metadata.category',
+                cognitiveTraces: 'id, traceId, startTime, status',
+                traces: 'id, startTime, status',
+                skills: 'id, name, category, status',
+                connectors: 'id, name, type, status',
+                keyValue: 'id, createdAt',
+                debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                debateVerdicts: 'sessionId',
+                debateTimeline: 'id, sessionId, timestamp, type',
+                debateOverrides: 'id, sessionId, appliedAt',
+                sessionLinks: 'id, fromId, toId, linkType',
+                eventLog: '++id, sequence, event, timestamp',
+            })
+            .upgrade(async (tx) => {
+                const debateTable = tx.table('debateSessions');
+                const kvTable = tx.table('keyValue');
+                const ACTIVE_SESSION_ID = '__debate_active_session__';
+                const HISTORY_LIST_ID = '__debate_history_list__';
+
+                const oldActive = await debateTable.get(ACTIVE_SESSION_ID);
+                if (oldActive) {
+                    await debateTable.delete(ACTIVE_SESSION_ID);
+                    await debateTable.put({
+                        ...oldActive,
+                        tags: [],
+                        folder: '',
+                        isArchived: false,
+                    });
+                }
+
+                const oldHistory = await debateTable.get(HISTORY_LIST_ID);
+                if (oldHistory) {
+                    try {
+                        const sessions = safeJsonParse(oldHistory.arguments || '[]');
+                        if (Array.isArray(sessions)) {
+                            for (const s of sessions) {
+                                const record: Record<string, unknown> = {
+                                    id: s.id || crypto.randomUUID(),
+                                    topic: s.topic || '(untitled)',
+                                    topologyType: s.strategy || 'roundtable',
+                                    phase: s.status || 'completed',
+                                    round: s.currentRound || 0,
+                                    totalTokens: s.totalTokens ?? 0,
+                                    totalCost: s.totalCost ?? 0,
+                                    agentStates: JSON.stringify(
+                                        s.arguments?.map((a: Record<string, unknown>) => ({
+                                            agentId: a.agentId,
+                                            nodeId: a.agentName,
+                                            phase: 'idle',
+                                            round: a.round,
+                                            tokensUsed: 0,
+                                            latency: 0,
+                                            lastActiveAt: a.timestamp,
+                                        })) || [],
+                                    ),
+                                    arguments: JSON.stringify(s.arguments || []),
+                                    topology: '{}',
+                                    participants: JSON.stringify(s.participants || []),
+                                    startedAt: s.createdAt ?? Date.now(),
+                                    updatedAt: Date.now(),
+                                    createdAt: s.createdAt ?? Date.now(),
+                                    tags: s.tags ?? [],
+                                    folder: s.folder ?? '',
+                                    isArchived: true,
+                                };
+                                await debateTable.put(record);
+                            }
+                        }
+                    } catch (e) {
+                        LOGGER.warn(
+                            'DatabaseService',
+                            'v11 migration: failed to parse history list',
+                            { error: e },
+                        );
+                    }
+                    await debateTable.delete(HISTORY_LIST_ID);
+                }
+
+                const legacyKv = await kvTable.get('debate_session');
+                if (legacyKv?.value && typeof legacyKv.value === 'object') {
+                    const s = legacyKv.value as Record<string, unknown>;
+                    const record: Record<string, unknown> = {
+                        id: (s.id as string) || crypto.randomUUID(),
+                        topic: s.topic || '(untitled)',
+                        topologyType: (s as Record<string, string>).strategy || 'roundtable',
+                        phase: (s as Record<string, string>).status || 'completed',
+                        round: (s as Record<string, number>).currentRound || 0,
+                        totalTokens: (s as Record<string, number>).totalTokens ?? 0,
+                        totalCost: (s as Record<string, number>).totalCost ?? 0,
+                        agentStates: '[]',
+                        arguments: JSON.stringify((s as Record<string, unknown[]>).arguments || []),
+                        topology: '{}',
+                        participants: JSON.stringify(
+                            (s as Record<string, unknown[]>).participants || [],
+                        ),
+                        startedAt: (s as Record<string, number>).createdAt ?? Date.now(),
+                        updatedAt: Date.now(),
+                        createdAt: (s as Record<string, number>).createdAt ?? Date.now(),
+                        tags: [],
+                        folder: '',
+                        isArchived: true,
+                    };
+                    await debateTable.put(record);
+                    await kvTable.delete('debate_session');
+                }
+
+                const existingAll = await debateTable.toArray();
+                for (const rec of existingAll) {
+                    if (
+                        rec.tags === undefined ||
+                        rec.folder === undefined ||
+                        rec.isArchived === undefined
+                    ) {
+                        await debateTable.update(rec.id, {
+                            tags: (rec as Record<string, unknown>).tags ?? [],
+                            folder: (rec as Record<string, unknown>).folder ?? '',
+                            isArchived: (rec as Record<string, unknown>).isArchived ?? false,
+                        });
+                    }
+                }
+            });
+
+        this.version(12)
+            .stores({
+                notes: 'id, keyId, type, timestamp',
+                memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                apiKeys: 'id, provider, status',
+                sessions: 'id, title, updatedAt',
+                roles: 'id, name, metadata.category',
+                cognitiveTraces: 'id, traceId, startTime, status',
+                traces: 'id, startTime, status',
+                skills: 'id, name, category, status',
+                connectors: 'id, name, type, status',
+                keyValue: 'id, createdAt',
+                debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                debateVerdicts: 'sessionId',
+                debateTimeline: 'id, sessionId, timestamp, type',
+                debateOverrides: 'id, sessionId, appliedAt',
+                sessionLinks: 'id, fromId, toId, linkType',
+                eventLog: '++id, sequence, event, timestamp',
+            })
+            .upgrade(async (tx) => {
+                const debateTable = tx.table('debateSessions');
+                const ACTIVE_SESSION_ID = '__debate_active_session__';
+                const oldActive = await debateTable.get(ACTIVE_SESSION_ID);
+                if (oldActive) {
+                    try {
+                        const parsedArgs = oldActive.arguments
+                            ? safeJsonParse(oldActive.arguments)
+                            : null;
+                        const realId =
+                            parsedArgs && Array.isArray(parsedArgs)
+                                ? oldActive.id.length > 20
+                                    ? oldActive.id
+                                    : crypto.randomUUID()
+                                : crypto.randomUUID();
+                        const idToUse = realId !== ACTIVE_SESSION_ID ? realId : crypto.randomUUID();
+                        await debateTable.put({
+                            ...oldActive,
+                            id: idToUse,
+                            tags: [],
+                            folder: '',
+                            isArchived: false,
+                        });
+                        await debateTable.delete(ACTIVE_SESSION_ID);
+                        LOGGER.info(
+                            'DatabaseService',
+                            'v12: migrated active session magic key to real ID',
+                            { id: idToUse },
+                        );
+                    } catch (e) {
+                        LOGGER.warn('DatabaseService', 'v12: failed to migrate active session', {
+                            error: e,
+                        });
+                        await debateTable.delete(ACTIVE_SESSION_ID);
+                    }
+                }
+
+                const HISTORY_LIST_ID = '__debate_history_list__';
+                const oldHistory = await debateTable.get(HISTORY_LIST_ID);
+                if (oldHistory) {
+                    await debateTable.delete(HISTORY_LIST_ID);
+                    LOGGER.info(
+                        'DatabaseService',
+                        'v12: cleaned up orphaned history list magic key',
+                    );
+                }
+            });
+
+        const rejectHook =
+            (schema: { parse: (data: unknown) => unknown }, label: string) =>
+            (_primKey: unknown, obj: unknown): boolean => {
+                try {
+                    schema.parse(obj);
+                    return true;
+                } catch (e) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    LOGGER.error(
+                        'DatabaseService',
+                        `${label} validation FAILED — rejecting write: ${msg}`,
+                    );
+                    return false;
+                }
+            };
+
+        this.memories.hook('creating', rejectHook(MemoryEntrySchema, 'MemoryEntry'));
+        this.memories.hook('updating', (mods, _primKey, obj) => {
+            try {
+                MemoryEntrySchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'MemoryEntry update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.cognitiveTraces.hook('creating', rejectHook(CognitiveTraceSchema, 'CognitiveTrace'));
+        this.cognitiveTraces.hook('updating', (mods, _primKey, obj) => {
+            try {
+                CognitiveTraceSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'CognitiveTrace update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.sessions.hook('creating', rejectHook(ChatSessionSchema, 'ChatSession'));
+        this.sessions.hook('updating', (mods, _primKey, obj) => {
+            try {
+                ChatSessionSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'ChatSession update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.notes.hook('creating', rejectHook(KeyNoteSchema, 'KeyNote'));
+        this.notes.hook('updating', (mods, _primKey, obj) => {
+            try {
+                KeyNoteSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch {
+                LOGGER.error('DatabaseService', 'KeyNote update validation FAILED');
+                return false;
+            }
+        });
+
+        this.apiKeys.hook('creating', rejectHook(ApiKeySchema, 'ApiKey'));
+        this.apiKeys.hook('updating', (mods, _primKey, obj) => {
+            try {
+                ApiKeySchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch {
+                LOGGER.error('DatabaseService', 'ApiKey update validation FAILED');
+                return false;
+            }
+        });
+
+        this.roles.hook('creating', rejectHook(RoleSchema, 'Role'));
+        this.roles.hook('updating', (mods, _primKey, obj) => {
+            try {
+                RoleSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch {
+                LOGGER.error('DatabaseService', 'Role update validation FAILED');
+                return false;
+            }
+        });
+
+        this.traces.hook('creating', rejectHook(ExecutionTraceSchema, 'ExecutionTrace'));
+        this.traces.hook('updating', (mods, _primKey, obj) => {
+            try {
+                ExecutionTraceSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch {
+                LOGGER.error('DatabaseService', 'ExecutionTrace update validation FAILED');
+                return false;
+            }
+        });
+
+        this.skills.hook('creating', rejectHook(CognitiveSkillSchema, 'CognitiveSkill'));
+        this.skills.hook('updating', (mods, _primKey, obj) => {
+            try {
+                CognitiveSkillSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch {
+                LOGGER.error('DatabaseService', 'CognitiveSkill update validation FAILED');
+                return false;
+            }
+        });
+
+        this.connectors.hook('creating', rejectHook(ConnectorSchema, 'Connector'));
+        this.connectors.hook('updating', (mods, _primKey, obj) => {
+            try {
+                ConnectorSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch {
+                LOGGER.error('DatabaseService', 'Connector update validation FAILED');
+                return false;
+            }
+        });
+
+        this.keyValue.hook('creating', rejectHook(KeyValueSchema, 'KeyValue'));
+        this.keyValue.hook('updating', (mods, _primKey, obj) => {
+            try {
+                KeyValueSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch {
+                LOGGER.error('DatabaseService', 'KeyValue update validation FAILED');
+                return false;
+            }
+        });
+
+        this.validateMigrations();
+    }
+
+    private validateMigrations(): void {
+        const versionDefs: Array<{ v: number; tables: Record<string, string> }> = [
+            {
+                v: 5,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id',
+                },
+            },
+            {
+                v: 6,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                },
+            },
+            {
+                v: 7,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                },
+            },
+            {
+                v: 8,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                },
+            },
+            {
+                v: 9,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt',
+                    debateVerdicts: 'sessionId',
+                },
+            },
+            {
+                v: 10,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt',
+                    debateVerdicts: 'sessionId',
+                    eventLog: '++id, sequence, event, timestamp',
+                },
+            },
+            {
+                v: 11,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                    debateVerdicts: 'sessionId',
+                    debateTimeline: 'id, sessionId, timestamp, type',
+                    debateOverrides: 'id, sessionId, appliedAt',
+                    sessionLinks: 'id, fromId, toId, linkType',
+                    eventLog: '++id, sequence, event, timestamp',
+                },
+            },
+        ];
+
+        for (let i = 1; i < versionDefs.length; i++) {
+            const prev = versionDefs[i - 1];
+            const curr = versionDefs[i];
+            for (const table of Object.keys(prev.tables)) {
+                if (!curr.tables[table]) {
+                    LOGGER.warn(
+                        'DatabaseService',
+                        `Migration v${prev.v}→v${curr.v}: table '${table}' dropped. Data loss possible if upgrade handler missing.`,
+                    );
+                } else if (prev.tables[table] !== curr.tables[table]) {
+                    const prevIdxs = prev.tables[table].split(', ').sort().join(', ');
+                    const currIdxs = curr.tables[table].split(', ').sort().join(', ');
+                    if (prevIdxs !== currIdxs) {
+                        LOGGER.info(
+                            'DatabaseService',
+                            `Migration v${prev.v}→v${curr.v}: table '${table}' indexes changed: [${prev.tables[table]}] → [${curr.tables[table]}]`,
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Bookmark, Search, Trash2, X, BookmarkPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/instances';
@@ -113,8 +113,10 @@ const BookmarksPanel: React.FC = () => {
         await bookmarksService.clearAll();
     }, [t, confirm]);
 
-    const allTags = bookmarksService.getAllTags();
-    const total = bookmarksService.count();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const allTags = useMemo(() => bookmarksService.getAllTags(), [bookmarks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const total = useMemo(() => bookmarksService.count(), [bookmarks]);
 
     if (loading) return <PanelLoading />;
 

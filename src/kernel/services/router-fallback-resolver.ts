@@ -77,6 +77,7 @@ export class RouterFallbackResolver {
         const allActive = this.deps.keyService.getKeys().filter((k) => k.status === 'active');
         if (allActive.length > 0) {
             for (const k of allActive) {
+                if (!this.deps.budgetService.canUseProvider(k.provider)) continue;
                 const selected =
                     this.deps.keyService.selectWithBurst?.(k.provider) ??
                     this.deps.keyService.selectFromPool(k.provider);

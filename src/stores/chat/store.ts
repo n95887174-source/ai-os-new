@@ -74,7 +74,7 @@ const updateActiveSession =
         }));
     };
 
-let _sendLock = false;
+const _sendLocks = new Map<string, boolean>();
 
 export const useChatStore = create<ChatStoreShape>((set, get) => {
     const uas = updateActiveSession(set, get);
@@ -223,18 +223,18 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         },
 
         sendMessage: async (targets, text, systemPromptArg, temperature, maxTokens) => {
-            if (_sendLock) {
-                console.warn('[ChatStore] sendMessage ignored — lock held');
+            const sessionId = get().activeSessionId;
+            if (_sendLocks.get(sessionId)) {
+                console.warn('[ChatStore] sendMessage ignored — lock held for session', sessionId);
                 return;
             }
             const requestId = `chat-${crypto.randomUUID()}`;
             const entryId = crypto.randomUUID();
-            const sessionId = get().activeSessionId;
             let requestIdsToTrack: string[] = [];
             let govOp;
             let currentHistory: ChatEntry[];
             try {
-                _sendLock = true;
+                _sendLocks.set(sessionId, true);
                 currentHistory = (
                     get().sessions.find((s) => s.id === sessionId)?.history ?? []
                 ).slice(-MAX_HISTORY);
@@ -432,7 +432,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 govOp?.fail(e instanceof Error ? e : new Error(String(e)));
                 throw e;
             } finally {
-                _sendLock = false;
+                _sendLocks.set(sessionId, false);
             }
         },
 

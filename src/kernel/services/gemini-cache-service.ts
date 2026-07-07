@@ -48,7 +48,9 @@ export class GeminiCacheService implements IGeminiCacheService {
                         cached.name = data.name;
                     }
                 }
-            } catch {}
+            } catch (e) {
+                console.warn('[GeminiCache] create failed:', e);
+            }
         }
         return cached;
     }
@@ -90,7 +92,9 @@ export class GeminiCacheService implements IGeminiCacheService {
                 const remoteIds = new Set(remote.map((r) => r.id));
                 this.caches = [...remote, ...this.caches.filter((c) => !remoteIds.has(c.id))];
             }
-        } catch {}
+        } catch (e) {
+            console.warn('[GeminiCache] syncFromApi failed:', e);
+        }
     }
 
     get(id: string): CachedContent | null {
@@ -109,7 +113,9 @@ export class GeminiCacheService implements IGeminiCacheService {
                         method: 'DELETE',
                         headers: { 'x-goog-api-key': apiKey },
                     });
-                } catch {}
+                } catch (e) {
+                    console.warn('[GeminiCache] delete remote failed:', e);
+                }
             }
         }
     }
@@ -132,7 +138,8 @@ export class GeminiCacheService implements IGeminiCacheService {
             const { keyService } = await import('../instances');
             const key = keyService.selectFromPool('gemini');
             return key?.key ?? null;
-        } catch {
+        } catch (e) {
+            console.warn('[GeminiCache] getApiKey failed:', e);
             return null;
         }
     }

@@ -7,11 +7,13 @@ const VALID_THEMES = [
     'sunset',
     'high-contrast',
 ] as const;
-const e = localStorage.getItem('super-agents-theme');
+const e = typeof localStorage !== 'undefined' ? localStorage.getItem('super-agents-theme') : null;
 const theme =
     e && VALID_THEMES.includes(e as (typeof VALID_THEMES)[number])
         ? e
-        : !e && matchMedia('(prefers-color-scheme:dark)').matches
+        : !e &&
+            typeof matchMedia !== 'undefined' &&
+            matchMedia('(prefers-color-scheme:dark)').matches
           ? 'dark'
           : 'light';
 document.documentElement.setAttribute('data-theme', theme);

@@ -1,32 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import {
-    Activity,
-    ZoomIn,
-    Search,
-    Cpu,
-    Play,
-    Pause,
-    ChevronLeft,
-    ChevronRight,
-    RefreshCcw,
-    Network,
-    Clock,
-    Code,
-    X,
-    AlertTriangle,
-    Radio,
-} from 'lucide-react';
+import { Activity, ZoomIn, Search, Cpu, Radio, Clock, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus } from '../../kernel/instances';
 import type { CognitiveTrace } from '../../kernel/instances';
 import { cognitiveService } from '../../kernel/instances';
-import CognitiveMicroscope from './CognitiveMicroscope';
-import DecisionGraph from './DecisionGraph';
+import TraceDebugger from './TraceDebugger';
 import TopologyTraceView from './TopologyTraceView';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
-import { emptyStateFlex, iconBtnGhostMd, flexCenterGap2rem } from '../../styles/common';
+import { emptyStateFlex } from '../../styles/common';
 import { getStatusColor } from '../Common/status-vocabulary';
 
 const TracesPanel: React.FC = () => {
@@ -35,20 +18,12 @@ const TracesPanel: React.FC = () => {
     const [selectedTrace, setSelectedTrace] = useState<CognitiveTrace | null>(null);
     const [filter, setFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState<'audit' | 'graph'>('audit');
     const [isLoading, setIsLoading] = useState(traces.length === 0);
     const [error, setError] = useState<string | null>(null);
-
     const [showLiveTopology, setShowLiveTopology] = useState(false);
-
-    // Replay State
-    const [replayIdx, setReplayIdx] = useState(-1);
-    const [isPlaying, setIsPlaying] = useState(false);
 
     const isMountedRef = useRef(true);
     const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
     const clearError = useAutoClearError(setError);
 
     useEffect(() => {
@@ -66,34 +41,8 @@ const TracesPanel: React.FC = () => {
             isMountedRef.current = false;
             sub();
             if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
-            if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
         };
     }, []);
-
-    // Автоматическое воспроизведение
-    useEffect(() => {
-        if (!selectedTrace || replayIdx >= selectedTrace.steps.length - 1) {
-            if (
-                replayIdx >= (selectedTrace?.steps.length || 0) - 1 &&
-                replayIdx >= 0 &&
-                isPlaying &&
-                isMountedRef.current
-            ) {
-                setIsPlaying(false);
-            }
-            return;
-        }
-        if (!isPlaying || !selectedTrace) return;
-        if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
-        replayTimerRef.current = setTimeout(() => {
-            if (isMountedRef.current) {
-                setReplayIdx((prev) => prev + 1);
-            }
-        }, 1000);
-        return () => {
-            if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
-        };
-    }, [isPlaying, replayIdx, selectedTrace]);
 
     const stats = useMemo(() => {
         const total = traces.length;
@@ -128,8 +77,6 @@ const TracesPanel: React.FC = () => {
     const handleSelectTrace = useCallback((trace: CognitiveTrace) => {
         if (!isMountedRef.current) return;
         setSelectedTrace(trace);
-        setReplayIdx(trace.steps.length - 1);
-        setIsPlaying(false);
     }, []);
 
     const filteredTraces = traces.filter((t) => {
@@ -155,277 +102,10 @@ const TracesPanel: React.FC = () => {
         >
             <AnimatePresence>
                 {selectedTrace && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                            zIndex: 100,
-                            background: 'var(--bg-main)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '1.5rem',
-                            borderRadius: 24,
-                        }}
-                    >
-                        {/* Debugger Header with Replay Controls */}
-                        <div
-                            style={{
-                                padding: '1.5rem 2rem',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                borderRadius: 24,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                background: 'rgba(255,255,255,0.02)',
-                                backdropFilter: 'blur(10px)',
-                                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
-                            }}
-                        >
-                            <div style={flexCenterGap2rem}>
-                                <button
-                                    onClick={() => setSelectedTrace(null)}
-                                    style={{
-                                        padding: '0.75rem',
-                                        borderRadius: 12,
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#e2e8f0',
-                                        cursor: 'pointer',
-                                    }}
-                                    aria-label="Close debugger"
-                                >
-                                    <ChevronLeft size={20} aria-hidden="true" />
-                                </button>
-                                <div>
-                                    <div
-                                        style={{
-                                            fontSize: '0.75rem',
-                                            color: '#a855f7',
-                                            fontWeight: 800,
-                                            letterSpacing: '0.05em',
-                                            marginBottom: '0.3rem',
-                                            textTransform: 'uppercase',
-                                        }}
-                                    >
-                                        {t('traces.debugger_title')}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: '1.25rem',
-                                            fontWeight: 800,
-                                            fontFamily: '"JetBrains Mono", monospace',
-                                            color: '#f8fafc',
-                                        }}
-                                    >
-                                        {selectedTrace.traceId}
-                                    </div>
-                                </div>
-
-                                <div
-                                    style={{
-                                        width: 1,
-                                        height: 40,
-                                        background: 'rgba(255,255,255,0.1)',
-                                        margin: '0 0.5rem',
-                                    }}
-                                    aria-hidden="true"
-                                />
-
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        gap: '0.5rem',
-                                        background: 'rgba(0,0,0,0.3)',
-                                        padding: '0.4rem',
-                                        borderRadius: 12,
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                    }}
-                                    role="tablist"
-                                    aria-label="Trace debugger views"
-                                >
-                                    <button
-                                        onClick={() => setViewMode('audit')}
-                                        role="tab"
-                                        aria-selected={viewMode === 'audit'}
-                                        style={{
-                                            padding: '0.6rem 1.25rem',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 700,
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            borderRadius: 10,
-                                            transition: 'all 0.2s',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            background:
-                                                viewMode === 'audit'
-                                                    ? 'rgba(255,255,255,0.1)'
-                                                    : 'transparent',
-                                            color: viewMode === 'audit' ? 'white' : '#64748b',
-                                        }}
-                                    >
-                                        <Code size={16} aria-hidden="true" />{' '}
-                                        {t('traces.tab.audit')}
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('graph')}
-                                        role="tab"
-                                        aria-selected={viewMode === 'graph'}
-                                        style={{
-                                            padding: '0.6rem 1.25rem',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 700,
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            borderRadius: 10,
-                                            transition: 'all 0.2s',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 6,
-                                            background:
-                                                viewMode === 'graph'
-                                                    ? 'rgba(255,255,255,0.1)'
-                                                    : 'transparent',
-                                            color: viewMode === 'graph' ? 'white' : '#64748b',
-                                        }}
-                                    >
-                                        <Network size={16} aria-hidden="true" />{' '}
-                                        {t('traces.tab.neural')}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div style={flexCenterGap2rem}>
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        gap: '0.5rem',
-                                        background: 'rgba(0,0,0,0.3)',
-                                        padding: '0.5rem',
-                                        borderRadius: 12,
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                    }}
-                                >
-                                    <button
-                                        onClick={() => setReplayIdx(Math.max(0, replayIdx - 1))}
-                                        style={iconBtnGhostMd}
-                                        aria-label="Previous step"
-                                    >
-                                        <ChevronLeft size={18} aria-hidden="true" />
-                                    </button>
-                                    <button
-                                        onClick={() => setIsPlaying(!isPlaying)}
-                                        style={{
-                                            padding: '0.6rem 1.5rem',
-                                            borderRadius: 10,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 8,
-                                            background: isPlaying
-                                                ? 'rgba(239,68,68,0.15)'
-                                                : 'rgba(59,130,246,0.15)',
-                                            color: isPlaying ? '#ef4444' : '#60a5fa',
-                                            border: `1px solid ${isPlaying ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`,
-                                            fontWeight: 800,
-                                            cursor: 'pointer',
-                                        }}
-                                        aria-label={isPlaying ? 'Pause replay' : 'Play replay'}
-                                    >
-                                        {isPlaying ? (
-                                            <Pause size={18} aria-hidden="true" />
-                                        ) : (
-                                            <Play size={18} aria-hidden="true" />
-                                        )}{' '}
-                                        {isPlaying ? 'PAUSE' : 'PLAY'}
-                                    </button>
-                                    <button
-                                        onClick={() =>
-                                            setReplayIdx(
-                                                Math.min(
-                                                    selectedTrace.steps.length - 1,
-                                                    replayIdx + 1,
-                                                ),
-                                            )
-                                        }
-                                        style={iconBtnGhostMd}
-                                        aria-label="Next step"
-                                    >
-                                        <ChevronRight size={18} aria-hidden="true" />
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setReplayIdx(0);
-                                            setIsPlaying(true);
-                                        }}
-                                        style={{
-                                            padding: '0.6rem',
-                                            borderRadius: 10,
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#e2e8f0',
-                                            cursor: 'pointer',
-                                            marginLeft: '0.5rem',
-                                        }}
-                                        title="Restart Replay"
-                                        aria-label="Restart replay"
-                                    >
-                                        <RefreshCcw size={18} aria-hidden="true" />
-                                    </button>
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: '0.9rem',
-                                        fontWeight: 800,
-                                        fontFamily: '"JetBrains Mono", monospace',
-                                        color: '#a855f7',
-                                        width: 100,
-                                        textAlign: 'center',
-                                        background: 'rgba(168,85,247,0.1)',
-                                        padding: '0.6rem 1rem',
-                                        borderRadius: 10,
-                                        border: '1px solid rgba(168,85,247,0.2)',
-                                    }}
-                                >
-                                    STEP {replayIdx + 1}/{selectedTrace.steps.length}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div
-                            style={{
-                                flex: 1,
-                                overflow: 'hidden',
-                                borderRadius: 24,
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                background: 'rgba(255,255,255,0.02)',
-                                backdropFilter: 'blur(10px)',
-                            }}
-                        >
-                            {viewMode === 'audit' ? (
-                                <CognitiveMicroscope
-                                    trace={{
-                                        ...selectedTrace,
-                                        steps: selectedTrace.steps.slice(0, replayIdx + 1),
-                                    }}
-                                />
-                            ) : (
-                                <DecisionGraph
-                                    steps={selectedTrace.steps.slice(0, replayIdx + 1)}
-                                    edges={selectedTrace.decisionGraph.edges}
-                                    selectedId={selectedTrace.steps[replayIdx]?.id}
-                                />
-                            )}
-                        </div>
-                    </motion.div>
+                    <TraceDebugger trace={selectedTrace} onClose={() => setSelectedTrace(null)} />
                 )}
             </AnimatePresence>
 
-            {/* Main Panel Header */}
             <div
                 style={{
                     display: 'flex',
@@ -564,7 +244,6 @@ const TracesPanel: React.FC = () => {
                 </div>
             </div>
 
-            {/* Stats Row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                 {[
                     { label: t('traces.total'), value: stats.total, color: '#a855f7' },
@@ -606,7 +285,6 @@ const TracesPanel: React.FC = () => {
                 ))}
             </div>
 
-            {/* Error Banner */}
             <AnimatePresence>
                 {error && (
                     <motion.div
@@ -673,7 +351,6 @@ const TracesPanel: React.FC = () => {
                     backdropFilter: 'blur(10px)',
                 }}
             >
-                {/* Table Header */}
                 <div
                     style={{
                         padding: '1.5rem',
@@ -697,7 +374,6 @@ const TracesPanel: React.FC = () => {
                     <span style={{ textAlign: 'right' }}>{t('traces.table.actions')}</span>
                 </div>
 
-                {/* Traces List */}
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     <AnimatePresence>
                         {filteredTraces.map((trace) => (

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { Search, MessageSquare, Home } from 'lucide-react';
 import { t as translate } from './i18n/translations';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+import { PermissionGate } from './components/Common/PermissionGate';
 import { NAV_SECTIONS } from './route-registry';
 import { PANEL_COMPONENTS, PanelLoader } from './route-imports';
 import DashboardPanel from './components/DashboardPanel/DashboardPanel';
@@ -13,7 +14,7 @@ import MCPPanel from './components/MCPPanel/MCPPanel';
 import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
 import EventsTimeline from './components/EventsTimeline/EventsTimeline';
 
-function Panel(key: string): React.ComponentType<any> {
+function Panel(key: string): React.ComponentType<Record<string, unknown>> {
     const component = PANEL_COMPONENTS[key];
     if (!component) {
         const Fallback: React.FC = () => (
@@ -233,15 +234,17 @@ export const AppRoutes: React.FC = () => {
                             key={item.id}
                             path={routePath}
                             element={
-                                item.lazy ? (
-                                    <PanelLoader name={item.id}>
-                                        <Component />
-                                    </PanelLoader>
-                                ) : (
-                                    <ErrorBoundary name={item.id} variant="panel">
-                                        <Component />
-                                    </ErrorBoundary>
-                                )
+                                <PermissionGate requiredLevel={item.level}>
+                                    {item.lazy ? (
+                                        <PanelLoader name={item.id}>
+                                            <Component />
+                                        </PanelLoader>
+                                    ) : (
+                                        <ErrorBoundary name={item.id} variant="panel">
+                                            <Component />
+                                        </ErrorBoundary>
+                                    )}
+                                </PermissionGate>
                             }
                         />
                     );
@@ -269,71 +272,91 @@ export const AppRoutes: React.FC = () => {
             <Route
                 path="/debates/live"
                 element={
-                    <PanelLoader name="DebateLive">
-                        {React.createElement(Panel('debate-live'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="DebateLive">
+                            {React.createElement(Panel('debate-live'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/debates/replay"
                 element={
-                    <PanelLoader name="DebateReplay">
-                        {React.createElement(Panel('debate-replay'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L2">
+                        <PanelLoader name="DebateReplay">
+                            {React.createElement(Panel('debate-replay'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/debates/tournament"
                 element={
-                    <PanelLoader name="Tournament">
-                        {React.createElement(Panel('debate-tournament'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="Tournament">
+                            {React.createElement(Panel('debate-tournament'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/audience"
                 element={
-                    <PanelLoader name="Audience">
-                        {React.createElement(Panel('audience'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="Audience">
+                            {React.createElement(Panel('audience'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/editors"
                 element={
-                    <PanelLoader name="Editors">
-                        {React.createElement(Panel('editors'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="Editors">
+                            {React.createElement(Panel('editors'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/debates/history"
                 element={
-                    <PanelLoader name="DebateHistory">
-                        {React.createElement(Panel('debate-history'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="DebateHistory">
+                            {React.createElement(Panel('debate-history'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/debates/analysis"
                 element={
-                    <PanelLoader name="DebateAnalysis">
-                        {React.createElement(Panel('debate-analysis'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="DebateAnalysis">
+                            {React.createElement(Panel('debate-analysis'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/debates/graph"
                 element={
-                    <PanelLoader name="ArgumentGraph">
-                        {React.createElement(Panel('argument-graph'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L2">
+                        <PanelLoader name="ArgumentGraph">
+                            {React.createElement(Panel('argument-graph'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/debates/topics"
                 element={
-                    <PanelLoader name="Topics">{React.createElement(Panel('topics'))}</PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="Topics">
+                            {React.createElement(Panel('topics'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
 
@@ -341,21 +364,29 @@ export const AppRoutes: React.FC = () => {
             <Route
                 path="/diagnostics/logs"
                 element={
-                    <PanelLoader name="Logs">{React.createElement(Panel('logs'))}</PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="Logs">{React.createElement(Panel('logs'))}</PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/diagnostics/health"
                 element={
-                    <PanelLoader name="Health">{React.createElement(Panel('health'))}</PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="Health">
+                            {React.createElement(Panel('health'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/diagnostics/system"
                 element={
-                    <PanelLoader name="SystemHealth">
-                        {React.createElement(Panel('system-health'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="SystemHealth">
+                            {React.createElement(Panel('system-health'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
@@ -369,15 +400,21 @@ export const AppRoutes: React.FC = () => {
             <Route
                 path="/diagnostics/memory"
                 element={
-                    <PanelLoader name="Memory">{React.createElement(Panel('memory'))}</PanelLoader>
+                    <PermissionGate requiredLevel="L1">
+                        <PanelLoader name="Memory">
+                            {React.createElement(Panel('memory'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
             <Route
                 path="/diagnostics/aquarium"
                 element={
-                    <PanelLoader name="Aquarium">
-                        {React.createElement(Panel('aquarium'))}
-                    </PanelLoader>
+                    <PermissionGate requiredLevel="L2">
+                        <PanelLoader name="Aquarium">
+                            {React.createElement(Panel('aquarium'))}
+                        </PanelLoader>
+                    </PermissionGate>
                 }
             />
 
@@ -419,9 +456,11 @@ export const AppRoutes: React.FC = () => {
             <Route
                 path="/chat-admin"
                 element={
-                    <ErrorBoundary name="ChatAdmin" variant="panel">
-                        <ChatAdminPanel />
-                    </ErrorBoundary>
+                    <PermissionGate requiredLevel="L2">
+                        <ErrorBoundary name="ChatAdmin" variant="panel">
+                            <ChatAdminPanel />
+                        </ErrorBoundary>
+                    </PermissionGate>
                 }
             />
 

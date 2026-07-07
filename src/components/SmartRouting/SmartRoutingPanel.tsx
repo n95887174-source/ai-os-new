@@ -149,7 +149,7 @@ function RuleCard({
                             </div>
                             {rule.conditions.map((c, i) => (
                                 <div
-                                    key={i}
+                                    key={`${rule.id}-cond-${i}`}
                                     style={{ fontSize: '0.8rem', opacity: 0.7, paddingLeft: 12 }}
                                 >
                                     {CONDITION_LABELS[c.type] ?? c.type}: {String(c.value)}
@@ -165,7 +165,7 @@ function RuleCard({
                             </div>
                             {rule.fallbackChain.map((f, i) => (
                                 <div
-                                    key={i}
+                                    key={`${rule.id}-fb-${i}`}
                                     style={{
                                         fontSize: '0.8rem',
                                         opacity: 0.7,
@@ -574,7 +574,7 @@ export default function SmartRoutingPanel() {
                         .slice(0, 20)
                         .map((d, i) => (
                             <div
-                                key={i}
+                                key={`${d.selectedProvider}-${d.selectedModel}-${i}`}
                                 style={{
                                     fontSize: '0.8rem',
                                     padding: '6px 10px',

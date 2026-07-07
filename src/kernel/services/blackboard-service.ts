@@ -57,7 +57,6 @@ export class BlackboardService {
             if (oldest !== undefined) this.entries.delete(oldest);
         }
         this.deps.eventBus.emit(EVENTS.AGENT_BLACKBOARD_UPDATED, { agentId: agentId, key, value });
-        this.subscribers.forEach((cb) => cb(entry));
     }
 
     read(agentId?: string, _visibility?: 'public' | 'group' | 'private'): BlackboardEntry[] {

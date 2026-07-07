@@ -66,7 +66,11 @@ const ChatSidebar: React.FC<Props> = ({
                 message: t('chat.confirm_delete'),
             });
             if (!confirmed) return;
-            deleteSession(id);
+            try {
+                deleteSession(id);
+            } catch {
+                console.error('Failed to delete session', id);
+            }
             if (id === activeSessionId) {
                 const nextSession = sessions.find((s) => s.id !== id);
                 onSessionClick(nextSession?.id || '');
@@ -81,7 +85,11 @@ const ChatSidebar: React.FC<Props> = ({
             message: t('chat.confirm_clear'),
         });
         if (!confirmed) return;
-        useChatStore.getState().clearHistory();
+        try {
+            useChatStore.getState().clearHistory();
+        } catch {
+            console.error('Failed to clear chat history');
+        }
     }, [confirmClear, t]);
 
     return (

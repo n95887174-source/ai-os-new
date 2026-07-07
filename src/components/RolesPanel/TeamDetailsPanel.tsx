@@ -577,12 +577,12 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                         ) : (
                             <div>
                                 <div style={{ display: 'grid', gap: 6 }}>
-                                    {allCompatibility.slice(0, 30).map((entry, i) => {
+                                    {allCompatibility.slice(0, 30).map((entry) => {
                                         const isDirectMatch =
                                             entry.roleA === team.id || entry.roleB === team.id;
                                         return (
                                             <div
-                                                key={i}
+                                                key={`${entry.roleA}-${entry.roleB}`}
                                                 style={{
                                                     ...card,
                                                     padding: '8px 12px',

@@ -1,5 +1,6 @@
 import type { ApiKey } from '../../types/metrics-types';
 import type { IKeyVaultService } from '../../contracts/key-vault';
+import { ssrSafeStorage } from '../../utils/ssr-storage';
 
 const ALGORITHM = 'AES-GCM';
 const KEY_USAGE: KeyUsage[] = ['encrypt', 'decrypt'];
@@ -33,12 +34,12 @@ export class KeyVault implements IKeyVaultService {
 
     async unlock(password: string): Promise<boolean> {
         try {
-            const stored = localStorage.getItem('key-vault:salt');
+            const stored = ssrSafeStorage.getItem('key-vault:salt');
             const salt = stored
                 ? hexToBytes(stored)
                 : crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
             if (!stored) {
-                localStorage.setItem('key-vault:salt', bytesToHex(salt));
+                ssrSafeStorage.setItem('key-vault:salt', bytesToHex(salt));
             }
             const baseKey = await crypto.subtle.importKey(
                 'raw',

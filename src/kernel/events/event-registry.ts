@@ -53,7 +53,23 @@ export const EVENT_REGISTRY = {
             source: z.string().optional(),
         }),
     ),
+    KEY_COMPROMISE_SIGNAL: event(
+        'key:compromise:signal',
+        z.object({
+            id: z.string().optional(),
+            fingerprint: z.string().optional(),
+            source: z.string().optional(),
+        }),
+    ),
     GROUP_SYNC: event(
+        'key:group:sync',
+        z.object({
+            passportAdded: z.number().optional(),
+            assigned: z.number().optional(),
+            reassigned: z.number().optional(),
+        }),
+    ),
+    KEY_GROUP_SYNC: event(
         'key:group:sync',
         z.object({
             passportAdded: z.number().optional(),
@@ -99,7 +115,9 @@ export const EVENT_REGISTRY = {
         z.object({ id: z.string(), provider: z.string(), score: z.number() }),
     ),
     CHECK_HEALTH: event('key:health:check', z.string()),
+    KEY_CHECK_HEALTH: event('key:health:check', z.string()),
     CHECK_ALL_HEALTH: event('key:health:check:all', z.void().or(z.undefined())),
+    KEY_CHECK_ALL_HEALTH: event('key:health:check:all', z.void().or(z.undefined())),
     KEY_PROBE_RESULT: event(
         'key:probe:result',
         z.object({
@@ -189,10 +207,32 @@ export const EVENT_REGISTRY = {
             options: z.unknown().optional(),
         }),
     ),
+    CHAT_SEND_MESSAGE: event(
+        'chat:send',
+        z.object({
+            provider: z.string(),
+            model: z.string(),
+            messages: z.array(z.unknown()),
+            requestId: z.string().optional(),
+            strategy: z.string().optional(),
+            keyId: z.string().optional(),
+            options: z.unknown().optional(),
+        }),
+    ),
     CANCEL_MESSAGE: event('chat:cancel', z.object({ requestId: z.string() })),
+    CHAT_CANCEL_MESSAGE: event('chat:cancel', z.object({ requestId: z.string() })),
     MESSAGE_RESPONSE: event('chat:response', ChatResponseSchema),
+    CHAT_MESSAGE_RESPONSE: event('chat:response', ChatResponseSchema),
     SELECT_MODEL: event('chat:model:select', z.object({ provider: z.string(), model: z.string() })),
+    CHAT_SELECT_MODEL: event(
+        'chat:model:select',
+        z.object({ provider: z.string(), model: z.string() }),
+    ),
     START_CHAT_WITH_TARGET: event(
+        'chat:target:start',
+        z.object({ provider: z.string(), model: z.string(), keyId: z.string() }),
+    ),
+    CHAT_START_WITH_TARGET: event(
         'chat:target:start',
         z.object({ provider: z.string(), model: z.string(), keyId: z.string() }),
     ),
@@ -205,7 +245,25 @@ export const EVENT_REGISTRY = {
             keyId: z.string().optional(),
         }),
     ),
+    CHAT_STREAM_START: event(
+        'chat:stream:start',
+        z.object({
+            requestId: z.string(),
+            provider: z.string(),
+            model: z.string(),
+            keyId: z.string().optional(),
+        }),
+    ),
     STREAM_CHUNK: event(
+        'chat:stream:chunk',
+        z.object({
+            requestId: z.string(),
+            provider: z.string(),
+            chunk: z.string(),
+            keyId: z.string().optional(),
+        }),
+    ),
+    CHAT_STREAM_CHUNK: event(
         'chat:stream:chunk',
         z.object({
             requestId: z.string(),
@@ -230,7 +288,32 @@ export const EVENT_REGISTRY = {
             finishReason: z.string().optional(),
         }),
     ),
+    CHAT_STREAM_END: event(
+        'chat:stream:end',
+        z.object({
+            requestId: z.string(),
+            fullContent: z.string(),
+            latency: z.number(),
+            tokens: z.number().optional(),
+            provider: z.string().optional(),
+            model: z.string().optional(),
+            keyId: z.string().optional(),
+            ttft: z.number().optional(),
+            tps: z.number().optional(),
+            status: z.enum(['timeout', 'done', 'cancelled', 'error']).optional(),
+            finishReason: z.string().optional(),
+        }),
+    ),
     STREAM_ERROR: event(
+        'chat:stream:error',
+        z.object({
+            requestId: z.string(),
+            provider: z.string(),
+            error: z.string(),
+            keyId: z.string().optional(),
+        }),
+    ),
+    CHAT_STREAM_ERROR: event(
         'chat:stream:error',
         z.object({
             requestId: z.string(),
@@ -246,6 +329,7 @@ export const EVENT_REGISTRY = {
 
     // ── System Events ──────────────────────────────────────────────────────
     NAVIGATE: event('system:navigate', z.string()),
+    SYSTEM_NAVIGATE: event('system:navigate', z.string()),
     NOTIFICATION: event(
         'system:notification',
         z.object({
@@ -257,7 +341,84 @@ export const EVENT_REGISTRY = {
                 .optional(),
         }),
     ),
+    SYSTEM_NOTIFICATION: event(
+        'system:notification',
+        z.object({
+            message: z.string(),
+            type: z.enum(['success', 'error', 'info', 'warning']),
+            source: z.string().optional(),
+            savings: z
+                .object({ latency: z.number().optional(), cost: z.number().optional() })
+                .optional(),
+        }),
+    ),
     DECISION: event(
+        'system:decision',
+        z.object({
+            requestId: z.string(),
+            strategy: z.string(),
+            classification: z
+                .object({
+                    complexity: z.enum(['simple', 'medium', 'complex']),
+                    isCode: z.boolean(),
+                    isLong: z.boolean(),
+                    isMultimodal: z.boolean(),
+                    intent: z.string().optional(),
+                    language: z.string().optional(),
+                })
+                .optional(),
+            weights: z.unknown(),
+            selected: z.string(),
+            secondBest: z.string().nullable(),
+            scores: z.array(
+                z.object({
+                    p: z.string(),
+                    s: z.string(),
+                    c: z
+                        .object({
+                            raw: z.number(),
+                            stabilityBonus: z.number(),
+                            reputationBonus: z.number(),
+                            explorationBonus: z.number(),
+                            keyReputationBonus: z.number(),
+                            affinityBonus: z.number(),
+                            priorityBonus: z.number(),
+                            costPenalty: z.number(),
+                            latencyPenalty: z.number(),
+                            budgetPenalty: z.number(),
+                        })
+                        .optional(),
+                }),
+            ),
+            skipped: z
+                .array(
+                    z.object({
+                        provider: z.string(),
+                        keyLabel: z.string(),
+                        keyId: z.string().optional(),
+                        reason: z.string(),
+                        stage: z.enum([
+                            'status',
+                            'policy',
+                            'quota',
+                            'score',
+                            'budget',
+                            'unavailable',
+                            'circuit',
+                            'ratelimit',
+                            'backoff',
+                            'normalization',
+                            'exclusion',
+                        ]),
+                    }),
+                )
+                .optional(),
+            timestamp: z.number(),
+            profile: z.string().optional(),
+            isExperiment: z.boolean().optional(),
+        }),
+    ),
+    SYSTEM_DECISION: event(
         'system:decision',
         z.object({
             requestId: z.string(),
@@ -340,6 +501,7 @@ export const EVENT_REGISTRY = {
     ),
     CLEAR_DATA: event('system:data:clear', z.void().or(z.undefined())),
     RELOAD: event('system:reload', z.object({ timestamp: z.number() })),
+    SYSTEM_RELOAD: event('system:reload', z.object({ timestamp: z.number() })),
     KERNEL_LOAD_FAILED: event('kernel:load:failed', z.object({ error: z.string() })),
     KERNEL_PERSIST_FAILED: event('kernel:persist:failed', z.object({ error: z.string() })),
     SYSTEM_RUNTIME_METRICS: event('system:runtime:metrics', z.record(z.string(), z.unknown())),

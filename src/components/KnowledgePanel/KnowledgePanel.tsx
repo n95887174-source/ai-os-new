@@ -99,8 +99,8 @@ const KnowledgePanel: React.FC = () => {
 
     const entityCount = filteredMemories.length;
     const density = computeDensity(edges.length, nodes.length);
-    const typeCounts = useMemo(() => computeTypeCounts(memories), [memories]);
-    const uniqueTypes = useMemo(() => getUniqueTypes(memories), [memories]);
+    const typeCounts = useMemo(() => computeTypeCounts(filteredMemories), [filteredMemories]);
+    const uniqueTypes = useMemo(() => getUniqueTypes(filteredMemories), [filteredMemories]);
 
     const handleDelete = async () => {
         if (

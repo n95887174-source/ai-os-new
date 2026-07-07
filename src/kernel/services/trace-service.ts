@@ -74,11 +74,14 @@ export class TraceService {
         };
     }
 
+    private sweepTimer: ReturnType<typeof setInterval> | null = null;
+
     async init() {
         if (this._initialized) return;
         this._initialized = true;
         await this.load();
         this.setupListeners();
+        this.sweepTimer = setInterval(() => this.sweepStaleTraces(), 5 * 60 * 1000);
     }
 
     private async load() {
@@ -316,6 +319,10 @@ export class TraceService {
         this._initialized = false;
         this.unsubs.forEach((u) => u());
         this.activeTraces.clear();
+        if (this.sweepTimer) {
+            clearInterval(this.sweepTimer);
+            this.sweepTimer = null;
+        }
     }
 
     sweepStaleTraces(maxAgeMs = 5 * 60 * 1000): void {
@@ -392,7 +399,9 @@ export class TraceService {
         this.traces = this.traces.filter((t) => t.id !== id);
         this.traceRepo
             .delete(id)
-            .catch((e) => LOGGER.error('TraceService', 'Failed to delete trace', e));
+            .catch((e) =>
+                LOGGER.error('TraceService', 'Failed to delete trace', { error: String(e) }),
+            );
         this.emitTraces();
     }
 
@@ -401,7 +410,9 @@ export class TraceService {
         this.activeTraces.clear();
         this.traceRepo
             .clear()
-            .catch((e) => LOGGER.error('TraceService', 'Failed to clear traces', e));
+            .catch((e) =>
+                LOGGER.error('TraceService', 'Failed to clear traces', { error: String(e) }),
+            );
         this.emitTraces();
     }
 

@@ -216,6 +216,11 @@ export class EloRatingService {
             newRating: winner.rating,
             change: winnerChange,
         });
+        eventBus.emit(EVENTS.ELO_RATING_UPDATED, {
+            agentId: loserId,
+            newRating: loser.rating,
+            change: loserChange,
+        });
 
         LOGGER.info('EloRating', 'Ratings updated', {
             winner: { id: winnerId, rating: winner.rating, change: winnerChange },

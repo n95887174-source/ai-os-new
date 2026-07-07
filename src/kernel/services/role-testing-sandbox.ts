@@ -6,6 +6,7 @@
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
+import { sanitizePromptVar } from '../../shared/utils/sanitize';
 import { EventBus } from '../instances';
 import { EVENTS } from '../events/event-names';
 const MAX_RESULTS = 500; // B10-143: Cap results to prevent unbounded growth
@@ -96,8 +97,8 @@ export class RoleTestingSandboxService {
         try {
             const response = await this.llmClient.sendMessage(
                 [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: testPrompt },
+                    { role: 'system', content: sanitizePromptVar(systemPrompt) },
+                    { role: 'user', content: sanitizePromptVar(testPrompt) },
                 ],
                 {
                     temperature: options?.temperature ?? 0.7,

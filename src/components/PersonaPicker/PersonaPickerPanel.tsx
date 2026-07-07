@@ -564,9 +564,9 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                     >
                                         <Quote size={12} /> Famous Quotes
                                     </div>
-                                    {selected.quotes.map((q, i) => (
+                                    {selected.quotes.map((q) => (
                                         <div
-                                            key={i}
+                                            key={q}
                                             style={{
                                                 padding: '8px 12px',
                                                 marginBottom: 6,
@@ -602,8 +602,8 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                         <Star size={12} /> Famous Works
                                     </div>
                                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                        {selected.famousWorks.map((w, i) => (
-                                            <span key={i} style={chip('#64748b')}>
+                                        {selected.famousWorks.map((w) => (
+                                            <span key={w} style={chip('#64748b')}>
                                                 {w}
                                             </span>
                                         ))}

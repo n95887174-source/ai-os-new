@@ -343,9 +343,9 @@ const MemoryTransferPanelContent: React.FC = () => {
                     >
                         Export History ({exports.length})
                     </h3>
-                    {exports.map((e, i) => (
+                    {exports.map((e) => (
                         <div
-                            key={i}
+                            key={e.createdAt}
                             style={{
                                 padding: '8px 10px',
                                 borderRadius: 6,

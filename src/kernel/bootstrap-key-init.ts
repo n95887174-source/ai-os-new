@@ -7,6 +7,7 @@ import { getDexieDb } from './services/database-service';
 import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie-identity';
 import { setBootstrapSnapshot } from './bootstrap-state';
 import { safeJsonParse } from '../kernel/utils/safe-json';
+import { ssrSafeStorage } from './utils/ssr-storage';
 
 export async function runKeyMigration(container: IContainer, logger: LoggerService): Promise<void> {
     try {
@@ -90,9 +91,9 @@ export async function loadBootstrapSnapshot(
             }
         }
 
-        if (snapshotKeys.length === 0 && typeof localStorage !== 'undefined') {
+        if (snapshotKeys.length === 0) {
             try {
-                const raw = localStorage.getItem('super_agents_api_keys');
+                const raw = ssrSafeStorage.getItem('super_agents_api_keys');
                 if (raw) {
                     const parsed = safeJsonParse(raw);
                     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -106,14 +107,12 @@ export async function loadBootstrapSnapshot(
         }
     }
 
-    if (typeof localStorage !== 'undefined') {
-        try {
-            localStorage.removeItem('super_agents_api_keys');
-            localStorage.removeItem('superagents:providers:super_agents_api_keys');
-            localStorage.removeItem('superagents:providers:super_agents_kernel_state');
-        } catch (e) {
-            logger.warn('Bootstrap', 'Failed to remove legacy state', { error: String(e) });
-        }
+    try {
+        ssrSafeStorage.removeItem('super_agents_api_keys');
+        ssrSafeStorage.removeItem('superagents:providers:super_agents_api_keys');
+        ssrSafeStorage.removeItem('superagents:providers:super_agents_kernel_state');
+    } catch (e) {
+        logger.warn('Bootstrap', 'Failed to remove legacy state', { error: String(e) });
     }
 
     if (snapshotKeys.length === 0) {

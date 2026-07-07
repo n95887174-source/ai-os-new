@@ -164,9 +164,9 @@ const CommunityHubPanel: React.FC = () => {
                     gap: '0.75rem',
                 }}
             >
-                {filtered.map((item, i) => (
+                {filtered.map((item) => (
                     <div
-                        key={i}
+                        key={item.name}
                         style={{
                             padding: '0.75rem',
                             borderRadius: '8px',

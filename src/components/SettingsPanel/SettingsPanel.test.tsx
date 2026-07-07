@@ -16,8 +16,21 @@ const mockSettings = {
 };
 
 vi.mock('../../kernel/instances', () => ({
+    eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+    EVENTS: { NOTIFICATION: 'notification' },
     settingsService: {
-        getSettings: vi.fn(() => mockSettings),
+        getSettings: vi.fn(() => ({
+            ...mockSettings,
+            dataManagement: {
+                autoSaveInterval: 30000,
+                maxHistoryEntries: 1000,
+                maxTraceEntries: 500,
+                pruneMemoriesAfterDays: 30,
+                exportOnShutdown: false,
+            },
+            telemetryEnabled: true,
+            autoUpdateCheck: true,
+        })),
         updateSettings: vi.fn(),
         subscribe: vi.fn(() => vi.fn()),
         reset: vi.fn(),

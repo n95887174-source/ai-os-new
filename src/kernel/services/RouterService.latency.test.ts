@@ -340,13 +340,14 @@ describe('RouterService latency balancing', () => {
     });
 
     describe('key:latency-burst handler', () => {
-        it('should recalculate weights on burst (reads from state)', async () => {
+        it('should recalculate weights on burst when provider exceeds 2x median latency', async () => {
             const { mockKernel, triggerBurst, setProviderState } = await createRouterService();
             setProviderState({
-                groq: { avgTTFT: 500 },
-                gemini: { avgTTFT: 100 },
+                groq: { avgTTFT: 100 },
+                gemini: { avgTTFT: 200 },
+                openrouter: { avgTTFT: 5000 },
             });
-            triggerBurst({ id: 'key-1', provider: 'Groq', latency: 500 });
+            triggerBurst({ id: 'key-1', provider: 'Groq', latency: 100 });
             expect(mockKernel.setBaseWeights).toHaveBeenCalled();
         });
     });

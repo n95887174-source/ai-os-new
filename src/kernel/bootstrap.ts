@@ -304,6 +304,15 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.warn('Bootstrap', 'DebateService init failed (non-critical)', { error: e });
         }
 
+        // ── ContributionService — lazy init via lifecycle (subscribes to events) ──
+        try {
+            this.container.get('contributionService');
+        } catch (e) {
+            this.logger.warn('Bootstrap', 'ContributionService get failed (non-critical)', {
+                error: e,
+            });
+        }
+
         // Auto-resume interrupted debates found in Dexie after page reload
         try {
             const allSessions = await getDexieDb().debateSessions.toArray();

@@ -1,0 +1,369 @@
+import { CONFIG } from '../config-registry';
+import { estimateTokenCount } from '../../../llm/utils/token-counter';
+import { getPrompt } from '../prompt-store';
+import { DebateProviderResolver, getAllModelsForProvider } from './debate-query-engine';
+import { buildPersonaMemory, DebateMemory } from './debate-memory';
+import { rootLogger } from '../logger-service';
+import { sanitizePromptVar } from '../../../shared/utils/sanitize';
+import { EVENTS } from '../../events/event-names';
+import type { IDebateSession, ParticipantConfig } from '../../contracts/debate-runtime';
+import type { IEventBus } from '../../types/interfaces';
+import type { IAdapterRegistry } from '../../contracts/provider-adapter';
+import type { DebateRAGRetriever } from './debate-rag-retriever';
+
+const LOGGER = rootLogger.child('DebateLlmCaller');
+
+const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
+const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
+const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
+const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
+
+export interface LlmCallerDeps {
+    eventBus: IEventBus;
+    getKeyService: () => {
+        getKeys(): Array<{
+            id: string;
+            key: string;
+            provider: string;
+            status: string;
+            model?: string;
+            availableModels?: string[];
+        }>;
+        recordUsage(
+            keyId: string,
+            latency: number,
+            tokens: number,
+            modelId: string,
+            metadata?: Record<string, unknown>,
+        ): void;
+        updateKeyStatus(keyId: string, status: string): void;
+    };
+    getAdapterRegistry: () => IAdapterRegistry;
+    getKeyStateStore?: () => {
+        get(
+            id: string,
+        ):
+            | { flags: { authFailed: boolean; circuitOpen: boolean; rateLimited: boolean } }
+            | undefined;
+        update(id: string, patch: { flags: Record<string, boolean> }): void;
+    };
+    getExecutionGovernor?: () => {
+        start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): {
+            complete(): void;
+            fail(e: Error): void;
+            signal: AbortSignal;
+        };
+    };
+    providerResolver: DebateProviderResolver;
+    getMemory(sessionId: string): DebateMemory;
+    getDefaultPrompt(nodeId: string, session: IDebateSession): Promise<string>;
+    sessionAbortControllers: Map<string, Map<string, AbortController>>;
+    ragRetriever?: DebateRAGRetriever;
+}
+
+export async function debateCallLlm(
+    sessionId: string,
+    session: IDebateSession,
+    participant: ParticipantConfig,
+    deps: LlmCallerDeps,
+    externalSignal?: AbortSignal,
+): Promise<string> {
+    const keyService = deps.getKeyService();
+    const adapterRegistry = deps.getAdapterRegistry();
+    let retries = 0;
+    let resolvedKey:
+        { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
+    let modelId = 'auto';
+    // DR-4: Reset per-call failure count so previous callLLM failures don't accumulate
+    const failKey = deps.providerResolver.providerKey(sessionId, participant.agentId);
+    deps.providerResolver.deleteLlmFailureCount(failKey);
+    const triedModels = new Set<string>();
+    const triedKeys = new Set<string>();
+
+    while (retries < MAX_RETRIES) {
+        const controller = new AbortController();
+        if (!deps.sessionAbortControllers.has(sessionId))
+            deps.sessionAbortControllers.set(sessionId, new Map());
+        deps.sessionAbortControllers.get(sessionId)!.set(participant.agentId, controller);
+
+        const onExternalAbort = () => controller.abort();
+        if (externalSignal) {
+            externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+        }
+        const timeout = setTimeout(() => controller.abort(), DEBATE_TIMEOUT_MS);
+
+        try {
+            const resolved = deps.providerResolver.resolveProvider(
+                session,
+                participant,
+                sessionId,
+                triedModels,
+                triedKeys,
+            );
+            if (!resolved) throw new Error('No available API keys for debate');
+            resolvedKey = resolved.key;
+            modelId = resolved.modelId;
+
+            const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
+            if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
+
+            // Build participant display name map — avoids leaking internal agentId to LLM.
+            const participantNameMap = new Map<string, string>(
+                session.participants.map((p) => [
+                    p.agentId,
+                    p.role || p.nodeId || `Agent ${p.agentId.slice(0, 8)}`,
+                ]),
+            );
+            const currentName = participantNameMap.get(participant.agentId) || participant.agentId;
+
+            const allSteps = deps.getMemory(sessionId).getAllSteps();
+            const recentSteps = allSteps.slice(-8);
+            const historyMessages: Array<{
+                role: 'system' | 'user' | 'assistant';
+                content: string;
+            }> = recentSteps.map((s, i) => ({
+                // HIGH-4.1e: Alternate user/assistant roles to prevent 4-agent debate
+                // collapsing to 2-party format. Each agent gets its own label in the
+                // content prefix, and roles alternate to help the LLM distinguish speakers.
+                role:
+                    s.agentId === participant.agentId
+                        ? ('assistant' as const)
+                        : i % 2 === 0
+                          ? ('user' as const)
+                          : ('assistant' as const),
+                content: `[${participantNameMap.get(s.agentId) || s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${s.content.slice(0, 2000)}`,
+            }));
+
+            const personaBlock = buildPersonaMemory(deps.getMemory(sessionId), participant.agentId);
+
+            const defaultPrompt = await deps.getDefaultPrompt(participant.nodeId, session);
+            const sanitizedSystemPrompt = sanitizePromptVar(
+                (participant.systemPrompt || '').replace(/<[^>]*>/g, '').slice(0, 2000),
+            );
+            let systemContent = `You are ${sanitizePromptVar(currentName)}. ${sanitizedSystemPrompt || defaultPrompt}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
+
+            // RAG: inject relevant memory from past debates
+            if (deps.ragRetriever) {
+                try {
+                    systemContent = await deps.ragRetriever.injectMemoryIntoDebate(
+                        sessionId,
+                        session.topic,
+                        systemContent,
+                    );
+                } catch {
+                    LOGGER.warn('DebateEngine', 'RAG memory injection failed', {
+                        sessionId,
+                        agentId: participant.agentId,
+                    });
+                }
+            }
+
+            const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+                {
+                    role: 'system',
+                    content: systemContent,
+                },
+                ...historyMessages,
+                {
+                    role: 'user',
+                    content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in ${session.language}.`,
+                },
+            ];
+
+            let govOp: { complete(): void; fail(e: Error): void; signal: AbortSignal } | undefined;
+            const gov = deps.getExecutionGovernor?.();
+            if (gov && resolvedKey) {
+                govOp = gov.start({
+                    type: 'debate',
+                    timeoutMs: DEBATE_TIMEOUT_MS + 5000,
+                    metadata: {
+                        provider: resolvedKey.provider,
+                        model: modelId,
+                        sessionId,
+                        agentId: participant.agentId,
+                    },
+                });
+                const onGovAbort = () => {
+                    if (!controller.signal.aborted) controller.abort();
+                };
+                govOp.signal.addEventListener('abort', onGovAbort, { once: true });
+            }
+
+            let response: { content: string };
+            try {
+                response = await adapter.sendMessage(
+                    messages,
+                    modelId,
+                    resolvedKey.key,
+                    controller.signal,
+                );
+            } catch (e) {
+                govOp?.fail(e instanceof Error ? e : new Error(String(e)));
+                throw e;
+            }
+            govOp?.complete();
+            const content = response.content;
+            deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
+                sessionId: session.id,
+                agentId: participant.agentId,
+                chunk: content,
+            });
+
+            deps.providerResolver.deleteLlmFailureCount(failKey);
+
+            LOGGER.debug('DebateEngine', 'ENGINE_MODEL', {
+                agent: participant.agentId,
+                provider: resolvedKey.provider,
+                model: modelId,
+            });
+
+            const estimatedTokens = estimateTokenCount(content);
+            try {
+                keyService.recordUsage(resolvedKey.id, 0, estimatedTokens, modelId, {
+                    task: 'debate',
+                    round: session.round,
+                });
+            } catch {
+                LOGGER.warn('DebateEngine', 'Failed to record reasoning trace');
+            }
+
+            clearTimeout(timeout);
+            deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+            if (externalSignal) {
+                externalSignal.removeEventListener('abort', onExternalAbort);
+            }
+            return content;
+        } catch (e) {
+            clearTimeout(timeout);
+            if (externalSignal) {
+                externalSignal.removeEventListener('abort', onExternalAbort);
+            }
+            const error = String(e);
+            const isTimeout = error.includes('AbortError') || error.includes('aborted');
+
+            // Try fallback models for the same provider before marking it as failed
+            if (resolvedKey) {
+                triedModels.add(modelId);
+                triedKeys.add(resolvedKey.id);
+                const allProviderModels = getAllModelsForProvider(resolvedKey);
+                const untried = allProviderModels.filter((m) => !triedModels.has(m));
+                if (untried.length > 0 && !isTimeout) {
+                    continue;
+                }
+                // Same-provider fallback: try a different key before marking provider as failed
+                const allKeys = keyService.getKeys();
+                const altKey = allKeys.find(
+                    (k) =>
+                        k.provider === resolvedKey!.provider &&
+                        !triedKeys.has(k.id) &&
+                        k.status === 'active' &&
+                        !deps.providerResolver.isKeyAuthFailed(k.id),
+                );
+                if (altKey) {
+                    deps.eventBus.emit(EVENTS.DEBATE_AGENT_FALLBACK, {
+                        sessionId,
+                        agentId: participant.agentId,
+                        fromProvider: resolvedKey!.provider,
+                        toProvider: altKey.provider,
+                    });
+                    triedModels.clear();
+                    continue;
+                }
+                session.markProviderFailed(resolvedKey.provider);
+            }
+
+            if (isTimeout) {
+                deps.eventBus.emit(EVENTS.DEBATE_AGENT_TIMEOUT, {
+                    sessionId,
+                    agentId: participant.agentId,
+                    timeoutMs: DEBATE_TIMEOUT_MS,
+                });
+                retries++;
+                if (retries > MAX_RETRIES) {
+                    deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                    if (resolvedKey)
+                        keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
+                            failed: true,
+                            error: 'LLM call timed out',
+                            task: 'debate',
+                            round: session.round,
+                        });
+                    throw new Error('LLM call timed out', { cause: e });
+                }
+                const sessionSignal = deps.sessionAbortControllers
+                    .get(sessionId)
+                    ?.get(participant.agentId)?.signal;
+                if (sessionSignal?.aborted)
+                    throw new Error('Debate cancelled during backoff', { cause: e });
+                const backoff = Math.min(
+                    BASE_BACKOFF_MS * Math.pow(2, retries - 1),
+                    MAX_BACKOFF_MS,
+                );
+                await new Promise<void>((resolve, reject) => {
+                    const timer = setTimeout(resolve, backoff);
+                    const onAbort = () => {
+                        clearTimeout(timer);
+                        reject(new Error('Debate cancelled during backoff'));
+                    };
+                    if (sessionSignal)
+                        sessionSignal.addEventListener('abort', onAbort, { once: true });
+                    else timer.ref();
+                });
+                continue;
+            }
+
+            const count = deps.providerResolver.incrementLlmFailureCount(failKey);
+
+            if (count <= MAX_RETRIES) {
+                const sessionSignal = deps.sessionAbortControllers
+                    .get(sessionId)
+                    ?.get(participant.agentId)?.signal;
+                if (sessionSignal?.aborted)
+                    throw new Error('Debate cancelled during backoff', { cause: e });
+                const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, count - 1), MAX_BACKOFF_MS);
+                await new Promise<void>((resolve, reject) => {
+                    const timer = setTimeout(resolve, backoff);
+                    const onAbort = () => {
+                        clearTimeout(timer);
+                        reject(new Error('Debate cancelled during backoff'));
+                    };
+                    if (sessionSignal)
+                        sessionSignal.addEventListener('abort', onAbort, { once: true });
+                    else timer.ref();
+                });
+                continue;
+            }
+
+            deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+            if (resolvedKey)
+                keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
+                    failed: true,
+                    error,
+                    task: 'debate',
+                    round: session.round,
+                });
+            throw new Error(error, { cause: e });
+        }
+    }
+
+    throw new Error('LLM call failed after max retries');
+}
+
+export async function debateGetDefaultPrompt(
+    nodeId: string,
+    session: IDebateSession,
+): Promise<string> {
+    const node = session.topology.nodes.find((n) => n.id === nodeId);
+    return (await getPrompt(node?.role)) + `\nRespond in ${session.language}.`;
+}
+
+export function estimateConfidence(content: string): number {
+    const certaintyMarkers =
+        /\b(definitely|certainly|undoubtedly|absolutely|clearly|obviously|always|never|must|without doubt|unquestionably|undeniably|in fact|indeed)\b/gi;
+    const hedgingMarkers =
+        /\b(perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i assume|i suppose|it seems|it appears|maybe)\b/gi;
+    const certainty = (content.match(certaintyMarkers) || []).length;
+    const hedging = (content.match(hedgingMarkers) || []).length;
+    const score = 0.5 + (certainty - hedging) * 0.05;
+    return Math.max(0.3, Math.min(0.95, score));
+}

@@ -141,6 +141,17 @@ export class OrchestrationService {
 
     mount(topology: ISTopology) {
         this.activeTopology = topology;
+        const newNodeIds = new Set(topology.nodes.map((n) => n.id));
+        // Clean up stale entries for nodes removed from topology
+        for (const key of this.lifecycleStates.keys()) {
+            if (!newNodeIds.has(key)) {
+                this.lifecycleStates.delete(key);
+                this.rateLimitTimestamps.delete(key);
+                this.rateLimitTokenRecords.delete(key);
+                this.rateLimitCostRecords.delete(key);
+                this.disabledNodes.delete(key);
+            }
+        }
         for (const node of topology.nodes) {
             if (!this.lifecycleStates.has(node.id)) {
                 const lifecycle =

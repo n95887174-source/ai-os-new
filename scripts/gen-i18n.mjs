@@ -1,0 +1,15 @@
+﻿import fs from 'fs';
+const missing = fs.readFileSync('missing_keys_list.txt','utf-8').split('\n').filter(Boolean).filter(k=>/^[a-z]+\.[\w.]+$/.test(k)).filter(k=>!k.includes('/')&&!k.startsWith('..'));
+const RD={Add:'Добавить',Active:'Активные',All:'Все',Available:'Доступные',Back:'Назад',Budget:'Бюджет',Cancel:'Отмена',Clear:'Очистить',Close:'Закрыть',Config:'Конфиг',Confirm:'Подтвердить',Copy:'Копировать',Cost:'Стоимость',Create:'Создать',Daily:'Ежедневно',Dashboard:'Панель',Debate:'Дебаты',Delete:'Удалить',Disabled:'Отключено',Edit:'Редактировать',Empty:'Пусто',Enabled:'Включено',Error:'Ошибка',Export:'Экспорт',Filter:'Фильтр',Health:'Здоровье',History:'История',Import:'Импорт',Info:'Информация',Latency:'Задержка',Loading:'Загрузка',Memory:'Память',Monthly:'Ежемесячно',Name:'Имя',New:'Новый',Next:'Далее',No:'Нет',None:'Нет',Overview:'Обзор',Pending:'В ожидании',Provider:'Провайдер',Remove:'Удалить',Reset:'Сброс',Route:'Маршрут',Save:'Сохранить',Search:'Поиск',Select:'Выбрать',Settings:'Настройки',Show:'Показать',Status:'Статус',Submit:'Отправить',Success:'Успешно',Timeout:'Таймаут',Today:'Сегодня',Token:'Токен',Total:'Всего',Update:'Обновить',Upload:'Загрузить',Usage:'Использование',Warning:'Предупреждение',Yes:'Да',Minute:'Минута',Hour:'Час',Hours:'Часы',Day:'День',Days:'Дни',Week:'Неделя',Month:'Месяц',Templates:'Шаблоны',Analytics:'Аналитика',Sessions:'Сессии',Session:'Сессия',Key:'Ключ',Keys:'Ключи',Model:'Модель',Models:'Модели',Metrics:'Метрики',Help:'Помощь',Default:'По умолчанию',Advanced:'Расширенные',Test:'Тест',Debug:'Отладка',Log:'Лог',Logs:'Логи',Audit:'Аудит',Report:'Отчет',Generate:'Сгенерировать',Group:'Группа',Groups:'Группы',Sort:'Сортировка',Recent:'Недавние',Favorite:'Избранное',Archive:'Архив',Restore:'Восстановить',Tag:'Тег',Tags:'Теги',Category:'Категория',Label:'Метка',Note:'Заметка',Notes:'Заметки',Description:'Описание',Details:'Детали',System:'Система',Service:'Сервис',Server:'Сервер',Speed:'Скорость',Chart:'График',Trend:'Тренд',Insight:'Инсайт',Score:'Оценка',Limit:'Лимит',Quota:'Квота',Average:'Среднее',Median:'Медиана',Max:'Макс',Min:'Мин',Notification:'Уведомление',Security:'Безопасность',Strategy:'Стратегия',Timer:'Таймер',Countdown:'Обратный отсчет'};
+function toEn(k){return k.split('.').pop().split('_').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');}
+function toRu(k){return toEn(k).split(' ').map(w=>RD[w]||w).join(' ');}
+missing.sort();const byNs={};
+for(const k of missing){const ns=k.split('.')[0];(byNs[ns]=byNs[ns]||[]).push(k);}
+let outEn='',outRu='';const nss=Object.keys(byNs).sort();
+for(const ns of nss){outEn+='\n    // --- '+ns+' ---\n';outRu+='\n    // --- '+ns+' ---\n';
+for(const k of byNs[ns]){const en=toEn(k);const ru=toRu(k);
+outEn+="    '"+k+"': '"+en+"',\n";outRu+="    '"+k+"': '"+ru+"',\n";}}
+const total=Object.values(byNs).reduce((a,b)=>a+b.length,0);
+fs.writeFileSync('generated_en_keys.txt',outEn,'utf-8');fs.writeFileSync('generated_ru_keys.txt',outRu,'utf-8');
+console.log('Generated '+total+' entries across '+nss.length+' namespaces');
+nss.forEach(ns=>console.log('  '+ns+': '+byNs[ns].length));

@@ -1,19 +1,18 @@
 import { genId } from '../../../utils/gen-id';
 import { CONFIG, DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
-import { estimateTokenCount } from '../../../llm/utils/token-counter';
-import { getPrompt } from '../prompt-store';
-import {
-    DebateProviderResolver,
-    DEBATE_MODEL_PRIORITY,
-    getAllModelsForProvider,
-} from './debate-query-engine';
+import { DebateProviderResolver, DEBATE_MODEL_PRIORITY } from './debate-query-engine';
 import { gatherClaims } from './debate-consensus';
-import { buildPersonaMemory } from './debate-memory';
 import { createAgentExecutor } from './debate-agent-executor';
 import { buildConclusionLlmCall, validateAndSaveVerdict } from './debate-conclusion-engine';
 import { DebatePipeline } from './debate-pipeline';
 import { DebateTopologyService } from './debate-topology';
 import { DebateOrchestrator } from './debate-orchestrator';
+import {
+    debateCallLlm,
+    debateGetDefaultPrompt,
+    estimateConfidence,
+    type LlmCallerDeps,
+} from './debate-llm-caller';
 import type {
     DebateTopology,
     DebatePhase,
@@ -122,17 +121,6 @@ function snapshotToSession(
     } as DebateSessionInterface;
 }
 
-function estimateConfidence(content: string): number {
-    const certaintyMarkers =
-        /\b(definitely|certainly|undoubtedly|absolutely|clearly|obviously|always|never|must|without doubt|unquestionably|undeniably|in fact|indeed)\b/gi;
-    const hedgingMarkers =
-        /\b(perhaps|possibly|might|could|seems|appears|i think|i believe|probably|likely|somewhat|generally|often|sometimes|i suspect|i guess|i assume|i suppose|it seems|it appears|maybe)\b/gi;
-    const certainty = (content.match(certaintyMarkers) || []).length;
-    const hedging = (content.match(hedgingMarkers) || []).length;
-    const score = 0.5 + (certainty - hedging) * 0.05;
-    return Math.max(0.3, Math.min(0.95, score));
-}
-
 interface KeyServiceLike {
     getKeys(): Array<{
         id: string;
@@ -191,12 +179,8 @@ interface DebateEngineDeps {
     providerResolver?: DebateProviderResolver;
 }
 
-const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
 // P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
 const DEBATE_MAX_DURATION_MS = CONFIG?.services?.debate?.maxDurationMs ?? 1_800_000;
-const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
-const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
-const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 const ROUND_DELAY_MS = CONFIG?.services?.debate?.roundDelayMs ?? 1000;
 
 export class DebateEngine implements IDebateEngine, ILifecycle {
@@ -946,298 +930,23 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         participant: ParticipantConfig,
         externalSignal?: AbortSignal,
     ): Promise<string> {
-        const keyService = this.deps.getKeyService();
-        const adapterRegistry = this.deps.getAdapterRegistry();
-        let retries = 0;
-        let resolvedKey:
-            { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
-        let modelId = 'auto';
-        // DR-4: Reset per-call failure count so previous callLLM failures don't accumulate
-        const failKey = this.providerResolver.providerKey(sessionId, participant.agentId);
-        this.providerResolver.deleteLlmFailureCount(failKey);
-        const triedModels = new Set<string>();
-        const triedKeys = new Set<string>();
-
-        while (retries < MAX_RETRIES) {
-            const controller = new AbortController();
-            if (!this.sessionAbortControllers.has(sessionId))
-                this.sessionAbortControllers.set(sessionId, new Map());
-            this.sessionAbortControllers.get(sessionId)!.set(participant.agentId, controller);
-            const onExternalAbort = () => controller.abort();
-            if (externalSignal) {
-                externalSignal.addEventListener('abort', onExternalAbort, { once: true });
-            }
-            const timeout = setTimeout(() => controller.abort(), DEBATE_TIMEOUT_MS);
-
-            try {
-                const resolved = this.providerResolver.resolveProvider(
-                    session,
-                    participant,
-                    sessionId,
-                    triedModels,
-                    triedKeys,
-                );
-                if (!resolved) throw new Error('No available API keys for debate');
-                resolvedKey = resolved.key;
-                modelId = resolved.modelId;
-
-                const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
-                if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
-
-                // Build participant display name map — avoids leaking internal agentId to LLM.
-                const participantNameMap = new Map<string, string>(
-                    session.participants.map((p) => [
-                        p.agentId,
-                        p.role || p.nodeId || `Agent ${p.agentId.slice(0, 8)}`,
-                    ]),
-                );
-                const currentName =
-                    participantNameMap.get(participant.agentId) || participant.agentId;
-
-                const allSteps = this.getMemory(sessionId).getAllSteps();
-                const recentSteps = allSteps.slice(-8);
-                const historyMessages: Array<{
-                    role: 'system' | 'user' | 'assistant';
-                    content: string;
-                }> = recentSteps.map((s, i) => ({
-                    // HIGH-4.1e: Alternate user/assistant roles to prevent 4-agent debate
-                    // collapsing to 2-party format. Each agent gets its own label in the
-                    // content prefix, and roles alternate to help the LLM distinguish speakers.
-                    role:
-                        s.agentId === participant.agentId
-                            ? ('assistant' as const)
-                            : i % 2 === 0
-                              ? ('user' as const)
-                              : ('assistant' as const),
-                    content: `[${participantNameMap.get(s.agentId) || s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${s.content.slice(0, 2000)}`,
-                }));
-
-                const personaBlock = buildPersonaMemory(
-                    this.getMemory(sessionId),
-                    participant.agentId,
-                );
-
-                const defaultPrompt = await this.getDefaultPrompt(participant.nodeId, session);
-                const sanitizedSystemPrompt = (participant.systemPrompt || '')
-                    .replace(/<[^>]*>/g, '')
-                    .slice(0, 2000);
-                let systemContent = `You are ${currentName}. ${sanitizedSystemPrompt || defaultPrompt}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
-
-                // RAG: inject relevant memory from past debates
-                if (this.deps.ragRetriever) {
-                    try {
-                        systemContent = await this.deps.ragRetriever.injectMemoryIntoDebate(
-                            sessionId,
-                            session.topic,
-                            systemContent,
-                        );
-                    } catch {
-                        LOGGER.warn('DebateEngine', 'RAG memory injection failed', {
-                            sessionId,
-                            agentId: participant.agentId,
-                        });
-                    }
-                }
-
-                const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> =
-                    [
-                        {
-                            role: 'system',
-                            content: systemContent,
-                        },
-                        ...historyMessages,
-                        {
-                            role: 'user',
-                            content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in ${session.language}.`,
-                        },
-                    ];
-
-                let govOp:
-                    { complete(): void; fail(e: Error): void; signal: AbortSignal } | undefined;
-                const gov = this.deps.getExecutionGovernor?.();
-                if (gov && resolvedKey) {
-                    govOp = gov.start({
-                        type: 'debate',
-                        timeoutMs: DEBATE_TIMEOUT_MS + 5000,
-                        metadata: {
-                            provider: resolvedKey.provider,
-                            model: modelId,
-                            sessionId,
-                            agentId: participant.agentId,
-                        },
-                    });
-                    const onGovAbort = () => {
-                        if (!controller.signal.aborted) controller.abort();
-                    };
-                    govOp.signal.addEventListener('abort', onGovAbort, { once: true });
-                }
-
-                let response: { content: string };
-                try {
-                    response = await adapter.sendMessage(
-                        messages,
-                        modelId,
-                        resolvedKey.key,
-                        controller.signal,
-                    );
-                } catch (e) {
-                    govOp?.fail(e instanceof Error ? e : new Error(String(e)));
-                    throw e;
-                }
-                govOp?.complete();
-                const content = response.content;
-                this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
-                    sessionId: session.id,
-                    agentId: participant.agentId,
-                    chunk: content,
-                });
-
-                this.providerResolver.deleteLlmFailureCount(failKey);
-
-                LOGGER.debug('DebateEngine', 'ENGINE_MODEL', {
-                    agent: participant.agentId,
-                    provider: resolvedKey.provider,
-                    model: modelId,
-                });
-
-                const estimatedTokens = estimateTokenCount(content);
-                try {
-                    keyService.recordUsage(resolvedKey.id, 0, estimatedTokens, modelId, {
-                        task: 'debate',
-                        round: session.round,
-                    });
-                } catch {
-                    LOGGER.warn('DebateEngine', 'Failed to record reasoning trace');
-                }
-
-                clearTimeout(timeout);
-                this.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                if (externalSignal) {
-                    externalSignal.removeEventListener('abort', onExternalAbort);
-                }
-                return content;
-            } catch (e) {
-                clearTimeout(timeout);
-                if (externalSignal) {
-                    externalSignal.removeEventListener('abort', onExternalAbort);
-                }
-                const error = String(e);
-                const isTimeout = error.includes('AbortError') || error.includes('aborted');
-
-                // Try fallback models for the same provider before marking it as failed
-                if (resolvedKey) {
-                    triedModels.add(modelId);
-                    triedKeys.add(resolvedKey.id);
-                    const allProviderModels = getAllModelsForProvider(resolvedKey);
-                    const untried = allProviderModels.filter((m) => !triedModels.has(m));
-                    if (untried.length > 0 && !isTimeout) {
-                        continue;
-                    }
-                    // Same-provider fallback: try a different key before marking provider as failed
-                    const allKeys = keyService.getKeys();
-                    const altKey = allKeys.find(
-                        (k) =>
-                            k.provider === resolvedKey!.provider &&
-                            !triedKeys.has(k.id) &&
-                            k.status === 'active' &&
-                            !this.providerResolver.isKeyAuthFailed(k.id),
-                    );
-                    if (altKey) {
-                        this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_FALLBACK, {
-                            sessionId,
-                            agentId: participant.agentId,
-                            fromProvider: resolvedKey!.provider,
-                            toProvider: altKey.provider,
-                        });
-                        triedModels.clear();
-                        continue;
-                    }
-                    session.markProviderFailed(resolvedKey.provider);
-                }
-
-                if (isTimeout) {
-                    this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_TIMEOUT, {
-                        sessionId,
-                        agentId: participant.agentId,
-                        timeoutMs: DEBATE_TIMEOUT_MS,
-                    });
-                    retries++;
-                    if (retries > MAX_RETRIES) {
-                        this.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        if (resolvedKey)
-                            keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
-                                failed: true,
-                                error: 'LLM call timed out',
-                                task: 'debate',
-                                round: session.round,
-                            });
-                        throw new Error('LLM call timed out', { cause: e });
-                    }
-                    const sessionSignal = this.sessionAbortControllers
-                        .get(sessionId)
-                        ?.get(participant.agentId)?.signal;
-                    if (sessionSignal?.aborted)
-                        throw new Error('Debate cancelled during backoff', { cause: e });
-                    const backoff = Math.min(
-                        BASE_BACKOFF_MS * Math.pow(2, retries - 1),
-                        MAX_BACKOFF_MS,
-                    );
-                    await new Promise<void>((resolve, reject) => {
-                        const timer = setTimeout(resolve, backoff);
-                        const onAbort = () => {
-                            clearTimeout(timer);
-                            reject(new Error('Debate cancelled during backoff'));
-                        };
-                        if (sessionSignal)
-                            sessionSignal.addEventListener('abort', onAbort, { once: true });
-                        else timer.ref();
-                    });
-                    continue;
-                }
-
-                const count = this.providerResolver.incrementLlmFailureCount(failKey);
-
-                if (count <= MAX_RETRIES) {
-                    const sessionSignal = this.sessionAbortControllers
-                        .get(sessionId)
-                        ?.get(participant.agentId)?.signal;
-                    if (sessionSignal?.aborted)
-                        throw new Error('Debate cancelled during backoff', { cause: e });
-                    const backoff = Math.min(
-                        BASE_BACKOFF_MS * Math.pow(2, count - 1),
-                        MAX_BACKOFF_MS,
-                    );
-                    await new Promise<void>((resolve, reject) => {
-                        const timer = setTimeout(resolve, backoff);
-                        const onAbort = () => {
-                            clearTimeout(timer);
-                            reject(new Error('Debate cancelled during backoff'));
-                        };
-                        if (sessionSignal)
-                            sessionSignal.addEventListener('abort', onAbort, { once: true });
-                        else timer.ref();
-                    });
-                    continue;
-                }
-
-                this.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                if (resolvedKey)
-                    keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
-                        failed: true,
-                        error,
-                        task: 'debate',
-                        round: session.round,
-                    });
-                throw new Error(error, { cause: e });
-            }
-        }
-
-        throw new Error('LLM call failed after max retries');
+        const deps: LlmCallerDeps = {
+            eventBus: this.deps.eventBus,
+            getKeyService: () => this.deps.getKeyService(),
+            getAdapterRegistry: () => this.deps.getAdapterRegistry(),
+            getKeyStateStore: this.deps.getKeyStateStore,
+            getExecutionGovernor: this.deps.getExecutionGovernor,
+            providerResolver: this.providerResolver,
+            getMemory: (id) => this.getMemory(id),
+            getDefaultPrompt: (nodeId, s) => this.getDefaultPrompt(nodeId, s),
+            sessionAbortControllers: this.sessionAbortControllers,
+            ragRetriever: this.deps.ragRetriever,
+        };
+        return debateCallLlm(sessionId, session, participant, deps, externalSignal);
     }
 
     private async getDefaultPrompt(nodeId: string, session: IDebateSession): Promise<string> {
-        const node = session.topology.nodes.find((n) => n.id === nodeId);
-        return (await getPrompt(node?.role)) + `\nRespond in ${session.language}.`;
+        return debateGetDefaultPrompt(nodeId, session);
     }
 
     pauseSession(sessionId: string): void {

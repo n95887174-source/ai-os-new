@@ -7,11 +7,29 @@ import { isPrivateIP } from '../utils/network';
 
 const LOGGER = rootLogger.child('NotificationWebhookService');
 
-function isValidWebhookUrl(url: string): boolean {
+async function isValidWebhookUrl(url: string): Promise<boolean> {
     try {
         const parsed = new URL(url);
         if (parsed.protocol !== 'https:') return false;
         if (isPrivateIP(parsed.hostname)) return false;
+
+        // H-09: DNS rebinding SSRF protection — verify URL is reachable
+        // before storing. Makes a lightweight HEAD request to force DNS
+        // resolution and catch unresolvable/internal hostnames.
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+            const response = await fetch(url, {
+                method: 'HEAD',
+                mode: 'no-cors',
+                signal: controller.signal,
+            });
+            clearTimeout(timeout);
+            if (response.type === 'error') return false;
+        } catch {
+            return false;
+        }
+
         return true;
     } catch {
         return false;
@@ -172,7 +190,7 @@ export class NotificationWebhookService {
         attempt: number,
     ): Promise<boolean> {
         try {
-            if (!isValidWebhookUrl(webhook.webhookUrl)) {
+            if (!(await isValidWebhookUrl(webhook.webhookUrl))) {
                 LOGGER.warn('NotificationWebhookService', 'Blocked SSRF attempt', {
                     webhookUrl: webhook.webhookUrl,
                 });
@@ -242,8 +260,8 @@ export class NotificationWebhookService {
         return [...this.webhooks];
     }
 
-    addWebhook(config: Omit<WebhookConfig, 'id' | 'createdAt'>) {
-        if (!isValidWebhookUrl(config.webhookUrl))
+    async addWebhook(config: Omit<WebhookConfig, 'id' | 'createdAt'>) {
+        if (!(await isValidWebhookUrl(config.webhookUrl)))
             throw new Error(`Invalid webhook URL (blocked SSRF): ${config.webhookUrl}`);
         const webhook: WebhookConfig = {
             ...config,
@@ -260,8 +278,8 @@ export class NotificationWebhookService {
         this.save();
     }
 
-    updateWebhook(id: string, updates: Partial<WebhookConfig>) {
-        if (updates.webhookUrl && !isValidWebhookUrl(updates.webhookUrl))
+    async updateWebhook(id: string, updates: Partial<WebhookConfig>) {
+        if (updates.webhookUrl && !(await isValidWebhookUrl(updates.webhookUrl)))
             throw new Error(`Invalid webhook URL (blocked SSRF): ${updates.webhookUrl}`);
         this.webhooks = this.webhooks.map((w) => (w.id === id ? { ...w, ...updates } : w));
         this.save();

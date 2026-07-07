@@ -22,11 +22,11 @@ export class EpisodicMemoryStore implements IMemoryStore {
         if (this.entries.length > MAX_EPISODIC) {
             const sorted = [...this.entries].sort((a, b) => {
                 const ra = computeRetention(
-                    a.metadata.importance || 5,
+                    a.metadata.importance ?? 0.5,
                     (Date.now() - (a.metadata.timestamp || Date.now())) / 3600000,
                 );
                 const rb = computeRetention(
-                    b.metadata.importance || 5,
+                    b.metadata.importance ?? 0.5,
                     (Date.now() - (b.metadata.timestamp || Date.now())) / 3600000,
                 );
                 return ra - rb;
@@ -91,7 +91,7 @@ export class EpisodicMemoryStore implements IMemoryStore {
     async consolidate(): Promise<ConsolidationReport> {
         const old = this.entries.filter((e) => {
             const ageHours = (Date.now() - (e.metadata.timestamp || 0)) / 3600000;
-            return computeRetention(e.metadata.importance || 5, ageHours) < 0.05;
+            return computeRetention(e.metadata.importance ?? 0.5, ageHours) < 0.05;
         });
         old.forEach((e) => {
             const idx = this.entries.findIndex((x) => x.id === e.id);
@@ -101,7 +101,7 @@ export class EpisodicMemoryStore implements IMemoryStore {
             timestamp: Date.now(),
             storesConsolidated: [this.type],
             entriesForgotten: old.length,
-            entriesConsolidated: 0,
+            entriesConsolidated: old.length,
             newSemanticEntries: 0,
             durationMs: 0,
         };

@@ -11,14 +11,36 @@ const LOGGER = rootLogger.child('ChatExecutor');
 export class ChatExecutor {
     private deps: ChatServiceDeps;
     private llmClient: ILLMClientService;
-    private activeRequests = new Map<string, AbortController>();
+    private activeRequests = new Map<string, { controller: AbortController; timestamp: number }>();
     private executingMessages = new Set<string>();
     private cacheInflight = new Map<string, Promise<void>>();
     private readonly MAX_429_RETRIES = 3;
+    private readonly ACTIVE_REQUEST_TTL = 10 * 60 * 1000;
+    private _staleTimer: ReturnType<typeof setInterval> | null = null;
 
     constructor(deps: ChatServiceDeps, llmClient: ILLMClientService) {
         this.deps = deps;
         this.llmClient = llmClient;
+    }
+
+    private startStaleTimer(): void {
+        if (this._staleTimer) return;
+        this._staleTimer = setInterval(() => {
+            const now = Date.now();
+            for (const [id, entry] of this.activeRequests) {
+                if (now - entry.timestamp > this.ACTIVE_REQUEST_TTL) {
+                    entry.controller.abort();
+                    this.activeRequests.delete(id);
+                }
+            }
+        }, 60000);
+    }
+
+    private stopStaleTimer(): void {
+        if (this._staleTimer) {
+            clearInterval(this._staleTimer);
+            this._staleTimer = null;
+        }
     }
 
     handleMessage(req: QueuedRequest): void {
@@ -31,17 +53,18 @@ export class ChatExecutor {
     }
 
     cancelRequest(requestId: string): void {
-        const controller = this.activeRequests.get(requestId);
-        if (controller) {
-            controller.abort();
+        const entry = this.activeRequests.get(requestId);
+        if (entry) {
+            entry.controller.abort();
             this.activeRequests.delete(requestId);
         }
     }
 
     destroy(): void {
-        for (const [, ac] of this.activeRequests) {
+        this.stopStaleTimer();
+        for (const [, entry] of this.activeRequests) {
             try {
-                ac.abort();
+                entry.controller.abort();
             } catch {
                 /* ignore */
             }
@@ -63,7 +86,11 @@ export class ChatExecutor {
         }
 
         const sessionController = new AbortController();
-        this.activeRequests.set(req.requestId, sessionController);
+        this.activeRequests.set(req.requestId, {
+            controller: sessionController,
+            timestamp: Date.now(),
+        });
+        this.startStaleTimer();
 
         try {
             while (depth < this.MAX_429_RETRIES) {
@@ -206,7 +233,7 @@ export class ChatExecutor {
                                     summary: scanResult.summary,
                                 });
                                 this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                                    id: `err-${Date.now()}`,
+                                    id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                                     requestId,
                                     provider: currentProvider,
                                     model: effectiveModel,
@@ -406,7 +433,7 @@ export class ChatExecutor {
                                 requestId,
                             });
                             this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                                id: `err-${Date.now()}`,
+                                id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                                 requestId,
                                 provider: currentProvider,
                                 model: effectiveModel,
@@ -426,7 +453,7 @@ export class ChatExecutor {
                             lastError,
                         );
                         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                            id: `err-${Date.now()}`,
+                            id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                             requestId,
                             provider: currentProvider,
                             model: effectiveModel,
@@ -472,7 +499,7 @@ export class ChatExecutor {
 
                         if (isRateLimit) {
                             this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-                                id: `err-${Date.now()}`,
+                                id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
                                 requestId,
                                 provider: currentProvider,
                                 model: effectiveModel,
@@ -635,7 +662,7 @@ export class ChatExecutor {
 
     private emitError(req: QueuedRequest, error: string) {
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-            id: `err-${Date.now()}`,
+            id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             requestId: req.requestId,
             provider: req.provider,
             model: req.model,
@@ -655,7 +682,7 @@ export class ChatExecutor {
 
     private emitStatus(req: QueuedRequest, status: ChatResponse['status']) {
         this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
-            id: `st-${Date.now()}`,
+            id: `st-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             requestId: req.requestId || crypto.randomUUID(),
             provider: req.provider || 'unknown',
             model: req.model || 'unknown',

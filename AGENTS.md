@@ -3314,3 +3314,29 @@ Fix remaining 9 Batch 8 items from the HML audit (`audit/newww/STATUS_HML.md`).
 - `npx vite build` ✅ 8.24s
 - HML audit total: **79/459 fixed (17.2%)** — 62 Medium, 7 High, 10 Low
 - Remaining: 379 unfixed (incl. 131+ `$` currency occurrences for incremental fix)
+
+---
+
+## Current Session (2026-07-06) — M-9 + M-1 Fix + C-07 localStorage Migration
+
+### Goal
+
+Fix 2 still-unfixed Medium audit items from earlier audit check, then continue Sprint C from REMAINING_WORK.md.
+
+### Changes
+
+| #    | Task                                                                                  | File                                                                      |
+| :--- | :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------ |
+| M-9  | **virtual-key realKeyId obfuscation** — XOR+base64 on persist, deobfuscate on load    | `virtual-key-service.ts` — `obfuscateId()`/`deobfuscateId()` helpers      |
+| M-1  | **sync-server IP detection behind nginx** — `getClientIP()` prefers `x-forwarded-for` | `sync-server.mjs` — extracted `getClientIP()`, fixed HTTP handler         |
+| C-07 | **sidebar-utils localStorage → ssrSafeStorage**                                       | `sidebar-utils.ts` — all 6 functions migrated                             |
+| C-07 | **CommandPalette localStorage → ssrSafeStorage**                                      | `CommandPalette.tsx` — `getRecent()`/`saveRecent()`                       |
+| C-07 | **AppearanceTab localStorage → ssrSafeStorage**                                       | `AppearanceTab.tsx` — getItem/setItem/removeItem                          |
+| C-07 | **theme-init SSR-safe**                                                               | `theme-init.ts` — `typeof localStorage` guard + `typeof matchMedia` guard |
+
+### Status
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅ zero new errors (only pre-existing ResearchEngine + agent-journal)
+- M-9, M-1 fixed 🟢 — both previously-unfixed Medium items now resolved
+- C-07: 4/14 components migrated (12 remaining: key-vault.ts, bootstrap-key-init.ts, key-migration.ts, 8+ TBD)
+- REMAINING_WORK.md Sprint C: C-01 (split oversized 8 services), C-02 (split oversized 8 components), C-03 (CSS modules), C-04 (30% tests), C-05 (RBAC), C-07 remainder, C-11 (debb.md partials) still 🔴

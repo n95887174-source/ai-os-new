@@ -484,8 +484,8 @@ const GoogleCachePanel: React.FC = () => {
                                         gap: '0.75rem',
                                     }}
                                 >
-                                    {freeTier.map((f, i) => (
-                                        <div key={i} style={CARD}>
+                                    {freeTier.map((f) => (
+                                        <div key={f.model} style={CARD}>
                                             <div
                                                 style={{
                                                     fontWeight: 600,

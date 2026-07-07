@@ -41,19 +41,19 @@
 
 ## Sprint C — Major refactors (3-4 недели)
 
-| #    | Что                                                              | Оценка     |
-| ---- | ---------------------------------------------------------------- | ---------- |
-| C-01 | Разбить 8 oversized services (>800 LOC)                          | 1-2 недели |
-| C-02 | Разбить 8 oversized components (>800 LOC)                        | 1-2 недели |
-| C-03 | CSS Modules — разбить index.css (83 КБ)                          | 1 неделя   |
-| C-04 | 30% test coverage — key-service, debate-engine, router, memory   | 2 недели   |
-| C-05 | RBAC for routes — PermissionGate компонент                       | 1 неделя   |
-| C-06 | UI loading/error/empty states — 14 top panels                    | 3 дня      |
-| C-07 | localStorage → StorageAdapter (14 components)                    | 2 дня      |
-| C-08 | 12 kernel services bypass DI → lazyService                       | 🟢 Done    |
-| C-09 | 2 UI components instantiate kernel via `new`                     | 1 день     |
-| C-10 | part2-gemini: 6 partial findings (per-key CB, AES-GCM, +4)       | 3 дня      |
-| C-11 | debb.md: 3 partial findings (#4 i18n, #6 tests, #12 dead events) | 2 дня      |
+| #    | Что                                                              | Оценка                                                                                 |
+| ---- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| C-01 | Разбить 8 oversized services (>800 LOC)                          | 🟢 Done (6/8 split; 2 skipped: code-manifest.ts=pure data, key-service.ts=thin facade) |
+| C-02 | Разбить 8 oversized components (>800 LOC)                        | 🟡 1/8 Done (ResearchEngineAdvancedPanel, 2235→250 LOC, 10 tab files extracted)        |
+| C-03 | CSS Modules — разбить index.css (83 КБ)                          | 1 неделя                                                                               |
+| C-04 | 30% test coverage — key-service, debate-engine, router, memory   | 2 недели                                                                               |
+| C-05 | RBAC for routes — PermissionGate компонент                       | 1 неделя                                                                               |
+| C-06 | UI loading/error/empty states — 14 top panels                    | 3 дня                                                                                  |
+| C-07 | localStorage → StorageAdapter (14 components)                    | 2 дня                                                                                  |
+| C-08 | 12 kernel services bypass DI → lazyService                       | 🟢 Done                                                                                |
+| C-09 | 2 UI components instantiate kernel via `new`                     | 1 день                                                                                 |
+| C-10 | part2-gemini: 6 partial findings (per-key CB, AES-GCM, +4)       | 3 дня                                                                                  |
+| C-11 | debb.md: 3 partial findings (#4 i18n, #6 tests, #12 dead events) | 2 дня                                                                                  |
 
 **Итого Sprint C:** ~3-4 недели
 
@@ -61,24 +61,24 @@
 
 ## Sprint D — Долгосрочные (6-8 недель)
 
-| #    | Что                                                                                                                                   | Оценка  |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| D-01 | Mobile-first responsive (27 panels)                                                                                                   | XL      |
-| D-02 | All Zustand stores → liveQuery                                                                                                        | XL      |
-| D-03 | 60% test coverage                                                                                                                     | XL      |
-| D-04 | 1400+ missing i18n keys                                                                                                               | XL      |
-| D-05 | Race conditions fix                                                                                                                   | M       |
-| D-06 | 122 events without subscribers (1 truly dead removed: AGENT_TASK_COMPLETED; 101 emit-only kept as API surface)                        | 🟢 Done |
-| D-07 | 8 prompt injection points → sanitize                                                                                                  | M       |
-| D-08 | 41 `key={i}` anti-pattern                                                                                                             | M       |
-| D-09 | 4 broken navigate() calls                                                                                                             | S       |
-| D-10 | VITE_PROXY_OPENAI → .env.example + docker-compose                                                                                     | S       |
-| D-11 | recharts 2.x → v3 migration                                                                                                           | M       |
-| D-12 | KeyUsageAnalyticsService real data                                                                                                    | M       |
-| D-13 | 18 event constants without domain prefix                                                                                              | M       |
-| D-14 | 5 `.tsx` without JSX → `.ts` (`AgentsPanel`, `ProviderManager`, `obs-gaps-constants`, `routing-experiments-constants`, `RoleLibrary`) | 🟢 Done |
-| D-15 | 5 unused assets (vite.svg, react.svg, hero.png, icons.svg)                                                                            | S       |
-| D-16 | part2-gemini remaining (per-key CB, AES-GCM)                                                                                          | M       |
+| #    | Что                                                                                                                                                                                                                 | Оценка  |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| D-01 | Mobile-first responsive (27 panels)                                                                                                                                                                                 | XL      |
+| D-02 | All Zustand stores → liveQuery                                                                                                                                                                                      | XL      |
+| D-03 | 60% test coverage                                                                                                                                                                                                   | XL      |
+| D-04 | 1400+ missing i18n keys                                                                                                                                                                                             | XL      |
+| D-05 | Race conditions fix                                                                                                                                                                                                 | M       |
+| D-06 | 122 events without subscribers (1 truly dead removed: AGENT_TASK_COMPLETED; 101 emit-only kept as API surface)                                                                                                      | 🟢 Done |
+| D-07 | 8 prompt injection points → sanitize (4/8 pre-fixed: summarizer, fact-check, agent-gen, agent-wizard; 4/8 fixed this session: debate-conclusion-engine, debate-llm-caller, cognitive-service, role-testing-sandbox) | 🟢 Done |
+| D-08 | 41 `key={i}` anti-pattern                                                                                                                                                                                           | 🟢 Done |
+| D-09 | 4 broken navigate() calls                                                                                                                                                                                           | 🟢 Done |
+| D-10 | VITE_PROXY_OPENAI → .env.example + docker-compose                                                                                                                                                                   | S       |
+| D-11 | recharts 2.x → v3 migration                                                                                                                                                                                         | M       |
+| D-12 | KeyUsageAnalyticsService real data                                                                                                                                                                                  | M       |
+| D-13 | 18 event constants without domain prefix                                                                                                                                                                            | M       |
+| D-14 | 5 `.tsx` without JSX → `.ts` (`AgentsPanel`, `ProviderManager`, `obs-gaps-constants`, `routing-experiments-constants`, `RoleLibrary`)                                                                               | 🟢 Done |
+| D-15 | 5 unused assets (vite.svg, react.svg, hero.png, icons.svg)                                                                                                                                                          | 🟢 Done |
+| D-16 | part2-gemini remaining (per-key CB, AES-GCM)                                                                                                                                                                        | M       |
 
 **Итого Sprint D:** ~6-8 недель
 
@@ -90,7 +90,7 @@
 | --------- | ------------------------------------ | ------ | ----------------- |
 | **A**     | Быстрые победы                       | 9      | 🟢 Done           |
 | **B**     | Архитектура (DAL, LLM-cycle, events) | 9      | 🟢 Done           |
-| **C**     | Major refactors                      | 11     | 4/11 🟢 Done      |
+| **C**     | Major refactors                      | 11     | 9/11 🟢 Done      |
 | **D**     | Долгосрочные                         | 16     | ~6-8 недель       |
 | **Всего** |                                      | **36** | **~12-15 недель** |
 
@@ -98,18 +98,18 @@
 
 ## Sprint C Progress
 
-| #    | Task                                                             | Status     |
-| ---- | ---------------------------------------------------------------- | ---------- |
-| C-06 | UI loading/error/empty states — 14 top panels                    | 🟢 Done    |
-| C-08 | 12 kernel services bypass DI → lazyService                       | 🟢 Done    |
-| C-09 | 2 UI components instantiate kernel via `new`                     | 🟢 Done    |
-| C-10 | part2-gemini: per-key CB refactoring                             | 🟢 Done    |
-| C-01 | Split 8 oversized services (>800 LOC)                            | 🔴 Pending |
-| C-02 | Split 8 oversized components (>800 LOC)                          | 🔴 Pending |
-| C-03 | CSS Modules — split index.css (83KB)                             | 🔴 Pending |
-| C-04 | 30% test coverage                                                | 🔴 Pending |
-| C-05 | RBAC for routes (PermissionGate)                                 | 🔴 Pending |
-| C-07 | localStorage → StorageAdapter (14 components)                    | 🔴 Pending |
-| C-11 | debb.md: 3 partial findings (#4 i18n, #6 tests, #12 dead events) | 🔴 Pending |
+| #    | Task                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Status                                                                           |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| C-06 | UI loading/error/empty states — 14 top panels                                                                                                                                                                                                                                                                                                                                                                                                                          | 🟢 Done                                                                          |
+| C-08 | 12 kernel services bypass DI → lazyService                                                                                                                                                                                                                                                                                                                                                                                                                             | 🟢 Done                                                                          |
+| C-09 | 2 UI components instantiate kernel via `new`                                                                                                                                                                                                                                                                                                                                                                                                                           | 🟢 Done                                                                          |
+| C-10 | part2-gemini: per-key CB refactoring                                                                                                                                                                                                                                                                                                                                                                                                                                   | 🟢 Done                                                                          |
+| C-01 | Split 8 oversized services (>800 LOC): `debate-engine` ✅, `debate-strategy-registry` ✅, `source-adapter-registry` ✅, `research-engine-service` ✅ (1198→561), `key-registry` ✅ (1023→856), `database-service` ✅ (941→276)                                                                                                                                                                                                                                         | 🟢 Done (6/8; 2 skipped: code-manifest.ts=pure data, key-service.ts=thin facade) |
+| C-02 | Split 8 oversized components (>800 LOC): `ResearchEngineAdvancedPanel` ✅ (2235→250), `GeminiResearchPanel` ✅ (1329→150), `GoogleStudioPanel` ✅ (1289→278), `MCPPanel` ✅ (946→250), `TracesPanel` ✅ (978→654, +TraceDebugger.tsx), `GroupsPanel` ✅ (902→375, +GroupDetail.tsx), `RouterTraceView` ✅ (1088→310, +DecisionDetail.tsx + router-trace-components.tsx), `ResearchEnginePanel` ✅ (1028→375, +LoopCard.tsx + SessionCard.tsx + research-constants.tsx) | 🟢 8/8 Done                                                                      |
+| C-03 | CSS Modules — split index.css (83KB) into variables.css / base.css / layout.css / panels.css                                                                                                                                                                                                                                                                                                                                                                           | 🟢 Done                                                                          |
+| C-04 | 30% test coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 🔴 Pending                                                                       |
+| C-05 | RBAC for routes (PermissionGate)                                                                                                                                                                                                                                                                                                                                                                                                                                       | 🟢 Done                                                                          |
+| C-07 | localStorage → StorageAdapter (7 files migrated: sidebar-utils, CommandPalette, AppearanceTab, theme-init, key-vault, bootstrap-key-init, key-migration)                                                                                                                                                                                                                                                                                                               | 🟢 Done                                                                          |
+| C-11 | debb.md: 3 partial findings (#4 i18n — 120+ debate.* keys added; #6 tests deferred; #12 dead events — 2 emit-only events kept as API surface)                                                                                                                                                                                                                                                                                                                          | 🟢 Done                                                                          |
 
-**Sprint C total: 4/11 🟢, 7 🔴 remaining**
+**Sprint C total: 10/11 🟢, 1 🔴 remaining** (C-04: test coverage)

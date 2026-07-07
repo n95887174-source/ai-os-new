@@ -310,8 +310,9 @@ export class PolicyService {
             id: genId('violation'),
             timestamp: Date.now(),
         };
-        this.violations.unshift(violation);
-        if (this.violations.length > MAX_VIOLATIONS) this.violations.pop();
+        this.violations.push(violation);
+        if (this.violations.length > MAX_VIOLATIONS) this.violations.shift();
+        this.persist();
         this.deps.eventBus.emit(EVENTS.POLICY_VIOLATION, violation);
     }
 

@@ -280,7 +280,7 @@ const BatchProcessingPanel: React.FC = () => {
                     >
                         {taskList.slice(0, 50).map((task, i) => (
                             <div
-                                key={i}
+                                key={task.prompt}
                                 style={{
                                     fontSize: '0.78rem',
                                     color: '#64748b',
@@ -493,7 +493,7 @@ const BatchProcessingPanel: React.FC = () => {
                     >
                         {results.map((r, i) => (
                             <div
-                                key={i}
+                                key={r.prompt}
                                 style={{
                                     display: 'grid',
                                     gridTemplateColumns: '2fr 1fr 1.5fr 80px 80px 80px 1fr',

@@ -18,7 +18,7 @@ export interface ILogger {
     debug(service: string, message: string, meta?: Record<string, unknown>): void;
     info(service: string, message: string, meta?: Record<string, unknown>): void;
     warn(service: string, message: string, meta?: Record<string, unknown>): void;
-    error(service: string, message: string, meta?: Record<string, unknown>): void;
+    error(service: string, message: string, meta?: Record<string, unknown>, err?: unknown): void;
     child(service: string): ILogger;
     getBuffer(): ReadonlyArray<LogEntry>;
     query(filter?: Partial<{ service: string; level: LogLevel; traceId: string }>): LogEntry[];

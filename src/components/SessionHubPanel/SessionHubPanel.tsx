@@ -198,7 +198,7 @@ export const SessionHubPanel: React.FC = () => {
     const handleOpen = useCallback(
         (item: SessionItem) => {
             if (item.type === 'chat') navigate(`/chat?session=${item.id}`);
-            else navigate(`/debate-runtime?sessionId=${item.id}`);
+            else navigate(`/debate?mode=runtime&sessionId=${item.id}`);
         },
         [navigate],
     );
@@ -458,8 +458,8 @@ export const SessionHubPanel: React.FC = () => {
                                                     e.stopPropagation();
                                                     navigate(
                                                         item.type === 'chat'
-                                                            ? `/debate-runtime?sessionId=${item.linkedId}`
-                                                            : `/chat?session=${item.linkedId}`,
+                                                            ? `/chat?session=${item.linkedId}`
+                                                            : `/debate?mode=runtime&sessionId=${item.linkedId}`,
                                                     );
                                                 }}
                                                 title={

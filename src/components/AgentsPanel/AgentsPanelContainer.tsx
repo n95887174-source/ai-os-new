@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { orchestrator } from '../../kernel/instances';
 import { agentService, agentVersionService } from '../../kernel/instances';
 import { toolService } from '../../kernel/instances';
@@ -96,7 +96,22 @@ const AgentsPanelContainer: React.FC = () => {
             setIsLoading(false);
         });
         const unsubStats = eventBus.on(EVENTS.COGNITIVE_STEP_COMPLETED, () => {
-            setAgentStats({ ...agentService.getAllStats() });
+            const next = agentService.getAllStats();
+            setAgentStats((prev) => {
+                const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+                for (const k of keys) {
+                    const a = prev[k];
+                    const b = next[k];
+                    if (
+                        a?.calls !== b?.calls ||
+                        a?.tokens !== b?.tokens ||
+                        a?.latency !== b?.latency
+                    ) {
+                        return { ...next };
+                    }
+                }
+                return prev;
+            });
         });
         const timer = setTimeout(() => {
             if (containerIsMountedRef.current) setIsLoading(false);
@@ -357,44 +372,75 @@ const AgentsPanelContainer: React.FC = () => {
         return matchesSearch && matchesStatus;
     });
 
-    const ctx = {
-        agents,
-        agentStats,
-        viewMode,
-        searchQuery,
-        statusFilter,
-        selectedAgent,
-        activeTab,
-        isLoading,
-        error,
-        resetAllArmed,
-        filteredAgents,
-        availableRoles,
-        availableTools,
-        keys,
-        fileInputRef,
-        searchInputRef,
-        modalRef,
-        onSetViewMode: setViewMode,
-        onSetSearchQuery: setSearchQuery,
-        onSetStatusFilter: setStatusFilter,
-        onSetSelectedAgentId: setSelectedAgentId,
-        onSetActiveTab: setActiveTab,
-        onSetError: setError,
-        onDeployNewAgent: deployNewAgent,
-        onToggleStatus: toggleStatus,
-        onUpdateAgent: updateAgent,
-        onApplyRoleToAgent: applyRoleToAgent,
-        onPauseAll: handlePauseAll,
-        onResumeAll: handleResumeAll,
-        onDuplicateAgent: handleDuplicateAgent,
-        onDeleteAgent: handleDeleteAgent,
-        onResetAgentStats: handleResetAgentStats,
-        onResetAllStats: handleResetAllStats,
-        onExportAgents: handleExportAgents,
-        onImportAgents: handleImportAgents,
-        onNavigateBuilder: handleNavigateBuilder,
-    };
+    const ctx = useMemo(
+        () => ({
+            agents,
+            agentStats,
+            viewMode,
+            searchQuery,
+            statusFilter,
+            selectedAgent,
+            activeTab,
+            isLoading,
+            error,
+            resetAllArmed,
+            filteredAgents,
+            availableRoles,
+            availableTools,
+            keys,
+            fileInputRef,
+            searchInputRef,
+            modalRef,
+            onSetViewMode: setViewMode,
+            onSetSearchQuery: setSearchQuery,
+            onSetStatusFilter: setStatusFilter,
+            onSetSelectedAgentId: setSelectedAgentId,
+            onSetActiveTab: setActiveTab,
+            onSetError: setError,
+            onDeployNewAgent: deployNewAgent,
+            onToggleStatus: toggleStatus,
+            onUpdateAgent: updateAgent,
+            onApplyRoleToAgent: applyRoleToAgent,
+            onPauseAll: handlePauseAll,
+            onResumeAll: handleResumeAll,
+            onDuplicateAgent: handleDuplicateAgent,
+            onDeleteAgent: handleDeleteAgent,
+            onResetAgentStats: handleResetAgentStats,
+            onResetAllStats: handleResetAllStats,
+            onExportAgents: handleExportAgents,
+            onImportAgents: handleImportAgents,
+            onNavigateBuilder: handleNavigateBuilder,
+        }),
+        [
+            agents,
+            agentStats,
+            viewMode,
+            searchQuery,
+            statusFilter,
+            selectedAgent,
+            activeTab,
+            isLoading,
+            error,
+            resetAllArmed,
+            filteredAgents,
+            availableRoles,
+            availableTools,
+            keys,
+            deployNewAgent,
+            toggleStatus,
+            updateAgent,
+            applyRoleToAgent,
+            handlePauseAll,
+            handleResumeAll,
+            handleDuplicateAgent,
+            handleDeleteAgent,
+            handleResetAgentStats,
+            handleResetAllStats,
+            handleExportAgents,
+            handleImportAgents,
+            handleNavigateBuilder,
+        ],
+    );
 
     return (
         <AgentsPanelContext.Provider value={ctx}>

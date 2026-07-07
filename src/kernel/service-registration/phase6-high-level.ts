@@ -320,7 +320,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Time Machine Service ──────────────────────────
     register('timeMachineService', (c) => new TimeMachineService({ eventBus: c.get('eventBus') }));
     // ── Contribution Service ──────────────────────────
-    register('contributionService', (_c) => new ContributionService());
+    register(
+        'contributionService',
+        (c) => new ContributionService({ eventBus: c.get<IEventBus>('eventBus') }),
+    );
     // ── Prompt Security Service ─────────────────────────
     register('promptSecurityService', (_c) => new PromptSecurityService());
     // ── Google GenAI Service ───────────────────────────

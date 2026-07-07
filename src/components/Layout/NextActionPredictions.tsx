@@ -22,14 +22,14 @@ const ROUTE_PREDICTIONS: Record<string, Prediction[]> = {
         {
             id: 'add-key',
             label: 'nav.providers',
-            path: '/providers',
+            path: '/keys',
             reason: 'prediction.add_key',
             icon: '🔑',
         },
         {
             id: 'open-sandbox',
             label: 'nav.tools',
-            path: '/sandbox',
+            path: '/tools',
             reason: 'prediction.open_sandbox',
             icon: '🧪',
         },
@@ -91,7 +91,7 @@ const ROUTE_PREDICTIONS: Record<string, Prediction[]> = {
         {
             id: 'memory-search',
             label: 'nav.memory_search',
-            path: '/memory-search',
+            path: '/diagnostics/memory',
             reason: 'prediction.memory_search',
             icon: '🔍',
         },
@@ -107,7 +107,7 @@ const ROUTE_PREDICTIONS: Record<string, Prediction[]> = {
         {
             id: 'traces',
             label: 'nav.traces',
-            path: '/traces',
+            path: '/debugger',
             reason: 'prediction.traces',
             icon: '📊',
         },
@@ -123,21 +123,21 @@ const ROUTE_PREDICTIONS: Record<string, Prediction[]> = {
         {
             id: 'appearance',
             label: 'nav.appearance',
-            path: '/appearance',
+            path: '/settings',
             reason: 'prediction.appearance',
             icon: '🎨',
         },
         {
             id: 'notifications',
             label: 'nav.notifications',
-            path: '/notifications',
+            path: '/settings',
             reason: 'prediction.notifications',
             icon: '🔔',
         },
         {
             id: 'keyboard',
             label: 'nav.keyboard_shortcuts',
-            path: '/keyboard-shortcuts',
+            path: '/settings',
             reason: 'prediction.keyboard',
             icon: '⌨',
         },
@@ -203,10 +203,10 @@ export const NextActionPredictions: React.FC = () => {
                         fontSize: '0.72rem',
                         transition: 'all 0.15s',
                     }}
-                    title={t(p.reason as any)}
+                    title={t(p.reason)}
                 >
                     <span style={{ fontSize: '0.8rem' }}>{p.icon}</span>
-                    <span>{t(p.label as any)}</span>
+                    <span>{t(p.label)}</span>
                 </button>
             ))}
             <button

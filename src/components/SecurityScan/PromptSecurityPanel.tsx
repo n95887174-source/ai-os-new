@@ -173,7 +173,7 @@ const PromptSecurityPanel: React.FC = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {scanResult.findings.map((f, i) => (
                                 <div
-                                    key={i}
+                                    key={f.message}
                                     onClick={() =>
                                         setExpandedFinding(expandedFinding === i ? null : i)
                                     }
@@ -397,7 +397,7 @@ const PromptSecurityPanel: React.FC = () => {
                         )}
                         {history.slice(0, 20).map((event, i) => (
                             <div
-                                key={i}
+                                key={event.timestamp ?? i}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',

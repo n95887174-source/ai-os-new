@@ -189,7 +189,7 @@ const GeminiLivePanelContent: React.FC = () => {
                     >
                         {session.messages.map((msg, i) => (
                             <div
-                                key={i}
+                                key={`${msg.role}-${i}`}
                                 style={{
                                     alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                                     maxWidth: '80%',

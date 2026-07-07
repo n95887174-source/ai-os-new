@@ -77,9 +77,15 @@ export class MemoryOrchestrator {
 
     async recall(context: string, limit = 10): Promise<MemoryEntry[]> {
         const all: MemoryEntry[] = [];
+        const seen = new Set<string>();
         for (const [, store] of this.stores) {
             const results = await store.recall(context, Math.ceil(limit / this.stores.size));
-            all.push(...results);
+            for (const r of results) {
+                if (!seen.has(r.id)) {
+                    seen.add(r.id);
+                    all.push(r);
+                }
+            }
         }
         all.sort((a, b) => (b.metadata.importance || 0) - (a.metadata.importance || 0));
         return all.slice(0, limit);

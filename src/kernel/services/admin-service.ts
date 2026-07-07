@@ -139,9 +139,6 @@ const APP_VERSION = '2.1.0';
 
 const AUDIT_LOG_KEY = 'super_agents_admin_audit_log';
 
-/**
- * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
- */
 export class AdminService {
     private startTime = Date.now();
     private auditLog: AdminAuditEntry[] = [];
@@ -149,6 +146,8 @@ export class AdminService {
     private readonly buildVersion: string = APP_VERSION;
     private deps: AdminServiceDeps;
     private _initialized = false;
+    private _lastCpuSample = performance.now();
+    private _busyMs = 0;
 
     constructor(deps: AdminServiceDeps) {
         this.deps = deps;
@@ -159,6 +158,11 @@ export class AdminService {
         this._initialized = true;
         await this.loadAuditLog();
         this.setupListeners();
+    }
+
+    /** Report actual processing duration so getSystemHealth() can compute real CPU % */
+    trackProcessingTime(durationMs: number): void {
+        this._busyMs += durationMs;
     }
 
     destroy() {
@@ -241,9 +245,6 @@ export class AdminService {
 
         const recentRequests =
             state.history?.filter((h) => h.timestamp > Date.now() - 60000).length || 0;
-        const totalReq = state.totalRequests;
-        const loadFactor =
-            totalReq > 0 ? Math.min(1, recentRequests / Math.max(1, totalReq * 0.01)) : 0;
 
         const aggregated = this.deps.metricsService.generateAggregated();
         const alerts = this.deps.metricsService.getAlerts(false);
@@ -257,10 +258,14 @@ export class AdminService {
                     ? 'degraded'
                     : 'healthy';
 
-        const cpu =
-            runtimeStatus.memoryUsage > 0
-                ? Math.round(5 + loadFactor * 85)
-                : Math.round(5 + loadFactor * 85);
+        // C-104: estimate CPU from request activity and average latency
+        const now = performance.now();
+        const elapsed = Math.max(1, now - this._lastCpuSample);
+        const busyFromLatency = (recentRequests * (aggregated.avgLatency || 50)) / elapsed;
+        const busyRatio = Math.min(1, Math.max(this._busyMs / elapsed, busyFromLatency));
+        this._lastCpuSample = now;
+        this._busyMs = 0;
+        const cpu = Math.round(busyRatio * 100);
 
         return {
             status,

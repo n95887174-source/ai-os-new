@@ -373,6 +373,10 @@ export class SnapshotService {
         if (snapshot) {
             snapshot.tags = [...new Set([...(snapshot.tags || []), ...tags])];
             void this.scheduleSave();
+            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
+                message: `Snapshot ${snapshot.label || snapshot.id} tagged`,
+                type: 'info',
+            });
         }
     }
 
@@ -452,6 +456,9 @@ export class SnapshotService {
                 }
                 if (!this.snapshots.some((s) => s.id === parsed.data.id)) {
                     this.snapshots.push(parsed.data as unknown as SystemSnapshot);
+                    if (this.snapshots.length > MAX_SNAPSHOTS) {
+                        this.snapshots = this.snapshots.slice(-MAX_SNAPSHOTS);
+                    }
                     count++;
                 }
             }

@@ -186,13 +186,13 @@ export class MCPService {
         }
 
         try {
-            server.status = 'connected';
             server.error = undefined;
             server.lastConnected = Date.now();
             const result = (await this.rpc(server, 'initialize', {
                 protocolVersion: '2025-03-26',
                 capabilities: {},
             })) as { capabilities?: Record<string, unknown> };
+            server.status = 'connected';
             server.capabilities = result.capabilities ? Object.keys(result.capabilities) : [];
             this.connectionRetries.delete(serverId);
             this.save();

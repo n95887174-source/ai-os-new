@@ -97,6 +97,8 @@ vi.mock('../../kernel/instances', () => ({
         recordRoleFeedback: vi.fn(),
     },
     toolService: { getTools: vi.fn(() => mockTools) },
+    eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+    EVENTS: { NOTIFICATION: 'notification' },
 }));
 
 vi.mock('../../kernel/events/event-bus', () => ({

@@ -306,6 +306,6 @@ export class DebateConsensusEngine implements IConsensusEngine {
             }
         }
 
-        return antonymCount >= 1 && hasNegationMismatch;
+        return false;
     }
 }

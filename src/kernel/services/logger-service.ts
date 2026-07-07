@@ -95,8 +95,8 @@ export class LoggerService implements ILogger {
         this.log('warn', service, message, meta);
     }
 
-    error(service: string, message: string, meta?: Record<string, unknown>): void {
-        this.log('error', service, message, meta);
+    error(service: string, message: string, meta?: Record<string, unknown>, err?: unknown): void {
+        this.log('error', service, message, meta, err);
     }
 
     private log(
@@ -104,6 +104,7 @@ export class LoggerService implements ILogger {
         service: string,
         message: string,
         meta?: Record<string, unknown>,
+        err?: unknown,
     ): void {
         if (LEVELS[level] < this.minLevel) return;
 
@@ -117,6 +118,7 @@ export class LoggerService implements ILogger {
             correlationId:
                 this.state.currentTrace?.correlationId ??
                 (meta?.correlationId as string | undefined),
+            error: err,
             meta,
         };
 

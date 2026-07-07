@@ -330,7 +330,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                 {s.changes.length > 0 && (
                                     <div style={{ marginTop: 4, fontSize: 11, color: '#64748b' }}>
                                         {s.changes.slice(0, 2).map((c, i) => (
-                                            <div key={i}>• {c}</div>
+                                            <div key={`${s.timestamp}-${i}`}>• {c}</div>
                                         ))}
                                     </div>
                                 )}

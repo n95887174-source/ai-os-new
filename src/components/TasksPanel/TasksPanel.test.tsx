@@ -2,33 +2,31 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 vi.mock('../../i18n/useTranslation', () => ({
-    useTranslation: () => ({
-        t: (key: string) => {
-            const labels: Record<string, string> = {
-                'tasks.title': 'Task Orchestrator',
-                'tasks.subtitle': 'Monitor and manage workflow tasks',
-                'tasks.all': 'All Workflows',
-                'tasks.active_pipeline': 'Active Pipeline',
-                'tasks.succeeded': 'Succeeded',
-                'tasks.failed': 'Failed',
-                'tasks.active_runners': 'Active Runners',
-                'tasks.queued': 'Queued',
-                'tasks.completed': 'Completed',
-                'tasks.exceptions': 'Exceptions',
-                'tasks.search_placeholder': 'Search tasks...',
-                'tasks.empty_none': 'No tasks yet',
-                'tasks.empty_search': 'No tasks match your search',
-                'tasks.empty_hint': 'Run a workflow to see tasks here',
-                'tasks.loading': 'Loading tasks...',
-                'tasks.loading_aria': 'Loading tasks',
-                'tasks.error_load': 'Failed to load tasks',
-                'tasks.error_update': 'Failed to update tasks',
-                'tasks.error_refresh': 'Failed to refresh tasks',
-                'common.dismiss_error': 'Dismiss error',
-            };
-            return labels[key] || key;
-        },
-    }),
+    useTranslation: () => {
+        const labels: Record<string, string> = {
+            'tasks.title': 'Task Orchestrator',
+            'tasks.subtitle': 'Monitor and manage workflow tasks',
+            'tasks.all': 'All Workflows',
+            'tasks.active_pipeline': 'Active Pipeline',
+            'tasks.succeeded': 'Succeeded',
+            'tasks.failed': 'Failed',
+            'tasks.active_runners': 'Active Runners',
+            'tasks.queued': 'Queued',
+            'tasks.completed': 'Completed',
+            'tasks.exceptions': 'Exceptions',
+            'tasks.search_placeholder': 'Search tasks...',
+            'tasks.empty_none': 'No tasks yet',
+            'tasks.empty_search': 'No tasks match your search',
+            'tasks.empty_hint': 'Run a workflow to see tasks here',
+            'tasks.loading': 'Loading tasks...',
+            'tasks.loading_aria': 'Loading tasks',
+            'tasks.error_load': 'Failed to load tasks',
+            'tasks.error_update': 'Failed to update tasks',
+            'tasks.error_refresh': 'Failed to refresh tasks',
+            'common.dismiss_error': 'Dismiss error',
+        };
+        return { t: (key: string) => labels[key] || key };
+    },
 }));
 
 vi.mock('../../kernel/instances', () => ({
@@ -94,6 +92,8 @@ vi.mock('../../kernel/instances', () => ({
         getSettings: vi.fn(() => ({ language: 'en' as const })),
         subscribe: vi.fn(() => vi.fn()),
     },
+    eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
+    EVENTS: { NOTIFICATION: 'notification' },
 }));
 
 vi.mock('../../kernel/events/event-bus', () => ({

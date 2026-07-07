@@ -109,7 +109,23 @@ export class AgentJournalService {
     }
 
     private subscribe(): void {
-        const off1 = this.deps.eventBus.on(EVENTS.COGNITIVE_STEP_COMPLETED, (raw: unknown) => {
+        const off1 = this.deps.eventBus.on(EVENTS.COGNITIVE_STEP_ACTIVE, (raw: unknown) => {
+            const e = raw as { nodeId: string };
+            if (!e?.nodeId) return;
+            this.record({
+                agentId: e.nodeId,
+                agentName: e.nodeId,
+                taskType: 'cognitive_step',
+                taskDescription: 'in_progress',
+                outcome: 'in_progress' as const,
+                durationMs: 0,
+                tokensUsed: 0,
+                tags: [],
+            }).catch(() => {});
+        });
+        this.unsubs.push(off1);
+
+        const off2 = this.deps.eventBus.on(EVENTS.COGNITIVE_STEP_COMPLETED, (raw: unknown) => {
             const e = raw as {
                 nodeId: string;
                 status: 'done' | 'error';
@@ -131,7 +147,7 @@ export class AgentJournalService {
                 this.deps.logger?.error('AgentJournal', 'record failed', { error: String(err) }),
             );
         });
-        this.unsubs.push(off1);
+        this.unsubs.push(off2);
     }
 
     destroy(): void {

@@ -69,6 +69,14 @@ export class ProviderBudget {
         if (provActive >= this.limits.maxSessionsPerProvider) {
             return { allowed: false, reason: `Max concurrent sessions for ${provider} reached` };
         }
+        const provCost = this.providerCosts.get(provider) || 0;
+        if (provCost >= this.limits.maxCostPerProvider) {
+            return { allowed: false, reason: `Cost limit exceeded for ${provider}` };
+        }
+        const provTokens = this.providerTokens.get(provider) || 0;
+        if (provTokens >= this.limits.maxTokensPerProvider) {
+            return { allowed: false, reason: `Token limit exceeded for ${provider}` };
+        }
         return { allowed: true };
     }
 

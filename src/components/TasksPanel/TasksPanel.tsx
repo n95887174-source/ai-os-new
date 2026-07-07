@@ -651,7 +651,7 @@ const TasksPanel: React.FC = () => {
                                     >
                                         {task.steps.map((step, idx) => (
                                             <div
-                                                key={idx}
+                                                key={`${task.id}-${idx}`}
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',

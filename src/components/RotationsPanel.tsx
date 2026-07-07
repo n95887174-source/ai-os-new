@@ -25,7 +25,10 @@ const RotationsPanel: React.FC = () => {
     const loadKeys = useCallback(() => {
         try {
             const allKeys = keyService.getKeys();
-            if (isMountedRef.current) setKeys(allKeys);
+            if (isMountedRef.current) {
+                setKeys(allKeys);
+                setError(null);
+            }
         } catch {
             if (isMountedRef.current) setError(t('rotations.error_load'));
         }

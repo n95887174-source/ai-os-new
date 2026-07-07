@@ -30,6 +30,16 @@ function isAllowedOrigin(origin) {
     return ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*');
 }
 
+function getClientIP(req) {
+    // M-1: prefer x-forwarded-for behind nginx; parse leftmost IP from chain
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+        const leftmost = forwarded.split(',')[0].trim();
+        if (leftmost) return leftmost;
+    }
+    return req.socket?.remoteAddress || 'unknown';
+}
+
 function checkRateLimit(ip) {
     const now = Date.now();
     const entry = rateLimits.get(ip);
@@ -76,7 +86,7 @@ let writeQueue = Promise.resolve();
 
 const server = http.createServer((req, res) => {
     const origin = req.headers['origin'] || '';
-    const ip = req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+    const ip = getClientIP(req);
     // Rate limit
     if (!checkRateLimit(ip)) {
         res.writeHead(429);

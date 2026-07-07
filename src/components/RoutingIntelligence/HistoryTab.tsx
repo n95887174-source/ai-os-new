@@ -98,10 +98,13 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                                 fontSize: '0.75rem',
                                             }}
                                             labelStyle={{ color: '#94a3b8' }}
-                                            formatter={(value: number, name: string) => [
-                                                `${value} (${Math.round((value / decisions.length) * 100)}%)`,
-                                                name,
-                                            ]}
+                                            formatter={(value, name) => {
+                                                const v = typeof value === 'number' ? value : 0;
+                                                return [
+                                                    `${v} (${Math.round((v / decisions.length) * 100)}%)`,
+                                                    name,
+                                                ];
+                                            }}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>

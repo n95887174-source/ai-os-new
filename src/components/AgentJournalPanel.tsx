@@ -190,13 +190,16 @@ const AgentJournalPanel: React.FC = () => {
 
     const agentStatsMap = React.useMemo(() => {
         const map = new Map<string, number>();
+        const counts = new Map<string, number>();
         for (const e of entries) {
-            if (!map.has(e.agentId)) {
-                map.set(e.agentId, service.getAgentStats(e.agentId).totalTasks);
-            }
+            counts.set(e.agentId, (counts.get(e.agentId) || 0) + 1);
+        }
+        for (const [agentId] of counts) {
+            map.set(agentId, service.getAgentStats(agentId).totalTasks);
         }
         return map;
-    }, [entries]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [entries, service]);
 
     if (loading) {
         return (

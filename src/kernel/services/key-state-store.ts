@@ -59,6 +59,8 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
     async init(): Promise<void> {}
 
+    private _persistedLoaded = false;
+
     private async loadPersisted(): Promise<void> {
         if (!this.database) return;
         try {
@@ -74,7 +76,15 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
                 }
             }
         } catch (e) {
-            rootLogger.warn('KeyStateStore', 'Failed to load persisted states', { error: e });
+            rootLogger.warn(
+                'KeyStateStore',
+                'Failed to load persisted states — starting with empty state',
+                { error: e },
+            );
+            // R-M-12: On load failure, start fresh — seedFromKeys() will populate from live keys
+            this.states.clear();
+        } finally {
+            this._persistedLoaded = true;
         }
     }
 
@@ -121,7 +131,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
     seedFromKeys(keys: ApiKey[]): void {
         const currentIds = new Set(keys.map((k) => k.id));
-        this.purgeOrphans(currentIds);
+        if (this._persistedLoaded) this.purgeOrphans(currentIds);
         for (const key of keys) {
             if (!this.states.has(key.id)) {
                 const status: KeyStatus =

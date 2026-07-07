@@ -472,5 +472,6 @@ export class CacheDecorator extends BaseDecorator {
         this.cache.clear();
         this.approximateTextIndex.clear();
         this.modelCache.clear();
+        this.#inFlight.clear();
     }
 }

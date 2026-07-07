@@ -22,6 +22,7 @@ import type { IGroupManager } from '../../contracts/group-manager';
 import type { IKeyStateStore } from '../../contracts/key-state';
 import type { IKeyRotationManager } from '../../contracts/key-rotation';
 import type { KeyStore } from '../../contracts/storage/key-store';
+import { initStats, initExtendedStats } from './key-registry-utils';
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
 
@@ -214,9 +215,9 @@ export class KeyService implements IKeyRotationManager {
     }
 
     private ensureExtendedStats(key: ApiKey): void {
-        if (!key.stats) key.stats = this.registry.initStats();
-        if (!key.stats.extended) key.stats.extended = this.registry.initExtendedStats();
-        const ext = key.stats.extended;
+        if (!key.stats) key.stats = initStats();
+        if (!key.stats.extended) key.stats.extended = initExtendedStats();
+        const ext = key.stats.extended!;
         if (!ext.usageToday)
             ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
         if (!ext.usageMonthly) ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
@@ -327,7 +328,7 @@ export class KeyService implements IKeyRotationManager {
                         const previousState = key.status;
                         key.status = 'error';
                         if (!key.stats) {
-                            key.stats = this.registry.initStats();
+                            key.stats = initStats();
                         }
                         key.stats.lastError = {
                             message: r.error || 'Unknown error',
@@ -1150,7 +1151,7 @@ export class KeyService implements IKeyRotationManager {
             const previousState = key.status;
             key.status = 'error';
             if (!key.stats) {
-                key.stats = this.registry.initStats();
+                key.stats = initStats();
             }
             key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
             this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {

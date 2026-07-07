@@ -5,6 +5,7 @@ import { Search, ArrowRight, Clock, X } from 'lucide-react';
 import { NAV_SECTIONS } from '../../route-registry';
 import type { TranslationKey } from '../../i18n/translations';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { ssrSafeStorage } from '../../kernel/utils/ssr-storage';
 
 // ─── Fuzzy match helper ───────────────────────────────────────────────────────
 function fuzzyScore(pattern: string, text: string): number {
@@ -42,7 +43,7 @@ const MAX_RECENT = 8;
 
 function getRecent(): string[] {
     try {
-        return (safeJsonParse(localStorage.getItem(RECENT_KEY) || '[]') as string[]) ?? [];
+        return (safeJsonParse(ssrSafeStorage.getItem(RECENT_KEY) || '[]') as string[]) ?? [];
     } catch {
         return [];
     }
@@ -51,7 +52,7 @@ function getRecent(): string[] {
 function saveRecent(path: string) {
     try {
         const prev = getRecent().filter((p) => p !== path);
-        localStorage.setItem(RECENT_KEY, JSON.stringify([path, ...prev].slice(0, MAX_RECENT)));
+        ssrSafeStorage.setItem(RECENT_KEY, JSON.stringify([path, ...prev].slice(0, MAX_RECENT)));
     } catch {
         /* storage unavailable */
     }

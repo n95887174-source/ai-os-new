@@ -1,4 +1,5 @@
-import type { DatabaseService, RecordedEventRow } from '../services/database-service';
+import type { DatabaseService } from '../services/database-service';
+import type { RecordedEventRow } from '../services/dexie-schema';
 import type { EventRecorderStore, RecordedEvent } from '../services/event-sourcing/event-recorder';
 import { rootLogger } from '../services/logger-service';
 import { safeJsonParse } from '../utils/safe-json';

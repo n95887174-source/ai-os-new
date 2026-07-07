@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
-import type { PalaceState, PalaceRoom } from '../../kernel/services/memory/memory-palace';
+import type { PalaceState } from '../../kernel/services/memory/memory-palace';
 
 const card: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)',
@@ -26,8 +26,11 @@ const MemoryPalacePanel: React.FC = () => {
                 setLoading(true);
                 setError(null);
                 const m = await import('../../kernel/instances');
-                const orch: { getPalaceState: () => Promise<PalaceState> } | undefined = (m as any)
-                    .memoryOrchestrator;
+                const mod = m as {
+                    memoryOrchestrator: { getPalaceState: () => Promise<PalaceState> };
+                };
+                const orch: { getPalaceState: () => Promise<PalaceState> } | undefined =
+                    mod.memoryOrchestrator;
                 if (orch) setState(await orch.getPalaceState());
                 else setError(t('memory_palace.service_unavailable'));
             } catch {
@@ -101,7 +104,7 @@ const MemoryPalacePanel: React.FC = () => {
                     gap: 12,
                 }}
             >
-                {(state?.rooms || getDefaultRooms(t)).map((room) => (
+                {state?.rooms.map((room) => (
                     <div key={room.id} style={{ ...card, borderTop: `3px solid ${room.color}` }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: '1.2rem' }}>{room.icon}</span>
@@ -121,73 +124,5 @@ const MemoryPalacePanel: React.FC = () => {
         </div>
     );
 };
-
-function getDefaultRooms(t: (key: string) => string): PalaceRoom[] {
-    return [
-        {
-            id: 'working',
-            name: t('memory_palace.room_study'),
-            store: 'working' as any,
-            entryCount: 0,
-            description: t('memory_palace.room_study_desc'),
-            color: '#f59e0b',
-            icon: '⚡',
-        },
-        {
-            id: 'episodic',
-            name: t('memory_palace.room_library'),
-            store: 'episodic' as any,
-            entryCount: 0,
-            description: t('memory_palace.room_library_desc'),
-            color: '#3b82f6',
-            icon: '📚',
-        },
-        {
-            id: 'semantic',
-            name: t('memory_palace.room_archive'),
-            store: 'semantic' as any,
-            entryCount: 0,
-            description: t('memory_palace.room_archive_desc'),
-            color: '#10b981',
-            icon: '🏛️',
-        },
-        {
-            id: 'procedural',
-            name: t('memory_palace.room_workshop'),
-            store: 'procedural' as any,
-            entryCount: 0,
-            description: t('memory_palace.room_workshop_desc'),
-            color: '#8b5cf6',
-            icon: '🔧',
-        },
-        {
-            id: 'emotional',
-            name: t('memory_palace.room_garden'),
-            store: 'emotional' as any,
-            entryCount: 0,
-            description: t('memory_palace.room_garden_desc'),
-            color: '#ef4444',
-            icon: '🌺',
-        },
-        {
-            id: 'social',
-            name: t('memory_palace.room_courtyard'),
-            store: 'social' as any,
-            entryCount: 0,
-            description: t('memory_palace.room_courtyard_desc'),
-            color: '#06b6d4',
-            icon: '👥',
-        },
-        {
-            id: 'spatial',
-            name: t('memory_palace.room_observatory'),
-            store: 'spatial' as any,
-            entryCount: 0,
-            description: t('memory_palace.room_observatory_desc'),
-            color: '#a855f7',
-            icon: '🔭',
-        },
-    ];
-}
 
 export default MemoryPalacePanel;

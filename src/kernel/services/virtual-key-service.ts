@@ -4,6 +4,27 @@ import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('VirtualKeyService');
 
+// M-9: XOR+base64 obfuscation for realKeyId at rest
+const OBFUSCATION_KEY = 0x5a;
+function obfuscateId(id: string): string {
+    return btoa(
+        Array.from(new TextEncoder().encode(id))
+            .map((b) => String.fromCharCode(b ^ OBFUSCATION_KEY))
+            .join(''),
+    );
+}
+function deobfuscateId(encoded: string): string {
+    try {
+        const raw = atob(encoded);
+        return new TextDecoder().decode(
+            new Uint8Array(Array.from(raw).map((c) => c.charCodeAt(0) ^ OBFUSCATION_KEY)),
+        );
+    } catch {
+        // fallback: already plaintext (legacy data or migration)
+        return encoded;
+    }
+}
+
 export interface VirtualKeyServiceDeps {
     database: {
         getKv: <T>(id: string) => Promise<T | null>;
@@ -49,10 +70,24 @@ export class VirtualKeyService implements IVirtualKeyService {
     async init(): Promise<void> {
         if (this.loaded) return;
         try {
-            const stored = await this.deps.database.getKv<VirtualKey[]>('virtual_keys');
+            const stored = await this.deps.database.getKv<
+                {
+                    id: string;
+                    realKeyId: string;
+                    provider: string;
+                    agentId?: string;
+                    label: string;
+                    createdAt: number;
+                    lastUsedAt?: number;
+                    active: boolean;
+                }[]
+            >('virtual_keys');
             if (stored) {
                 for (const k of stored) {
-                    this.cache.set(k.id, k);
+                    this.cache.set(k.id, {
+                        ...k,
+                        realKeyId: deobfuscateId(k.realKeyId),
+                    });
                 }
             }
             this.loaded = true;
@@ -172,7 +207,11 @@ export class VirtualKeyService implements IVirtualKeyService {
 
     private async doPersist() {
         try {
-            await this.deps.database.setKv('virtual_keys', this.list());
+            const obfuscated = this.list().map((vk) => ({
+                ...vk,
+                realKeyId: obfuscateId(vk.realKeyId),
+            }));
+            await this.deps.database.setKv('virtual_keys', obfuscated);
         } catch (e) {
             LOGGER.warn('VirtualKeyService', 'Failed to persist virtual keys', {
                 error: String(e),

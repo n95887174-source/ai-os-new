@@ -3,6 +3,7 @@ import type { KeyStore } from '../contracts/storage/key-store';
 import type { ApiKey } from '../types/metrics-types';
 import { rootLogger } from '../services/logger-service';
 import { safeJsonParse } from '../utils/safe-json';
+import { ssrSafeStorage } from '../utils/ssr-storage';
 
 const LOGGER = rootLogger.child('KeyMigration');
 
@@ -17,9 +18,8 @@ interface MigrationDeps {
 }
 
 function readRawFromLocalStorage(key: string): string | null {
-    if (typeof localStorage === 'undefined') return null;
     try {
-        return localStorage.getItem(key);
+        return ssrSafeStorage.getItem(key);
     } catch {
         return null;
     }

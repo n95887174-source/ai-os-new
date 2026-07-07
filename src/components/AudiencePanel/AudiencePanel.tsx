@@ -240,6 +240,7 @@ export const AudiencePanel: React.FC = () => {
             audienceService.populate(size);
         }
         refresh();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [size]);
 
     // C-95: usePolling gates on document.hidden
@@ -542,7 +543,7 @@ export const AudiencePanel: React.FC = () => {
                                 .reverse()
                                 .map((e, i) => (
                                     <div
-                                        key={i}
+                                        key={`${e.sourceName}-${e.reaction}-${i}`}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',

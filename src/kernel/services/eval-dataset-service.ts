@@ -7,6 +7,7 @@ import type {
 import type { IProviderAdapter } from '../contracts/provider-adapter';
 
 const STORAGE_KEY = 'eval_datasets';
+const VERSION_KEY = 'eval_datasets_version';
 
 let datasetLock: Promise<void> = Promise.resolve();
 
@@ -19,15 +20,39 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
     return prev.then(fn).finally(() => release!());
 }
 
-async function loadDatasets(): Promise<EvalDataset[]> {
+async function loadDatasets(): Promise<{ datasets: EvalDataset[]; version: number }> {
     const { storageAdapter } = await import('../instances');
     const raw = storageAdapter.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const versionRaw = storageAdapter.getItem(VERSION_KEY);
+    return {
+        datasets: raw ? JSON.parse(raw) : [],
+        version: versionRaw ? parseInt(versionRaw, 10) || 0 : 0,
+    };
 }
 
-async function saveDatasets(datasets: EvalDataset[]): Promise<void> {
+async function saveDatasets(datasets: EvalDataset[], expectedVersion: number): Promise<boolean> {
     const { storageAdapter } = await import('../instances');
-    storageAdapter.setItem(STORAGE_KEY, JSON.stringify(datasets));
+    // C-48: Cross-tab race protection — reload and check version before write
+    const currentVersionRaw = storageAdapter.getItem(VERSION_KEY);
+    const currentVersion = currentVersionRaw ? parseInt(currentVersionRaw, 10) || 0 : 0;
+    if (currentVersion !== expectedVersion) {
+        // Another tab modified data — merge by keeping all entries deduped by id
+        const currentRaw = storageAdapter.getItem(STORAGE_KEY);
+        if (currentRaw) {
+            const current: EvalDataset[] = JSON.parse(currentRaw);
+            const existingIds = new Set(current.map((d) => d.id));
+            for (const d of datasets) {
+                if (!existingIds.has(d.id)) current.push(d);
+            }
+            storageAdapter.setItem(STORAGE_KEY, JSON.stringify(current));
+        } else {
+            storageAdapter.setItem(STORAGE_KEY, JSON.stringify(datasets));
+        }
+    } else {
+        storageAdapter.setItem(STORAGE_KEY, JSON.stringify(datasets));
+    }
+    storageAdapter.setItem(VERSION_KEY, String(expectedVersion + 1));
+    return true;
 }
 
 export class EvalDatasetService implements IEvalDatasetService {
@@ -36,13 +61,16 @@ export class EvalDatasetService implements IEvalDatasetService {
     ) {}
 
     async list(): Promise<EvalDataset[]> {
-        return withLock(() => loadDatasets());
+        return withLock(async () => {
+            const result = await loadDatasets();
+            return result.datasets;
+        });
     }
 
     async get(id: string): Promise<EvalDataset | undefined> {
         return withLock(async () => {
-            const all = await loadDatasets();
-            return all.find((d) => d.id === id);
+            const result = await loadDatasets();
+            return result.datasets.find((d) => d.id === id);
         });
     }
 
@@ -50,36 +78,43 @@ export class EvalDatasetService implements IEvalDatasetService {
         dataset: Omit<EvalDataset, 'id' | 'createdAt' | 'updatedAt' | 'runs'>,
     ): Promise<string> {
         return withLock(async () => {
-            const all = await loadDatasets();
+            const result = await loadDatasets();
+            const datasets = result.datasets;
             const id = crypto.randomUUID();
             const now = Date.now();
-            all.push({ ...dataset, id, createdAt: now, updatedAt: now, runs: [] });
-            await saveDatasets(all);
+            const all = [...datasets, { ...dataset, id, createdAt: now, updatedAt: now, runs: [] }];
+            await saveDatasets(all, result.version);
             return id;
         });
     }
 
     async update(id: string, updates: Partial<EvalDataset>): Promise<void> {
         return withLock(async () => {
-            const all = await loadDatasets();
-            const idx = all.findIndex((d) => d.id === id);
+            const result = await loadDatasets();
+            const datasets = result.datasets;
+            const version = result.version;
+            const idx = datasets.findIndex((d) => d.id === id);
             if (idx < 0) throw new Error(`Dataset ${id} not found`);
+            const all = [...datasets];
             all[idx] = { ...all[idx], ...updates, updatedAt: Date.now() };
-            await saveDatasets(all);
+            await saveDatasets(all, version);
         });
     }
 
     async delete(id: string): Promise<void> {
         return withLock(async () => {
-            const all = await loadDatasets();
-            await saveDatasets(all.filter((d) => d.id !== id));
+            const result = await loadDatasets();
+            const all = result.datasets.filter((d) => d.id !== id);
+            await saveDatasets(all, result.version);
         });
     }
 
     async runEval(datasetId: string, provider: string, model: string): Promise<EvalRun> {
         return withLock(async () => {
-            const all = await loadDatasets();
-            const dataset = all.find((d) => d.id === datasetId);
+            const result = await loadDatasets();
+            const datasets = result.datasets;
+            const version = result.version;
+            const dataset = datasets.find((d) => d.id === datasetId);
             if (!dataset) throw new Error(`Dataset ${datasetId} not found`);
 
             const adapter = this.adapterRegistry.getAdapter(provider);
@@ -106,10 +141,10 @@ export class EvalDatasetService implements IEvalDatasetService {
                     const actualOutput =
                         typeof response.content === 'string' ? response.content : '';
                     const tkns = response.tokens;
-                    const inputTokens =
-                        tkns && typeof tkns === 'object' ? (tkns as any).input || 0 : 0;
-                    const outputTokens =
-                        tkns && typeof tkns === 'object' ? (tkns as any).output || 0 : 0;
+                    const tokensRecord =
+                        tkns && typeof tkns === 'object' ? (tkns as Record<string, number>) : {};
+                    const inputTokens = tokensRecord.input || 0;
+                    const outputTokens = tokensRecord.output || 0;
                     const score = prompt.expectedOutput
                         ? computeSimilarity(actualOutput, prompt.expectedOutput)
                         : 1;
@@ -157,11 +192,11 @@ export class EvalDatasetService implements IEvalDatasetService {
                 },
             };
 
-            const idx = all.findIndex((d) => d.id === datasetId);
-            all[idx].runs.push(run);
-            if (all[idx].runs.length > 50) all[idx].runs = all[idx].runs.slice(-50);
-            all[idx].updatedAt = Date.now();
-            await saveDatasets(all);
+            const idx = datasets.findIndex((d: EvalDataset) => d.id === datasetId);
+            datasets[idx].runs.push(run);
+            if (datasets[idx].runs.length > 50) datasets[idx].runs = datasets[idx].runs.slice(-50);
+            datasets[idx].updatedAt = Date.now();
+            await saveDatasets(datasets, version);
 
             return run;
         });

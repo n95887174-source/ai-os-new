@@ -16,6 +16,7 @@ import { DebateVerdictRecordSchema } from '../../types/schema-types';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import { rootLogger } from '../logger-service';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
+import { sanitizePromptVar } from '../../../shared/utils/sanitize';
 import type { DebateProviderResolver } from './debate-query-engine';
 import { DEBATE_MODEL_PRIORITY } from './debate-query-engine';
 
@@ -282,12 +283,15 @@ export class DebateConclusionEngine {
     private buildLLMPrompt(verdict: DebateVerdict, snapshot: DebateSessionSnapshot): string {
         const argsSummary = verdict.keyArguments
             .slice(0, 10)
-            .map((a, i) => `${i + 1}. [${a.stance}] ${a.agentName}: ${a.content.slice(0, 300)}`)
+            .map(
+                (a, i) =>
+                    `${i + 1}. [${a.stance}] ${sanitizePromptVar(a.agentName)}: ${sanitizePromptVar(a.content.slice(0, 300))}`,
+            )
             .join('\n');
 
         return `You are a debate analyst. Analyze the following debate verdict and provide an enhanced summary and reasoning.
 
-DEBATE TOPIC: ${verdict.topic}
+DEBATE TOPIC: ${sanitizePromptVar(verdict.topic)}
 ROUNDS: ${snapshot.round}
 PARTICIPANTS: ${snapshot.agentStates.length}
 CONCLUSION TYPE: ${verdict.conclusionType}

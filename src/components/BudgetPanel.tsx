@@ -29,6 +29,7 @@ const BudgetPanel: React.FC = () => {
             if (isMountedRef.current) {
                 setSummary(s);
                 setAlerts(a);
+                setError(null);
             }
         } catch {
             if (isMountedRef.current) setError(t('budget.error_load'));

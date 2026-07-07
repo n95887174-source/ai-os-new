@@ -267,7 +267,7 @@ const BudgetAlertsPanelContent: React.FC = () => {
                 .reverse()
                 .map((ev, i) => (
                     <div
-                        key={i}
+                        key={ev.timestamp ?? i}
                         style={{
                             display: 'flex',
                             alignItems: 'flex-start',

@@ -140,7 +140,7 @@ const DeployPanelContent: React.FC = () => {
         >
             {logs.map((log, i) => (
                 <div
-                    key={i}
+                    key={log.timestamp ?? i}
                     style={{
                         color:
                             log.level === 'error'
@@ -417,7 +417,8 @@ const DeployPanelContent: React.FC = () => {
                                 <span style={{ color: '#22c55e' }}>{v}</span>
                                 <button
                                     onClick={() => {
-                                        const { [k]: _, ...rest } = envVars;
+                                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                        const { [k]: _x_, ...rest } = envVars;
                                         setEnvVars(rest);
                                     }}
                                     style={{

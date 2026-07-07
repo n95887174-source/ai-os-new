@@ -221,6 +221,13 @@ vi.mock('../../kernel/instances', () => ({
         getIndex: vi.fn(() => ({ rooms: [], activeRoomId: null, lastUpdated: Date.now() })),
         destroy: vi.fn(),
     },
+    eventBus: {
+        emit: vi.fn(),
+        on: vi.fn(() => vi.fn()),
+        onSafe: vi.fn(() => vi.fn()),
+        off: vi.fn(),
+    },
+    EVENTS: { NOTIFICATION: 'notification' },
 }));
 
 async function waitForAgentCards() {

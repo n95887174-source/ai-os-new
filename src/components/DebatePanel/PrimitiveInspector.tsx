@@ -214,7 +214,10 @@ function VotingEditor({
 }) {
     return (
         <>
-            <AgentEditor agents={p.voters} onChange={(voters) => onUpdate({ ...p, voters })} />
+            <AgentEditor
+                agents={p.voters ?? []}
+                onChange={(voters) => onUpdate({ ...p, voters })}
+            />
             <div>
                 <div style={s.fieldLabel}>Mechanism</div>
                 <select
@@ -272,7 +275,10 @@ function PeerReviewEditor({
 }) {
     return (
         <>
-            <AgentEditor agents={p.authors} onChange={(authors) => onUpdate({ ...p, authors })} />
+            <AgentEditor
+                agents={p.authors ?? []}
+                onChange={(authors) => onUpdate({ ...p, authors })}
+            />
             <AgentEditor
                 agents={p.reviewers}
                 onChange={(reviewers) => onUpdate({ ...p, reviewers })}

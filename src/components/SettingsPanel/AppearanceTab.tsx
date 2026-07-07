@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Palette, RotateCcw, Download, Sun } from 'lucide-react';
+import { ssrSafeStorage } from '../../kernel/utils/ssr-storage';
 
 const TOKEN_GROUPS: Record<string, { label: string; icon: string }> = {
     bg: { label: 'Backgrounds', icon: '🎨' },
@@ -133,7 +134,7 @@ const AppearanceTab: React.FC = () => {
         }
         // Apply saved overrides
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
+            const saved = ssrSafeStorage.getItem(STORAGE_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved) as Record<string, string>;
                 for (const [k, v] of Object.entries(parsed)) {
@@ -163,7 +164,7 @@ const AppearanceTab: React.FC = () => {
     }, [tokens]);
 
     const handleReset = () => {
-        localStorage.removeItem(STORAGE_KEY);
+        ssrSafeStorage.removeItem(STORAGE_KEY);
         const root = document.documentElement;
         for (const name of Object.keys(tokens)) {
             root.style.removeProperty(name);
@@ -183,7 +184,7 @@ const AppearanceTab: React.FC = () => {
                 root.style.getPropertyValue(name) || style.getPropertyValue(name).trim();
             if (current) overrides[name] = current;
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+        ssrSafeStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
         setCopyFeedback(true);
         setTimeout(() => setCopyFeedback(false), 2000);
     };

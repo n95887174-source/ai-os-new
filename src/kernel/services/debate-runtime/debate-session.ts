@@ -24,8 +24,8 @@ const VALID_TRANSITIONS: Record<DebatePhase, DebatePhase[]> = {
     consensus: ['summarizing', 'deliberating', 'failed', 'cancelled'],
     summarizing: ['completed', 'failed', 'cancelled'],
     completed: [],
-    failed: [],
-    cancelled: [],
+    failed: ['created'],
+    cancelled: ['created'],
 };
 
 export class DebateSession implements IDebateSession {

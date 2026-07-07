@@ -178,7 +178,10 @@ export class MemoryService implements IMemoryEngine {
             const mem = this.memories.find((m) => m.id === id);
             if (mem) {
                 const idx = this.memories.indexOf(mem);
-                if (idx >= 0) this.memories[idx] = { ...mem, vector };
+                if (idx >= 0) {
+                    this.memories[idx] = { ...mem, vector };
+                    this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+                }
             }
         } catch (e) {
             LOGGER.warn('MemoryEngine', 'Failed to persist embedding vector', { error: e });
