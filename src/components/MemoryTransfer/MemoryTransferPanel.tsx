@@ -81,6 +81,25 @@ const MemoryTransferPanelContent: React.FC = () => {
                 Export and import memories across instances
             </p>
 
+            <div
+                style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: '0.8rem',
+                }}
+            >
+                <span>
+                    Memory Export/Import — preview. Import uses simple string splitting, not real
+                    format parsing. Proper format support coming in a future update.
+                </span>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div
                     style={{

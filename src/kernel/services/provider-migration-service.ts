@@ -7,6 +7,10 @@ export interface ProviderMigrationServiceDeps {
     keyService: IKeyService;
 }
 
+/**
+ * @deprecated MOCK — simulated backend. Migration steps are no-ops. Replace with real
+ * provider API migration logic before production use.
+ */
 export class ProviderMigrationService implements IProviderMigrationService {
     private plans: MigrationPlan[] = [];
     private deps: ProviderMigrationServiceDeps;

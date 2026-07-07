@@ -45,6 +45,10 @@ function serializeEntryToMarkdown(entry: MemoryEntry): string {
     return `## ${section}\n> *Source: ${meta.source ?? 'unknown'} | Type: ${meta.type ?? 'unknown'} | Timestamp: ${new Date(meta.timestamp ?? Date.now()).toISOString()} | Importance: ${meta.importance ?? 0}*\n\n${entry.content}\n`;
 }
 
+/**
+ * @deprecated MOCK — simulated backend. Import uses simple string splitting, not real format parsing.
+ * Replace with proper format parsers before production use.
+ */
 export class MemoryTransferService implements IMemoryTransferService {
     private exports: MemoryExport[] = [];
     private imports: MemoryImport[] = [];

@@ -128,6 +128,25 @@ const TimeMachinePanelContent: React.FC = () => {
                 </div>
             </div>
 
+            <div
+                style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: '0.8rem',
+                }}
+            >
+                <span>
+                    Time Machine — preview. Snapshot restore is simulated. Actual state restoration
+                    coming in a future update.
+                </span>
+            </div>
+
             {showCreate && (
                 <div
                     style={{

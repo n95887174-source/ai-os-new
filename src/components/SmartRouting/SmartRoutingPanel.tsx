@@ -279,6 +279,25 @@ export default function SmartRoutingPanel() {
                 </div>
             </div>
 
+            <div
+                style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    marginBottom: 24,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: '0.8rem',
+                }}
+            >
+                <span>
+                    Smart Routing — preview. Route simulation returns estimated latency/cost. Real
+                    ML-based routing coming in a future update.
+                </span>
+            </div>
+
             {/* Config Section */}
             <div
                 style={{
