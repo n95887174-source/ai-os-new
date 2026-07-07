@@ -265,23 +265,26 @@ export class PolicyService {
     }
 
     private persistTimer: ReturnType<typeof setTimeout> | undefined;
-    private persistPromise: Promise<void> | undefined;
+    private persistPromise: Promise<void> | (() => Promise<void>) | undefined;
 
     protected async persist() {
-        if (this.persistTimer) clearTimeout(this.persistTimer);
         if (this.persistPromise) return this.persistPromise;
         this.persistTimer = setTimeout(() => {
+            this.persistTimer = undefined;
             this.persistPromise = (async () => {
                 try {
-                    await this.deps.database.setKv(POLICIES_KEY, this.activePolicies);
-                    await this.deps.database.setKv(PATTERNS_KEY, this.securityPatterns);
-                    await this.deps.database.setKv(AGENT_POLICIES_KEY, this.agentPolicies);
+                    await Promise.all([
+                        this.deps.database.setKv(POLICIES_KEY, this.activePolicies),
+                        this.deps.database.setKv(PATTERNS_KEY, this.securityPatterns),
+                        this.deps.database.setKv(AGENT_POLICIES_KEY, this.agentPolicies),
+                    ]);
                 } catch (e) {
                     LOGGER.error('PolicyService', 'Failed to persist', { error: e });
                 } finally {
                     this.persistPromise = undefined;
                 }
             })();
+            this.persistPromise?.catch(() => {});
         }, 50);
     }
 

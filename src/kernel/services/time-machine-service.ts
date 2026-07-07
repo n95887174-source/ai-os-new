@@ -19,6 +19,19 @@ export interface TimeMachineServiceDeps {
         getHistory(): ConfigVersion[];
         rollback(versionId: string, author: string): Promise<unknown>;
     };
+    snapshotService?: {
+        capture(traceId: string, stepId: string, label?: string): Promise<{ id: string }>;
+        restoreById(snapshotId: string): boolean;
+    };
+    keyService?: {
+        getAllKeys(): { id: string; provider: string; model: string; status: string }[];
+        saveKeys(): Promise<void>;
+        restoreKeys(keys: { id: string; provider: string; model: string; status: string }[]): void;
+    };
+    memoryService?: {
+        getAllMemories(): { id: string; content: string; timestamp: number }[];
+        importMemories(memories: { id: string; content: string; timestamp: number }[]): void;
+    };
 }
 
 export class TimeMachineService implements ITimeMachineService {
@@ -57,10 +70,20 @@ export class TimeMachineService implements ITimeMachineService {
 
     createSnapshot(label: string, scope: SnapshotScope): TimeSnapshot {
         const changes: string[] = [];
+        let snapshotRefId: string | undefined;
         switch (scope) {
-            case 'full':
+            case 'full': {
                 changes.push('Full system state captured');
+                const svc = this.deps.snapshotService;
+                if (svc) {
+                    const result = svc.capture('time-machine', crypto.randomUUID(), label);
+                    if (result && typeof result === 'object' && 'id' in result) {
+                        snapshotRefId = (result as { id: string }).id;
+                        changes.push('Kernel state stored');
+                    }
+                }
                 break;
+            }
             case 'config':
                 changes.push('Configuration state captured');
                 break;
@@ -81,6 +104,7 @@ export class TimeMachineService implements ITimeMachineService {
             timestamp: Date.now(),
             size: changes.join('').length + 64,
             changes,
+            snapshotRefId,
         };
         this.snapshots.push(snap);
         if (this.snapshots.length > MAX_SNAPSHOTS) {
@@ -99,22 +123,37 @@ export class TimeMachineService implements ITimeMachineService {
     private async restoreByScope(snap: TimeSnapshot): Promise<void> {
         const deps = this.deps;
         switch (snap.scope) {
+            case 'full':
+                if (snap.snapshotRefId && deps.snapshotService) {
+                    deps.snapshotService.restoreById(snap.snapshotRefId);
+                }
+                break;
             case 'config':
                 if (deps.configHistory) {
                     const versions = deps.configHistory.getHistory();
                     const targetVersion = versions.find(
-                        (v) => v.comment.includes(snap.label) || v.comment.includes(snap.id),
+                        (v) =>
+                            v.version === snap.label ||
+                            v.comment.includes(snap.label) ||
+                            v.comment.includes(snap.id),
                     );
                     if (targetVersion) {
                         await deps.configHistory.rollback(targetVersion.version, 'TimeMachine');
                     }
                 }
                 break;
-            case 'full':
+            case 'keys':
+                if (deps.keyService) {
+                    deps.keyService.saveKeys();
+                }
                 break;
             case 'memory':
-                break;
-            case 'keys':
+                if (deps.memoryService) {
+                    const allMemories = deps.memoryService.getAllMemories();
+                    if (allMemories.length > 0) {
+                        deps.memoryService.importMemories(allMemories);
+                    }
+                }
                 break;
             case 'debates':
                 break;

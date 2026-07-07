@@ -191,11 +191,15 @@ class GoogleCustomSearchAdapter implements ISourceAdapter {
         const apiKey = config.apiKeys.google_custom_search;
         const cx = config.apiKeys.google_custom_search_cx;
         if (!apiKey || !cx) return [];
-        const res = await safeFetch(
-            `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=10`,
-            8000,
-            signal,
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const combined = signal ? combineSignals(signal, controller.signal) : controller.signal;
+        const res = await fetch(
+            `https://www.googleapis.com/customsearch/v1?cx=${cx}&q=${encodeURIComponent(query)}&num=10`,
+            { signal: combined, keepalive: true, headers: { 'X-goog-api-key': apiKey } },
         );
+        clearTimeout(timer);
+
         if (!res) return [];
         const data = (await res.json()) as any;
         const items = data.items as any[] | undefined;
@@ -986,6 +990,10 @@ class StackOverflowAdapter implements ISourceAdapter {
         signal?: AbortSignal,
     ): Promise<ResearchSource[]> {
         const apiKey = config.apiKeys.stack_overflow;
+        // Note: StackExchange API only supports auth via URL query param `key`.
+        // This is a rate-limit-only key (higher quota), not a security credential.
+        // Unlike Google Custom Search (which also had this issue, now fixed to use
+        // X-goog-api-key header), StackExchange has no header-based alternative.
         const url = `https://api.stackexchange.com/2.3/search/advanced?q=${encodeURIComponent(query)}&site=stackoverflow&order=desc&sort=relevance&pagesize=10${apiKey ? `&key=${apiKey}` : ''}`;
         const res = await safeFetch(url, 8000, signal);
         if (!res) return [];

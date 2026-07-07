@@ -66,8 +66,9 @@ export class ConfigHistoryService {
     }
 
     async commit(config: ConfigRegistry, author: string, comment: string): Promise<ConfigVersion> {
-        // Clone config deeply to preserve immutability
-        // JSON round-trip (not structuredClone) because CONFIG is a Proxy that throws DATA_CLONE_ERR
+        if (!author || !author.trim()) {
+            throw new Error('commit failed: author is required');
+        }
         let snapshot: ConfigRegistry;
         try {
             snapshot = JSON.parse(
@@ -88,6 +89,9 @@ export class ConfigHistoryService {
         await this.persist();
         this.history.push(newVersion);
         if (this.history.length > MAX_HISTORY) this.history.shift();
+        LOGGER.info('ConfigHistory', `Config committed by ${author}: ${comment}`, {
+            versionString,
+        });
         return newVersion;
     }
 
@@ -100,6 +104,9 @@ export class ConfigHistoryService {
     }
 
     async rollback(versionId: string, author = 'System'): Promise<ConfigRegistry> {
+        if (!author || !author.trim()) {
+            throw new Error('rollback failed: author is required');
+        }
         const target = this.getVersion(versionId);
         if (!target) {
             throw new Error(`Rollback failed: Config version "${versionId}" not found.`);
@@ -122,6 +129,9 @@ export class ConfigHistoryService {
             // Config is already applied — non-fatal, history entry is just a record
         }
 
+        LOGGER.info('ConfigHistory', `Config rolled back by ${author} to ${target.version}`, {
+            versionId,
+        });
         return CONFIG;
     }
 

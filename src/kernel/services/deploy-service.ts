@@ -18,6 +18,10 @@ interface PersistedData {
     deployments: Deployment[];
 }
 
+/**
+ * @deprecated MOCK — simulated deployment. No real build, upload, or server interaction.
+ * Replace with CI/CD webhook or SSH-based deployment before production use.
+ */
 export class DeployService implements IDeployService {
     private configs: DeployConfig[] = [];
     private deployments: Deployment[] = [];

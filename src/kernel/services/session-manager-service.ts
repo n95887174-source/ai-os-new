@@ -24,6 +24,7 @@ export class SessionManagerService implements ISessionManager {
     private completedSessions: DebateSession[] = [];
     private readonly MAX_HISTORY = 20;
     private _historyLoaded = false;
+    private _pendingHistorySaves: DebateSession[] = [];
 
     constructor(
         private sessionStore: SessionStore,
@@ -356,6 +357,19 @@ export class SessionManagerService implements ISessionManager {
         this._historyLoaded = true;
         try {
             this.completedSessions = await loadHistoryList(this.debateStore, this.MAX_HISTORY);
+            // Replay any saves that arrived while load was in flight
+            const pending = this._pendingHistorySaves.splice(0);
+            for (const session of pending) {
+                if (!this.completedSessions.some((s) => s.id === session.id)) {
+                    this.completedSessions.unshift(structuredClone(session));
+                }
+            }
+            if (this.completedSessions.length > this.MAX_HISTORY) {
+                this.completedSessions = this.completedSessions.slice(0, this.MAX_HISTORY);
+            }
+            if (pending.length > 0) {
+                this.persistDebateHistory();
+            }
         } catch (e) {
             LOGGER.warn('SessionManagerService', 'Failed to load debate history', {
                 error: e instanceof Error ? e.message : String(e),
@@ -376,6 +390,11 @@ export class SessionManagerService implements ISessionManager {
         if (session.status !== 'completed') return;
         if (this.completedSessions.some((s) => s.id === session.id)) return;
         const snapshot = structuredClone(session);
+        // If history is still loading, buffer the save to replay after load completes
+        if (!this._historyLoaded && this._pendingHistorySaves.length >= 0) {
+            this._pendingHistorySaves.push(snapshot);
+            return;
+        }
         this.completedSessions.unshift(snapshot);
         if (this.completedSessions.length > this.MAX_HISTORY) {
             this.completedSessions = this.completedSessions.slice(0, this.MAX_HISTORY);

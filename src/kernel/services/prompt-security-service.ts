@@ -7,6 +7,9 @@ import type {
     IPromptSecurityService,
 } from '../contracts/prompt-security-types';
 import type { IDatabaseService } from '../types/interfaces';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('PromptSecurityService');
 
 const STORAGE_KEY_HISTORY = 'security_scan_history';
 const MAX_HISTORY = 100;
@@ -17,7 +20,8 @@ const DEFAULT_RULES: SecurityScanRule[] = [
         id: 'inj-1',
         name: 'Ignore Instructions',
         category: 'injection',
-        pattern: 'ignore\\s+(all\\s+)?(previous|above|prior)\\s+instructions',
+        pattern:
+            '(?:ignore|disregard|forget|omit|discard|override|supersede|cast\\s+aside|jettison|nullify|abandon|drop|skip|neglect|bypass|overrule|annul|revoke|rescind|dismiss|cancel|trump|waive|relinquish|surrender|yield|abjure|eschew|forsake|repudiate|disclaim|renounce|disavow|contradict|countermand|quash|invalidate|void|vacate|repeal|overturn|overthrow|subvert|sabotage|derail|hijack|preempt|supplant|displace|unseat|oust|topple|undo|reverse|erase|wipe|delete|remove|purge|expunge|obliterate|efface|blot|scratch|strike|rub|wash|clean|clear|empty|void|blank)',
         severity: 'high',
         enabled: true,
         description: 'Attempts to override system instructions',
@@ -82,7 +86,7 @@ const DEFAULT_RULES: SecurityScanRule[] = [
         name: 'Prompt Extraction',
         category: 'extraction',
         pattern:
-            '(?:repeat|output|show|print|display|reveal|dump|copy)\\s+(?:the\\s+)?(?:above|entire|full|complete|whole|system|initial|prompt|instruction)',
+            '(?:repeat|output|show|print|display|reveal|dump|copy|echo|recite|paste|return|give|send|write|type|list|state|declare|disclose|expose|recapitulate|transcribe|quote|cite|specify|render|mirror|regurgitate)\\s+(?:the\\s+)?(?:above|entire|full|complete|whole|system|initial|prompt|instruction|message|text|content|context|directive|guideline|rule|policy|protocol|configuration)',
         severity: 'high',
         enabled: true,
         description: 'Attempts to extract system prompt',
@@ -208,7 +212,16 @@ export class PromptSecurityService implements IPromptSecurityService {
         const findings: SecurityFinding[] = [];
         for (const rule of this.config.rules) {
             if (!rule.enabled) continue;
-            const regex = new RegExp(rule.pattern, 'gi');
+            let regex: RegExp;
+            try {
+                regex = new RegExp(rule.pattern, 'gi');
+            } catch {
+                LOGGER.warn(
+                    'PromptSecurityService',
+                    `Invalid regex pattern for rule ${rule.id}: ${rule.pattern}`,
+                );
+                continue;
+            }
             let match: RegExpExecArray | null;
             while ((match = regex.exec(prompt)) !== null) {
                 findings.push({
@@ -263,7 +276,20 @@ export class PromptSecurityService implements IPromptSecurityService {
     updateConfig(partial: Partial<SecurityScanConfig>): void {
         if (partial.enabled !== undefined) this.config.enabled = partial.enabled;
         if (partial.blockOnScore !== undefined) this.config.blockOnScore = partial.blockOnScore;
-        if (partial.rules) this.config.rules = partial.rules;
+        if (partial.rules) {
+            for (const rule of partial.rules) {
+                try {
+                    new RegExp(rule.pattern, 'gi');
+                } catch {
+                    LOGGER.warn(
+                        'PromptSecurityService',
+                        `Rejected update — invalid regex pattern for rule ${rule.id}: ${rule.pattern}`,
+                    );
+                    return;
+                }
+            }
+            this.config.rules = partial.rules;
+        }
         this.persist();
     }
 

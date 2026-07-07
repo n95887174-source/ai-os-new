@@ -11,62 +11,64 @@
 # ────────────────────────────────────────────────────────────────
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NGINX_CONFIG: ${NGINX_CONFIG:-nginx.conf}
-    image: superagents-os:${TAG:-latest}
-    container_name: superagents-os
-    restart: unless-stopped
-    environment:
-      # Override the API proxy target (default: OpenRouter).
-      API_UPSTREAM: ${API_UPSTREAM:-https://api.openrouter.ai}
-    profiles: [dev, prod]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '1.0'
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                NGINX_CONFIG: ${NGINX_CONFIG:-nginx.conf}
+        image: superagents-os:${TAG:-latest}
+        container_name: superagents-os
+        restart: unless-stopped
+        environment:
+            # Override the API proxy target (default: OpenRouter).
+            API_UPSTREAM: ${API_UPSTREAM:-https://api.openrouter.ai}
+        profiles: [dev, prod]
+        healthcheck:
+            test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/']
+            interval: 30s
+            timeout: 3s
+            retries: 3
+            start_period: 10s
+        deploy:
+            resources:
+                limits:
+                    memory: 512M
+                    cpus: '1.0'
 
-  # ── Dev profile: HTTP on :80 ─────────────────────────────────
-  app-dev:
-    extends:
-      service: app
-    container_name: superagents-os-dev
-    profiles: [dev]
-    ports:
-      - "80:8080"
+    # ── Dev profile: HTTP on :80 (localhost only) ────────────────
+    # H-15: Bind to 127.0.0.1 to prevent remote MITM over plain HTTP.
+    # For remote access, use --profile prod with TLS certs.
+    app-dev:
+        extends:
+            service: app
+        container_name: superagents-os-dev
+        profiles: [dev]
+        ports:
+            - '127.0.0.1:80:8080'
 
-  # ── Prod profile: HTTPS on :443, HTTP redirects to it ────────
-  app-prod:
-    extends:
-      service: app
-    container_name: superagents-os-prod
-    profiles: [prod]
-    # BLD-C5: prod profile must bake the SSL nginx template, otherwise
-    # the image serves plain HTTP despite exposing port 443 (dead
-    # socket). Override NGINX_CONFIG here; user can still override via
-    # the NGINX_CONFIG env var at deploy time.
-    build:
-      args:
-        NGINX_CONFIG: ${NGINX_CONFIG:-nginx-ssl.conf}
-    ports:
-      - "80:8080"   # HTTPS→HTTP redirect
-      - "443:8443"  # The actual TLS listener (see nginx-ssl.conf)
-    volumes:
-      # Mount your real certs (or certbot output) here.
-      # Create dir first: mkdir -p certs
-      # Generate a self-signed cert for testing:
-      #   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-      #     -keyout certs/key.pem -out certs/cert.pem \
-      #     -subj "/CN=localhost"
-      # Entrypoint checks for /etc/nginx/ssl/cert.pem and key.pem.
-      - ./certs:/etc/nginx/ssl:ro
+    # ── Prod profile: HTTPS on :443, HTTP redirects to it ────────
+    app-prod:
+        extends:
+            service: app
+        container_name: superagents-os-prod
+        profiles: [prod]
+        # BLD-C5: prod profile must bake the SSL nginx template, otherwise
+        # the image serves plain HTTP despite exposing port 443 (dead
+        # socket). Override NGINX_CONFIG here; user can still override via
+        # the NGINX_CONFIG env var at deploy time.
+        build:
+            args:
+                NGINX_CONFIG: ${NGINX_CONFIG:-nginx-ssl.conf}
+        ports:
+            - '80:8080' # HTTPS→HTTP redirect
+            - '443:8443' # The actual TLS listener (see nginx-ssl.conf)
+        volumes:
+            # Mount your real certs (or certbot output) here.
+            # Create dir first: mkdir -p certs
+            # Generate a self-signed cert for testing:
+            #   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            #     -keyout certs/key.pem -out certs/cert.pem \
+            #     -subj "/CN=localhost"
+            # Entrypoint checks for /etc/nginx/ssl/cert.pem and key.pem.
+            - ./certs:/etc/nginx/ssl:ro

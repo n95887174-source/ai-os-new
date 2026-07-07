@@ -24,6 +24,7 @@ export interface IGeminiCacheService {
     list(): CachedContent[];
     get(id: string): CachedContent | null;
     delete(id: string): void;
+    recordHit(id: string): void;
     getFreeTierUsage(): FreeTierUsage[];
     getEstimatedSavings(): { totalSaved: number; cacheHitRate: number };
 }

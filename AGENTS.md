@@ -3370,3 +3370,79 @@ H-42, H-44, H-45, H-46, H-47, H-48, H-50, H-51, H-52, H-53, H-54, H-55, H-56, H-
 - `npx vite build` ✅ 4.41s
 - Commits: `fdd772a9` (H-41/H-49), `7eb6777c` (H-40/H-62)
 - Remaining: STATUS_HML.md shows 459 total findings, 107 fixed, 351 remaining
+
+---
+
+## Current Session (2026-07-07) — Audit High Findings H-08..H-21
+
+### Goal
+
+Fix remaining unfixed High findings from `audit/newww/ai-os-new-audit-report (1).md`.
+
+### Changes
+
+| #    | Status | Fix                                                                                                                   |
+| :--- | :----- | :-------------------------------------------------------------------------------------------------------------------- |
+| H-08 | 🟢     | Already fixed — CSP eval detection (`isEvalBlockedByCSP()`), AST validation, defense-in-depth Function shadowing      |
+| H-09 | 🟢     | Already fixed — async `isValidWebhookUrl()` does HEAD request for DNS rebinding protection                            |
+| H-10 | 🟢     | Improved regex: `inj-1` expanded to 70+ synonyms for `ignore`; `ext-1` expanded to 30+ extraction verbs               |
+| H-11 | 🟢     | Already fixed — startup warning via module-level `import('./config-registry')`                                        |
+| H-12 | 🟢     | Google Custom Search: key moved from URL query param to `X-goog-api-key` header. StackExchange: documented limitation |
+| H-13 | 🟢     | Already fixed — `getClientIP()` parses X-Forwarded-For correctly                                                      |
+| H-14 | 🟢     | Already fixed — `checkWsRateLimit()` in `verifyClient`                                                                |
+| H-15 | 🟢     | Dev docker-compose: bind dev profile to `127.0.0.1:80:8080`. nginx.conf: added WARNING banner                         |
+| H-16 | 🟢     | Already fixed — `MemoryRepository.computeId()` uses SHA-256 matching `MemoryEngine.computeId()`                       |
+| H-17 | 🟢     | Already fixed — `storeBatch()` uses Dexie transaction                                                                 |
+| H-18 | 🟢     | Already fixed — `store()`/`storeBatch()` use deterministic `computeId()`                                              |
+| H-19 | 🟢     | Already fixed — `importSnapshots()` validates via `SystemSnapshotSchema.safeParse()`                                  |
+| H-20 | 🟢     | Already fixed — `repair()` method emits reconcile events                                                              |
+| H-21 | 🟢     | Already fixed — `restore()` validates via `SystemSnapshotSchema.safeParse()`                                          |
+
+### Result
+
+- Fixed: 3 new (H-10, H-12, H-15) + 11 pre-existing = 14 resolved this session
+- H-01 through H-21 all 🟢
+- `npx tsc -b --noEmit` ✅ | `npx vite build` ✅ 4.33s
+
+---
+
+## Current Session (2026-07-07) — High Findings H-22..H-39 Verification + H-23/H-27 Fixes
+
+### Goal
+
+Verify and fix High findings H-22 through H-39 from `audit/newww/ai-os-new-audit-report (1).md`.
+
+### Changes
+
+| ID   | Status          | Fix                                                                                                                                               |
+| :--- | :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| H-22 | 🟢 Pre-existing | `DatabaseService.setKv()` already wrapped in Dexie transaction (line 93-102)                                                                      |
+| H-23 | 🟢 **Fixed**    | `EventLogRepository.lastPersistedSeq` now persisted via Dexie KV on every save, restored on load — survives HMR/restart                           |
+| H-24 | 🟢 Pre-existing | All 4 operations (`archiveSession`/`unarchiveSession`/`tagSession`/`moveToFolder`) call `sessionManager.updateMeta()`                             |
+| H-25 | 🟢 Pre-existing | `LifecycleManager` has `_initializing` re-entrancy guard                                                                                          |
+| H-26 | 🟢 Pre-existing | `RaceExecutor` removes `onParentAbort` listener in `finally` block                                                                                |
+| H-27 | 🟢 **Fixed**    | `SessionManagerService.ensureHistoryLoaded` race: added `_pendingHistorySaves` buffer — saves during async load are replayed after load completes |
+| H-28 | 🟢 Pre-existing | `PriorityQueue.delayWithSignal` removes listener in timer callback; `flushAll` calls `item.cleanup?.()`                                           |
+| H-29 | 🟢 Pre-existing | `DebateRuntimePanel` has guard: skip AGENT_CHUNK if AGENT_RESPONDED already fired                                                                 |
+| H-30 | 🟢 Pre-existing | `SchedulerService.checkSchedules` has `_checkingSchedules` re-entrancy guard; `runSchedule` reads from current Map                                |
+| H-31 | 🟢 Pre-existing | `TraceContext` has `runAsync<T>()` for async callbacks + H-31 comments                                                                            |
+| H-32 | 🟢 Pre-existing | `ExecutionGovernor._cleanup()` calls `removeEventListener('abort', ...)` before nulling handler                                                   |
+| H-33 | 🟢 Pre-existing | `DebateEngine` stores `_visibilityHandler` and removes it in `destroy()`                                                                          |
+| H-34 | 🟢 Pre-existing | `ChatExecutor.executeRaceRequest` removes `onParentAbort` listener in `finally`                                                                   |
+| H-35 | 🟢 Pre-existing | `CrossTabStateSync` tracks all 6 listeners via `this.unsubs.push(...)`                                                                            |
+| H-36 | 🟢 Pre-existing | `CrossTabStateSync` sends full state in broadcast; receiver uses `.set()` not `.delete()`                                                         |
+| H-37 | 🟢 Pre-existing | `GoogleStudioPanel` rewritten — delegates to sub-tabs, no shared `abortRef`                                                                       |
+| H-38 | 🟢 Pre-existing | `RoleSchema` and `Role` interface aligned                                                                                                         |
+| H-39 | 🟢 Pre-existing | `ICacheService` contract has `invalidate()` method                                                                                                |
+
+### Files Modified
+
+- `src/kernel/dal/event-log-repository.ts` — added `loadPersistedSeq()`/`persistSeq()` with Dexie KV persistence
+- `src/kernel/services/session-manager-service.ts` — added `_pendingHistorySaves` buffer, replay logic in `ensureHistoryLoaded`
+
+### Status
+
+- H-22 through H-39: **all 🟢** (2 fixed this session, 16 pre-existing)
+- `npx tsc -b --noEmit` ✅ | `npx vite build` ✅
+- H-40 through H-65: 🟢 all resolved in prior sessions
+- H-66 through H-187: ~120 remaining findings (feature gaps, performance, UI/UX) — many appear partially fixed

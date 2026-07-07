@@ -202,7 +202,7 @@ const MemoryPanel: React.FC = () => {
 
     const handleExportVectors = async () => {
         try {
-            const exportData = JSON.stringify(filteredMemories, null, 2);
+            const exportData = JSON.stringify(memories, null, 2);
             const blob = new Blob([exportData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');

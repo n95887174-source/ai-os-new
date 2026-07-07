@@ -459,17 +459,20 @@ export class ObsGapsService implements IObsGapsService {
 
     async scanServices(readFile?: ObsReadFile): Promise<ServiceObsInfo[]> {
         const services: ServiceObsInfo[] = [];
+        const fetchFile: ObsReadFile =
+            readFile ??
+            (async (path: string) => {
+                const res = await fetch(path);
+                if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+                return res.text();
+            });
         for (const [name, filePath] of Object.entries(SERVICE_FILE_MAP)) {
-            if (readFile) {
-                try {
-                    const content = await readFile(filePath);
-                    services.push(this.analyzeServiceContent(name, content));
-                    continue;
-                } catch {
-                    /* fall through to static */
-                }
+            try {
+                const content = await fetchFile(filePath);
+                services.push(this.analyzeServiceContent(name, content));
+            } catch {
+                services.push(staticFallback(name));
             }
-            services.push(staticFallback(name));
         }
         return services;
     }

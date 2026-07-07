@@ -73,6 +73,7 @@ export interface StreamEndPayload {
     provider?: string;
     model?: string;
     keyId?: string;
+    agentId?: string;
     ttft?: number;
     tps?: number;
     status?: StreamEndStatus;

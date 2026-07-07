@@ -52,6 +52,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
             getKv: <T>(id: string) => Promise<T | null>;
             setKv: <T>(id: string, value: T) => Promise<void>;
         },
+        private _lazyGetKeyIds?: () => string[],
     ) {
         this.eventBus = eventBus;
         this.database = database;
@@ -172,11 +173,12 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         }
         if (!this.eventBus) return;
 
-        // Periodic orphan cleanup every 5min
+        // Periodic orphan cleanup every 5min — reconciles against live key IDs
         this._purgeTimer = setInterval(() => {
-            const ids = new Set<string>();
-            for (const id of this.states.keys()) ids.add(id);
-            if (ids.size > 0) this.purgeOrphans(new Set(ids));
+            const liveIds = this._lazyGetKeyIds?.();
+            if (liveIds && liveIds.length > 0) {
+                this.purgeOrphans(new Set(liveIds));
+            }
         }, 300000);
 
         this.unsubs.push(

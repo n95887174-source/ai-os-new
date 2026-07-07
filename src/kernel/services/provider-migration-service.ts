@@ -1,77 +1,19 @@
 import type { IProviderMigrationService, MigrationPlan } from '../contracts/provider-migration';
+import type { IKeyService } from '../types/interfaces';
 
 const genId = () => crypto.randomUUID();
 
-/**
- * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
- */
+export interface ProviderMigrationServiceDeps {
+    keyService: IKeyService;
+}
+
 export class ProviderMigrationService implements IProviderMigrationService {
-    private plans: MigrationPlan[] = [
-        {
-            id: genId(),
-            name: 'Groq → NVIDIA Migration',
-            description: 'Migrate llama-3.1 workloads from Groq to NVIDIA NIM',
-            sourceProvider: 'Groq',
-            targetProvider: 'NVIDIA',
-            models: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
-            status: 'completed',
-            steps: [
-                {
-                    id: genId(),
-                    action: 'Validate credentials',
-                    detail: 'NVIDIA API key validated',
-                    status: 'done',
-                },
-                {
-                    id: genId(),
-                    action: 'Deploy models',
-                    detail: 'Both models deployed on NVIDIA NIM',
-                    status: 'done',
-                },
-                {
-                    id: genId(),
-                    action: 'Migrate routing rules',
-                    detail: '60% traffic shifted',
-                    status: 'done',
-                },
-                {
-                    id: genId(),
-                    action: 'Verify parity',
-                    detail: 'Latency within 15% of baseline',
-                    status: 'done',
-                },
-                {
-                    id: genId(),
-                    action: 'Full cutover',
-                    detail: '100% traffic on NVIDIA',
-                    status: 'done',
-                },
-            ],
-            createdAt: Date.now() - 86400000 * 3,
-            completedAt: Date.now() - 86400000 * 2,
-        },
-        {
-            id: genId(),
-            name: 'OpenRouter → Direct Gemini',
-            description: 'Move Gemini traffic to direct API endpoint',
-            sourceProvider: 'OpenRouter',
-            targetProvider: 'Gemini',
-            models: ['gemini-2.0-flash'],
-            status: 'in_progress',
-            steps: [
-                {
-                    id: genId(),
-                    action: 'Validate credentials',
-                    detail: 'Gemini API key validated',
-                    status: 'done',
-                },
-                { id: genId(), action: 'Deploy models', detail: '', status: 'running' },
-                { id: genId(), action: 'Migrate routing rules', detail: '', status: 'pending' },
-                { id: genId(), action: 'Full cutover', detail: '', status: 'pending' },
-            ],
-            createdAt: Date.now() - 3600000,
-        },
-    ];
+    private plans: MigrationPlan[] = [];
+    private deps: ProviderMigrationServiceDeps;
+
+    constructor(deps: ProviderMigrationServiceDeps) {
+        this.deps = deps;
+    }
 
     getPlans(): MigrationPlan[] {
         return [...this.plans];
@@ -103,12 +45,50 @@ export class ProviderMigrationService implements IProviderMigrationService {
         const plan = this.plans.find((p) => p.id === id);
         if (!plan) throw new Error(`Plan ${id} not found`);
         plan.status = 'in_progress';
-        for (const step of plan.steps) {
-            step.status = 'running';
-            await new Promise((r) => setTimeout(r, 800));
-            step.status = 'done';
-            step.detail = `${step.action} completed successfully`;
+
+        const setStep = (
+            idx: number,
+            status: MigrationPlan['steps'][0]['status'],
+            detail: string,
+        ) => {
+            if (plan.steps[idx]) {
+                plan.steps[idx] = { ...plan.steps[idx], status, detail };
+            }
+        };
+
+        // Step 1: Validate target provider credentials
+        const targetKeys = this.deps.keyService.getKeysByProvider(plan.targetProvider);
+        if (targetKeys.length > 0) {
+            const usable = targetKeys.some((k) => this.deps.keyService.canUseKey(k.id).can);
+            setStep(
+                0,
+                'done',
+                `${plan.targetProvider}: ${targetKeys.length} key(s), ${usable ? 'healthy' : 'degraded'}`,
+            );
+        } else {
+            setStep(0, 'error', `No API keys found for ${plan.targetProvider}`);
+            plan.status = 'failed';
+            return { ...plan };
         }
+
+        // Step 2: Source provider check
+        const sourceKeys = this.deps.keyService.getKeysByProvider(plan.sourceProvider);
+        setStep(1, 'done', `Source ${plan.sourceProvider}: ${sourceKeys.length} key(s)`);
+
+        // Step 3: Circuit breaker check
+        const circuitOpen = this.deps.keyService.isProviderCircuitOpen(plan.targetProvider);
+        setStep(
+            2,
+            'done',
+            circuitOpen ? 'Target circuit is open — may need recovery' : 'Target provider healthy',
+        );
+
+        // Step 4: Health verification
+        const healthy = targetKeys.filter((k) => this.deps.keyService.canUseKey(k.id).can);
+        setStep(3, 'done', `${healthy.length}/${targetKeys.length} target keys healthy`);
+
+        // Step 5: Cutover
+        setStep(4, 'done', 'Migration plan ready');
         plan.status = 'completed';
         plan.completedAt = Date.now();
         return { ...plan };

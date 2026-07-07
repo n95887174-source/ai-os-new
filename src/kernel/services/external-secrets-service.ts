@@ -1,6 +1,7 @@
 import { EVENTS } from '../events/event-names';
 import type { SecretStore, SecretRef, SecretStoreConfig } from '../contracts/secret-store';
 import { rootLogger } from './logger-service';
+import { CONFIG } from './config-registry';
 
 const LOGGER = rootLogger.child('ExternalSecretsService');
 
@@ -37,7 +38,7 @@ export class ExternalSecretsService {
         this.deps = deps;
     }
 
-    register(type: string, store: SecretStore) {
+    register(type: BackendType, store: SecretStore) {
         this.backends.set(type, store);
     }
 
@@ -70,7 +71,22 @@ export class ExternalSecretsService {
         return true;
     }
 
-    async activateBackend(type: BackendType, config: SecretStoreConfig): Promise<boolean> {
+    private verifyAdminToken(token?: string): boolean {
+        const expected = CONFIG.security?.adminToken;
+        if (!expected) return true;
+        if (!token) return false;
+        return token === expected;
+    }
+
+    async activateBackend(
+        type: BackendType,
+        config: SecretStoreConfig,
+        adminToken?: string,
+    ): Promise<boolean> {
+        if (!this.verifyAdminToken(adminToken)) {
+            LOGGER.warn('ExternalSecretsService', 'Unauthorized activateBackend attempt', { type });
+            throw new Error('Unauthorized: invalid admin token');
+        }
         const factory = this.deps.storeFactories?.[type];
         if (!factory) return false;
 
@@ -152,7 +168,13 @@ export class ExternalSecretsService {
         return ok;
     }
 
-    async deleteSecret(ref: SecretRef): Promise<boolean> {
+    async deleteSecret(ref: SecretRef, adminToken?: string): Promise<boolean> {
+        if (!this.verifyAdminToken(adminToken)) {
+            LOGGER.warn('ExternalSecretsService', 'Unauthorized deleteSecret attempt', {
+                path: ref.path,
+            });
+            throw new Error('Unauthorized: invalid admin token');
+        }
         let ok = false;
         for (const store of this.backends.values()) {
             if (
@@ -164,6 +186,7 @@ export class ExternalSecretsService {
                 ok = true;
             }
         }
+        LOGGER.info('ExternalSecretsService', 'Secret deleted', { path: ref.path, ok });
         return ok;
     }
 
@@ -176,7 +199,15 @@ export class ExternalSecretsService {
     async migrateSecrets(
         from: BackendType,
         to: BackendType,
+        adminToken?: string,
     ): Promise<{ migrated: number; failed: number }> {
+        if (!this.verifyAdminToken(adminToken)) {
+            LOGGER.warn('ExternalSecretsService', 'Unauthorized migrateSecrets attempt', {
+                from,
+                to,
+            });
+            throw new Error('Unauthorized: invalid admin token');
+        }
         const source = this.backends.get(from);
         const target = this.backends.get(to);
         if (!source || !target) return { migrated: 0, failed: 0 };
@@ -202,6 +233,7 @@ export class ExternalSecretsService {
             }
         }
 
+        LOGGER.info('ExternalSecretsService', `Migration ${from} → ${to}`, { migrated, failed });
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
             message: `Migration ${from} → ${to}: ${migrated} migrated, ${failed} failed`,
             type: failed > 0 ? 'warning' : 'success',

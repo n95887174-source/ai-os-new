@@ -106,7 +106,23 @@ export const registerPhase1: Phase = (helpers, ctx) => {
 
     register(
         'keyStateStore',
-        (c) => new KeyStateStore(c.get<IEventBus>('eventBus'), c.get<IDatabaseService>('database')),
+        (c) =>
+            new KeyStateStore(
+                c.get<IEventBus>('eventBus'),
+                c.get<IDatabaseService>('database'),
+                () => {
+                    try {
+                        return (
+                            c
+                                .get<KeyService>('keyService')
+                                ?.getKeys()
+                                .map((k) => k.id) ?? []
+                        );
+                    } catch {
+                        return [];
+                    }
+                },
+            ),
     );
 
     // A-04: tracker.start() called inside factory — instance exists at that point.

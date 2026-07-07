@@ -7,12 +7,13 @@ export interface TimeSnapshot {
     timestamp: number;
     size: number;
     changes: string[];
+    snapshotRefId?: string;
 }
 
 export interface ITimeMachineService {
     getSnapshots(): TimeSnapshot[];
     createSnapshot(label: string, scope: SnapshotScope): TimeSnapshot;
-    restoreSnapshot(id: string): void;
+    restoreSnapshot(id: string): Promise<void>;
     deleteSnapshot(id: string): void;
     compareSnapshots(id1: string, id2: string): { key: string; before: string; after: string }[];
 }

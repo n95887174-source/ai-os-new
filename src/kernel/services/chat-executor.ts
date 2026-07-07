@@ -138,12 +138,14 @@ export class ChatExecutor {
                         type: 'warning',
                         message: `Prompt blocked by security scan: ${scanResult.summary}`,
                     });
-                    promptSecurityService.addEvent({
-                        timestamp: Date.now(),
-                        prompt: promptText.slice(0, 200),
-                        result: scanResult,
-                        blocked: true,
-                    });
+                    await promptSecurityService
+                        .addEvent({
+                            timestamp: Date.now(),
+                            prompt: promptText.slice(0, 200),
+                            result: scanResult,
+                            blocked: true,
+                        })
+                        .catch(() => {});
                     throw new LLMError(
                         'SecurityError',
                         `Prompt blocked: ${scanResult.summary}`,
@@ -371,6 +373,38 @@ export class ChatExecutor {
                         }
 
                         const latencyMs = Math.round(performance.now() - startTime);
+
+                        // H-119: Scan LLM response for sensitive content before emitting
+                        if (result?.content && promptSecurityService.getConfig().enabled) {
+                            const outputScan = promptSecurityService.scan(result.content);
+                            if (!outputScan.safe) {
+                                LOGGER.warn('ChatExecutor', 'Response blocked by security scan', {
+                                    requestId,
+                                    score: outputScan.score,
+                                    summary: outputScan.summary,
+                                });
+                                this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+                                    id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+                                    requestId,
+                                    provider: currentProvider,
+                                    model: effectiveModel,
+                                    keyId: req.keyId,
+                                    content: '[Response blocked by content security policy]',
+                                    latency: latencyMs,
+                                    status: 'error',
+                                    error: `Response blocked by security policy (score: ${outputScan.score}/10)`,
+                                } satisfies ChatResponse);
+                                promptSecurityService
+                                    .addEvent({
+                                        timestamp: Date.now(),
+                                        prompt: promptText.slice(0, 200),
+                                        result: outputScan,
+                                        blocked: true,
+                                    })
+                                    .catch(() => {});
+                                return;
+                            }
+                        }
 
                         if (result && result.content !== undefined && result.content !== null) {
                             this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {

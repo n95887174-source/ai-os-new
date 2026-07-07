@@ -164,6 +164,7 @@ export class BudgetService implements IBudgetService {
                 tokens?: number;
                 inputTokens?: number;
                 outputTokens?: number;
+                agentId?: string;
             }>(EVENTS.STREAM_END, (d) => {
                 if (!d.requestId || !d.model) return;
                 const input = d.inputTokens ?? Math.round((d.tokens || 0) * 0.3);
@@ -187,6 +188,7 @@ export class BudgetService implements IBudgetService {
                     outputCost: (output / 1_000_000) * cc.getOutputCost(d.model),
                     totalCost: cost,
                     timestamp: now,
+                    agentId: d.agentId,
                 });
                 this._invalidateMonthFiltered();
                 if (this.costHistory.length > 10000) {

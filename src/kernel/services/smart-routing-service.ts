@@ -5,6 +5,8 @@ import type {
     RoutingDecision,
     ISmartRoutingService,
 } from '../contracts/smart-routing';
+import type { IProviderTracker } from '../types/interfaces';
+import type { ICostCalculator } from '../contracts/pricing';
 
 const DEFAULT_CONFIG: SmartRoutingConfig = {
     defaultProvider: 'openrouter',
@@ -19,13 +21,20 @@ const DEFAULT_CONFIG: SmartRoutingConfig = {
 
 let nextId = 1;
 
-/**
- * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
- */
+export interface SmartRoutingServiceDeps {
+    providerTracker: IProviderTracker;
+    pricingService: ICostCalculator;
+}
+
 export class SmartRoutingService implements ISmartRoutingService {
     private config: SmartRoutingConfig = { ...DEFAULT_CONFIG };
     private rules: RoutingRule[] = [];
     private decisionHistory: RoutingDecision[] = [];
+    private deps: SmartRoutingServiceDeps;
+
+    constructor(deps: SmartRoutingServiceDeps) {
+        this.deps = deps;
+    }
 
     getConfig(): SmartRoutingConfig {
         return { ...this.config };
@@ -75,6 +84,20 @@ export class SmartRoutingService implements ISmartRoutingService {
         });
     }
 
+    private getAvgLatency(prov: string): number {
+        const keys = this.deps.providerTracker.getProviderRankings();
+        const p = keys.find((k) => k.provider.toLowerCase() === prov.toLowerCase());
+        return p?.avgLatency ?? 200;
+    }
+
+    private getEstimatedCost(_provider: string, model: string): number {
+        try {
+            return this.deps.pricingService.estimateCost(model, 500);
+        } catch {
+            return 0.001;
+        }
+    }
+
     simulateRouting(request: {
         model?: string;
         provider?: string;
@@ -96,21 +119,26 @@ export class SmartRoutingService implements ISmartRoutingService {
                     selectedProvider: rule.targetProvider,
                     selectedModel: rule.targetModel ?? this.config.defaultModel,
                     fallbackUsed: false,
-                    latency: Math.random() * 500 + 100,
-                    estimatedCost: Math.random() * 0.01,
+                    latency: this.getAvgLatency(rule.targetProvider),
+                    estimatedCost: this.getEstimatedCost(
+                        rule.targetProvider,
+                        rule.targetModel ?? this.config.defaultModel,
+                    ),
                     matchedConditions,
                     timestamp: Date.now(),
                 };
             }
         }
 
+        const prov = request.provider || this.config.defaultProvider;
+        const model = request.model || this.config.defaultModel;
         const decision: RoutingDecision = {
             ruleId: null,
-            selectedProvider: request.provider || this.config.defaultProvider,
-            selectedModel: request.model || this.config.defaultModel,
+            selectedProvider: prov,
+            selectedModel: model,
             fallbackUsed: false,
-            latency: Math.random() * 500 + 100,
-            estimatedCost: Math.random() * 0.01,
+            latency: this.getAvgLatency(prov),
+            estimatedCost: this.getEstimatedCost(prov, model),
             matchedConditions,
             timestamp: Date.now(),
         };
@@ -138,9 +166,11 @@ export class SmartRoutingService implements ISmartRoutingService {
             case 'provider_match':
                 return req.provider === c.value;
             case 'max_latency':
-                return (req.maxLatency ?? Infinity) <= Number(c.value);
+                if (req.maxLatency === undefined) return true;
+                return req.maxLatency <= Number(c.value);
             case 'max_cost':
-                return (req.maxCost ?? Infinity) <= Number(c.value);
+                if (req.maxCost === undefined) return true;
+                return req.maxCost <= Number(c.value);
             default:
                 return true;
         }

@@ -299,7 +299,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Prompt Version Service ──────────────────────────
     register('promptVersionService', (_c) => new PromptVersionService());
     // ── Provider Migration Service ─────────────────────────
-    register('providerMigrationService', (_c) => new ProviderMigrationService());
+    register(
+        'providerMigrationService',
+        (c) => new ProviderMigrationService({ keyService: c.get<KeyService>('keyService') }),
+    );
     // ── Health SLA Service ──────────────────────────────
     register(
         'healthSlaService',
@@ -343,6 +346,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
             new TimeMachineService({
                 eventBus: c.get('eventBus'),
                 database: c.get<IDatabaseService>('database'),
+                snapshotService: c.get('snapshotService'),
             }),
     );
     // ── Contribution Service ──────────────────────────
@@ -369,7 +373,14 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Quantum Inspiration Service ─────────────────
     register('quantumInspirationService', (_c) => new QuantumInspirationService());
     // ── Smart Routing Service ─────────────────────
-    register('smartRoutingService', (_c) => new SmartRoutingService());
+    register(
+        'smartRoutingService',
+        (c) =>
+            new SmartRoutingService({
+                providerTracker: c.get('providerTracker'),
+                pricingService: c.get('costCalculator'),
+            }),
+    );
     // ── NVIDIA Enterprise Service ─────────────────
     register('nvidiaEnterpriseService', (_c) => new NvidiaEnterpriseService());
     // ── Gemini Cache Service ─────────────────────

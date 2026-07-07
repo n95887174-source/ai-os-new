@@ -124,6 +124,11 @@ export class GeminiCacheService implements IGeminiCacheService {
         return [];
     }
 
+    recordHit(id: string): void {
+        const cached = this.caches.find((c) => c.id === id);
+        if (cached) cached.hits++;
+    }
+
     getEstimatedSavings(): { totalSaved: number; cacheHitRate: number } {
         const totalHits = this.caches.reduce((s, c) => s + c.hits, 0);
         const totalTokens = this.caches.reduce((s, c) => s + c.sizeTokens, 0);

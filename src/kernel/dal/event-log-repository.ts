@@ -6,6 +6,8 @@ import { safeJsonParse } from '../utils/safe-json';
 
 const LOGGER = rootLogger.child('EventLogRepository');
 
+const SEQ_STORAGE_KEY = 'event_log_last_persisted_seq';
+
 export class EventLogRepository implements EventRecorderStore {
     private db: DatabaseService;
     private lastPersistedSeq = -1;
@@ -16,16 +18,36 @@ export class EventLogRepository implements EventRecorderStore {
         this.maxEvents = maxEvents;
     }
 
+    private async loadPersistedSeq(): Promise<void> {
+        try {
+            const record = await this.db.getKv<number>(SEQ_STORAGE_KEY);
+            if (record !== null && typeof record === 'number' && record >= 0) {
+                this.lastPersistedSeq = record;
+            }
+        } catch {
+            // Non-critical — will recover from eventLog table
+        }
+    }
+
+    private async persistSeq(): Promise<void> {
+        try {
+            await this.db.setKv(SEQ_STORAGE_KEY, this.lastPersistedSeq);
+        } catch {
+            // Non-critical — sequence will be recovered on next load
+        }
+    }
+
     async load(): Promise<{ events: RecordedEvent[]; sequence: number } | null> {
         try {
+            await this.loadPersistedSeq();
             const total = await this.db.eventLog.count();
-            if (total === 0) return null;
+            if (total === 0) return { events: [], sequence: this.lastPersistedSeq + 1 };
             const keep = Math.min(total, this.maxEvents);
             const rows = await this.db.eventLog.orderBy('sequence').reverse().limit(keep).toArray();
             rows.reverse();
 
             const seq = rows[rows.length - 1].sequence;
-            this.lastPersistedSeq = seq;
+            if (seq > this.lastPersistedSeq) this.lastPersistedSeq = seq;
             const events: RecordedEvent[] = rows.map((row) => ({
                 sequence: row.sequence,
                 event: row.event,
@@ -72,6 +94,7 @@ export class EventLogRepository implements EventRecorderStore {
                     await this.db.eventLog.bulkDelete(oldestIds);
                 }
             });
+            await this.persistSeq();
         } catch (e) {
             LOGGER.warn('EventLogRepository', 'Save failed', { error: e });
         }
@@ -80,5 +103,10 @@ export class EventLogRepository implements EventRecorderStore {
     async clearAll(): Promise<void> {
         await this.db.eventLog.clear();
         this.lastPersistedSeq = -1;
+        try {
+            await this.db.setKv(SEQ_STORAGE_KEY, -1);
+        } catch {
+            // Non-critical
+        }
     }
 }
