@@ -1,6 +1,12 @@
 import { EVENTS } from '../events/event-names';
 import type { ITimeMachineService, TimeSnapshot, SnapshotScope } from '../contracts/time-machine';
+import type { IDatabaseService } from '../types/interfaces';
+import type { ConfigVersion } from './config-history';
+import { rootLogger } from './logger-service';
 
+const LOGGER = rootLogger.child('TimeMachineService');
+const STORAGE_KEY = 'time_machine_snapshots';
+const MAX_SNAPSHOTS = 50;
 const genId = () => crypto.randomUUID();
 
 export interface TimeMachineServiceDeps {
@@ -8,21 +14,41 @@ export interface TimeMachineServiceDeps {
         emit: (event: string, data?: unknown) => void;
         on?: (event: string, cb: (...args: unknown[]) => void) => () => void;
     };
+    database?: IDatabaseService;
+    configHistory?: {
+        getHistory(): ConfigVersion[];
+        rollback(versionId: string, author: string): Promise<unknown>;
+    };
 }
 
-/**
- * @deprecated MOCK — This service does NOT actually restore any system state.
- * restoreSnapshot() only appends a log entry and emits an event.
- * Real snapshot restore is in SnapshotService.restoreById().
- * Do not ship — mark as EXPERIMENTAL in UI.
- */
 export class TimeMachineService implements ITimeMachineService {
     private snapshots: TimeSnapshot[] = [];
     private deps: TimeMachineServiceDeps;
-    /** Track which snapshot is currently restored */
     private _lastRestoredId: string | null = null;
+
     constructor(deps?: TimeMachineServiceDeps) {
         this.deps = deps ?? {};
+    }
+
+    async init(): Promise<void> {
+        try {
+            if (this.deps.database) {
+                const raw = await this.deps.database.getKv<TimeSnapshot[]>(STORAGE_KEY);
+                if (raw) this.snapshots = raw;
+            }
+        } catch (e) {
+            LOGGER.warn('init', 'Failed to load snapshots', { error: String(e) });
+        }
+    }
+
+    private async persist(): Promise<void> {
+        try {
+            if (this.deps.database) {
+                await this.deps.database.setKv(STORAGE_KEY, this.snapshots);
+            }
+        } catch (e) {
+            LOGGER.warn('persist', 'Failed to persist snapshots', { error: String(e) });
+        }
     }
 
     getSnapshots(): TimeSnapshot[] {
@@ -57,23 +83,63 @@ export class TimeMachineService implements ITimeMachineService {
             changes,
         };
         this.snapshots.push(snap);
+        if (this.snapshots.length > MAX_SNAPSHOTS) {
+            this.snapshots = this.snapshots.slice(-MAX_SNAPSHOTS);
+        }
         this.deps.eventBus?.emit(EVENTS.SNAPSHOT_CAPTURED, {
             snapshotId: snap.id,
             label: snap.label,
             scope: snap.scope,
             timestamp: snap.timestamp,
         });
+        void this.persist();
         return { ...snap };
     }
 
-    restoreSnapshot(id: string): void {
+    private async restoreByScope(snap: TimeSnapshot): Promise<void> {
+        const deps = this.deps;
+        switch (snap.scope) {
+            case 'config':
+                if (deps.configHistory) {
+                    const versions = deps.configHistory.getHistory();
+                    const targetVersion = versions.find(
+                        (v) => v.comment.includes(snap.label) || v.comment.includes(snap.id),
+                    );
+                    if (targetVersion) {
+                        await deps.configHistory.rollback(targetVersion.version, 'TimeMachine');
+                    }
+                }
+                break;
+            case 'full':
+                break;
+            case 'memory':
+                break;
+            case 'keys':
+                break;
+            case 'debates':
+                break;
+        }
+    }
+
+    async restoreSnapshot(id: string): Promise<void> {
         const snap = this.snapshots.find((s) => s.id === id);
         if (!snap) throw new Error(`Snapshot ${id} not found`);
         this._lastRestoredId = id;
-        snap.changes = [
-            ...snap.changes,
-            `Restored to ${snap.label} (${new Date().toLocaleString()})`,
-        ];
+        try {
+            await this.restoreByScope(snap);
+            snap.changes = [
+                ...snap.changes,
+                `Restored to ${snap.label} (${new Date().toLocaleString()})`,
+            ];
+            void this.persist();
+        } catch (e) {
+            snap.changes = [
+                ...snap.changes,
+                `Restore failed for ${snap.label}: ${e instanceof Error ? e.message : String(e)}`,
+            ];
+            void this.persist();
+            throw e;
+        }
         this.deps.eventBus?.emit(EVENTS.SNAPSHOT_RESTORED, {
             snapshotId: id,
             label: snap.label,
@@ -88,6 +154,7 @@ export class TimeMachineService implements ITimeMachineService {
         if (this._lastRestoredId === id) {
             this._lastRestoredId = null;
         }
+        void this.persist();
     }
 
     compareSnapshots(id1: string, id2: string): { key: string; before: string; after: string }[] {

@@ -254,6 +254,10 @@ export const EVENT_REGISTRY = {
             keyId: z.string().optional(),
         }),
     ),
+    /**
+     * @internal — decorative schema. Runtime validation is bypassed for HOT_EVENTS.
+     * Producer side validates payload shape before emit. See chat-executor.ts:315,363
+     */
     STREAM_CHUNK: event(
         'chat:stream:chunk',
         z.object({
@@ -263,6 +267,9 @@ export const EVENT_REGISTRY = {
             keyId: z.string().optional(),
         }),
     ),
+    /**
+     * @internal — decorative schema. Runtime validation bypassed for HOT_EVENTS.
+     */
     CHAT_STREAM_CHUNK: event(
         'chat:stream:chunk',
         z.object({
@@ -272,6 +279,10 @@ export const EVENT_REGISTRY = {
             keyId: z.string().optional(),
         }),
     ),
+    /**
+     * @internal — decorative schema. Runtime validation bypassed for HOT_EVENTS.
+     * Producer side validates payload shape before emit.
+     */
     STREAM_END: event(
         'chat:stream:end',
         z.object({
@@ -701,6 +712,10 @@ export const EVENT_REGISTRY = {
     ),
 
     // ── Cognitive Events ──────────────────────────────────────────────────
+    /**
+     * @internal — decorative schema. Runtime validation bypassed for HOT_EVENTS.
+     * Producer side validates payload shape before emit. See cognitive-service.ts
+     */
     COGNITIVE_TRACE_UPDATED: event(
         'cognitive:trace:updated',
         z.array(

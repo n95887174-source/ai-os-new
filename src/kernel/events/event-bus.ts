@@ -68,17 +68,16 @@ export class EventBus implements IEventBus {
     // (up to 1MB each × 100 = 100MB memory leak). If replay is needed later, implement with
     // structuredClone + size cap. See git history for removed code.
 
-    // PERF-C2: High-frequency events that skip Zod validation to avoid main-thread blocking
-    // STREAM_CHUNK fires 50-200/sec during streaming; validation adds 5-50µs per call = significant overhead
-    // P0-3: HOT_EVENTS also bypass emitDepth deferral to prevent perpetual "streaming" state
+    // P0-3: HOT_EVENTS bypass emitDepth deferral to prevent perpetual "streaming" state
+    // Hot events still get Zod validation (removed skip in C-30 fix — safeParse on simple schemas <10µs)
     private static readonly HOT_EVENTS = new Set([
-        'chat:stream:chunk', // 50-200/sec during streaming
-        'chat:stream:end', // must never be deferred — terminates streaming state
-        'chat:stream:provider-switch', // on provider fallback
-        'cognitive:trace:updated', // 20-50/sec during agent workforce — skip deep Zod validation on full traces array
+        'chat:stream:chunk',
+        'chat:stream:end',
+        'chat:stream:provider-switch',
+        'cognitive:trace:updated',
         'cognitive:step:active',
         'cognitive:step:completed',
-        'cognitive:decision:made', // emitted per agent node but has no subscribers — skip Zod validation entirely
+        'cognitive:decision:made',
     ]);
 
     private readonly hotEvents = EventBus.HOT_EVENTS;
@@ -198,8 +197,7 @@ export class EventBus implements IEventBus {
         const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } })?.memory;
         const heapBefore = isTraceEvent && mem ? mem.usedJSHeapSize : 0;
 
-        // PERF-C2: Skip validation for hot (high-frequency) events to avoid main-thread blocking
-        if (validator && !this.hotEvents.has(eventStr)) {
+        if (validator) {
             const result = validator.safeParse(payload);
             if (!result.success) {
                 const msg = result.error?.issues[0]?.message || 'unknown error';

@@ -11,6 +11,7 @@
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
+import type { IMemoryEngine } from '../contracts/memory';
 import type { LoggerService } from '../services/logger-service';
 import type { DataAccessLayer } from '../dal';
 import type { KeyService } from '../services/key-management/key-service';
@@ -306,7 +307,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Agent Protocol Service ─────────────────────────
     register('agentProtocolService', (_c) => new AgentProtocolService());
     // ── Federated Memory Service ──────────────────────
-    register('federatedMemoryService', (_c) => new FederatedMemoryService());
+    register(
+        'federatedMemoryService',
+        (c) => new FederatedMemoryService({ database: c.get<IDatabaseService>('database') }),
+    );
     // ── Plugin SDK Service ────────────────────────────
     register('pluginSdkService', (_c) => new PluginSdkService());
     // ── Persona Marketplace Service ───────────────────
@@ -314,11 +318,25 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Template Sharing Service ──────────────────────
     register('templateSharingService', (_c) => new TemplateSharingService());
     // ── Memory Transfer Service ───────────────────────
-    register('memoryTransferService', (_c) => new MemoryTransferService());
+    register(
+        'memoryTransferService',
+        (c) =>
+            new MemoryTransferService({
+                memoryService: c.get<IMemoryEngine>('memoryService'),
+                database: c.get<IDatabaseService>('database'),
+            }),
+    );
     // ── Aquarium Trading Service ──────────────────────
     register('aquariumTradingService', (_c) => new AquariumTradingService());
     // ── Time Machine Service ──────────────────────────
-    register('timeMachineService', (c) => new TimeMachineService({ eventBus: c.get('eventBus') }));
+    register(
+        'timeMachineService',
+        (c) =>
+            new TimeMachineService({
+                eventBus: c.get('eventBus'),
+                database: c.get<IDatabaseService>('database'),
+            }),
+    );
     // ── Contribution Service ──────────────────────────
     register(
         'contributionService',

@@ -4,59 +4,255 @@ import type {
     MemoryImport,
     ExportFormat,
 } from '../contracts/memory-transfer';
+import type { IMemoryEngine } from '../contracts/memory';
+import type { MemoryEntry } from '../types/memory-types';
+import type { IDatabaseService } from '../types/interfaces';
+import { rootLogger } from './logger-service';
 
+const LOGGER = rootLogger.child('MemoryTransferService');
 const genId = () => crypto.randomUUID();
+const EXPORT_HISTORY_KEY = 'memory_transfer_exports';
+const IMPORT_HISTORY_KEY = 'memory_transfer_imports';
+const MAX_HISTORY = 100;
 
-/**
- * @deprecated MOCK — export() generates placeholder text, import() never writes to DB.
- * No real memory integration. Do not ship — mark as EXPERIMENTAL in UI.
- */
+export interface MemoryTransferServiceDeps {
+    memoryService: IMemoryEngine;
+    database: IDatabaseService;
+}
+
+function serializeEntryToJson(entry: MemoryEntry): string {
+    return JSON.stringify({
+        id: entry.id,
+        content: entry.content,
+        metadata: entry.metadata,
+        vector: entry.vector,
+    });
+}
+
+function serializeEntryToCsv(entry: MemoryEntry): string {
+    const meta = entry.metadata;
+    const content = entry.content.replace(/"/g, '""').replace(/\n/g, '\\n');
+    const source = (meta.source ?? '').replace(/"/g, '""');
+    const type = (meta.type ?? '').replace(/"/g, '""');
+    return `"${content}","${source}","${type}","${meta.timestamp ?? 0}","${meta.importance ?? 0}"`;
+}
+
+const CSV_HEADER = '"content","source","type","timestamp","importance"';
+
+function serializeEntryToMarkdown(entry: MemoryEntry): string {
+    const meta = entry.metadata;
+    const section = meta.source && meta.type ? `${meta.source}:${meta.type}` : 'General';
+    return `## ${section}\n> *Source: ${meta.source ?? 'unknown'} | Type: ${meta.type ?? 'unknown'} | Timestamp: ${new Date(meta.timestamp ?? Date.now()).toISOString()} | Importance: ${meta.importance ?? 0}*\n\n${entry.content}\n`;
+}
+
 export class MemoryTransferService implements IMemoryTransferService {
     private exports: MemoryExport[] = [];
     private imports: MemoryImport[] = [];
+    private db: IDatabaseService;
+    private memory: IMemoryEngine;
+    private initialized = false;
+
+    constructor(deps: MemoryTransferServiceDeps) {
+        this.db = deps.database;
+        this.memory = deps.memoryService;
+    }
+
+    async init(): Promise<void> {
+        if (this.initialized) return;
+        this.initialized = true;
+        try {
+            const [savedExports, savedImports] = await Promise.all([
+                this.db.getKv<MemoryExport[]>(EXPORT_HISTORY_KEY),
+                this.db.getKv<MemoryImport[]>(IMPORT_HISTORY_KEY),
+            ]);
+            if (savedExports) this.exports = savedExports.slice(-MAX_HISTORY);
+            if (savedImports) this.imports = savedImports.slice(-MAX_HISTORY);
+        } catch (e) {
+            LOGGER.warn('init', 'Failed to load persisted history', { error: String(e) });
+        }
+    }
+
+    private async persistExports(): Promise<void> {
+        try {
+            await this.db.setKv(EXPORT_HISTORY_KEY, this.exports.slice(-MAX_HISTORY));
+        } catch (e) {
+            LOGGER.warn('persistExports', 'Failed', { error: String(e) });
+        }
+    }
+
+    private async persistImports(): Promise<void> {
+        try {
+            await this.db.setKv(IMPORT_HISTORY_KEY, this.imports.slice(-MAX_HISTORY));
+        } catch (e) {
+            LOGGER.warn('persistImports', 'Failed', { error: String(e) });
+        }
+    }
 
     export(format: ExportFormat, sections: string[]): MemoryExport {
-        const serialized = sections
-            .map((s) => `## ${s}\n- (memory data for section: ${s})\n`)
-            .join('\n');
-        const header = `# Memory Export\nFormat: ${format}\nGenerated: ${new Date().toISOString()}\nSections: ${sections.join(', ')}\n\n`;
-        const data = header + serialized;
+        const allMemories = this.memory.getMemories();
+
+        const filtered =
+            sections.length > 0 && sections[0] !== '*'
+                ? allMemories.filter(
+                      (m) =>
+                          sections.includes(m.metadata.type ?? '') ||
+                          sections.includes(m.metadata.source ?? ''),
+                  )
+                : allMemories;
+
+        let data: string;
+        switch (format) {
+            case 'json':
+                data = `[\n${filtered.map(serializeEntryToJson).join(',\n')}\n]`;
+                break;
+            case 'csv':
+                data = `${CSV_HEADER}\n${filtered.map(serializeEntryToCsv).join('\n')}`;
+                break;
+            case 'markdown':
+            default:
+                data = `# Memory Export\nGenerated: ${new Date().toISOString()}\nEntries: ${filtered.length}\n\n${filtered.map(serializeEntryToMarkdown).join('\n---\n')}`;
+                break;
+        }
+
         const exportEntry: MemoryExport = {
             format,
             sections,
             data,
             createdAt: Date.now(),
-            size: new Blob([data]).size,
+            size: new TextEncoder().encode(data).length,
         };
         this.exports.push(exportEntry);
+        void this.persistExports();
         return { ...exportEntry };
     }
 
     getExportHistory(): MemoryExport[] {
-        return [...this.exports];
+        return this.exports.map((e) => ({ ...e }));
     }
 
     async import(data: string, format: ExportFormat): Promise<MemoryImport> {
-        await new Promise((r) => setTimeout(r, 800));
-        const entryCount = data.split('##').length - 1;
-        const importEntry: MemoryImport = {
-            id: genId(),
-            source: 'import',
-            format,
-            entriesCount: Math.max(entryCount, 1),
-            status: 'completed',
-            createdAt: Date.now(),
-        };
-        this.imports.push(importEntry);
-        return { ...importEntry };
+        const id = genId();
+        try {
+            let entries: Omit<MemoryEntry, 'id'>[] = [];
+
+            switch (format) {
+                case 'json': {
+                    const parsed = JSON.parse(data);
+                    const rawList = Array.isArray(parsed) ? parsed : [parsed];
+                    entries = rawList
+                        .filter((r: Record<string, unknown>) => typeof r.content === 'string')
+                        .map((r: Record<string, unknown>) => ({
+                            content: r.content as string,
+                            metadata: {
+                                source:
+                                    ((r.metadata as Record<string, unknown>)?.source as string) ??
+                                    'import',
+                                type:
+                                    ((r.metadata as Record<string, unknown>)?.type as string) ??
+                                    'imported',
+                                timestamp:
+                                    ((r.metadata as Record<string, unknown>)
+                                        ?.timestamp as number) ?? Date.now(),
+                                importance:
+                                    ((r.metadata as Record<string, unknown>)
+                                        ?.importance as number) ?? 5,
+                            },
+                            vector: Array.isArray(r.vector) ? (r.vector as number[]) : undefined,
+                        }));
+                    break;
+                }
+                case 'csv': {
+                    const lines = data
+                        .split('\n')
+                        .filter((l) => l.trim() && !l.startsWith('"content",'));
+                    for (const line of lines) {
+                        const parts = line.match(/"(?:[^"]|"")*"/g);
+                        if (!parts || parts.length < 3) continue;
+                        const content = parts[0]
+                            .replace(/""/g, '"')
+                            .replace(/\\n/g, '\n')
+                            .slice(1, -1);
+                        const source = parts[1].slice(1, -1);
+                        const type = parts[2].slice(1, -1);
+                        const timestamp = parts[3]
+                            ? Number(parts[3].replace(/"/g, ''))
+                            : Date.now();
+                        const importance = parts[4] ? Number(parts[4].replace(/"/g, '')) : 5;
+                        entries.push({
+                            content,
+                            metadata: { source, type, timestamp, importance },
+                        });
+                    }
+                    break;
+                }
+                case 'markdown':
+                default: {
+                    const sections = data.split('## ').filter(Boolean);
+                    for (const section of sections) {
+                        const lines = section.split('\n').filter(Boolean);
+                        const sectionName = lines[0]?.trim() ?? 'General';
+                        const contentLines = lines.slice(2).filter((l) => !l.startsWith('>'));
+                        const content = contentLines.join('\n').trim();
+                        if (content) {
+                            entries.push({
+                                content,
+                                metadata: {
+                                    source: 'import',
+                                    type: sectionName,
+                                    timestamp: Date.now(),
+                                    importance: 5,
+                                },
+                            });
+                        }
+                    }
+                }
+            }
+
+            const entryCount = entries.length;
+
+            if (entryCount > 0) {
+                await this.memory.storeBatch(entries);
+            }
+
+            const importEntry: MemoryImport = {
+                id,
+                source: 'import',
+                format,
+                entriesCount: entryCount,
+                status: 'completed',
+                createdAt: Date.now(),
+            };
+            this.imports.push(importEntry);
+            void this.persistImports();
+            return { ...importEntry };
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            LOGGER.warn('import', `Import failed (${format})`, { error: msg });
+            const importEntry: MemoryImport = {
+                id,
+                source: 'import',
+                format,
+                entriesCount: 0,
+                status: 'failed',
+                createdAt: Date.now(),
+                error: msg,
+            };
+            this.imports.push(importEntry);
+            void this.persistImports();
+            return { ...importEntry };
+        }
     }
 
     getImportHistory(): MemoryImport[] {
-        return [...this.imports];
+        return this.imports.map((i) => ({ ...i }));
     }
 
     previewImport(data: string, _format: ExportFormat): { sections: string[]; entries: number } {
-        const sections = ['Episodic Memories', 'Semantic Memories', 'Procedural Memories'];
-        return { sections, entries: data.split('##').length };
+        const headings = data.match(/^##\s+(.+)$/gm);
+        const sections = headings
+            ? [...new Set(headings.map((h) => h.replace(/^##\s+/, '').trim()))]
+            : ['General'];
+        const entries = sections.length;
+        return { sections, entries };
     }
 }
