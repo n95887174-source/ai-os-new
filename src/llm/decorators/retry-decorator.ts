@@ -1,5 +1,5 @@
 import { LLMError } from '../core/errors';
-import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions, StreamMeta } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { RetryableError } from '../core/errors';
 import { FALLBACK_LOGGER } from '../../shared/utils/logger';
@@ -103,7 +103,7 @@ export class RetryDecorator extends BaseDecorator {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {

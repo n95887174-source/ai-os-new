@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions, StreamMeta } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 
 // CONTRACT-C8: This is NOT real semantic embeddings — it's an FNV-1a hash-based
@@ -302,7 +302,7 @@ export class CacheDecorator extends BaseDecorator {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {

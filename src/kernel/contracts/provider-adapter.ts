@@ -14,6 +14,23 @@ export type { HealthCheckResult as AdapterHealthResult } from '../types/llm-type
 export type AdapterFinishReason =
     'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
 
+export interface StreamMeta {
+    finishReason?: string;
+    usage?: Record<string, unknown>;
+    reasoning?: string;
+    tokens?: number;
+    safetyRatings?: Array<{
+        category: string;
+        probability: string;
+        blocked?: boolean;
+    }>;
+    usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+    };
+}
+
 interface BatchRequest {
     messages: AdapterMessage[];
     model: string;
@@ -26,7 +43,7 @@ interface BatchStreamRequest {
     messages: AdapterMessage[];
     model: string;
     apiKey: string;
-    onChunk: (chunk: string, meta?: unknown) => void;
+    onChunk: (chunk: string, meta?: StreamMeta) => void;
     signal?: AbortSignal;
     options?: AdapterSendMessageOptions;
 }
@@ -44,7 +61,7 @@ export interface IProviderAdapter {
         messages: AdapterMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: AdapterSendMessageOptions,
     ): Promise<void>;
@@ -83,7 +100,7 @@ export interface ILLMClientChatOptions {
     provider?: string;
     model?: string;
     signal?: AbortSignal;
-    onChunk?: (chunk: string, meta?: unknown) => void;
+    onChunk?: (chunk: string, meta?: StreamMeta) => void;
     priority?: 'low' | 'normal' | 'high';
     temperature?: number;
     maxTokens?: number;

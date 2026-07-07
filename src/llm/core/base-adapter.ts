@@ -4,6 +4,7 @@ import type {
     ProviderResponse,
     HealthCheckResult,
     SendMessageOptions,
+    StreamMeta,
 } from './types';
 import { LLMError, SafetyError } from './errors';
 
@@ -76,7 +77,7 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal: AbortSignal | undefined,
         options: SendMessageOptions | undefined,
     ): Promise<void>;
@@ -105,7 +106,7 @@ export abstract class BaseLLMAdapter implements LLMProviderAdapter {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {

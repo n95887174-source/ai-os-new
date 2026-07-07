@@ -1,5 +1,5 @@
 import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
-import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, StreamMeta } from '../core/types';
 import { LLMHttpClient } from '../http/llm-http-client';
 import { GeminiRequestBuilder } from './gemini-request-builder';
 import { toProviderResponse } from './gemini-response-mapper';
@@ -68,7 +68,7 @@ export class GeminiAdapter extends BaseLLMAdapter {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal: AbortSignal | undefined,
         options: SendMessageOptions | undefined,
     ): Promise<void> {

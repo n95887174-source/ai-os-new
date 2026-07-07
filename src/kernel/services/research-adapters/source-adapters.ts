@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any -- External API responses are inherently untyped */
 import type { ResearchSource, SourceCategory, SourceType } from '../../contracts/research-engine';
 import type { ISourceAdapter, SourceAdapterConfig } from '../../contracts/research-adapter';
 import { genId } from '../../../utils/gen-id';
@@ -112,7 +112,7 @@ class DuckDuckGoAdapter implements ISourceAdapter {
         }
         if (Array.isArray(data.RelatedTopics)) {
             for (const t of data.RelatedTopics.slice(0, 8)) {
-                const topic = t as any;
+                const topic = t as Record<string, unknown>;
                 if (!topic.Text) continue;
                 const text = String(topic.Text);
                 sources.push(
@@ -299,9 +299,9 @@ class PubMedAdapter implements ISourceAdapter {
         );
         if (!summaryRes) return sources;
         const summaryData = (await summaryRes.json()) as any;
-        const result = (summaryData?.result as any) || {};
+        const result = (summaryData?.result as Record<string, unknown>) || {};
         for (const id of idList.slice(0, 10)) {
-            const item = result[id] as any | undefined;
+            const item = result[id] as Record<string, unknown> | undefined;
             if (!item) continue;
             const title = String(item.title || '');
             const authors = ((item.authors as Array<Record<string, string>>) || []).map(
@@ -537,9 +537,11 @@ class DBLPAdapter implements ISourceAdapter {
         const data = (await res.json()) as any;
         const hits = (data.result?.hits?.hit as any[]) || [];
         return hits.map((h) => {
-            const info = (h.info as any) || {};
+            const info = (h.info as Record<string, unknown>) || {};
             const authors = (
-                (info.authors?.author as Array<Record<string, string> | string>) || []
+                ((info.authors as Record<string, unknown>)?.author as Array<
+                    Record<string, string> | string
+                >) || []
             ).map((a: Record<string, string> | string) =>
                 typeof a === 'string' ? a : a.text || '',
             );
@@ -1030,7 +1032,7 @@ class RedditAdapter implements ISourceAdapter {
         const data = (await res.json()) as any;
         const children = (data.data?.children as any[]) || [];
         return children.map((c) => {
-            const d = (c.data as any) || {};
+            const d = (c.data as Record<string, unknown>) || {};
             return mkSource(
                 String(d.title || ''),
                 `https://www.reddit.com${d.permalink || ''}`,

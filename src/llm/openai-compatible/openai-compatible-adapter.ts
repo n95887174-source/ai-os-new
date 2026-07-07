@@ -1,5 +1,11 @@
 import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
-import type { ChatMessage, ProviderResponse, HealthCheckResult, ToolCall } from '../core/types';
+import type {
+    ChatMessage,
+    ProviderResponse,
+    HealthCheckResult,
+    ToolCall,
+    StreamMeta,
+} from '../core/types';
 import { LLMError, RetryableError, AuthError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
@@ -135,7 +141,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {

@@ -4,6 +4,7 @@ import type {
     ProviderResponse,
     HealthCheckResult,
     SendMessageOptions,
+    StreamMeta,
 } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { AuthError, SafetyError } from '../core/errors';
@@ -74,7 +75,7 @@ export class FallbackDecorator extends BaseDecorator {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {

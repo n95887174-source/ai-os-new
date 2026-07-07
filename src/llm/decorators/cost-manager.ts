@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../core/types';
+import type { ChatMessage, ProviderResponse, SendMessageOptions, StreamMeta } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 import { LLMError } from '../core/errors';
 import { estimateTokenCount } from '../utils/token-counter';
@@ -234,7 +234,7 @@ export class CostManagerDecorator extends BaseDecorator {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {

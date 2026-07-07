@@ -4,6 +4,7 @@ import type {
     HealthCheckResult,
     LLMProviderAdapter,
     SendMessageOptions,
+    StreamMeta,
 } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 
@@ -76,7 +77,7 @@ export class SemanticRouterDecorator extends BaseDecorator {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {

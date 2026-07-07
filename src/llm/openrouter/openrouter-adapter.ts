@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, StreamMeta } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { LLMError, RetryableError } from '../core/errors';
@@ -188,7 +188,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal: AbortSignal | undefined,
         options: SendMessageOptions | undefined,
     ): Promise<void> {
@@ -248,7 +248,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         if (finalFinishReason || finalUsage || finalReasoning) {
             onChunk('', {
                 finishReason: normalizedFinishReason,
-                usage: finalUsage,
+                usage: finalUsage as Record<string, unknown> | undefined,
                 reasoning: finalReasoning,
             });
         }

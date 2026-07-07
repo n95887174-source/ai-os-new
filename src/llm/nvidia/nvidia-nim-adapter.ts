@@ -1,4 +1,4 @@
-import type { ChatMessage, ProviderResponse, HealthCheckResult } from '../core/types';
+import type { ChatMessage, ProviderResponse, HealthCheckResult, StreamMeta } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { parseSSEStream } from '../http/sse-parser';
@@ -131,7 +131,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
         messages: ChatMessage[],
         model: string,
         apiKey: string,
-        onChunk: (chunk: string, meta?: unknown) => void,
+        onChunk: (chunk: string, meta?: StreamMeta) => void,
         signal: AbortSignal | undefined,
         options: SendMessageOptions | undefined,
     ): Promise<void> {
