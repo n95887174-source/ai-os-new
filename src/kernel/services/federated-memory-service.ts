@@ -89,12 +89,42 @@ export class FederatedMemoryService implements IFederatedMemoryService {
     }
 
     updateConfig(updates: Partial<FederationConfig>): FederationConfig {
+        if (updates.syncInterval !== undefined && updates.syncInterval < 1000) {
+            throw new Error('syncInterval must be at least 1000ms');
+        }
+        if (updates.maxPayloadSize !== undefined && updates.maxPayloadSize < 1024) {
+            throw new Error('maxPayloadSize must be at least 1024 bytes');
+        }
+        if (updates.nodeName !== undefined && updates.nodeName.trim().length === 0) {
+            throw new Error('nodeName must be non-empty');
+        }
+        if (updates.role !== undefined && !['hub', 'node', 'peer'].includes(updates.role)) {
+            throw new Error('role must be hub, node, or peer');
+        }
+        if (updates.allowedPeers !== undefined && !Array.isArray(updates.allowedPeers)) {
+            throw new Error('allowedPeers must be an array');
+        }
+        if (
+            updates.encryptionEnabled !== undefined &&
+            typeof updates.encryptionEnabled !== 'boolean'
+        ) {
+            throw new Error('encryptionEnabled must be a boolean');
+        }
         this.config = { ...this.config, ...updates };
         void this.persistConfig();
         return { ...this.config };
     }
 
     connectNode(id: string, name: string, endpoint: string, role: FederationRole): FederatedNode {
+        if (
+            this.config.allowedPeers.length > 0 &&
+            !this.config.allowedPeers.includes(id) &&
+            !this.config.allowedPeers.includes(name)
+        ) {
+            throw new Error(
+                `Peer "${name}" (${id}) is not in allowedPeers list. Add it to allowedPeers first.`,
+            );
+        }
         const existing = this.nodes.find((n) => n.id === id);
         if (existing) {
             existing.status = 'connected';
@@ -137,6 +167,21 @@ export class FederatedMemoryService implements IFederatedMemoryService {
     async syncNode(nodeId: string): Promise<SyncSession> {
         const node = this.nodes.find((n) => n.id === nodeId);
         if (!node) throw new Error(`Node ${nodeId} not found`);
+
+        if (
+            this.config.allowedPeers.length > 0 &&
+            !this.config.allowedPeers.includes(nodeId) &&
+            !this.config.allowedPeers.includes(node.name)
+        ) {
+            throw new Error(`Node "${node.name}" (${nodeId}) is not in allowedPeers list`);
+        }
+
+        if (this.config.encryptionEnabled && node.endpoint.startsWith('http://')) {
+            LOGGER.warn(
+                'syncNode',
+                `Sync to ${node.endpoint} is not encrypted — set encryptionEnabled=false or use https://`,
+            );
+        }
 
         const session: SyncSession = {
             id: genId(),

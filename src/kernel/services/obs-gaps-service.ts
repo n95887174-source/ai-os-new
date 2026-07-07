@@ -389,15 +389,33 @@ function buildRecommendations(
 }
 
 /**
- * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
+ * @deprecated STATIC — service inventory snapshot. Update `STATIC_SERVICES` and `SERVICE_FILE_MAP`
+ * whenever a new service is added to bootstrap. Use `registerService()` at runtime for dynamic additions.
  */
 export class ObsGapsService implements IObsGapsService {
+    private dynamicServices: Map<string, ServiceObsInfo> = new Map();
+
+    registerService(info: ServiceObsInfo): void {
+        this.dynamicServices.set(info.name, info);
+    }
+
+    registerServices(infos: ServiceObsInfo[]): void {
+        for (const info of infos) {
+            this.dynamicServices.set(info.name, info);
+        }
+    }
+
     getStaticInventory(): ServiceObsInfo[] {
-        return STATIC_SERVICES.map((s) => ({ ...s }));
+        const staticCopy = STATIC_SERVICES.map((s) => ({ ...s }));
+        const dynamicCopy: ServiceObsInfo[] = [];
+        for (const info of this.dynamicServices.values()) {
+            dynamicCopy.push({ ...info });
+        }
+        return [...staticCopy, ...dynamicCopy];
     }
 
     getServiceCount(): number {
-        return STATIC_SERVICES.length;
+        return STATIC_SERVICES.length + this.dynamicServices.size;
     }
 
     parseEventsDocumentation(content: string): DocEvent[] {

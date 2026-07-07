@@ -153,17 +153,16 @@ export class HealthSlaService implements IHealthSlaService {
         if (!profile) throw new Error(`Profile ${profileId} not found`);
         return profile.rules.map((rule) => {
             let actual: number;
+            let hasData = false;
             switch (rule.metric) {
                 case 'latency': {
                     const latencies: number[] = [];
                     for (const prov of profile.providers) {
                         const m = this.deps.providerTracker.getMetrics(prov, '');
-                        if (m) latencies.push(m.avgLatency);
+                        if (m && m.avgLatency > 0) latencies.push(m.avgLatency);
                     }
-                    actual =
-                        latencies.length > 0
-                            ? latencies.reduce((a, b) => a + b, 0) / latencies.length
-                            : 0;
+                    hasData = latencies.length > 0;
+                    actual = hasData ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
                     break;
                 }
                 case 'error_rate': {
@@ -173,7 +172,8 @@ export class HealthSlaService implements IHealthSlaService {
                         if (m && m.totalRequests > 0)
                             rates.push((m.errors / m.totalRequests) * 100);
                     }
-                    actual = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+                    hasData = rates.length > 0;
+                    actual = hasData ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
                     break;
                 }
                 case 'uptime': {
@@ -183,7 +183,8 @@ export class HealthSlaService implements IHealthSlaService {
                         if (m && m.totalRequests > 0)
                             ups.push(((m.totalRequests - m.errors) / m.totalRequests) * 100);
                     }
-                    actual = ups.length > 0 ? ups.reduce((a, b) => a + b, 0) / ups.length : 100;
+                    hasData = ups.length > 0;
+                    actual = hasData ? ups.reduce((a, b) => a + b, 0) / ups.length : 100;
                     break;
                 }
                 case 'throughput': {
@@ -192,7 +193,8 @@ export class HealthSlaService implements IHealthSlaService {
                         const m = this.deps.providerTracker.getMetrics(prov, '');
                         if (m) tps.push(m.totalRequests);
                     }
-                    actual = tps.length > 0 ? tps.reduce((a, b) => a + b, 0) / tps.length : 0;
+                    hasData = tps.length > 0;
+                    actual = hasData ? tps.reduce((a, b) => a + b, 0) / tps.length : 0;
                     break;
                 }
                 default:
@@ -208,7 +210,11 @@ export class HealthSlaService implements IHealthSlaService {
                         : rule.operator === 'gte'
                           ? actual >= rule.threshold
                           : actual === rule.threshold;
-            return { ruleId: rule.id, passed, actual: Math.round(actual * 100) / 100 };
+            return {
+                ruleId: rule.id,
+                passed: hasData ? passed : false,
+                actual: Math.round(actual * 100) / 100,
+            };
         });
     }
 }
