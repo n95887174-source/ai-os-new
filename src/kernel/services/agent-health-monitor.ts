@@ -20,13 +20,26 @@ interface StepRecord {
 
 export interface AgentHealthMonitorDeps {
     eventBus: IEventBus;
+    database?: {
+        getKv: <T>(id: string) => Promise<T | null>;
+        setKv: <T>(id: string, value: T) => Promise<void>;
+    };
+    agentService?: {
+        restartAgent: (id: string) => Promise<void>;
+    };
 }
+
+const HEALTH_PERSIST_KEY = 'agent_health_monitor_state';
+const HEARTBEAT_INTERVAL_MS = 60000;
+const AUTO_RECOVERY_UNHEALTHY_THRESHOLD = 3;
 
 export class AgentHealthMonitor implements ILifecycle {
     private deps: AgentHealthMonitorDeps;
     private records: StepRecord[] = [];
     private healthCache = new Map<string, AgentHealthSnapshot>();
     private unsubs: Array<() => void> = [];
+    private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    private unhealthyCounters = new Map<string, number>();
 
     constructor(deps: AgentHealthMonitorDeps) {
         this.deps = deps;
@@ -38,6 +51,9 @@ export class AgentHealthMonitor implements ILifecycle {
     async start() {
         if (this._started) return;
         this._started = true;
+
+        await this.loadPersisted();
+
         this.unsubs.push(
             this.deps.eventBus.onSafe<{ nodeId: string; duration: number; status: string }>(
                 EVENTS.COGNITIVE_STEP_COMPLETED,
@@ -52,17 +68,100 @@ export class AgentHealthMonitor implements ILifecycle {
                 if (data?.id) {
                     this.healthCache.delete(data.id);
                     this.records = this.records.filter((r) => r.agentId !== data.id);
+                    this.unhealthyCounters.delete(data.id);
                 }
             }),
         );
+
+        this.heartbeatTimer = setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL_MS);
     }
 
     destroy() {
         for (const u of this.unsubs) u();
         this.unsubs = [];
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+        this.persist().catch(() => {});
         this.records = [];
         this.healthCache.clear();
+        this.unhealthyCounters.clear();
         this._started = false;
+    }
+
+    private async loadPersisted() {
+        if (!this.deps.database) return;
+        try {
+            const saved = await this.deps.database.getKv<{
+                records: StepRecord[];
+                cache: Record<string, AgentHealthSnapshot>;
+            }>(HEALTH_PERSIST_KEY);
+            if (saved) {
+                if (Array.isArray(saved.records)) this.records = saved.records;
+                if (saved.cache && typeof saved.cache === 'object') {
+                    for (const [id, snap] of Object.entries(saved.cache)) {
+                        this.healthCache.set(id, snap);
+                    }
+                }
+            }
+        } catch (e) {
+            LOGGER.error('AgentHealthMonitor', 'Failed to load persisted state', { error: e });
+        }
+    }
+
+    private async persist() {
+        if (!this.deps.database) return;
+        try {
+            await this.deps.database.setKv(HEALTH_PERSIST_KEY, {
+                records: this.records.slice(-MAX_ENTRIES),
+                cache: Object.fromEntries(this.healthCache),
+            });
+        } catch (e) {
+            LOGGER.error('AgentHealthMonitor', 'Failed to persist state', { error: e });
+        }
+    }
+
+    private heartbeat() {
+        const agentIds = new Set(this.records.map((r) => r.agentId));
+        for (const agentId of agentIds) {
+            this.recompute(agentId);
+        }
+        const allHealth = this.getAllHealth();
+        const unhealthy = allHealth.filter((h) => h.health === 'unhealthy');
+        const degraded = allHealth.filter((h) => h.health === 'degraded');
+        if (unhealthy.length > 0 || degraded.length > 0) {
+            LOGGER.info('AgentHealthMonitor', 'Heartbeat health summary', {
+                total: allHealth.length,
+                unhealthy: unhealthy.length,
+                degraded: degraded.length,
+                healthy: allHealth.length - unhealthy.length - degraded.length,
+            });
+        }
+        this.persist().catch(() => {});
+
+        for (const h of unhealthy) {
+            const count = (this.unhealthyCounters.get(h.agentId) || 0) + 1;
+            this.unhealthyCounters.set(h.agentId, count);
+            if (count >= AUTO_RECOVERY_UNHEALTHY_THRESHOLD && this.deps.agentService) {
+                LOGGER.warn('AgentHealthMonitor', 'Auto-recovering unhealthy agent', {
+                    agentId: h.agentId,
+                    consecutiveUnhealthy: count,
+                });
+                this.unhealthyCounters.set(h.agentId, 0);
+                this.deps.agentService.restartAgent(h.agentId).catch((e) => {
+                    LOGGER.error('AgentHealthMonitor', 'Auto-recovery failed', {
+                        agentId: h.agentId,
+                        error: e,
+                    });
+                });
+            }
+        }
+        for (const h of allHealth) {
+            if (h.health !== 'unhealthy') {
+                this.unhealthyCounters.delete(h.agentId);
+            }
+        }
     }
 
     ingest(agentId: string, duration: number, success: boolean) {
