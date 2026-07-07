@@ -22,7 +22,10 @@ const STRATEGY_MAP: Record<string, import('../../contracts/debate-runtime').Topo
 };
 
 // C2-DT-001 fix: reverse map topologyType → strategy (was casting directly, losing type safety)
-const TOPOLOGY_TO_STRATEGY: Record<import('../../contracts/debate-runtime').TopologyType, DebateSession['strategy']> = {
+const TOPOLOGY_TO_STRATEGY: Record<
+    import('../../contracts/debate-runtime').TopologyType,
+    DebateSession['strategy']
+> = {
     roundtable: 'round_robin',
     linear: 'sequential',
     judge: 'judge',
@@ -35,8 +38,8 @@ function sessionToRecord(session: DebateSession): DebateSessionRecord {
         config: session.config || {},
         convergenceScore: session.convergenceScore ?? 0,
         maxRounds: session.maxRounds ?? 10,
-        metadata: (session as unknown as Record<string, unknown>).metadata ?? {},
-        tags: (session as unknown as Record<string, unknown>).tags ?? [],
+        metadata: session.metadata ?? {},
+        tags: session.tags ?? [],
     });
     return {
         id: session.id,
@@ -111,7 +114,9 @@ function recordToSession(record: DebateSessionRecord): DebateSession {
         topic: record.topic || '(untitled)',
         status: (record.phase || 'active') as DebateSession['status'],
         strategy: record.topologyType
-            ? TOPOLOGY_TO_STRATEGY[record.topologyType as import('../../contracts/debate-runtime').TopologyType] ?? 'round_robin'
+            ? (TOPOLOGY_TO_STRATEGY[
+                  record.topologyType as import('../../contracts/debate-runtime').TopologyType
+              ] ?? 'round_robin')
             : 'round_robin',
         maxRounds: toNum(savedExtra.maxRounds, 10),
         currentRound: record.round,

@@ -142,6 +142,30 @@ npx eslint src/      # lint
 
 ---
 
+## Current Session (2026-07-07) — Medium Audit Batch: M-7, M3, M5, M6
+
+### Goal
+
+Fix 4 Medium findings from `audit/newww/STATUS_HML.md` — infrastructure and security improvements.
+
+### Changes
+
+| #   | Audit | ID      | Description                                                                                | Fix                                                                                                      |
+| --- | ----- | ------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| 1   | `1b`  | **M-7** | `tool-executor.importTools` no schema validation — accepts arbitrary JSON tool definitions | Added `ImportToolSchema` (Zod), per-item `safeParse`, skips invalid entries with logged warning          |
+| 2   | `3c`  | **M3**  | `Dockerfile` only passes `VITE_BASE_PATH` as build-arg; other VITE_* vars unoverridable    | Added `VITE_SANDBOX_ENABLED`, `VITE_PROXY_TARGET`, `VITE_DISABLE_TELEMETRY`, `VITE_LOG_LEVEL` build-args |
+| 3   | `3c`  | **M5**  | `docker-compose.yml` missing log rotation, `security_opt`, `cap_drop`                      | Added `no-new-privileges:true`, `cap_drop: ALL`, json-file logging (10m/3-file rotation)                 |
+| 4   | `3c`  | **M6**  | `.npmrc` `audit=false` suppresses vuln scanning with no rationale                          | Added comment documenting trade-off — silent CI vs. catching known vulns                                 |
+
+### Status
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅
+- `npx vite build` ✅ 6.72s
+- Commit: `71e4172c`
+- STATUS_HML.md: Medium 72→76 🟢, 351→345 🔴
+
+---
+
 ## Current Session (2026-07-02) — Debate Live Integration (Phases 3-8)
 
 ### Goal

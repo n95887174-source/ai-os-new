@@ -140,7 +140,7 @@ export class EvalDatasetService implements IEvalDatasetService {
                     const outputTokens = tokensRecord.output || 0;
                     const score = prompt.expectedOutput
                         ? computeSimilarity(actualOutput, prompt.expectedOutput)
-                        : 1;
+                        : 0;
                     results.push({
                         promptIndex: i,
                         input: prompt.input,
@@ -210,7 +210,8 @@ export class EvalDatasetService implements IEvalDatasetService {
 function computeSimilarity(a: string, b: string): number {
     const aWords = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
     const bWords = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+    if (aWords.size === 0 && bWords.size === 0) return 0;
     const intersection = new Set([...aWords].filter((w) => bWords.has(w)));
     const union = new Set([...aWords, ...bWords]);
-    return union.size > 0 ? intersection.size / union.size : 1;
+    return intersection.size / union.size;
 }

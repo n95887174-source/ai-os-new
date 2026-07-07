@@ -265,6 +265,8 @@ export interface DebateSession {
     activityMetrics?: ActivityMetrics;
     qualityMetrics?: QualityMetrics;
     roundVotes?: Record<number, HumanVote[]>;
+    metadata?: Record<string, unknown>;
+    tags?: string[];
 }
 
 export interface DisagreementPoint {
