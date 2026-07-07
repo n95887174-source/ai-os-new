@@ -414,9 +414,9 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
             id: `sim_${++this.seq}`,
             type,
             input,
-            result: result as unknown as Record<string, unknown>,
+            result,
             timestamp: Date.now(),
-        });
+        } as SimulationRecord);
         if (this.history.length > MAX_HISTORY) this.history.pop();
     }
 }

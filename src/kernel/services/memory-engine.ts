@@ -404,8 +404,13 @@ export class MemoryService implements IMemoryEngine {
             metadata: { operation: 'storeBatch', count: newEntries.length },
         });
         try {
-            await Promise.all(newEntries.map((e) => this.memoryRepo.save(e)));
-            this.memories = [...newEntries, ...this.memories];
+            const persisted = await this.memoryRepo.storeBatch(
+                newEntries.map((e) => ({
+                    content: e.content,
+                    metadata: e.metadata,
+                })),
+            );
+            this.memories = [...persisted, ...this.memories];
             if (this.memories.length > MAX_MEMORY_ENTRIES) {
                 this.memories = this.memories.slice(0, MAX_MEMORY_ENTRIES);
             }
