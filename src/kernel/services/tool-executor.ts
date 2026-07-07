@@ -3,7 +3,24 @@ import { isPrivateIP } from '../utils/network';
 import { parseScript } from 'meriyah';
 import type { ToolDefinition, ToolCategory } from '../contracts/tool-types';
 import { rootLogger } from './logger-service';
+import { z } from 'zod';
 export type { ToolDefinition, ToolCategory };
+
+const ImportToolSchema = z.object({
+    id: z.string().min(1, 'Tool id is required'),
+    name: z.string().optional(),
+    description: z.string().optional(),
+    type: z.enum(['script', 'api', 'database']).optional(),
+    category: z
+        .enum(['search', 'code', 'web', 'data', 'connector', 'utility', 'custom'])
+        .optional(),
+    language: z.enum(['python', 'javascript', 'sql']).optional(),
+    code: z.string().optional(),
+    enabled: z.boolean().optional(),
+    rateLimit: z.number().int().positive().optional(),
+    timeout: z.number().int().positive().optional(),
+    allowedDomains: z.array(z.string()).optional(),
+});
 
 const LOGGER = rootLogger.child('ToolService');
 
@@ -638,10 +655,16 @@ export class ToolService {
                 throw toolError('tools', 'Invalid format', 'INVALID_FORMAT');
             let count = 0;
             for (const item of imported) {
-                const tool = item as { id: string; code?: string; [key: string]: unknown };
+                const parsed = ImportToolSchema.safeParse(item);
+                if (!parsed.success) {
+                    LOGGER.warn('ToolService', 'Skipping invalid tool in import', {
+                        errors: parsed.error.flatten().fieldErrors,
+                    });
+                    continue;
+                }
+                const tool = parsed.data;
                 const exists = this.tools.some((t) => t.id === tool.id);
                 if (!exists) {
-                    // B10-135: Validate tool code to prevent eval/fetch injection via JSON import
                     if (tool.code) {
                         const err = validateToolCode(tool.code);
                         if (err) throw toolError(tool.id || 'tools', err, 'CODE_INVALID');

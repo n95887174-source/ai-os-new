@@ -30,6 +30,16 @@ services:
             timeout: 3s
             retries: 3
             start_period: 10s
+        # M5 (3c): security hardening — no-new-privileges, drop all capabilities, logging
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        logging:
+            driver: json-file
+            options:
+                max-size: '10m'
+                max-file: '3'
         deploy:
             resources:
                 limits:

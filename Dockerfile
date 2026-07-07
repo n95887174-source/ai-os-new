@@ -31,8 +31,18 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps --no-fund
 
 COPY . .
+# M3 (3c): Allow VITE_* env overrides at build time via --build-arg
 ARG VITE_BASE_PATH=/
-RUN VITE_BASE_PATH=$VITE_BASE_PATH npm run build
+ARG VITE_SANDBOX_ENABLED=
+ARG VITE_PROXY_TARGET=
+ARG VITE_DISABLE_TELEMETRY=
+ARG VITE_LOG_LEVEL=
+RUN VITE_BASE_PATH=$VITE_BASE_PATH \
+    VITE_SANDBOX_ENABLED=$VITE_SANDBOX_ENABLED \
+    VITE_PROXY_TARGET=$VITE_PROXY_TARGET \
+    VITE_DISABLE_TELEMETRY=$VITE_DISABLE_TELEMETRY \
+    VITE_LOG_LEVEL=$VITE_LOG_LEVEL \
+    npm run build
 
 # ─── Stage 2: runtime (nginx-unprivileged) ──────────────────────
 # nginx-unprivileged listens on 8080 by default; docker-compose maps
