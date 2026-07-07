@@ -5,6 +5,28 @@ import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
 const LOGGER = rootLogger.child('DebateSessionPersistence');
 
+/** 1e M7: fallback with warning when topologyType not in TOPOLOGY_TO_STRATEGY */
+function topologyToStrategy(topologyType: string): DebateSession['strategy'] {
+    const map: Record<string, DebateSession['strategy'] | undefined> = {
+        roundtable: 'round_robin',
+        linear: 'sequential',
+        judge: 'judge',
+        'tree-of-thought': 'argument_tree',
+        'red-blue': 'red-blue',
+    };
+    const strategy = map[topologyType];
+    if (!strategy) {
+        LOGGER.warn(
+            'DebateSessionPersistence',
+            'Unknown topology type, falling back to round_robin',
+            {
+                topologyType,
+            },
+        );
+    }
+    return strategy ?? 'round_robin';
+}
+
 const STRATEGY_MAP: Record<string, import('../../contracts/debate-runtime').TopologyType> = {
     round_robin: 'roundtable',
     sequential: 'linear',
@@ -19,18 +41,6 @@ const STRATEGY_MAP: Record<string, import('../../contracts/debate-runtime').Topo
     moderated: 'roundtable',
     free_for_all: 'roundtable',
     jury_trial: 'judge',
-};
-
-// C2-DT-001 fix: reverse map topologyType → strategy (was casting directly, losing type safety)
-const TOPOLOGY_TO_STRATEGY: Record<
-    import('../../contracts/debate-runtime').TopologyType,
-    DebateSession['strategy']
-> = {
-    roundtable: 'round_robin',
-    linear: 'sequential',
-    judge: 'judge',
-    'tree-of-thought': 'argument_tree',
-    'red-blue': 'red-blue',
 };
 
 function sessionToRecord(session: DebateSession): DebateSessionRecord {
@@ -113,11 +123,7 @@ function recordToSession(record: DebateSessionRecord): DebateSession {
         id: record.id,
         topic: record.topic || '(untitled)',
         status: (record.phase || 'active') as DebateSession['status'],
-        strategy: record.topologyType
-            ? (TOPOLOGY_TO_STRATEGY[
-                  record.topologyType as import('../../contracts/debate-runtime').TopologyType
-              ] ?? 'round_robin')
-            : 'round_robin',
+        strategy: record.topologyType ? topologyToStrategy(record.topologyType) : 'round_robin',
         maxRounds: toNum(savedExtra.maxRounds, 10),
         currentRound: record.round,
         participants: Array.isArray(parsedParticipants) ? parsedParticipants : [],

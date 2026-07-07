@@ -437,18 +437,30 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
         return results;
     }
 
-    async verifyAll(): Promise<ConsistencyReport> {
+    async verifyAll(docContents?: Record<string, string>): Promise<ConsistencyReport> {
         if (!this.healingPlan || !this.healingPlan.report) {
             throw new Error('No plan — call analyze() first');
         }
 
-        const docFiles = this.healingPlan.report.items.reduce<Record<string, string>>(
-            (acc, item) => {
+        // 2f M2: accept real doc contents for meaningful verification; otherwise build empty stubs
+        const docFiles =
+            docContents ??
+            this.healingPlan.report.items.reduce<Record<string, string>>((acc, item) => {
                 if (!acc[item.docFile]) acc[item.docFile] = '';
                 return acc;
-            },
-            {},
-        );
+            }, {});
+
+        if (Object.keys(docFiles).length === 0) {
+            return {
+                timestamp: Date.now(),
+                total: 0,
+                passed: 0,
+                failed: 0,
+                items: [],
+                byCategory: {},
+                summary: 'No documents to verify',
+            };
+        }
 
         const newReport = this.checkDocs(docFiles);
 

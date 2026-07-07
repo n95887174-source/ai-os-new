@@ -45,6 +45,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
     private persistPromise: Promise<void> | null = null;
     private _persistDirty = false;
     private _started = false;
+    private _pendingSeedIds: string[] | null = null;
 
     constructor(
         eventBus?: IEventBus,
@@ -67,7 +68,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         try {
             const data =
                 await this.database.getKv<Array<{ id: string; state: KeyState }>>(
-                    'keystate_store_states',
+                    'keystore_store_states',
                 );
             if (data) {
                 for (const { id, state } of data) {
@@ -86,6 +87,33 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
             this.states.clear();
         } finally {
             this._persistedLoaded = true;
+            // 1c M4: flush pending seeds after persistence is loaded
+            this._flushPendingSeeds();
+        }
+    }
+
+    /** Process seeds that were queued before loadPersisted() completed */
+    private _flushPendingSeeds(): void {
+        if (!this._pendingSeedIds) return;
+        const ids = this._pendingSeedIds;
+        this._pendingSeedIds = null;
+        for (const id of ids) {
+            if (!this.states.has(id)) {
+                this.states.set(id, {
+                    id,
+                    provider: 'unknown',
+                    label: id,
+                    status: 'unknown',
+                    healthScore: 25,
+                    lastProbe: { status: 'unknown', latency: 0, timestamp: Date.now() },
+                    health: { ...DEFAULT_HEALTH },
+                    quota: { ...DEFAULT_QUOTA },
+                    routing: { weight: 0, blocked: true },
+                    flags: { circuitOpen: false, rateLimited: false, authFailed: false },
+                    lifecycleState: 'active',
+                    updatedAt: Date.now(),
+                });
+            }
         }
     }
 
@@ -132,7 +160,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
     seedFromKeys(keys: ApiKey[]): void {
         const currentIds = new Set(keys.map((k) => k.id));
-        if (this._persistedLoaded) this.purgeOrphans(currentIds);
+        // 1c M4: if loadPersisted hasn't run yet, queue seeds for later to avoid
+        // overwriting persisted state with defaults
+        if (!this._persistedLoaded) {
+            this._pendingSeedIds = Array.from(currentIds);
+            return;
+        }
+        this.purgeOrphans(currentIds);
         for (const key of keys) {
             if (!this.states.has(key.id)) {
                 const status: KeyStatus =
