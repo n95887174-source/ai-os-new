@@ -77,6 +77,7 @@ export class SnapshotService {
     private _saveQueued = false;
     /** @internal C-94: Throttle guard — skip duplicate (traceId, nodeId) within 1s */
     private _lastStepTimestamps = new Map<string, number>();
+    private _replaying = false;
     /** Max step captures per second — prevents burst from COGNITIVE_STEP_COMPLETED */
     private static readonly STEP_THROTTLE_MS = 1000;
 
@@ -380,12 +381,18 @@ export class SnapshotService {
     tagSnapshot(id: string, tags: string[]) {
         const snapshot = this.snapshots.find((s) => s.id === id);
         if (snapshot) {
-            snapshot.tags = [...new Set([...(snapshot.tags || []), ...tags])];
+            const updated = {
+                ...snapshot,
+                tags: [...new Set([...(snapshot.tags || []), ...tags])],
+            };
+            const idx = this.snapshots.indexOf(snapshot);
+            this.snapshots[idx] = updated;
             void this.scheduleSave();
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                 message: `Snapshot ${snapshot.label || snapshot.id} tagged`,
                 type: 'info',
             });
+            this.deps.eventBus.emit(EVENTS.SNAPSHOT_CAPTURED, updated);
         }
     }
 
@@ -413,23 +420,36 @@ export class SnapshotService {
     }
 
     startReplay(): boolean {
-        if (this.snapshots.length === 0) return false;
+        if (this._replaying || this.snapshots.length === 0) return false;
+        this._replaying = true;
         this.replayIndex = 0;
-        return this.restore(this.snapshots[0]);
+        const ok = this.restore(this.snapshots[0]);
+        if (!ok) this._replaying = false;
+        return ok;
     }
 
     replayNext(): boolean {
         // B10-39: Use >= comparison, not = assignment
-        if (this.replayIndex < 0 || this.replayIndex >= this.snapshots.length - 1) return false;
+        if (
+            !this._replaying ||
+            this.replayIndex < 0 ||
+            this.replayIndex >= this.snapshots.length - 1
+        )
+            return false;
         this.replayIndex++;
         return this.restore(this.snapshots[this.replayIndex]);
     }
 
     replayPrev(): boolean {
         // B10-40: Use <= comparison, not = assignment; decrement index; call restore()
-        if (this.replayIndex <= 0) return false;
+        if (!this._replaying || this.replayIndex <= 0) return false;
         this.replayIndex--;
         return this.restore(this.snapshots[this.replayIndex]);
+    }
+
+    stopReplay(): void {
+        this._replaying = false;
+        this.replayIndex = -1;
     }
 
     getReplayIndex(): number {

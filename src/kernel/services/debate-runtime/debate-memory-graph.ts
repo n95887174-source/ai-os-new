@@ -78,6 +78,7 @@ export class DebateMemoryGraph {
             if (relation) {
                 const key = `${fromNodeId}->${node.id}:${relation}`;
                 if (this.edgeKeys.has(key)) continue;
+                if (this.wouldCreateCycle(fromNodeId, node.id, relation)) continue;
                 this.edgeKeys.add(key);
                 this.graph.edges.push({ from: fromNodeId, to: node.id, relation, weight: overlap });
             }
@@ -166,6 +167,22 @@ export class DebateMemoryGraph {
             .filter((x): x is { a: KnowledgeNode; b: KnowledgeNode } => x !== null);
     }
 
+    private wouldCreateCycle(from: string, to: string, relation: EdgeRelation): boolean {
+        if (relation !== 'depends') return false;
+        const visited = new Set<string>();
+        const stack = [to];
+        while (stack.length > 0) {
+            const current = stack.pop()!;
+            if (current === from) return true;
+            if (visited.has(current)) continue;
+            visited.add(current);
+            for (const edge of this.graph.edges) {
+                if (edge.from === current && edge.relation === 'depends') stack.push(edge.to);
+            }
+        }
+        return false;
+    }
+
     private buildEdges(arguments_: DebateArgument[]): void {
         if (!this.edgeKeys) this.edgeKeys = new Set();
         for (let i = 0; i < arguments_.length; i++) {
@@ -181,6 +198,7 @@ export class DebateMemoryGraph {
                     const to = this.resolveNodeId(b.id);
                     const key = `${from}->${to}:${relation}`;
                     if (this.edgeKeys.has(key)) continue;
+                    if (this.wouldCreateCycle(from, to, relation)) continue;
                     this.edgeKeys.add(key);
                     this.graph.edges.push({ from, to, relation, weight: overlap });
                 }

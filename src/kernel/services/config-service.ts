@@ -1,6 +1,7 @@
 import { CONFIG_DEFAULTS } from './config-registry';
 import { setConfig } from './config-mutations';
 import type {
+    ConfigRegistry,
     MonitoringConfigSection,
     MetricsConfigSection,
     TracesConfigSection,
@@ -240,21 +241,13 @@ export class ConfigService {
     }
 
     private applyOverlays(overlays: ConfigOverlays) {
-        if (overlays.monitoring)
-            setConfig('monitoring', deepMerge(CONFIG_DEFAULTS.monitoring, overlays.monitoring));
-        if (overlays.metrics)
-            setConfig('metrics', deepMerge(CONFIG_DEFAULTS.metrics, overlays.metrics));
-        if (overlays.traces)
-            setConfig('traces', deepMerge(CONFIG_DEFAULTS.traces, overlays.traces));
-        if (overlays.webhooks)
-            setConfig('webhooks', deepMerge(CONFIG_DEFAULTS.webhooks, overlays.webhooks));
-        if (overlays.keys) setConfig('keys', deepMerge(CONFIG_DEFAULTS.keys, overlays.keys));
-        if (overlays.llm) setConfig('llm', deepMerge(CONFIG_DEFAULTS.llm, overlays.llm));
-        if (overlays.pressure)
-            setConfig('pressure', deepMerge(CONFIG_DEFAULTS.pressure, overlays.pressure));
-        if (overlays.pricing)
-            setConfig('pricing', deepMerge(CONFIG_DEFAULTS.pricing, overlays.pricing));
-        if (overlays.services)
-            setConfig('services', deepMerge(CONFIG_DEFAULTS.services, overlays.services));
+        const defaults = CONFIG_DEFAULTS as Record<string, unknown>;
+        for (const [key, value] of Object.entries(overlays)) {
+            if (value)
+                setConfig(
+                    key as keyof ConfigRegistry,
+                    deepMerge(defaults[key] as Record<string, unknown>, value),
+                );
+        }
     }
 }
