@@ -7,6 +7,8 @@ import { rootLogger } from '../logger-service';
 
 const LOGGER = rootLogger.child('KeyLifecycle');
 
+const COUNTERS_STORAGE_KEY = 'key_lifecycle_counters';
+
 export type LifecycleState = 'active' | 'probation' | 'degraded' | 'quarantined' | 'recovering';
 
 const LIFECYCLE_TRANSITIONS: Record<LifecycleState, LifecycleState[]> = {
@@ -53,6 +55,10 @@ export interface KeyLifecycleDeps {
     eventBus?: {
         emit: (event: string, data?: unknown) => void;
     };
+    database?: {
+        getKv: <T>(id: string) => Promise<T | null>;
+        setKv: <T>(id: string, value: T) => Promise<void>;
+    };
 }
 
 export class KeyLifecycle {
@@ -68,6 +74,42 @@ export class KeyLifecycle {
         config?: Partial<LifecycleConfig>,
     ) {
         this.config = { ...DEFAULT_LIFECYCLE_CONFIG, ...config };
+    }
+
+    async init(): Promise<void> {
+        await this._load();
+    }
+
+    private async _load(): Promise<void> {
+        if (!this.deps.database) return;
+        try {
+            const saved = await this.deps.database.getKv<{
+                errorCounters: [string, number][];
+                successCounters: [string, number][];
+            }>(COUNTERS_STORAGE_KEY);
+            if (saved) {
+                this.errorCounters = new Map(saved.errorCounters);
+                this.successCounters = new Map(saved.successCounters);
+                LOGGER.info('KeyLifecycle', 'Counters restored from DB', {
+                    errorCount: this.errorCounters.size,
+                    successCount: this.successCounters.size,
+                });
+            }
+        } catch (e) {
+            LOGGER.warn('KeyLifecycle', 'Failed to load persisted counters', { error: e });
+        }
+    }
+
+    private async _save(): Promise<void> {
+        if (!this.deps.database) return;
+        try {
+            await this.deps.database.setKv(COUNTERS_STORAGE_KEY, {
+                errorCounters: Array.from(this.errorCounters.entries()),
+                successCounters: Array.from(this.successCounters.entries()),
+            });
+        } catch (e) {
+            LOGGER.warn('KeyLifecycle', 'Failed to persist counters', { error: e });
+        }
     }
 
     setKeyStateStore(store: IKeyStateStore): void {
@@ -131,6 +173,7 @@ export class KeyLifecycle {
         const errors = (this.errorCounters.get(id) || 0) + 1;
         this.errorCounters.set(id, errors);
         this.successCounters.delete(id);
+        this._save();
 
         let next: LifecycleState = current;
         if (errors >= this.config.quarantineErrorThreshold) next = 'quarantined';
@@ -170,6 +213,7 @@ export class KeyLifecycle {
                 this.successCounters.delete(id);
                 this.deps.keyHealth?.cleanupKey(id);
             }
+            this._save();
             return current;
         }
 
@@ -187,10 +231,12 @@ export class KeyLifecycle {
                 this.successCounters.delete(id);
                 return 'active';
             }
+            this._save();
             return current;
         }
 
         this.successCounters.set(id, (this.successCounters.get(id) || 0) + 1);
+        this._save();
         return current;
     }
 
@@ -229,6 +275,7 @@ export class KeyLifecycle {
         }
         this.errorCounters.delete(id);
         this.successCounters.delete(id);
+        this._save();
     }
 
     destroy(): void {
@@ -238,6 +285,7 @@ export class KeyLifecycle {
         this.transitions = [];
         this.errorCounters.clear();
         this.successCounters.clear();
+        this._save();
     }
 
     private transition(id: string, from: LifecycleState, to: LifecycleState, reason: string): void {

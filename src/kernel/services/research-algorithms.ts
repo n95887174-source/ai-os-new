@@ -676,13 +676,49 @@ export function computeDiscovery(allSessions: ResearchSession[]): DiscoveryResul
 
     const sorted = [...wordFreq.entries()].sort((a, b) => b[1] - a[1]);
 
-    const topics: DiscoveryTopic[] = sorted.slice(0, 8).map(([word, freq], i) => ({
+    // 2b E11: determine trend by comparing recent vs older session frequency
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentText = allSessions
+        .filter((s) => s.createdAt >= thirtyDaysAgo)
+        .flatMap((s) => s.loops)
+        .flatMap((l) => [l.question.text, ...(l.synthesis?.keyFindings || [])])
+        .join(' ');
+    const olderText = allSessions
+        .filter((s) => s.createdAt < thirtyDaysAgo)
+        .flatMap((s) => s.loops)
+        .flatMap((l) => [l.question.text, ...(l.synthesis?.keyFindings || [])])
+        .join(' ');
+
+    const countWords = (text: string): Map<string, number> => {
+        const map = new Map<string, number>();
+        const toks = text.split(/\s+/).filter((w) => w.length > 5 && /^[A-Za-z]/.test(w));
+        for (const w of toks) {
+            map.set(w, (map.get(w) || 0) + 1);
+        }
+        return map;
+    };
+
+    const recentFreq = countWords(recentText);
+    const olderFreq = countWords(olderText);
+
+    const determineTrend = (word: string): 'rising' | 'stable' | 'falling' | 'emerging' => {
+        const rf = recentFreq.get(word) || 0;
+        const of = olderFreq.get(word) || 0;
+        if (rf > 0 && of === 0) return 'emerging';
+        if (of === 0) return 'stable';
+        const ratio = rf / of;
+        if (ratio > 1.2) return 'rising';
+        if (ratio < 0.8) return 'falling';
+        return 'stable';
+    };
+
+    const topics: DiscoveryTopic[] = sorted.slice(0, 8).map(([word, freq]) => ({
         id: genId('dt'),
         name: word,
         description: `Frequently discussed concept: "${word}" appears ${freq} times across research sessions`,
         sourceKeywords: [word.toLowerCase()],
         frequency: freq,
-        trend: i < 3 ? 'rising' : i < 5 ? 'stable' : 'emerging',
+        trend: determineTrend(word),
         relevanceScore: Math.min(1, freq / Math.max(1, sorted[0]?.[1] || 1)),
         relatedTopics: sorted
             .slice(0, 3)

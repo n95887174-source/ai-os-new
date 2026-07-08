@@ -1,4 +1,5 @@
 import { genId } from '../../utils/gen-id';
+import { z } from 'zod';
 import type { IHypothesisService, ProposeHypothesisInput } from '../contracts/hypothesis';
 import type {
     ResearchHypothesis,
@@ -7,6 +8,16 @@ import type {
 } from '../types/research-types';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
+
+const HYPOTHESIS_UPDATE_SCHEMA = z.object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().min(1).optional(),
+    category: z.enum(['arch', 'prompt', 'routing', 'gov']).optional(),
+    status: z.enum(['proposed', 'debating', 'accepted', 'rejected', 'archived']).optional(),
+    sourceFile: z.string().optional(),
+    evidenceRefs: z.array(z.string()).optional(),
+    linkedDebateId: z.string().optional(),
+});
 
 const LOGGER = rootLogger.child('HypothesisService');
 
@@ -109,7 +120,17 @@ export class HypothesisService implements IHypothesisService {
     ): Promise<ResearchHypothesis | null> {
         const idx = this.hypotheses.findIndex((h) => h.id === id);
         if (idx === -1) return null;
-        this.hypotheses[idx] = { ...this.hypotheses[idx], ...patch };
+
+        const parsed = HYPOTHESIS_UPDATE_SCHEMA.safeParse(patch);
+        if (!parsed.success) {
+            LOGGER.warn('HypothesisService', 'Invalid update fields', {
+                errors: parsed.error.flatten().fieldErrors,
+            });
+            return null;
+        }
+
+        const allowed = parsed.data as Partial<ResearchHypothesis>;
+        this.hypotheses[idx] = { ...this.hypotheses[idx], ...allowed };
         await this.persist();
         this.deps.eventBus.emit(EVENTS.HYPOTHESES_UPDATED, { hypotheses: this.hypotheses });
         return this.hypotheses[idx];

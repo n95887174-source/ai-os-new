@@ -193,6 +193,7 @@ export class KeyService implements IKeyRotationManager {
             eventBus: this.deps.eventBus,
             keyHealth: this.health,
             keyStateStore: deps.keyStateStore,
+            database: this.deps.database,
         });
 
         this.poolSelector = this.createPoolSelector();
@@ -250,6 +251,7 @@ export class KeyService implements IKeyRotationManager {
             });
         this.notify();
 
+        await this.lifecycle.init();
         this.lifecycle.startAutoRecovery();
 
         // NOTE: beforeunload cannot synchronously flush IndexedDB writes.

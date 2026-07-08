@@ -258,7 +258,7 @@ export class MemoryService implements IMemoryEngine {
                     'featureFlags.memory.enabled' in changes &&
                     changes['featureFlags.memory.enabled'] === false
                 ) {
-                    this.memories = [];
+                    this.clear();
                 }
             }),
         );
