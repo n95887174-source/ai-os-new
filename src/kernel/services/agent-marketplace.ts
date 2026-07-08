@@ -120,6 +120,16 @@ export class AgentMarketplace implements ILifecycle {
         if (!item.description || typeof item.description !== 'string') {
             throw new Error('Item description is required');
         }
+        if (item.content == null) {
+            throw new Error('Item content is required');
+        }
+        const contentSize =
+            typeof item.content === 'string'
+                ? item.content.length
+                : JSON.stringify(item.content).length;
+        if (contentSize > 1_048_576) {
+            throw new Error('Item content exceeds 1MB limit');
+        }
         const newItem: MarketplaceItem = {
             ...item,
             id: `mkt-${crypto.randomUUID()}`,

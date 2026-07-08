@@ -69,6 +69,7 @@ export class AgentService {
     private groups: AgentGroup[] = [];
     private lifecycleStates = new Map<string, AgentLifecycleState>();
     private unsubs: Array<() => void> = [];
+    private _onUnload: (() => void) | null = null;
 
     public autoSpawnConfig = {
         enabled: true,
@@ -90,6 +91,13 @@ export class AgentService {
         this.setupListeners();
         await this.load();
         await this.loadGroups();
+        if (typeof window !== 'undefined') {
+            this._onUnload = () => {
+                this.deps.database.setKv(STATS_KEY, Object.fromEntries(this.stats));
+                this.deps.database.setKv(GROUPS_KEY, this.groups);
+            };
+            window.addEventListener('beforeunload', this._onUnload);
+        }
     }
 
     destroy() {
@@ -98,6 +106,10 @@ export class AgentService {
         if (this.persistDebounceTimer) {
             clearTimeout(this.persistDebounceTimer);
             this.persistDebounceTimer = null;
+        }
+        if (this._onUnload && typeof window !== 'undefined') {
+            window.removeEventListener('beforeunload', this._onUnload);
+            this._onUnload = null;
         }
         this.deps.database
             .setKv(STATS_KEY, Object.fromEntries(this.stats))

@@ -48,7 +48,7 @@ export class CollaborativeService {
         if (session.participants.some((p) => p.userName === userName)) return false;
         session.participants.push({ userName, role, joinedAt: Date.now() });
         const activeSession = this.deps.debateApiService.getSession(session.debateId);
-        this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, activeSession);
+        if (activeSession) this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, activeSession);
         return true;
     }
 
@@ -57,10 +57,8 @@ export class CollaborativeService {
         if (!session) return;
         session.participants = session.participants.filter((p) => p.userName !== userName);
         if (session.participants.length === 0) this.sessions.delete(sessionId);
-        this.deps.eventBus.emit(
-            EVENTS.DEBATE_UPDATED,
-            this.deps.debateApiService.getSession(session.debateId),
-        );
+        const activeSession = this.deps.debateApiService.getSession(session.debateId);
+        if (activeSession) this.deps.eventBus.emit(EVENTS.DEBATE_UPDATED, activeSession);
     }
 
     getParticipants(sessionId: string): HumanParticipant[] {
