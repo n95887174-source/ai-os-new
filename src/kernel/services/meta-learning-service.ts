@@ -20,6 +20,7 @@ export class MetaLearningService implements IMetaLearningService {
     private adjustmentsApplied = 0;
     private correctPredictions = 0;
     private totalPredictions = 0;
+    private _analyzeTimer: ReturnType<typeof setTimeout> | null = null;
 
     getState(): MetaLearningState {
         return {
@@ -49,7 +50,7 @@ export class MetaLearningService implements IMetaLearningService {
         };
         this.observations.push(obs);
         this.observations = this.observations.slice(-10000); // keep last 10K
-        this.analyzePatterns();
+        this.scheduleAnalysis();
         LOGGER.info('MetaLearning', 'Observation recorded', { signal, outcome });
     }
 
@@ -158,5 +159,13 @@ export class MetaLearningService implements IMetaLearningService {
         }
 
         this.patterns = patterns;
+    }
+
+    private scheduleAnalysis(): void {
+        if (this._analyzeTimer) return;
+        this._analyzeTimer = setTimeout(() => {
+            this._analyzeTimer = null;
+            this.analyzePatterns();
+        }, 2_000);
     }
 }

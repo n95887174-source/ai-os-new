@@ -42,6 +42,17 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({
 }) => {
     const { t } = useTranslation();
     const [userVote, setUserVote] = useState<VerdictFeedbackVote | null>(null);
+    const [showAllArgs, setShowAllArgs] = useState(false);
+    const [expandedArgs, setExpandedArgs] = useState<Set<number>>(new Set());
+
+    const toggleExpand = useCallback((idx: number) => {
+        setExpandedArgs((prev) => {
+            const next = new Set(prev);
+            if (next.has(idx)) next.delete(idx);
+            else next.add(idx);
+            return next;
+        });
+    }, []);
 
     const handleVote = useCallback(
         (vote: VerdictFeedbackVote) => {
@@ -282,39 +293,79 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({
                             overflowY: 'auto',
                         }}
                     >
-                        {verdict.keyArguments.slice(0, 5).map((arg, _i) => (
-                            <div
-                                key={`${arg.agentName}-${arg.stance}-${_i}`}
-                                style={{
-                                    padding: '0.5rem 0.75rem',
-                                    borderRadius: 8,
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderLeft: `3px solid ${STANCE_COLORS[arg.stance]}`,
-                                }}
-                            >
+                        {(showAllArgs
+                            ? verdict.keyArguments
+                            : verdict.keyArguments.slice(0, 5)
+                        ).map((arg, _i) => {
+                            const isExpanded = expandedArgs.has(_i);
+                            const displayContent = isExpanded
+                                ? arg.content
+                                : arg.content.slice(0, 200);
+                            return (
                                 <div
+                                    key={`${arg.agentName}-${arg.stance}-${_i}`}
                                     style={{
-                                        fontSize: '0.7rem',
-                                        fontWeight: 600,
-                                        color: STANCE_COLORS[arg.stance],
-                                        marginBottom: 2,
+                                        padding: '0.5rem 0.75rem',
+                                        borderRadius: 8,
+                                        background: 'rgba(255,255,255,0.03)',
+                                        borderLeft: `3px solid ${STANCE_COLORS[arg.stance]}`,
                                     }}
                                 >
-                                    {arg.agentName} · {arg.stance}
+                                    <div
+                                        style={{
+                                            fontSize: '0.7rem',
+                                            fontWeight: 600,
+                                            color: STANCE_COLORS[arg.stance],
+                                            marginBottom: 2,
+                                        }}
+                                    >
+                                        {arg.agentName} · {arg.stance}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: '0.8rem',
+                                            color: 'var(--text-main)',
+                                            lineHeight: 1.4,
+                                            cursor:
+                                                arg.content.length > 200 ? 'pointer' : undefined,
+                                        }}
+                                        onClick={() => arg.content.length > 200 && toggleExpand(_i)}
+                                        title={
+                                            arg.content.length > 200
+                                                ? isExpanded
+                                                    ? t('debate.verdict.collapse')
+                                                    : t('debate.verdict.expand')
+                                                : undefined
+                                        }
+                                    >
+                                        {displayContent}
+                                        {arg.content.length > 200 && !isExpanded ? '...' : ''}
+                                    </div>
                                 </div>
-                                <div
-                                    style={{
-                                        fontSize: '0.8rem',
-                                        color: 'var(--text-main)',
-                                        lineHeight: 1.4,
-                                    }}
-                                >
-                                    {arg.content.slice(0, 200)}
-                                    {arg.content.length > 200 ? '...' : ''}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
+                    {verdict.keyArguments.length > 5 && (
+                        <button
+                            onClick={() => setShowAllArgs((v) => !v)}
+                            style={{
+                                marginTop: 8,
+                                padding: '6px 12px',
+                                borderRadius: 8,
+                                border: '1px solid var(--border)',
+                                background: 'rgba(255,255,255,0.04)',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                width: '100%',
+                            }}
+                        >
+                            {showAllArgs
+                                ? t('debate.verdict.show_less')
+                                : `${t('debate.verdict.show_all')} (${verdict.keyArguments.length})`}
+                        </button>
+                    )}
                 </div>
             )}
 

@@ -101,7 +101,7 @@ export class EpisodicMemoryStore implements IMemoryStore {
             timestamp: Date.now(),
             storesConsolidated: [this.type],
             entriesForgotten: old.length,
-            entriesConsolidated: old.length,
+            entriesConsolidated: 0,
             newSemanticEntries: 0,
             durationMs: 0,
         };

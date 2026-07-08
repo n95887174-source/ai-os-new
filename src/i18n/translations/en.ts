@@ -800,6 +800,10 @@ const en = {
     'debate.verdict.replay': 'Replay',
     'debate.verdict.export': 'Export',
     'debate.verdict.view_analysis': 'View Analysis',
+    'debate.verdict.show_all': 'Show All',
+    'debate.verdict.show_less': 'Show Less',
+    'debate.verdict.expand': 'Click to expand',
+    'debate.verdict.collapse': 'Click to collapse',
 
     // --- agents ---
     'agents.agent_workforce': 'Agent Workforce',
