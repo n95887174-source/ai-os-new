@@ -36,26 +36,46 @@ import { ObsGapsService } from '../services/obs-gaps-service';
 
 const EMPTY_ROLES_STORE: RolesStore = {
     loadAll: async () => [],
-    saveAll: async () => {/* no-op */},
+    saveAll: async () => {
+        /* no-op */
+    },
     toArray: async () => [],
-    bulkAdd: async () => {/* no-op */},
-    bulkPut: async () => {/* no-op */},
+    bulkAdd: async () => {
+        /* no-op */
+    },
+    bulkPut: async () => {
+        /* no-op */
+    },
     count: async () => 0,
-    clear: async () => {/* no-op */},
+    clear: async () => {
+        /* no-op */
+    },
     exportAll: async () => '[]',
-    importAll: async () => {/* no-op */},
+    importAll: async () => {
+        /* no-op */
+    },
 };
 
 const EMPTY_SKILLS_STORE: SkillsStore = {
     loadAll: async () => [],
-    saveAll: async () => {/* no-op */},
+    saveAll: async () => {
+        /* no-op */
+    },
     toArray: async () => [],
-    bulkAdd: async () => {/* no-op */},
-    bulkPut: async () => {/* no-op */},
+    bulkAdd: async () => {
+        /* no-op */
+    },
+    bulkPut: async () => {
+        /* no-op */
+    },
     count: async () => 0,
-    clear: async () => {/* no-op */},
+    clear: async () => {
+        /* no-op */
+    },
     exportAll: async () => '[]',
-    importAll: async () => {/* no-op */},
+    importAll: async () => {
+        /* no-op */
+    },
 };
 
 export const registerPhase4: Phase = (helpers, ctx) => {
@@ -63,15 +83,17 @@ export const registerPhase4: Phase = (helpers, ctx) => {
     const storageLayer = ctx.container.get<StorageLayer>('storageLayer');
     const configStore = storageLayer?.config;
 
-    register('agentService', (c) =>
-        new AgentService({
-            database: c.get<IDatabaseService>('database'),
-            eventBus: c.get<IEventBus>('eventBus'),
-            pricingService: c.get<PricingService>('pricingService'),
-            get orchestrator() {
-                return c.get<OrchestrationService>('orchestrator');
-            },
-        }),
+    register(
+        'agentService',
+        (c) =>
+            new AgentService({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+                pricingService: c.get<PricingService>('pricingService'),
+                get orchestrator() {
+                    return c.get<OrchestrationService>('orchestrator');
+                },
+            }),
     );
 
     // A-04: templateService.init() called inside factory on first get()
@@ -104,100 +126,127 @@ export const registerPhase4: Phase = (helpers, ctx) => {
         return ahm;
     });
 
-    register('taskHandoffService', (c) =>
-        new TaskHandoffService({ eventBus: c.get<IEventBus>('eventBus') }),
-    );
-
-    register('traceService', (c) =>
-        new TraceService(
-            asDeps<ConstructorParameters<typeof TraceService>[0]>({
+    register(
+        'taskHandoffService',
+        (c) =>
+            new TaskHandoffService({
                 eventBus: c.get<IEventBus>('eventBus'),
                 database: c.get<IDatabaseService>('database'),
+                getLifecycleState: (agentId) =>
+                    c.get<any>('agentService')?.getLifecycleState?.(agentId),
             }),
-        ),
     );
 
-    register('orchestrator', (c) =>
-        new OrchestratorClass({
-            eventBus: c.get<IEventBus>('eventBus'),
-            toolService: c.get<ToolService>('toolService'),
-            cognitiveService: c.get<CognitiveService>('cognitiveService'),
-            policyService: c.get<PolicyService>('policyService'),
-        }),
+    register(
+        'traceService',
+        (c) =>
+            new TraceService(
+                asDeps<ConstructorParameters<typeof TraceService>[0]>({
+                    eventBus: c.get<IEventBus>('eventBus'),
+                    database: c.get<IDatabaseService>('database'),
+                }),
+            ),
+    );
+
+    register(
+        'orchestrator',
+        (c) =>
+            new OrchestratorClass({
+                eventBus: c.get<IEventBus>('eventBus'),
+                toolService: c.get<ToolService>('toolService'),
+                cognitiveService: c.get<CognitiveService>('cognitiveService'),
+                policyService: c.get<PolicyService>('policyService'),
+            }),
     );
 
     // A-04: roleService depends on roleVersionService — create inside same phase
-    register('roleService', (c) =>
-        new RoleService({
-            rolesStore: storageLayer?.roles ?? EMPTY_ROLES_STORE,
-            keyValue: {
-                get: async (id: string) => {
-                    const val = configStore ? await configStore.get<unknown>(id) : null;
-                    return val != null ? { id, value: val } : undefined;
+    register(
+        'roleService',
+        (c) =>
+            new RoleService({
+                rolesStore: storageLayer?.roles ?? EMPTY_ROLES_STORE,
+                keyValue: {
+                    get: async (id: string) => {
+                        const val = configStore ? await configStore.get<unknown>(id) : null;
+                        return val != null ? { id, value: val } : undefined;
+                    },
+                    put: async (item: { id: string; value: unknown; createdAt?: number }) => {
+                        if (configStore) await configStore.set(item.id, item.value);
+                    },
                 },
-                put: async (item: { id: string; value: unknown; createdAt?: number }) => {
-                    if (configStore) await configStore.set(item.id, item.value);
-                },
-            },
-            eventBus: c.get<IEventBus>('eventBus'),
-            toolService: c.get<ToolService>('toolService'),
-            orchestrator: c.get<OrchestrationService>('orchestrator'),
-            roleVersionService: c.get<RoleVersionService>('roleVersionService'),
-        }),
+                eventBus: c.get<IEventBus>('eventBus'),
+                toolService: c.get<ToolService>('toolService'),
+                orchestrator: c.get<OrchestrationService>('orchestrator'),
+                roleVersionService: c.get<RoleVersionService>('roleVersionService'),
+            }),
     );
 
-    register('govStressTestService', (c) =>
-        new GovStressTestService({
-            getPolicies: () =>
-                c.get<PolicyService>('policyService')
-                    .getPolicies()
-                    .map((p) => ({
-                        type: String(p.type),
-                        value: typeof p.value === 'number' ? p.value : Number(p.value),
-                        enabled: true,
-                    })),
-            getViolations: (onlyActive, limit) =>
-                c.get<PolicyService>('policyService').getViolations(onlyActive, limit),
-            getRoleCount: () => c.get<RoleService>('roleService').getAllRoles().length,
-        }),
+    register(
+        'govStressTestService',
+        (c) =>
+            new GovStressTestService({
+                getPolicies: () =>
+                    c
+                        .get<PolicyService>('policyService')
+                        .getPolicies()
+                        .map((p) => ({
+                            type: String(p.type),
+                            value: typeof p.value === 'number' ? p.value : Number(p.value),
+                            enabled: true,
+                        })),
+                getViolations: (onlyActive, limit) =>
+                    c.get<PolicyService>('policyService').getViolations(onlyActive, limit),
+                getRoleCount: () => c.get<RoleService>('roleService').getAllRoles().length,
+            }),
     );
 
     register('obsGapsService', (_c) => new ObsGapsService());
 
-    register('skillService', (c) =>
-        new SkillService({
-            skillsStore: storageLayer?.skills ?? EMPTY_SKILLS_STORE,
-            eventBus: c.get<IEventBus>('eventBus'),
-        }),
+    register(
+        'skillService',
+        (c) =>
+            new SkillService({
+                skillsStore: storageLayer?.skills ?? EMPTY_SKILLS_STORE,
+                eventBus: c.get<IEventBus>('eventBus'),
+            }),
     );
 
-    register('mcpService', (c) =>
-        new MCPService({
-            database: c.get<IDatabaseService>('database'),
-            eventBus: c.get<IEventBus>('eventBus'),
-        }),
+    register(
+        'mcpService',
+        (c) =>
+            new MCPService({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+            }),
     );
 
-    register('sandboxService', (c) =>
-        new SandboxService({
-            toolService: c.get<ToolService>('toolService'),
-        }),
+    register(
+        'sandboxService',
+        (c) =>
+            new SandboxService({
+                toolService: c.get<ToolService>('toolService'),
+            }),
     );
 
-    register('budgetService', (c) =>
-        new BudgetService({
-            eventBus: c.get<IEventBus>('eventBus'),
-            database: c.get<IDatabaseService>('database'),
-            costCalculator: c.get<PricingService>('pricingService'),
-        }),
+    register(
+        'budgetService',
+        (c) =>
+            new BudgetService({
+                eventBus: c.get<IEventBus>('eventBus'),
+                database: c.get<IDatabaseService>('database'),
+                costCalculator: c.get<PricingService>('pricingService'),
+            }),
     );
 
-    register('routingPolicyService', (c) =>
-        new RoutingPolicyService({
-            settingsService: c.get<
-                import('../services/settings-service').SettingsService
-            >('settingsService'),
-            pricingService: c.get<PricingService>('pricingService'),
-        }),
+    register(
+        'routingPolicyService',
+        (c) =>
+            new RoutingPolicyService({
+                settingsService:
+                    c.get<import('../services/settings-service').SettingsService>(
+                        'settingsService',
+                    ),
+                pricingService: c.get<PricingService>('pricingService'),
+            }),
     );
 };

@@ -170,7 +170,7 @@ export class AgentJournalService {
             timestamp: Date.now(),
         };
         this.cache.set(entry.id, entry);
-        if (this.cache.size > 1000) {
+        if (this.cache.size > MAX_ENTRIES) {
             const entries = Array.from(this.cache.entries()).sort(
                 ([, a], [, b]) => a.timestamp - b.timestamp,
             );

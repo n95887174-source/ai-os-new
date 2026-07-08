@@ -1,105 +1,157 @@
 import { EVENTS } from '../events/event-names';
 
-const MAX_HANDOFFS = 200; // B10-144: Cap handoffs to prevent unbounded growth
+const MAX_HANDOFFS = 200;
+const HANDOFF_STORAGE_KEY = 'task_handoffs_v1';
 
 export interface HandoffRequest {
-  id: string;
-  fromAgent: string;
-  toAgent: string;
-  description: string;
-  context: string;
-  expectedOutput?: string;
-  deadline?: number;
-  priority: 'critical' | 'high' | 'normal' | 'low';
-  status: 'pending' | 'accepted' | 'completed' | 'failed' | 'cancelled';
-  createdAt: number;
-  completedAt?: number;
-  result?: string;
-}
-
-export interface TaskHandoffServiceDeps {
-  eventBus: {
-    emit: (event: string, data?: unknown) => void;
-  };
-}
-
-export class TaskHandoffService {
-  private deps: TaskHandoffServiceDeps;
-  private handoffs: Map<string, HandoffRequest> = new Map();
-
-  constructor(deps: TaskHandoffServiceDeps) {
-    this.deps = deps;
-  }
-
-  handoff(opts: {
+    id: string;
     fromAgent: string;
     toAgent: string;
     description: string;
     context: string;
     expectedOutput?: string;
     deadline?: number;
-    priority?: 'critical' | 'high' | 'normal' | 'low';
-  }): HandoffRequest {
-    const req: HandoffRequest = {
-      id: `handoff-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
-      fromAgent: opts.fromAgent,
-      toAgent: opts.toAgent,
-      description: opts.description,
-      context: opts.context,
-      expectedOutput: opts.expectedOutput,
-      deadline: opts.deadline,
-      priority: opts.priority || 'normal',
-      status: 'pending',
-      createdAt: Date.now(),
+    priority: 'critical' | 'high' | 'normal' | 'low';
+    status: 'pending' | 'accepted' | 'completed' | 'failed' | 'cancelled';
+    createdAt: number;
+    completedAt?: number;
+    result?: string;
+}
+
+export interface TaskHandoffServiceDeps {
+    eventBus: {
+        emit: (event: string, data?: unknown) => void;
     };
-    this.handoffs.set(req.id, req);
-    // B10-144: Cap handoffs map to prevent unbounded growth
-    if (this.handoffs.size > MAX_HANDOFFS) {
-      const oldestKey = this.handoffs.keys().next().value;
-      if (oldestKey) this.handoffs.delete(oldestKey);
+    database?: {
+        getKv: <T>(id: string) => Promise<T | null>;
+        setKv: <T>(id: string, value: T) => Promise<void>;
+    };
+    getLifecycleState?: (agentId: string) => string | undefined;
+}
+
+export class TaskHandoffService {
+    private deps: TaskHandoffServiceDeps;
+    private handoffs: Map<string, HandoffRequest> = new Map();
+
+    constructor(deps: TaskHandoffServiceDeps) {
+        this.deps = deps;
     }
-    this.deps.eventBus.emit(EVENTS.AGENT_HANDOFF_INITIATED, {
-      id: req.id,
-      fromAgent: req.fromAgent,
-      toAgent: req.toAgent,
-      description: req.description,
-      priority: req.priority,
-    });
-    return req;
-  }
 
-  accept(id: string) {
-    const req = this.handoffs.get(id);
-    if (req && req.status === 'pending') req.status = 'accepted';
-  }
+    async init(): Promise<void> {
+        if (!this.deps.database) return;
+        try {
+            const saved = await this.deps.database.getKv<HandoffRequest[]>(HANDOFF_STORAGE_KEY);
+            if (saved && Array.isArray(saved)) {
+                for (const h of saved) {
+                    if (h && h.id) this.handoffs.set(h.id, h);
+                }
+            }
+        } catch {
+            /* persist unavailable */
+        }
+    }
 
-  complete(id: string, result: string) {
-    const req = this.handoffs.get(id);
-    if (req) { req.status = 'completed'; req.result = result; req.completedAt = Date.now(); }
-  }
+    private async persist(): Promise<void> {
+        if (!this.deps.database) return;
+        try {
+            const toSave = Array.from(this.handoffs.values()).slice(-MAX_HANDOFFS);
+            await this.deps.database.setKv(HANDOFF_STORAGE_KEY, toSave);
+        } catch {
+            /* persist unavailable */
+        }
+    }
 
-  fail(id: string, error: string) {
-    const req = this.handoffs.get(id);
-    if (req) { req.status = 'failed'; req.result = error; req.completedAt = Date.now(); }
-  }
+    handoff(opts: {
+        fromAgent: string;
+        toAgent: string;
+        description: string;
+        context: string;
+        expectedOutput?: string;
+        deadline?: number;
+        priority?: 'critical' | 'high' | 'normal' | 'low';
+    }): HandoffRequest {
+        if (this.deps.getLifecycleState) {
+            const exists = this.deps.getLifecycleState(opts.toAgent);
+            if (!exists) {
+                throw new Error(`Handoff target agent "${opts.toAgent}" does not exist`);
+            }
+        }
+        const req: HandoffRequest = {
+            id: `handoff-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
+            fromAgent: opts.fromAgent,
+            toAgent: opts.toAgent,
+            description: opts.description,
+            context: opts.context,
+            expectedOutput: opts.expectedOutput,
+            deadline: opts.deadline,
+            priority: opts.priority || 'normal',
+            status: 'pending',
+            createdAt: Date.now(),
+        };
+        this.handoffs.set(req.id, req);
+        if (this.handoffs.size > MAX_HANDOFFS) {
+            const oldestKey = this.handoffs.keys().next().value;
+            if (oldestKey) this.handoffs.delete(oldestKey);
+        }
+        this.persist();
+        this.deps.eventBus.emit(EVENTS.AGENT_HANDOFF_INITIATED, {
+            id: req.id,
+            fromAgent: req.fromAgent,
+            toAgent: req.toAgent,
+            description: req.description,
+            priority: req.priority,
+        });
+        return req;
+    }
 
-  cancel(id: string) {
-    const req = this.handoffs.get(id);
-    if (req && (req.status === 'pending' || req.status === 'accepted')) req.status = 'cancelled';
-  }
+    accept(id: string) {
+        const req = this.handoffs.get(id);
+        if (req && req.status === 'pending') {
+            req.status = 'accepted';
+            this.persist();
+        }
+    }
 
-  getHandoffs(agentId?: string): HandoffRequest[] {
-    const all = Array.from(this.handoffs.values());
-    if (agentId) return all.filter(h => h.fromAgent === agentId || h.toAgent === agentId);
-    return all.sort((a, b) => b.createdAt - a.createdAt);
-  }
+    complete(id: string, result: string) {
+        const req = this.handoffs.get(id);
+        if (req) {
+            req.status = 'completed';
+            req.result = result;
+            req.completedAt = Date.now();
+            this.persist();
+        }
+    }
 
-  getPendingFor(agentId: string): HandoffRequest[] {
-    return Array.from(this.handoffs.values())
-      .filter(h => h.toAgent === agentId && h.status === 'pending')
-      .sort((a, b) => {
-        const prio: Record<string, number> = { critical: 0, high: 1, normal: 2, low: 3 };
-        return (prio[a.priority] ?? 2) - (prio[b.priority] ?? 2);
-      });
-  }
+    fail(id: string, error: string) {
+        const req = this.handoffs.get(id);
+        if (req) {
+            req.status = 'failed';
+            req.result = error;
+            req.completedAt = Date.now();
+            this.persist();
+        }
+    }
+
+    cancel(id: string) {
+        const req = this.handoffs.get(id);
+        if (req && (req.status === 'pending' || req.status === 'accepted')) {
+            req.status = 'cancelled';
+            this.persist();
+        }
+    }
+
+    getHandoffs(agentId?: string): HandoffRequest[] {
+        const all = Array.from(this.handoffs.values());
+        if (agentId) return all.filter((h) => h.fromAgent === agentId || h.toAgent === agentId);
+        return all.sort((a, b) => b.createdAt - a.createdAt);
+    }
+
+    getPendingFor(agentId: string): HandoffRequest[] {
+        return Array.from(this.handoffs.values())
+            .filter((h) => h.toAgent === agentId && h.status === 'pending')
+            .sort((a, b) => {
+                const prio: Record<string, number> = { critical: 0, high: 1, normal: 2, low: 3 };
+                return (prio[a.priority] ?? 2) - (prio[b.priority] ?? 2);
+            });
+    }
 }

@@ -72,13 +72,14 @@ function keyStateToProviderMetrics(
             : 500;
         const errors = entries.reduce((s, e) => s + (Number(e.healthErrors) || 0), 0);
         const reliability = anyBroken ? 0 : anyLimited ? 0.3 : Math.max(0.4, 1 - errors * 0.1);
+        const avgRep = entries.length > 0 ? Math.round((1 - errors / entries.length) * 100) : 100;
         result[provider] = {
             reliability,
             avgTTFT: avgLat,
             status: anyBroken ? 'offline' : anyLimited ? 'degraded' : 'active',
             stabilityIndex: Math.max(0.1, 1 - errors * 0.05),
-            reputationScore: 100,
-            avgTPS: 50,
+            reputationScore: Math.max(10, avgRep),
+            avgTPS: avgLat > 0 ? Math.max(1, Math.round(1000 / avgLat)) : 10,
         };
     }
     return result;
