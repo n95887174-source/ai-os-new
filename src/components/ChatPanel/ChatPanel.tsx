@@ -87,6 +87,12 @@ const ChatPanel: React.FC = () => {
         type: 'success' | 'error' | 'info';
     } | null>(null);
     const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(
+        () => () => {
+            if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+        },
+        [],
+    );
     const sidebarWidth = 280;
     const sidebarRef = useRef<HTMLDivElement>(null);
     const [showSearchWithinChat, setShowSearchWithinChat] = useState(false);

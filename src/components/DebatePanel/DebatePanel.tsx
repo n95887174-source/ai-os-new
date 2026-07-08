@@ -108,7 +108,7 @@ function buildDebateMarkdown(session: DebateSession): string {
             lines.push('');
             lines.push(`> ${a.content.replace(/\n/g, '\n> ')}`);
             lines.push('');
-            lines.push(`*Confidence: ${(a.confidence * 100).toFixed(0)}%*`);
+            lines.push(`*Confidence: ${((a.confidence ?? 0) * 100).toFixed(0)}%*`);
             lines.push('');
         }
     }

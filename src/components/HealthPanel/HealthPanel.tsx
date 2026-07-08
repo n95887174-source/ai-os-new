@@ -63,6 +63,12 @@ const HealthPanel: React.FC = () => {
         (health as { runtime?: { totalActive?: number } })?.runtime?.totalActive ?? 0;
 
     const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(
+        () => () => {
+            if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+        },
+        [],
+    );
 
     const handleRefresh = useCallback(() => {
         setIsLoading(true);

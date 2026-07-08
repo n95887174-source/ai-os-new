@@ -29,6 +29,14 @@ const MemoryPanel: React.FC = () => {
         'long_term' | 'ephemeral' | 'rag_sources'
     >('long_term');
     const [semanticMode, setSemanticMode] = useState(!!CONFIG?.services?.memory?.semanticEnabled);
+    useEffect(
+        () =>
+            eventBus.onSafe(EVENTS.SETTINGS_UPDATED, () => {
+                if (isMountedRef.current)
+                    setSemanticMode(!!CONFIG?.services?.memory?.semanticEnabled);
+            }),
+        [],
+    );
     const [importanceFilter, setImportanceFilter] = useState(0);
     const [viewMode, setViewMode] = useState<'cards' | 'timeline'>('cards');
     const [currentTime, setCurrentTime] = useState(() => Date.now());
