@@ -72,6 +72,26 @@ export class ResearchEngineService implements IResearchEngine {
     private _discoveryResult: DiscoveryResult | null = null;
     private researchReports: Map<string, ResearchReport> = new Map();
     private _initialized = false;
+
+    /** 2b E13: remove entries from related maps whose session no longer exists */
+    private _pruneOrphanedMaps(): void {
+        const activeIds = new Set(this.sessions.keys());
+        for (const map of [
+            this.citationGraphs,
+            this.knowledgeGraphs,
+            this.systematicReviews,
+            this.factCheckReports,
+            this.anomalyReports,
+            this.summarizations,
+            this.citationExports,
+            this.peerReviews,
+            this.researchReports,
+        ]) {
+            for (const id of map.keys()) {
+                if (!activeIds.has(id)) map.delete(id);
+            }
+        }
+    }
     private _storageLoaded = false;
 
     constructor(
@@ -192,6 +212,7 @@ export class ResearchEngineService implements IResearchEngine {
         };
         this.sessions.set(id, session);
         trimSessions(this.sessions, MAX_SESSIONS);
+        this._pruneOrphanedMaps();
         await this.#persistState();
         this.deps.eventBus.emit(EVENTS.RESEARCH_SESSION_UPDATED, {
             action: 'session_started',

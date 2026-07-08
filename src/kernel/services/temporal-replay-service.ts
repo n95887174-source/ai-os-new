@@ -251,9 +251,10 @@ export class TemporalReplayService implements ITemporalReplayService {
         const decisionWinner = String(trace.decision.selected ?? '');
 
         // Step 1: get all events from EventRecorder within time window
+        // 2b K3: bounded window — events capped at ~1000 by EventRecorder, windowEnd uses finite default
         const allEvents = this.recorder.getAll();
         const windowStart = trace.before?.keyState?.takenAt ?? 0;
-        const windowEnd = trace.after?.keyState?.takenAt ?? Infinity;
+        const windowEnd = trace.after?.keyState?.takenAt ?? Date.now();
         const windowEvents = allEvents.filter(
             (e) => e.timestamp >= windowStart && e.timestamp <= windowEnd,
         );

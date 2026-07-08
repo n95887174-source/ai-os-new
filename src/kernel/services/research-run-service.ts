@@ -28,6 +28,8 @@ export class ResearchRunService {
     private deps: ResearchRunServiceDeps;
     private persistTimer: ReturnType<typeof setTimeout> | null = null;
     private static readonly MAX_RUNS = 200;
+    /** 2b F2: flush on tab close so debounced writes aren't lost */
+    private _onUnload: (() => void) | null = null;
 
     constructor(deps: ResearchRunServiceDeps) {
         this.deps = deps;
@@ -39,6 +41,20 @@ export class ResearchRunService {
             if (stored) this.runs = stored;
         } catch (e) {
             LOGGER.error('ResearchRunService', 'Failed to load', { error: e });
+        }
+        if (typeof window !== 'undefined') {
+            this._onUnload = () => {
+                this._flushPersist();
+            };
+            window.addEventListener('beforeunload', this._onUnload);
+        }
+    }
+
+    destroy(): void {
+        this._flushPersist();
+        if (this._onUnload && typeof window !== 'undefined') {
+            window.removeEventListener('beforeunload', this._onUnload);
+            this._onUnload = null;
         }
     }
 
@@ -98,6 +114,17 @@ export class ResearchRunService {
     clearAll() {
         this.runs = [];
         void this.persist(); // B10-153
+    }
+
+    /** Flush pending debounced persist immediately */
+    private _flushPersist(): void {
+        if (this.persistTimer) {
+            clearTimeout(this.persistTimer);
+            this.persistTimer = null;
+            this.deps.database
+                .setKv(STORAGE_KEY, this.runs)
+                .catch((e) => LOGGER.error('ResearchRunService', 'Flush failed', { error: e }));
+        }
     }
 
     private persist() {

@@ -259,8 +259,11 @@ export function computeKnowledgeGraph(session: ResearchSession): KnowledgeGraph 
     return {
         entities,
         relations,
+        // 2b E6: undirected graph — max edges = n*(n-1)/2, not n*(n-1)
         density:
-            entities.length > 0 ? relations.length / (entities.length * (entities.length - 1)) : 0,
+            entities.length > 1
+                ? relations.length / ((entities.length * (entities.length - 1)) / 2)
+                : 0,
         clusters,
     };
 }
