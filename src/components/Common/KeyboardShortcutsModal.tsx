@@ -9,6 +9,8 @@ interface ShortcutEntry {
     category: string;
     categoryKey: string;
     icon?: React.ReactNode;
+    /** false when the shortcut is documented but the global keydown handler is not yet wired */
+    wired?: boolean;
 }
 
 const SHORTCUTS: ShortcutEntry[] = [
@@ -18,18 +20,21 @@ const SHORTCUTS: ShortcutEntry[] = [
         category: 'Global',
         categoryKey: 'shortcuts.category_global',
         icon: <Zap size={14} />,
+        wired: true,
     },
     {
         keys: '?',
         labelKey: 'shortcuts.toggle_legend',
         category: 'Global',
         categoryKey: 'shortcuts.category_global',
+        wired: true,
     },
     {
         keys: 'Escape',
         labelKey: 'shortcuts.cancel_close',
         category: 'Global',
         categoryKey: 'shortcuts.category_global',
+        wired: true,
     },
     {
         keys: 'Ctrl+,',
@@ -43,6 +48,7 @@ const SHORTCUTS: ShortcutEntry[] = [
         category: 'Chat',
         categoryKey: 'shortcuts.category_chat',
         icon: <Send size={14} />,
+        wired: true,
     },
     {
         keys: 'Ctrl+Shift+N',
@@ -291,6 +297,21 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                                                                 </span>
                                                             )}
                                                             <span>{t(s.labelKey)}</span>
+                                                            {s.wired !== true && (
+                                                                <span
+                                                                    style={{
+                                                                        fontSize: '0.6rem',
+                                                                        color: '#64748b',
+                                                                        background:
+                                                                            'rgba(100,116,139,0.15)',
+                                                                        padding: '0.1rem 0.35rem',
+                                                                        borderRadius: 4,
+                                                                        marginLeft: 6,
+                                                                    }}
+                                                                >
+                                                                    Planned
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <kbd
                                                             style={{

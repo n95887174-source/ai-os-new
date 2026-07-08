@@ -22,7 +22,7 @@ function getCrumbs(
             const item = section.items.find((i) => i.id === segments.slice(1).join('-'));
             if (item) {
                 return [
-                    { label: t(section.labelKey), path: '#' },
+                    { label: t(section.labelKey), path: `/${segments[0]}` },
                     { label: t(item.labelKey), path: `/${segments.join('/')}` },
                 ];
             }
@@ -34,7 +34,7 @@ function getCrumbs(
         for (const item of section.items) {
             if (item.id === id) {
                 return [
-                    { label: t(section.labelKey), path: '#' },
+                    { label: t(section.labelKey), path: `/${id}` },
                     { label: t(item.labelKey), path: `/${item.id}` },
                 ];
             }
