@@ -500,7 +500,9 @@ export class ResearchEngineService implements IResearchEngine {
         const allSources = session.loops.flatMap((l) => l.sources);
         const allClaims = session.loops.flatMap((l) => l.claims);
 
-        const summaryResult = await this.generateSummary(sessionId, 'hybrid', 'detailed');
+        const summaryStyle: SummaryStyle = format === 'json' ? 'extractive' : 'hybrid';
+        const summaryLength: SummaryLength = format === 'json' ? 'brief' : 'detailed';
+        const summaryResult = await this.generateSummary(sessionId, summaryStyle, summaryLength);
         let peerReview = this.peerReviews.get(sessionId);
         if (!peerReview) peerReview = await this.runPeerReview(sessionId);
 

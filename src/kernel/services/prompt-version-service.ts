@@ -6,6 +6,7 @@ import type {
 import { ssrSafeStorage } from '../utils/ssr-storage';
 
 const STORAGE_KEY = 'prompt_version_data';
+const MAX_VERSIONS_PER_PROMPT = 50;
 
 function id(): string {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -178,6 +179,14 @@ export class PromptVersionService implements IPromptVersionService {
             comment,
         };
         this.versions.push(v);
+        const promptVersions = this.versions.filter((pv) => pv.promptId === promptId);
+        if (promptVersions.length > MAX_VERSIONS_PER_PROMPT) {
+            const toRemove = promptVersions
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .slice(0, promptVersions.length - MAX_VERSIONS_PER_PROMPT);
+            const removeIds = new Set(toRemove.map((r) => r.id));
+            this.versions = this.versions.filter((pv) => !removeIds.has(pv.id));
+        }
         if (this.versions.length > 1000) {
             this.versions = this.versions.slice(-1000);
         }

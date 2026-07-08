@@ -401,12 +401,22 @@ export class AgentService {
             });
     }
 
-    async restartAgent(agentId: string): Promise<void> {
+    async restartAgent(agentId: string, signal?: AbortSignal): Promise<void> {
         const current = this.lifecycleStates.get(agentId) || 'ready';
         this.transitionLifecycle(agentId, current, 'initializing');
         this.stats.set(agentId, this.emptyStats());
         this.deps.orchestrator.setNodeDisabled(agentId, false);
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, 500);
+            signal?.addEventListener(
+                'abort',
+                () => {
+                    clearTimeout(timer);
+                    reject(new DOMException('Aborted', 'AbortError'));
+                },
+                { once: true },
+            );
+        }).catch(() => {});
         if (!this.lifecycleStates.has(agentId)) return;
         this.transitionLifecycle(agentId, 'initializing', 'ready');
         this.deps.eventBus.emit(EVENTS.AGENT_RESTARTED, { id: agentId });

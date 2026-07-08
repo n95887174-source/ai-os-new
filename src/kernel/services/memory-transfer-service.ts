@@ -159,7 +159,7 @@ export class MemoryTransferService implements IMemoryTransferService {
                                         ?.timestamp as number) ?? Date.now(),
                                 importance:
                                     ((r.metadata as Record<string, unknown>)
-                                        ?.importance as number) ?? 5,
+                                        ?.importance as number) ?? 0.5,
                             },
                             vector: Array.isArray(r.vector) ? (r.vector as number[]) : undefined,
                         }));
@@ -181,7 +181,7 @@ export class MemoryTransferService implements IMemoryTransferService {
                         const timestamp = parts[3]
                             ? Number(parts[3].replace(/"/g, ''))
                             : Date.now();
-                        const importance = parts[4] ? Number(parts[4].replace(/"/g, '')) : 5;
+                        const importance = parts[4] ? Number(parts[4].replace(/"/g, '')) : 0.5;
                         entries.push({
                             content,
                             metadata: { source, type, timestamp, importance },
@@ -204,7 +204,7 @@ export class MemoryTransferService implements IMemoryTransferService {
                                     source: 'import',
                                     type: sectionName,
                                     timestamp: Date.now(),
-                                    importance: 5,
+                                    importance: 0.5,
                                 },
                             });
                         }
