@@ -116,7 +116,7 @@ export class PolicyService {
     // C-79: audit + auth for mutation APIs
     private verifyAdminToken(token?: string): boolean {
         const expected = CONFIG.security?.adminToken;
-        if (!expected) return true;
+        if (!expected) return false;
         if (!token) return false;
         return constantTimeEqual(token, expected);
     }
@@ -535,6 +535,13 @@ export class PolicyService {
                     blockedBy: 'model',
                 };
             }
+            if (!this.checkModelBlacklist(model, agentId)) {
+                return {
+                    allowed: false,
+                    reason: `Model ${model} is globally blacklisted`,
+                    blockedBy: 'model',
+                };
+            }
         }
         const freeProviders = Object.keys(CONFIG.keys.freeTierLimits).map((p) => p.toLowerCase());
         if (agentPolicy.freeOnly && !freeProviders.includes(provider.toLowerCase())) {
@@ -565,7 +572,8 @@ export class PolicyService {
         );
     }
 
-    removeAgentPolicy(agentId: string) {
+    removeAgentPolicy(agentId: string, adminToken?: string) {
+        this.auditMutation('removeAgentPolicy', agentId, adminToken);
         delete this.agentPolicies[agentId];
         this.persist();
     }
@@ -600,21 +608,25 @@ export class PolicyService {
         return this.securityPatterns.filter((p) => p.type === 'blocklist').map((p) => p.pattern);
     }
 
-    addBlockedModel(model: string) {
+    addBlockedModel(model: string, adminToken?: string) {
         const exists = this.securityPatterns.some(
             (p) => p.type === 'blocklist' && p.pattern === model,
         );
         if (!exists)
-            this.addSecurityPattern({
-                id: `pattern-${Date.now()}`,
-                type: 'blocklist',
-                label: model,
-                pattern: model,
-                replacement: '',
-            });
+            this.addSecurityPattern(
+                {
+                    id: `pattern-${Date.now()}`,
+                    type: 'blocklist',
+                    label: model,
+                    pattern: model,
+                    replacement: '',
+                },
+                adminToken,
+            );
     }
 
-    removeBlockedModel(model: string) {
+    removeBlockedModel(model: string, adminToken?: string) {
+        this.auditMutation('removeBlockedModel', model, adminToken);
         const idx = this.securityPatterns.findIndex(
             (p) => p.type === 'blocklist' && p.pattern === model,
         );
@@ -640,7 +652,8 @@ export class PolicyService {
         };
     }
 
-    resolveViolation(id: string) {
+    resolveViolation(id: string, adminToken?: string) {
+        this.auditMutation('resolveViolation', id, adminToken);
         const v = this.violations.find((v) => v.id === id);
         if (v) {
             v.resolved = true;

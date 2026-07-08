@@ -83,18 +83,18 @@ export const registerPhase4: Phase = (helpers, ctx) => {
     const storageLayer = ctx.container.get<StorageLayer>('storageLayer');
     const configStore = storageLayer?.config;
 
-    register(
-        'agentService',
-        (c) =>
-            new AgentService({
-                database: c.get<IDatabaseService>('database'),
-                eventBus: c.get<IEventBus>('eventBus'),
-                pricingService: c.get<PricingService>('pricingService'),
-                get orchestrator() {
-                    return c.get<OrchestrationService>('orchestrator');
-                },
-            }),
-    );
+    register('agentService', (c) => {
+        const svc = new AgentService({
+            database: c.get<IDatabaseService>('database'),
+            eventBus: c.get<IEventBus>('eventBus'),
+            pricingService: c.get<PricingService>('pricingService'),
+            get orchestrator() {
+                return c.get<OrchestrationService>('orchestrator');
+            },
+        });
+        void svc.init();
+        return svc;
+    });
 
     // A-04: templateService.init() called inside factory on first get()
     register('templateService', (c) => {
@@ -121,7 +121,12 @@ export const registerPhase4: Phase = (helpers, ctx) => {
     });
 
     register('agentHealthMonitor', (c) => {
-        const ahm = new AgentHealthMonitor({ eventBus: c.get<IEventBus>('eventBus') });
+        const ahm = new AgentHealthMonitor({
+            eventBus: c.get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
+            agentService: c.get<AgentService>('agentService'),
+        });
+        void ahm.start();
         ctx.registerWithLifecycle('agentHealthMonitor', ahm);
         return ahm;
     });
@@ -160,26 +165,26 @@ export const registerPhase4: Phase = (helpers, ctx) => {
     );
 
     // A-04: roleService depends on roleVersionService — create inside same phase
-    register(
-        'roleService',
-        (c) =>
-            new RoleService({
-                rolesStore: storageLayer?.roles ?? EMPTY_ROLES_STORE,
-                keyValue: {
-                    get: async (id: string) => {
-                        const val = configStore ? await configStore.get<unknown>(id) : null;
-                        return val != null ? { id, value: val } : undefined;
-                    },
-                    put: async (item: { id: string; value: unknown; createdAt?: number }) => {
-                        if (configStore) await configStore.set(item.id, item.value);
-                    },
+    register('roleService', (c) => {
+        const svc = new RoleService({
+            rolesStore: storageLayer?.roles ?? EMPTY_ROLES_STORE,
+            keyValue: {
+                get: async (id: string) => {
+                    const val = configStore ? await configStore.get<unknown>(id) : null;
+                    return val != null ? { id, value: val } : undefined;
                 },
-                eventBus: c.get<IEventBus>('eventBus'),
-                toolService: c.get<ToolService>('toolService'),
-                orchestrator: c.get<OrchestrationService>('orchestrator'),
-                roleVersionService: c.get<RoleVersionService>('roleVersionService'),
-            }),
-    );
+                put: async (item: { id: string; value: unknown; createdAt?: number }) => {
+                    if (configStore) await configStore.set(item.id, item.value);
+                },
+            },
+            eventBus: c.get<IEventBus>('eventBus'),
+            toolService: c.get<ToolService>('toolService'),
+            orchestrator: c.get<OrchestrationService>('orchestrator'),
+            roleVersionService: c.get<RoleVersionService>('roleVersionService'),
+        });
+        void svc.init();
+        return svc;
+    });
 
     register(
         'govStressTestService',

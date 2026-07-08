@@ -119,7 +119,7 @@ export async function runOnce(deps: MigrationDeps): Promise<{ migrated: number; 
 
         if (deps.securityService && !deps.securityService.isLocked()) {
             const encrypted = await deps.securityService.encrypt(k.key);
-            if (encrypted) {
+            if (encrypted && encrypted !== k.key) {
                 k.key = encrypted;
                 k.isEncrypted = true;
                 encryptedCount++;

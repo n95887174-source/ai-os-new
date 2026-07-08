@@ -231,14 +231,14 @@ export const registerPhase6: Phase = (helpers, ctx) => {
             }),
     );
 
-    register(
-        'agentMarketplace',
-        (c) =>
-            new AgentMarketplace({
-                eventBus: c.get<IEventBus>('eventBus'),
-                database: c.get<IDatabaseService>('database'),
-            }),
-    );
+    register('agentMarketplace', (c) => {
+        const svc = new AgentMarketplace({
+            eventBus: c.get<IEventBus>('eventBus'),
+            database: c.get<IDatabaseService>('database'),
+        });
+        void svc.init().catch((e) => console.error('[AgentMarketplace] init() failed', e));
+        return svc;
+    });
 
     register('eloService', (_c) => new EloRatingService());
 
@@ -258,6 +258,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     register('personaService', (c) => {
         const svc = new PersonaService();
         svc.setDatabase(c.get<IDatabaseService>('database'));
+        void svc.init().catch((e) => console.error('[PersonaService] init() failed', e));
         return svc;
     });
 
