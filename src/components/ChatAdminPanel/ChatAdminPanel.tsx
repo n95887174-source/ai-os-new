@@ -161,7 +161,7 @@ const ChatAdminPanel: React.FC = () => {
         return { totalSessions: sessions.length, totalMessages, totalResponses, avgMessages };
     }, [sessions]);
 
-    const filteredSessions = (() => {
+    const filteredSessions = useMemo(() => {
         const query = deferredSearch;
         let result = sessions.filter(
             (s) =>
@@ -181,7 +181,7 @@ const ChatAdminPanel: React.FC = () => {
             result = result.filter((s) => s.history.length > 3 && s.history.length <= 10);
         else if (messageFilter === 'long') result = result.filter((s) => s.history.length > 10);
         return result;
-    })();
+    }, [sessions, deferredSearch, filterType, messageFilter, todayStart, filterTimestamp]);
 
     return (
         <div

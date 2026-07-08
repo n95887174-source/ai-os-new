@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PORT = 3001;
+const PORT = parseInt(process.env.SYNC_PORT || '3001', 10);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'shared-db.bin');

@@ -149,6 +149,9 @@ const MemoryPanel: React.FC = () => {
                 clearTimeout(innerTimerRef.current);
                 innerTimerRef.current = null;
             }
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
         };
     }, [searchQuery, semanticMode, clearError, t]);
 

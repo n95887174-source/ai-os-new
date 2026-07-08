@@ -17,6 +17,7 @@ export interface LatencyMonitorDeps {
 export class RouterLatencyMonitor {
     private latencyUnsub: (() => void) | null = null;
     private monitorInterval: ReturnType<typeof setInterval> | null = null;
+    private notifiedDegraded = new Set<string>();
 
     constructor(private deps: LatencyMonitorDeps) {}
 
@@ -75,13 +76,21 @@ export class RouterLatencyMonitor {
         const degraded = sorted.filter(
             (e) => e.avg > median * config.latency.degradationRatio && e.avg > 0,
         );
+        const degradedNow = new Set(degraded.map((d) => d.provider));
         for (const d of degraded) {
+            if (this.notifiedDegraded.has(d.provider)) continue;
             const prevState = state.providers[d.provider];
             if (prevState && prevState.status === 'healthy') {
                 this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                     message: `Latency degradation on ${d.provider}: ${Math.round(d.avg)}ms (median ${Math.round(median)}ms)`,
                     type: 'warning',
                 });
+                this.notifiedDegraded.add(d.provider);
+            }
+        }
+        for (const provider of [...this.notifiedDegraded]) {
+            if (!degradedNow.has(provider)) {
+                this.notifiedDegraded.delete(provider);
             }
         }
 
