@@ -16,7 +16,7 @@ export class CognitiveRepository {
 
     // Skills
     async getAllSkills(): Promise<CognitiveSkill[]> {
-        return this.db.skills.toArray();
+        return this.db.skills.limit(1000).toArray();
     }
 
     async getSkill(id: string): Promise<CognitiveSkill | undefined> {
@@ -33,7 +33,7 @@ export class CognitiveRepository {
 
     // Connectors
     async getAllConnectors(): Promise<Connector[]> {
-        return this.db.connectors.toArray();
+        return this.db.connectors.limit(1000).toArray();
     }
 
     async getConnector(id: string): Promise<Connector | undefined> {

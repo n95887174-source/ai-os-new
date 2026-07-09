@@ -77,6 +77,12 @@ export class ProviderBudget {
         if (provTokens >= this.limits.maxTokensPerProvider) {
             return { allowed: false, reason: `Token limit exceeded for ${provider}` };
         }
+        if (this.totalCost >= this.limits.maxTotalCost) {
+            return { allowed: false, reason: 'Global cost limit reached' };
+        }
+        if (this.totalTokens >= this.limits.maxTotalTokens) {
+            return { allowed: false, reason: 'Global token limit reached' };
+        }
         return { allowed: true };
     }
 

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { keyService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
+import { formatCost } from '../../shared/utils/format-cost';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -433,7 +434,7 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                         </span>
                     </div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-                        ${(stats.usageMonthly?.estimatedCost || 0).toFixed(2)}
+                        {formatCost(stats.usageMonthly?.estimatedCost || 0)}
                     </div>
                     {stats.rules?.quota?.monthlyBudget && (
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>

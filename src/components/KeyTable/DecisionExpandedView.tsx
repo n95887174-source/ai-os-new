@@ -1,4 +1,5 @@
 import type { RouterDecision, PipelineStep } from '../../kernel/services/provider-router';
+import { formatCost } from '../../shared/utils/format-cost';
 
 const STEP_ICONS: Record<PipelineStep['status'], string> = {
     passed: '\u2713',
@@ -55,7 +56,7 @@ const DecisionExpandedView: React.FC<Props> = ({ decision: d, keyId }) => (
             {d.estimatedCost !== undefined && (
                 <>
                     <span>Est. cost:</span>
-                    <span>${d.estimatedCost.toFixed(6)}</span>
+                    <span>{formatCost(d.estimatedCost)}</span>
                 </>
             )}
             <span>Weights:</span>
