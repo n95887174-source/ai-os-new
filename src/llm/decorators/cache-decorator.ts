@@ -40,6 +40,8 @@ export class CacheDecorator extends BaseDecorator {
     readonly #similarityThreshold: number;
     readonly #evictionTimer: ReturnType<typeof setInterval>;
     readonly #inFlight = new Map<string, Promise<ProviderResponse>>();
+    readonly #inFlightTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    static readonly #IN_FLIGHT_TIMEOUT_MS = 120_000;
     #destroyed = false;
 
     constructor(
@@ -232,12 +234,28 @@ export class CacheDecorator extends BaseDecorator {
         const pending = this.#inFlight.get(key);
         if (pending) return pending;
 
-        // 4. Fetch fresh response
-        const fetchPromise = this.inner.sendMessage(messages, model, apiKey, signal, options);
+        // 4. Fetch fresh response with timeout to prevent #inFlight leaks on hung calls
+        const timeoutPromise = new Promise<ProviderResponse>((_, reject) => {
+            const timer = setTimeout(() => {
+                this.#inFlight.delete(key);
+                this.#inFlightTimers.delete(key);
+                reject(new Error('CacheDecorator in-flight timeout'));
+            }, CacheDecorator.#IN_FLIGHT_TIMEOUT_MS);
+            this.#inFlightTimers.set(key, timer);
+        });
+        const fetchPromise = Promise.race([
+            this.inner.sendMessage(messages, model, apiKey, signal, options),
+            timeoutPromise,
+        ]);
         this.#inFlight.set(key, fetchPromise);
         try {
             const response = await fetchPromise;
             this.#inFlight.delete(key);
+            const timer = this.#inFlightTimers.get(key);
+            if (timer) {
+                clearTimeout(timer);
+                this.#inFlightTimers.delete(key);
+            }
             if (!response.error) {
                 const entry: {
                     response: ProviderResponse;
@@ -294,6 +312,11 @@ export class CacheDecorator extends BaseDecorator {
             return response;
         } catch (e) {
             this.#inFlight.delete(key);
+            const timer = this.#inFlightTimers.get(key);
+            if (timer) {
+                clearTimeout(timer);
+                this.#inFlightTimers.delete(key);
+            }
             throw e;
         }
     }
@@ -462,6 +485,8 @@ export class CacheDecorator extends BaseDecorator {
         this.#destroyed = true;
         clearInterval(this.#evictionTimer);
         this.#inFlight.clear();
+        for (const timer of this.#inFlightTimers.values()) clearTimeout(timer);
+        this.#inFlightTimers.clear();
         this.cache.clear();
         this.approximateTextIndex.clear();
         this.modelCache.clear();
@@ -473,5 +498,7 @@ export class CacheDecorator extends BaseDecorator {
         this.approximateTextIndex.clear();
         this.modelCache.clear();
         this.#inFlight.clear();
+        for (const timer of this.#inFlightTimers.values()) clearTimeout(timer);
+        this.#inFlightTimers.clear();
     }
 }

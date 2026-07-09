@@ -114,17 +114,17 @@ export class ChatBookmarksService {
                     const sessionId = data.sessionId;
                     const toRemove: string[] = [];
                     for (const [id, b] of this.cache) {
-                        if (b.sessionId === sessionId) {
-                            toRemove.push(id);
-                            this.cache.delete(id);
-                        }
+                        if (b.sessionId === sessionId) toRemove.push(id);
                     }
                     for (const id of toRemove) {
-                        this.storage.delete(id).catch((err) =>
-                            this.deps.logger?.warn('ChatBookmarks', 'rewind delete failed', {
-                                error: String(err),
-                            }),
-                        );
+                        this.storage
+                            .delete(id)
+                            .then(() => this.cache.delete(id))
+                            .catch((err) =>
+                                this.deps.logger?.warn('ChatBookmarks', 'rewind delete failed', {
+                                    error: String(err),
+                                }),
+                            );
                     }
                 }
             }),
@@ -144,16 +144,30 @@ export class ChatBookmarksService {
         note?: string;
         tags?: string[];
     }): Promise<ChatBookmark> {
+        const messageId = (input.message as ChatMessage & { id?: string }).id ?? `m_${Date.now()}`;
+
+        // Dedup: if same sessionId + messageId already exists, return existing
+        const existing = this.listAll().find(
+            (b) => b.sessionId === input.sessionId && b.messageId === messageId,
+        );
+        if (existing) return existing;
+
         const bookmark: ChatBookmark = {
             id: genId('bm'),
             sessionId: input.sessionId,
-            messageId: (input.message as ChatMessage & { id?: string }).id ?? `m_${Date.now()}`,
+            messageId,
             role: input.message.role,
             content: input.message.content ?? '',
             note: input.note,
             tags: input.tags ?? [],
             createdAt: Date.now(),
         };
+        try {
+            await this.storage.save(bookmark);
+        } catch (err) {
+            this.deps.logger?.warn('ChatBookmarks', 'persist failed', { error: String(err) });
+            throw err;
+        }
         this.cache.set(bookmark.id, bookmark);
         if (this.cache.size > 500) {
             const sorted = Array.from(this.cache.entries()).sort(
@@ -161,11 +175,6 @@ export class ChatBookmarksService {
             );
             const toRemove = sorted.slice(500);
             for (const [id] of toRemove) this.cache.delete(id);
-        }
-        try {
-            await this.storage.save(bookmark);
-        } catch (err) {
-            this.deps.logger?.warn('ChatBookmarks', 'persist failed', { error: String(err) });
         }
         this.deps.eventBus.emit(EVENTS.CHAT_BOOKMARK_ADDED, bookmark);
         return bookmark;

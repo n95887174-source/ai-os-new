@@ -19,6 +19,7 @@ class ModelCache {
     private cache = new Map<string, { models: Set<string>; timestamp: number }>();
     private fetchPromises = new Map<string, Promise<Set<string>>>();
     private refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private fetcher: ((apiKey: string) => Promise<Set<string>>) | null = null;
     private failedKeys = new Map<string, number>();
     private static readonly MAX_CACHE_SIZE = 100;
@@ -38,6 +39,16 @@ class ModelCache {
         this.clearTimer(apiKey);
         this.fetchPromises.delete(h);
         this.cache.delete(h);
+        // Schedule a retry after the backoff window so the circuit breaker recovers proactively
+        const existingRetry = this.retryTimers.get(h);
+        if (existingRetry) clearTimeout(existingRetry);
+        this.retryTimers.set(
+            h,
+            setTimeout(() => {
+                this.retryTimers.delete(h);
+                this.refresh(apiKey);
+            }, FAILED_KEY_RETRY_MS),
+        );
     }
 
     private isKeyFailed(apiKey: string): boolean {
@@ -80,6 +91,10 @@ class ModelCache {
             clearTimeout(timer);
         }
         this.refreshTimers.clear();
+        for (const timer of this.retryTimers.values()) {
+            clearTimeout(timer);
+        }
+        this.retryTimers.clear();
     }
 
     private scheduleRefresh(apiKey: string): void {
