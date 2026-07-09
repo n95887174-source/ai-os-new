@@ -32,7 +32,7 @@ export interface IMemoryEngine {
     getMemories(limit?: number): MemoryEntry[];
     getMemory(id: string): MemoryEntry | undefined;
     deleteMemory(id: string): Promise<void>;
-    updateMemory(id: string, content: string): Promise<void>;
+    updateMemory(id: string, content: string): Promise<string | undefined>;
     getStats(): MemoryStats;
     prune(options: MemoryPruneOptions): Promise<MemoryPruneResult>;
     clear(): Promise<void>;

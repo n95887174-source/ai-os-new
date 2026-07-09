@@ -132,10 +132,27 @@ const KnowledgePanel: React.FC = () => {
         if (!selectedNode || !editContent.trim()) return;
         setIsSaving(true);
         try {
-            await memoryService.updateMemory(selectedNode.id, editContent.trim());
+            const updatedId = await memoryService.updateMemory(selectedNode.id, editContent.trim());
             if (isMountedRef.current) {
-                setSelectedNode(null);
-                setMemories([...memoryService.getMemories()]);
+                const allMemories = memoryService.getMemories();
+                setMemories([...allMemories]);
+                if (updatedId) {
+                    const updated = allMemories.find((m) => m.id === updatedId);
+                    if (updated) {
+                        setSelectedNode({
+                            id: updated.id,
+                            label: updated.content.slice(0, 60),
+                            type: updated.metadata.type ?? 'generic',
+                            importance: updated.metadata.importance ?? 0.5,
+                            source: updated.metadata.source ?? '',
+                            fullContent: updated.content,
+                        });
+                    } else {
+                        setSelectedNode(null);
+                    }
+                } else {
+                    setSelectedNode(null);
+                }
                 setError(null);
             }
         } catch (e) {

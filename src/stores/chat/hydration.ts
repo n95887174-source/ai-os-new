@@ -146,6 +146,7 @@ export function useChatStoreHydration(): void {
                         merged.push(cur);
                     }
                 }
+                merged.sort((a, b) => b.updatedAt - a.updatedAt);
                 useChatStore.setState({ sessions: merged, hasMoreSessions: false });
             },
             error: (err: unknown) => {

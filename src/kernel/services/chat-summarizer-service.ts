@@ -89,7 +89,7 @@ export class ChatSummarizerService {
         messages: SummarizerMessage[],
     ): Promise<ChatSummary | null> {
         await this.#ensureLoaded();
-        if (messages.length < 10) {
+        if (messages.length < this.config.triggerAfterMessages) {
             LOGGER.debug('ChatSummarizer', 'Not enough messages to summarize', {
                 sessionId,
                 count: messages.length,

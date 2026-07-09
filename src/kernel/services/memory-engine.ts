@@ -476,21 +476,23 @@ export class MemoryService implements IMemoryEngine {
         this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     }
 
-    async updateMemory(id: string, content: string) {
+    async updateMemory(id: string, content: string): Promise<string | undefined> {
         const entry = this.memories.find((m) => m.id === id);
-        if (!entry) return;
+        if (!entry) return undefined;
         const source = entry.metadata.source ?? 'unknown';
         const type = entry.metadata.type ?? 'generic';
         const newId = await this.computeId(content, source, type);
+        let resultId: string | undefined;
         if (newId === id) {
             const updated = { ...entry, content };
             try {
                 await this.memoryRepo.save(updated);
+                resultId = id;
             } catch (e) {
                 LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', {
                     error: e,
                 });
-                return;
+                return undefined;
             }
             Object.assign(entry, updated);
         } else {
@@ -503,11 +505,12 @@ export class MemoryService implements IMemoryEngine {
             try {
                 await this.memoryRepo.delete(id);
                 await this.memoryRepo.save(newEntry);
+                resultId = newId;
             } catch (e) {
                 LOGGER.error('MemoryEngine', 'Dexie update failed — in-memory unchanged', {
                     error: e,
                 });
-                return;
+                return undefined;
             }
             const idx = this.memories.findIndex((m) => m.id === id);
             if (idx !== -1) this.memories[idx] = newEntry;
@@ -531,6 +534,7 @@ export class MemoryService implements IMemoryEngine {
                 })
                 .catch((e) => LOGGER.warn('MemoryEngine', 'Worker update failed', { error: e }));
         this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+        return resultId;
     }
 
     async search(
