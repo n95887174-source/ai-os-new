@@ -166,7 +166,8 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
             this._pendingSeedIds = Array.from(currentIds);
             return;
         }
-        this.purgeOrphans(currentIds);
+        // S-M-7: Don't purgeOrphans here — it wipes history for keys temporarily absent.
+        // The periodic purge timer (start(), 5min interval) handles orphan cleanup.
         for (const key of keys) {
             if (!this.states.has(key.id)) {
                 const status: KeyStatus =

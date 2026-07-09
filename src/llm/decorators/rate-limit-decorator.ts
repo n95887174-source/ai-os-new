@@ -49,13 +49,6 @@ export class RateLimitDecorator extends BaseDecorator {
         bucket.lastRefill = now;
     }
 
-    private consume(bucket: TokenBucket): boolean {
-        this.refill(bucket);
-        if (bucket.tokens < 1) return false;
-        bucket.tokens--;
-        return true;
-    }
-
     private getProviderId(): string {
         return this.inner.id.replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '');
     }
@@ -89,6 +82,7 @@ export class RateLimitDecorator extends BaseDecorator {
     }
 
     canSend(): boolean {
+        if (this.#manualLimited) return false;
         const now = Date.now();
         const globalElapsed = now - this.#global.lastRefill;
         const globalAvailable = Math.min(
@@ -117,13 +111,10 @@ export class RateLimitDecorator extends BaseDecorator {
             this.#perProvider.set(providerId, { tokens: this.#maxTokens, lastRefill: Date.now() });
         }
         const pb = this.#perProvider.get(providerId)!;
-        const now = Date.now();
-        const provElapsed = now - pb.lastRefill;
-        const provAvailable = Math.min(
-            this.#maxTokens,
-            pb.tokens + (provElapsed / this.#refillInterval) * this.#refillRate,
-        );
-        if (provAvailable < 1) {
+        // Check both buckets first (read-only), then consume atomically
+        this.refill(pb);
+        this.refill(this.#global);
+        if (pb.tokens < 1) {
             this.#crossTabStateSync?.updateRateLimit({
                 provider: providerId,
                 keyId: this.inner.id,
@@ -136,7 +127,7 @@ export class RateLimitDecorator extends BaseDecorator {
             });
             throw new RetryableError(`Rate limit exceeded for ${providerId}`, this.inner.id, 429);
         }
-        if (!this.consume(this.#global)) {
+        if (this.#global.tokens < 1) {
             this.#crossTabStateSync?.updateRateLimit({
                 provider: 'unknown',
                 keyId: this.inner.id,
@@ -148,7 +139,9 @@ export class RateLimitDecorator extends BaseDecorator {
             });
             throw new RetryableError('Global rate limit exceeded', this.inner.id, 429);
         }
-        this.consume(pb);
+        // Both available — consume atomically
+        pb.tokens--;
+        this.#global.tokens--;
     }
 
     async sendMessage(

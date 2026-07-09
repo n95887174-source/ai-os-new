@@ -210,6 +210,17 @@ export class EventRecorder {
     }
 
     getSince(sequence: number): RecordedEvent[] {
+        if (this.events.length > 0 && sequence < this.events[0].sequence) {
+            LOGGER.warn(
+                'EventRecorder',
+                'getSince: requested sequence predates earliest available event',
+                {
+                    requested: sequence,
+                    earliestAvailable: this.events[0].sequence,
+                },
+            );
+            return [];
+        }
         return this.events.filter((e) => e.sequence > sequence);
     }
 
@@ -405,7 +416,9 @@ export class EventRecorder {
         // Synchronous WAL write — survives tab close
         try {
             ssrSafeStorage.setItem('event-recorder:wal', JSON.stringify(this._pendingPersistData));
-        } catch {}
+        } catch {
+            // silently ignore — ssrSafeStorage.setItem can fail in restricted environments
+        }
         queueMicrotask(() => {
             this.persistQueued = false;
             const data = this._pendingPersistData;
