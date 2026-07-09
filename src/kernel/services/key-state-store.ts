@@ -65,31 +65,40 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
 
     private async loadPersisted(): Promise<void> {
         if (!this.database) return;
-        try {
-            const data =
-                await this.database.getKv<Array<{ id: string; state: KeyState }>>(
-                    'keystore_store_states',
-                );
-            if (data) {
-                for (const { id, state } of data) {
-                    if (!this.states.has(id)) {
-                        this.states.set(id, state);
+        const doLoad = async (): Promise<boolean> => {
+            try {
+                const data =
+                    await this.database!.getKv<Array<{ id: string; state: KeyState }>>(
+                        'keystore_store_states',
+                    );
+                if (data) {
+                    for (const { id, state } of data) {
+                        if (!this.states.has(id)) {
+                            this.states.set(id, state);
+                        }
                     }
                 }
+                return true;
+            } catch (e) {
+                rootLogger.warn('KeyStateStore', 'loadPersisted attempt failed', { error: e });
+                return false;
             }
-        } catch (e) {
-            rootLogger.warn(
-                'KeyStateStore',
-                'Failed to load persisted states — starting with empty state',
-                { error: e },
-            );
-            // R-M-12: On load failure, start fresh — seedFromKeys() will populate from live keys
-            this.states.clear();
-        } finally {
-            this._persistedLoaded = true;
-            // 1c M4: flush pending seeds after persistence is loaded
-            this._flushPendingSeeds();
+        };
+        const ok = await doLoad();
+        if (!ok) {
+            // R-M-12: Retry once after 5s to handle transient DB unavailability
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            const retryOk = await doLoad();
+            if (!retryOk) {
+                rootLogger.warn(
+                    'KeyStateStore',
+                    'loadPersisted retry failed — starting with empty state',
+                );
+                this.states.clear();
+            }
         }
+        this._persistedLoaded = true;
+        this._flushPendingSeeds();
     }
 
     /** Process seeds that were queued before loadPersisted() completed */

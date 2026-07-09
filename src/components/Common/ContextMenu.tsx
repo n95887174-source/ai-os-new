@@ -60,11 +60,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, actions, onClose
         };
     }, [onClose, handleKeyDown, focusIndex]);
 
-    const adjustedX = Math.min(x, window.innerWidth - (menuRef.current?.offsetWidth ?? 220));
-    const adjustedY = Math.min(
-        y,
-        window.innerHeight - (menuRef.current?.offsetHeight ?? actions.length * 36 + 16),
-    );
+    const menuWidth = menuRef.current?.offsetWidth ?? 180;
+    const menuHeight = menuRef.current?.offsetHeight ?? actions.length * 36 + 16;
+    const adjustedX = Math.min(x, Math.max(0, window.innerWidth - menuWidth));
+    const adjustedY = Math.min(y, Math.max(0, window.innerHeight - menuHeight));
 
     return (
         <AnimatePresence>

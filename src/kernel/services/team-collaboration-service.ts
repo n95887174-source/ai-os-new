@@ -116,11 +116,12 @@ export class TeamCollaborationService implements ITeamCollaborationService {
     }
 
     getTeams(): Team[] {
-        return this.teams;
+        return this.teams.map((t) => structuredClone(t));
     }
 
     getTeam(id: string): Team | undefined {
-        return this.teams.find((t) => t.id === id);
+        const found = this.teams.find((t) => t.id === id);
+        return found ? structuredClone(found) : undefined;
     }
 
     createTeam(name: string, description: string, createdBy: string): Team {

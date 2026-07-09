@@ -58,8 +58,8 @@ export class DeployService implements IDeployService {
                 STORAGE_KEY,
                 JSON.stringify({ configs: this.configs, deployments: this.deployments }),
             );
-        } catch {
-            /* silent */
+        } catch (e) {
+            console.warn('[DeployService] persist failed', e);
         }
     }
 
