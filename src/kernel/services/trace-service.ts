@@ -259,6 +259,7 @@ export class TraceService {
                 provider?: string;
                 model?: string;
             }>(EVENTS.STREAM_END, (d) => {
+                if (d.requestId.startsWith('probe-')) return;
                 const trace = this.activeTraces.get(d.requestId);
                 if (!trace) {
                     LOGGER.debug('TraceService', 'Stream end event for unknown trace', {

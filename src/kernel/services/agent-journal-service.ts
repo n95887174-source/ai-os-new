@@ -148,6 +148,24 @@ export class AgentJournalService {
             );
         });
         this.unsubs.push(off2);
+
+        const off3 = this.deps.eventBus.on('debate:runtime:agent:error', (raw: unknown) => {
+            const e = raw as { agentId: string; error: string };
+            if (!e?.agentId) return;
+            this.record({
+                agentId: e.agentId,
+                agentName: e.agentId,
+                taskType: 'debate',
+                taskDescription: (e.error ?? '').slice(0, 200),
+                outcome: 'failure' as const,
+                durationMs: 0,
+                tokensUsed: 0,
+                tags: [],
+            }).catch((err) =>
+                this.deps.logger?.error('AgentJournal', 'record failed', { error: String(err) }),
+            );
+        });
+        this.unsubs.push(off3);
     }
 
     destroy(): void {

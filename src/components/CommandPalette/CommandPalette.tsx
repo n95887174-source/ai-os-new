@@ -116,15 +116,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, t
         [recentPaths, allItems],
     );
 
-    const filtered = query.trim()
-        ? allItems
-              .map((item) => ({ item, score: fuzzyScore(query, item.label) }))
-              .filter(({ score }) => score >= 0)
-              .sort((a, b) => b.score - a.score)
-              .map(({ item }) => item)
-        : recentItems.length > 0
-          ? recentItems
-          : allItems.slice(0, 8);
+    const filtered = useMemo(
+        () =>
+            query.trim()
+                ? allItems
+                      .map((item) => ({ item, score: fuzzyScore(query, item.label) }))
+                      .filter(({ score }) => score >= 0)
+                      .sort((a, b) => b.score - a.score)
+                      .map(({ item }) => item)
+                : recentItems.length > 0
+                  ? recentItems
+                  : allItems.slice(0, 8),
+        [query, allItems, recentItems],
+    );
 
     // Re-derive items when language changes (t() is stable per session)
     useEffect(() => {
