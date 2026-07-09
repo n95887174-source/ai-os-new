@@ -118,9 +118,19 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async save(id: string): Promise<void> {
-        const existing = await this.load(id);
-        if (!existing) {
-            LOGGER.warn('SessionManagerService', `save: session ${id} not found`);
+        let existed = false;
+        const debate = await this.debateStore.getSnapshot(id);
+        if (debate) {
+            existed = true;
+            await this.debateStore.saveSnapshot({ ...debate, updatedAt: Date.now() });
+        }
+        const chat = await this.sessionStore.getSession(id);
+        if (chat) {
+            existed = true;
+            await this.sessionStore.put({ ...chat, updatedAt: Date.now() });
+        }
+        if (!existed) {
+            LOGGER.warn('SessionManagerService', `save: session ${id} not found in any store`);
         }
     }
 

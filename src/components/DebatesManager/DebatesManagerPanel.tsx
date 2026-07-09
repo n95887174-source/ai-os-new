@@ -128,22 +128,20 @@ function getStatusGroup(s: DebateSessionMeta): string {
 
 export const DebatesManagerPanel: React.FC = () => {
     const navigate = useNavigate();
-    const {
-        sessions,
-        activeSessionId,
-        isLoaded,
-        createSession,
-        deleteSession,
-        archiveSession,
-        unarchiveSession,
-        pauseSession,
-        resumeSession,
-        renameSession,
-        tagSession,
-        moveToFolder,
-        setActiveSessionId,
-        refresh,
-    } = useDebateSessionStore();
+    const sessions = useDebateSessionStore((s) => s.sessions);
+    const activeSessionId = useDebateSessionStore((s) => s.activeSessionId);
+    const isLoaded = useDebateSessionStore((s) => s.isLoaded);
+    const createSession = useDebateSessionStore((s) => s.createSession);
+    const deleteSession = useDebateSessionStore((s) => s.deleteSession);
+    const archiveSession = useDebateSessionStore((s) => s.archiveSession);
+    const unarchiveSession = useDebateSessionStore((s) => s.unarchiveSession);
+    const pauseSession = useDebateSessionStore((s) => s.pauseSession);
+    const resumeSession = useDebateSessionStore((s) => s.resumeSession);
+    const renameSession = useDebateSessionStore((s) => s.renameSession);
+    const tagSession = useDebateSessionStore((s) => s.tagSession);
+    const moveToFolder = useDebateSessionStore((s) => s.moveToFolder);
+    const setActiveSessionId = useDebateSessionStore((s) => s.setActiveSessionId);
+    const refresh = useDebateSessionStore((s) => s.refresh);
     const [search, setSearch] = useState('');
     const [showCreate, setShowCreate] = useState(false);
     const [newTopic, setNewTopic] = useState('');
