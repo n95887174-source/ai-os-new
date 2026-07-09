@@ -175,28 +175,32 @@ function ensureInitialized(
 
     const db = getDexieDb();
     const observable = liveQuery(() => db.apiKeys.toArray());
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     liveSub = observable.subscribe({
         next: (keys: ApiKey[]) => {
-            const activeCount = computeActiveCount(keys);
-            const errorCount = computeErrorCount(keys);
-            set(() => ({
-                keys,
-                activeKeys: computeActiveKeys(keys),
-                isLoaded: true,
-                totalKeys: keys.length,
-                activeCount,
-                errorCount,
-            }));
-            try {
-                eventBus.emit(EVENTS.KEY_STORE_GAUGES, {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const activeCount = computeActiveCount(keys);
+                const errorCount = computeErrorCount(keys);
+                set(() => ({
+                    keys,
+                    activeKeys: computeActiveKeys(keys),
+                    isLoaded: true,
+                    totalKeys: keys.length,
                     activeCount,
                     errorCount,
-                    alertCount: 0,
-                    totalCount: keys.length,
-                });
-            } catch {
-                /* best-effort */
-            }
+                }));
+                try {
+                    eventBus.emit(EVENTS.KEY_STORE_GAUGES, {
+                        activeCount,
+                        errorCount,
+                        alertCount: 0,
+                        totalCount: keys.length,
+                    });
+                } catch {
+                    /* best-effort */
+                }
+            }, 200);
         },
         error: (err: unknown) => {
             console.warn('[KeyStore] liveQuery error:', err);

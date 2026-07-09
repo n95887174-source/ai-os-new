@@ -99,7 +99,7 @@ export const QuickAccess: React.FC<QuickAccessProps> = ({
                                     cursor: 'pointer',
                                     padding: 4,
                                 }}
-                                aria-label="Unpin"
+                                aria-label={t('quick_access.unpin')}
                             >
                                 <X size={10} />
                             </button>

@@ -185,6 +185,10 @@ export class EventRecorder {
 
     async record(event: string, data?: unknown): Promise<void> {
         if (!this.config.enabled) return;
+        if (event === 'cognitive:trace:updated') return;
+        if (event === 'cognitive:step:active') return;
+        if (event === 'cognitive:step:completed') return;
+        if (event === 'cognitive:decision:made') return;
         const ts = Date.now();
         const recorded: RecordedEvent = {
             sequence: this.sequence++,

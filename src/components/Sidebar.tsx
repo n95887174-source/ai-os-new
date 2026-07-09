@@ -98,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 padding: '0.25rem',
                                 marginRight: '0.5rem',
                             }}
-                            aria-label="Close"
+                            aria-label={t('sidebar.close')}
                         >
                             <X size={20} />
                         </button>
@@ -124,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 padding: '0.5rem',
                                 marginLeft: 'auto',
                             }}
-                            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
                         >
                             {isCollapsed ? (
                                 <PanelRightOpen size={18} />
@@ -212,7 +212,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             userSelect: 'none',
                                         }}
                                         title={
-                                            sectionCollapsed ? 'Expand section' : 'Collapse section'
+                                            sectionCollapsed
+                                                ? t('sidebar.expand_section')
+                                                : t('sidebar.collapse_section')
                                         }
                                         aria-expanded={!sectionCollapsed}
                                     >

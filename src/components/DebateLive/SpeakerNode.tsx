@@ -157,6 +157,8 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
                         whiteSpace: 'nowrap',
                         marginTop: 2,
                     }}
+                    aria-live="polite"
+                    role="status"
                 >
                     {isActive && streamText ? 'speaking...' : thinking ? 'thinking...' : ''}
                 </motion.div>

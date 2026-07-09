@@ -127,6 +127,8 @@ export const DebateLivePanel: React.FC = () => {
                             borderRadius: 6,
                             background: 'rgba(0,0,0,0.3)',
                         }}
+                        aria-live="polite"
+                        role="status"
                     >
                         {session.phase} · {t('debate_live.round_label', { n: session.round })}
                     </span>
