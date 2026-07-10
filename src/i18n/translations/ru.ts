@@ -747,6 +747,7 @@ const ru = {
     'agents.export': 'Экспорт',
     'agents.filter_active': 'Фильтр Активные',
     'agents.filter_all': 'Фильтр Все',
+    'agents.filter_error': 'Фильтр Ошибки',
     'agents.filter_paused': 'Фильтр paused',
     'agents.header_subtitle': 'Заголовок Подзаголовок',
     'agents.import': 'Импорт',

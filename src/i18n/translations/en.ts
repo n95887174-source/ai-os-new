@@ -815,6 +815,7 @@ const en = {
     'agents.export': 'Export',
     'agents.filter_active': 'Filter Active',
     'agents.filter_all': 'Filter All',
+    'agents.filter_error': 'Filter Error',
     'agents.filter_paused': 'Filter Paused',
     'agents.header_subtitle': 'Header Subtitle',
     'agents.import': 'Import',

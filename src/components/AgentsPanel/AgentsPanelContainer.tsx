@@ -9,6 +9,34 @@ import AgentsPanelView from './AgentsPanelView';
 import { AgentsPanelContext } from './AgentsPanelContext';
 import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelContext';
 
+const lifecycleToStatus = (state: string): Agent['status'] => {
+    switch (state) {
+        case 'ready':
+        case 'busy':
+        case 'idle':
+        case 'initializing':
+            return 'active';
+        case 'paused':
+        case 'terminated':
+            return 'paused';
+        case 'degraded':
+        case 'errored':
+            return 'error';
+        default:
+            return 'active';
+    }
+};
+
+const getAgentStatus = (agentId: string): Agent['status'] => {
+    try {
+        const lifecycle = agentService.getLifecycleState(agentId);
+        if (lifecycle) return lifecycleToStatus(lifecycle);
+    } catch {
+        // fall through to isNodeDisabled
+    }
+    return orchestrator.isNodeDisabled(agentId) ? 'paused' : 'active';
+};
+
 const getAgentsFromTopology = (): Agent[] => {
     const top = orchestrator.getActiveTopology();
     if (!top) return [];
@@ -25,7 +53,7 @@ const getAgentsFromTopology = (): Agent[] => {
             description: n.config.prompt || 'No specific description.',
             providerId: n.config.provider || 'Auto',
             model: n.config.model || 'auto',
-            status: orchestrator.isNodeDisabled(n.id) ? 'paused' : 'active',
+            status: getAgentStatus(n.id),
             temperature: n.config.temperature ?? 0.7,
             tools: Array.isArray(n.config.tools) ? n.config.tools : [],
             skills: Array.isArray(n.config.skills) ? n.config.skills : [],

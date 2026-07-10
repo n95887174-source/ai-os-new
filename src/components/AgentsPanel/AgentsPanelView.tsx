@@ -225,7 +225,7 @@ const AgentsPanelView: React.FC = () => {
                 </div>
                 <div className="agents-filters">
                     <span className="agents-filter-label">{t('agents.status_filter_label')}</span>
-                    {(['all', 'active', 'paused'] as const).map((status) => (
+                    {(['all', 'active', 'paused', 'error'] as const).map((status) => (
                         <button
                             key={status}
                             onClick={() => onSetStatusFilter(status)}
@@ -236,7 +236,9 @@ const AgentsPanelView: React.FC = () => {
                                 ? t('agents.filter_all')
                                 : status === 'active'
                                   ? t('agents.filter_active')
-                                  : t('agents.filter_paused')}
+                                  : status === 'paused'
+                                    ? t('agents.filter_paused')
+                                    : t('agents.filter_error')}
                         </button>
                     ))}
                 </div>
