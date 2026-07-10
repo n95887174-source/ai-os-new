@@ -3494,3 +3494,48 @@ Fix 4 Medium findings from `audit/newww/ai-os-new-audit-report (1).md` catalog (
 - `npx vite build` ✅ (5.43s)
 - Commit: `d57c99f0`
 - STATUS_HML.md: Medium 72→76 🟢, Total 107→111 🟢, Unfixed 351→347 🔴
+
+---
+
+## Current Session (2026-07-10) — Audit Statuses Documentation Cleanup
+
+### Goal
+
+Update `REMAINING_AUDIT_ITEMS.md` and `REMAINING_WORK.md` with correct verified statuses for remaining audit items, close documentation loop.
+
+### Changes
+
+| #   | File                       | Change                                                                                                                              |
+| :-- | :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `REMAINING_AUDIT_ITEMS.md` | Moved 7 previously-investigated 2e catalog items (#110-116) from "Still remaining" → "Resolved" with per-item verification evidence |
+| 2   | `REMAINING_WORK.md`        | Updated Sprint D: verified 7 items as 🟢 Done (D-10..D-16), marked real statuses for remaining (4 🔴, 3 🟡 Partial)                 |
+| 3   | `AGENTS.md`                | Added this session entry                                                                                                            |
+
+### Verified Pre-existing (2e catalog items)
+
+| #   | Finding                          | File & Evidence                                                                                       |
+| :-- | :------------------------------- | :---------------------------------------------------------------------------------------------------- |
+| 110 | Routing bugs (C9/C10/C11)        | `router-ranking.ts:103-105` — checks `ks.flags.circuitOpen/rateLimited/authFailed`                    |
+| 111 | Budget accounting (C13/C14)      | `budget-service.ts:140` — preserves `agentId` during `loadHistory()`                                  |
+| 113 | Session leak (C15/C16)           | `chat-executor.ts:447` — comment `// C-69: removed per-request session creation`                      |
+| 114 | Decorator errors (H5/H6/H7)      | `priority-queue.ts:342,353` — uses `DOMException('Aborted', 'AbortError')`; lines 201-203 abort check |
+| 115 | Cost-opt dead code (C12/H10/H12) | `downgrade-strategy.ts:72` — `avgTokensPerRequest`; `budget-service.ts:140` — agentId preserved       |
+| 116 | Observability (H2/H4/M5)         | `router-latency-monitor.ts:45,51,53` — dynamic `getConfig()` on every call                            |
+
+### Verified Sprint D Items
+
+| #    | Item                     | Status                     |
+| :--- | :----------------------- | :------------------------- |
+| D-10 | VITE_PROXY_OPENAI        | 🟢 Already in .env.example |
+| D-11 | recharts 2.x → v3        | 🟢 Already on 3.9.2        |
+| D-12 | KeyUsageAnalyticsService | 🟢 Real data (B-017)       |
+| D-13 | Event domain prefixes    | 🟢 Done (B-041)            |
+| D-14 | .tsx→.ts renaming        | 🟢 Done (2026-07-06)       |
+| D-15 | Unused assets            | 🟢 Done                    |
+| D-16 | part2-gemini remaining   | 🟡 CB done, GCM pending    |
+
+### Unresolved
+
+- **2 real Medium remaining**: #112 mock services (nvidia-enterprise, persona-marketplace), #172 a11y 123 aria-labels
+- **Sprint C**: C-04 test coverage 🔴
+- **Sprint D**: D-01 responsive XL, D-02 liveQuery partial, D-03 60% coverage XL, D-04 i18n partial, D-05 races partial, D-10 docker-compose S
