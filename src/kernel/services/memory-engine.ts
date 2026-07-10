@@ -441,6 +441,7 @@ export class MemoryService implements IMemoryEngine {
         } catch (e) {
             govOp?.fail(e instanceof Error ? e : new Error(String(e)));
             LOGGER.error('MemoryEngine', 'Batch store failed', { error: e });
+            throw e;
         }
     }
 
