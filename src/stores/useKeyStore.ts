@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { useMemo } from 'react';
 import { liveQuery } from 'dexie';
-import { eventBus, EVENTS, keyService, groupManager, keyStateStore } from '../kernel/instances';
+import { eventBus, EVENTS, keyService, groupManager, keyStateStore } from './key-store-deps';
 import { getDexieDb } from '../kernel/services/database-service';
 import { tryGetServiceProp } from '../kernel/service-helper';
 import type { ApiKey, KeyNote, ProviderAlert } from '../types/metrics';

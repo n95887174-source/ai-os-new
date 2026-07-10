@@ -5,7 +5,7 @@ import type { ChatSession } from './types';
 import { DEFAULT_SESSION } from './types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
 import { runtime } from '../../kernel/runtime';
-import { BucketStorageAdapter } from '../../kernel/instances';
+import { BucketStorageAdapter } from '../../kernel/storage-adapter-instance';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { getDexieDb } from '../../kernel/services/database-service';
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { systemStatusService } from '../kernel/instances';
-import { eventBus, EVENTS } from '../kernel/instances';
+import { runtime } from '../kernel/runtime';
+import { eventBus, EVENTS } from '../kernel/events/event-bus';
 import type { SystemStatusReport } from '../kernel/contracts/system-status';
 
 const EVENTS_REFRESH = [
@@ -18,9 +18,19 @@ export interface SystemStatusWithStaleness {
     stalenessMs: number;
 }
 
+const _getStatus = (): SystemStatusReport => {
+    try {
+        return runtime
+            .getService<{ getStatus(): SystemStatusReport }>('systemStatusService')
+            .getStatus();
+    } catch {
+        return {} as SystemStatusReport;
+    }
+};
+
 /** Hook that tracks system status reactively — re-computes on key events + periodic refresh */
 export function useSystemStatus(): SystemStatusWithStaleness {
-    const [report, setReport] = useState(() => systemStatusService.getStatus());
+    const [report, setReport] = useState(() => _getStatus());
     const [lastUpdated, setLastUpdated] = useState(Date.now());
 
     useEffect(() => {
@@ -30,7 +40,7 @@ export function useSystemStatus(): SystemStatusWithStaleness {
         const recompute = () => {
             if (timer) clearTimeout(timer);
             timer = setTimeout(() => {
-                setReport(systemStatusService.getStatus());
+                setReport(_getStatus());
                 setLastUpdated(Date.now());
                 timer = null;
             }, 50);

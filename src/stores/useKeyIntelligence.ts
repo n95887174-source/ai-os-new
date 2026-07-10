@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { keyIntelligencePipeline } from '../kernel/instances';
-import { eventBus } from '../kernel/instances';
+import { runtime } from '../kernel/runtime';
+import { eventBus } from '../kernel/events/event-bus';
 import { rootLogger } from '../kernel/services/logger-service';
 import { EVENTS } from '../kernel/events/event-names';
 import type { KeyImportReport, KeyIntelligenceInput } from '../kernel/contracts/key-intelligence';
@@ -38,7 +38,11 @@ export function useKeyIntelligence(): UseKeyIntelligenceReturn {
         setError('');
         setReport(null);
         try {
-            const result = await keyIntelligencePipeline.run(input);
+            const result = await runtime
+                .getService<{ run(input: KeyIntelligenceInput): Promise<KeyImportReport> }>(
+                    'keyIntelligencePipeline',
+                )
+                .run(input);
             if (!mountedRef.current || ac.signal.aborted) return;
             setReport(result);
         } catch (err: unknown) {

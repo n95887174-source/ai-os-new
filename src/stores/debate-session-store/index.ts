@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { runtime } from '../../kernel/runtime';
-import { eventBus } from '../../kernel/instances';
+import { eventBus } from '../../kernel/events/event-bus';
 import { EVENTS } from '../../kernel/events/event-names';
 import { genId } from '../../utils/gen-id';
 import type { DebateParticipant, DebateSession } from '../../kernel/contracts/debate-types';
@@ -262,8 +262,8 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
         if (!mgr) return;
         await mgr.pause(id);
         try {
-            const { debateEngine } = await import('../../kernel/instances');
-            if (debateEngine?.pauseSession) debateEngine.pauseSession(id);
+            const de = runtime.getService<{ pauseSession(id: string): void }>('debateEngine');
+            de?.pauseSession?.(id);
         } catch {
             /* engine not available */
         }
@@ -279,8 +279,8 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
         if (!mgr) return;
         await mgr.resume(id);
         try {
-            const { debateEngine } = await import('../../kernel/instances');
-            if (debateEngine?.resumeSession) debateEngine.resumeSession(id);
+            const de = runtime.getService<{ resumeSession(id: string): void }>('debateEngine');
+            de?.resumeSession?.(id);
         } catch {
             /* engine not available */
         }

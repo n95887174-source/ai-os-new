@@ -1,16 +1,17 @@
 import { create } from 'zustand';
-import { eventBus, EVENTS } from '../../kernel/instances';
 import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../kernel/types/llm-types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
 import { CONFIG } from '../../kernel/services/config-registry';
-import { runtime } from '../../kernel/runtime';
 import {
+    eventBus,
+    EVENTS,
+    runtime,
     executionGovernor,
     memoryService,
     workspaceService,
     sessionManager,
-} from '../../kernel/instances';
+} from './service-deps';
 import type { ChatStoreShape, ChatEntry, ChatSession, ZustandSet, ZustandGet } from './types';
 import {
     DEFAULT_SESSION,

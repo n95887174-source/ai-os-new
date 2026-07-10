@@ -1,7 +1,25 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- External API responses are inherently untyped */
+/* eslint-disable @typescript-eslint/no-explicit-any --
+ * 23 external API adapters with different response shapes. Each returns
+ * `Promise<any>` from `res.json()` so `any` is unavoidable at the boundary.
+ * When adding NEW adapters, import and use `asObj`/`asArr` below — they
+ * return `Record<string,unknown>` / `Record<string,unknown>[]` for typed
+ * downstream access. Existing adapters can be migrated incrementally. */
 import type { ResearchSource, SourceCategory, SourceType } from '../../contracts/research-engine';
 import type { ISourceAdapter, SourceAdapterConfig } from '../../contracts/research-adapter';
 import { genId } from '../../../utils/gen-id';
+
+// ── Typed JSON helpers (prefer these for NEW adapters) ──────────────────
+
+function asObj(v: unknown): Record<string, unknown> {
+    return (v ?? {}) as Record<string, unknown>;
+}
+
+function asArr(v: unknown): Record<string, unknown>[] {
+    return Array.isArray(v) ? (v as Record<string, unknown>[]) : [];
+}
+
+void asObj;
+void asArr;
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
