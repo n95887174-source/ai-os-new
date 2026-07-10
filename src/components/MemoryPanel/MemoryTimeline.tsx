@@ -218,10 +218,10 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                                                     style={{
                                                         fontSize: '0.6rem',
                                                         color:
-                                                            (entry.metadata.importance ?? 0) >= 8
+                                                            (entry.metadata.importance ?? 0) >= 0.8
                                                                 ? '#ef4444'
                                                                 : (entry.metadata.importance ??
-                                                                        0) >= 5
+                                                                        0) >= 0.5
                                                                   ? '#f59e0b'
                                                                   : '#94a3b8',
                                                         display: 'flex',

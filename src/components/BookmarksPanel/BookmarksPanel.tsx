@@ -113,10 +113,9 @@ const BookmarksPanel: React.FC = () => {
         await bookmarksService.clearAll();
     }, [t, confirm]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const allTags = useMemo(() => bookmarksService.getAllTags(), [bookmarks]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const total = useMemo(() => bookmarksService.count(), [bookmarks]);
+    // P6: compute from service, not from filtered local state (bookmarks ref changes every render)
+    const allTags = useMemo(() => bookmarksService.getAllTags(), []);
+    const total = useMemo(() => bookmarksService.count(), []);
 
     if (loading) return <PanelLoading />;
 

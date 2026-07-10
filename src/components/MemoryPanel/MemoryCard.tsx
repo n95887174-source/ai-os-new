@@ -153,15 +153,15 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
                             alignItems: 'center',
                             fontWeight: 600,
                             background:
-                                (memory.metadata.importance ?? 0) >= 8
+                                (memory.metadata.importance ?? 0) >= 0.8
                                     ? 'rgba(239,68,68,0.15)'
-                                    : (memory.metadata.importance ?? 0) >= 5
+                                    : (memory.metadata.importance ?? 0) >= 0.5
                                       ? 'rgba(245,158,11,0.15)'
                                       : 'rgba(100,116,139,0.15)',
                             color:
-                                (memory.metadata.importance ?? 0) >= 8
+                                (memory.metadata.importance ?? 0) >= 0.8
                                     ? '#ef4444'
-                                    : (memory.metadata.importance ?? 0) >= 5
+                                    : (memory.metadata.importance ?? 0) >= 0.5
                                       ? '#f59e0b'
                                       : '#94a3b8',
                         }}
