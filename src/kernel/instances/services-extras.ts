@@ -1,0 +1,168 @@
+import { lazyService } from '../service-helper';
+import type { IArchitectureReviewService } from '../contracts/architecture-review';
+import type { IPromptAuditService } from '../contracts/prompt-audit';
+import type { IRoutingExperimentsService } from '../contracts/routing-experiments';
+import type { IGovStressTestService } from '../contracts/gov-stress-test';
+import type { IObsGapsService } from '../contracts/obs-gaps';
+import type { IConsistencyChecker } from '../contracts/consistency-checker';
+import type { IConsistencyHealingPipeline } from '../contracts/consistency-healing';
+import type { IRotationService } from '../contracts/key-rotation';
+import type { IBudgetService } from '../contracts/budget';
+import type { TaskHandoffService } from '../services/task-handoff';
+import type { TemplateService } from '../services/template-service';
+import type { AgentVersionService } from '../services/agent-version-service';
+import type { MetricsService } from '../services/metrics-service';
+import type { WorkforceFederation } from '../services/workforce-federation';
+import type { AgentMarketplace } from '../services/agent-marketplace';
+import type { TopologyManager } from '../services/topology-manager';
+import type { CollaborativeService } from '../services/collaborative-service';
+import type { DebateApiService } from '../services/debate-runtime/debate-api';
+import type { DebateKnowledgeSyncService } from '../services/debate-runtime/debate-knowledge-sync';
+import type { IHypothesisService } from '../contracts/hypothesis';
+import type { ResearchRunService as ResearchRunServiceType } from '../services/research-run-service';
+import type { ChatSummarizerService as ChatSummarizerServiceType } from '../services/chat-summarizer-service';
+import type { IBridgeKeeperService } from '../contracts/guardian';
+import type { ReconnectionService } from '../services/reconnection-service';
+import type { IResearchEngine } from '../contracts/research-engine';
+import type { IGeminiResearchService } from '../contracts/gemini-research';
+import type { IAudienceService } from '../contracts/audience';
+import type { ITutorialService } from '../contracts/tutorial';
+import type { ITeamCollaborationService } from '../contracts/team-collaboration';
+import type { IFineTuningService } from '../contracts/fine-tuning';
+import type { IDistillationService } from '../contracts/model-distillation';
+import type { IDeployService } from '../contracts/deploy';
+import type { IBudgetAlertService } from '../contracts/budget-alert';
+import type { ITopologyTemplateService } from '../contracts/topology-templates';
+import type { IKeyUsageAnalyticsService } from '../contracts/key-usage-analytics';
+import type { IPromptVersionService } from '../contracts/prompt-version-history';
+import type { IProviderMigrationService } from '../contracts/provider-migration';
+import type { IHealthSlaService } from '../contracts/health-sla';
+import type { IResearchReportService } from '../contracts/research-report';
+import type { IVoiceInputService } from '../contracts/voice-input';
+import type { IAgentProtocolService } from '../contracts/agent-protocol';
+import type { IFederatedMemoryService } from '../contracts/federated-memory';
+import type { IPluginSdkService } from '../contracts/plugin-sdk';
+import type { IPersonaMarketplaceService } from '../contracts/persona-marketplace';
+import type { ITemplateSharingService } from '../contracts/template-sharing';
+import type { IMemoryTransferService } from '../contracts/memory-transfer';
+import type { IAquariumTradingService } from '../contracts/aquarium-trading';
+import type { ITimeMachineService } from '../contracts/time-machine';
+import type { IContributionService } from '../contracts/contribution';
+import type { IGeminiLiveService } from '../contracts/gemini-live';
+import type { IMetaLearningService } from '../contracts/meta-learning';
+import type { IQuantumInspirationService } from '../contracts/quantum-inspiration';
+import type { ISmartRoutingService } from '../contracts/smart-routing';
+import type { INvidiaEnterpriseService } from '../contracts/nvidia-enterprise';
+import type { IGeminiCacheService } from '../contracts/gemini-cache';
+import type { IProviderAchievementService } from '../contracts/provider-achievements';
+import type { IPromptSecurityService } from '../contracts/prompt-security-types';
+import type { GoogleGenAIService as GoogleGenAIServiceType } from '../services/google-genai-service';
+import type { WorkflowService as WorkflowServiceType } from '../services/workflow-service';
+import type { SourceAdapterRegistry as SourceAdapterRegistryType } from '../services/research-adapters/source-adapter-registry';
+import type { PromptLibraryService as PromptLibraryServiceType } from '../services/prompt-library-service';
+import type { BatchProcessorService as BatchProcessorServiceType } from '../services/batch-processor-service';
+import type { AgentAvatarService } from '../services/agent-avatar-service';
+
+export const architectureReviewService = lazyService<IArchitectureReviewService>(
+    'architectureReviewService',
+);
+export const promptAuditService = lazyService<IPromptAuditService>('promptAuditService');
+export const routingExperimentsService = lazyService<IRoutingExperimentsService>(
+    'routingExperimentsService',
+);
+export const govStressTestService = lazyService<IGovStressTestService>('govStressTestService');
+export const obsGapsService = lazyService<IObsGapsService>('obsGapsService');
+
+export const consistencyChecker = lazyService<IConsistencyChecker>('consistencyChecker');
+export const consistencyHealingPipeline = lazyService<IConsistencyHealingPipeline>(
+    'consistencyHealingPipeline',
+);
+export const rotationService = lazyService<IRotationService>('rotationService');
+export const budgetService = lazyService<IBudgetService>('budgetService');
+export const taskHandoffService = lazyService<TaskHandoffService>('taskHandoffService');
+export const templateService = lazyService<TemplateService>('templateService');
+export const agentVersionService = lazyService<AgentVersionService>('agentVersionService');
+export const metricsService = lazyService<MetricsService>('metricsService');
+export const workforceFederation = lazyService<WorkforceFederation>('workforceFederation');
+export const agentMarketplace = lazyService<AgentMarketplace>('agentMarketplace');
+export const topologyManager = lazyService<TopologyManager>('topologyManager');
+export const collaborativeService = lazyService<CollaborativeService>('collaborativeService');
+export const debateApiService = lazyService<DebateApiService>('debateApiService');
+export const debateKnowledgeSync = lazyService<DebateKnowledgeSyncService>('debateKnowledgeSync');
+export const hypothesisService = lazyService<IHypothesisService>('hypothesisService');
+
+// ── Research Run Service (direct re-export + lazyService) ──
+export { ResearchRunService, type ResearchRun } from '../services/research-run-service';
+export const researchRunService = lazyService<ResearchRunServiceType>('researchRunService');
+
+// ── Debate Templates (direct re-export) ──
+export { DEBATE_TEMPLATES, getDebateTemplate } from '../services/debate-runtime/debate-templates';
+export type { DebateTemplate } from '../services/debate-runtime/debate-templates';
+
+// ── ELO Rating Service ──
+export const eloService =
+    lazyService<import('../services/elo/elo-service').EloRatingService>('eloService');
+export type { AgentElo } from '../services/elo/elo-service';
+
+export const chatSummarizerService =
+    lazyService<ChatSummarizerServiceType>('chatSummarizerService');
+export const bridgeKeeperService = lazyService<IBridgeKeeperService>('bridgeKeeperService');
+export const reconnectionService = lazyService<ReconnectionService>('reconnectionService');
+export const researchEngine = lazyService<IResearchEngine>('researchEngine');
+export const geminiResearchService = lazyService<IGeminiResearchService>('geminiResearchService');
+export const audienceService = lazyService<IAudienceService>('audienceService');
+export const tutorialService = lazyService<ITutorialService>('tutorialService');
+export const teamCollaborationService = lazyService<ITeamCollaborationService>(
+    'teamCollaborationService',
+);
+export const fineTuningService = lazyService<IFineTuningService>('fineTuningService');
+export const distillationService = lazyService<IDistillationService>('distillationService');
+export const deployService = lazyService<IDeployService>('deployService');
+export const budgetAlertService = lazyService<IBudgetAlertService>('budgetAlertService');
+export const topologyTemplateService =
+    lazyService<ITopologyTemplateService>('topologyTemplateService');
+export const keyUsageAnalyticsService = lazyService<IKeyUsageAnalyticsService>(
+    'keyUsageAnalyticsService',
+);
+export const promptVersionService = lazyService<IPromptVersionService>('promptVersionService');
+export const providerMigrationService = lazyService<IProviderMigrationService>(
+    'providerMigrationService',
+);
+export const healthSlaService = lazyService<IHealthSlaService>('healthSlaService');
+export const researchReportService = lazyService<IResearchReportService>('researchReportService');
+export const voiceInputService = lazyService<IVoiceInputService>('voiceInputService');
+export const agentProtocolService = lazyService<IAgentProtocolService>('agentProtocolService');
+export const federatedMemoryService =
+    lazyService<IFederatedMemoryService>('federatedMemoryService');
+export const pluginSdkService = lazyService<IPluginSdkService>('pluginSdkService');
+export const personaMarketplaceService = lazyService<IPersonaMarketplaceService>(
+    'personaMarketplaceService',
+);
+export const templateSharingService =
+    lazyService<ITemplateSharingService>('templateSharingService');
+export const memoryTransferService = lazyService<IMemoryTransferService>('memoryTransferService');
+export const aquariumTradingService =
+    lazyService<IAquariumTradingService>('aquariumTradingService');
+export const timeMachineService = lazyService<ITimeMachineService>('timeMachineService');
+export const contributionService = lazyService<IContributionService>('contributionService');
+export const geminiLiveService = lazyService<IGeminiLiveService>('geminiLiveService');
+export const metaLearningService = lazyService<IMetaLearningService>('metaLearningService');
+export const quantumInspirationService = lazyService<IQuantumInspirationService>(
+    'quantumInspirationService',
+);
+export const smartRoutingService = lazyService<ISmartRoutingService>('smartRoutingService');
+export const nvidiaEnterpriseService =
+    lazyService<INvidiaEnterpriseService>('nvidiaEnterpriseService');
+export const geminiCacheService = lazyService<IGeminiCacheService>('geminiCacheService');
+export const providerAchievementService = lazyService<IProviderAchievementService>(
+    'providerAchievementService',
+);
+export const promptSecurityService = lazyService<IPromptSecurityService>('promptSecurityService');
+export const googleGenAIService = lazyService<GoogleGenAIServiceType>('googleGenAIService');
+export const workflowService = lazyService<WorkflowServiceType>('workflowService');
+export const sourceAdapterRegistry =
+    lazyService<SourceAdapterRegistryType>('sourceAdapterRegistry');
+export const promptLibraryService = lazyService<PromptLibraryServiceType>('promptLibraryService');
+export const batchProcessorService =
+    lazyService<BatchProcessorServiceType>('batchProcessorService');
+export const agentAvatarService = lazyService<AgentAvatarService>('agentAvatarService');
