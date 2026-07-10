@@ -225,6 +225,13 @@ const wss = new WebSocketServer({
             callback(false, 429, 'Too many connections');
             return;
         }
+        // L-9: Check origin BEFORE token check — never reveal token validity to unauthorized origins
+        const wsOrigin = info.origin || info.req.headers['origin'] || '';
+        if (wsOrigin && !isAllowedOrigin(wsOrigin)) {
+            callback(false, 403, 'Origin not allowed');
+            return;
+        }
+
         // SECURITY FIX: Check Sec-WebSocket-Protocol header first (preferred), then Authorization, then query param (deprecated fallback)
         // Sec-WebSocket-Protocol: first value is subprotocol name, second (if any) is the token
         const protocols = info.req.headers['sec-websocket-protocol'];
@@ -265,12 +272,6 @@ const wss = new WebSocketServer({
             }
         } catch {
             /* ignore parse errors */
-        }
-        // CRIT-11: Reject WebSocket connections from disallowed origins
-        const wsOrigin = info.origin || info.req.headers['origin'] || '';
-        if (wsOrigin && !isAllowedOrigin(wsOrigin)) {
-            callback(false, 403, 'Origin not allowed');
-            return;
         }
         callback(false, 401, 'Unauthorized');
     },
