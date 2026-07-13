@@ -18,9 +18,6 @@ function asArr(v: unknown): Record<string, unknown>[] {
     return Array.isArray(v) ? (v as Record<string, unknown>[]) : [];
 }
 
-void asObj;
-void asArr;
-
 // ── Helpers ────────────────────────────────────────────────────────────
 
 function mkSource(
@@ -115,7 +112,7 @@ class DuckDuckGoAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return sources;
-        const data = (await res.json()) as any;
+        const data = asObj(await res.json());
         if (data.AbstractText && typeof data.AbstractText === 'string') {
             sources.push(
                 mkSource(
@@ -173,7 +170,7 @@ class WikipediaAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return sources;
-        const data = (await res.json()) as any;
+        const data = asObj(await res.json());
         if (data.title && data.extract) {
             sources.push(
                 mkSource(
@@ -219,8 +216,8 @@ class GoogleCustomSearchAdapter implements ISourceAdapter {
         clearTimeout(timer);
 
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const items = data.items as any[] | undefined;
+        const data = asObj(await res.json());
+        const items = asArr(data.items);
         if (!items) return [];
         return items.map((item) =>
             mkSource(
@@ -309,8 +306,9 @@ class PubMedAdapter implements ISourceAdapter {
             signal,
         );
         if (!searchRes) return sources;
-        const searchData = (await searchRes.json()) as any;
-        const idList = (searchData?.esearchresult?.idlist as string[]) || [];
+        const searchData = asObj(await searchRes.json());
+        const esr = searchData.esearchresult as Record<string, unknown> | undefined;
+        const idList = (esr?.idlist as string[]) || [];
         if (idList.length === 0) return sources;
 
         const ids = idList.slice(0, 10).join(',');
@@ -320,7 +318,7 @@ class PubMedAdapter implements ISourceAdapter {
             signal,
         );
         if (!summaryRes) return sources;
-        const summaryData = (await summaryRes.json()) as any;
+        const summaryData = asObj(await summaryRes.json());
         const result = (summaryData?.result as Record<string, unknown>) || {};
         for (const id of idList.slice(0, 10)) {
             const item = result[id] as Record<string, unknown> | undefined;
@@ -370,8 +368,9 @@ class PubMedCentralAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const idList = (data?.esearchresult?.idlist as string[]) || [];
+        const data = asObj(await res.json());
+        const pmcEsr = data.esearchresult as Record<string, unknown> | undefined;
+        const idList = (pmcEsr?.idlist as string[]) || [];
         return idList.map((id) =>
             mkSource(
                 `PubMed Central article ${id}`,
@@ -414,8 +413,8 @@ class SemanticScholarAdapter implements ISourceAdapter {
             );
             clearTimeout(timer);
             if (!res.ok) return [];
-            const data = (await res.json()) as any;
-            const papers = (data.data as any[]) || [];
+            const data = asObj(await res.json());
+            const papers = asArr(data.data);
             return papers.map((p) =>
                 mkSource(
                     String(p.title || ''),
@@ -461,8 +460,8 @@ class OpenAlexAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const results = (data.results as any[]) || [];
+        const data = asObj(await res.json());
+        const results = asArr(data.results);
         return results.map((r) =>
             mkSource(
                 String(r.title || ''),
@@ -472,7 +471,7 @@ class OpenAlexAdapter implements ISourceAdapter {
                 'openalex',
                 Number(r.relevance_score) || 0.6,
                 {
-                    authors: ((r.authorships as any[]) || []).map((a: Record<string, unknown>) =>
+                    authors: asArr(r.authorships).map((a: Record<string, unknown>) =>
                         String((a.author as Record<string, string>)?.name || ''),
                     ),
                     year: r.publication_year ? Number(r.publication_year) : undefined,
@@ -506,18 +505,23 @@ class CrossrefAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const items = (data.message?.items as any[]) || [];
-        return items.map((item) => {
+        const data = asObj(await res.json());
+        const msg = data['message'] as Record<string, unknown> | undefined;
+        const items = asArr(msg?.['items']);
+        return items.map((item: Record<string, unknown>) => {
             const title = (item.title as string[])?.[0] || '';
             const authors = ((item.author as Array<Record<string, string>>) || []).map((a) =>
                 `${a.given || ''} ${a.family || ''}`.trim(),
             );
-            const date = (item.published?.['date-parts'] as number[])?.[0];
+            const published = item.published as Record<string, unknown> | undefined;
+            const dateParts = published?.['date-parts'] as number[] | undefined;
+            const date = dateParts?.[0];
+            const containerTitle = item['container-title'] as string[] | undefined;
+            const isRefCount = item['is-referenced-by-count'] as number | undefined;
             return mkSource(
                 title,
                 item.URL ? String(item.URL) : `https://doi.org/${item.DOI}`,
-                `Published in ${item['container-title']?.[0] || 'unknown journal'}. Authors: ${authors.join(', ').slice(0, 200)}`,
+                `Published in ${containerTitle?.[0] || 'unknown journal'}. Authors: ${authors.join(', ').slice(0, 200)}`,
                 'academic',
                 'crossref',
                 0.65,
@@ -525,9 +529,7 @@ class CrossrefAdapter implements ISourceAdapter {
                     authors,
                     year: date ? Number(date) : undefined,
                     doi: item.DOI ? String(item.DOI) : undefined,
-                    citationCount: item['is-referenced-by-count']
-                        ? Number(item['is-referenced-by-count'])
-                        : undefined,
+                    citationCount: isRefCount ? Number(isRefCount) : undefined,
                 },
             );
         });
@@ -556,8 +558,10 @@ class DBLPAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const hits = (data.result?.hits?.hit as any[]) || [];
+        const data = asObj(await res.json());
+        const dblpResult = data.result as Record<string, unknown> | undefined;
+        const dblpHits = dblpResult?.hits as Record<string, unknown> | undefined;
+        const hits = asArr(dblpHits?.hit);
         return hits.map((h) => {
             const info = (h.info as Record<string, unknown>) || {};
             const authors = (
@@ -615,8 +619,8 @@ class COREAdapter implements ISourceAdapter {
             );
             clearTimeout(timer);
             if (!res.ok) return [];
-            const data = (await res.json()) as any;
-            const results = (data.results as any[]) || [];
+            const data = asObj(await res.json());
+            const results = asArr(data.results);
             return results.map((r) =>
                 mkSource(
                     String(r.title || ''),
@@ -662,19 +666,20 @@ class BASEAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const docs = (data.response?.docs as any[]) || [];
-        return docs.map((d) =>
+        const data = asObj(await res.json());
+        const baseResp = data.response as Record<string, unknown> | undefined;
+        const docs = asArr(baseResp?.docs);
+        return docs.map((d: Record<string, unknown>) =>
             mkSource(
-                String(d.title?.[0] || ''),
-                String(d.url?.[0] || d.link?.[0] || ''),
-                String(d.description?.[0] || '').slice(0, 500),
+                String((d.title as string[])?.[0] || ''),
+                String((d.url as string[])?.[0] || (d.link as string[])?.[0] || ''),
+                String((d.description as string[])?.[0] || '').slice(0, 500),
                 'academic',
                 'base',
                 0.55,
                 {
-                    authors: Array.isArray(d.author) ? d.author.map(String) : [],
-                    year: d.year?.[0] ? Number(d.year[0]) : undefined,
+                    authors: Array.isArray(d.author) ? (d.author as string[]).map(String) : [],
+                    year: (d.year as string[])?.[0] ? Number((d.year as string[])[0]) : undefined,
                 },
             ),
         );
@@ -703,25 +708,30 @@ class HALAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const docs = (data.response?.docs as any[]) || [];
-        return docs.map((d) =>
+        const data = asObj(await res.json());
+        const halResp = data.response as Record<string, unknown> | undefined;
+        const docs = asArr(halResp?.docs);
+        return docs.map((d: Record<string, unknown>) =>
             mkSource(
-                String(d.title_s?.[0] || d.title?.[0] || ''),
-                String(d.uri_s?.[0] || d.link?.[0] || 'https://hal.science/' + (d.docid_s || '')),
-                String(d.abstract_s?.[0] || '').slice(0, 500),
+                String((d.title_s as string[])?.[0] || (d.title as string[])?.[0] || ''),
+                String(
+                    (d.uri_s as string[])?.[0] ||
+                        (d.link as string[])?.[0] ||
+                        'https://hal.science/' + String(d.docid_s || ''),
+                ),
+                String((d.abstract_s as string[])?.[0] || '').slice(0, 500),
                 'academic',
                 'hal',
                 0.6,
                 {
                     authors:
                         Array.isArray(d.authFirstName_s) && Array.isArray(d.authLastName_s)
-                            ? d.authFirstName_s.map((f: string, i: number) =>
-                                  `${f} ${d.authLastName_s[i] || ''}`.trim(),
+                            ? (d.authFirstName_s as string[]).map((f: string, i: number) =>
+                                  `${f} ${(d.authLastName_s as string[])[i] || ''}`.trim(),
                               )
                             : [],
-                    year: d.productionDate_s?.[0]
-                        ? Number(String(d.productionDate_s[0]).slice(0, 4))
+                    year: (d.productionDate_s as string[])?.[0]
+                        ? Number(String((d.productionDate_s as string[])[0]).slice(0, 4))
                         : undefined,
                 },
             ),
@@ -751,18 +761,25 @@ class OpenAIREAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const results = (data.response?.results?.result as any[]) || [];
-        return results.map((r) => {
-            const meta = r.metadata?.['oaf:entity']?.['oaf:result'] || {};
-            const title = meta.title?.['$'] || '';
-            const authors = (meta.creator || []).map((c: Record<string, unknown>) =>
-                String(c['$'] || ''),
-            );
-            const date = meta.dateOfAcceptance?.['$'] || meta.dateOfModification?.['$'] || '';
+        const data = asObj(await res.json());
+        const oaResp = data.response as Record<string, unknown> | undefined;
+        const oaResults = oaResp?.results as Record<string, unknown> | undefined;
+        const results = asArr(oaResults?.result);
+        return results.map((r: Record<string, unknown>) => {
+            const rMeta = r.metadata as Record<string, unknown> | undefined;
+            const ent = rMeta?.['oaf:entity'] as Record<string, unknown> | undefined;
+            const result = ent?.['oaf:result'] as Record<string, unknown> | undefined;
+            const rTitle = result?.title as Record<string, unknown> | undefined;
+            const title = String(rTitle?.['$'] || '');
+            const creators = asArr(result?.creator);
+            const authors = creators.map((c: Record<string, unknown>) => String(c['$'] || ''));
+            const rAccept = result?.dateOfAcceptance as Record<string, unknown> | undefined;
+            const rMod = result?.dateOfModification as Record<string, unknown> | undefined;
+            const date = String(rAccept?.['$'] || rMod?.['$'] || '');
+            const rPid = result?.pid as Record<string, unknown> | undefined;
             return mkSource(
-                String(title),
-                meta.pid?.['$'] || r._url || '',
+                title,
+                String(rPid?.['$'] || String(r['_url'] || '')),
                 `Authors: ${authors.join(', ').slice(0, 200)}. Date: ${date}`,
                 'academic',
                 'openaire',
@@ -795,8 +812,8 @@ class BioRxivAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const collection = (data.collection as any[]) || [];
+        const data = asObj(await res.json());
+        const collection = asArr(data.collection);
         return collection.slice(0, 10).map((item) =>
             mkSource(
                 String(item.title || ''),
@@ -835,8 +852,8 @@ class MedRxivAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const collection = (data.collection as any[]) || [];
+        const data = asObj(await res.json());
+        const collection = asArr(data.collection);
         return collection.slice(0, 10).map((item) =>
             mkSource(
                 String(item.title || ''),
@@ -875,8 +892,8 @@ class ChemRxivAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const results = (data.results || data.items || []) as any[];
+        const data = asObj(await res.json());
+        const results = asArr(data.results || data.items);
         return results.map((item) =>
             mkSource(
                 String(item.title || ''),
@@ -925,8 +942,8 @@ class NewsAPIAdapter implements ISourceAdapter {
             apiKey,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const articles = (data.articles as any[]) || [];
+        const data = asObj(await res.json());
+        const articles = asArr(data.articles);
         return articles.map((a) =>
             mkSource(
                 String(a.title || ''),
@@ -969,22 +986,23 @@ class GitHubAdapter implements ISourceAdapter {
             );
             clearTimeout(timer);
             if (!res.ok) return [];
-            const data = (await res.json()) as any;
-            const items = (data.items as any[]) || [];
-            return items.map((r) =>
-                mkSource(
-                    String(r.full_name || ''),
-                    String(r.html_url || ''),
-                    String(r.description || '').slice(0, 500),
+            const data = asObj(await res.json());
+            const items = asArr(data.items);
+            return items.map((r: Record<string, unknown>) => {
+                const githubOwner = r.owner as Record<string, unknown> | undefined;
+                return mkSource(
+                    String(r.full_name ?? ''),
+                    String(r.html_url ?? ''),
+                    String(r.description ?? '').slice(0, 500),
                     'code',
                     'github',
                     0.7,
                     {
-                        authors: [String(r.owner?.login || '')],
+                        authors: [String(githubOwner?.login ?? '')],
                         year: r.created_at ? Number(String(r.created_at).slice(0, 4)) : undefined,
                     },
-                ),
-            );
+                );
+            });
         } catch {
             return [];
         }
@@ -1015,21 +1033,22 @@ class StackOverflowAdapter implements ISourceAdapter {
         const url = `https://api.stackexchange.com/2.3/search/advanced?q=${encodeURIComponent(query)}&site=stackoverflow&order=desc&sort=relevance&pagesize=10${apiKey ? `&key=${apiKey}` : ''}`;
         const res = await safeFetch(url, 8000, signal);
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const items = (data.items as any[]) || [];
-        return items.map((q) =>
-            mkSource(
-                String(q.title || ''),
-                String(q.link || ''),
-                String(q.body_markdown || q.excerpt || '').slice(0, 500),
+        const data = asObj(await res.json());
+        const items = asArr(data.items);
+        return items.map((q: Record<string, unknown>) => {
+            const soOwner = q.owner as Record<string, unknown> | undefined;
+            return mkSource(
+                String(q.title ?? ''),
+                String(q.link ?? ''),
+                String(q.body_markdown ?? q.excerpt ?? '').slice(0, 500),
                 'code',
                 'stack_overflow',
                 0.6,
                 {
-                    authors: [String(q.owner?.display_name || '')],
+                    authors: [String(soOwner?.display_name ?? '')],
                 },
-            ),
-        );
+            );
+        });
     }
 }
 
@@ -1055,19 +1074,20 @@ class RedditAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const children = (data.data?.children as any[]) || [];
-        return children.map((c) => {
-            const d = (c.data as Record<string, unknown>) || {};
+        const data = asObj(await res.json());
+        const redditData = data.data as Record<string, unknown> | undefined;
+        const children = asArr(redditData?.children);
+        return children.map((c: Record<string, unknown>) => {
+            const d = c.data as Record<string, unknown> | undefined;
             return mkSource(
-                String(d.title || ''),
-                `https://www.reddit.com${d.permalink || ''}`,
-                String(d.selftext || d.body || '').slice(0, 400),
+                String(d?.title || ''),
+                `https://www.reddit.com${d?.permalink || ''}`,
+                String(d?.selftext || d?.body || '').slice(0, 400),
                 'web',
                 'reddit',
                 0.45,
                 {
-                    authors: [String(d.author || '')],
+                    authors: [String(d?.author || '')],
                 },
             );
         });
@@ -1096,8 +1116,8 @@ class GooglePatentsAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const patents = (data.patents as any[]) || [];
+        const data = asObj(await res.json());
+        const patents = asArr(data.patents);
         return patents.map((p) =>
             mkSource(
                 String(p.title || ''),
@@ -1139,17 +1159,18 @@ class WolframAlphaAdapter implements ISourceAdapter {
             signal,
         );
         if (!res) return [];
-        const data = (await res.json()) as any;
-        const pods = (data.queryresult?.pods as any[]) || [];
+        const data = asObj(await res.json());
+        const qr = data.queryresult as Record<string, unknown> | undefined;
+        const pods = asArr(qr?.pods);
         const sources: ResearchSource[] = [];
-        for (const pod of pods.slice(0, 5)) {
-            const subpods = (pod.subpods as any[]) || [];
+        for (const pod of pods.slice(0, 5) as Record<string, unknown>[]) {
+            const subpods = asArr(pod.subpods);
             for (const sp of subpods) {
-                const text = String(sp.plaintext || '');
+                const text = String(sp.plaintext ?? '');
                 if (text.trim()) {
                     sources.push(
                         mkSource(
-                            String(pod.title || 'Wolfram Alpha Result'),
+                            String(pod.title ?? 'Wolfram Alpha Result'),
                             'https://www.wolframalpha.com/input/?i=' + encodeURIComponent(query),
                             text.slice(0, 500),
                             'web',
