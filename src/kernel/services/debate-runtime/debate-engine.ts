@@ -1,5 +1,5 @@
 import { genId } from '../../../utils/gen-id';
-import { CONFIG, DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
+import { CONFIG } from '../config-registry';
 import { DebateProviderResolver, DEBATE_MODEL_PRIORITY } from './debate-query-engine';
 import { gatherClaims } from './debate-consensus';
 import { createAgentExecutor } from './debate-agent-executor';
@@ -15,14 +15,12 @@ import {
 } from './debate-llm-caller';
 import type {
     DebateTopology,
-    DebatePhase,
     ParticipantConfig,
     DebateSessionSnapshot,
     IDebateEngine,
     IDebateSession,
     IDebateBudget,
     TimelineEntry,
-    AgentStateEntry,
 } from '../../contracts/debate-runtime';
 import type { DebateSession as DebateSessionInterface } from '../../contracts/debate-types';
 import type { IEventBus } from '../../types/interfaces';
@@ -45,6 +43,11 @@ import { DebateSession as DebateSessionClass } from './debate-session';
 import { DebateSessionRecordSchema } from '../../types/schema-types';
 import type { DebateStore } from '../../contracts/storage/debate-store';
 import { snapshotToSession, type SnapshotBridgeContext } from './debate-snapshot-bridge';
+import {
+    DebatePersistenceManager,
+    type PersistenceEngineState,
+    type PersistenceDeps,
+} from './debate-persistence-manager';
 const LOGGER = rootLogger.child('DebateEngine');
 
 interface KeyServiceLike {
@@ -123,6 +126,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private sessionAbortControllers = new Map<string, Map<string, AbortController>>();
     private runningSessions = new Set<string>();
     private preflightDone = new Set<string>();
+    private persistence: DebatePersistenceManager;
 
     constructor(deps: DebateEngineDeps) {
         this.deps = deps;
@@ -141,6 +145,21 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 },
                 getKeyStateStore: deps.getKeyStateStore,
             });
+        const persistenceState: PersistenceEngineState = {
+            sessions: this.sessions,
+            budgets: this.budgets,
+            memories: this.memories,
+            contexts: this.sessionContexts,
+            preflightDone: this.preflightDone,
+            providerResolver: this.providerResolver,
+        };
+        const persistenceDeps: PersistenceDeps = {
+            debateStore: deps.debateStore,
+            eventBus: deps.eventBus,
+            memoryExtractor: deps.memoryExtractor,
+            evaluator: deps.evaluator,
+        };
+        this.persistence = new DebatePersistenceManager(persistenceState, persistenceDeps);
     }
 
     async init(): Promise<void> {}
@@ -919,143 +938,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     async saveSnapshot(sessionId: string): Promise<void> {
-        const store = this.deps.debateStore;
-        if (!store) return;
-        const snap = this.getSession(sessionId);
-        if (!snap) return;
-        const session = this.sessions.get(sessionId);
-        if (!session) return;
-        const record = {
-            id: snap.id,
-            topic: snap.topic,
-            topologyType: snap.topology.type,
-            phase: snap.phase,
-            round: snap.round,
-            totalTokens: snap.totalTokens,
-            totalCost: snap.totalCost,
-            agentStates: JSON.stringify(snap.agentStates),
-            topology: JSON.stringify(snap.topology),
-            participants: JSON.stringify(session.participants),
-            startedAt: snap.startedAt,
-            updatedAt: snap.updatedAt,
-            createdAt: snap.startedAt,
-            arguments: snap.arguments ? JSON.stringify(snap.arguments) : '[]',
-            memory: JSON.stringify(this.getMemory(sessionId).toJSON()),
-            language: snap.language,
-            version: snap.version,
-        } as const;
-        const parsed = DebateSessionRecordSchema.safeParse(record);
-        if (!parsed.success) {
-            LOGGER.warn('DebateEngine', `saveSnapshot validation failed for ${sessionId}`, {
-                errors: parsed.error.issues,
-            });
-            throw new Error(
-                `saveSnapshot validation failed for ${sessionId}: ${parsed.error.issues.map((i) => i.message).join(', ')}`,
-            );
-        }
-        const newVersion = await store.saveSnapshot(record);
-        session.incrementVersion?.(newVersion);
-        const ctx = this.sessionContexts.get(sessionId);
-        if (ctx) {
-            ctx.timeline.persist(sessionId).catch((e) =>
-                LOGGER.warn('DebateEngine', `Failed to persist timeline for ${sessionId}`, {
-                    error: e,
-                }),
-            );
-        }
+        return this.persistence.saveSnapshot(sessionId);
     }
 
     async restoreSession(sessionId: string): Promise<DebateSessionSnapshot | null> {
-        const store = this.deps.debateStore;
-        if (!store) return null;
-        const record = await store.getSnapshot(sessionId);
-        if (!record) return null;
-        const rp = DebateSessionRecordSchema.safeParse(record);
-        if (!rp.success) {
-            LOGGER.warn('DebateEngine', `restoreSession: corrupted record ${sessionId}`, {
-                errors: rp.error.issues,
-            });
-            return null;
-        }
-        const existing = this.sessions.get(sessionId);
-        if (existing) return existing.snapshot();
-
-        // D9-04: Reconstruct and register a DebateSession so the
-        // restored session is visible to all engine operations (startSession,
-        // pauseSession, cancelSession, etc.)
-        try {
-            const topology: DebateTopology =
-                safeJsonParse(record.topology) ?? ({} as DebateTopology);
-            const agentStates: AgentStateEntry[] = safeJsonParse(record.agentStates) ?? [];
-            const participants: ParticipantConfig[] =
-                safeJsonParse(record.participants || '[]') ?? [];
-
-            const session = new DebateSessionClass(record.id, record.topic, topology, participants);
-
-            // Restore internal state from snapshot
-            const restoredSnapshot: DebateSessionSnapshot = {
-                id: record.id,
-                topic: record.topic,
-                topology,
-                phase: record.phase as DebatePhase,
-                round: record.round,
-                agentStates,
-                totalTokens: record.totalTokens,
-                totalCost: record.totalCost,
-                startedAt: record.startedAt,
-                updatedAt: record.updatedAt,
-                version: record.version ?? 1,
-                language: (record as { language?: string }).language ?? DEFAULT_DEBATE_LANGUAGE,
-            };
-            session.restoreInternalState(restoredSnapshot);
-
-            // S4-11: Restore reasoning chains / memory
-            try {
-                const mem = this.getMemory(record.id);
-                const memData = safeJsonParse(record.memory || '{}');
-                mem.restoreFrom(memData as import('../../contracts/debate-runtime').MemoryRecord);
-            } catch {
-                /* memory is optional — fresh start if parse fails */
-            }
-
-            // Register phase listeners (same as createSession)
-            session.onPhaseChange(
-                createPhaseChangeHandler(
-                    record.id,
-                    session,
-                    {
-                        eventBus: this.deps.eventBus,
-                        debateStore: this.deps.debateStore,
-                        memoryExtractor: this.deps.memoryExtractor,
-                        evaluator: this.deps.evaluator,
-                    },
-                    {
-                        getContext: (sid) => this.getContext(sid),
-                        getMemory: (sid) => this.getMemory(sid),
-                        getTimeline: (sid) => this.getTimeline(sid),
-                        saveSnapshot: (sid) => this.saveSnapshot(sid),
-                    },
-                    ' (restored)',
-                ),
-            );
-
-            this.sessions.set(record.id, session as IDebateSession);
-            const budget = new DebateBudget(record.id);
-            this.budgets.set(record.id, budget);
-
-            this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_CREATED, {
-                sessionId: record.id,
-                topic: record.topic,
-                topologyType: topology.type,
-            });
-
-            return session.snapshot();
-        } catch (e) {
-            LOGGER.warn('DebateEngine', 'Failed to reconstruct session from snapshot', {
-                error: e,
-            });
-            return null;
-        }
+        return this.persistence.restoreSession(sessionId);
     }
 
     getTimeline(sessionId: string): TimelineEntry[] {
