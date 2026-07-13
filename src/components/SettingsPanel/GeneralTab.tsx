@@ -18,6 +18,7 @@ import { setFeatureFlag } from '../../kernel/services/config-mutations';
 import { settingsService } from '../../kernel/instances';
 import type { SystemSettings } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
+import { safeClone } from '../../shared/utils/safe-json';
 import {
     detailsContainer,
     detailsSummary,
@@ -332,7 +333,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             onChange={(v) => {
                                 setFeatureFlag('memory.enabled', v);
                                 setFeatureFlags(
-                                    structuredClone(CONFIG.featureFlags) as unknown as Record<
+                                    safeClone(CONFIG.featureFlags) as unknown as Record<
                                         string,
                                         boolean
                                     >,
@@ -351,7 +352,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             onChange={(v) => {
                                 setFeatureFlag('memory.semantic', v);
                                 setFeatureFlags(
-                                    structuredClone(CONFIG.featureFlags) as unknown as Record<
+                                    safeClone(CONFIG.featureFlags) as unknown as Record<
                                         string,
                                         boolean
                                     >,
@@ -370,7 +371,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             onChange={(v) => {
                                 setFeatureFlag('memory.ragOnChat', v);
                                 setFeatureFlags(
-                                    structuredClone(CONFIG.featureFlags) as unknown as Record<
+                                    safeClone(CONFIG.featureFlags) as unknown as Record<
                                         string,
                                         boolean
                                     >,
@@ -389,7 +390,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             onChange={(v) => {
                                 setFeatureFlag('memory.autoStore', v);
                                 setFeatureFlags(
-                                    structuredClone(CONFIG.featureFlags) as unknown as Record<
+                                    safeClone(CONFIG.featureFlags) as unknown as Record<
                                         string,
                                         boolean
                                     >,
@@ -408,7 +409,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             onChange={(v) => {
                                 setFeatureFlag('debate.runtimeEngine', v);
                                 setFeatureFlags(
-                                    structuredClone(CONFIG.featureFlags) as unknown as Record<
+                                    safeClone(CONFIG.featureFlags) as unknown as Record<
                                         string,
                                         boolean
                                     >,
@@ -427,7 +428,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             onChange={(v) => {
                                 setFeatureFlag('ui.experimentalVisuals', v);
                                 setFeatureFlags(
-                                    structuredClone(CONFIG.featureFlags) as unknown as Record<
+                                    safeClone(CONFIG.featureFlags) as unknown as Record<
                                         string,
                                         boolean
                                     >,

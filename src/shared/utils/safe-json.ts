@@ -10,3 +10,11 @@ export function safeJsonParse<T = unknown>(json: string, fallback?: T): T | unde
         return fallback;
     }
 }
+
+export function safeClone<T>(obj: T): T {
+    try {
+        return structuredClone(obj);
+    } catch {
+        return JSON.parse(JSON.stringify(obj));
+    }
+}

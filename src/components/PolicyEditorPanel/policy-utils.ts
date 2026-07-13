@@ -29,7 +29,11 @@ export function createEmptyRule(): PolicyRule {
 }
 
 export function cloneRule(r: PolicyRule): PolicyRule {
-    return structuredClone(r);
+    try {
+        return structuredClone(r);
+    } catch {
+        return JSON.parse(JSON.stringify(r));
+    }
 }
 
 export function conditionSummary(c: PolicyCondition): string {

@@ -11,6 +11,7 @@ import { Breadcrumbs } from './Common/Breadcrumbs';
 import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
 import { KeyboardShortcutsModal } from './Common/KeyboardShortcutsModal';
 import { CONFIG } from '../kernel/instances';
+import { safeClone } from '../shared/utils/safe-json';
 import { eventBus, EVENTS } from '../kernel/instances';
 import { settingsService, groupManager } from '../kernel/instances';
 import { useUiPreferences } from '../stores/uiPreferencesStore';
@@ -61,7 +62,7 @@ export const AppLayout: React.FC = () => {
         [setTheme],
     );
     const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
-        () => structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
+        () => safeClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
     );
 
     const handleUserLevelChange = useCallback(
@@ -119,11 +120,9 @@ export const AppLayout: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const unsub = eventBus.on(EVENTS.SETTINGS_UPDATED, () =>
-            setFeatureFlags(
-                structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
-            ),
-        );
+        const unsub = eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
+            setFeatureFlags(safeClone(CONFIG.featureFlags) as unknown as Record<string, boolean>);
+        });
         return () => unsub();
     }, []);
 

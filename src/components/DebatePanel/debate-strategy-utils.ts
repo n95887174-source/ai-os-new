@@ -108,5 +108,9 @@ export function createDefaultPrimitive(type: string): StrategyPrimitive {
 }
 
 export function clonePrimitive(p: StrategyPrimitive): StrategyPrimitive {
-    return structuredClone(p);
+    try {
+        return structuredClone(p);
+    } catch {
+        return JSON.parse(JSON.stringify(p));
+    }
 }

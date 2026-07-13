@@ -23,6 +23,7 @@ import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../ker
 import type { BackendStatus } from '../../kernel/instances';
 import { CONFIG } from '../../kernel/instances';
 import { configService } from '../../kernel/instances';
+import { safeClone } from '../../shared/utils/safe-json';
 import { APP_VERSION } from '../../utils/version';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -58,7 +59,7 @@ const SettingsPanel: React.FC = () => {
     const [showSecretsDetail, setShowSecretsDetail] = useState(false);
     const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
     const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
-        () => structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
+        () => safeClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
     );
     const [settingsSearch, setSettingsSearch] = useState('');
 
@@ -76,7 +77,7 @@ const SettingsPanel: React.FC = () => {
         const unsubFlags = eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
             if (isMountedRef.current)
                 setFeatureFlags(
-                    structuredClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
+                    safeClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
                 );
         });
 
