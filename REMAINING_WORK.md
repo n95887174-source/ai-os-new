@@ -67,7 +67,7 @@
 | D-02 | All Zustand stores → liveQuery (chat ✅, keys ✅, debate sessions ✅; others pure UI) | XL     | 🟢 Done (2026-07-13 — debate-session-store migrated; remaining stores are pure UI/transient) |
 | D-03 | 60% test coverage                                                                     | XL     | 🔴 Pending                                                                                   |
 | D-04 | 1400+ missing i18n keys (~180 added in D-20)                                          | XL     | 🟡 Partial (~12% done)                                                                       |
-| D-05 | Race conditions fix                                                                   | M      | 🟡 Some already fixed                                                                        |
+| D-05 | Race conditions fix                                                                   | M      | 🟢 Done (2026-07-13 — CRIT #7, H-3/4/6/7/8/9/11, M-3/4: 8 items fixed)                       |
 | D-06 | 122 events without subscribers                                                        | M      | 🟢 Done                                                                                      |
 | D-07 | 8 prompt injection points → sanitize                                                  | M      | 🟢 Done                                                                                      |
 | D-08 | 41 `key={i}` anti-pattern                                                             | S      | 🟢 Done                                                                                      |
@@ -80,7 +80,7 @@
 | D-15 | 5 unused assets (vite.svg, react.svg, hero.png, icons.svg)                            | S      | 🟢 Done                                                                                      |
 | D-16 | part2-gemini remaining (per-key CB ✅, AES-GCM ✅ — verified already implemented)     | M      | 🟢 Done (AES-GCM via Web Crypto API in key-vault.ts; per-key CB in earlier session)          |
 
-**Итого Sprint D:** ~6-8 недель (10 🟢 Done, 1 🟡 Partial, 3 🔴 Pending)
+**Итого Sprint D:** ~6-8 недель (11 🟢 Done, 1 🟡 Partial, 3 🔴 Pending)
 
 ---
 
@@ -91,5 +91,5 @@
 | **A**     | Быстрые победы                       | 9      | 🟢 Done           |
 | **B**     | Архитектура (DAL, LLM-cycle, events) | 9      | 🟢 Done           |
 | **C**     | Major refactors                      | 11     | 10/11 🟢 Done     |
-| **D**     | Долгосрочные                         | 16     | 7 🟢 3 🟡 4 🔴    |
+| **D**     | Долгосрочные                         | 16     | 13 🟢 1 🟡 2 🔴   |
 | **Всего** |                                      | **45** | **~12-15 недель** |
