@@ -3,7 +3,7 @@ import { CONFIG, DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
 import { DebateProviderResolver, DEBATE_MODEL_PRIORITY } from './debate-query-engine';
 import { gatherClaims } from './debate-consensus';
 import { createAgentExecutor } from './debate-agent-executor';
-import { buildConclusionLlmCall, validateAndSaveVerdict } from './debate-conclusion-engine';
+import { buildConclusionLlmCall } from './debate-conclusion-engine';
 import { DebatePipeline } from './debate-pipeline';
 import { DebateTopologyService } from './debate-topology';
 import { DebateOrchestrator } from './debate-orchestrator';
@@ -24,11 +24,7 @@ import type {
     TimelineEntry,
     AgentStateEntry,
 } from '../../contracts/debate-runtime';
-import type {
-    DebateArgument,
-    DebateConfig,
-    DebateSession as DebateSessionInterface,
-} from '../../contracts/debate-types';
+import type { DebateSession as DebateSessionInterface } from '../../contracts/debate-types';
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
@@ -40,6 +36,7 @@ import { executePolicyActions } from './debate-policy-engine';
 import type { DebateRAGRetriever } from './debate-rag-retriever';
 import type { DebateMemoryExtractor } from './debate-memory-extractor';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
+import { createPhaseChangeHandler } from './debate-phase-handler';
 
 import { DebateSessionContext } from './debate-session-context';
 import { DebateMemory } from './debate-memory';
@@ -47,79 +44,8 @@ import { DebateBudget } from './debate-budget';
 import { DebateSession as DebateSessionClass } from './debate-session';
 import { DebateSessionRecordSchema } from '../../types/schema-types';
 import type { DebateStore } from '../../contracts/storage/debate-store';
+import { snapshotToSession, type SnapshotBridgeContext } from './debate-snapshot-bridge';
 const LOGGER = rootLogger.child('DebateEngine');
-
-interface SnapshotBridgeContext {
-    participants: ParticipantConfig[];
-    strategy: import('../../contracts/debate-types').DebateSessionStrategy;
-    maxRounds: number;
-    config: DebateConfig;
-    timeline?: TimelineEntry[];
-}
-
-function timelineToArguments(
-    timeline: TimelineEntry[],
-    participants: ParticipantConfig[],
-    defaultConfidence = 0.7,
-): DebateArgument[] {
-    const nameById = new Map(participants.map((p) => [p.agentId, p.role || p.nodeId]));
-    return timeline
-        .filter((e) => e.type === 'agent:responded')
-        .map((e, idx) => {
-            const payload = e.payload as { agentId?: string; content?: string; round?: number };
-            const agentId = payload.agentId ?? 'unknown';
-            return {
-                id: e.id || `arg-${idx}`,
-                agentId,
-                agentName: nameById.get(agentId) || agentId,
-                content: payload.content ?? '',
-                confidence: defaultConfidence,
-                timestamp: e.timestamp,
-                round: payload.round ?? 1,
-                position: 'neutral' as const,
-                source: 'llm' as const,
-            };
-        });
-}
-
-function snapshotToSession(
-    snapshot: DebateSessionSnapshot,
-    ctx: SnapshotBridgeContext,
-): DebateSessionInterface {
-    const participants = Array.isArray(ctx.participants) ? ctx.participants : [];
-    const args = ctx.timeline ? timelineToArguments(ctx.timeline, participants) : [];
-    const round = Math.max(1, snapshot.round);
-    const socraticQuestioner =
-        ctx.strategy === 'socratic' && participants.length > 1
-            ? (round - 1) % participants.length
-            : 0;
-    return {
-        id: snapshot.id,
-        topic: snapshot.topic,
-        status: snapshot.phase,
-        strategy: ctx.strategy,
-        maxRounds: ctx.maxRounds,
-        currentRound: round,
-        participants: participants.map(
-            (p) =>
-                ({
-                    id: p.agentId,
-                    name: p.agentId,
-                    role: p.role || 'proponent',
-                    provider: p.provider,
-                    modelId: p.modelId,
-                    systemPrompt: p.systemPrompt,
-                }) as import('../../contracts/debate-types').DebateParticipant,
-        ),
-        arguments: args,
-        convergenceScore: 0,
-        openingStatements: args.filter((a) => a.round === 0),
-        config: ctx.config,
-        socraticQuestioner,
-        argumentTreeRoundMap: {},
-        createdAt: snapshot.startedAt,
-    } as DebateSessionInterface;
-}
 
 interface KeyServiceLike {
     getKeys(): Array<{
@@ -350,115 +276,24 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const session = new DebateSessionClass(id, topic, topology, participants, language);
         const budget = new DebateBudget(id, { maxRounds: topology.maxRounds });
 
-        session.onPhaseChange((from: string, to: string) => {
-            this.getContext(id).timeline.record({
-                sessionId: id,
-                type: `session:${to}`,
-                payload: { from, to },
-            });
-            this.deps.eventBus.emit(EVENTS.DEBATE_PHASE_CHANGED, {
-                sessionId: id,
-                from,
-                to,
-            });
-
-            if (to === 'completed' || to === 'failed' || to === 'cancelled') {
-                this.deps.eventBus.emit(
-                    to === 'completed'
-                        ? EVENTS.DEBATE_SESSION_COMPLETED
-                        : to === 'failed'
-                          ? EVENTS.DEBATE_SESSION_FAILED
-                          : EVENTS.DEBATE_SESSION_CANCELLED,
-                    {
-                        sessionId: id,
-                        error:
-                            to === 'failed'
-                                ? session.snapshot().agentStates.find((s) => s.error)?.error
-                                : undefined,
-                    },
-                );
-                if (to === 'completed') {
-                    const snap = session.snapshot() as DebateSessionSnapshot;
-                    const tl = this.getTimeline(id);
-                    this.getContext(id)
-                        .conclusionEngine.generateVerdictWithLLM(snap, tl)
-                        .then((verdict) => {
-                            const store = this.deps.debateStore;
-                            if (store) {
-                                validateAndSaveVerdict(store, {
-                                    sessionId: verdict.sessionId,
-                                    topic: verdict.topic,
-                                    summary: verdict.summary,
-                                    conclusionType: verdict.conclusionType,
-                                    stanceResult: verdict.stanceResult,
-                                    keyArguments: JSON.stringify(verdict.keyArguments),
-                                    reasoning: verdict.reasoning,
-                                    confidence: verdict.confidence,
-                                    generatedAt: verdict.generatedAt,
-                                    roundsTotal: verdict.roundsTotal,
-                                    totalTokens: verdict.totalTokens,
-                                }).catch((e) =>
-                                    LOGGER.warn('DebateEngine', 'verdict persist failed', {
-                                        error: e,
-                                    }),
-                                );
-                            }
-                            this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, {
-                                sessionId: id,
-                                verdict,
-                            });
-                        })
-                        .catch((e) =>
-                            LOGGER.warn(
-                                'DebateEngine',
-                                'LLM-enhanced verdict failed, using heuristic',
-                                { error: e },
-                            ),
-                        );
-
-                    // Memory extraction at session completion
-                    if (this.deps.memoryExtractor) {
-                        try {
-                            const extracted = this.deps.memoryExtractor.extractFromTimeline(id, tl);
-                            LOGGER.info('DebateEngine', 'Memory extraction complete', {
-                                sessionId: id,
-                                units: extracted.units.length,
-                                ...extracted.summary,
-                            });
-
-                            // Feed extracted claims to evaluator
-                            if (this.deps.evaluator) {
-                                const claims = this.deps.memoryExtractor.extractClaims(
-                                    extracted.units,
-                                );
-                                for (const p of session.participants) {
-                                    const chain = this.getMemory(id).getChain(p.agentId);
-                                    const score = this.deps.evaluator.scoreArguments(
-                                        p.agentId,
-                                        claims,
-                                        chain,
-                                    );
-                                    this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_PHASE_CHANGED, {
-                                        sessionId: id,
-                                        agentId: p.agentId,
-                                        from: 'completed',
-                                        to: JSON.stringify(score),
-                                    });
-                                }
-                            }
-                        } catch (e) {
-                            LOGGER.warn('DebateEngine', 'Memory extraction failed', {
-                                error: e,
-                                sessionId: id,
-                            });
-                        }
-                    }
-                }
-                this.saveSnapshot(id).catch((e) =>
-                    LOGGER.warn('DebateEngine', 'auto-checkpoint failed', { error: e }),
-                );
-            }
-        });
+        session.onPhaseChange(
+            createPhaseChangeHandler(
+                id,
+                session,
+                {
+                    eventBus: this.deps.eventBus,
+                    debateStore: this.deps.debateStore,
+                    memoryExtractor: this.deps.memoryExtractor,
+                    evaluator: this.deps.evaluator,
+                },
+                {
+                    getContext: (sid) => this.getContext(sid),
+                    getMemory: (sid) => this.getMemory(sid),
+                    getTimeline: (sid) => this.getTimeline(sid),
+                    saveSnapshot: (sid) => this.saveSnapshot(sid),
+                },
+            ),
+        );
 
         this.sessions.set(id, session as IDebateSession);
         this.budgets.set(id, budget);
@@ -1184,118 +1019,25 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             }
 
             // Register phase listeners (same as createSession)
-            session.onPhaseChange((from: string, to: string) => {
-                this.getContext(record.id).timeline.record({
-                    sessionId: record.id,
-                    type: `session:${to}`,
-                    payload: { from, to },
-                });
-                this.deps.eventBus.emit(EVENTS.DEBATE_PHASE_CHANGED, {
-                    sessionId: record.id,
-                    from,
-                    to,
-                });
-                if (to === 'completed' || to === 'failed' || to === 'cancelled') {
-                    this.deps.eventBus.emit(
-                        to === 'completed'
-                            ? EVENTS.DEBATE_SESSION_COMPLETED
-                            : to === 'failed'
-                              ? EVENTS.DEBATE_SESSION_FAILED
-                              : EVENTS.DEBATE_SESSION_CANCELLED,
-                        {
-                            sessionId: record.id,
-                            error:
-                                to === 'failed'
-                                    ? session.snapshot().agentStates.find((s) => s.error)?.error
-                                    : undefined,
-                        },
-                    );
-                    if (to === 'completed') {
-                        const snap = session.snapshot();
-                        const tl = this.getTimeline(record.id);
-                        this.getContext(record.id)
-                            .conclusionEngine.generateVerdictWithLLM(snap, tl)
-                            .then((verdict) => {
-                                if (store) {
-                                    validateAndSaveVerdict(store, {
-                                        sessionId: verdict.sessionId,
-                                        topic: verdict.topic,
-                                        summary: verdict.summary,
-                                        conclusionType: verdict.conclusionType,
-                                        stanceResult: verdict.stanceResult,
-                                        keyArguments: JSON.stringify(verdict.keyArguments),
-                                        reasoning: verdict.reasoning,
-                                        confidence: verdict.confidence,
-                                        generatedAt: verdict.generatedAt,
-                                        roundsTotal: verdict.roundsTotal,
-                                        totalTokens: verdict.totalTokens,
-                                    }).catch((e) =>
-                                        LOGGER.warn('DebateEngine', 'verdict persist failed', {
-                                            error: e,
-                                        }),
-                                    );
-                                }
-                                this.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, {
-                                    sessionId: record.id,
-                                    verdict,
-                                });
-                            })
-                            .catch((e) =>
-                                LOGGER.warn(
-                                    'DebateEngine',
-                                    'LLM-enhanced verdict failed, using heuristic',
-                                    { error: e },
-                                ),
-                            );
-
-                        // Memory extraction at session completion
-                        if (this.deps.memoryExtractor) {
-                            try {
-                                const extracted = this.deps.memoryExtractor.extractFromTimeline(
-                                    record.id,
-                                    tl,
-                                );
-                                LOGGER.info(
-                                    'DebateEngine',
-                                    'Memory extraction complete (restored)',
-                                    {
-                                        sessionId: record.id,
-                                        units: extracted.units.length,
-                                        ...extracted.summary,
-                                    },
-                                );
-                                if (this.deps.evaluator) {
-                                    const claims = this.deps.memoryExtractor.extractClaims(
-                                        extracted.units,
-                                    );
-                                    for (const p of session.participants) {
-                                        const chain = this.getMemory(record.id).getChain(p.agentId);
-                                        const score = this.deps.evaluator.scoreArguments(
-                                            p.agentId,
-                                            claims,
-                                            chain,
-                                        );
-                                        this.deps.eventBus.emit(EVENTS.DEBATE_AGENT_PHASE_CHANGED, {
-                                            sessionId: record.id,
-                                            agentId: p.agentId,
-                                            from: 'completed',
-                                            to: JSON.stringify(score),
-                                        });
-                                    }
-                                }
-                            } catch (e) {
-                                LOGGER.warn('DebateEngine', 'Memory extraction failed (restored)', {
-                                    error: e,
-                                    sessionId: record.id,
-                                });
-                            }
-                        }
-                    }
-                    this.saveSnapshot(record.id).catch((e) =>
-                        LOGGER.warn('DebateEngine', 'auto-checkpoint failed', { error: e }),
-                    );
-                }
-            });
+            session.onPhaseChange(
+                createPhaseChangeHandler(
+                    record.id,
+                    session,
+                    {
+                        eventBus: this.deps.eventBus,
+                        debateStore: this.deps.debateStore,
+                        memoryExtractor: this.deps.memoryExtractor,
+                        evaluator: this.deps.evaluator,
+                    },
+                    {
+                        getContext: (sid) => this.getContext(sid),
+                        getMemory: (sid) => this.getMemory(sid),
+                        getTimeline: (sid) => this.getTimeline(sid),
+                        saveSnapshot: (sid) => this.saveSnapshot(sid),
+                    },
+                    ' (restored)',
+                ),
+            );
 
             this.sessions.set(record.id, session as IDebateSession);
             const budget = new DebateBudget(record.id);
