@@ -68,6 +68,10 @@ export class ReconnectionService {
         this.streams.clear();
     }
 
+    destroy(): void {
+        this.cancelAll();
+    }
+
     private scheduleRetry(state: ReconnectionState): void {
         if (state.destroyed) return;
         if (state.attempt >= state.config.maxRetries) {

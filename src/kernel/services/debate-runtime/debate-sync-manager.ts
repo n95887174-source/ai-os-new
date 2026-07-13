@@ -206,6 +206,7 @@ export class DebateSyncManager {
     }
 
     resetDebateState(): DebateConfig {
+        this._finalized = false;
         this.clearTimers();
         this.clearListeners();
         if (DEFAULT_CONFIG.useGovernor !== false) {
@@ -388,8 +389,13 @@ export class DebateSyncManager {
         }
     }
 
+    private _finalized = false;
+
     private finalizeInternal(): void {
+        if (this._finalized) return;
+        this._finalized = true;
         this.stopHeartbeat();
+        this.clearTimers();
         const session = this.activeSession;
         if (!session) return;
         finalizeDebate(session, {

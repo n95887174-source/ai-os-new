@@ -131,7 +131,7 @@ export async function debateCallLlm(
                         : i % 2 === 0
                           ? ('user' as const)
                           : ('assistant' as const),
-                content: `[${participantNameMap.get(s.agentId) || s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${s.content.slice(0, 2000)}`,
+                content: `[${participantNameMap.get(s.agentId) || s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${sanitizePromptVar(s.content).slice(0, 2000)}`,
             }));
 
             const personaBlock = buildPersonaMemory(deps.getMemory(sessionId), participant.agentId);
@@ -166,7 +166,7 @@ export async function debateCallLlm(
                 ...historyMessages,
                 {
                     role: 'user',
-                    content: `Topic: ${session.topic}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in ${session.language}.`,
+                    content: `Topic: ${sanitizePromptVar(session.topic)}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in ${session.language}.`,
                 },
             ];
 
@@ -279,7 +279,7 @@ export async function debateCallLlm(
                     timeoutMs: DEBATE_TIMEOUT_MS,
                 });
                 retries++;
-                if (retries > MAX_RETRIES) {
+                if (retries >= MAX_RETRIES) {
                     deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                     if (resolvedKey)
                         keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
@@ -290,10 +290,7 @@ export async function debateCallLlm(
                         });
                     throw new Error('LLM call timed out', { cause: e });
                 }
-                const sessionSignal = deps.sessionAbortControllers
-                    .get(sessionId)
-                    ?.get(participant.agentId)?.signal;
-                if (sessionSignal?.aborted)
+                if (externalSignal?.aborted)
                     throw new Error('Debate cancelled during backoff', { cause: e });
                 const backoff = Math.min(
                     BASE_BACKOFF_MS * Math.pow(2, retries - 1),
@@ -305,9 +302,8 @@ export async function debateCallLlm(
                         clearTimeout(timer);
                         reject(new Error('Debate cancelled during backoff'));
                     };
-                    if (sessionSignal)
-                        sessionSignal.addEventListener('abort', onAbort, { once: true });
-                    else timer.ref();
+                    if (externalSignal)
+                        externalSignal.addEventListener('abort', onAbort, { once: true });
                 });
                 continue;
             }
@@ -315,10 +311,7 @@ export async function debateCallLlm(
             const count = deps.providerResolver.incrementLlmFailureCount(failKey);
 
             if (count <= MAX_RETRIES) {
-                const sessionSignal = deps.sessionAbortControllers
-                    .get(sessionId)
-                    ?.get(participant.agentId)?.signal;
-                if (sessionSignal?.aborted)
+                if (externalSignal?.aborted)
                     throw new Error('Debate cancelled during backoff', { cause: e });
                 const backoff = Math.min(BASE_BACKOFF_MS * Math.pow(2, count - 1), MAX_BACKOFF_MS);
                 await new Promise<void>((resolve, reject) => {
@@ -327,9 +320,8 @@ export async function debateCallLlm(
                         clearTimeout(timer);
                         reject(new Error('Debate cancelled during backoff'));
                     };
-                    if (sessionSignal)
-                        sessionSignal.addEventListener('abort', onAbort, { once: true });
-                    else timer.ref();
+                    if (externalSignal)
+                        externalSignal.addEventListener('abort', onAbort, { once: true });
                 });
                 continue;
             }

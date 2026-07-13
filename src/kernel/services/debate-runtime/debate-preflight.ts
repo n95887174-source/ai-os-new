@@ -19,7 +19,7 @@ export function checkDebatePreflight(
         'cohere',
         'scaleway',
         'github',
-        'blackboxapi',
+        'blackbox',
         'cometapi',
     ];
     const hasDebateProvider = DEBATE_PROVIDERS.some((p) => availableProviders.has(p));

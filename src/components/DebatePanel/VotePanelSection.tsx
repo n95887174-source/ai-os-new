@@ -1,7 +1,6 @@
 import { ThumbsUp, BarChart3 } from 'lucide-react';
 import type { HumanVote } from '../../kernel/contracts';
-import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';
-import { debateHumanService } from '../../kernel/instances';
+import { debateHumanService, debateService } from '../../kernel/instances';
 import {
     debateVotePanel,
     debateVoteHeader,
@@ -60,22 +59,27 @@ const VotePanelSection: React.FC<Props> = ({
                                 );
                                 if (wasBest) {
                                     debateHumanService.removeHumanVote(
-                                        getActiveDebateSession(),
+                                        debateService.getActiveDebateSession(),
                                         showVotePanel,
                                         'human',
                                         agentId,
                                     );
                                 } else {
-                                    debateHumanService.recordHumanVote(getActiveDebateSession(), {
-                                        round: showVotePanel,
-                                        voter: 'human',
-                                        votedAgentId: agentId,
-                                        score: 5,
-                                        timestamp: Date.now(),
-                                    });
+                                    debateHumanService.recordHumanVote(
+                                        debateService.getActiveDebateSession(),
+                                        {
+                                            round: showVotePanel,
+                                            voter: 'human',
+                                            votedAgentId: agentId,
+                                            score: 5,
+                                            timestamp: Date.now(),
+                                        },
+                                    );
                                 }
                                 setHumanVotes(
-                                    debateHumanService.getHumanVotes(getActiveDebateSession()),
+                                    debateHumanService.getHumanVotes(
+                                        debateService.getActiveDebateSession(),
+                                    ),
                                 );
                             }}
                             style={{

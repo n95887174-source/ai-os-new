@@ -642,3 +642,5 @@ export type {
     TeamFallback,
     IRoleTeamService,
 } from './role-team';
+
+export type { ChatServiceDeps } from './chat';

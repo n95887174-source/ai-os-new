@@ -1,6 +1,9 @@
 import type { CachedContent, FreeTierUsage, IGeminiCacheService } from '../contracts/gemini-cache';
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_API_BASE =
+    typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.host}/proxy/gemini`
+        : 'https://generativelanguage.googleapis.com/v1beta';
 
 export class GeminiCacheService implements IGeminiCacheService {
     private caches: CachedContent[] = [];
@@ -120,8 +123,39 @@ export class GeminiCacheService implements IGeminiCacheService {
         }
     }
 
-    getFreeTierUsage(): FreeTierUsage[] {
-        return [];
+    async getFreeTierUsage(): Promise<FreeTierUsage[]> {
+        const apiKey = await this.#getApiKey();
+        if (!apiKey) return [];
+        try {
+            const res = await fetch(`${GEMINI_API_BASE}/models?key=${apiKey}&pageSize=50`);
+            if (!res.ok) return [];
+            const data = (await res.json()) as {
+                models?: Array<{
+                    name: string;
+                    description?: string;
+                    inputTokenLimit?: number;
+                    outputTokenLimit?: number;
+                    supportedGenerationMethods?: string[];
+                }>;
+            };
+            if (!data.models) return [];
+            return data.models
+                .filter(
+                    (m) =>
+                        m.supportedGenerationMethods?.includes('generateContent') &&
+                        m.name.startsWith('models/gemini-'),
+                )
+                .map((m) => ({
+                    model: m.name.replace('models/', ''),
+                    requestsUsed: 0,
+                    requestsLimit: 1500,
+                    tokensUsed: 0,
+                    tokensLimit: m.inputTokenLimit ?? 1_000_000,
+                    resetsAt: Date.now() + 86_400_000,
+                }));
+        } catch {
+            return [];
+        }
     }
 
     recordHit(id: string): void {

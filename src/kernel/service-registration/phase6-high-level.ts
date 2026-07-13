@@ -9,7 +9,8 @@
  * Imperative setup calls (setDatabase, setEngine) moved inside factories.
  */
 import type { Phase } from './helpers';
-import type { IEventBus, IDatabaseService } from '../types/interfaces';
+import type { IEventBus, IDatabaseService, IProviderTracker } from '../types/interfaces';
+import type { ICostCalculator } from '../contracts/pricing';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { IMemoryEngine } from '../contracts/memory';
 import type { IResearchEngine } from '../contracts/research-engine';
@@ -79,7 +80,10 @@ import { ContributionService } from '../services/contribution-service';
 import { MetaLearningService } from '../services/meta-learning-service';
 import { QuantumInspirationService } from '../services/quantum-inspiration-service';
 import { SmartRoutingService } from '../services/smart-routing-service';
-import { NvidiaEnterpriseService } from '../services/nvidia-enterprise-service';
+import {
+    NvidiaEnterpriseService,
+    type NvidiaEnterpriseDeps,
+} from '../services/nvidia-enterprise-service';
 import { GeminiCacheService } from '../services/gemini-cache-service';
 import { ProviderAchievementService } from '../services/provider-achievement-service';
 import { PromptSecurityService } from '../services/prompt-security-service';
@@ -383,7 +387,13 @@ export const registerPhase6: Phase = (helpers, ctx) => {
             }),
     );
     // ── NVIDIA Enterprise Service ─────────────────
-    register('nvidiaEnterpriseService', (_c) => new NvidiaEnterpriseService());
+    register('nvidiaEnterpriseService', (c) => {
+        const deps: NvidiaEnterpriseDeps = {
+            providerTracker: c.get<IProviderTracker>('providerTracker'),
+            pricingService: c.get<ICostCalculator>('costCalculator'),
+        };
+        return new NvidiaEnterpriseService(deps);
+    });
     // ── Gemini Cache Service ─────────────────────
     register('geminiCacheService', (_c) => new GeminiCacheService());
     // ── Provider Achievement Service ──────────────

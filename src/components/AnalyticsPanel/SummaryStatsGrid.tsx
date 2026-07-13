@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Zap, Hash, Coins, Clock } from 'lucide-react';
 import { summaryMetricCard } from '../../styles/common';
+import { formatCost } from '../../shared/utils/format-cost';
 
 interface SummaryStatsGridProps {
     totalRequests: number;
@@ -36,7 +37,7 @@ const SummaryStatsGrid: React.FC<SummaryStatsGridProps> = ({
         },
         {
             label: t('analytics.metric.platform_spend'),
-            value: `$${(estimatedCost || 0).toFixed(4)}`,
+            value: formatCost(estimatedCost || 0),
             icon: <Coins size={20} />,
             color: '#10b981',
             trend: 'Stable',

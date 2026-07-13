@@ -96,7 +96,7 @@ const ToolsPanel: React.FC = () => {
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const count = toolService.importTools(event.target?.result as string);
+                const count = await toolService.importTools(event.target?.result as string);
                 if (isMountedRef.current) {
                     setTools(toolService.getTools());
                     eventBus.emit(EVENTS.NOTIFICATION as keyof EventMap, {

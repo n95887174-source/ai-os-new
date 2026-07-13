@@ -11,6 +11,7 @@ import {
     AlertTriangle,
     XCircle,
 } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { adapterRegistry } from '../../kernel/instances';
 import {
@@ -164,6 +165,7 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({
     onAddProvider,
     installedKeys = [],
 }) => {
+    const { t } = useTranslation();
     const [activeCategory, setActiveCategory] = useState<(typeof CATEGORIES)[number]>('All');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -207,7 +209,7 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({
                 <input
                     type="text"
                     placeholder="Search providers, models, or features..."
-                    aria-label="Search providers"
+                    aria-label={t('common.aria.search')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="provider-search-input"

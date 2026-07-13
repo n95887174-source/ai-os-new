@@ -9,8 +9,7 @@ import {
     type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { getDebateGovernorState } from '../../kernel/services/debate-runtime/active-debate-store';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, debateService } from '../../kernel/instances';
 import type {
     GovernorState,
     Claim,
@@ -199,7 +198,9 @@ function buildRoundLayout(claims: Claim[]): Map<number, string[]> {
 }
 
 const ArgumentGraphPanel: React.FC = () => {
-    const [govState, setGovState] = useState<GovernorState | null>(getDebateGovernorState());
+    const [govState, setGovState] = useState<GovernorState | null>(
+        debateService.getDebateGovernorState(),
+    );
     const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
     const [showContradictions, setShowContradictions] = useState(true);
     const [showResolved, setShowResolved] = useState(false);
@@ -212,7 +213,7 @@ const ArgumentGraphPanel: React.FC = () => {
 
         const handler = () => {
             if (!isMountedRef.current) return;
-            setGovState(getDebateGovernorState());
+            setGovState(debateService.getDebateGovernorState());
         };
 
         const unsubs = [

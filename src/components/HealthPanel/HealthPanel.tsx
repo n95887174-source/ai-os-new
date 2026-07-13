@@ -16,7 +16,7 @@ import { useKeyStore } from '../../stores/useKeyStore';
 import { adminService, probeService, keyStateStore } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { keyService, kernel } from '../../kernel/instances';
-import type { HealthEvent } from '../../kernel/services/provider-tracker';
+import type { HealthEvent } from '../../kernel/instances';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AlertEntry } from '../../kernel/types/interfaces';
 import { APP_VERSION } from '../../utils/version';
@@ -35,7 +35,7 @@ import { HealthTimelineSection } from './HealthTimelineSection';
 
 const HealthPanel: React.FC = () => {
     const { t } = useTranslation();
-    const { keys } = useKeyStore();
+    const keys = useKeyStore((s) => s.keys);
     const [health, setHealth] = useState(() => {
         try {
             return adminService.getSystemHealth();

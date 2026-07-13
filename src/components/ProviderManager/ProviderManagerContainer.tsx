@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from '../../i18n/useTranslation';
 import { FocusScope } from '@react-aria/focus';
 import { X, Loader2, Mail } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
@@ -13,19 +14,18 @@ import { groupManager } from '../../kernel/instances';
 const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];
 
 const ProviderManagerContainer: React.FC = () => {
-    const {
-        keys,
-        checkingIds,
-        removeKey,
-        checkHealth,
-        checkAllHealth,
-        toggleKeyStatus,
-        enableAllKeys,
-        disableAllKeys,
-        exportKeys,
-        importKeys,
-        updateKey,
-    } = useKeyStore();
+    const { t } = useTranslation();
+    const keys = useKeyStore((s) => s.keys);
+    const checkingIds = useKeyStore((s) => s.checkingIds);
+    const removeKey = useKeyStore((s) => s.removeKey);
+    const checkHealth = useKeyStore((s) => s.checkHealth);
+    const checkAllHealth = useKeyStore((s) => s.checkAllHealth);
+    const toggleKeyStatus = useKeyStore((s) => s.toggleKeyStatus);
+    const enableAllKeys = useKeyStore((s) => s.enableAllKeys);
+    const disableAllKeys = useKeyStore((s) => s.disableAllKeys);
+    const exportKeys = useKeyStore((s) => s.exportKeys);
+    const importKeys = useKeyStore((s) => s.importKeys);
+    const updateKey = useKeyStore((s) => s.updateKey);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showAddAccount, setShowAddAccount] = useState(false);
     const [addAccountGroup, setAddAccountGroup] = useState('');
@@ -236,7 +236,7 @@ const ProviderManagerContainer: React.FC = () => {
                         onClick={() => setShowAddAccount(false)}
                         role="dialog"
                         aria-modal="true"
-                        aria-label="Add Account"
+                        aria-label={t('provider_manager.aria.add_account')}
                         onKeyDown={(e) => {
                             if (e.key === 'Escape') setShowAddAccount(false);
                         }}
@@ -284,7 +284,7 @@ const ProviderManagerContainer: React.FC = () => {
                                             color: '#64748b',
                                             cursor: 'pointer',
                                         }}
-                                        aria-label="Close"
+                                        aria-label={t('common.aria.close')}
                                     >
                                         <X size={18} />
                                     </button>

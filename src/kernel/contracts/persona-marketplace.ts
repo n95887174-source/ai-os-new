@@ -24,4 +24,9 @@ export interface IPersonaMarketplaceService {
     uninstall(id: string): void;
     rate(id: string, rating: number): void;
     getInstalled(): PersonaListing[];
+    addListing(
+        listing: Omit<PersonaListing, 'id' | 'createdAt' | 'installed' | 'downloads' | 'rating'>,
+    ): PersonaListing;
+    updateListing(id: string, updates: Partial<PersonaListing>): void;
+    removeListing(id: string): void;
 }

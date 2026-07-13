@@ -10,6 +10,13 @@
 #   docker compose --profile prod up --build -d
 # ────────────────────────────────────────────────────────────────
 
+networks:
+    app-net:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 172.20.0.0/16
+
 services:
     app:
         build:
@@ -17,8 +24,25 @@ services:
             dockerfile: Dockerfile
             args:
                 NGINX_CONFIG: ${NGINX_CONFIG:-nginx.conf}
+                VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+                VITE_SANDBOX_ENABLED: ${VITE_SANDBOX_ENABLED:-}
+                VITE_PROXY_GEMINI: ${VITE_PROXY_GEMINI:-}
+                VITE_PROXY_OPENROUTER: ${VITE_PROXY_OPENROUTER:-}
+                VITE_PROXY_NVIDIA: ${VITE_PROXY_NVIDIA:-}
+                VITE_PROXY_GROQ: ${VITE_PROXY_GROQ:-}
+                VITE_PROXY_CEREBRAS: ${VITE_PROXY_CEREBRAS:-}
+                VITE_PROXY_CLOUDFLARE: ${VITE_PROXY_CLOUDFLARE:-}
+                VITE_PROXY_OPENAI: ${VITE_PROXY_OPENAI:-}
+                VITE_DISABLE_TELEMETRY: ${VITE_DISABLE_TELEMETRY:-}
+                VITE_LOG_LEVEL: ${VITE_LOG_LEVEL:-}
         image: superagents-os:${TAG:-latest}
         container_name: superagents-os
+        labels:
+            org.opencontainers.image.title: 'SuperAgents OS'
+            org.opencontainers.image.version: '${TAG:-latest}'
+            org.opencontainers.image.description: 'Autonomous multi-agent runtime with cognitive DAG topology'
+            org.opencontainers.image.source: 'https://github.com/anomalyco/ai-os-new'
+            org.opencontainers.image.licenses: 'MIT'
         restart: unless-stopped
         environment:
             # Override the API proxy target (default: OpenRouter).
@@ -35,6 +59,10 @@ services:
             - no-new-privileges:true
         cap_drop:
             - ALL
+        read_only: true
+        tmpfs:
+            - /tmp
+            - /var/run
         logging:
             driver: json-file
             options:
@@ -54,6 +82,8 @@ services:
             service: app
         container_name: superagents-os-dev
         profiles: [dev]
+        networks:
+            - app-net
         ports:
             - '127.0.0.1:80:8080'
 
@@ -63,10 +93,9 @@ services:
             service: app
         container_name: superagents-os-prod
         profiles: [prod]
+        networks:
+            - app-net
         # BLD-C5: prod profile must bake the SSL nginx template, otherwise
-        # the image serves plain HTTP despite exposing port 443 (dead
-        # socket). Override NGINX_CONFIG here; user can still override via
-        # the NGINX_CONFIG env var at deploy time.
         build:
             args:
                 NGINX_CONFIG: ${NGINX_CONFIG:-nginx-ssl.conf}

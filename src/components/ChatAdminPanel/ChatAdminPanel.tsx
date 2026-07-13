@@ -23,7 +23,10 @@ interface SessionPreview {
 }
 
 const ChatAdminPanel: React.FC = () => {
-    const { sessions, deleteSession, setActiveSessionId, importSessions } = useChatStore();
+    const sessions = useChatStore((s) => s.sessions);
+    const deleteSession = useChatStore((s) => s.deleteSession);
+    const setActiveSessionId = useChatStore((s) => s.setActiveSessionId);
+    const importSessions = useChatStore((s) => s.importSessions);
     const [searchQuery, setSearchQuery] = useState('');
     const deferredSearch = useDeferredValue(searchQuery);
     const [filterType, setFilterType] = useState<FilterType>('all');

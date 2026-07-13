@@ -11,7 +11,6 @@ import {
     Download,
     FileText,
 } from 'lucide-react';
-import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';
 import {
     debateService,
     debateEngine,
@@ -125,7 +124,7 @@ const DebatePanel: React.FC = () => {
     const isMobile = useMediaQuery('(max-width: 767px)');
     const [session, setSession] = useState<DebateSession | null>(() => {
         try {
-            return getActiveDebateSession();
+            return debateService.getActiveDebateSession();
         } catch {
             return null;
         }
@@ -138,7 +137,7 @@ const DebatePanel: React.FC = () => {
     const [userInjection, setUserInjection] = useState('');
     const [isLoading, setIsLoading] = useState(() => {
         try {
-            return !getActiveDebateSession();
+            return !debateService.getActiveDebateSession();
         } catch {
             return true;
         }
@@ -197,8 +196,12 @@ const DebatePanel: React.FC = () => {
 
     const prevRoundRef = useRef(0);
     const lastSessionRef = useRef<DebateSession | null>(null);
+    const sessionRef = useRef(session);
+    useEffect(() => {
+        sessionRef.current = session;
+    }, [session]);
     const [humanVotes, setHumanVotes] = useState<HumanVote[]>(() =>
-        debateHumanService.getHumanVotes(getActiveDebateSession()),
+        debateHumanService.getHumanVotes(debateService.getActiveDebateSession()),
     );
     const [showVotePanel, setShowVotePanel] = useState<number | null>(null);
 
@@ -248,6 +251,8 @@ const DebatePanel: React.FC = () => {
             if (!isMountedRef.current) return;
             // Guard: skip non-session payloads (e.g. metricsInterval emits DEBATE_UPDATED with {sessionId:'', type:'store_metrics'})
             if (!data.topic || !data.status) return;
+            // audit2#1: skip updates from other debate sessions
+            if (data.id && sessionRef.current?.id && data.id !== sessionRef.current?.id) return;
             queueMicrotask(() => {
                 if (!isMountedRef.current) return;
                 try {
@@ -303,6 +308,8 @@ const DebatePanel: React.FC = () => {
     useEffect(() => {
         const unsubVerdict = eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
             const payload = data as { sessionId: string; verdict: DebateVerdict };
+            // audit2#2: only accept verdict for the current session
+            if (payload.sessionId && session?.id && payload.sessionId !== session?.id) return;
             setVerdict(payload.verdict);
         });
         if (session?.id && session.status === 'completed') {
@@ -432,7 +439,7 @@ const DebatePanel: React.FC = () => {
         setError(null);
         try {
             await debateHumanService.addArgument(
-                getActiveDebateSession(),
+                debateService.getActiveDebateSession(),
                 'User (Human-in-loop)',
                 userInjection,
                 1.0,

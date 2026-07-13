@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { budgetValueLarge } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';
+import { formatCost } from '../../shared/utils/format-cost';
 
 const PricingPanel: React.FC = () => {
     const { t } = useTranslation();
@@ -136,7 +137,7 @@ const PricingPanel: React.FC = () => {
                     >
                         {t('pricing.spent_this_month')}
                     </div>
-                    <div style={budgetValueLarge}>${budget?.spentThisMonth.toFixed(2)}</div>
+                    <div style={budgetValueLarge}>{formatCost(budget?.spentThisMonth ?? 0)}</div>
                     <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
                         {t('pricing.daily_avg', {
                             amount: budget?.dailyAverage.toFixed(2) ?? '0.00',
@@ -166,7 +167,7 @@ const PricingPanel: React.FC = () => {
                     <div style={budgetValueLarge}>
                         {budget != null && !isFinite(budget.remainingBudget)
                             ? '∞'
-                            : `$${budget?.remainingBudget?.toFixed(2) ?? '0.00'}`}
+                            : formatCost(budget?.remainingBudget ?? 0)}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
                         {t('pricing.of_goal', {
@@ -194,7 +195,7 @@ const PricingPanel: React.FC = () => {
                     >
                         {t('pricing.projected_month_end')}
                     </div>
-                    <div style={budgetValueLarge}>${budget?.projectedMonthly.toFixed(2)}</div>
+                    <div style={budgetValueLarge}>{formatCost(budget?.projectedMonthly ?? 0)}</div>
                     <div
                         style={{
                             fontSize: '0.8rem',
@@ -310,10 +311,10 @@ const PricingPanel: React.FC = () => {
                                                 {id}
                                             </td>
                                             <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                                ${p.input.toFixed(2)}
+                                                {formatCost(p.input)}
                                             </td>
                                             <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                                ${p.output.toFixed(2)}
+                                                {formatCost(p.output)}
                                             </td>
                                             <td style={{ padding: '1rem', textAlign: 'center' }}>
                                                 {overrides[id] ? (

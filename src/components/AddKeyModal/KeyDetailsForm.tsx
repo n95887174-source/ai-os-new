@@ -105,7 +105,7 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                     type="text"
                     autoFocus
                     value={label}
-                    onChange={(e) => setLabel(e.target.value)}
+                    onChange={(e) => setLabel(e.target.value.normalize('NFC'))}
                     placeholder={t('add_key.name_placeholder')}
                     className="modal-input"
                     aria-label="Connection name"
@@ -129,7 +129,7 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                         id="keyGroup"
                         type="text"
                         value={group}
-                        onChange={(e) => setGroup(e.target.value)}
+                        onChange={(e) => setGroup(e.target.value.normalize('NFC'))}
                         placeholder="e.g. Personal, Work, Client-A"
                         className="modal-input"
                         aria-label="Key group"
@@ -143,7 +143,7 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                         id="keyAccount"
                         type="text"
                         value={account}
-                        onChange={(e) => setAccount(e.target.value)}
+                        onChange={(e) => setAccount(e.target.value.normalize('NFC'))}
                         placeholder="e.g. alice@gmail.com"
                         className="modal-input"
                         aria-label="Account identifier"
@@ -178,7 +178,7 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                         id="apiKey"
                         type={showKey ? 'text' : 'password'}
                         value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
+                        onChange={(e) => setApiKey(e.target.value.normalize('NFC'))}
                         placeholder={t('add_key.key_placeholder')}
                         className="modal-input modal-input--mono"
                         aria-label="API key"

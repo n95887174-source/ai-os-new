@@ -248,7 +248,7 @@ const AgentsPanelView: React.FC = () => {
                         className={`agents-view-btn${viewMode === 'grid' ? ' agents-view-btn--active' : ''}`}
                         role="radio"
                         aria-checked={viewMode === 'grid'}
-                        aria-label="Grid view"
+                        aria-label={t('common.aria.grid_view')}
                     >
                         <LayoutGrid size={16} />
                     </button>
@@ -257,7 +257,7 @@ const AgentsPanelView: React.FC = () => {
                         className={`agents-view-btn${viewMode === 'list' ? ' agents-view-btn--active' : ''}`}
                         role="radio"
                         aria-checked={viewMode === 'list'}
-                        aria-label="List view"
+                        aria-label={t('common.aria.list_view')}
                     >
                         <List size={16} />
                     </button>

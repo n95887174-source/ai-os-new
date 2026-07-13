@@ -359,16 +359,33 @@ export class KeyRegistry {
                 let valid = true;
                 if (!k || typeof k !== 'object') {
                     valid = false;
-                    LOGGER.warn('KeyRegistry', 'Filter fail: not object', { key: k });
+                    LOGGER.warn('KeyRegistry', 'Filter fail: not object', {
+                        id: 'unknown',
+                        provider: 'unknown',
+                        hasKey: false,
+                    });
                 } else if (!k.id) {
                     valid = false;
-                    LOGGER.warn('KeyRegistry', 'Filter fail: no id', { key: k });
+                    LOGGER.warn('KeyRegistry', 'Filter fail: no id', {
+                        id: 'unknown',
+                        provider: 'unknown',
+                        hasKey: false,
+                    });
                 } else if (!k.provider) {
                     valid = false;
-                    LOGGER.warn('KeyRegistry', 'Filter fail: no provider', { key: k });
+                    LOGGER.warn('KeyRegistry', 'Filter fail: no provider', {
+                        id: k.id,
+                        provider: 'unknown',
+                        hasKey: !!k.key,
+                    });
                 } else if (typeof k.key === 'string' && k.key.startsWith('placeholder-')) {
                     valid = false;
-                    LOGGER.warn('KeyRegistry', 'Filter fail: placeholder key', { key: k });
+                    LOGGER.warn('KeyRegistry', 'Filter fail: placeholder key', {
+                        id: k.id,
+                        provider: k.provider,
+                        hasKey: !!k.key,
+                        keyLen: k.key.length,
+                    });
                 }
                 if (valid) real.push(k);
             }
@@ -592,7 +609,7 @@ export class KeyRegistry {
 
     async addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey | null> {
         // HIGH-K3: Serialize via promise chain to prevent race conditions on duplicate check
-        return (this.addKeyLock = this.addKeyLock.then(() => this._addKey(data)));
+        return (this.addKeyLock = this.addKeyLock.catch(() => null).then(() => this._addKey(data)));
     }
 
     private async _addKey(data: Omit<ApiKey, 'id' | 'stats'>): Promise<ApiKey | null> {

@@ -30,6 +30,12 @@ const GeminiLivePanelContent: React.FC = () => {
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [session.messages.length]);
 
+    useEffect(() => {
+        return () => {
+            geminiLiveService.stop();
+        };
+    }, []);
+
     const status = STATUS_CONFIG[session.status] || STATUS_CONFIG.idle;
 
     const handleStart = async () => {

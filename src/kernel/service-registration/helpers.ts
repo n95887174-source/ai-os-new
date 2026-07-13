@@ -50,15 +50,22 @@ export function makeHelpers(ctx: PhaseContext) {
      *   - Lazy init — actual instance passed to registerWithLifecycle
      *     only after first get(), so LifecycleManager can call init()/start()
      */
-    const register = <T>(name: string, factory: (c: IContainer) => T): void => {
+    const register = <T>(name: string, factory: (c: IContainer) => T | null): void => {
+        // P1-11B: accept T | null — factories can return null for graceful
+        // degradation of non-critical services without needing `null as unknown as T`.
+        // All existing factories returning T remain compatible (T ⊆ T | null).
+
         if (ctx.container.has(name)) return;
 
-        ctx.container.registerFactory(name, (c: IContainer) => {
+        ctx.container.registerFactory(name, (c: IContainer): T | null => {
             // First get() — create and register with lifecycle
             const instance = factory(c);
-            _pendingLifecycle.set(name, instance);
-            ctx.registerWithLifecycle(name, instance);
-            invalidateLazyServiceNotFound(name);
+            // P1-11A: null is valid for non-critical services — consumers must guard
+            if (instance !== null) {
+                _pendingLifecycle.set(name, instance);
+                ctx.registerWithLifecycle(name, instance);
+                invalidateLazyServiceNotFound(name);
+            }
             return instance;
         });
     };

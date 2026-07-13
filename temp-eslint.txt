@@ -1,0 +1,31 @@
+﻿node.exe : 
+строка:1 знак:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Oops! Something went wrong! :(
+
+ESLint: 10.3.0
+
+Error: Error while loading rule '@typescript-eslint/switch-exhaustiveness-check': You have used a rule which requires t
+ype information, but don't have parserOptions set to generate type information for this file. See https://tseslint.com/
+typed-linting for enabling linting with type information.
+Parser: typescript-eslint/parser
+Occurred while linting C:\Users\egily\Desktop\ai-os-new\src\components\AddKeyModal\AddKeyModal.test.tsx
+    at throwError (C:\Users\egily\Desktop\ai-os-new\node_modules\@typescript-eslint\utils\dist\eslint-utils\getParserSe
+rvices.js:40:11)
+    at getParserServices (C:\Users\egily\Desktop\ai-os-new\node_modules\@typescript-eslint\utils\dist\eslint-utils\getP
+arserServices.js:29:9)
+    at create (C:\Users\egily\Desktop\ai-os-new\node_modules\@typescript-eslint\eslint-plugin\dist\rules\switch-exhaust
+iveness-check.js:87:55)
+    at Object.create (C:\Users\egily\Desktop\ai-os-new\node_modules\@typescript-eslint\utils\dist\eslint-utils\RuleCrea
+tor.js:39:20)
+    at createRuleListeners (C:\Users\egily\Desktop\ai-os-new\node_modules\eslint\lib\linter\linter.js:497:15)
+    at C:\Users\egily\Desktop\ai-os-new\node_modules\eslint\lib\linter\linter.js:623:7
+    at Array.forEach (<anonymous>)
+    at runRules (C:\Users\egily\Desktop\ai-os-new\node_modules\eslint\lib\linter\linter.js:557:31)
+    at #flatVerifyWithoutProcessors (C:\Users\egily\Desktop\ai-os-new\node_modules\eslint\lib\linter\linter.js:1264:4)
+    at Linter._verifyWithFlatConfigArrayAndWithoutProcessors (C:\Users\egily\Desktop\ai-os-new\node_modules\eslint\lib\
+linter\linter.js:1349:43)

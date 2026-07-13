@@ -21,7 +21,7 @@ import { externalSecretsService } from '../../kernel/instances';
 import type { SystemSettings } from '../../kernel/instances';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../../kernel/instances';
 import type { BackendStatus } from '../../kernel/instances';
-import { CONFIG } from '../../kernel/services/config-registry';
+import { CONFIG } from '../../kernel/instances';
 import { configService } from '../../kernel/instances';
 import { APP_VERSION } from '../../utils/version';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
@@ -390,7 +390,7 @@ const SettingsPanel: React.FC = () => {
                                 color: '#fca5a5',
                                 cursor: 'pointer',
                             }}
-                            aria-label="Dismiss error"
+                            aria-label={t('common.aria.dismiss_error')}
                         >
                             ✕
                         </button>
@@ -436,7 +436,7 @@ const SettingsPanel: React.FC = () => {
                             width: '100%',
                             boxSizing: 'border-box',
                         }}
-                        aria-label="Search settings"
+                        aria-label={t('common.aria.search')}
                     />
                     {(
                         [

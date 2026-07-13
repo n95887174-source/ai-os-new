@@ -422,21 +422,23 @@ class DexieConfigStore implements ConfigStore {
 
 class DexieDebateStore implements DebateStore {
     async saveSnapshot(record: DebateSessionRecord): Promise<number> {
-        const current = await getDexieDb().debateSessions.get(record.id);
-        const currentVersion = (current as { version?: number })?.version ?? 0;
-        if (current && record.version != null && record.version < currentVersion) {
-            eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
-                sessionId: record.id,
-                currentVersion,
-                attemptedVersion: record.version,
-            });
-            throw new Error(
-                `Debate session ${record.id} version conflict: DB has ${currentVersion}, attempted ${record.version}. Reload the page to get the latest version.`,
-            );
-        }
-        const newVersion = currentVersion + 1;
-        await getDexieDb().debateSessions.put({ ...record, version: newVersion });
-        return newVersion;
+        return getDexieDb().transaction('rw', getDexieDb().debateSessions, async () => {
+            const current = await getDexieDb().debateSessions.get(record.id);
+            const currentVersion = (current as { version?: number })?.version ?? 0;
+            if (current && record.version != null && record.version < currentVersion) {
+                eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
+                    sessionId: record.id,
+                    currentVersion,
+                    attemptedVersion: record.version,
+                });
+                throw new Error(
+                    `Debate session ${record.id} version conflict: DB has ${currentVersion}, attempted ${record.version}. Reload the page to get the latest version.`,
+                );
+            }
+            const newVersion = currentVersion + 1;
+            await getDexieDb().debateSessions.put({ ...record, version: newVersion });
+            return newVersion;
+        });
     }
 
     async getSnapshot(id: string): Promise<DebateSessionRecord | null> {

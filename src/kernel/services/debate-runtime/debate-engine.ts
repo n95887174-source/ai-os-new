@@ -243,8 +243,30 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             };
             document.addEventListener('visibilitychange', this._visibilityHandler);
             this._beforeUnloadHandler = () => {
+                // Async saveSnapshot fires and forgets — may not complete before tab closes
                 for (const sessionId of this.sessions.keys()) {
                     this.saveSnapshot(sessionId);
+                }
+                // audit1#2: Sync localStorage fallback for crash recovery
+                try {
+                    const snapshot: Record<string, unknown> = {};
+                    for (const [sid, session] of this.sessions) {
+                        const snap = this.getSession(sid);
+                        if (!snap) continue;
+                        snapshot[sid] = {
+                            id: snap.id,
+                            topic: snap.topic,
+                            phase: snap.phase,
+                            round: snap.round,
+                            startedAt: snap.startedAt,
+                            updatedAt: Date.now(),
+                        };
+                    }
+                    if (Object.keys(snapshot).length > 0) {
+                        localStorage.setItem('debate-engine:sync-backup', JSON.stringify(snapshot));
+                    }
+                } catch {
+                    // Sync backup is best-effort
                 }
             };
             window.addEventListener('beforeunload', this._beforeUnloadHandler);

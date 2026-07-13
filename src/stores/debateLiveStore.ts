@@ -336,6 +336,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     // D-H-12: Transient UI state — no persist needed (zustand middleware not used; data is live-only)
     const metricsInterval = setInterval(() => {
         const s = get();
+        // audit1#9: skip when no data to prevent unnecessary work when no component is mounted
+        if (s.agentEvents.length === 0 && s.roundEvents.length === 0) return;
         const errorCount = s.agentEvents.filter((e) => e.status === 'error').length;
         const timeoutCount = s.agentEvents.filter((e) => e.status === 'timeout').length;
         const fallbackCount = s.agentEvents.filter((e) => e.status === 'fallback').length;

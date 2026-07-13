@@ -203,7 +203,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
             </div>
             <textarea
                 value={bulkInput}
-                onChange={(e) => setBulkInput(e.target.value)}
+                onChange={(e) => setBulkInput(e.target.value.normalize('NFC'))}
                 placeholder={t('add_key.bulk_placeholder')}
                 rows={10}
                 className="modal-input"

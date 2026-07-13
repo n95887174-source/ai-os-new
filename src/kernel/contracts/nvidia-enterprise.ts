@@ -39,6 +39,15 @@ export interface NvidiaEnterpriseConfig {
     slaTarget: number;
     budgetAlert: number;
     costOptimization: boolean;
+    ngcApiKey?: string;
+    ngcOrg?: string;
+}
+
+export interface NgcConnectionStatus {
+    connected: boolean;
+    org?: string;
+    lastCheck?: number;
+    error?: string;
 }
 
 export interface INvidiaEnterpriseService {
@@ -50,4 +59,7 @@ export interface INvidiaEnterpriseService {
     getFeatures(): EnterpriseFeature[];
     toggleFeature(id: string, enabled: boolean): void;
     getEstimatedCosts(): { model: string; costPer1k: number; usage: number; total: number }[];
+    getConnectionStatus(): NgcConnectionStatus;
+    connectNgc(apiKey: string, org?: string): Promise<NgcConnectionStatus>;
+    disconnectNgc(): void;
 }

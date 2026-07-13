@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { GitBranch, Activity, Settings2, FlaskConical } from 'lucide-react';
 import { useRoutingIntelligence } from '../../hooks/useRoutingIntelligence';
 import type { FallbackLink } from '../../kernel/instances';
-import type { RouterDecision } from '../../kernel/services/provider-router';
+import type { RouterDecision } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import ABTestPanel from './ABTestPanel';

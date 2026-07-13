@@ -35,10 +35,14 @@ const ConnectorControls: React.FC<Props> = ({
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value)}
                     className="connector-search-input"
-                    aria-label="Search connectors"
+                    aria-label={t('common.aria.search')}
                 />
             </div>
-            <div className="connector-filter-group" role="group" aria-label="Filter by status">
+            <div
+                className="connector-filter-group"
+                role="group"
+                aria-label={t('common.aria.filter')}
+            >
                 {FILTERS(totalCount, connectedCount).map((f) => (
                     <button
                         key={f.value}

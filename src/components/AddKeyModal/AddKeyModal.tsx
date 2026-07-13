@@ -21,7 +21,8 @@ interface Props {
 }
 
 const AddKeyModal: React.FC<Props> = ({ onClose, defaultProvider }) => {
-    const { addKey, keys } = useKeyStore();
+    const addKey = useKeyStore((s) => s.addKey);
+    const keys = useKeyStore((s) => s.keys);
     const { t } = useTranslation();
     const [step, setStep] = useState<1 | 2 | 3>(defaultProvider ? 2 : 1);
     const [provider, setProvider] = useState(defaultProvider || 'OpenRouter');

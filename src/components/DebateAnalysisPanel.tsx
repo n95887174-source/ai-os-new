@@ -3,8 +3,7 @@ import { Brain, AlertTriangle, TrendingUp, Activity, BarChart3, X } from 'lucide
 import { PanelSkeleton } from './Common/Skeleton';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
-import { getActiveDebateSession } from '../kernel/services/debate-runtime/active-debate-store';
-import { sessionManager } from '../kernel/instances';
+import { sessionManager, debateService } from '../kernel/instances';
 import { analyzeDebate } from '../kernel/utils/debate-analysis';
 import type { DebateAnalysis } from '../kernel/utils/debate-analysis';
 import { errorContainer, dismissBtnRed } from '../styles/common';
@@ -24,7 +23,7 @@ const DebateAnalysisPanel: React.FC = () => {
     useEffect(() => {
         isMountedRef.current = true;
         try {
-            const active = getActiveDebateSession();
+            const active = debateService.getActiveDebateSession();
             if (active && isMountedRef.current) {
                 setAvailableSessions([{ id: active.id, topic: active.topic }]);
                 if (!sessionId) setSessionId(active.id);
@@ -42,7 +41,7 @@ const DebateAnalysisPanel: React.FC = () => {
     const runAnalysis = useMemo(() => {
         if (!sessionId) return null;
         try {
-            const active = getActiveDebateSession();
+            const active = debateService.getActiveDebateSession();
             const session =
                 active?.id === sessionId
                     ? active

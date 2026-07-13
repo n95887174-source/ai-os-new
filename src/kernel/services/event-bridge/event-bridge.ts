@@ -20,20 +20,10 @@ export class EventBridge {
 
     start(): void {
         if (this.started) return;
-        this.started = true;
 
-        for (const be of this.preStartBuffer) {
-            this.registry.dispatch({
-                type: be.event,
-                payload: be.data,
-                timestamp: be.timestamp,
-                seq: 0,
-            });
-        }
-        this.preStartBuffer = [];
-
-        // MED-K6: cognitive events skipped to avoid flooding projections.
-        // If new cognitive events are added, add them here or extract to a config set.
+        // P2-43: Register subscribeAll BEFORE started = true to avoid race
+        // where events emitted between subscribeAll and started = true
+        // bypass both the buffer and the subscription.
         const SKIP_COGNITIVE_EVENTS = new Set([
             'cognitive:trace:updated',
             'cognitive:step:active',
@@ -51,6 +41,18 @@ export class EventBridge {
             };
             this.registry.dispatch(kernelEvent);
         });
+
+        this.started = true;
+
+        for (const be of this.preStartBuffer) {
+            this.registry.dispatch({
+                type: be.event,
+                payload: be.data,
+                timestamp: be.timestamp,
+                seq: 0,
+            });
+        }
+        this.preStartBuffer = [];
     }
 
     stop(): void {

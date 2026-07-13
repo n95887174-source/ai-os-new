@@ -182,14 +182,14 @@ export const EcosystemDashboard: React.FC = () => {
         try {
             engineRef.current.tick();
         } catch {
-            /* */
+            /* non-critical — ecosystem tick failed */
         }
         setState(engineRef.current.getState());
         refreshRef.current = setInterval(() => {
             try {
                 engineRef.current.tick();
             } catch {
-                /* */
+                /* non-critical — ecosystem tick failed */
             }
             setState(engineRef.current.getState());
         }, 10000);

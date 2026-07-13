@@ -6,6 +6,7 @@ import { PersonalityBadge } from './PersonalityBadge';
 import KeyProfileExtended from '../KeyTable/KeyProfileExtended';
 import type { ApiKey } from '../../types/metrics';
 import { keyService } from '../../kernel/instances';
+import { useTranslation } from '../../i18n/useTranslation';
 import { useNow } from '../../hooks/useNow';
 
 interface ProviderDetailModalProps {
@@ -25,6 +26,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
     onRemove,
     checkingIds,
 }) => {
+    const { t } = useTranslation();
     const now = useNow();
     const [confirmRemove, setConfirmRemove] = useState(false);
     const [introspectionData, setIntrospectionData] = useState<string | null>(null);
@@ -97,7 +99,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') onClose();
             }}
-            aria-label="Close modal"
+            aria-label={t('common.aria.close_modal')}
         >
             <motion.div
                 initial={{ y: 30, opacity: 0 }}
@@ -139,7 +141,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
                         ref={closeBtnRef}
                         onClick={onClose}
                         className="provider-modal-close-btn"
-                        aria-label="Close provider details"
+                        aria-label={t('common.aria.close_details')}
                     >
                         <X size={20} />
                     </button>
@@ -202,7 +204,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
                                 className="btn-secondary"
                                 onClick={handleIntrospect}
                                 disabled={introspecting}
-                                aria-label="Provider introspection"
+                                aria-label={t('provider_manager.aria.introspection')}
                             >
                                 {introspecting ? (
                                     <Loader2 size={15} className="provider-spin" />

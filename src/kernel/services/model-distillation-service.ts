@@ -65,7 +65,7 @@ export class DistillationService implements IDistillationService {
         try {
             ssrSafeStorage.setItem(STORAGE_KEY, JSON.stringify({ jobs: this.jobs }));
         } catch {
-            /* */
+            /* non-critical — storage write failed */
         }
     }
 

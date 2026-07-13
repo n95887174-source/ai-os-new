@@ -1,5 +1,6 @@
 import { Activity } from 'lucide-react';
 import { metricsService } from '../../kernel/instances';
+import { formatCost } from '../../shared/utils/format-cost';
 import {
     flexColGap5,
     statCardDark,
@@ -125,13 +126,13 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                 >
                     <div style={textCenter}>
                         <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>
-                            ${avgCostPerCall.toFixed(6)}
+                            {formatCost(avgCostPerCall)}
                         </div>
                         <div style={textXxsSecondary}>Avg / Call</div>
                     </div>
                     <div style={textCenter}>
                         <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>
-                            ${cost.toFixed(6)}
+                            {formatCost(cost)}
                         </div>
                         <div style={textXxsSecondary}>Total Est.</div>
                     </div>
@@ -186,7 +187,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                             textAlign: 'right',
                         }}
                     >
-                        ${avgCostPerCall.toFixed(6)}
+                        {formatCost(avgCostPerCall)}
                     </span>
                 </div>
                 <div
@@ -197,8 +198,8 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                         color: '#475569',
                     }}
                 >
-                    <span>Total est.: ${cost.toFixed(6)}</span>
-                    <span>Avg/call: ${avgCostPerCall.toFixed(6)}</span>
+                    <span>Total est.: {formatCost(cost)}</span>
+                    <span>Avg/call: {formatCost(avgCostPerCall)}</span>
                 </div>
             </div>
 

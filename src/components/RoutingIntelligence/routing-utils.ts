@@ -1,4 +1,4 @@
-import type { RouterDecision } from '../../kernel/services/provider-router';
+import type { RouterDecision } from '../../kernel/instances';
 
 export const STRATEGY_LABELS: Record<string, string> = {
     broadcast: 'Broadcast all',

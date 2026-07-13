@@ -7,13 +7,23 @@ const VALID_THEMES = [
     'sunset',
     'high-contrast',
 ] as const;
-const e = typeof localStorage !== 'undefined' ? localStorage.getItem('super-agents-theme') : null;
-const theme =
-    e && VALID_THEMES.includes(e as (typeof VALID_THEMES)[number])
-        ? e
-        : !e &&
-            typeof matchMedia !== 'undefined' &&
-            matchMedia('(prefers-color-scheme:dark)').matches
-          ? 'dark'
-          : 'light';
+let e: string | null = null;
+try {
+    e = typeof localStorage !== 'undefined' ? localStorage.getItem('super-agents-theme') : null;
+} catch {
+    // localStorage unavailable (SSR, private browsing)
+}
+let theme = 'light';
+try {
+    theme =
+        e && VALID_THEMES.includes(e as (typeof VALID_THEMES)[number])
+            ? e
+            : !e &&
+                typeof matchMedia !== 'undefined' &&
+                matchMedia('(prefers-color-scheme:dark)').matches
+              ? 'dark'
+              : 'light';
+} catch {
+    // matchMedia unavailable
+}
 document.documentElement.setAttribute('data-theme', theme);

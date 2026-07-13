@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../kernel/types/llm-types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
-import { CONFIG } from '../../kernel/services/config-registry';
+import { CONFIG } from '../../kernel/instances';
 import {
     eventBus,
     EVENTS,
@@ -433,7 +433,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 govOp?.fail(e instanceof Error ? e : new Error(String(e)));
                 throw e;
             } finally {
-                _sendLocks.set(sessionId, false);
+                _sendLocks.delete(sessionId);
             }
         },
 
@@ -546,6 +546,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         },
 
         deleteSession: (id) => {
+            // Prune requestEntryMap entries for this session
+            for (const [reqId, ref] of requestEntryMap) {
+                if (ref.sessionId === id) requestEntryMap.delete(reqId);
+            }
             sessionManager.delete(id).catch((e) => {
                 console.error('[ChatStore] Failed to persist session deletion', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {

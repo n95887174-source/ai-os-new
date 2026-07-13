@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1.7
 # ────────────────────────────────────────────────────────────────
 # SuperAgents OS — multi-stage production Dockerfile
+# LABELS: https://github.com/opencontainers/image-spec/blob/main/annotations.md
+LABEL org.opencontainers.image.title="SuperAgents OS"
+LABEL org.opencontainers.image.description="Autonomous multi-agent runtime with cognitive topology DSL"
+LABEL org.opencontainers.image.url="https://github.com/n95887174-source/ai-os-new"
+LABEL org.opencontainers.image.source="https://github.com/n95887174-source/ai-os-new"
+LABEL org.opencontainers.image.licenses="MIT"
 #
 # Stage 1 (build): installs deps with legacy-peer-deps to bypass the
 #                  typescript/madge peer-dep conflict, then runs
@@ -34,12 +40,24 @@ COPY . .
 # M3 (3c): Allow VITE_* env overrides at build time via --build-arg
 ARG VITE_BASE_PATH=/
 ARG VITE_SANDBOX_ENABLED=
-ARG VITE_PROXY_TARGET=
+ARG VITE_PROXY_GEMINI=
+ARG VITE_PROXY_OPENROUTER=
+ARG VITE_PROXY_NVIDIA=
+ARG VITE_PROXY_GROQ=
+ARG VITE_PROXY_CEREBRAS=
+ARG VITE_PROXY_CLOUDFLARE=
+ARG VITE_PROXY_OPENAI=
 ARG VITE_DISABLE_TELEMETRY=
 ARG VITE_LOG_LEVEL=
 RUN VITE_BASE_PATH=$VITE_BASE_PATH \
     VITE_SANDBOX_ENABLED=$VITE_SANDBOX_ENABLED \
-    VITE_PROXY_TARGET=$VITE_PROXY_TARGET \
+    VITE_PROXY_GEMINI=$VITE_PROXY_GEMINI \
+    VITE_PROXY_OPENROUTER=$VITE_PROXY_OPENROUTER \
+    VITE_PROXY_NVIDIA=$VITE_PROXY_NVIDIA \
+    VITE_PROXY_GROQ=$VITE_PROXY_GROQ \
+    VITE_PROXY_CEREBRAS=$VITE_PROXY_CEREBRAS \
+    VITE_PROXY_CLOUDFLARE=$VITE_PROXY_CLOUDFLARE \
+    VITE_PROXY_OPENAI=$VITE_PROXY_OPENAI \
     VITE_DISABLE_TELEMETRY=$VITE_DISABLE_TELEMETRY \
     VITE_LOG_LEVEL=$VITE_LOG_LEVEL \
     npm run build

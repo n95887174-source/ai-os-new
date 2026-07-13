@@ -176,8 +176,10 @@ const DebateRuntimePanel: React.FC = () => {
                         position: realPosition,
                         source: 'llm',
                     };
+                    // audit2#4: deduplicate — remove previous streaming entry for this agent before appending
+                    const deduped = existing.filter((a) => a.id !== streamKey);
                     const next = new Map(argsRef.current);
-                    next.set(d.sessionId, [...existing, partial]);
+                    next.set(d.sessionId, [...deduped, partial]);
                     argsRef.current = next;
                     setSessionArgs(next);
                 },

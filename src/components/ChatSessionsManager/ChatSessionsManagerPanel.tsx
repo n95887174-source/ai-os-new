@@ -105,19 +105,17 @@ function lastMessagePreview(s: ChatSession, maxLen = 80): string {
 
 export const ChatSessionsManagerPanel: React.FC = () => {
     const navigate = useNavigate();
-    const {
-        sessions,
-        activeSessionId,
-        isLoaded,
-        deleteSession,
-        renameSession,
-        archiveSession,
-        unarchiveSession,
-        tagSession,
-        moveToFolder,
-        pinSession,
-        setActiveSessionId,
-    } = useChatStore();
+    const sessions = useChatStore((s) => s.sessions);
+    const activeSessionId = useChatStore((s) => s.activeSessionId);
+    const isLoaded = useChatStore((s) => s.isLoaded);
+    const deleteSession = useChatStore((s) => s.deleteSession);
+    const renameSession = useChatStore((s) => s.renameSession);
+    const archiveSession = useChatStore((s) => s.archiveSession);
+    const unarchiveSession = useChatStore((s) => s.unarchiveSession);
+    const tagSession = useChatStore((s) => s.tagSession);
+    const moveToFolder = useChatStore((s) => s.moveToFolder);
+    const pinSession = useChatStore((s) => s.pinSession);
+    const setActiveSessionId = useChatStore((s) => s.setActiveSessionId);
     const [search, setSearch] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState('');

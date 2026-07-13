@@ -205,7 +205,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                         <button
                             onClick={() => setReplayIdx(Math.max(0, replayIdx - 1))}
                             style={iconBtnGhostMd}
-                            aria-label="Previous step"
+                            aria-label={t('common.aria.previous_step')}
                         >
                             <ChevronLeft size={18} aria-hidden="true" />
                         </button>
@@ -239,7 +239,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                                 setReplayIdx(Math.min(trace.steps.length - 1, replayIdx + 1))
                             }
                             style={iconBtnGhostMd}
-                            aria-label="Next step"
+                            aria-label={t('common.aria.next_step')}
                         >
                             <ChevronRight size={18} aria-hidden="true" />
                         </button>
@@ -258,7 +258,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                                 marginLeft: '0.5rem',
                             }}
                             title="Restart Replay"
-                            aria-label="Restart replay"
+                            aria-label={t('common.aria.restart')}
                         >
                             <RefreshCcw size={18} aria-hidden="true" />
                         </button>

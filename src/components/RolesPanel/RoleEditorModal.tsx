@@ -163,7 +163,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                 color: '#e2e8f0',
                                 cursor: 'pointer',
                             }}
-                            aria-label="Close modal"
+                            aria-label={t('common.aria.close_modal')}
                         >
                             <X size={20} aria-hidden="true" />
                         </button>

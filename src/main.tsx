@@ -29,7 +29,7 @@ window.addEventListener('unhandledrejection', (event) => {
 // Memory monitor — logs every 30 seconds (DEV only)
 if (import.meta.env.DEV && typeof window !== 'undefined') {
     let memCount = 0;
-    setInterval(() => {
+    const memTimer = setInterval(() => {
         const mem = (
             performance as unknown as {
                 memory?: { usedJSHeapSize: number; totalJSHeapSize: number };
@@ -46,6 +46,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
             memCount = 0;
         }
     }, 30000);
+    window.addEventListener('beforeunload', () => clearInterval(memTimer), { once: true });
 }
 
 // C2: Render shell immediately so user sees a loading state, then bootstrap async

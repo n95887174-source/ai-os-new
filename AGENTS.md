@@ -3536,6 +3536,103 @@ Update `REMAINING_AUDIT_ITEMS.md` and `REMAINING_WORK.md` with correct verified 
 
 ### Unresolved
 
-- **2 real Medium remaining**: #112 mock services (nvidia-enterprise, persona-marketplace), #172 a11y 123 aria-labels
+- **1 real Medium remaining**: #172 a11y 123 aria-labels
 - **Sprint C**: C-04 test coverage 🔴
 - **Sprint D**: D-01 responsive XL, D-02 liveQuery partial, D-03 60% coverage XL, D-04 i18n partial, D-05 races partial, D-10 docker-compose S
+
+---
+
+## Current Session (2026-07-10) — Mock Services Replacement Sprint
+
+### Goal
+
+Replace 2 `@deprecated MOCK` services with real implementations — #112 from audit.
+
+### Changes
+
+| #   | File                                                        | Change                                                                                                                                                                                                                                                               |
+| :-- | :---------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `src/kernel/services/persona-marketplace-service.ts`        | Fixed `addListing()` bug (was using `listing` instead of `entry`). Service already uses BucketStorageAdapter CRUD with 10 seed personas                                                                                                                              |
+| 2   | `src/kernel/contracts/nvidia-enterprise.ts`                 | Added `ngcApiKey`/`ngcOrg` to config, `NgcConnectionStatus` type, `connectNgc()/disconnectNgc()/getConnectionStatus()` methods                                                                                                                                       |
+| 3   | `src/kernel/services/nvidia-enterprise-service.ts`          | Full rewrite: NGC API integration (`api.ngc.nvidia.com/v2`) for entitlements/regions, `providerTracker` for real SLA metrics, `pricingService` for cost calculation, `BucketStorageAdapter` for config persistence. Falls back to static data when NGC not connected |
+| 4   | `src/kernel/service-registration/phase6-high-level.ts`      | Injected `providerTracker` + `pricingService` deps into NvidiaEnterpriseService                                                                                                                                                                                      |
+| 5   | `src/components/NvidiaEnterprise/NvidiaEnterprisePanel.tsx` | Removed DEMO DATA banner. Added NGC connection UI (connect/disconnect form, status indicator, real/fallback data awareness)                                                                                                                                          |
+| 6   | `REMAINING_AUDIT_ITEMS.md`                                  | #112 mock services → 🟢 Fixed                                                                                                                                                                                                                                        |
+
+### Result
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅ (only pre-existing KnowledgePanel error)
+- `npx vite build` ✅
+- Audit items: Medium 42→29 resolved (1 remaining: #172 a11y)
+
+---
+
+## Current Session (2026-07-11) — Currency Formatting Cleanup + Status Updates
+
+### Goal
+
+Fix `$` + `toFixed()` hardcoded patterns → `formatCost()` utility in CostAnalyticsPanel.tsx and AgentObservabilityTab.tsx. Update REMAINING_WORK.md with verified D-10/D-16 statuses.
+
+### Changes
+
+| #   | File                        | Change                                                                                                        |
+| :-- | :-------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| 1   | `REMAINING_WORK.md`         | D-10 → 🟢 Done, D-16 → 🟢 Done (AES-GCM verified in key-vault.ts); Sprint D summary updated (9🟢 2🟡 3🔴)     |
+| 2   | `CostAnalyticsPanel.tsx`    | Added `formatCost` import. Replaced 10 `$`+`toFixed()` patterns → `formatCost()` calls                        |
+| 3   | `AgentObservabilityTab.tsx` | Added `formatCost` import. Replaced 5 `$`+`toFixed()` patterns → `formatCost()` calls; fixed JSX indent issue |
+
+### Status
+
+- `npx vite build` ✅ 15.11s, 4045 modules
+- `formatCost()` now used in 8 files: PricingPanel, SummaryStatsGrid, UsageChart, DecisionExpandedView, OverviewTab, ProviderManagerView, CostAnalyticsPanel, AgentObservabilityTab
+- REMAINING_WORK.md D-10/D-16 updated; Sprint D summary synced
+
+---
+
+## Current Session (2026-07-11) — audit2.md Runtime Bug Fix Sprint (7/7 🟢)
+
+### Goal
+
+Fix all 7 findings from `audit/Новая папка/audit2.md` — concrete runtime bugs found in deep debate-stack pass.
+
+### Changes
+
+| #   | Audit | File                             | Fix                                                                                                                        |
+| :-- | :---- | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------- |
+| 1   | #1    | `DebatePanel.tsx:248-283`        | Added `sessionRef` + guard `data.id !== sessionRef.current?.id` in `debate:updated` handler — ignores cross-session events |
+| 2   | #2    | `DebatePanel.tsx:304-316`        | Added `payload.sessionId !== session?.id` check in `DEBATE_VERDICT_GENERATED` handler — filters verdicts by session        |
+| 3   | #3    | `debate-llm-caller.ts:275-309`   | Already pre-fixed (`>=` instead of `>`) — verified code correct ✅                                                         |
+| 4   | #4    | `DebateRuntimePanel.tsx:144-183` | Added `deduped = existing.filter(a => a.id !== streamKey)` before appending — replaces streaming entry instead of pushing  |
+| 5   | #5    | `debate-sync-manager.ts:391-403` | Added `this.clearTimers()` at start of `finalizeInternal()` — kills duration timer on normal completion                    |
+| 6   | #6    | `DebatePanel.test.tsx:22-93`     | Moved mock declarations into `vi.hoisted()` — fixes `ReferenceError` from hoisted `vi.mock` factory                        |
+| 7   | #7    | `package.json:15`                | `typecheck` script now uses `node --max-old-space-size=4096` — prevents OOM on large projects                              |
+
+### Status
+
+- `npx vite build` ✅ 17.81s
+- All 7 audit2.md findings: 6 fixed + 1 pre-existing = 🟢 Complete
+- Statuses updated in `audit/Новая папка/audit2.md`
+- Remaining: audit1.md (18 items), BUG_REPORT.md (164 items)
+
+---
+
+## Current Session (2026-07-11) — BUG_REPORT.md P1 Fix Sprint (4 items)
+
+### Goal
+
+Fix 4 actionable P1 findings from `audit/Новая папка/BUG_REPORT.md`.
+
+### Changes
+
+| #   | Finding | Description                                                                                    | Fix                                                                                                                     | File                                        |
+| :-- | :------ | :--------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ |
+| 1   | #22     | Empty `catch {}` in ABTestPanel.handleRun + unprotected handleCreateDash in CustomMetricsPanel | Added `error` state + error banner + `setError` + `console.warn` in catch. Wrapped handleCreateDash in try/catch        | `ABTestPanel.tsx`, `CustomMetricsPanel.tsx` |
+| 2   | #26     | NoteInputForm silently skips files >1MB without UI feedback                                    | Calls `onFileError(fileName, new Error(...))` before `continue` for oversized files                                     | `NoteInputForm.tsx`                         |
+| 3   | #28     | `import { parseScript } from 'meriyah'` loaded eagerly at boot (1.4 MB unpacked)               | Changed to `await import('meriyah')` dynamic import; made `validateToolCode`/`addTool`/`updateTool`/`importTools` async | `tool-executor.ts`, `ToolsPanel.tsx`        |
+| 4   | —       | Pre-existing tsc errors verified — none caused by this session                                 | All 5 errors pre-existing: GoogleCachePanel, chat-executor, debate-engine                                               | —                                           |
+
+### Status
+
+- `npx vite build` ✅ 15.25s
+- BUG_REPORT.md P1: 4 more items resolved (#22, #26, #28)
+- Remaining P1 deferred: #12 (instances.ts split), #13 (74 UI imports), #14 (Zustand selectors), #15 (EventRecorder races), #19 (Monaco self-host), #23 (1200 i18n keys), #27 (ChatMessagesSection virtualize)

@@ -45,7 +45,7 @@ const ResearchEnginePanel: React.FC = () => {
         try {
             await researchEngine.runLoop(id);
         } catch {
-            /**/
+            /* non-critical — run loop failed */
         } finally {
             refresh();
         }

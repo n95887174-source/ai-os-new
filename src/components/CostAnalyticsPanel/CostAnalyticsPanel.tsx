@@ -11,6 +11,7 @@ import {
     progressBarSmall,
 } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';
+import { formatCost } from '../../shared/utils/format-cost';
 
 interface DailyCost {
     date: string;
@@ -106,7 +107,7 @@ const CostAnalyticsPanel: React.FC = () => {
                             <DollarSign size={16} style={{ color: '#10b981' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
-                            ${totalCost.toFixed(2)}
+                            {formatCost(totalCost)}
                         </div>
                     </div>
                     <div
@@ -118,7 +119,7 @@ const CostAnalyticsPanel: React.FC = () => {
                             <BarChart3 size={16} style={{ color: '#3b82f6' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
-                            ${(budget?.spentThisMonth || 0).toFixed(2)}
+                            {formatCost(budget?.spentThisMonth ?? 0)}
                         </div>
                         {budget && budget.monthlyBudget > 0 && (
                             <div
@@ -152,7 +153,7 @@ const CostAnalyticsPanel: React.FC = () => {
                             <TrendingUp size={16} style={{ color: '#f59e0b' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
-                            ${(budget?.projectedMonthly || 0).toFixed(2)}
+                            {formatCost(budget?.projectedMonthly ?? 0)}
                         </div>
                         {trend && (
                             <span style={textXsMuted}>
@@ -174,12 +175,12 @@ const CostAnalyticsPanel: React.FC = () => {
                             <Activity size={16} style={{ color: '#8b5cf6' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
-                            ${(trend?.dailyAvg || 0).toFixed(2)}
+                            {formatCost(trend?.dailyAvg ?? 0)}
                         </div>
                         {trend && (
                             <span style={textXsMuted}>
                                 {t('cost_analytics.forecast', {
-                                    amount: trend.forecast.toFixed(2),
+                                    amount: formatCost(trend.forecast),
                                 })}
                             </span>
                         )}
@@ -247,7 +248,7 @@ const CostAnalyticsPanel: React.FC = () => {
                                         <span
                                             style={{ color: d.cost > 0.1 ? '#f59e0b' : '#71717a' }}
                                         >
-                                            ${d.cost.toFixed(2)}
+                                            {formatCost(d.cost)}
                                         </span>
                                     </div>
                                 ))}
@@ -287,7 +288,7 @@ const CostAnalyticsPanel: React.FC = () => {
                                                         fontWeight: 600,
                                                     }}
                                                 >
-                                                    ${c.toFixed(2)}
+                                                    {formatCost(c)}
                                                 </span>
                                             </div>
                                             <div style={{ ...progressBarSmall, marginTop: 2 }}>
@@ -337,7 +338,7 @@ const CostAnalyticsPanel: React.FC = () => {
                                                 {m.split('/').pop()}
                                             </span>
                                             <span style={{ fontSize: 11, color: '#a1a1aa' }}>
-                                                ${c.toFixed(2)}
+                                                {formatCost(c)}
                                             </span>
                                         </div>
                                     ))}
@@ -376,7 +377,7 @@ const CostAnalyticsPanel: React.FC = () => {
                                                 {a}
                                             </span>
                                             <span style={{ fontSize: 11, color: '#a1a1aa' }}>
-                                                ${c.toFixed(2)}
+                                                {formatCost(c)}
                                             </span>
                                         </div>
                                     ))}
@@ -431,8 +432,10 @@ const CostAnalyticsPanel: React.FC = () => {
                                     </span>
                                     <span>{a.date}</span>
                                     <span style={{ color: '#a1a1aa' }}>
-                                        ${a.cost}{' '}
-                                        {t('cost_analytics.vs_expected', { amount: a.expected })}
+                                        {formatCost(a.cost)}{' '}
+                                        {t('cost_analytics.vs_expected', {
+                                            amount: formatCost(a.expected),
+                                        })}
                                     </span>
                                     <span style={{ color: '#f59e0b', fontSize: 11 }}>
                                         {a.deviation.toFixed(1)}σ

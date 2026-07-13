@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { runtime } from '../kernel/runtime';
 import { eventBus } from '../kernel/events/event-bus';
-import { rootLogger } from '../kernel/services/logger-service';
+import { rootLogger } from '../kernel/instances';
 import { EVENTS } from '../kernel/events/event-names';
 import type { KeyImportReport, KeyIntelligenceInput } from '../kernel/contracts/key-intelligence';
 

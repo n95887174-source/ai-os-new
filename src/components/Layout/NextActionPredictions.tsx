@@ -222,7 +222,7 @@ export const NextActionPredictions: React.FC = () => {
                     padding: '0.1rem 0.3rem',
                     opacity: 0.6,
                 }}
-                aria-label="Dismiss"
+                aria-label={t('common.aria.dismiss')}
             >
                 ✕
             </button>

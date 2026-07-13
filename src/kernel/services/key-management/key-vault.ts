@@ -26,6 +26,15 @@ function asBuf(data: Uint8Array): ArrayBuffer {
     return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 }
 
+/**
+ * KeyVault — AES-GCM + PBKDF2 key encryption.
+ *
+ * NOTE: Vault is intentionally NOT wired into the app's bootstrap.
+ * See key-registry.ts:619: "Vault system removed — keys stored as plaintext".
+ * API keys are stored in IndexedDB in plaintext by design.
+ * The vault code is kept as infrastructure for future password-gated encryption.
+ * P0-#2 (key-registry-utils.ts) prevents silent plaintext during export.
+ */
 export class KeyVault implements IKeyVaultService {
     private masterKey: CryptoKey | null = null;
     private _locked = true;
@@ -82,7 +91,7 @@ export class KeyVault implements IKeyVaultService {
     }
 
     async encryptKey(plaintext: string): Promise<string | null> {
-        if (this._locked || !this.masterKey) return plaintext;
+        if (this._locked || !this.masterKey) return null;
         try {
             const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
             const encoded = new TextEncoder().encode(plaintext);

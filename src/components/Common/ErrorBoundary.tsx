@@ -3,7 +3,7 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
-import { rootLogger } from '../../kernel/services/logger-service';
+import { rootLogger } from '../../kernel/instances';
 import { t } from '../../i18n/translations';
 
 interface Props {

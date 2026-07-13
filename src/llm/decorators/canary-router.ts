@@ -55,8 +55,8 @@ export class CanaryRouterDecorator extends BaseDecorator {
     readonly #config: CanaryRouterConfig;
 
     constructor(config: CanaryRouterConfig, options?: { maxResults?: number }) {
-        super(config.targets[0].adapter);
         if (config.targets.length < 2) throw new Error('CanaryRouter requires at least 2 targets');
+        super(config.targets[0].adapter);
         this.#config = config;
         this.maxResults = options?.maxResults ?? 1000;
     }

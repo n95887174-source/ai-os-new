@@ -16,7 +16,7 @@ const CARD: React.CSSProperties = {
 
 const GroupsPanel: React.FC = () => {
     const { t } = useTranslation();
-    const { keys } = useKeyStore();
+    const keys = useKeyStore((s) => s.keys);
     const [groups, setGroups] = useState<KeyGroup[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
     const [createOpen, setCreateOpen] = useState(false);

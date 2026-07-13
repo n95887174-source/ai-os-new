@@ -21,6 +21,8 @@ import { clearBootstrapSnapshot } from './bootstrap-state';
 import {
     CRITICAL_SERVICES,
     RUNNING_DEBATE_PHASES,
+    INIT_TIERS,
+    checkDependencies,
     type InitPhase,
     type BootstrapReport,
 } from './bootstrap-phases';
@@ -160,9 +162,61 @@ export class SystemBootstrap implements IBootstrap {
     private async initServices(): Promise<boolean> {
         this.phase = 'services';
 
-        await this.lifecycle.initAll();
+        // ── Tier 0: Config + logger (zero deps) ─────────────────────────
+        await this.lifecycle.tryInit('configService', () =>
+            this.container.get<ConfigService>('configService').init(),
+        );
 
-        // Check for critical service failures
+        // ── Tier 1: Core infrastructure ──────────────────────────────────
+        checkDependencies(
+            'eventSourcingService',
+            ['configService'],
+            (n) => this.container.has(n),
+            this.logger.warn.bind(this.logger),
+        );
+        await this.lifecycle.tryInit('eventSourcingService', () => {
+            return this.container
+                .get<EventRecorder>('eventSourcingService')
+                .init((cb) => this.eventBus.subscribeAll(cb));
+        });
+
+        // ── Tier 2: Key + pricing ────────────────────────────────────────
+        checkDependencies(
+            'budgetService',
+            ['keyService', 'pricingService'],
+            (n) => this.container.has(n),
+            this.logger.warn.bind(this.logger),
+        );
+
+        // ── Tier 3: Provider runtime ─────────────────────────────────────
+        checkDependencies(
+            'providerRuntimeService',
+            ['keyService', 'keyStateStore'],
+            (n) => this.container.has(n),
+            this.logger.warn.bind(this.logger),
+        );
+        await this.lifecycle.tryInit('providerRuntimeService', () => {
+            const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');
+            const ks = this.container.get<KeyService>('keyService');
+            const keys: ApiKey[] = ks.getKeys?.() ?? [];
+            for (const key of keys) {
+                try {
+                    prs.createInstance(key);
+                } catch (e) {
+                    this.logger.warn('Bootstrap', 'createInstance failed', {
+                        provider: key.provider,
+                        error: e,
+                    });
+                }
+            }
+        });
+
+        await this.lifecycle.tryInit('rotationService', async () => {
+            const svc = this.container.get<RotationService>('rotationService');
+            return svc.init();
+        });
+
+        // ── Check critical service failures after core tiers ─────────────
         for (const status of this.lifecycle.getStatuses()) {
             if (status.status === 'error') {
                 if (CRITICAL_SERVICES.has(status.name)) {
@@ -192,37 +246,28 @@ export class SystemBootstrap implements IBootstrap {
             }
         }
 
-        this.phase = 'topology';
+        // ── Tier 4-6: Remaining lifecycle services by tier ──────────────
+        const serviceMap = new Map<string, ILifecycle>();
+        for (const entry of this.lifecycle.getEntries()) {
+            serviceMap.set(entry.name, entry.service);
+        }
 
-        await this.lifecycle.tryInit('eventSourcingService', () => {
-            return this.container
-                .get<EventRecorder>('eventSourcingService')
-                .init((cb: (payload: { event: string; data: unknown }) => void) =>
-                    this.eventBus.subscribeAll(cb),
-                );
-        });
-
-        await this.lifecycle.tryInit('providerRuntimeService', () => {
-            const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');
-            const ks = this.container.get<KeyService>('keyService');
-            const keys: ApiKey[] = ks.getKeys?.() ?? [];
-            for (const key of keys) {
-                try {
-                    prs.createInstance(key);
-                } catch (e) {
-                    this.logger.warn('Bootstrap', 'createInstance failed', {
-                        provider: key.provider,
-                        error: e,
-                    });
+        for (const tier of INIT_TIERS) {
+            const tierNames = tier[0] === '*' ? [...serviceMap.keys()] : tier;
+            for (const name of tierNames) {
+                const svc = serviceMap.get(name);
+                if (!svc) continue;
+                const hasStatus = this.lifecycle
+                    .getStatuses()
+                    .some((s) => s.name === name && s.status === 'ok');
+                if (!hasStatus) {
+                    await this.lifecycle.tryInit(name, () => svc.init());
                 }
             }
-        });
+        }
 
-        await this.lifecycle.tryInit('rotationService', async () => {
-            const svc = this.container.get<RotationService>('rotationService');
-            return svc.init();
-        });
-
+        // ── Topology ──────────────────────────────────────────────────────
+        this.phase = 'topology';
         try {
             const orch = this.container.get<Orchestrator>('orchestrator');
             orch.mount(AuditorTopology);
@@ -232,17 +277,7 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
         }
 
-        // ── Init remaining services (created as deps but not explicitly tryInit'd) ──
-        for (const entry of this.lifecycle.getEntries()) {
-            const hasStatus = this.lifecycle
-                .getStatuses()
-                .some((s) => s.name === entry.name && s.status === 'ok');
-            if (!hasStatus) {
-                await this.lifecycle.tryInit(entry.name, () => entry.service.init());
-            }
-        }
-
-        // ── Start all lifecycle services ───────────────────────────────
+        // ── Start all lifecycle services (tiered) ─────────────────────────
         try {
             await this.lifecycle.startAll();
         } catch (e) {
@@ -253,14 +288,9 @@ export class SystemBootstrap implements IBootstrap {
             this.phase = 'degraded';
         }
 
-        // Group Manager — wraps all key lifecycle
+        // ── Post-start: GroupManager ──────────────────────────────────────
         try {
             const gm = this.container.get<GroupManagerService>('groupManagerService');
-            const keysBeforeSync = this.container.get<KeyService>('keyService').getKeys();
-            if (import.meta.env.DEV)
-                this.logger.debug('Bootstrap', 'GroupManager.syncExistingKeys — keys before sync', {
-                    count: keysBeforeSync.length,
-                });
             await gm.syncExistingKeys();
             const keysAfterSync = gm.getAllKeys();
             if (import.meta.env.DEV)
@@ -275,15 +305,11 @@ export class SystemBootstrap implements IBootstrap {
             });
         }
 
-        // Seed KeyStateStore with existing keys
+        // ── Post-start: KeyStateStore seed ────────────────────────────────
         try {
-            const ks = this.container.get<KeyService>('keyService');
             const kss = this.container.get<KeyStateStore>('keyStateStore');
-            const existingKeys: ApiKey[] = ks.getKeys?.() ?? [];
-            if (import.meta.env.DEV)
-                this.logger.debug('Bootstrap', 'KeyStateStore seed', {
-                    keyCount: existingKeys.length,
-                });
+            const existingKeys: ApiKey[] =
+                this.container.get<KeyService>('keyService').getKeys?.() ?? [];
             if (kss && existingKeys.length > 0) {
                 kss.seedFromKeys(existingKeys);
                 this.logger.info(
@@ -295,7 +321,7 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.warn('Bootstrap', 'KeyStateStore seed failed (non-critical)', { error: e });
         }
 
-        // ── DebateService.init() — loads active session + registers event listeners ──
+        // ── Post-start: DebateService.init() ──────────────────────────────
         try {
             const ds = this.container.get<{ init: () => Promise<void> }>('debateService');
             await ds.init();
@@ -304,16 +330,7 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.warn('Bootstrap', 'DebateService init failed (non-critical)', { error: e });
         }
 
-        // ── ContributionService — lazy init via lifecycle (subscribes to events) ──
-        try {
-            this.container.get('contributionService');
-        } catch (e) {
-            this.logger.warn('Bootstrap', 'ContributionService get failed (non-critical)', {
-                error: e,
-            });
-        }
-
-        // Auto-resume interrupted debates found in Dexie after page reload
+        // Auto-resume interrupted debates
         try {
             const allSessions = await getDexieDb().debateSessions.toArray();
             let interruptedCount = 0;
@@ -331,7 +348,7 @@ export class SystemBootstrap implements IBootstrap {
             if (interruptedCount > 0) {
                 this.logger.info(
                     'Bootstrap',
-                    `Marked ${interruptedCount} debate(s) as interrupted (page reload during active session)`,
+                    `Marked ${interruptedCount} debate(s) as interrupted`,
                 );
             }
         } catch (e) {
@@ -345,7 +362,6 @@ export class SystemBootstrap implements IBootstrap {
             type: 'success',
         });
         this.eventBus.emit(EVENTS.RUNTIME_READY, { timestamp: Date.now() });
-
         this.phase = 'ready';
         return true;
     }

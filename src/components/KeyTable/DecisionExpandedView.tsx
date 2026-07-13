@@ -1,4 +1,4 @@
-import type { RouterDecision, PipelineStep } from '../../kernel/services/provider-router';
+import type { RouterDecision, PipelineStep } from '../../kernel/instances';
 import { formatCost } from '../../shared/utils/format-cost';
 
 const STEP_ICONS: Record<PipelineStep['status'], string> = {

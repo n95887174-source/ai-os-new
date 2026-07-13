@@ -19,43 +19,45 @@ beforeAll(() => {
     });
 });
 
-const mockNodes = [
-    { id: 'agent-1', type: 'agent', label: 'Agent Alpha', config: {} },
-    { id: 'agent-2', type: 'agent', label: 'Agent Beta', config: {} },
-    { id: 'agent-3', type: 'agent', label: 'Agent Gamma', config: {} },
-    { id: 'router-1', type: 'router', label: 'Router', config: {} },
-];
-
-const mockDebateService = {
-    getSession: vi.fn(),
-    startDebate: vi.fn(),
-    pauseDebate: vi.fn(),
-    resumeDebate: vi.fn(),
-    stopDebate: vi.fn(),
-    getArguments: vi.fn(() => []),
-    exportAsMarkdown: vi.fn(() => ''),
-    destroy: vi.fn(),
-    getVerdict: vi.fn(() => null),
-    getHistory: vi.fn(() => []),
-    setFactCheckLevel: vi.fn(),
-};
-
-const mockGetActiveSession = vi.fn();
-
-const mockDebateHumanService = {
-    addArgument: vi.fn(),
-    getHumanVotes: vi.fn(() => []),
-    recordHumanVote: vi.fn(),
-};
-
-const mockDebateEngine = {
-    pauseSession: vi.fn(),
-    resumeSession: vi.fn(),
-    cancelSession: vi.fn(),
-};
-
-vi.mock('../../kernel/services/debate-runtime/active-debate-store', () => ({
-    getActiveDebateSession: mockGetActiveSession,
+const {
+    mockNodes,
+    mockDebateService,
+    mockGetActiveSession,
+    mockDebateHumanService,
+    mockDebateEngine,
+} = vi.hoisted(() => ({
+    mockNodes: [
+        { id: 'agent-1', type: 'agent', label: 'Agent Alpha', config: {} },
+        { id: 'agent-2', type: 'agent', label: 'Agent Beta', config: {} },
+        { id: 'agent-3', type: 'agent', label: 'Agent Gamma', config: {} },
+        { id: 'router-1', type: 'router', label: 'Router', config: {} },
+    ],
+    mockDebateService: {
+        getSession: vi.fn(),
+        startDebate: vi.fn(),
+        pauseDebate: vi.fn(),
+        resumeDebate: vi.fn(),
+        stopDebate: vi.fn(),
+        getArguments: vi.fn(() => []),
+        exportAsMarkdown: vi.fn(() => ''),
+        destroy: vi.fn(),
+        getVerdict: vi.fn(() => null),
+        getHistory: vi.fn(() => []),
+        setFactCheckLevel: vi.fn(),
+        getActiveDebateSession: mockGetActiveSession,
+        getDebateGovernorState: vi.fn(() => null),
+    },
+    mockGetActiveSession: vi.fn(),
+    mockDebateHumanService: {
+        addArgument: vi.fn(),
+        getHumanVotes: vi.fn(() => []),
+        recordHumanVote: vi.fn(),
+    },
+    mockDebateEngine: {
+        pauseSession: vi.fn(),
+        resumeSession: vi.fn(),
+        cancelSession: vi.fn(),
+    },
 }));
 
 vi.mock('../../kernel/instances', () => ({

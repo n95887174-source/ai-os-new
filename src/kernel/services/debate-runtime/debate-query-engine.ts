@@ -10,7 +10,6 @@ const NON_CHAT_PREFIXES = [
     'babbage',
     'ada',
     'code-',
-    'gemini-2.5-pro-exp',
     'imagen-',
     'veo-',
     'gemma-',
@@ -246,7 +245,7 @@ export class DebateProviderResolver {
         }
 
         if (!resolvedKey) {
-            const providerKeys = routerService.getDebateProviders(0);
+            const providerKeys = routerService.getDebateProviders(1);
             const available = providerKeys.find(
                 (pk) =>
                     this.providerCanBeUsed(pk.key.provider, session) &&

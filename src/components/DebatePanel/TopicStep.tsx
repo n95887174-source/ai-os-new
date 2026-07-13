@@ -1,6 +1,6 @@
 import { MessageSquare, Zap } from 'lucide-react';
 import { TEMP_LABELS } from './wizard-constants';
-import { DEBATE_TEMPLATES } from '../../kernel/services/debate-runtime/debate-templates';
+import { DEBATE_TEMPLATES } from '../../kernel/instances';
 import StrategySelector from './StrategySelector';
 import {
     textCenter,
@@ -182,7 +182,7 @@ const TopicStep: React.FC<TopicStepProps> = ({
                     step={1}
                     value={debateTemperature}
                     onChange={(e) => onTemperatureChange(parseInt(e.target.value))}
-                    aria-label="Debate temperature"
+                    aria-label={t('common.aria.temperature')}
                     className="debate-input"
                     style={{ width: '100%', accentColor }}
                 />

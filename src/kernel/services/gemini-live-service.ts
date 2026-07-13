@@ -75,7 +75,7 @@ export class GeminiLiveService implements IGeminiLiveService {
         this.recognition = new Ctor();
         this.recognition.continuous = true;
         this.recognition.interimResults = false;
-        this.recognition.lang = 'en-US';
+        this.recognition.lang = navigator.language?.startsWith('ru') ? 'ru-RU' : 'en-US';
 
         this.recognition.onresult = (event: SpeechRecognitionEvent) => {
             const last = event.results[event.results.length - 1];
@@ -91,7 +91,12 @@ export class GeminiLiveService implements IGeminiLiveService {
 
         this.recognition.onend = () => {
             if (!this.aborted && this.session.status !== 'error') {
-                setTimeout(() => this.recognition?.start(), 100);
+                const currentStatus = this.session.status;
+                setTimeout(() => {
+                    if (!this.aborted && this.session.status === currentStatus) {
+                        this.recognition?.start();
+                    }
+                }, 100);
             }
         };
 

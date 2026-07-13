@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { memoryService } from '../../kernel/instances';
 import type { MemoryEntry } from '../../types/memory';
 import { eventBus, EVENTS } from '../../kernel/instances';
-import { CONFIG } from '../../kernel/services/config-registry';
+import { CONFIG } from '../../kernel/instances';
 import { configService } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -29,14 +29,6 @@ const MemoryPanel: React.FC = () => {
         'long_term' | 'ephemeral' | 'rag_sources'
     >('long_term');
     const [semanticMode, setSemanticMode] = useState(!!CONFIG?.services?.memory?.semanticEnabled);
-    useEffect(
-        () =>
-            eventBus.onSafe(EVENTS.SETTINGS_UPDATED, () => {
-                if (isMountedRef.current)
-                    setSemanticMode(!!CONFIG?.services?.memory?.semanticEnabled);
-            }),
-        [],
-    );
     const [importanceFilter, setImportanceFilter] = useState(0);
     const [viewMode, setViewMode] = useState<'cards' | 'timeline'>('cards');
     const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -55,15 +47,13 @@ const MemoryPanel: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    useEffect(() => {
-        setSemanticMode(!!CONFIG?.services?.memory?.semanticEnabled);
-        const unsub = eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
-            setSemanticMode(!!CONFIG?.services?.memory?.semanticEnabled);
-        });
-        return () => {
-            if (unsub) unsub();
-        };
-    }, []);
+    useEffect(
+        () =>
+            eventBus.onSafe(EVENTS.SETTINGS_UPDATED, () => {
+                setSemanticMode(!!CONFIG?.services?.memory?.semanticEnabled);
+            }),
+        [],
+    );
 
     useEffect(() => {
         const unsub = eventBus.onSafe<MemoryEntry[]>('memory:updated', (data) => {
@@ -340,7 +330,7 @@ const MemoryPanel: React.FC = () => {
                                         color: viewMode === 'cards' ? '#a855f7' : '#64748b',
                                         transition: 'all 0.15s',
                                     }}
-                                    aria-label="Card view"
+                                    aria-label={t('common.aria.card_view')}
                                 >
                                     Cards
                                 </button>
@@ -360,7 +350,7 @@ const MemoryPanel: React.FC = () => {
                                         color: viewMode === 'timeline' ? '#a855f7' : '#64748b',
                                         transition: 'all 0.15s',
                                     }}
-                                    aria-label="Timeline view"
+                                    aria-label={t('common.aria.timeline_view')}
                                 >
                                     Timeline
                                 </button>

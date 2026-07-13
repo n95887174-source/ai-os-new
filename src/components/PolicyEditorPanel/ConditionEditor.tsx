@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 import type {
     PolicyCondition,
     DebatePhase,
@@ -26,6 +27,7 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
     onRemove,
     depth = 0,
 }) => {
+    const { t } = useTranslation();
     const setType = (type: string) => {
         switch (type) {
             case 'and':
@@ -195,7 +197,11 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
                     />
                 )}
                 {onRemove && (
-                    <button onClick={onRemove} style={s.iconBtn} aria-label="Remove condition">
+                    <button
+                        onClick={onRemove}
+                        style={s.iconBtn}
+                        aria-label={t('common.aria.delete')}
+                    >
                         <X size={12} />
                     </button>
                 )}

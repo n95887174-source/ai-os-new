@@ -186,7 +186,7 @@ const TracesPanel: React.FC = () => {
                             }}
                             onFocus={(e) => (e.target.style.borderColor = '#a855f7')}
                             onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.05)')}
-                            aria-label="Search traces"
+                            aria-label={t('common.aria.search')}
                         />
                     </div>
                     <div
@@ -198,7 +198,7 @@ const TracesPanel: React.FC = () => {
                             border: '1px solid rgba(255,255,255,0.05)',
                         }}
                         role="tablist"
-                        aria-label="Filter traces by status"
+                        aria-label={t('common.aria.filter')}
                     >
                         {['all', 'running', 'completed', 'failed'].map((f) => (
                             <button

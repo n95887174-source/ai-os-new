@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
-import type { RouterDecision } from '../../kernel/services/provider-router';
+import type { RouterDecision } from '../../kernel/instances';
 import { STRATEGY_LABELS, scoreBreakdown } from './routing-utils';
 import {
     emptyState,

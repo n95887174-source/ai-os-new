@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Search, Users, MessageCircle, Thermometer, ArrowUpRight } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
-import { DEBATE_TEMPLATES } from '../../kernel/services/debate-runtime/debate-templates';
+import { DEBATE_TEMPLATES } from '../../kernel/instances';
 
 const STRATEGY_COLORS: Record<string, string> = {
     constrained: '#f59e0b',

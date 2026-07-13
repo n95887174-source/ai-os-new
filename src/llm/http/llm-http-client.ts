@@ -30,17 +30,7 @@ export class LLMHttpClient {
 
     #withTimeout(signal?: AbortSignal): AbortSignal {
         if (!signal) return AbortSignal.timeout(this.#timeoutMs);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(
-            () => controller.abort(new DOMException('Timeout', 'TimeoutError')),
-            this.#timeoutMs,
-        );
-        const onAbort = () => {
-            controller.abort(signal.reason);
-            clearTimeout(timeoutId);
-        };
-        signal.addEventListener('abort', onAbort, { once: true });
-        return controller.signal;
+        return AbortSignal.any([signal, AbortSignal.timeout(this.#timeoutMs)]);
     }
 
     async post(

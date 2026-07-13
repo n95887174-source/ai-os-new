@@ -12,6 +12,7 @@ interface NoteInputFormProps {
     onTagsChange: (tags: string) => void;
     onAttachmentsChange: (files: AttachedFile[]) => void;
     onAdd: () => void;
+    onFileError?: (fileName: string, error: unknown) => void;
 }
 
 export const NoteInputForm: React.FC<NoteInputFormProps> = ({
@@ -23,6 +24,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
     onTagsChange,
     onAttachmentsChange,
     onAdd,
+    onFileError,
 }) => {
     const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,9 +35,16 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
         let total = attachments.reduce((s, f) => s + f.size, 0);
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            if (file.size > 1024 * 1024) continue;
+            if (file.size > 1024 * 1024) {
+                onFileError?.(file.name, new Error('File exceeds 1MB limit, skipped'));
+                continue;
+            }
             if (total + file.size > 3 * 1024 * 1024) break;
             const reader = new FileReader();
+            reader.onerror = () => {
+                console.error('[NoteInputForm] FileReader failed', file.name, reader.error);
+                onFileError?.(file.name, reader.error);
+            };
             reader.onload = () => {
                 onAttachmentsChange([
                     ...attachments,

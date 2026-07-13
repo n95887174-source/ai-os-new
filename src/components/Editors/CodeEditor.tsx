@@ -1,7 +1,5 @@
 import React from 'react';
-import Editor, { loader } from '@monaco-editor/react';
-
-loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' } });
+import Editor from '@monaco-editor/react';
 
 interface CodeEditorProps {
     value: string;

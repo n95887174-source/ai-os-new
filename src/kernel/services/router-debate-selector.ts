@@ -131,7 +131,7 @@ export class RouterDebateSelector {
             'cohere',
             'scaleway',
             'github',
-            'blackboxapi',
+            'blackbox',
             'cometapi',
         ];
         const sorted = Array.from(uniqueProviders.entries()).sort(([a], [b]) => {

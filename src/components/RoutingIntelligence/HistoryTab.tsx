@@ -1,7 +1,7 @@
 import { ArrowRight, Info, TrendingUp, Zap, DollarSign, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from '../../i18n/useTranslation';
-import type { RouterDecision } from '../../kernel/services/provider-router';
+import type { RouterDecision } from '../../kernel/instances';
 import { STRATEGY_LABELS, providerColor, scoreBreakdown, getExplanation } from './routing-utils';
 import {
     detailRow,

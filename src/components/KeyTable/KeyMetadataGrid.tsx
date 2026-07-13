@@ -93,7 +93,7 @@ const KeyMetadataGrid: React.FC<Props> = ({ apiKey, stats }) => {
                             alignItems: 'center',
                             padding: 2,
                         }}
-                        aria-label="Copy API key"
+                        aria-label={t('common.aria.copy')}
                         title={t('overview.copy_to_clipboard')}
                     >
                         {copied ? <Check size={12} color="#10b981" /> : <Copy size={12} />}

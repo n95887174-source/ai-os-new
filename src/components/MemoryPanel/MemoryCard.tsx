@@ -182,7 +182,7 @@ const MemoryCard: React.FC<MemoryCardProps> = ({
                         className="btn-secondary"
                         style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }}
                         title={t('memory.delete_vector')}
-                        aria-label="Delete memory entry"
+                        aria-label={t('common.aria.delete')}
                         onClick={() => onDelete(memory.id)}
                     >
                         <Trash2 size={16} aria-hidden="true" />

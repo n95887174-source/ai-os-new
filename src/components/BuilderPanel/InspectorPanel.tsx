@@ -150,7 +150,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                                     model: e.target.value,
                                                 })
                                             }
-                                            aria-label="Select model"
+                                            aria-label={t('common.aria.select_model')}
                                         >
                                             <option value="auto">{t('builder.auto_select')}</option>
                                             {keys
@@ -212,7 +212,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                                     prompt: e.target.value,
                                                 })
                                             }
-                                            aria-label="System prompt"
+                                            aria-label={t('common.aria.system_prompt')}
                                         />
                                     </div>
 

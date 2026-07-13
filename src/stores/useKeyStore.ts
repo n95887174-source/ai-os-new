@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useMemo } from 'react';
 import { liveQuery } from 'dexie';
 import { eventBus, EVENTS, keyService, groupManager, keyStateStore } from './key-store-deps';
-import { getDexieDb } from '../kernel/services/database-service';
+import { getDexieDb } from '../kernel/instances';
 import { tryGetServiceProp } from '../kernel/service-helper';
 import type { ApiKey, KeyNote, ProviderAlert } from '../types/metrics';
 
@@ -519,11 +519,14 @@ export function useKeySelector<T>(selector: (s: Store) => T): T {
 
 export function refreshKeyStore() {
     const db = getDexieDb();
-    db.apiKeys.toArray().then((keys) => {
-        useKeyStore.setState({
-            keys,
-            activeKeys: computeActiveKeys(keys),
-            isLoaded: true,
-        });
-    });
+    db.apiKeys
+        .toArray()
+        .then((keys) => {
+            useKeyStore.setState({
+                keys,
+                activeKeys: computeActiveKeys(keys),
+                isLoaded: true,
+            });
+        })
+        .catch((e) => console.error('[KeyStore] refresh failed', e));
 }

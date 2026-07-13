@@ -67,7 +67,7 @@ export class ContributionService implements IContributionService, ILifecycle {
     }
 
     private recordContribution(): void {
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toLocaleDateString('en-CA');
         this.days[today] = (this.days[today] || 0) + 1;
         this.schedulePersist();
     }
@@ -91,7 +91,7 @@ export class ContributionService implements IContributionService, ILifecycle {
             for (let d = 0; d < 7; d++) {
                 const date = new Date(now);
                 date.setDate(date.getDate() - (52 * 7 - w * 7 - d));
-                const dateStr = date.toISOString().split('T')[0];
+                const dateStr = date.toLocaleDateString('en-CA');
                 const count = this.days[dateStr] || 0;
                 totalContributions += count;
                 let level: ContributionDay['level'] = 0;
@@ -119,7 +119,7 @@ export class ContributionService implements IContributionService, ILifecycle {
         const s = new Date(start);
         const e = new Date(end);
         for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-            const ds = d.toISOString().split('T')[0];
+            const ds = d.toLocaleDateString('en-CA');
             const count = this.days[ds] || 0;
             let level: ContributionDay['level'] = 0;
             if (count > 8) level = 4;
@@ -144,11 +144,11 @@ export class ContributionService implements IContributionService, ILifecycle {
         if (activeDays.length === 0) return { current: 0, longest: 0 };
 
         let currentStreak = 0;
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toLocaleDateString('en-CA');
         const checkDate = new Date(today);
 
         for (let i = 0; i < 365; i++) {
-            const ds = checkDate.toISOString().split('T')[0];
+            const ds = checkDate.toLocaleDateString('en-CA');
             if (this.days[ds] && this.days[ds] > 0) {
                 currentStreak++;
             } else if (i > 0) {

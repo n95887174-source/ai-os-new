@@ -42,8 +42,9 @@ export type ConfigOverlays = {
     services?: Partial<ServicesConfigSection>;
 };
 
-function deepMerge<T>(target: T, source?: Partial<T>): T {
+function deepMerge<T>(target: T, source?: Partial<T>, depth = 0): T {
     if (!source) return target;
+    if (depth > 10) return { ...target, ...source } as T;
     const result = { ...target } as Record<string, unknown>;
     for (const key of Object.keys(source as Record<string, unknown>)) {
         const val = (source as Record<string, unknown>)[key];
@@ -52,7 +53,7 @@ function deepMerge<T>(target: T, source?: Partial<T>): T {
                 result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])
                     ? (result[key] as Record<string, unknown>)
                     : {};
-            result[key] = deepMerge(base as T, val as Partial<T>);
+            result[key] = deepMerge(base as T, val as Partial<T>, depth + 1);
         } else {
             result[key] = val;
         }

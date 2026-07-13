@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Brain } from 'lucide-react';
-import { debateHumanService } from '../../kernel/instances';
-import { eventBus } from '../../kernel/instances';
-import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';
+import { debateHumanService, debateService, eventBus } from '../../kernel/instances';
 import { computeStats, findRelated, getCurrentSessions } from './debate-memory-helpers';
 import DebateMemoryStats from './DebateMemoryStats';
 import RelatedDebates from './RelatedDebates';
@@ -63,7 +61,7 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
         if (!filteredSessions[0] || injecting) return;
         setInjecting(true);
         try {
-            const current = getActiveDebateSession();
+            const current = debateService.getActiveDebateSession();
             const related = relatedDebates.slice(0, 3);
             if (related.length === 0 || !current) return;
             const memoryText = related
@@ -78,7 +76,7 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
                 )
                 .join('\n\n');
             await debateHumanService.addArgument(
-                getActiveDebateSession(),
+                debateService.getActiveDebateSession(),
                 'Memory System',
                 `### Memory from Past Debates\n\n${memoryText}`,
                 0.8,
@@ -181,7 +179,7 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
                 onSelectSession={onSelectSession}
                 injecting={injecting}
                 handleInjectMemory={handleInjectMemory}
-                hasActiveSession={getActiveDebateSession()?.status === 'active'}
+                hasActiveSession={debateService.getActiveDebateSession()?.status === 'active'}
             />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

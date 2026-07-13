@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     Clock,
     Play,
@@ -85,15 +85,13 @@ const TasksPanel: React.FC = () => {
 
     const clearError = useAutoClearError(setError);
 
-    const deriveStats = (taskList: Task[]) => {
-        const active = taskList.filter((t) => t.status === 'running').length;
-        const pending = taskList.filter((t) => t.status === 'pending').length;
-        const completed = taskList.filter((t) => t.status === 'completed').length;
-        const failed = taskList.filter((t) => t.status === 'failed').length;
+    const stats = useMemo(() => {
+        const active = tasks.filter((t) => t.status === 'running').length;
+        const pending = tasks.filter((t) => t.status === 'pending').length;
+        const completed = tasks.filter((t) => t.status === 'completed').length;
+        const failed = tasks.filter((t) => t.status === 'failed').length;
         return { active, pending, completed, failed };
-    };
-
-    const stats = deriveStats(tasks);
+    }, [tasks]);
 
     const updateTasksFromTraces = useCallback(() => {
         try {
@@ -405,7 +403,7 @@ const TasksPanel: React.FC = () => {
                             fontSize: '0.9rem',
                             outline: 'none',
                         }}
-                        aria-label="Search tasks by ID or instruction"
+                        aria-label={t('common.aria.search')}
                     />
                     <button
                         onClick={handleRefresh}
@@ -422,7 +420,7 @@ const TasksPanel: React.FC = () => {
                             justifyContent: 'center',
                         }}
                         title="Refresh tasks"
-                        aria-label="Refresh tasks"
+                        aria-label={t('common.aria.refresh')}
                     >
                         {isRefreshing ? (
                             <motion.div
@@ -477,7 +475,7 @@ const TasksPanel: React.FC = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ delay: i * 0.05 }}
+                                transition={{ delay: Math.min(i * 0.05, 0.4) }}
                                 style={{
                                     padding: '1.5rem',
                                     marginBottom: '1rem',

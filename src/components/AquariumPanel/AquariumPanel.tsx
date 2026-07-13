@@ -36,7 +36,7 @@ import { useLatest } from './hooks/useLatest';
 import { aquariumScreenshotsService } from './services/aquarium-screenshots-service';
 
 const AquariumPanel: React.FC = () => {
-    const { keys } = useKeyStore();
+    const keys = useKeyStore((s) => s.keys);
     const { t } = useTranslation();
     const [selectedFish, setSelectedFish] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -179,7 +179,7 @@ const AquariumPanel: React.FC = () => {
                             }
                         }}
                         className="aquarium-feed-btn"
-                        aria-label="Screenshot"
+                        aria-label={t('common.aria.screenshot')}
                     >
                         <Camera size={14} aria-hidden="true" /> Screenshot
                     </button>
@@ -192,7 +192,7 @@ const AquariumPanel: React.FC = () => {
                     <button
                         onClick={() => setShowHelp((prev) => !prev)}
                         className="aquarium-feed-btn"
-                        aria-label="Help"
+                        aria-label={t('common.aria.help')}
                         style={{ position: 'relative' }}
                     >
                         <HelpCircle size={14} aria-hidden="true" /> Help
@@ -213,7 +213,7 @@ const AquariumPanel: React.FC = () => {
                         <button
                             onClick={() => setError(null)}
                             className="aquarium-error-close"
-                            aria-label="Dismiss"
+                            aria-label={t('common.aria.dismiss')}
                         >
                             ✕
                         </button>

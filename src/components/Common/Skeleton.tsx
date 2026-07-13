@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n/useTranslation';
 
 const SHIMMER = {
     background:
@@ -79,36 +80,39 @@ export const SkeletonTableRow: React.FC<{ cols?: number }> = ({ cols = 4 }) => (
     </div>
 );
 
-export const PanelSkeleton: React.FC<{ title?: boolean }> = ({ title = true }) => (
-    <div
-        aria-label="Loading content"
-        role="status"
-        style={{
-            padding: '1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20,
-            width: '100%',
-            boxSizing: 'border-box',
-        }}
-    >
-        {title && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Skeleton width={28} height={28} borderRadius={8} />
-                <Skeleton width="180px" height={20} />
-            </div>
-        )}
+export const PanelSkeleton: React.FC<{ title?: boolean }> = ({ title = true }) => {
+    const { t } = useTranslation();
+    return (
         <div
+            aria-label={t('common.aria.loading')}
+            role="status"
             style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 12,
+                padding: '1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 20,
+                width: '100%',
+                boxSizing: 'border-box',
             }}
         >
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
+            {title && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Skeleton width={28} height={28} borderRadius={8} />
+                    <Skeleton width="180px" height={20} />
+                </div>
+            )}
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: 12,
+                }}
+            >
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+            </div>
+            <SkeletonText lines={4} />
         </div>
-        <SkeletonText lines={4} />
-    </div>
-);
+    );
+};

@@ -1,5 +1,17 @@
-import { useState } from 'react';
-import { Shield, Clock, DollarSign, Globe, Server, Activity, Cpu, Settings } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import {
+    Shield,
+    Clock,
+    DollarSign,
+    Globe,
+    Server,
+    Activity,
+    Cpu,
+    Settings,
+    Plug,
+    PlugZap,
+    Loader2,
+} from 'lucide-react';
 import { nvidiaEnterpriseService, providerAchievementService } from '../../kernel/instances';
 import { AchievementList } from '../ProviderManager/AchievementList';
 import type {
@@ -8,6 +20,7 @@ import type {
     SLARecord,
     RegionStatus,
     EnterpriseFeature,
+    NgcConnectionStatus,
 } from '../../kernel/contracts/nvidia-enterprise';
 
 import {
@@ -17,19 +30,6 @@ import {
     FeatureRow,
     StatCard,
 } from './NvidiaEnterpriseComponents';
-
-const DEMO_BANNER: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #fef3cd, #fbbf24)',
-    color: '#78350f',
-    padding: '12px 16px',
-    borderRadius: 8,
-    marginBottom: 16,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    fontWeight: 600,
-    fontSize: 14,
-};
 
 export default function NvidiaEnterprisePanel() {
     const [config, setConfig] = useState<NvidiaEnterpriseConfig>(() =>
@@ -50,18 +50,25 @@ export default function NvidiaEnterprisePanel() {
     const [costs, setCosts] = useState<
         { model: string; costPer1k: number; usage: number; total: number }[]
     >(() => nvidiaEnterpriseService.getEstimatedCosts());
+    const [connStatus, setConnStatus] = useState<NgcConnectionStatus>(() =>
+        nvidiaEnterpriseService.getConnectionStatus(),
+    );
+    const [ngcKeyInput, setNgcKeyInput] = useState('');
+    const [ngcOrgInput, setNgcOrgInput] = useState('');
+    const [connecting, setConnecting] = useState(false);
     const [tab, setTab] = useState<
         'overview' | 'compliance' | 'sla' | 'regions' | 'features' | 'costs' | 'achievements'
     >('overview');
 
-    const refresh = () => {
+    const refresh = useCallback(() => {
         setConfig(nvidiaEnterpriseService.getConfig());
         setCompliance(nvidiaEnterpriseService.getCompliance());
         setSlaRecords(nvidiaEnterpriseService.getSLAHistory());
         setRegions(nvidiaEnterpriseService.getRegions());
         setFeatures(nvidiaEnterpriseService.getFeatures());
         setCosts(nvidiaEnterpriseService.getEstimatedCosts());
-    };
+        setConnStatus(nvidiaEnterpriseService.getConnectionStatus());
+    }, []);
 
     const handleToggleFeature = (id: string, enabled: boolean) => {
         nvidiaEnterpriseService.toggleFeature(id, enabled);
@@ -70,6 +77,24 @@ export default function NvidiaEnterprisePanel() {
 
     const handleConfigChange = (updates: Partial<NvidiaEnterpriseConfig>) => {
         nvidiaEnterpriseService.updateConfig(updates);
+        refresh();
+    };
+
+    const handleConnect = async () => {
+        if (!ngcKeyInput.trim()) return;
+        setConnecting(true);
+        await nvidiaEnterpriseService.connectNgc(
+            ngcKeyInput.trim(),
+            ngcOrgInput.trim() || undefined,
+        );
+        setConnecting(false);
+        setNgcKeyInput('');
+        setNgcOrgInput('');
+        refresh();
+    };
+
+    const handleDisconnect = () => {
+        nvidiaEnterpriseService.disconnectNgc();
         refresh();
     };
 
@@ -88,9 +113,106 @@ export default function NvidiaEnterprisePanel() {
 
     return (
         <div style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
-            <div style={DEMO_BANNER}>
-                ⚠️ DEMO DATA — Not connected to NVIDIA Enterprise API. Real data requires an NGC API
-                key and separate auth flow.
+            {/* NGC Connection Status */}
+            <div
+                style={{
+                    background: connStatus.connected
+                        ? 'rgba(16,185,129,0.08)'
+                        : 'rgba(245,158,11,0.08)',
+                    border: `1px solid ${connStatus.connected ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                    borderRadius: 8,
+                    padding: '12px 16px',
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    fontSize: 13,
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {connStatus.connected ? (
+                        <PlugZap size={16} color="#10b981" />
+                    ) : (
+                        <Plug size={16} color="#f59e0b" />
+                    )}
+                    <span>
+                        {connStatus.connected
+                            ? `Connected to NGC${connStatus.org ? ` (org: ${connStatus.org})` : ''}`
+                            : connStatus.error
+                              ? `NGC: ${connStatus.error}`
+                              : 'NGC not connected — using provider data + static defaults'}
+                    </span>
+                </div>
+                {!connStatus.connected ? (
+                    <details style={{ fontSize: 12 }}>
+                        <summary style={{ cursor: 'pointer', color: '#76b900', fontWeight: 600 }}>
+                            Connect NGC
+                        </summary>
+                        <div
+                            style={{
+                                marginTop: 8,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 6,
+                                minWidth: 320,
+                            }}
+                        >
+                            <input
+                                placeholder="NGC API Key"
+                                value={ngcKeyInput}
+                                onChange={(e) => setNgcKeyInput(e.target.value)}
+                                style={inputStyle}
+                            />
+                            <input
+                                placeholder="NGC Org (optional, default: nvidia)"
+                                value={ngcOrgInput}
+                                onChange={(e) => setNgcOrgInput(e.target.value)}
+                                style={inputStyle}
+                            />
+                            <button
+                                onClick={handleConnect}
+                                disabled={connecting || !ngcKeyInput.trim()}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: 6,
+                                    border: 'none',
+                                    background: connecting ? '#999' : '#76b900',
+                                    color: '#fff',
+                                    fontWeight: 600,
+                                    cursor: connecting ? 'wait' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                {connecting && (
+                                    <Loader2
+                                        size={14}
+                                        style={{ animation: 'spin 1s linear infinite' }}
+                                    />
+                                )}
+                                {connecting ? 'Connecting...' : 'Connect'}
+                            </button>
+                        </div>
+                    </details>
+                ) : (
+                    <button
+                        onClick={handleDisconnect}
+                        style={{
+                            padding: '4px 10px',
+                            borderRadius: 6,
+                            border: '1px solid rgba(239,68,68,0.3)',
+                            background: 'transparent',
+                            color: '#ef4444',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Disconnect
+                    </button>
+                )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
                 <Cpu size={24} style={{ color: '#76b900' }} />
@@ -473,79 +595,6 @@ export default function NvidiaEnterprisePanel() {
                                                 background: '#76b900',
                                                 borderRadius: 4,
                                                 transition: 'width 0.3s',
-                                            }}
-                                        />
-                                    </div>
-                                    <div style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: 2 }}>
-                                        ${c.costPer1k}/1k tokens · {(c.usage / 1000000).toFixed(1)}M
-                                        tokens used
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <div
-                        style={{
-                            marginTop: 16,
-                            fontSize: '0.85rem',
-                            opacity: 0.6,
-                            textAlign: 'right',
-                        }}
-                    >
-                        Total: ${costs.reduce((s, c) => s + c.total, 0).toFixed(2)}
-                    </div>
-                </div>
-            )}
-
-            {tab === 'costs' && (
-                <div
-                    style={{
-                        background: 'rgba(239,68,68,0.04)',
-                        border: '1px solid rgba(239,68,68,0.12)',
-                        borderRadius: 12,
-                        padding: 16,
-                    }}
-                >
-                    <h3 style={{ margin: '0 0 16px', fontSize: '0.95rem' }}>
-                        Cost Analytics — Last 30 Days
-                    </h3>
-                    <div style={{ display: 'grid', gap: 8 }}>
-                        {costs.map((c) => {
-                            const maxTotal = Math.max(...costs.map((x) => x.total));
-                            return (
-                                <div key={c.model}>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            fontSize: '0.85rem',
-                                            marginBottom: 4,
-                                        }}
-                                    >
-                                        <span style={{ fontWeight: 600 }}>{c.model}</span>
-                                        <span style={{ fontWeight: 700 }}>
-                                            ${c.total.toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <div
-                                        style={{
-                                            height: 6,
-                                            background: 'rgba(0,0,0,0.05)',
-                                            borderRadius: 3,
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                height: '100%',
-                                                width: `${(c.total / maxTotal) * 100}%`,
-                                                background:
-                                                    c.total > 0.5
-                                                        ? '#ef4444'
-                                                        : c.total > 0.1
-                                                          ? '#f59e0b'
-                                                          : '#22c55e',
-                                                borderRadius: 3,
                                             }}
                                         />
                                     </div>

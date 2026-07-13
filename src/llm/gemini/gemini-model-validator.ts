@@ -1,4 +1,5 @@
 import { ModelValidationError } from '../core/errors';
+import { rootLogger } from '../../kernel/services/logger-service';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.-]+$/;
 const MODEL_CACHE_TTL = 5 * 60 * 1000;
@@ -180,8 +181,9 @@ export async function validateModel(model: string, apiKey: string): Promise<stri
     sanitizeModel(model);
     const cached = await modelCache.get(apiKey);
     if (cached && cached.size > 0 && !cached.has(model)) {
-        console.warn(
-            `[Gemini] Model "${model}" not in recent model list for this API key — may fail at runtime`,
+        rootLogger.warn(
+            'GeminiModelValidator',
+            `Model "${model}" not in recent model list — may fail at runtime`,
         );
     }
     return model;

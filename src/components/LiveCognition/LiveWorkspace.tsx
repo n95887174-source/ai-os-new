@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Network, Brain, AlertTriangle, X } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
 import { adminService, kernel } from '../../kernel/instances';
@@ -10,6 +11,7 @@ import EventLog from './EventLog';
 import ControlActions from './ControlActions';
 
 const LiveWorkspace: React.FC = () => {
+    const { t } = useTranslation();
     const [health, setHealth] = useState(() => {
         try {
             return adminService.getSystemHealth();
@@ -211,7 +213,7 @@ const LiveWorkspace: React.FC = () => {
                                 border: 'none',
                                 color: 'inherit',
                             }}
-                            aria-label="Dismiss error"
+                            aria-label={t('common.aria.dismiss_error')}
                         >
                             <X size={14} aria-hidden="true" />
                         </button>

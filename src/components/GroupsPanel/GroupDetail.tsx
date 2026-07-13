@@ -131,7 +131,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                             cursor: 'pointer',
                                             color: '#64748b',
                                         }}
-                                        aria-label="Edit group name"
+                                        aria-label={t('common.aria.edit')}
                                     >
                                         <Edit3 size={13} />
                                     </button>

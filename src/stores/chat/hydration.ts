@@ -7,7 +7,7 @@ import type { SessionStore } from '../../kernel/contracts/storage/session-store'
 import { runtime } from '../../kernel/runtime';
 import { BucketStorageAdapter } from '../../kernel/storage-adapter-instance';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
-import { getDexieDb } from '../../kernel/services/database-service';
+import { getDexieDb } from '../../kernel/instances';
 
 function cleanupOrphanLoading(sessions: ChatSession[]): ChatSession[] {
     let changed = false;
@@ -104,11 +104,13 @@ export function useChatStoreHydration(): void {
             }
         };
 
-        migrateLegacy();
+        migrateLegacy().catch((e) => console.error('[Hydration] migrateLegacy failed', e));
         restoreBackup();
 
         const db = getDexieDb();
-        const observable = liveQuery(() => db.sessions.orderBy('updatedAt').reverse().toArray());
+        const observable = liveQuery(() =>
+            db.sessions.orderBy('updatedAt').reverse().limit(100).toArray(),
+        );
         const subscription = observable.subscribe({
             next: (sessions: ChatSession[]) => {
                 if (cancelled) return;
@@ -117,12 +119,16 @@ export function useChatStoreHydration(): void {
 
                 if (!current.isLoaded) {
                     const cleaned = cleanupOrphanLoading(sessions);
-                    useChatStore.setState({
-                        sessions: cleaned,
-                        activeSessionId: cleaned[0]?.id ?? DEFAULT_SESSION.id,
-                        hasMoreSessions: false,
-                        isLoaded: true,
-                        activeRequestIds: new Set(),
+                    db.sessions.count().then((total) => {
+                        if (!cancelled) {
+                            useChatStore.setState({
+                                sessions: cleaned,
+                                activeSessionId: cleaned[0]?.id ?? DEFAULT_SESSION.id,
+                                hasMoreSessions: total > 100,
+                                isLoaded: true,
+                                activeRequestIds: new Set(),
+                            });
+                        }
                     });
                     return;
                 }
@@ -147,7 +153,11 @@ export function useChatStoreHydration(): void {
                     }
                 }
                 merged.sort((a, b) => b.updatedAt - a.updatedAt);
-                useChatStore.setState({ sessions: merged, hasMoreSessions: false });
+                db.sessions.count().then((total) => {
+                    if (!cancelled) {
+                        useChatStore.setState({ sessions: merged, hasMoreSessions: total > 100 });
+                    }
+                });
             },
             error: (err: unknown) => {
                 console.warn('[ChatStore] liveQuery error:', err);

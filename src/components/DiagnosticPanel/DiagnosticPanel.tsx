@@ -15,7 +15,7 @@ import {
     Globe,
 } from 'lucide-react';
 import { diagnosticService, kernel } from '../../kernel/instances';
-import { rootLogger } from '../../kernel/services/logger-service';
+import { rootLogger } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { getStatusColor } from '../Common/status-vocabulary';

@@ -24,6 +24,8 @@ const btn: React.CSSProperties = {
     background: 'rgba(255,255,255,0.05)',
 };
 
+import { errorBanner, dismissBtn } from '../../styles/common';
+
 const CustomMetricsPanel: React.FC = () => {
     const { t } = useTranslation();
     const [metrics, setMetrics] = useState<CustomMetric[]>([]);
@@ -33,6 +35,7 @@ const CustomMetricsPanel: React.FC = () => {
     const [name, setName] = useState('');
     const [field, setField] = useState('');
     const [showDash, setShowDash] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         load();
@@ -51,10 +54,16 @@ const CustomMetricsPanel: React.FC = () => {
                 try {
                     const v = await svc.computeValue(metric.id);
                     vals[metric.id] = v.value;
-                } catch {}
+                } catch (e) {
+                    setError(
+                        `Failed to compute value for '${metric.name}': ${e instanceof Error ? e.message : 'Unknown error'}`,
+                    );
+                }
             }
             setValues(vals);
-        } catch {}
+        } catch (e) {
+            setError(`Failed to load metrics: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        }
     }
 
     async function handleCreate() {
@@ -77,7 +86,11 @@ const CustomMetricsPanel: React.FC = () => {
             setField('');
             setShowCreate(false);
             await load();
-        } catch {}
+        } catch (e) {
+            setError(
+                `Failed to create metric: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            );
+        }
     }
 
     async function handleDelete(id: string) {
@@ -86,20 +99,38 @@ const CustomMetricsPanel: React.FC = () => {
             const svc = (m as any).customMetricsService;
             if (svc) await svc.deleteMetric(id);
             await load();
-        } catch {}
+        } catch (e) {
+            setError(
+                `Failed to delete metric: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            );
+        }
     }
 
     async function handleCreateDash() {
-        const m = await import('../../kernel/instances');
-        const svc = (m as any).customMetricsService;
-        if (!svc) return;
-        const ids = metrics.map((mm) => mm.id);
-        await svc.createDashboard(`Dashboard ${dashboards.length + 1}`, ids);
-        await load();
+        try {
+            const m = await import('../../kernel/instances');
+            const svc = (m as any).customMetricsService;
+            if (!svc) return;
+            const ids = metrics.map((mm) => mm.id);
+            await svc.createDashboard(`Dashboard ${dashboards.length + 1}`, ids);
+            await load();
+        } catch (e) {
+            setError(
+                `Failed to create dashboard: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            );
+        }
     }
 
     return (
         <div style={{ padding: 24, maxWidth: 900 }}>
+            {error && (
+                <div role="alert" aria-live="polite" style={errorBanner}>
+                    {error}
+                    <button onClick={() => setError(null)} style={dismissBtn} aria-label="Dismiss">
+                        ✕
+                    </button>
+                </div>
+            )}
             <div
                 style={{
                     display: 'flex',

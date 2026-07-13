@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Terminal, X } from 'lucide-react';
 import { useConfirm } from '../../hooks/useConfirm';
+import DOMPurify from 'dompurify';
 
 const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'html', 'css']);
 // Python removed from EXECUTABLE_LANGS — sandbox iframe does not support Python execution.
@@ -46,36 +47,14 @@ function escapeForSrcdoc(s: string): string {
     return s.replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '<\\!--');
 }
 
-// C-6: Strip all event handlers and dangerous attributes from allowed HTML.
-// This is a defense-in-depth layer after the allowlist check.
-function stripDangerousAttrs(html: string): string {
-    // Remove all on* attributes (case-insensitive)
-    html = html.replace(/\bon\w+\s*=/gi, 'data-blocked-attr=');
-    // Remove javascript: in href/src/action etc.
-    html = html.replace(
-        /\b(href|src|action|data|formaction)\s*=\s*["']?\s*javascript:/gi,
-        '$1="blocked:',
-    );
-    return html;
-}
-
 function sanitizeAllowedHtml(s: string): string {
-    // For HTML language: only permit known-safe tags, strip everything else + dangerous attrs
-    // This is a simple regex-based allowlist — adequate for code runner sandbox
-    const lines = s.split('\n');
-    const result: string[] = [];
-    for (const line of lines) {
-        // Replace any <tag ...> that isn't in the allowlist with escaped text
-        const sanitized = line.replace(/<(\/?)([\w-]+)[^>]*>/gi, (_, closing, tag) => {
-            const t = tag.toLowerCase();
-            if (ALLOWED_TAGS.has(t)) {
-                return `<${closing}${t}>`;
-            }
-            return `&lt;${closing}${tag}&gt;`;
-        });
-        result.push(stripDangerousAttrs(sanitized));
-    }
-    return result.join('\n');
+    // Use DOMPurify with strict tag allowlist instead of regex
+    const purified = DOMPurify.sanitize(s, {
+        ALLOWED_TAGS: Array.from(ALLOWED_TAGS),
+        ALLOWED_ATTR: [],
+        ALLOW_DATA_ATTR: false,
+    });
+    return purified;
 }
 
 /** Escape a CSS fragment so it cannot terminate its own <style> block. */

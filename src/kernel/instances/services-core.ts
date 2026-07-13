@@ -4,6 +4,7 @@ import type { KeyService } from '../services/key-management/key-service';
 import type { IMemoryEngine } from '../contracts/memory';
 import type { MCPService } from '../services/mcp-service';
 import type { RouterService } from '../services/provider-router';
+export type { RouterDecision, PipelineStep } from '../services/provider-router';
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { CognitiveService } from '../services/cognitive-service';
 import type { AgentService } from '../services/agent-service';
@@ -183,6 +184,7 @@ import type { IGroupManager } from '../contracts/group-manager';
 import type { ISystemStatusService } from '../contracts/system-status';
 import type { SystemState } from '../types/metrics-types';
 import type { HealthEvent, ProviderTracker } from '../services/provider-tracker';
+export type { HealthEvent } from '../services/provider-tracker';
 import type { ProviderRanking } from '../types/interfaces';
 export const groupManager = lazyService<IGroupManager>('groupManagerService', {
     getAllKeys: () => [],

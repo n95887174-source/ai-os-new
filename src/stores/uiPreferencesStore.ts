@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LayoutMode } from '../components/Layout/LayoutContext';
-import type { UserLevel } from '../route-registry';
+import type { UserLevel } from '../types/routing';
 
 export interface UiPreferencesState {
     onboardingCompleted: boolean;
@@ -92,6 +92,24 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
         }),
         {
             name: 'super-agents-ui-prefs',
+            version: 1,
+            migrate: (persisted: unknown, version: number) => {
+                if (version === 0) {
+                    const v0 = persisted as Partial<UiPreferencesState>;
+                    return {
+                        onboardingCompleted: v0.onboardingCompleted ?? false,
+                        userLevel: v0.userLevel ?? ('L0' as UserLevel),
+                        theme: v0.theme ?? 'dark',
+                        defaultLayout: v0.defaultLayout ?? ('default' as LayoutMode),
+                        perRouteLayout: v0.perRouteLayout ?? {},
+                        collapsedSections: v0.collapsedSections ?? [],
+                        pinnedSidebar: v0.pinnedSidebar ?? [],
+                        recentCommands: v0.recentCommands ?? [],
+                        designTokenOverrides: v0.designTokenOverrides ?? {},
+                    } as UiPreferencesState;
+                }
+                return persisted as UiPreferencesState;
+            },
             partialize: (state) => ({
                 onboardingCompleted: state.onboardingCompleted,
                 userLevel: state.userLevel,

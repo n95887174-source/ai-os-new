@@ -2,7 +2,7 @@ import { Activity } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { h3White } from '../../styles/common';
-import type { HealthEvent } from '../../kernel/services/provider-tracker';
+import type { HealthEvent } from '../../kernel/instances';
 
 interface HealthTimelineSectionProps {
     healthEvents: HealthEvent[];

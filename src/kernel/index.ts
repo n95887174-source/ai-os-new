@@ -65,7 +65,7 @@ export type {
 } from './services/policy-service';
 
 export { ChatService } from './services/chat-service';
-export type { ChatServiceDeps } from './services/chat-service';
+export type { ChatServiceDeps } from './contracts/chat';
 
 export { AgentService } from './services/agent-service';
 export type { AgentServiceDeps, AgentStats, AgentGroup } from './services/agent-service';

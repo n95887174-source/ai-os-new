@@ -13,7 +13,7 @@ import {
     Database,
     Circle,
 } from 'lucide-react';
-import { CONFIG } from '../../kernel/services/config-registry';
+import { CONFIG } from '../../kernel/instances';
 import { setFeatureFlag } from '../../kernel/services/config-mutations';
 import { settingsService } from '../../kernel/instances';
 import type { SystemSettings } from '../../kernel/instances';

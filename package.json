@@ -3,16 +3,21 @@
   "private": true,
   "version": "4.5.0",
   "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "**/theme-init*",
+    "**/*.worker*"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
     "dev": "vite",
-    "build": "node --max-old-space-size=8192 ./node_modules/typescript/bin/tsc -b && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
-    "build:unsafe": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
+    "build": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -b && node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
+    "build:unsafe": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
     "lint:staged": "lint-staged",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -b --noEmit",
     "typecheck:watch": "tsc -b --noEmit --watch",
     "fix:unused": "tsx scripts/fix-unused.ts",
     "test": "vitest run",
@@ -53,16 +58,17 @@
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
     "meriyah": "^7.1.0",
+    "monaco-editor": "^0.52.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-is": "^19.2.7",
     "react-router-dom": "^7.15.0",
     "recharts": "^3.9.2",
-    "ws": "^8.21.0",
     "zod": "^4.4.3",
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "ws": "^8.21.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
     "@testing-library/dom": "10.4.1",
@@ -76,6 +82,8 @@
     "@vitest/ui": "^4.1.5",
     "dependency-cruiser": "18.0.0",
     "esbuild": "0.28.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",

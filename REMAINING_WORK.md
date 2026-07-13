@@ -61,26 +61,26 @@
 
 ## Sprint D — Долгосрочные (6-8 недель)
 
-| #    | Что                                                                                   | Оценка | Статус                            |
-| ---- | ------------------------------------------------------------------------------------- | ------ | --------------------------------- |
-| D-01 | Mobile-first responsive (27 panels)                                                   | XL     | 🔴 Pending                        |
-| D-02 | All Zustand stores → liveQuery (chat ✅, keys ✅; 5+ remaining)                       | XL     | 🟡 Partial (2/7 migrated)         |
-| D-03 | 60% test coverage                                                                     | XL     | 🔴 Pending                        |
-| D-04 | 1400+ missing i18n keys (~180 added in D-20)                                          | XL     | 🟡 Partial (~12% done)            |
-| D-05 | Race conditions fix                                                                   | M      | 🟡 Some already fixed             |
-| D-06 | 122 events without subscribers                                                        | M      | 🟢 Done                           |
-| D-07 | 8 prompt injection points → sanitize                                                  | M      | 🟢 Done                           |
-| D-08 | 41 `key={i}` anti-pattern                                                             | S      | 🟢 Done                           |
-| D-09 | 4 broken navigate() calls                                                             | S      | 🟢 Done                           |
-| D-10 | VITE_PROXY_OPENAI → docker-compose.yml (exists in .env.example, missing from compose) | S      | 🔴 Pending                        |
-| D-11 | recharts 2.x → v3 migration                                                           | M      | 🟢 Done (already on 3.9.2)        |
-| D-12 | KeyUsageAnalyticsService real data                                                    | M      | 🟢 Done (B-017)                   |
-| D-13 | 18 event constants without domain prefix                                              | M      | 🟢 Done (B-041)                   |
-| D-14 | 5 `.tsx` without JSX → `.ts`                                                          | S      | 🟢 Done (2026-07-06)              |
-| D-15 | 5 unused assets (vite.svg, react.svg, hero.png, icons.svg)                            | S      | 🟢 Done                           |
-| D-16 | part2-gemini remaining (per-key CB ✅, AES-GCM not implemented)                       | M      | 🟡 Partial (CB done, GCM pending) |
+| #    | Что                                                                                   | Оценка | Статус                                                                                      |
+| ---- | ------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| D-01 | Mobile-first responsive (27 panels)                                                   | XL     | 🔴 Pending                                                                                  |
+| D-02 | All Zustand stores → liveQuery (chat ✅, keys ✅; 5+ remaining)                       | XL     | 🟡 Partial (2/7 migrated)                                                                   |
+| D-03 | 60% test coverage                                                                     | XL     | 🔴 Pending                                                                                  |
+| D-04 | 1400+ missing i18n keys (~180 added in D-20)                                          | XL     | 🟡 Partial (~12% done)                                                                      |
+| D-05 | Race conditions fix                                                                   | M      | 🟡 Some already fixed                                                                       |
+| D-06 | 122 events without subscribers                                                        | M      | 🟢 Done                                                                                     |
+| D-07 | 8 prompt injection points → sanitize                                                  | M      | 🟢 Done                                                                                     |
+| D-08 | 41 `key={i}` anti-pattern                                                             | S      | 🟢 Done                                                                                     |
+| D-09 | 4 broken navigate() calls                                                             | S      | 🟢 Done                                                                                     |
+| D-10 | VITE_PROXY_OPENAI → docker-compose.yml (exists in .env.example, missing from compose) | S      | 🟢 Done (2026-07-10 — added all VITE_* proxy build-args to Dockerfile + docker-compose.yml) |
+| D-11 | recharts 2.x → v3 migration                                                           | M      | 🟢 Done (already on 3.9.2)                                                                  |
+| D-12 | KeyUsageAnalyticsService real data                                                    | M      | 🟢 Done (B-017)                                                                             |
+| D-13 | 18 event constants without domain prefix                                              | M      | 🟢 Done (B-041)                                                                             |
+| D-14 | 5 `.tsx` without JSX → `.ts`                                                          | S      | 🟢 Done (2026-07-06)                                                                        |
+| D-15 | 5 unused assets (vite.svg, react.svg, hero.png, icons.svg)                            | S      | 🟢 Done                                                                                     |
+| D-16 | part2-gemini remaining (per-key CB ✅, AES-GCM ✅ — verified already implemented)     | M      | 🟢 Done (AES-GCM via Web Crypto API in key-vault.ts; per-key CB in earlier session)         |
 
-**Итого Sprint D:** ~6-8 недель (7 🟢 Done, 3 🟡 Partial, 4 🔴 Pending, 2 not started)
+**Итого Sprint D:** ~6-8 недель (9 🟢 Done, 2 🟡 Partial, 3 🔴 Pending)
 
 ---
 

@@ -4,12 +4,14 @@
  */
 
 import { genId } from '../../../utils/gen-id';
-import { rootLogger } from '../../../kernel/services/logger-service';
+import { rootLogger } from '../../../kernel/instances';
 import { eventBus } from '../../../kernel/instances';
 import { EVENTS } from '../../../kernel/events/event-names';
 import { BucketStorageAdapter } from '../../../kernel/services/storage-adapter';
 
 const LOGGER = rootLogger.child('AquariumScreenshots');
+
+const MAX_SCREENSHOTS = 50;
 
 export interface Screenshot {
     id: string;
@@ -67,6 +69,14 @@ class AquariumScreenshotsService {
         };
 
         this.screenshots.set(id, screenshot);
+        // P1-20: evict oldest screenshots when over limit
+        if (this.screenshots.size > MAX_SCREENSHOTS) {
+            const sorted = Array.from(this.screenshots.entries()).sort(
+                ([, a], [, b]) => a.timestamp - b.timestamp,
+            );
+            const toRemove = sorted.slice(0, this.screenshots.size - MAX_SCREENSHOTS);
+            for (const [evictId] of toRemove) this.screenshots.delete(evictId);
+        }
         await this.save();
 
         eventBus.emit(EVENTS.AQUARIUM_SCREENSHOT_CAPTURED, screenshot);

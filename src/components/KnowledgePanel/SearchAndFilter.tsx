@@ -56,7 +56,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         <div
             style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}
             role="group"
-            aria-label="Filter by type"
+            aria-label={t('common.aria.filter')}
         >
             <button
                 onClick={() => onTypeFilterChange(null)}

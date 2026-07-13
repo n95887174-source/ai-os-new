@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     LayoutDashboard,
     Settings,
@@ -72,30 +71,9 @@ import {
     Route as RouteIcon,
     Container as ContainerIcon,
 } from 'lucide-react';
-import type { TranslationKey } from './i18n/translations';
-import type { FeatureFlag } from './kernel/contracts/feature-flags';
+import type { UserLevel, RouteMeta, NavSection } from './types/routing';
 
-export type UserLevel = 'L0' | 'L1' | 'L2';
-
-export interface RouteMeta {
-    id: string;
-    /** URL path — defaults to `/${id}` if omitted */
-    path?: string;
-    labelKey: TranslationKey;
-    icon: React.ReactNode;
-    color: string;
-    lazy?: boolean;
-    /** Minimum user level required to see this item in sidebar. L2 = admin (default). */
-    level?: UserLevel;
-    /** Hidden from sidebar when flag is off (routes remain for deep links). */
-    featureFlag?: FeatureFlag;
-}
-
-export interface NavSection {
-    id: string;
-    labelKey: TranslationKey;
-    items: RouteMeta[];
-}
+export type { UserLevel, RouteMeta, NavSection };
 
 export const NAV_SECTIONS: NavSection[] = [
     // ═══════════════════════════════════════════════════════════

@@ -260,7 +260,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                                             transition: 'opacity 0.15s',
                                         }}
                                         title={t('memory.delete_vector')}
-                                        aria-label="Delete memory entry"
+                                        aria-label={t('common.aria.delete')}
                                         onClick={() => onDelete(entry.id)}
                                         onMouseEnter={(e) => {
                                             (e.currentTarget as HTMLElement).style.opacity = '1';

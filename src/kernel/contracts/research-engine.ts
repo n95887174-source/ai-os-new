@@ -48,6 +48,23 @@ export type SourceType =
     | 'stack_overflow'
     | 'google_patents';
 
+import { z } from 'zod';
+
+export const ResearchSourceSchema = z.object({
+    id: z.string(),
+    title: z.string().max(200),
+    url: z.string(),
+    snippet: z.string().max(500),
+    category: z.enum(['web', 'academic', 'news', 'code', 'document']),
+    sourceType: z.string(),
+    relevanceScore: z.number().min(0).max(1),
+    timestamp: z.number(),
+    authors: z.array(z.string()).optional(),
+    year: z.number().optional(),
+    doi: z.string().optional(),
+    citationCount: z.number().optional(),
+});
+
 export interface ResearchSource {
     id: string;
     title: string;

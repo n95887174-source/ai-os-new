@@ -18,6 +18,7 @@ const genExecId = () => crypto.randomUUID();
 
 const TEAMS_STORAGE_KEY = 'role_teams_v1';
 const EXECUTIONS_STORAGE_KEY = 'role_team_executions_v1';
+const MAX_EXECUTIONS = 200;
 
 /**
  * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
@@ -209,6 +210,14 @@ export class RoleTeamService implements IRoleTeamService {
         };
 
         this.executions.set(executionId, execution);
+        // P1-20: evict oldest executions when over limit
+        if (this.executions.size > MAX_EXECUTIONS) {
+            const sorted = Array.from(this.executions.entries()).sort(
+                ([, a], [, b]) => a.startedAt - b.startedAt,
+            );
+            const toRemove = sorted.slice(0, this.executions.size - MAX_EXECUTIONS);
+            for (const [evictId] of toRemove) this.executions.delete(evictId);
+        }
         this.tryEmit(EVENTS.TEAM_EXECUTION_STARTED, {
             teamId,
             task,
@@ -692,6 +701,13 @@ export class RoleTeamService implements IRoleTeamService {
             avgCost: 0,
             perRoleContribution: {},
         };
+    }
+
+    /** P1-20: clean up abort tokens and maps on shutdown */
+    destroy(): void {
+        this.abortTokens.clear();
+        this.executions.clear();
+        this.analyticsCache.clear();
     }
 }
 

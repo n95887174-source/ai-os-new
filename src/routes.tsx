@@ -6,13 +6,13 @@ import ErrorBoundary from './components/Common/ErrorBoundary';
 import { PermissionGate } from './components/Common/PermissionGate';
 import { NAV_SECTIONS } from './route-registry';
 import { PANEL_COMPONENTS, PanelLoader } from './route-imports';
-import DashboardPanel from './components/DashboardPanel/DashboardPanel';
-import ProviderManager from './components/ProviderManager/ProviderManager';
-import GroupsPanel from './components/GroupsPanel/GroupsPanel';
-import ConnectorsPanel from './components/ConnectorsPanel/ConnectorsPanel';
-import MCPPanel from './components/MCPPanel/MCPPanel';
-import ChatAdminPanel from './components/ChatAdminPanel/ChatAdminPanel';
-import EventsTimeline from './components/EventsTimeline/EventsTimeline';
+const DashboardPanel = React.lazy(() => import('./components/DashboardPanel/DashboardPanel'));
+const ProviderManager = React.lazy(() => import('./components/ProviderManager/ProviderManager'));
+const GroupsPanel = React.lazy(() => import('./components/GroupsPanel/GroupsPanel'));
+const ConnectorsPanel = React.lazy(() => import('./components/ConnectorsPanel/ConnectorsPanel'));
+const MCPPanel = React.lazy(() => import('./components/MCPPanel/MCPPanel'));
+const ChatAdminPanel = React.lazy(() => import('./components/ChatAdminPanel/ChatAdminPanel'));
+const EventsTimeline = React.lazy(() => import('./components/EventsTimeline/EventsTimeline'));
 
 function Panel(key: string): React.ComponentType<Record<string, unknown>> {
     const component = PANEL_COMPONENTS[key];
@@ -422,9 +422,9 @@ export const AppRoutes: React.FC = () => {
             <Route
                 path="/services/keys"
                 element={
-                    <ErrorBoundary name="Providers" variant="panel">
+                    <PanelLoader name="Providers">
                         <ProviderManager />
-                    </ErrorBoundary>
+                    </PanelLoader>
                 }
             />
             <Route
@@ -438,17 +438,17 @@ export const AppRoutes: React.FC = () => {
             <Route
                 path="/services/connectors"
                 element={
-                    <ErrorBoundary name="Connectors" variant="panel">
+                    <PanelLoader name="Connectors">
                         <ConnectorsPanel />
-                    </ErrorBoundary>
+                    </PanelLoader>
                 }
             />
             <Route
                 path="/services/mcp"
                 element={
-                    <ErrorBoundary name="MCP" variant="panel">
+                    <PanelLoader name="MCP">
                         <MCPPanel />
-                    </ErrorBoundary>
+                    </PanelLoader>
                 }
             />
 
@@ -457,9 +457,9 @@ export const AppRoutes: React.FC = () => {
                 path="/chat-admin"
                 element={
                     <PermissionGate requiredLevel="L2">
-                        <ErrorBoundary name="ChatAdmin" variant="panel">
+                        <PanelLoader name="ChatAdmin">
                             <ChatAdminPanel />
-                        </ErrorBoundary>
+                        </PanelLoader>
                     </PermissionGate>
                 }
             />

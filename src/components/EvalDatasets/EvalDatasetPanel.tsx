@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Database, Plus, Play, Trash2, CheckCircle, XCircle, BarChart3 } from 'lucide-react';
 import type { EvalDataset, EvalRun } from '../../kernel/contracts/eval-dataset';
+import { errorBanner, dismissBtn } from '../../styles/common';
 
 const card: React.CSSProperties = {
     background: 'rgba(255,255,255,0.04)',
@@ -43,6 +44,7 @@ const EvalDatasetPanel: React.FC = () => {
     const [description, setDescription] = useState('');
     const [inputText, setInputText] = useState('');
     const [runningId, setRunningId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         load();
@@ -53,7 +55,11 @@ const EvalDatasetPanel: React.FC = () => {
             const m = await import('../../kernel/instances');
             const s = (m as any).evalDatasetService;
             if (s) setDatasets(await s.list());
-        } catch {}
+        } catch (e) {
+            setError(
+                `Failed to load datasets: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            );
+        }
     }
 
     async function handleCreate() {
@@ -72,7 +78,11 @@ const EvalDatasetPanel: React.FC = () => {
             setInputText('');
             setShowCreate(false);
             await load();
-        } catch {}
+        } catch (e) {
+            setError(
+                `Failed to create dataset: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            );
+        }
     }
 
     async function handleDelete(id: string) {
@@ -81,7 +91,11 @@ const EvalDatasetPanel: React.FC = () => {
             const s = (m as any).evalDatasetService;
             if (s) await s.delete(id);
             await load();
-        } catch {}
+        } catch (e) {
+            setError(
+                `Failed to delete dataset: ${e instanceof Error ? e.message : 'Unknown error'}`,
+            );
+        }
     }
 
     async function handleRun(datasetId: string) {
@@ -95,12 +109,22 @@ const EvalDatasetPanel: React.FC = () => {
             if (providers.length === 0) return;
             await s.runEval(datasetId, providers[0], '');
             await load();
-        } catch {}
+        } catch (e) {
+            setError(`Failed to run eval: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        }
         setRunningId(null);
     }
 
     return (
         <div style={{ padding: 24, maxWidth: 900 }}>
+            {error && (
+                <div role="alert" aria-live="polite" style={errorBanner}>
+                    {error}
+                    <button onClick={() => setError(null)} style={dismissBtn} aria-label="Dismiss">
+                        ✕
+                    </button>
+                </div>
+            )}
             <div
                 style={{
                     display: 'flex',

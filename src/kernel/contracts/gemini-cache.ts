@@ -23,8 +23,8 @@ export interface IGeminiCacheService {
     create(content: { systemPrompt: string; model: string; ttl?: string }): Promise<CachedContent>;
     list(): CachedContent[];
     get(id: string): CachedContent | null;
-    delete(id: string): void;
+    delete(id: string): Promise<void>;
     recordHit(id: string): void;
-    getFreeTierUsage(): FreeTierUsage[];
+    getFreeTierUsage(): FreeTierUsage[] | Promise<FreeTierUsage[]>;
     getEstimatedSavings(): { totalSaved: number; cacheHitRate: number };
 }

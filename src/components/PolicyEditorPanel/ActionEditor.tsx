@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 import type {
     PolicyAction,
     PolicyType,
@@ -13,6 +14,7 @@ interface ActionEditorProps {
 }
 
 const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange, onRemove }) => {
+    const { t } = useTranslation();
     const setType = (type: string) => {
         switch (type) {
             case 'set_policy':
@@ -164,7 +166,7 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange, onRemove 
             {action.type === 'pause' && (
                 <span style={{ fontSize: 10, color: '#64748b' }}>(no config needed)</span>
             )}
-            <button onClick={onRemove} style={s.iconBtn} aria-label="Remove action">
+            <button onClick={onRemove} style={s.iconBtn} aria-label={t('common.aria.delete')}>
                 <X size={12} />
             </button>
         </div>

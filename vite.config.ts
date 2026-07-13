@@ -44,8 +44,9 @@ export default defineConfig({
         target: 'es2023',
         sourcemap: false,
         minify: 'esbuild',
-        chunkSizeWarningLimit: 1000,
+        chunkSizeWarningLimit: 700,
         rollupOptions: {
+            external: ['onnxruntime-node', 'sharp'],
             output: {
                 manualChunks(id) {
                     if (id.includes('node_modules')) {
@@ -81,6 +82,18 @@ export default defineConfig({
                         }
                         if (id.includes('meriyah')) {
                             return 'vendor-ast';
+                        }
+                        if (id.includes('@tiptap')) {
+                            return 'vendor-tiptap';
+                        }
+                        if (id.includes('@react-aria')) {
+                            return 'vendor-aria';
+                        }
+                        if (id.includes('@orama')) {
+                            return 'vendor-orama';
+                        }
+                        if (id.includes('dompurify')) {
+                            return 'vendor-dompurify';
                         }
                     }
                 },

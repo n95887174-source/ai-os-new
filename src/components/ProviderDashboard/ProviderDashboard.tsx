@@ -14,7 +14,7 @@ import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { kernel, keyStateStore } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useNow } from '../../hooks/useNow';
-import type { HealthEvent } from '../../kernel/services/provider-tracker';
+import type { HealthEvent } from '../../kernel/instances';
 import type { SystemState } from '../../kernel/types/metrics-types';
 
 const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({

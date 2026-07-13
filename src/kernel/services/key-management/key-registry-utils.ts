@@ -145,13 +145,16 @@ export async function buildExportData(
 ): Promise<string> {
     const exportData = await Promise.all(
         keys.map(async (k) => {
-            const encryptedKey = encryptFn ? await encryptFn(k.key) : null;
+            const encryptedKey = await encryptFn(k.key);
+            if (encryptedKey === null) {
+                throw new Error('Vault locked — cannot export keys in plaintext');
+            }
             return {
                 id: k.id,
                 provider: k.provider,
                 group: k.group,
                 account: k.account,
-                key: encryptedKey || k.key,
+                key: encryptedKey ?? k.key,
                 label: k.label,
                 tags: k.tags,
                 status: k.status,

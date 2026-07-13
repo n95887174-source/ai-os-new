@@ -65,7 +65,7 @@ const getAgentsFromTopology = (): Agent[] => {
 };
 
 const AgentsPanelContainer: React.FC = () => {
-    const { keys } = useKeyStore();
+    const keys = useKeyStore((s) => s.keys);
     const availableTools = (() => {
         try {
             return toolService.getTools();

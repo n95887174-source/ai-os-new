@@ -406,7 +406,7 @@ export class SystemKernel implements IKernel {
                 this.state = this.getInitialState();
                 this.isDirty = true;
                 this.deps.eventBus?.emit(EVENTS.KERNEL_STATE_RESET as keyof EventMap, {
-                    reason: `State version mismatch (got ${obj.version ?? "undefined"}, expected 2.1.0-safety)`,
+                    reason: `State version mismatch (got ${obj.version ?? 'undefined'}, expected 2.1.0-safety)`,
                 });
                 this.deps.eventBus?.emit(EVENTS.NOTIFICATION as keyof EventMap, {
                     message: 'Kernel state version mismatch вЂ” reset to defaults.',
@@ -562,7 +562,11 @@ export class SystemKernel implements IKernel {
 
     /** Mutable clone for Counterfactual simulation вЂ” explicit snapshot ABI */
     getStateSnapshot(): SystemState {
-        return structuredClone(this.state);
+        try {
+            return structuredClone(this.state);
+        } catch {
+            return JSON.parse(JSON.stringify(this.state)) as SystemState;
+        }
     }
 
     setExplorationFactor(val: number, tx?: ITransaction) {
@@ -645,4 +649,3 @@ const THROW_UNINITIALIZED: KernelDeps = new Proxy({} as KernelDeps, {
     },
 });
 export const kernel = new SystemKernel(THROW_UNINITIALIZED);
-

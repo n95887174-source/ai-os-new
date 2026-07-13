@@ -37,15 +37,38 @@ export class EventRecorder {
     private unsub: (() => void) | null = null;
     private store?: EventRecorderStore;
     private persistQueued = false;
+    /** P1-15.3: generation counter prevents stale microtask from overwriting cleared state */
+    private _persistGen = 0;
     private inFlightChecksums = 0;
     private static readonly MAX_INFLIGHT_CHECKSUMS = 50;
     private pendingChecksums = new Map<number, () => void>();
     private checksumSeq = 0;
     private _pendingPersistData: { events: RecordedEvent[]; sequence: number } | null = null;
     private unsubCallbacks: Array<() => void> = [];
+    /** P1-15.2: prevents new work after destroy() */
+    private _destroyed = false;
 
     readonly checkpoints: CheckpointStore;
     private restoreHandler: ((checkpoint: Checkpoint) => boolean) | null = null;
+
+    /** P1-15.1: serializes async event recording to preserve ordering */
+    private _recordLock: Promise<void> | null = null;
+
+    private async _serializedRecord(fn: () => Promise<void>): Promise<void> {
+        while (this._recordLock) {
+            await this._recordLock;
+        }
+        let release: () => void;
+        this._recordLock = new Promise((r) => {
+            release = r;
+        });
+        try {
+            await fn();
+        } finally {
+            this._recordLock = null;
+            release!();
+        }
+    }
 
     private async boundedChecksum(
         event: string,
@@ -70,8 +93,9 @@ export class EventRecorder {
             this.inFlightChecksums--;
             const next = this.pendingChecksums.entries().next();
             if (!next.done) {
-                this.pendingChecksums.delete(next.value[0]);
-                next.value[1]();
+                const [k, v] = next.value;
+                this.pendingChecksums.delete(k);
+                v();
             }
         }
     }
@@ -160,19 +184,45 @@ export class EventRecorder {
         }
 
         this.unsub = subscribeAll(async (payload) => {
-            if (!this.config.enabled) return;
+            if (!this.config.enabled || this._destroyed) return;
             if (payload.event === 'cognitive:trace:updated') return;
             if (payload.event === 'cognitive:step:active') return;
             if (payload.event === 'cognitive:step:completed') return;
             if (payload.event === 'cognitive:decision:made') return;
+            await this._serializedRecord(async () => {
+                const ts = Date.now();
+                const seq = this.sequence++;
+                const recorded: RecordedEvent = {
+                    sequence: seq,
+                    event: payload.event,
+                    data: payload.data,
+                    timestamp: ts,
+                    checksum: await this.boundedChecksum(payload.event, payload.data, ts),
+                };
+                if (this.config.filter && !this.config.filter(recorded)) return;
+                this.events.push(recorded);
+                if (this.events.length > this.config.maxEvents) {
+                    this.events = this.events.slice(-this.config.maxEvents);
+                }
+                this.schedulePersist();
+            });
+        });
+    }
+
+    async record(event: string, data?: unknown): Promise<void> {
+        if (!this.config.enabled || this._destroyed) return;
+        if (event === 'cognitive:trace:updated') return;
+        if (event === 'cognitive:step:active') return;
+        if (event === 'cognitive:step:completed') return;
+        if (event === 'cognitive:decision:made') return;
+        await this._serializedRecord(async () => {
             const ts = Date.now();
-            const seq = this.sequence++;
             const recorded: RecordedEvent = {
-                sequence: seq,
-                event: payload.event,
-                data: payload.data,
+                sequence: this.sequence++,
+                event,
+                data,
                 timestamp: ts,
-                checksum: await this.boundedChecksum(payload.event, payload.data, ts),
+                checksum: await this.boundedChecksum(event, data, ts),
             };
             if (this.config.filter && !this.config.filter(recorded)) return;
             this.events.push(recorded);
@@ -181,28 +231,6 @@ export class EventRecorder {
             }
             this.schedulePersist();
         });
-    }
-
-    async record(event: string, data?: unknown): Promise<void> {
-        if (!this.config.enabled) return;
-        if (event === 'cognitive:trace:updated') return;
-        if (event === 'cognitive:step:active') return;
-        if (event === 'cognitive:step:completed') return;
-        if (event === 'cognitive:decision:made') return;
-        const ts = Date.now();
-        const recorded: RecordedEvent = {
-            sequence: this.sequence++,
-            event,
-            data,
-            timestamp: ts,
-            checksum: await this.boundedChecksum(event, data, ts),
-        };
-        if (this.config.filter && !this.config.filter(recorded)) return;
-        this.events.push(recorded);
-        if (this.events.length > this.config.maxEvents) {
-            this.events = this.events.slice(-this.config.maxEvents);
-        }
-        this.schedulePersist();
     }
 
     getAll(): RecordedEvent[] {
@@ -314,6 +342,7 @@ export class EventRecorder {
     async clear(): Promise<void> {
         this.events = [];
         this.sequence = 0;
+        this._persistGen++; // P1-15.3: invalidate any queued microtask
         this.checkpoints.clear();
         if (this.store) {
             try {
@@ -394,8 +423,12 @@ export class EventRecorder {
     }
 
     destroy(): void {
+        this._destroyed = true;
+        this._pendingPersistData = null;
         this.unsub?.();
         this.unsub = null;
+        for (const cb of this.unsubCallbacks) cb();
+        this.unsubCallbacks = [];
         this.events = [];
         this.sequence = 0;
         this.checkpoints.destroy();
@@ -414,8 +447,9 @@ export class EventRecorder {
     }
 
     private schedulePersist(): void {
-        if (!this.store || this.persistQueued) return;
+        if (!this.store || this.persistQueued || this._destroyed) return;
         this.persistQueued = true;
+        const gen = this._persistGen;
         this._pendingPersistData = { events: [...this.events], sequence: this.sequence };
         // Synchronous WAL write — survives tab close
         try {
@@ -425,6 +459,8 @@ export class EventRecorder {
         }
         queueMicrotask(() => {
             this.persistQueued = false;
+            // P1-15.3: discard if clear() was called while microtask was queued
+            if (gen !== this._persistGen) return;
             const data = this._pendingPersistData;
             this._pendingPersistData = null;
             if (!data) return;

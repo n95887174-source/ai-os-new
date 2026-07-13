@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { eventBus, EVENTS } from '../kernel/instances';
 import { routerService, settingsService } from '../kernel/instances';
 import type { FallbackLink, RoutingPolicySnapshot } from '../kernel/contracts/index';
-import type { RouterDecision } from '../kernel/services/provider-router';
+import type { RouterDecision } from '../kernel/instances';
 import type { ABTestConfig, RouterConfig } from '../kernel/types/routing-types';
 
 type RoutingConfigWithProfile = RoutingPolicySnapshot &

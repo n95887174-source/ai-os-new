@@ -34,6 +34,7 @@ const ABTestPanel: React.FC = () => {
     const [running, setRunning] = useState(false);
     const [result, setResult] = useState<ABTestResult | null>(null);
     const [history, setHistory] = useState<ABTestHistoryEntry[]>([]);
+    const [error, setError] = useState<string | null>(null);
     const [viewTab, setViewTab] = useState<'test' | 'history'>('test');
 
     const allKeys = useMemo(() => keyService.getKeys(), []);
@@ -83,7 +84,9 @@ const ABTestPanel: React.FC = () => {
             });
             setResult(res);
             loadHistory();
-        } catch {
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'AB test failed');
+            console.warn('[ABTest]', e);
         } finally {
             setRunning(false);
         }
@@ -142,6 +145,39 @@ const ABTestPanel: React.FC = () => {
                 gap: 16,
             }}
         >
+            {error && (
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    style={{
+                        padding: '10px 14px',
+                        borderRadius: 8,
+                        background: 'rgba(239,68,68,0.15)',
+                        border: '1px solid rgba(239,68,68,0.3)',
+                        color: '#fca5a5',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                    }}
+                >
+                    <span>{error}</span>
+                    <button
+                        onClick={() => setError(null)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#fca5a5',
+                            cursor: 'pointer',
+                            padding: '2px 6px',
+                            fontSize: '0.9rem',
+                        }}
+                        aria-label="Dismiss"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
             <div
                 style={{
                     display: 'flex',

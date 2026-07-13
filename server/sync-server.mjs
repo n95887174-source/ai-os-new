@@ -262,17 +262,7 @@ const wss = new WebSocketServer({
             callback(false, 4001, 'Invalid token');
             return;
         }
-        // Extract ?token= from the URL path (used by SharedDbChannel WS client)
-        try {
-            const url = new URL(info.req.url || '/', 'http://localhost');
-            const urlToken = url.searchParams.get('token');
-            if (urlToken && timingSafeEqual(urlToken, SYNC_SECRET)) {
-                callback(true);
-                return;
-            }
-        } catch {
-            /* ignore parse errors */
-        }
+        // P1-16: ?token= query param removed — use Sec-WebSocket-Protocol or Authorization header only
         callback(false, 401, 'Unauthorized');
     },
 });

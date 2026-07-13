@@ -1,10 +1,9 @@
-import { sessionManager } from '../../kernel/instances';
-import { getActiveDebateSession } from '../../kernel/services/debate-runtime/active-debate-store';
+import { sessionManager, debateService } from '../../kernel/instances';
 import type { DebateSession } from '../../kernel/contracts/debate-types';
 
 export function getCurrentSessions(): DebateSession[] {
     const history = sessionManager.getDebateHistory();
-    const active = getActiveDebateSession();
+    const active = debateService.getActiveDebateSession();
     if (active && active.status === 'completed')
         return [active, ...history.filter((s) => s.id !== active.id)];
     return history;

@@ -1,3 +1,4 @@
+import { ResearchSourceSchema } from '../../contracts/research-engine';
 import type { ResearchSource, SourceCategory, SourceType } from '../../contracts/research-engine';
 import type { ISourceAdapter, SourceAdapterConfig } from '../../contracts/research-adapter';
 import {
@@ -233,8 +234,19 @@ export class SourceAdapterRegistry {
         const promises = adapters.map(async (adapter) => {
             try {
                 const sources = await adapter.search(query, this.config, signal);
-                if (sources.length > 0) {
-                    results.set(adapter.name, sources);
+                const valid = sources.filter((s) => {
+                    const r = ResearchSourceSchema.safeParse(s);
+                    if (!r.success) {
+                        console.warn(
+                            '[SourceAdapterRegistry] Invalid result from',
+                            adapter.name,
+                            r.error.issues,
+                        );
+                    }
+                    return r.success;
+                });
+                if (valid.length > 0) {
+                    results.set(adapter.name, valid);
                 }
             } catch {
                 // skip failed adapter silently
@@ -256,7 +268,18 @@ export class SourceAdapterRegistry {
             if (!adapter) return;
             try {
                 const sources = await adapter.search(query, this.config, signal);
-                if (sources.length > 0) results.set(type, sources);
+                const valid = sources.filter((s) => {
+                    const r = ResearchSourceSchema.safeParse(s);
+                    if (!r.success) {
+                        console.warn(
+                            '[SourceAdapterRegistry] Invalid result from',
+                            adapter.name,
+                            r.error.issues,
+                        );
+                    }
+                    return r.success;
+                });
+                if (valid.length > 0) results.set(type, valid);
             } catch {
                 // skip
             }

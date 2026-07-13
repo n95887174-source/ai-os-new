@@ -57,10 +57,16 @@ function buildSDKContents(messages: ChatMessage[]): {
         }
 
         if (m.role === 'tool' && m.content) {
+            let parsedResponse: unknown;
+            try {
+                parsedResponse = JSON.parse(m.content);
+            } catch {
+                parsedResponse = { raw: m.content, _parseError: true };
+            }
             parts.push({
                 functionResponse: {
                     name: m.name || 'unknown',
-                    response: JSON.parse(m.content),
+                    response: parsedResponse,
                 },
             } as unknown as Part);
         }
@@ -103,7 +109,7 @@ export class GoogleGenAIService {
         const { keyService } = await import('../instances');
         const key = keyService.selectFromPool('gemini');
         if (!key?.key) {
-            if (this.#client) return;
+            this.clearApiKey();
             throw new Error('No Gemini key available — add a Gemini key in Key Manager');
         }
         if (key.key !== this.#apiKey) {
@@ -173,7 +179,7 @@ export class GoogleGenAIService {
         options?: SendMessageOptions,
         signal?: AbortSignal,
     ): Promise<ProviderResponse> {
-        await this.ensureConfigured().catch(() => {});
+        await this.ensureConfigured();
         const start = Date.now();
         const m = this.#model(model, options);
         const { contents, systemInstruction } = buildSDKContents(messages);
@@ -222,7 +228,7 @@ export class GoogleGenAIService {
         options?: SendMessageOptions,
         signal?: AbortSignal,
     ): Promise<ProviderResponse> {
-        await this.ensureConfigured().catch(() => {});
+        await this.ensureConfigured();
         const start = Date.now();
         const m = this.#model(model, options);
         const { contents, systemInstruction } = buildSDKContents(messages);
@@ -271,7 +277,7 @@ export class GoogleGenAIService {
     }
 
     async countTokens(text: string, model = 'gemini-2.5-flash'): Promise<number> {
-        await this.ensureConfigured().catch(() => {});
+        await this.ensureConfigured();
         try {
             const m = this.#model(model);
             const result = await m.countTokens(text);
@@ -285,7 +291,7 @@ export class GoogleGenAIService {
         prompt: string,
         options?: { aspectRatio?: string; personGeneration?: string; safetyFilterLevel?: string },
     ): Promise<{ images: string[]; mimeType: string }> {
-        await this.ensureConfigured().catch(() => {});
+        await this.ensureConfigured();
         if (!this.#client) throw new Error('GoogleGenAI not configured');
         const imagenConfig: Record<string, unknown> = {
             responseModalities: ['image', 'text'],
@@ -322,7 +328,7 @@ export class GoogleGenAIService {
     }
 
     async getEmbedding(text: string): Promise<number[]> {
-        await this.ensureConfigured().catch(() => {});
+        await this.ensureConfigured();
         if (!this.#client) throw new Error('GoogleGenAI not configured');
         try {
             const m = this.#client.getGenerativeModel({ model: 'text-embedding-004' });
@@ -337,7 +343,15 @@ export class GoogleGenAIService {
 
     async getEmbeddings(texts: string[]): Promise<number[][]> {
         if (texts.length === 0) return [];
-        return Promise.all(texts.map((t) => this.getEmbedding(t)));
+        // Batch in chunks of 10 to avoid Gemini rate limits (audit1#14)
+        const BATCH_SIZE = 10;
+        const results: number[][] = [];
+        for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+            const batch = texts.slice(i, i + BATCH_SIZE);
+            const chunk = await Promise.all(batch.map((t) => this.getEmbedding(t)));
+            results.push(...chunk);
+        }
+        return results;
     }
 
     async clusterMemories(
@@ -390,7 +404,7 @@ export class GoogleGenAIService {
     }
 
     async getModels(): Promise<string[]> {
-        await this.ensureConfigured().catch(() => {});
+        await this.ensureConfigured();
         const apiKey = this.#apiKey;
         if (!apiKey) return ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
         try {

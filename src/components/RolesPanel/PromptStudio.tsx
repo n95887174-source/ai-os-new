@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import {
     Variable,
     AlertTriangle,
@@ -76,6 +77,7 @@ interface PromptStudioProps {
 }
 
 export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) => {
+    const { t } = useTranslation();
     const [showVars, setShowVars] = useState(false);
     const [showLint, setShowLint] = useState(false);
     const [showTemplates, setShowTemplates] = useState(false);
@@ -423,7 +425,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                 onChange={(e) => onChange(e.target.value)}
                 onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
                 onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-                aria-label="System prompt"
+                aria-label={t('common.aria.system_prompt')}
             />
 
             <div

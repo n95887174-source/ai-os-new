@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+// Route transitions use CSS animation instead of framer-motion to keep ~50KB gzip off the critical path
 import { History, Search, Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { AppRoutes } from '../routes';
@@ -10,14 +10,15 @@ import { CommandPalette, useCommandPalette } from './CommandPalette/CommandPalet
 import { Breadcrumbs } from './Common/Breadcrumbs';
 import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
 import { KeyboardShortcutsModal } from './Common/KeyboardShortcutsModal';
-import { CONFIG } from '../kernel/services/config-registry';
+import { CONFIG } from '../kernel/instances';
 import { eventBus, EVENTS } from '../kernel/instances';
 import { settingsService, groupManager } from '../kernel/instances';
 import { useUiPreferences } from '../stores/uiPreferencesStore';
 import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
-import { NAV_SECTIONS, type UserLevel } from '../route-registry';
+import { NAV_SECTIONS } from '../route-registry';
+import type { UserLevel } from '../types/routing';
 import { LayoutProvider } from './Layout/LayoutContext';
 import { LayoutSelector } from './Layout/LayoutSelector';
 import { NextActionPredictions } from './Layout/NextActionPredictions';
@@ -287,7 +288,7 @@ export const AppLayout: React.FC = () => {
                                         cursor: 'pointer',
                                         outline: 'none',
                                     }}
-                                    aria-label="Theme"
+                                    aria-label={t('common.aria.theme')}
                                 >
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
@@ -310,7 +311,7 @@ export const AppLayout: React.FC = () => {
                                         borderRadius: 6,
                                     }}
                                     title="Keyboard shortcuts"
-                                    aria-label="Keyboard shortcuts"
+                                    aria-label={t('common.aria.keyboard_shortcuts')}
                                 >
                                     ?
                                 </button>
@@ -351,27 +352,20 @@ export const AppLayout: React.FC = () => {
                                 }}
                             />
 
-                            <MotionConfig reducedMotion="user">
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={activeTab}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                        style={{
-                                            flex: 1,
-                                            minHeight: 0,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            position: 'relative',
-                                            zIndex: 10,
-                                        }}
-                                    >
-                                        <AppRoutes />
-                                    </motion.div>
-                                </AnimatePresence>
-                            </MotionConfig>
+                            <div
+                                key={activeTab}
+                                className="route-enter-animation"
+                                style={{
+                                    flex: 1,
+                                    minHeight: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    position: 'relative',
+                                    zIndex: 10,
+                                }}
+                            >
+                                <AppRoutes />
+                            </div>
                         </section>
                         <NextActionPredictions />
                         <AlertLayer />

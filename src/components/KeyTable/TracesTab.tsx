@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { routerService } from '../../kernel/instances';
-import type { RouterDecision } from '../../kernel/services/provider-router';
+import type { RouterDecision } from '../../kernel/instances';
 import type { ApiKey } from '../../types/metrics';
 import DecisionCard from './DecisionCard';
 

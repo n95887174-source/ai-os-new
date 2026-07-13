@@ -236,29 +236,39 @@ const ContributionGraphPanelLazy = React.lazy(
     () => import('./components/ContributionGraph/ContributionGraphPanel'),
 );
 
-// ── Direct imports (non-lazy) ─────────────────────────────────────────────────
-import ProviderManager from './components/ProviderManager/ProviderManager';
-import AgentsPanel from './components/AgentsPanel/AgentsPanel';
-import ToolsPanel from './components/ToolsPanel/ToolsPanel';
-import ConnectorsPanel from './components/ConnectorsPanel/ConnectorsPanel';
-import KnowledgePanel from './components/KnowledgePanel/KnowledgePanel';
-import SettingsPanel from './components/SettingsPanel/SettingsPanel';
-import DocumentationPanel from './components/DocumentationPanel/DocumentationPanel';
-import AnalyticsPanel from './components/AnalyticsPanel/AnalyticsPanel';
-import SkillsPanel from './components/SkillsPanel/SkillsPanel';
-import TasksPanel from './components/TasksPanel/TasksPanel';
-import RolesPanel from './components/RolesPanel/RolesPanel';
-import AuditLogView from './components/AuditLogView/AuditLogView';
-import ConfigHistoryView from './components/ConfigHistoryView/ConfigHistoryView';
-import PoolStatusPanel from './components/PoolStatusPanel/PoolStatusPanel';
-import PolicyPanel from './components/PolicyPanel/PolicyPanel';
-import MCPPanel from './components/MCPPanel/MCPPanel';
-import PatternsPanel from './components/PatternsPanel/PatternsPanel';
+// ── Lazy panels (converted from eager imports to reduce initial bundle) ─────────
+const ProviderManagerLazy = React.lazy(
+    () => import('./components/ProviderManager/ProviderManager'),
+);
+const AgentsPanelLazy = React.lazy(() => import('./components/AgentsPanel/AgentsPanel'));
+const ToolsPanelLazy = React.lazy(() => import('./components/ToolsPanel/ToolsPanel'));
+const ConnectorsPanelLazy = React.lazy(
+    () => import('./components/ConnectorsPanel/ConnectorsPanel'),
+);
+const KnowledgePanelLazy = React.lazy(() => import('./components/KnowledgePanel/KnowledgePanel'));
+const SettingsPanelLazy = React.lazy(() => import('./components/SettingsPanel/SettingsPanel'));
+const DocumentationPanelLazy = React.lazy(
+    () => import('./components/DocumentationPanel/DocumentationPanel'),
+);
+const AnalyticsPanelLazy = React.lazy(() => import('./components/AnalyticsPanel/AnalyticsPanel'));
+const SkillsPanelLazy = React.lazy(() => import('./components/SkillsPanel/SkillsPanel'));
+const TasksPanelLazy = React.lazy(() => import('./components/TasksPanel/TasksPanel'));
+const RolesPanelLazy = React.lazy(() => import('./components/RolesPanel/RolesPanel'));
+const AuditLogViewLazy = React.lazy(() => import('./components/AuditLogView/AuditLogView'));
+const ConfigHistoryViewLazy = React.lazy(
+    () => import('./components/ConfigHistoryView/ConfigHistoryView'),
+);
+const PoolStatusPanelLazy = React.lazy(
+    () => import('./components/PoolStatusPanel/PoolStatusPanel'),
+);
+const PolicyPanelLazy = React.lazy(() => import('./components/PolicyPanel/PolicyPanel'));
+const MCPPanelLazy = React.lazy(() => import('./components/MCPPanel/MCPPanel'));
+const PatternsPanelLazy = React.lazy(() => import('./components/PatternsPanel/PatternsPanel'));
 
 // Component map: nav id → React component (dashboard handled manually for onNavigate)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
-    analytics: AnalyticsPanel,
+    analytics: AnalyticsPanelLazy,
     pricing: PricingPanel,
     budget: BudgetPanel,
     'cost-analytics': CostAnalyticsPanel,
@@ -267,7 +277,7 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'chat-sessions': ChatSessionsManagerPanel,
     'session-hub': SessionHubPanel,
     bookmarks: BookmarksPanel,
-    tasks: TasksPanel,
+    tasks: TasksPanelLazy,
     files: WorkspacePanel,
     debate: DebateArena,
     builder: CognitiveBuilder,
@@ -283,16 +293,16 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'debate-history': DebateHistoryPage,
     'debates-manager': DebatesManagerPanel,
     topics: TopicSuggesterPanel,
-    agents: AgentsPanel,
-    roles: RolesPanel,
+    agents: AgentsPanelLazy,
+    roles: RolesPanelLazy,
     'roles-consortia': RolesConsortiaPanel,
     sre: SREAgentPanel,
     'agent-journal': AgentJournalPanel,
     mission: MissionControl,
     live: LiveWorkspace,
     'agent-marketplace': AgentMarketplacePanel,
-    keys: ProviderManager,
-    pools: PoolStatusPanel,
+    keys: ProviderManagerLazy,
+    pools: PoolStatusPanelLazy,
     groups: GroupsPanel,
     'key-notes': KeyNotesPanel,
     'provider-dashboard': ProviderDashboard,
@@ -300,8 +310,8 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'smart-routing': SmartRoutingPanelLazy,
     'nvidia-enterprise': NvidiaEnterprisePanelLazy,
     'provider-marketplace': ProviderMarketplace,
-    connectors: ConnectorsPanel,
-    mcp: MCPPanel,
+    connectors: ConnectorsPanelLazy,
+    mcp: MCPPanelLazy,
     'session-bindings': SessionBindingsPanel,
     guardians: GuardiansPanel,
     playground: ModelComparePanel,
@@ -331,9 +341,9 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'causal-debugger': CausalDebugger,
     counterfactual: CounterfactualPanel,
     aquarium: AquariumPanel,
-    patterns: PatternsPanel,
-    knowledge: KnowledgePanel,
-    docs: DocumentationPanel,
+    patterns: PatternsPanelLazy,
+    knowledge: KnowledgePanelLazy,
+    docs: DocumentationPanelLazy,
     'decision-log': DecisionLogPanel,
     'project-os': ProjectOsExplorer,
     'hypothesis-gen': HypothesisGenerator,
@@ -348,8 +358,8 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'debate-system-research': DebateSystemResearch,
     'research-engine': ResearchEnginePanelLazy,
     ecosystem: EcosystemDashboardLazy,
-    skills: SkillsPanel,
-    tools: ToolsPanel,
+    skills: SkillsPanelLazy,
+    tools: ToolsPanelLazy,
     cache: CachePanel,
     webhooks: WebhooksPanel,
     rotations: RotationsPanel,
@@ -377,11 +387,11 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'research-reports': ResearchReportPanelLazy,
     'voice-input': VoiceInputPanelLazy,
     'agent-protocol': AgentProtocolPanelLazy,
-    settings: SettingsPanel,
-    policies: PolicyPanel,
+    settings: SettingsPanelLazy,
+    policies: PolicyPanelLazy,
     'policy-editor': PolicyEditorPanelLazy,
-    audit: AuditLogView,
-    history: ConfigHistoryView,
+    audit: AuditLogViewLazy,
+    history: ConfigHistoryViewLazy,
     'federated-memory': FederatedMemoryPanelLazy,
     'plugin-sdk': PluginSdkPanelLazy,
     'persona-marketplace': PersonaMarketplacePanelLazy,

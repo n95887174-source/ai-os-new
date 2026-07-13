@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUiPreferences } from '../../stores/uiPreferencesStore';
-import type { UserLevel } from '../../route-registry';
+import type { UserLevel } from '../../types/routing';
 import { useTranslation } from '../../i18n/useTranslation';
 
 const LEVEL_RANK: Record<UserLevel, number> = { L0: 0, L1: 1, L2: 2 };

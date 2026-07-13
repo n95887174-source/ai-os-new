@@ -10,11 +10,13 @@ import {
     ChevronDown,
     HardDrive,
 } from 'lucide-react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { Skeleton } from '../Common/Skeleton';
 import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 
 const WorkspacePanel: React.FC = () => {
+    const { t } = useTranslation();
     const [attached, setAttached] = useState(() => {
         try {
             return workspaceService.isAttached();
@@ -329,7 +331,7 @@ const WorkspacePanel: React.FC = () => {
                                 fontSize: '0.75rem',
                             }}
                             title="Refresh"
-                            aria-label="Refresh file tree"
+                            aria-label={t('common.aria.refresh')}
                         >
                             <Loader2 size={12} />
                         </button>
@@ -354,7 +356,7 @@ const WorkspacePanel: React.FC = () => {
                                 value={searchQuery}
                                 onChange={(e) => handleSearch(e.target.value)}
                                 placeholder="Search files..."
-                                aria-label="Search workspace files"
+                                aria-label={t('common.aria.search')}
                                 style={{
                                     flex: 1,
                                     background: 'none',

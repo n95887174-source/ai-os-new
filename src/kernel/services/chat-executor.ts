@@ -3,7 +3,7 @@ import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { LLMError } from '../../llm/core/errors';
-import type { ChatServiceDeps } from './chat-service';
+import type { ChatServiceDeps } from '../contracts/chat';
 import { rootLogger, promptSecurityService } from '../instances';
 
 const LOGGER = rootLogger.child('ChatExecutor');
@@ -289,6 +289,15 @@ export class ChatExecutor {
                                 return;
                             }
 
+                            const onChunk = (chunk: string) => {
+                                this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, {
+                                    requestId,
+                                    provider: currentProvider,
+                                    chunk,
+                                    keyId: req.keyId,
+                                });
+                            };
+
                             const inflightKey = `${currentProvider}:${cacheKey}`;
                             const existingInflight = this.cacheInflight.get(inflightKey);
                             if (existingInflight) {
@@ -313,40 +322,34 @@ export class ChatExecutor {
                                 }
                             }
 
-                            const onChunk = (chunk: string) => {
-                                this.deps.eventBus.emit(EVENTS.STREAM_CHUNK, {
-                                    requestId,
-                                    provider: currentProvider,
-                                    chunk,
-                                    keyId: req.keyId,
-                                });
-                            };
                             this.deps.eventBus.emit(EVENTS.STREAM_START, {
                                 requestId,
                                 provider: currentProvider,
                                 model: effectiveModel,
                                 keyId: req.keyId,
                             });
-                            const inflightPromise = (async () => {
-                                const r = await this.llmClient.sendMessage(effectiveMessages, {
-                                    provider: currentProvider,
-                                    model: effectiveModel,
-                                    temperature: req.options?.temperature,
-                                    maxTokens: req.options?.maxTokens,
-                                    signal: sessionController.signal,
-                                    onChunk,
-                                });
-                                return r;
-                            })();
 
-                            this.cacheInflight.set(
-                                inflightKey,
-                                inflightPromise.then(() => {}).catch(() => {}),
-                            );
-                            try {
-                                result = await inflightPromise;
-                            } finally {
-                                this.cacheInflight.delete(inflightKey);
+                            if (!this.cacheInflight.has(inflightKey)) {
+                                const inflightPromise = this.llmClient.sendMessage(
+                                    effectiveMessages,
+                                    {
+                                        provider: currentProvider,
+                                        model: effectiveModel,
+                                        temperature: req.options?.temperature,
+                                        maxTokens: req.options?.maxTokens,
+                                        signal: sessionController.signal,
+                                        onChunk,
+                                    },
+                                );
+                                this.cacheInflight.set(
+                                    inflightKey,
+                                    inflightPromise.then(() => {}).catch(() => {}),
+                                );
+                                try {
+                                    result = await inflightPromise;
+                                } finally {
+                                    this.cacheInflight.delete(inflightKey);
+                                }
                             }
                         } else {
                             this.deps.eventBus.emit(EVENTS.STREAM_START, {

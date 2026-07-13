@@ -146,6 +146,9 @@ const KnowledgePanel: React.FC = () => {
                             importance: updated.metadata.importance ?? 0.5,
                             source: updated.metadata.source ?? '',
                             fullContent: updated.content,
+                            x: 0,
+                            y: 0,
+                            memory: updated,
                         });
                     } else {
                         setSelectedNode(null);

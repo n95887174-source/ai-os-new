@@ -3,8 +3,11 @@ import type {
     PersonaListing,
     PersonaCategory,
 } from '../contracts/persona-marketplace';
+import { BucketStorageAdapter } from './storage-adapter';
 
-const MOCK_PERSONAS: PersonaListing[] = [
+const STORAGE_KEY = 'persona_marketplace_v1';
+
+const SEED_PERSONAS: PersonaListing[] = [
     {
         id: 'pm-1',
         name: 'Elara Strategist',
@@ -157,19 +160,35 @@ const MOCK_PERSONAS: PersonaListing[] = [
     },
 ];
 
-/**
- * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
- */
 export class PersonaMarketplaceService implements IPersonaMarketplaceService {
-    private listings: PersonaListing[] = MOCK_PERSONAS.map((p) => ({ ...p }));
+    private listings: PersonaListing[] = [];
+    private loaded = false;
+
+    #load(): void {
+        if (this.loaded) return;
+        const raw = BucketStorageAdapter.UI.getSync<PersonaListing[]>(STORAGE_KEY);
+        if (raw && raw.length > 0) {
+            this.listings = raw;
+        } else {
+            this.listings = SEED_PERSONAS.map((p) => ({ ...p }));
+            BucketStorageAdapter.UI.setSync(STORAGE_KEY, this.listings);
+        }
+        this.loaded = true;
+    }
+
+    #persist(): void {
+        BucketStorageAdapter.UI.setSync(STORAGE_KEY, this.listings);
+    }
 
     getListings(category?: PersonaCategory): PersonaListing[] {
+        this.#load();
         let result = this.listings;
         if (category) result = result.filter((l) => l.category === category);
         return result.map((l) => ({ ...l }));
     }
 
     search(query: string): PersonaListing[] {
+        this.#load();
         const q = query.toLowerCase();
         return this.listings
             .filter(
@@ -182,21 +201,66 @@ export class PersonaMarketplaceService implements IPersonaMarketplaceService {
     }
 
     install(id: string): void {
+        this.#load();
         const p = this.listings.find((l) => l.id === id);
-        if (p) p.installed = true;
+        if (p) {
+            p.installed = true;
+            p.downloads++;
+            this.#persist();
+        }
     }
 
     uninstall(id: string): void {
+        this.#load();
         const p = this.listings.find((l) => l.id === id);
-        if (p) p.installed = false;
+        if (p) {
+            p.installed = false;
+            this.#persist();
+        }
     }
 
     rate(id: string, rating: number): void {
+        this.#load();
         const p = this.listings.find((l) => l.id === id);
-        if (p) p.rating = (p.rating * p.downloads + rating) / (p.downloads + 1);
+        if (p) {
+            p.rating = (p.rating * p.downloads + rating) / (p.downloads + 1);
+            this.#persist();
+        }
     }
 
     getInstalled(): PersonaListing[] {
+        this.#load();
         return this.listings.filter((l) => l.installed).map((l) => ({ ...l }));
+    }
+
+    addListing(
+        listing: Omit<PersonaListing, 'id' | 'createdAt' | 'installed' | 'downloads' | 'rating'>,
+    ): PersonaListing {
+        this.#load();
+        const entry: PersonaListing = {
+            ...listing,
+            id: `pm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            createdAt: Date.now(),
+            installed: false,
+            downloads: 0,
+            rating: 0,
+        };
+        this.listings.push(entry);
+        this.#persist();
+        return { ...entry };
+    }
+
+    updateListing(id: string, updates: Partial<PersonaListing>): void {
+        this.#load();
+        const idx = this.listings.findIndex((l) => l.id === id);
+        if (idx === -1) throw new Error(`Persona ${id} not found`);
+        Object.assign(this.listings[idx], updates);
+        this.#persist();
+    }
+
+    removeListing(id: string): void {
+        this.#load();
+        this.listings = this.listings.filter((l) => l.id !== id);
+        this.#persist();
     }
 }

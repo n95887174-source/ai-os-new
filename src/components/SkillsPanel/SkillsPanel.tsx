@@ -220,14 +220,14 @@ const SkillsPanel: React.FC = () => {
                     <button
                         onClick={handleExportSkills}
                         style={exportImportBtn}
-                        aria-label="Export skills to JSON"
+                        aria-label={t('common.aria.export')}
                     >
                         <Download size={16} aria-hidden="true" /> {t('common.export')}
                     </button>
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         style={exportImportBtn}
-                        aria-label="Import skills from JSON"
+                        aria-label={t('common.aria.import')}
                     >
                         <Upload size={16} aria-hidden="true" /> {t('common.import')}
                     </button>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { RouterDecision, PipelineStep } from '../../kernel/services/provider-router';
+import type { RouterDecision, PipelineStep } from '../../kernel/instances';
 import DecisionExpandedView from './DecisionExpandedView';
 
 const STEP_ICONS: Record<PipelineStep['status'], string> = {

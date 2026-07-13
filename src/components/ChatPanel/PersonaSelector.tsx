@@ -7,7 +7,7 @@ import type { PersonaEntry } from '../../kernel/contracts/persona-entry';
 import type { Persona } from '../../kernel/services/persona-service';
 
 export const PersonaSelector: React.FC = () => {
-    const { setSystemPrompt } = useChatStore();
+    const setSystemPrompt = useChatStore((s) => s.setSystemPrompt);
     const [open, setOpen] = useState(false);
     const [showLibrary, setShowLibrary] = useState(false);
     const [activePersona, setActivePersona] = useState<Persona | null>(null);

@@ -40,6 +40,7 @@ export interface DebateSyncPayload {
     updatedAt: number;
     phase: string;
     round: number;
+    seq: number;
 }
 
 export type ErrorEntry = {
@@ -62,8 +63,11 @@ class CrossTabStateSync implements ICrossTabStateSync {
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private syncTimer: ReturnType<typeof setInterval> | null = null;
     private storageHandler: ((event: StorageEvent) => void) | null = null;
-    private localDebateVersions: Map<string, { updatedAt: number; phase: string; round: number }> =
-        new Map();
+    private localDebateVersions: Map<
+        string,
+        { updatedAt: number; phase: string; round: number; seq: number }
+    > = new Map();
+    private debateSeqCounter = 0;
 
     constructor() {
         this.tabId = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
@@ -105,10 +109,12 @@ class CrossTabStateSync implements ICrossTabStateSync {
         this.unsubs.push(
             eventBus.on(EVENTS.DEBATE_UPDATED, (raw: unknown) => {
                 const data = raw as { id: string; phase: string; round: number };
+                const seq = ++this.debateSeqCounter;
                 this.localDebateVersions.set(data.id, {
                     updatedAt: Date.now(),
                     phase: data.phase,
                     round: data.round,
+                    seq,
                 });
                 this.broadcast({
                     type: 'debate-update',
@@ -119,6 +125,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
                         updatedAt: Date.now(),
                         phase: data.phase,
                         round: data.round,
+                        seq,
                     },
                 });
             }),
@@ -348,8 +355,8 @@ class CrossTabStateSync implements ICrossTabStateSync {
 
     private handleDebateUpdate(payload: DebateSyncPayload): void {
         const existing = this.localDebateVersions.get(payload.sessionId);
-        if (existing && existing.updatedAt >= payload.updatedAt) return;
-        if (existing && existing.updatedAt < payload.updatedAt) {
+        if (existing && existing.seq >= payload.seq) return;
+        if (existing && existing.seq < payload.seq) {
             LOGGER.warn('CrossTabStateSync', 'Debate session conflict detected', {
                 sessionId: payload.sessionId,
                 local: existing,
@@ -365,6 +372,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
             updatedAt: payload.updatedAt,
             phase: payload.phase,
             round: payload.round,
+            seq: payload.seq,
         });
     }
 
@@ -491,12 +499,13 @@ class CrossTabStateSync implements ICrossTabStateSync {
     }
 
     updateDebate(sessionId: string, phase: string, round: number): void {
-        this.localDebateVersions.set(sessionId, { updatedAt: Date.now(), phase, round });
+        const seq = ++this.debateSeqCounter;
+        this.localDebateVersions.set(sessionId, { updatedAt: Date.now(), phase, round, seq });
         this.broadcast({
             type: 'debate-update',
             timestamp: Date.now(),
             tabId: this.tabId,
-            payload: { sessionId, updatedAt: Date.now(), phase, round },
+            payload: { sessionId, updatedAt: Date.now(), phase, round, seq },
         });
     }
 
