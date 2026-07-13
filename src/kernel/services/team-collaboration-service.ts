@@ -42,7 +42,8 @@ export class TeamCollaborationService implements ITeamCollaborationService {
                 this.invites = data.invites ?? [];
                 this.sharedSessions = data.sharedSessions ?? [];
             }
-        } catch {
+        } catch (err) {
+            console.warn('[TeamCollaboration] init load failed', err);
             this.teams = [];
             this.invites = [];
             this.sharedSessions = [];
@@ -54,8 +55,8 @@ export class TeamCollaborationService implements ITeamCollaborationService {
             this.reloadListeners.push(() => {
                 if (this.bc) this.bc.close();
             });
-        } catch {
-            // BroadcastChannel not available
+        } catch (err) {
+            console.warn('[TeamCollaboration] BroadcastChannel unavailable', err);
         }
     }
 
@@ -84,8 +85,8 @@ export class TeamCollaborationService implements ITeamCollaborationService {
                 this.invites = data.invites ?? [];
                 this.sharedSessions = data.sharedSessions ?? [];
             }
-        } catch {
-            /* ignore */
+        } catch (err) {
+            console.warn('[TeamCollaboration] reload failed', err);
         }
     }
 
@@ -98,8 +99,8 @@ export class TeamCollaborationService implements ITeamCollaborationService {
             } as PersistedData);
             ssrSafeStorage.setItem(STORAGE_KEY, data);
             if (this.bc) this.bc.postMessage('reload');
-        } catch {
-            /* silently fail */
+        } catch (err) {
+            console.warn('[TeamCollaboration] persist failed', err);
         }
     }
 

@@ -78,8 +78,8 @@ export function useChatStoreHydration(): void {
                         if (!existing) await sStore.put(session);
                     }
                 }
-            } catch {
-                /* ignore corrupt localStorage data */
+            } catch (err) {
+                console.warn('[Hydration] corrupt localStorage data', err);
             }
             BucketStorageAdapter.removeItem('super_agents_chat_sessions');
             BucketStorageAdapter.removeItem('super_agents_chat_sessions_ts');
@@ -99,8 +99,8 @@ export function useChatStoreHydration(): void {
                         if (!existing) await sStore.put(session);
                     }
                 }
-            } catch {
-                /* ignore corrupt backup */
+            } catch (err) {
+                console.warn('[Hydration] corrupt backup', err);
             }
         };
 

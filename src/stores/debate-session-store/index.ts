@@ -59,7 +59,8 @@ async function getLinkedIds(id: string): Promise<string[]> {
         if (!mgr) return [];
         const links = await mgr.getLinked(id);
         return links.map((l) => (l.fromId === id ? l.toId : l.fromId));
-    } catch {
+    } catch (err) {
+        console.warn('[DebateSessionStore] getLinkedIds failed', err);
         return [];
     }
 }
@@ -68,7 +69,8 @@ function toMeta(r: DebateRecord, linkedIds?: string[]): DebateSessionMeta {
     let p: DebateParticipant[];
     try {
         p = (safeJsonParse(r.participants || '[]') as DebateParticipant[]) ?? [];
-    } catch {
+    } catch (err) {
+        console.warn('[DebateSessionStore] toMeta parse participants failed', err);
         p = [];
     }
     return {
@@ -98,12 +100,14 @@ async function loadFull(id: string): Promise<DebateSession | null> {
         let parts: unknown[] = [];
         try {
             args = (safeJsonParse(r.arguments || '[]') as unknown[]) ?? [];
-        } catch {
+        } catch (err) {
+            console.warn('[DebateSessionStore] loadFull parse arguments failed', err);
             args = [];
         }
         try {
             parts = (safeJsonParse(r.participants || '[]') as unknown[]) ?? [];
-        } catch {
+        } catch (err) {
+            console.warn('[DebateSessionStore] loadFull parse participants failed', err);
             parts = [];
         }
         let storedConfig: Record<string, unknown> = {};
@@ -111,8 +115,8 @@ async function loadFull(id: string): Promise<DebateSession | null> {
             const topology = safeJsonParse(r.topology || '{}') as
                 Record<string, unknown> | undefined;
             storedConfig = ((topology?.config || topology) as Record<string, unknown>) ?? {};
-        } catch {
-            /* ignore parse errors */
+        } catch (err) {
+            console.warn('[DebateSessionStore] loadFull parse topology failed', err);
         }
         return {
             id: r.id,
@@ -137,7 +141,8 @@ async function loadFull(id: string): Promise<DebateSession | null> {
                 ...storedConfig,
             },
         };
-    } catch {
+    } catch (err) {
+        console.warn('[DebateSessionStore] loadFull failed', err);
         return null;
     }
 }
@@ -263,7 +268,8 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
                 return await Promise.all(
                     records.map(async (r) => toMeta(r, await getLinkedIds(r.id))),
                 );
-            } catch {
+            } catch (err) {
+                console.warn('[DebateSessionStore] listSessions failed', err);
                 return [];
             }
         },
@@ -386,7 +392,8 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
                     .toArray()) as DebateRecord[];
                 const metas = await recordsToMetas(records);
                 set({ sessions: metas, isLoaded: true });
-            } catch {
+            } catch (err) {
+                console.warn('[DebateSessionStore] refresh failed', err);
                 set({ sessions: [], isLoaded: true });
             }
         },

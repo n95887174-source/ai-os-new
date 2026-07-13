@@ -60,8 +60,8 @@ export class BudgetAlertService implements IBudgetAlertService {
             }
             const histRaw = ssrSafeStorage.getItem(HISTORY_KEY);
             if (histRaw) this.history = JSON.parse(histRaw);
-        } catch {
-            /* silent */
+        } catch (err) {
+            console.warn('[BudgetAlertService] init failed', err);
         }
     }
 
