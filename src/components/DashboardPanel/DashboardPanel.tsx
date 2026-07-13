@@ -33,13 +33,7 @@ import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
 import type { RouterDecision } from '../../kernel/instances';
-import {
-    getStatusColor,
-    latencyColor,
-    thresholdColor,
-    StatusBadge,
-    ThresholdBar,
-} from '../Common/status-vocabulary';
+import { getStatusColor, latencyColor, StatusBadge } from '../Common/status-vocabulary';
 import {
     QuickActionBtn,
     SectionTitle,
@@ -49,15 +43,14 @@ import {
     summarizeEvent,
 } from './DashboardComponents';
 import SystemHealthPanel from './SystemHealthPanel';
+import { ProviderPressureMap } from './ProviderPressureMap';
 
 import {
     dismissBtn,
     errorBanner,
     flex1,
-    flex1Min0,
     flexCenterGap2Mb05,
     flexCenterGap3,
-    flexColGap2,
     flexColGap3,
     panelRounded16,
     statusDot,
@@ -768,137 +761,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 onNavigate={onNavigate}
             />
 
-            <div className="glass-panel" style={panelRounded16}>
-                <SectionTitle
-                    icon={<Server size={16} color="#a855f7" />}
-                    title={t('dashboard.resource_pressure_map')}
-                    action={t('dashboard.pools')}
-                    onAction={() => onNavigate('pools')}
-                />
-                <div
-                    style={{
-                        display: 'flex',
-                        gap: '0.75rem',
-                        flexWrap: 'wrap',
-                        marginBottom: '1rem',
-                        paddingBottom: '0.75rem',
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    }}
-                >
-                    {Array.from(new Set(keys.map((k) => k.provider))).map((provider) => {
-                        const providerKeys = keys.filter((k) => k.provider === provider);
-                        const totalUsed = providerKeys.reduce(
-                            (s, k) => s + (k.stats?.extended?.usageToday?.requests || 0),
-                            0,
-                        );
-                        const totalLimit = providerKeys.reduce(
-                            (s, k) => s + (FREE_TIER_LIMITS[k.provider]?.requestsPerDay || 0),
-                            0,
-                        );
-                        const avgLat =
-                            providerKeys
-                                .filter((k) => k.latency)
-                                .reduce((s, k) => s + (k.latency || 0), 0) /
-                            Math.max(1, providerKeys.filter((k) => k.latency).length);
-                        const pct = totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
-                        const color = thresholdColor(pct, 70, 90);
-                        return (
-                            <div
-                                key={provider}
-                                style={{
-                                    flex: '1 1 160px',
-                                    padding: '0.6rem 0.75rem',
-                                    borderRadius: 10,
-                                    background: `${color}08`,
-                                    border: `1px solid ${color}25`,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '0.35rem',
-                                    fontSize: '0.7rem',
-                                }}
-                            >
-                                <div style={flexCenterSmGap}>
-                                    <ProviderIcon provider={provider} size={14} />
-                                    <span
-                                        style={{
-                                            fontWeight: 700,
-                                            color: '#e2e8f0',
-                                            textTransform: 'capitalize',
-                                        }}
-                                    >
-                                        {provider}
-                                    </span>
-                                    <span style={{ marginLeft: 'auto', fontWeight: 800, color }}>
-                                        {pct}%
-                                    </span>
-                                </div>
-                                <ThresholdBar pct={pct} />
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        color: '#64748b',
-                                        fontSize: '0.6rem',
-                                    }}
-                                >
-                                    <span>
-                                        {Math.round(avgLat)}
-                                        {t('dashboard.ms_avg')}
-                                    </span>
-                                    <span
-                                        style={{
-                                            color:
-                                                providerKeys.filter((k) => k.status === 'error')
-                                                    .length > 0
-                                                    ? '#ef4444'
-                                                    : '#10b981',
-                                        }}
-                                    >
-                                        {t('dashboard.active_count', {
-                                            active: providerKeys.filter(
-                                                (k) => k.status === 'active',
-                                            ).length,
-                                            total: providerKeys.length,
-                                        })}
-                                    </span>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-                <div style={flexColGap2}>
-                    {keys.map((key) => {
-                        const limit = FREE_TIER_LIMITS[key.provider]?.requestsPerDay;
-                        const used = key.stats?.extended?.usageToday?.requests || 0;
-                        const pct = limit ? Math.min(100, (used / limit) * 100) : 0;
-                        return (
-                            <div key={key.id} style={flexCenterGap3}>
-                                <ProviderIcon provider={key.provider} size={14} />
-                                <div style={flex1Min0}>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            fontSize: '0.7rem',
-                                            marginBottom: '0.15rem',
-                                        }}
-                                    >
-                                        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
-                                            {key.label}
-                                        </span>
-                                        <span style={{ color: thresholdColor(pct, 70, 90) }}>
-                                            {limit
-                                                ? `${Math.round(pct)}%`
-                                                : `${formatNumber(used)} req`}
-                                        </span>
-                                    </div>
-                                    <ThresholdBar pct={pct} />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
+            <ProviderPressureMap keys={keys} onNavigate={onNavigate} />
 
             {/* Routing Activity */}
             <div className="glass-panel" style={panelRounded16}>
