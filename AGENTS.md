@@ -3636,3 +3636,26 @@ Fix 4 actionable P1 findings from `audit/Новая папка/BUG_REPORT.md`.
 - `npx vite build` ✅ 15.25s
 - BUG_REPORT.md P1: 4 more items resolved (#22, #26, #28)
 - Remaining P1 deferred: #12 (instances.ts split), #13 (74 UI imports), #14 (Zustand selectors), #15 (EventRecorder races), #19 (Monaco self-host), #23 (1200 i18n keys), #27 (ChatMessagesSection virtualize)
+
+---
+
+## Current Session (2026-07-11) — BUG_REPORT.md P2 Sprint: Lint Fixes + Commit
+
+### Goal
+
+Fix `as any` lint errors blocking pre-commit hook, verify pre-existing fixes, push commit.
+
+### Changes
+
+| #   | Item                  | Description                                                                                                                         | Files                                                                                                                  |
+| :-- | :-------------------- | :---------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------- |
+| 1   | Pre-existing verified | #41 (useKeyStore.catch), #42 (migrateLegacy.catch), #73 (lang effect), #75 (Unicode normalize), #76 (commitlint) — all already done | —                                                                                                                      |
+| 2   | `as any` fixed        | 5 files with bare `as any` casts → typed assertions or removal                                                                      | `CustomMetricsPanel.tsx`, `EvalDatasetPanel.tsx`, `DebateAnalysisPanel.tsx`, `RoleEditorModal.tsx`, `debate-engine.ts` |
+| 3   | Commit unblocked      | 2 commits (eb5c4b02 + 9d260369) — 168 files, as any errors eliminated                                                               | —                                                                                                                      |
+| 4   | `.gitignore`          | Added `temp-*.txt` + `staged_ts_files.txt` patterns, rm --cached temp-eslint.txt                                                    | `.gitignore`                                                                                                           |
+
+### Status
+
+- `npx vite build` ✅ 22.38s
+- BUG_REPORT.md P2 progress: #31, #32, #34, #37 still 🔴 deferred (complex); all others 🟢 done or pre-existing
+- **Next**: Tackle remaining P2 (#31 DAL cycle, #32 god-files split, #34 constructor injection) or switch to another roadmap section

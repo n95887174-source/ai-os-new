@@ -54,6 +54,7 @@ certs/
 _pw_*.json
 snap_args.json
 temp-*.txt
+staged_ts_files.txt
 # Audit artifacts (not part of source)
 audit/
 
