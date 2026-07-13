@@ -541,7 +541,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             for (const [, controller] of agentControllers) controller.abort();
         }
         this.getContext(sessionId).orchestrator.abort(sessionId);
-        session.transition('paused');
+        // H-6: graceful if transition invalid (e.g. consensus → paused)
+        try {
+            session.transition('paused');
+        } catch {
+            LOGGER.warn('DebateEngine', 'pauseSession: invalid transition', {
+                sessionId,
+                phase: session.phase,
+            });
+            return;
+        }
         this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_PAUSED, { sessionId });
         this.saveSnapshot(sessionId).catch((e) =>
             LOGGER.warn('DebateEngine', 'pause checkpoint failed', { error: e }),

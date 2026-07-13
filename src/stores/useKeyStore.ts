@@ -487,18 +487,21 @@ export const useKeyStore = create<Store>((set, get) => {
 
         refresh: () => {
             const db = getDexieDb();
-            db.apiKeys.toArray().then((keys) => {
-                const activeCount = computeActiveCount(keys);
-                const errorCount = computeErrorCount(keys);
-                set(() => ({
-                    keys,
-                    activeKeys: computeActiveKeys(keys),
-                    isLoaded: true,
-                    totalKeys: keys.length,
-                    activeCount,
-                    errorCount,
-                }));
-            });
+            db.apiKeys
+                .toArray()
+                .then((keys) => {
+                    const activeCount = computeActiveCount(keys);
+                    const errorCount = computeErrorCount(keys);
+                    set(() => ({
+                        keys,
+                        activeKeys: computeActiveKeys(keys),
+                        isLoaded: true,
+                        totalKeys: keys.length,
+                        activeCount,
+                        errorCount,
+                    }));
+                })
+                .catch((e) => console.error('[KeyStore] refresh failed', e));
         },
     };
 });

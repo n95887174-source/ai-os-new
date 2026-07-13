@@ -320,6 +320,7 @@ export class ChatExecutor {
                                     this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, res);
                                     return;
                                 }
+                                // Inflight resolved with cache miss — keep going with new request
                             }
 
                             this.deps.eventBus.emit(EVENTS.STREAM_START, {
@@ -329,25 +330,21 @@ export class ChatExecutor {
                                 keyId: req.keyId,
                             });
 
-                            if (!this.cacheInflight.has(inflightKey)) {
-                                const inflightPromise = this.llmClient.sendMessage(
-                                    effectiveMessages,
-                                    {
-                                        provider: currentProvider,
-                                        model: effectiveModel,
-                                        temperature: req.options?.temperature,
-                                        maxTokens: req.options?.maxTokens,
-                                        signal: sessionController.signal,
-                                        onChunk,
-                                    },
-                                );
-                                this.cacheInflight.set(
-                                    inflightKey,
-                                    inflightPromise.then(() => {}).catch(() => {}),
-                                );
-                                try {
-                                    result = await inflightPromise;
-                                } finally {
+                            // Atomic: set inflight BEFORE first await to prevent duplicate requests
+                            const inflightPromise = this.llmClient.sendMessage(effectiveMessages, {
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                temperature: req.options?.temperature,
+                                maxTokens: req.options?.maxTokens,
+                                signal: sessionController.signal,
+                                onChunk,
+                            });
+                            const inflightEntry = inflightPromise.then(() => {}).catch(() => {});
+                            this.cacheInflight.set(inflightKey, inflightEntry);
+                            try {
+                                result = await inflightPromise;
+                            } finally {
+                                if (this.cacheInflight.get(inflightKey) === inflightEntry) {
                                     this.cacheInflight.delete(inflightKey);
                                 }
                             }

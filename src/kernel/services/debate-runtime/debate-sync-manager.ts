@@ -148,6 +148,8 @@ export class DebateSyncManager {
         checkDebatePreflight(this.deps, participants);
         if (this._engineOnly && !this.engine)
             throw new Error('debate.engineOnly flag is set but no DebateEngine configured');
+        // M-3: clear stale timer BEFORE cancelSession — prevents timer firing during teardown
+        this.clearTimers();
         if (this.engine && this.runtimeSessionId) {
             this.engine.cancelSession(this.runtimeSessionId);
         }
@@ -183,6 +185,8 @@ export class DebateSyncManager {
     ): Promise<DebateSession> {
         if (!this.deps) throw new Error('DebateService not initialized');
         checkDebatePreflight(this.deps, participants);
+        // M-3: clear stale timer before cancelSession
+        this.clearTimers();
         if (this.engine && this.runtimeSessionId) {
             this.engine.cancelSession(this.runtimeSessionId);
         }

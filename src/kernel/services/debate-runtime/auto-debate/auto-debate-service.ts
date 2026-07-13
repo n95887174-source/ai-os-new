@@ -223,23 +223,31 @@ export class AutoDebateService implements IAutoDebateService {
         return pickRandom(ALL_TOPICS);
     }
 
-    private async waitForSessionCompletion(
+    private waitForSessionCompletion(
         session: DebateSession,
         timeoutMs = 60_000,
-        pollMs = 250,
     ): Promise<DebateSession> {
-        const startedAt = Date.now();
-        if (TERMINAL_SESSION_STATUSES.has(session.status)) return session;
-        while (Date.now() - startedAt < timeoutMs) {
-            await new Promise((resolve) => setTimeout(resolve, pollMs));
-            const fresh = useActiveDebateStore.getState().session;
-            if (fresh && fresh.id === session.id && TERMINAL_SESSION_STATUSES.has(fresh.status))
-                return fresh;
-        }
-        const final = useActiveDebateStore.getState().session;
-        if (final && final.id === session.id && TERMINAL_SESSION_STATUSES.has(final.status))
-            return final;
-        return session;
+        if (TERMINAL_SESSION_STATUSES.has(session.status)) return Promise.resolve(session);
+        // M-4: use Zustand subscribe instead of polling to avoid race with concurrent runAutoDebate
+        return new Promise((resolve) => {
+            const unsub = useActiveDebateStore.subscribe((state) => {
+                if (
+                    state.session?.id === session.id &&
+                    TERMINAL_SESSION_STATUSES.has(state.session.status)
+                ) {
+                    unsub();
+                    clearTimeout(timer);
+                    resolve(state.session);
+                }
+            });
+            const timer = setTimeout(() => {
+                unsub();
+                const final = useActiveDebateStore.getState().session;
+                if (final && final.id === session.id && TERMINAL_SESSION_STATUSES.has(final.status))
+                    resolve(final);
+                else resolve(session);
+            }, timeoutMs);
+        });
     }
 
     async runAutoDebate(options: AutoDebateOptions = {}): Promise<AutoDebateResult> {

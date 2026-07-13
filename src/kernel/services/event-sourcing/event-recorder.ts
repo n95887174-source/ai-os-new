@@ -80,6 +80,8 @@ export class EventRecorder {
             await new Promise<void>((resolve) => {
                 this.pendingChecksums.set(seq, resolve);
             });
+            // H-9: if clear()/destroy() resolved us, return empty checksum
+            if (this._destroyed) return '';
         }
         this.inFlightChecksums++;
         try {
@@ -343,6 +345,12 @@ export class EventRecorder {
         this.events = [];
         this.sequence = 0;
         this._persistGen++; // P1-15.3: invalidate any queued microtask
+        this._pendingPersistData = null;
+        this.persistQueued = false;
+        // H-9: resolve all pending checksum waiters — they can't complete after clear
+        for (const [, resolve] of this.pendingChecksums) resolve();
+        this.pendingChecksums.clear();
+        this.inFlightChecksums = 0;
         this.checkpoints.clear();
         if (this.store) {
             try {
@@ -429,6 +437,9 @@ export class EventRecorder {
         this.unsub = null;
         for (const cb of this.unsubCallbacks) cb();
         this.unsubCallbacks = [];
+        // H-7: resolve all pending checksum waiters so they don't hang forever
+        for (const [, resolve] of this.pendingChecksums) resolve();
+        this.pendingChecksums.clear();
         this.events = [];
         this.sequence = 0;
         this.checkpoints.destroy();

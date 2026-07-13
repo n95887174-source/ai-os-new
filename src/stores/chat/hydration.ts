@@ -105,7 +105,7 @@ export function useChatStoreHydration(): void {
         };
 
         migrateLegacy().catch((e) => console.error('[Hydration] migrateLegacy failed', e));
-        restoreBackup();
+        void restoreBackup().catch((e) => console.warn('[Hydration] restoreBackup failed', e));
 
         const db = getDexieDb();
         const observable = liveQuery(() =>
@@ -114,13 +114,13 @@ export function useChatStoreHydration(): void {
         const subscription = observable.subscribe({
             next: (sessions: ChatSession[]) => {
                 if (cancelled) return;
-                _lqEpoch++;
                 const current = useChatStore.getState();
 
                 if (!current.isLoaded) {
                     const cleaned = cleanupOrphanLoading(sessions);
                     db.sessions.count().then((total) => {
                         if (!cancelled) {
+                            _lqEpoch++;
                             useChatStore.setState({
                                 sessions: cleaned,
                                 activeSessionId: cleaned[0]?.id ?? DEFAULT_SESSION.id,
@@ -155,6 +155,7 @@ export function useChatStoreHydration(): void {
                 merged.sort((a, b) => b.updatedAt - a.updatedAt);
                 db.sessions.count().then((total) => {
                     if (!cancelled) {
+                        _lqEpoch++;
                         useChatStore.setState({ sessions: merged, hasMoreSessions: total > 100 });
                     }
                 });
