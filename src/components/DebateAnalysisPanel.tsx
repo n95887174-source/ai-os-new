@@ -61,7 +61,7 @@ const DebateAnalysisPanel: React.FC = () => {
     }, [sessionId]);
 
     useEffect(() => {
-        if (runAnalysis) setAnalysis(runAnalysis as any);
+        if (runAnalysis) setAnalysis(runAnalysis);
     }, [runAnalysis]);
 
     if (loading) {
@@ -205,7 +205,7 @@ const DebateAnalysisPanel: React.FC = () => {
                         <StatCard
                             icon={<BarChart3 size={18} color="#f59e0b" />}
                             label={t('debate_analysis.trend')}
-                            value={t(`debate_analysis.trend_${analysis.tone.trend}` as any)}
+                            value={t(`debate_analysis.trend_${analysis.tone.trend}`)}
                             color="#f59e0b"
                         />
                     </div>

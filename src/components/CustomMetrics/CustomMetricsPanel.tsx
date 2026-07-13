@@ -44,7 +44,7 @@ const CustomMetricsPanel: React.FC = () => {
     async function load() {
         try {
             const m = await import('../../kernel/instances');
-            const svc = (m as any).customMetricsService;
+            const svc = m.customMetricsService;
             if (!svc) return;
             setMetrics(await svc.listMetrics());
             setDashboards(await svc.listDashboards());
@@ -70,7 +70,7 @@ const CustomMetricsPanel: React.FC = () => {
         if (!name.trim() || !field.trim()) return;
         try {
             const m = await import('../../kernel/instances');
-            const svc = (m as any).customMetricsService;
+            const svc = m.customMetricsService;
             if (!svc) return;
             await svc.createMetric({
                 name,
@@ -96,7 +96,7 @@ const CustomMetricsPanel: React.FC = () => {
     async function handleDelete(id: string) {
         try {
             const m = await import('../../kernel/instances');
-            const svc = (m as any).customMetricsService;
+            const svc = m.customMetricsService;
             if (svc) await svc.deleteMetric(id);
             await load();
         } catch (e) {
@@ -109,7 +109,7 @@ const CustomMetricsPanel: React.FC = () => {
     async function handleCreateDash() {
         try {
             const m = await import('../../kernel/instances');
-            const svc = (m as any).customMetricsService;
+            const svc = m.customMetricsService;
             if (!svc) return;
             const ids = metrics.map((mm) => mm.id);
             await svc.createDashboard(`Dashboard ${dashboards.length + 1}`, ids);

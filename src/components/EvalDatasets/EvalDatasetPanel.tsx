@@ -53,7 +53,7 @@ const EvalDatasetPanel: React.FC = () => {
     async function load() {
         try {
             const m = await import('../../kernel/instances');
-            const s = (m as any).evalDatasetService;
+            const s = m.evalDatasetService;
             if (s) setDatasets(await s.list());
         } catch (e) {
             setError(
@@ -66,7 +66,7 @@ const EvalDatasetPanel: React.FC = () => {
         if (!name.trim()) return;
         try {
             const m = await import('../../kernel/instances');
-            const s = (m as any).evalDatasetService;
+            const s = m.evalDatasetService;
             if (!s) return;
             const prompts = inputText
                 .split('\n')
@@ -88,7 +88,7 @@ const EvalDatasetPanel: React.FC = () => {
     async function handleDelete(id: string) {
         try {
             const m = await import('../../kernel/instances');
-            const s = (m as any).evalDatasetService;
+            const s = m.evalDatasetService;
             if (s) await s.delete(id);
             await load();
         } catch (e) {
@@ -102,7 +102,7 @@ const EvalDatasetPanel: React.FC = () => {
         setRunningId(datasetId);
         try {
             const m = await import('../../kernel/instances');
-            const s = (m as any).evalDatasetService;
+            const s = m.evalDatasetService;
             const { keyService } = m;
             const keys = keyService?.getKeys() || [];
             const providers = [...new Set(keys.map((k: any) => k.provider))];

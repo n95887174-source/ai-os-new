@@ -53,6 +53,7 @@ certs/
 # Playwright / debug temp files
 _pw_*.json
 snap_args.json
+temp-*.txt
 # Audit artifacts (not part of source)
 audit/
 

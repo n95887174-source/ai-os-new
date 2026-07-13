@@ -250,7 +250,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 // audit1#2: Sync localStorage fallback for crash recovery
                 try {
                     const snapshot: Record<string, unknown> = {};
-                    for (const [sid, session] of this.sessions) {
+                    for (const [sid] of this.sessions) {
                         const snap = this.getSession(sid);
                         if (!snap) continue;
                         snapshot[sid] = {

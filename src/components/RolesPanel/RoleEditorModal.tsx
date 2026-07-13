@@ -204,7 +204,15 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         <ProceduralAvatar
                                             seed={r.id || 'new'}
                                             size={64}
-                                            shape={(r.metadata.avatarShape as any) || 'circle'}
+                                            shape={
+                                                (r.metadata.avatarShape as
+                                                    | 'circle'
+                                                    | 'square'
+                                                    | 'rounded'
+                                                    | 'hexagon'
+                                                    | 'shield'
+                                                    | 'star') || 'circle'
+                                            }
                                         />
                                     )}
                                 </div>
