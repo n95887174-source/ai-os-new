@@ -28,7 +28,6 @@ import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
-import { safeJsonParse } from '../../../kernel/utils/safe-json';
 import type { DebatePolicyEngine } from './debate-policy-engine';
 import { executePolicyActions } from './debate-policy-engine';
 import type { DebateRAGRetriever } from './debate-rag-retriever';
@@ -40,7 +39,6 @@ import { DebateSessionContext } from './debate-session-context';
 import { DebateMemory } from './debate-memory';
 import { DebateBudget } from './debate-budget';
 import { DebateSession as DebateSessionClass } from './debate-session';
-import { DebateSessionRecordSchema } from '../../types/schema-types';
 import type { DebateStore } from '../../contracts/storage/debate-store';
 import { snapshotToSession, type SnapshotBridgeContext } from './debate-snapshot-bridge';
 import {

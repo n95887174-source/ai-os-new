@@ -55,21 +55,13 @@ import {
     errorBanner,
     flex1,
     flex1Min0,
-    flex1Min100,
-    flexCenterGap2,
     flexCenterGap2Mb05,
     flexCenterGap3,
-    flexCenterSmGap,
     flexColGap2,
     flexColGap3,
-    metricBox,
     panelRounded16,
-    progressBar8,
     statusDot,
-    textLabelSmall,
     textSecondary,
-    textSmMutedMarginTop,
-    textXxsSecondary,
 } from '../../styles/common';
 interface DashboardPanelProps {
     onNavigate: (page: string) => void;
