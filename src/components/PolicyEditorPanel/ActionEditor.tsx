@@ -45,6 +45,8 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange, onRemove 
             case 'log':
                 onChange({ type: 'log', level: 'warn', message: 'Policy triggered' });
                 break;
+            default:
+                break;
         }
     };
 

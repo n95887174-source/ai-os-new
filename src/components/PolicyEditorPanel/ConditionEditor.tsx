@@ -79,15 +79,12 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
                 onChange({ type: 'pressure_is', value: 'high' });
                 break;
             case 'policy_equals':
-                onChange({ type: 'policy_equals', policyType: 'max_rounds', value: 10 });
+                onChange({ type: 'policy_equals', policyType: 'max_rounds', value: 'active' });
+                break;
+            default:
                 break;
         }
     };
-
-    const isLogical = condition.type === 'and' || condition.type === 'or';
-    const isNot = condition.type === 'not';
-    const showValue = !isLogical && !isNot && condition.type !== 'phase_in';
-    const showValues = condition.type === 'phase_in';
 
     return (
         <div style={{ ...s.conditionBlock, marginLeft: depth * 16 }}>
