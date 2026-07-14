@@ -225,42 +225,61 @@ export const AppRoutes: React.FC = () => {
             />
 
             {/* ── Primary routes from registry ── */}
-            {NAV_SECTIONS.flatMap((s) => s.items)
-                .filter((i) => i.id !== 'dashboard')
-                .map((item) => {
-                    const Component = PANEL_COMPONENTS[item.id];
-                    if (!Component) return null;
-                    const routePath = item.path ?? `/${item.id}`;
-                    return (
-                        <Route
-                            key={item.id}
-                            path={routePath}
-                            element={
-                                <PermissionGate requiredLevel={item.level}>
-                                    {item.lazy ? (
-                                        <PanelLoader name={item.id}>
-                                            <Component />
-                                        </PanelLoader>
-                                    ) : (
-                                        <ErrorBoundary name={item.id} variant="panel">
-                                            <Component />
-                                        </ErrorBoundary>
-                                    )}
-                                </PermissionGate>
-                            }
-                        />
-                    );
-                })}
+            {NAV_SECTIONS.flatMap((s) =>
+                s.items
+                    .filter((i) => i.id !== 'dashboard')
+                    .map((item) => {
+                        const Component = PANEL_COMPONENTS[item.id];
+                        if (!Component) return null;
+                        const routePath = item.path ?? `/${item.id}`;
+                        return (
+                            <Route
+                                key={`${s.id}-${item.id}`}
+                                path={routePath}
+                                element={
+                                    <PermissionGate requiredLevel={item.level}>
+                                        {item.lazy ? (
+                                            <PanelLoader name={item.id}>
+                                                <Component />
+                                            </PanelLoader>
+                                        ) : (
+                                            <ErrorBoundary name={item.id} variant="panel">
+                                                <Component />
+                                            </ErrorBoundary>
+                                        )}
+                                    </PermissionGate>
+                                }
+                            />
+                        );
+                    }),
+            )}
 
             {/* ── Redirects ── */}
-            <Route path="/events" element={<Navigate to="/timeline" replace />} />
-            <Route path="/message-search" element={<Navigate to="/chat" replace />} />
-            <Route path="/chat-export" element={<Navigate to="/chat" replace />} />
             <Route
+                key="redirect-events"
+                path="/events"
+                element={<Navigate to="/timeline" replace />}
+            />
+            <Route
+                key="redirect-message-search"
+                path="/message-search"
+                element={<Navigate to="/chat" replace />}
+            />
+            <Route
+                key="redirect-chat-export"
+                path="/chat-export"
+                element={<Navigate to="/chat" replace />}
+            />
+            <Route
+                key="redirect-debate-runtime"
                 path="/debate-runtime"
                 element={<Navigate to="/debate?mode=runtime" replace />}
             />
-            <Route path="/topic-suggester" element={<Navigate to="/topics" replace />} />
+            <Route
+                key="redirect-topic-suggester"
+                path="/topic-suggester"
+                element={<Navigate to="/topics" replace />}
+            />
 
             {/* ── Nested URL aliases (debates/*) ── */}
             <Route
