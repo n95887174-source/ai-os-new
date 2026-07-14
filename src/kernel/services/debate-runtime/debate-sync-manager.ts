@@ -57,6 +57,8 @@ export class DebateSyncManager {
     private _governorState: GovernorState | null = null;
     private readonly _verdictCache = new Map<string, DebateVerdict>();
     private static readonly MAX_VERDICT_CACHE = 50;
+    private static readonly RESTART_COOLDOWN_MS = 10_000;
+    private _lastStartTime = 0;
 
     private _setCachedVerdict(sessionId: string, verdict: DebateVerdict): void {
         if (this._verdictCache.size >= DebateSyncManager.MAX_VERDICT_CACHE) {
@@ -139,6 +141,14 @@ export class DebateSyncManager {
         chatSessionId?: string,
     ): Promise<DebateSession> {
         if (!this.deps) throw new Error('DebateService not initialized');
+        const now = Date.now();
+        if (now - this._lastStartTime < DebateSyncManager.RESTART_COOLDOWN_MS) {
+            LOGGER.warn('DebateSyncManager', 'Restart throttled — cooldown active', {
+                elapsed: now - this._lastStartTime,
+            });
+            throw new Error('Debate restart throttled — too soon since last start');
+        }
+        this._lastStartTime = now;
         LOGGER.info('DebateSyncManager', 'Starting debate', {
             topic,
             participants: participants.length,
@@ -184,6 +194,14 @@ export class DebateSyncManager {
         chatSessionId?: string,
     ): Promise<DebateSession> {
         if (!this.deps) throw new Error('DebateService not initialized');
+        const now = Date.now();
+        if (now - this._lastStartTime < DebateSyncManager.RESTART_COOLDOWN_MS) {
+            LOGGER.warn('DebateSyncManager', 'Topology restart throttled — cooldown active', {
+                elapsed: now - this._lastStartTime,
+            });
+            throw new Error('Debate restart throttled — too soon since last start');
+        }
+        this._lastStartTime = now;
         checkDebatePreflight(this.deps, participants);
         // M-3: clear stale timer before cancelSession
         this.clearTimers();

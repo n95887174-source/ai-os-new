@@ -82,8 +82,13 @@ export class LLMHttpClient {
             );
         }
         if (!res.ok) {
-            res.body?.cancel()?.catch(() => {});
-            throw new LLMError(`HTTP ${res.status}`, this.#provider, res.status);
+            const errorBody = await res.text().catch(() => '');
+            console.warn(`[${this.#provider}] POST ${res.status} body:`, errorBody.slice(0, 500));
+            throw new LLMError(
+                `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
+                this.#provider,
+                res.status,
+            );
         }
 
         let data: Record<string, unknown>;
@@ -132,8 +137,13 @@ export class LLMHttpClient {
             throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
         }
         if (!res.ok) {
-            res.body?.cancel()?.catch(() => {});
-            throw new LLMError(`HTTP ${res.status}`, this.#provider, res.status);
+            const errorBody = await res.text().catch(() => '');
+            console.warn(`[${this.#provider}] GET ${res.status} body:`, errorBody.slice(0, 500));
+            throw new LLMError(
+                `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
+                this.#provider,
+                res.status,
+            );
         }
 
         let data: Record<string, unknown>;
@@ -188,8 +198,13 @@ export class LLMHttpClient {
             throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
         }
         if (!res.ok) {
-            res.body?.cancel()?.catch(() => {});
-            throw new LLMError(`HTTP ${res.status}`, this.#provider, res.status);
+            const errorBody = await res.text().catch(() => '');
+            console.warn(`[${this.#provider}] STREAM ${res.status} body:`, errorBody.slice(0, 500));
+            throw new LLMError(
+                `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
+                this.#provider,
+                res.status,
+            );
         }
 
         return res;

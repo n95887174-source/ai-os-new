@@ -206,6 +206,7 @@ export const AppRoutes: React.FC = () => {
         <Routes location={location}>
             {/* ── Landing & dashboard (manual — special onNavigate prop) ── */}
             <Route
+                key="/"
                 path="/"
                 element={
                     <PanelLoader name="Dashboard">
@@ -214,6 +215,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/dashboard"
                 path="/dashboard"
                 element={
                     <PanelLoader name="Dashboard">
@@ -262,6 +264,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* ── Nested URL aliases (debates/*) ── */}
             <Route
+                key="/debates/arena"
                 path="/debates/arena"
                 element={
                     <PanelLoader name="DebateArena">
@@ -270,6 +273,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/debates/live"
                 path="/debates/live"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -280,6 +284,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/debates/replay"
                 path="/debates/replay"
                 element={
                     <PermissionGate requiredLevel="L2">
@@ -290,6 +295,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/debates/tournament"
                 path="/debates/tournament"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -300,26 +306,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
-                path="/audience"
-                element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="Audience">
-                            {React.createElement(Panel('audience'))}
-                        </PanelLoader>
-                    </PermissionGate>
-                }
-            />
-            <Route
-                path="/editors"
-                element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="Editors">
-                            {React.createElement(Panel('editors'))}
-                        </PanelLoader>
-                    </PermissionGate>
-                }
-            />
-            <Route
+                key="/debates/history"
                 path="/debates/history"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -330,6 +317,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/debates/analysis"
                 path="/debates/analysis"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -340,6 +328,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/debates/graph"
                 path="/debates/graph"
                 element={
                     <PermissionGate requiredLevel="L2">
@@ -350,6 +339,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/debates/topics"
                 path="/debates/topics"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -362,6 +352,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* ── Nested URL aliases (diagnostics/*) ── */}
             <Route
+                key="/diagnostics/logs"
                 path="/diagnostics/logs"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -370,6 +361,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/diagnostics/health"
                 path="/diagnostics/health"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -380,6 +372,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/diagnostics/system"
                 path="/diagnostics/system"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -390,6 +383,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/diagnostics/traces"
                 path="/diagnostics/traces"
                 element={
                     <PanelLoader name="Traces">
@@ -398,6 +392,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/diagnostics/memory"
                 path="/diagnostics/memory"
                 element={
                     <PermissionGate requiredLevel="L1">
@@ -408,6 +403,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/diagnostics/aquarium"
                 path="/diagnostics/aquarium"
                 element={
                     <PermissionGate requiredLevel="L2">
@@ -420,6 +416,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* ── Nested URL aliases (services/*) ── */}
             <Route
+                key="/services/keys"
                 path="/services/keys"
                 element={
                     <PanelLoader name="Providers">
@@ -428,6 +425,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/services/groups"
                 path="/services/groups"
                 element={
                     <PanelLoader name="Groups">
@@ -436,6 +434,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/services/connectors"
                 path="/services/connectors"
                 element={
                     <PanelLoader name="Connectors">
@@ -444,6 +443,7 @@ export const AppRoutes: React.FC = () => {
                 }
             />
             <Route
+                key="/services/mcp"
                 path="/services/mcp"
                 element={
                     <PanelLoader name="MCP">
@@ -454,6 +454,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* ── Legacy admin route (no nav entry) ── */}
             <Route
+                key="/chat-admin"
                 path="/chat-admin"
                 element={
                     <PermissionGate requiredLevel="L2">
@@ -466,6 +467,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* ── Legacy route for timeline/events ── */}
             <Route
+                key="/timeline"
                 path="/timeline"
                 element={
                     <PanelLoader name="Timeline">
@@ -475,7 +477,7 @@ export const AppRoutes: React.FC = () => {
             />
 
             {/* ── 404 catch-all ── */}
-            <Route path="*" element={<NotFound />} />
+            <Route key="*" path="*" element={<NotFound />} />
         </Routes>
     );
 };

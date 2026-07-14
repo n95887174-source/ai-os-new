@@ -91,7 +91,7 @@ export const rawConfig: ConfigRegistry = {
             multimodal: { provider: 'gemini', model: 'gemini-2.0-flash' },
             long: { provider: 'gemini', model: 'gemini-2.0-flash' },
             complexCode: { provider: 'gemini', model: 'gemini-2.0-flash' },
-            complex: { provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet' },
+            complex: { provider: 'openrouter', model: 'anthropic/claude-3-5-sonnet' },
             medium: { provider: 'groq', model: 'llama-3.3-70b-versatile' },
             default: { provider: 'groq', model: 'llama-3.1-8b-instant' },
         },

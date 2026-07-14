@@ -230,10 +230,13 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                                     : 'All providers unavailable — debate cannot proceed';
                                 LOGGER.warn('DebatePipeline', msg, { sessionId });
                                 session.transition(event.anyBudgetSkipped ? 'paused' : 'failed');
-                                engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
-                                    sessionId,
-                                    error: msg,
-                                });
+                                if (event.anyBudgetSkipped) {
+                                    engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_PAUSED, {
+                                        sessionId,
+                                        reason: msg,
+                                    });
+                                }
+                                // Phase handler emits DEBATE_SESSION_FAILED for 'failed' transition
                                 earlyExit = true;
                                 break;
                             }
