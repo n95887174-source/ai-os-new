@@ -172,7 +172,7 @@ export class SystemBootstrap implements IBootstrap {
             'eventSourcingService',
             ['configService'],
             (n) => this.container.has(n),
-            this.logger.warn.bind(this.logger),
+            (msg: string) => this.logger.warn('Bootstrap', msg),
         );
         await this.lifecycle.tryInit('eventSourcingService', () => {
             return this.container
@@ -185,7 +185,7 @@ export class SystemBootstrap implements IBootstrap {
             'budgetService',
             ['keyService', 'pricingService'],
             (n) => this.container.has(n),
-            this.logger.warn.bind(this.logger),
+            (msg: string) => this.logger.warn('Bootstrap', msg),
         );
 
         // ── Tier 3: Provider runtime ─────────────────────────────────────
@@ -193,7 +193,7 @@ export class SystemBootstrap implements IBootstrap {
             'providerRuntimeService',
             ['keyService', 'keyStateStore'],
             (n) => this.container.has(n),
-            this.logger.warn.bind(this.logger),
+            (msg: string) => this.logger.warn('Bootstrap', msg),
         );
         await this.lifecycle.tryInit('providerRuntimeService', () => {
             const prs = this.container.get<ProviderRuntimeService>('providerRuntimeService');

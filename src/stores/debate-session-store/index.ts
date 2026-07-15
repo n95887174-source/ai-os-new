@@ -155,7 +155,7 @@ async function recordsToMetas(records: DebateRecord[]): Promise<DebateSessionMet
 }
 
 function ensureLiveQuery(
-    set: (
+    _set: (
         partial:
             | Partial<DebateSessionStoreShape>
             | ((prev: DebateSessionStoreShape) => Partial<DebateSessionStoreShape>),

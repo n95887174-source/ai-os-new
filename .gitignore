@@ -70,3 +70,8 @@ playwright/.cache/
 
 # Prompt vault (dead code — superseded by prompt-store.ts)
 prompt-vault/
+
+# Temp analysis files
+temp_*.txt
+*_used.txt
+*_keys.txt

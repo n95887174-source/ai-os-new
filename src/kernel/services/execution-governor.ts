@@ -87,16 +87,19 @@ class ManagedOperationImpl implements ManagedOperation {
         if (this._endedAt !== null) return;
         this._state = 'cancelled';
         this._endedAt = Date.now();
-        this._abortController.abort();
+        this._abortController.abort(new Error('CancelledByGovernor'));
         this._cleanup();
         this._notify();
+        LOGGER.warn('ExecutionGovernor', `Operation ${this.id} cancelled`, {
+            type: this.type,
+        });
     }
 
     timeout(): void {
         if (this._endedAt !== null) return;
         this._state = 'timed-out';
         this._endedAt = Date.now();
-        this._abortController.abort();
+        this._abortController.abort(new Error('OperationTimedOut'));
         this._cleanup();
         this._notify();
         LOGGER.warn('ExecutionGovernor', `Operation ${this.id} timed out`, {

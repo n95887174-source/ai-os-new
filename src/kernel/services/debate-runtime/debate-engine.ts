@@ -1,6 +1,6 @@
 import { genId } from '../../../utils/gen-id';
 import { CONFIG } from '../config-registry';
-import { DebateProviderResolver, DEBATE_MODEL_PRIORITY } from './debate-query-engine';
+import { DebateProviderResolver, DEBATE_MODEL_PRIORITY, isLargeModel } from './debate-query-engine';
 import { buildConclusionLlmCall } from './debate-conclusion-engine';
 import { DebateTopologyService } from './debate-topology';
 import { DebateOrchestrator } from './debate-orchestrator';
@@ -115,6 +115,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private sessionTimeoutTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private sessionAbortControllers = new Map<string, Map<string, AbortController>>();
     private runningSessions = new Set<string>();
+    // Warm provider cache: avoids re-preflighting known-good provider:model pairs
+    // across sessions. TTL: 5 minutes.
+    private static warmCache = new Map<string, number>();
+    private static readonly WARM_CACHE_TTL = 5 * 60 * 1000;
+
     private preflightDone = new Set<string>();
     private persistence: DebatePersistenceManager;
 
@@ -150,6 +155,140 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             evaluator: deps.evaluator,
         };
         this.persistence = new DebatePersistenceManager(persistenceState, persistenceDeps);
+    }
+
+    private isProviderWarm(provider: string, model: string): boolean {
+        const key = `${provider}:${model}`;
+        const ts = DebateEngine.warmCache.get(key);
+        return ts !== undefined && Date.now() - ts < DebateEngine.WARM_CACHE_TTL;
+    }
+
+    private markProviderWarm(provider: string, model: string): void {
+        DebateEngine.warmCache.set(`${provider}:${model}`, Date.now());
+    }
+
+    private async runProviderPreflight(sessionId: string): Promise<void> {
+        const session = this.sessions.get(sessionId);
+        if (!session || this.preflightDone.has(sessionId)) return;
+        this.preflightDone.add(sessionId);
+
+        const keyService = this.deps.getKeyService();
+        const adapterRegistry = this.deps.getAdapterRegistry();
+        const providers = new Set<string>();
+        for (const p of session.participants) {
+            if (p.provider) providers.add(p.provider);
+        }
+        // Also gather providers available via routing
+        try {
+            const routerKeys = this.deps
+                .getRouterService()
+                .getDebateProviders(session.participants.length);
+            for (const rk of routerKeys) providers.add(rk.key.provider);
+        } catch {
+            /* best-effort */
+        }
+        if (providers.size === 0) return;
+
+        // Guard: skip preflight if keys aren't loaded yet (race condition on page load)
+        const allKeys = keyService.getKeys();
+        if (allKeys.length === 0) return;
+
+        const tasks: Promise<void>[] = [];
+        for (const provider of providers) {
+            if (session.hasProviderFailed(provider)) continue;
+            const keys = allKeys.filter((k) => k.provider === provider && k.status === 'active');
+            if (keys.length === 0) {
+                session.markProviderFailed(provider);
+                continue;
+            }
+            const key = keys[0];
+            const adapter = adapterRegistry.getAdapter(provider);
+            if (!adapter) {
+                session.markProviderFailed(provider);
+                continue;
+            }
+            const models = DEBATE_MODEL_PRIORITY[provider.toLowerCase()] ?? [];
+            if (models.length === 0) continue;
+
+            tasks.push(
+                (async () => {
+                    for (const model of models) {
+                        // Skip preflight for known-warm models
+                        if (this.isProviderWarm(provider, model)) {
+                            LOGGER.debug(
+                                'DebateEngine',
+                                `preflight: ${provider}/${model} WARM (skipping)`,
+                            );
+                            return;
+                        }
+
+                        const ctrl = new AbortController();
+                        const preflightTimeout = isLargeModel(model) ? 15000 : 5000;
+                        const timer = setTimeout(
+                            () => ctrl.abort(new Error('PreflightTimedOut')),
+                            preflightTimeout,
+                        );
+                        try {
+                            await adapter.sendMessage(
+                                [{ role: 'user', content: 'Reply only: OK' }],
+                                model,
+                                key.key,
+                                ctrl.signal,
+                            );
+                            this.markProviderWarm(provider, model);
+                            LOGGER.debug(
+                                'DebateEngine',
+                                `preflight: ${provider}/${model} OK (${preflightTimeout}ms budget)`,
+                            );
+                            return; // First working model is enough for this provider
+                        } catch (e) {
+                            const errMsg = String(e);
+                            const sc = (e as { statusCode?: number }).statusCode;
+                            const isAuth =
+                                sc === 401 ||
+                                sc === 402 ||
+                                sc === 403 ||
+                                errMsg.includes('401') ||
+                                errMsg.includes('403') ||
+                                errMsg.includes('Authentication failed') ||
+                                errMsg.includes('Invalid API Key') ||
+                                errMsg.includes('Unauthorized') ||
+                                errMsg.includes('Forbidden');
+                            if (isAuth) {
+                                LOGGER.warn(
+                                    'DebateEngine',
+                                    `preflight: ${provider}/${model} auth error — marking provider failed`,
+                                );
+                                session.markProviderFailed(provider);
+                                const kss = this.deps.getKeyStateStore?.();
+                                if (kss) {
+                                    try {
+                                        kss.update(key.id, { flags: { authFailed: true } });
+                                    } catch {
+                                        /* best-effort */
+                                    }
+                                }
+                                return; // Auth errors are provider-wide, don't try other models
+                            }
+                            // Timeout or other transient error — try next model
+                            LOGGER.warn(
+                                'DebateEngine',
+                                `preflight: ${provider}/${model} failed (${errMsg.slice(0, 60)}), trying next model`,
+                            );
+                        } finally {
+                            clearTimeout(timer);
+                        }
+                    }
+                    // All models failed for this provider
+                    session.markProviderFailed(provider);
+                    LOGGER.warn(
+                        'DebateEngine',
+                        `preflight: ${provider} — all models failed, marking provider unavailable`,
+                    );
+                })(),
+            );
+        }
+        await Promise.allSettled(tasks);
     }
 
     async init(): Promise<void> {}
@@ -350,96 +489,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         return mem;
     }
 
-    private async runProviderPreflight(sessionId: string): Promise<void> {
-        const session = this.sessions.get(sessionId);
-        if (!session || this.preflightDone.has(sessionId)) return;
-        this.preflightDone.add(sessionId);
-
-        const keyService = this.deps.getKeyService();
-        const adapterRegistry = this.deps.getAdapterRegistry();
-        const providers = new Set<string>();
-        for (const p of session.participants) {
-            if (p.provider) providers.add(p.provider);
-        }
-        // Also gather providers available via routing
-        try {
-            const routerKeys = this.deps
-                .getRouterService()
-                .getDebateProviders(session.participants.length);
-            for (const rk of routerKeys) providers.add(rk.key.provider);
-        } catch {
-            /* best-effort */
-        }
-        if (providers.size === 0) return;
-
-        // Guard: skip preflight if keys aren't loaded yet (race condition on page load)
-        const allKeys = keyService.getKeys();
-        if (allKeys.length === 0) return;
-
-        const tasks: Promise<void>[] = [];
-        for (const provider of providers) {
-            if (session.hasProviderFailed(provider)) continue;
-            const keys = allKeys.filter((k) => k.provider === provider && k.status === 'active');
-            if (keys.length === 0) {
-                session.markProviderFailed(provider);
-                continue;
-            }
-            const key = keys[0];
-            const adapter = adapterRegistry.getAdapter(provider);
-            if (!adapter) {
-                session.markProviderFailed(provider);
-                continue;
-            }
-            const model = (DEBATE_MODEL_PRIORITY[provider.toLowerCase()] ?? [])[0] || 'auto';
-            tasks.push(
-                (async () => {
-                    const ctrl = new AbortController();
-                    const timer = setTimeout(() => ctrl.abort(), 5000);
-                    try {
-                        await adapter.sendMessage(
-                            [{ role: 'user', content: 'Reply only: OK' }],
-                            model,
-                            key.key,
-                            ctrl.signal,
-                        );
-                        LOGGER.debug('DebateEngine', `preflight: ${provider} OK (${model})`);
-                    } catch (e) {
-                        const errMsg = String(e);
-                        const sc = (e as { statusCode?: number }).statusCode;
-                        const isAuth =
-                            sc === 401 ||
-                            sc === 402 ||
-                            sc === 403 ||
-                            errMsg.includes('401') ||
-                            errMsg.includes('403') ||
-                            errMsg.includes('Authentication failed') ||
-                            errMsg.includes('Invalid API Key') ||
-                            errMsg.includes('Unauthorized') ||
-                            errMsg.includes('Forbidden');
-                        if (isAuth) {
-                            LOGGER.warn(
-                                'DebateEngine',
-                                `preflight: ${provider} marked failed (auth error: ${sc || errMsg.slice(0, 60)})`,
-                            );
-                            session.markProviderFailed(provider);
-                            const kss = this.deps.getKeyStateStore?.();
-                            if (kss) {
-                                try {
-                                    kss.update(key.id, { flags: { authFailed: true } });
-                                } catch {
-                                    /* best-effort */
-                                }
-                            }
-                        }
-                    } finally {
-                        clearTimeout(timer);
-                    }
-                })(),
-            );
-        }
-        await Promise.allSettled(tasks);
-    }
-
     async startSession(sessionId: string, isResume = false): Promise<void> {
         const session = this.sessions.get(sessionId);
         if (!session) throw new Error(`Session not found: ${sessionId}`);
@@ -537,7 +586,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         // to run until timeout, wasting tokens.
         const agentControllers = this.sessionAbortControllers.get(sessionId);
         if (agentControllers) {
-            for (const [, controller] of agentControllers) controller.abort();
+            for (const [, controller] of agentControllers)
+                controller.abort(new Error('SessionPaused'));
         }
         this.getContext(sessionId).orchestrator.abort(sessionId);
         // H-6: graceful if transition invalid (e.g. consensus → paused)
@@ -582,7 +632,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         // Abort ALL agents' controllers for this session
         const agentControllers = this.sessionAbortControllers.get(sessionId);
         if (agentControllers) {
-            for (const [, controller] of agentControllers) controller.abort();
+            for (const [, controller] of agentControllers)
+                controller.abort(new Error('SessionCancelled'));
             agentControllers.clear();
         }
         this.sessionAbortControllers.delete(sessionId);

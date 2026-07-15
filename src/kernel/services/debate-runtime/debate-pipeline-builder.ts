@@ -19,8 +19,6 @@ import type { DebateMemoryExtractor } from './debate-memory-extractor';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
 import type { DebateMemory } from './debate-memory';
 import type { DebateSessionContext } from './debate-session-context';
-import type { DebateBudget } from './debate-budget';
-
 const LOGGER = rootLogger.child('DebatePipelineBuilder');
 
 interface KeyServiceLike {

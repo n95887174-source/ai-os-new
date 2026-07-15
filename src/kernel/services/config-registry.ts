@@ -246,6 +246,7 @@ export const rawConfig: ConfigRegistry = {
             baseBackoffMs: 5000,
             maxBackoffMs: 30000,
             debateTimeoutMs: 30000,
+            largeModelTimeoutMs: 90000,
             maxDurationMs: 1800000,
             roundDelayMs: 3000,
             maxTokens: 500,

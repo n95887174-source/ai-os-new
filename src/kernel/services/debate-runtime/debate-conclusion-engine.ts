@@ -28,10 +28,12 @@ function combineSignals(...signals: AbortSignal[]): AbortSignal {
     const controller = new AbortController();
     for (const sig of signals) {
         if (sig.aborted) {
-            controller.abort();
+            controller.abort(new Error('CombinedSignalAlreadyAborted'));
             return controller.signal;
         }
-        sig.addEventListener('abort', () => controller.abort(), { once: true });
+        sig.addEventListener('abort', () => controller.abort(new Error('CombinedSignalAborted')), {
+            once: true,
+        });
     }
     return controller.signal;
 }
@@ -250,7 +252,10 @@ export class DebateConclusionEngine {
         try {
             const timeoutMs = 30_000;
             const timeoutController = new AbortController();
-            const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+            const timeoutId = setTimeout(
+                () => timeoutController.abort(new Error('ConclusionTimedOut')),
+                timeoutMs,
+            );
             const combinedSignal = signal
                 ? combineSignals(signal, timeoutController.signal)
                 : timeoutController.signal;

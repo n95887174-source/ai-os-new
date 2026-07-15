@@ -28,6 +28,10 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
     depth = 0,
 }) => {
     const { t } = useTranslation();
+    const isLogical = condition.type === 'and' || condition.type === 'or';
+    const isNot = condition.type === 'not';
+    const showValue = !isLogical;
+    const showValues = condition.type === 'phase_is' || condition.type === 'policy_equals';
     const setType = (type: string) => {
         switch (type) {
             case 'and':

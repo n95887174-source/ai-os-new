@@ -11,11 +11,11 @@ import { rootLogger } from '../logger-service';
 const LOGGER = rootLogger.child('DebateBudget');
 
 const DEFAULT_LIMITS: DebateBudgetLimits = {
-    maxTokensPerDebate: 100_000,
-    maxCostPerDebate: 2.0,
-    maxRounds: 10,
-    maxConcurrency: 4,
-    maxDurationMs: 1_800_000,
+    maxTokensPerDebate: 500_000,
+    maxCostPerDebate: 10.0,
+    maxRounds: 20,
+    maxConcurrency: 8,
+    maxDurationMs: 3_600_000,
 };
 
 const PRESSURE_THRESHOLDS = [

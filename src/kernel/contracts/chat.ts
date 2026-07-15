@@ -1,4 +1,5 @@
 import type { ILLMClientService } from './provider-adapter';
+import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../types/llm-types';
 import type { ILogger } from './logger';
 
 export interface ChatServiceDeps {
@@ -53,10 +54,25 @@ export interface ChatServiceDeps {
         ) => { provider: string; key: { id: string } } | null;
     };
     raceExecutor?: {
-        executeRace: (
-            entries: { provider: string; responses: Promise<unknown> }[],
-            signal: AbortSignal,
-        ) => Promise<{ winner: number; latency: number }>;
+        race: (
+            messages: ChatMessage[],
+            candidates: { provider: string; model: string; keyId: string }[],
+            options?: {
+                signal?: AbortSignal;
+                adapterOptions?: SendMessageOptions;
+                timeoutMs?: number;
+                keyResolver?: (keyId: string) => string | undefined;
+            },
+        ) => Promise<{
+            winner: { provider: string; model: string; keyId: string };
+            response: ProviderResponse;
+            latency: number;
+            failures: Array<{
+                candidate: { provider: string; model: string; keyId: string };
+                error: string;
+            }>;
+            aborted: { provider: string; model: string; keyId: string }[];
+        }>;
         destroy: () => void;
     };
     routingPolicyService?: {
@@ -74,9 +90,7 @@ export interface ChatServiceDeps {
             messages: Array<{ role: string; content: string }>,
             model: string,
         ) => Promise<string>;
-        get: (
-            key: string,
-        ) => {
+        get: (key: string) => {
             response: string;
             model: string;
             promptTokens: number;

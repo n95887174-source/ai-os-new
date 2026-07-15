@@ -18,11 +18,19 @@ const NON_CHAT_PREFIXES = [
 
 const NON_CHAT_PATTERNS = [/^gpt-3\.5-turbo-instruct/, /^text-davinci/, /^code-davinci/];
 
+// Models matching these patterns are considered "large" and get longer timeouts
+const LARGE_MODEL_PATTERNS = [/70b/i, /120b/i, /180b/i, /405b/i, /671b/i];
+
+export function isLargeModel(model: string): boolean {
+    return LARGE_MODEL_PATTERNS.some((re) => re.test(model));
+}
+
 export const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
     gemini: ['gemini-3.1-flash-lite', 'gemini-3.5-flash'],
     groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
     openrouter: [PROVIDER_DEFAULT_MODELS.openrouter, 'openrouter/free'],
-    nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
+    // Fast model first; 70B+ models are fallback due to cold-start latency on NIM
+    nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
 };
 
 export function isChatModel(model: string): boolean {

@@ -84,7 +84,9 @@ const GoogleCachePanel: React.FC = () => {
     const load = useCallback(() => {
         if (!isMounted.current) return;
         setCaches(geminiCacheService.list());
-        setFreeTier(geminiCacheService.getFreeTierUsage());
+        Promise.resolve(geminiCacheService.getFreeTierUsage())
+            .then(setFreeTier)
+            .catch(() => {});
         setSavings(geminiCacheService.getEstimatedSavings());
         setLoading(false);
     }, []);

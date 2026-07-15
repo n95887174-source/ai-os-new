@@ -20,6 +20,8 @@ const FALLBACK_PRICING: Record<string, { input: number; output: number; provider
     'gemini-3.5-flash': { input: 2.5, output: 10.0, provider: 'google' },
     'gemini-3.1-pro': { input: 3.0, output: 12.0, provider: 'google' },
     'llama-3.3-70b': { input: 0.6, output: 0.8, provider: 'meta' },
+    'meta/llama-3.3-70b-instruct': { input: 0.9, output: 0.9, provider: 'nvidia' },
+    'meta/llama-3.1-8b-instruct': { input: 0.1, output: 0.1, provider: 'nvidia' },
     'llama-3.1-405b': { input: 2.5, output: 2.5, provider: 'meta' },
     'llama-3-70b': { input: 0.6, output: 0.8, provider: 'meta' },
     'llama-3-8b': { input: 0.05, output: 0.1, provider: 'meta' },

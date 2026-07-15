@@ -3694,3 +3694,31 @@ React Router v7 + React 19.2.5: `<Routes location={location}>` with redundant `l
 - `npx vite build` ✅ 7.14s
 - Warning likely caused by React Router v7 internal handling of `<Routes location={location}>` — removed prop should fix all 3 duplicate key warnings
 - Cannot verify in browser from CLI; user should check browser console on next dev session
+
+---
+
+## Current Session (2026-07-15) — Debate Abort Mechanism Fix
+
+### Goal
+
+Fix misleading abort error messages ("signal is aborted without reason") by passing descriptive `reason` to all `controller.abort()` calls in the debate pipeline. Improve error classification so budget-governor cancellations don't get misclassified as timeouts and retried.
+
+### Changes
+
+| #   | File                          | Fix                                                                                                                                             |
+| --- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `execution-governor.ts`       | Passed `Error` reason to both `abort()` calls (`CancelledByGovernor`, `OperationTimedOut`)                                                      |
+| 2   | `debate-llm-caller.ts`        | Passed reason to 3 `abort()` calls + `isAbortError` classification via `DOMException` + `signal.reason.message` — no retry on intentional abort |
+| 3   | `debate-engine.ts`            | Passed reason to 3 `abort()` calls (`PreflightTimedOut`, `SessionPaused`, `SessionCancelled`)                                                   |
+| 4   | `debate-conclusion-engine.ts` | Passed reason to 3 `abort()` calls                                                                                                              |
+| 5   | `debate-budget.ts`            | Raised defaults: 100K→500K tokens, $2→$10, 10→20 rounds, 4→8 concurrency, 30→60min duration                                                     |
+| 6   | `pricing-service.ts`          | Added NVIDIA model pricing (`meta/llama-3.3-70b-instruct`, `meta/llama-3.1-8b-instruct`)                                                        |
+
+### Status
+
+- All `controller.abort()` calls (11 across 4 files) now pass descriptive `Error` reason
+- Error classification: `isAbortError` (no retry) vs `isTimeout` (explicit timeout event)
+- Budget defaults raised to prevent premature cancellations in multi-agent tournaments
+- NVIDIA pricing added — eliminates "Unknown model — using fallback pricing" warnings
+- `npx tsc -b --noEmit` ✅ | `npx vite build` ✅
+- Commit: `b7cb807d` pushed to `origin/main`

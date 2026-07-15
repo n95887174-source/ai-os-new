@@ -1,7 +1,11 @@
 import { CONFIG } from '../config-registry';
 import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
-import { DebateProviderResolver, getAllModelsForProvider } from './debate-query-engine';
+import {
+    DebateProviderResolver,
+    getAllModelsForProvider,
+    isLargeModel,
+} from './debate-query-engine';
 import { buildPersonaMemory, DebateMemory } from './debate-memory';
 import { rootLogger } from '../logger-service';
 import { sanitizePromptVar } from '../../../shared/utils/sanitize';
@@ -14,9 +18,14 @@ import type { DebateRAGRetriever } from './debate-rag-retriever';
 const LOGGER = rootLogger.child('DebateLlmCaller');
 
 const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
+const LARGE_MODEL_TIMEOUT_MS = CONFIG?.services?.debate?.largeModelTimeoutMs ?? 90000;
 const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
 const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
+
+function getModelTimeout(modelId: string): number {
+    return isLargeModel(modelId) ? LARGE_MODEL_TIMEOUT_MS : DEBATE_TIMEOUT_MS;
+}
 
 export interface LlmCallerDeps {
     eventBus: IEventBus;
@@ -86,11 +95,14 @@ export async function debateCallLlm(
             deps.sessionAbortControllers.set(sessionId, new Map());
         deps.sessionAbortControllers.get(sessionId)!.set(participant.agentId, controller);
 
-        const onExternalAbort = () => controller.abort();
+        const onExternalAbort = () => controller.abort(new Error('CancelledByUser'));
         if (externalSignal) {
             externalSignal.addEventListener('abort', onExternalAbort, { once: true });
         }
-        const timeout = setTimeout(() => controller.abort(), DEBATE_TIMEOUT_MS);
+
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        let modelTimeout = 0;
+        let startedAt = 0;
 
         try {
             const resolved = deps.providerResolver.resolveProvider(
@@ -103,6 +115,14 @@ export async function debateCallLlm(
             if (!resolved) throw new Error('No available API keys for debate');
             resolvedKey = resolved.key;
             modelId = resolved.modelId;
+
+            // Set per-model timeout AFTER modelId is resolved (large models need longer)
+            modelTimeout = getModelTimeout(modelId);
+            startedAt = performance.now();
+            timeout = setTimeout(
+                () => controller.abort(new Error('RequestTimedOut')),
+                modelTimeout,
+            );
 
             const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
             if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
@@ -184,7 +204,8 @@ export async function debateCallLlm(
                     },
                 });
                 const onGovAbort = () => {
-                    if (!controller.signal.aborted) controller.abort();
+                    if (!controller.signal.aborted)
+                        controller.abort(new Error('CancelledByGovernor'));
                 };
                 govOp.signal.addEventListener('abort', onGovAbort, { once: true });
             }
@@ -234,12 +255,43 @@ export async function debateCallLlm(
             }
             return content;
         } catch (e) {
-            clearTimeout(timeout);
+            if (timeout !== undefined) clearTimeout(timeout);
             if (externalSignal) {
                 externalSignal.removeEventListener('abort', onExternalAbort);
             }
             const error = String(e);
-            const isTimeout = error.includes('AbortError') || error.includes('aborted');
+            const isAbortError = e instanceof DOMException && e.name === 'AbortError';
+            const abortReason = isAbortError
+                ? controller.signal.reason instanceof Error
+                    ? controller.signal.reason.message
+                    : 'Aborted'
+                : '';
+            const isTimeout =
+                isAbortError &&
+                (abortReason.includes('RequestTimedOut') ||
+                    abortReason.includes('TimedOut') ||
+                    abortReason.includes('PreflightTimedOut'));
+            if (isAbortError && isTimeout) {
+                const elapsed =
+                    startedAt !== undefined ? (performance.now() - startedAt).toFixed(0) : '?';
+                LOGGER.warn('DebateLlmCaller', `Request timed out after ${elapsed}ms`, {
+                    provider: resolvedKey?.provider ?? 'unknown',
+                    model: modelId,
+                    timeoutMs: modelTimeout ?? 0,
+                    elapsedMs:
+                        startedAt !== undefined ? Math.round(performance.now() - startedAt) : -1,
+                    agentId: participant.agentId,
+                    sessionId,
+                });
+            }
+
+            // Non-timeout aborts (CancelledByUser, SessionPaused, CancelledByGovernor):
+            // surface immediately without retry
+            if (isAbortError && !isTimeout) {
+                deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                const reason = abortReason || 'Aborted';
+                throw new Error(`Debate LLM call ${reason}`, { cause: e });
+            }
 
             // Try fallback models for the same provider before marking it as failed
             if (resolvedKey) {
