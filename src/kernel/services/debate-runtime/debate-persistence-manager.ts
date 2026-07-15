@@ -181,6 +181,7 @@ export class DebatePersistenceManager {
                             )?.timeline.getEntries(sid) ?? [],
                         saveSnapshot: (sid) => this.saveSnapshot(sid),
                     },
+                    undefined,
                     ' (restored)',
                 ),
             );

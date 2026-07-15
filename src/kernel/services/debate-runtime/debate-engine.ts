@@ -109,11 +109,13 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private memories = new Map<string, DebateMemory>();
     private deps: DebateEngineDeps;
     private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+    private warmCacheEvictInterval: ReturnType<typeof setInterval> | null = null;
     private providerResolver: DebateProviderResolver;
     private topologyService: DebateTopologyService;
     private sessionStartTimes = new Map<string, number>();
     private sessionTimeoutTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private sessionAbortControllers = new Map<string, Map<string, AbortController>>();
+    private sessionPhaseControllers = new Map<string, AbortController>();
     private runningSessions = new Set<string>();
     // Warm provider cache: avoids re-preflighting known-good provider:model pairs
     // across sessions. TTL: 5 minutes.
@@ -157,6 +159,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         this.persistence = new DebatePersistenceManager(persistenceState, persistenceDeps);
     }
 
+    // Provider-specific preflight timeout multipliers (cold-start compensation)
+    private static readonly PROVIDER_PREFLIGHT_TIMEOUT: Record<string, number> = {
+        nvidia: 25000,
+        'nvidia-nim': 25000,
+    };
+
     private isProviderWarm(provider: string, model: string): boolean {
         const key = `${provider}:${model}`;
         const ts = DebateEngine.warmCache.get(key);
@@ -165,6 +173,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     private markProviderWarm(provider: string, model: string): void {
         DebateEngine.warmCache.set(`${provider}:${model}`, Date.now());
+    }
+
+    private getPreflightTimeout(provider: string, model: string): number {
+        const providerOverride = DebateEngine.PROVIDER_PREFLIGHT_TIMEOUT[provider.toLowerCase()];
+        if (providerOverride) return providerOverride;
+        return isLargeModel(model) ? 30000 : 20000;
     }
 
     private async runProviderPreflight(sessionId: string): Promise<void> {
@@ -223,11 +237,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                         }
 
                         const ctrl = new AbortController();
-                        const preflightTimeout = isLargeModel(model) ? 15000 : 5000;
+                        const preflightTimeout = this.getPreflightTimeout(provider, model);
                         const timer = setTimeout(
                             () => ctrl.abort(new Error('PreflightTimedOut')),
                             preflightTimeout,
                         );
+                        let timedOut: boolean;
                         try {
                             await adapter.sendMessage(
                                 [{ role: 'user', content: 'Reply only: OK' }],
@@ -243,6 +258,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                             return; // First working model is enough for this provider
                         } catch (e) {
                             const errMsg = String(e);
+                            timedOut = errMsg.includes('PreflightTimedOut');
                             const sc = (e as { statusCode?: number }).statusCode;
                             const isAuth =
                                 sc === 401 ||
@@ -270,7 +286,15 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                                 }
                                 return; // Auth errors are provider-wide, don't try other models
                             }
-                            // Timeout or other transient error — try next model
+                            if (timedOut) {
+                                LOGGER.warn(
+                                    'DebateEngine',
+                                    `preflight: ${provider}/${model} timed out (${preflightTimeout}ms) — skipping remaining models, same endpoint`,
+                                );
+                                // Don't try other models — same endpoint, same cold-start delay
+                                break;
+                            }
+                            // Other transient error — try next model
                             LOGGER.warn(
                                 'DebateEngine',
                                 `preflight: ${provider}/${model} failed (${errMsg.slice(0, 60)}), trying next model`,
@@ -299,6 +323,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (this._started) return;
         this._started = true;
         this.cleanupInterval = setInterval(() => this.cleanupStaleSessions(), 60000);
+        this.warmCacheEvictInterval = setInterval(
+            () => this.evictExpiredWarmCache(),
+            DebateEngine.WARM_CACHE_TTL,
+        );
         // C1: Use visibilitychange (fires 5-10s before beforeunload) to persist
         // snapshots before tab close. Also keep a sync localStorage fallback for
         // beforeunload since async saveSnapshot may not complete in time.
@@ -414,6 +442,15 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }
     }
 
+    private evictExpiredWarmCache(): void {
+        const now = Date.now();
+        for (const [key, ts] of DebateEngine.warmCache) {
+            if (now - ts >= DebateEngine.WARM_CACHE_TTL) {
+                DebateEngine.warmCache.delete(key);
+            }
+        }
+    }
+
     createSession(
         topology: DebateTopology,
         topic: string,
@@ -423,6 +460,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const id = genId('debate');
         const session = new DebateSessionClass(id, topic, topology, participants, language);
         const budget = new DebateBudget(id, { maxRounds: topology.maxRounds });
+        const phaseAbort = new AbortController();
+        this.sessionPhaseControllers.set(id, phaseAbort);
 
         session.onPhaseChange(
             createPhaseChangeHandler(
@@ -440,6 +479,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     getTimeline: (sid) => this.getTimeline(sid),
                     saveSnapshot: (sid) => this.saveSnapshot(sid),
                 },
+                phaseAbort.signal,
             ),
         );
 
@@ -458,6 +498,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private getContext(sessionId: string): DebateSessionContext {
         let ctx = this.sessionContexts.get(sessionId);
         if (!ctx) {
+            const isOrphan = !this.sessions.has(sessionId);
             const llmCall = buildConclusionLlmCall({
                 getAdapterRegistry: () => this.deps.getAdapterRegistry(),
                 getKeyService: () => this.deps.getKeyService(),
@@ -470,12 +511,18 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 undefined,
                 new DebateOrchestrator(this.topologyService),
             );
-            this.sessionContexts.set(sessionId, ctx);
-            ctx.timeline.loadPersisted(sessionId).catch((e) =>
-                LOGGER.warn('DebateEngine', `Failed to load timeline for ${sessionId}`, {
-                    error: e,
-                }),
-            );
+            // Don't persist orphan contexts in the map — the async pipeline
+            // generator may still yield events after cleanupMaps, and each
+            // event handler calls getContext(). Persisting orphans would pin
+            // them in memory forever.
+            if (!isOrphan) {
+                this.sessionContexts.set(sessionId, ctx);
+                ctx.timeline.loadPersisted(sessionId).catch((e) =>
+                    LOGGER.warn('DebateEngine', `Failed to load timeline for ${sessionId}`, {
+                        error: e,
+                    }),
+                );
+            }
         }
         return ctx;
     }
@@ -483,6 +530,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private getMemory(sessionId: string): DebateMemory {
         let mem = this.memories.get(sessionId);
         if (!mem) {
+            // Same defense as getContext: don't persist recreated memory for cleaned-up sessions
+            if (!this.sessions.has(sessionId)) return new DebateMemory();
             mem = new DebateMemory();
             this.memories.set(sessionId, mem);
         }
@@ -627,9 +676,105 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     cancelSession(sessionId: string): void {
+        console.log('[cancelSession] ENTER', {
+            sessionId,
+            hasSession: this.sessions.has(sessionId),
+            activeSessions: this.sessions.size,
+        });
         const session = this.sessions.get(sessionId);
-        if (!session || session.phase === 'cancelled') return;
-        // Abort ALL agents' controllers for this session
+        if (!session) {
+            console.warn('[cancelSession] session not found', {
+                sessionId,
+                sessionsKeys: [...this.sessions.keys()],
+            });
+            return;
+        }
+        console.log(
+            '[cancelSession] phase=%s, runningSessions=%d',
+            session.phase,
+            this.runningSessions.size,
+        );
+
+        // Shared cleanup for terminal phases — destroys all engine-internal
+        // maps/controllers to prevent memory leaks. Does NOT emit events
+        // (the event was already emitted when phase first transitioned).
+        const cleanupMaps = () => {
+            const budget = this.budgets.get(sessionId);
+            if (budget) (budget as DebateBudget).destroy();
+            this.budgets.delete(sessionId);
+            const mem = this.memories.get(sessionId);
+            if (mem) mem.destroy();
+            this.memories.delete(sessionId);
+            const ctxKeys = [...this.sessionContexts.keys()];
+            const ctx = this.sessionContexts.get(sessionId);
+            if (ctx) ctx.destroy();
+            this.sessionContexts.delete(sessionId);
+            const ctxAfter = this.sessionContexts.size;
+            if (ctxAfter > 0 && ctxKeys.includes(sessionId)) {
+                console.warn(
+                    '[cancelSession] sessionContexts still has %d entries after deleting %s (keys before: %s)',
+                    ctxAfter,
+                    sessionId,
+                    JSON.stringify(ctxKeys),
+                );
+            }
+            session.destroy();
+            this.sessions.delete(sessionId);
+            this.providerResolver.clearSession(sessionId);
+            this.preflightDone.delete(sessionId);
+            this.runningSessions.delete(sessionId);
+            const timer = this.sessionTimeoutTimers.get(sessionId);
+            if (timer) {
+                clearTimeout(timer);
+                this.sessionTimeoutTimers.delete(sessionId);
+            }
+            this.sessionStartTimes.delete(sessionId);
+            this.sessionPhaseControllers.get(sessionId)?.abort();
+            this.sessionPhaseControllers.delete(sessionId);
+            const abortCtls = this.sessionAbortControllers.get(sessionId);
+            if (abortCtls) {
+                for (const [, c] of abortCtls) c.abort(new Error('SessionCancelled'));
+                abortCtls.clear();
+            }
+            this.sessionAbortControllers.delete(sessionId);
+            // Clean up orphan contexts — sessions that no longer exist but whose
+            // contexts were lazily recreated by getContext() after cleanup.
+            // This happens when the async pipeline generator yields events after
+            // cleanupMaps, and each event handler calls getContext() which recreates
+            // the context on the fly (since we just deleted it from sessionContexts).
+            for (const orphanId of this.sessionContexts.keys()) {
+                if (!this.sessions.has(orphanId)) {
+                    const orphanCtx = this.sessionContexts.get(orphanId);
+                    if (orphanCtx) orphanCtx.destroy();
+                    this.sessionContexts.delete(orphanId);
+                }
+            }
+        };
+
+        if (session.phase === 'cancelled') {
+            console.log('[cancelSession] already cancelled — cleaning up maps', { sessionId });
+            cleanupMaps();
+            console.log('[cancelSession] cleanup done (cancelled path)', {
+                sessionId,
+                sessionsLeft: this.sessions.size,
+            });
+            return;
+        }
+        if (session.phase === 'completed' || session.phase === 'failed') {
+            console.log('[cancelSession] terminal phase %s — cleaning up maps', session.phase, {
+                sessionId,
+            });
+            cleanupMaps();
+            console.log('[cancelSession] cleanup done (terminal path)', {
+                sessionId,
+                sessionsLeft: this.sessions.size,
+            });
+            return;
+        }
+        // Active phase — abort agents, transition, emit, then clean up maps
+        console.log('[cancelSession] active phase %s — aborting agents', session.phase, {
+            sessionId,
+        });
         const agentControllers = this.sessionAbortControllers.get(sessionId);
         if (agentControllers) {
             for (const [, controller] of agentControllers)
@@ -637,39 +782,24 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             agentControllers.clear();
         }
         this.sessionAbortControllers.delete(sessionId);
-        // Transition BEFORE destroying context — phase change callbacks
-        // access getContext(id).timeline which requires a live context.
+        // Save orchestrator reference BEFORE cleanupMaps() — ctx.destroy() calls
+        // orchestrator.destroy() which removes the session from the `aborted` Set.
+        // Without this, the async generator continues yielding events after cancel.
+        const orchestrator = this.getContext(sessionId)?.orchestrator;
+        orchestrator?.abort(sessionId);
         session.transition('cancelled');
+        console.log('[cancelSession] transition done, phase=%s', session.phase, { sessionId });
+        this.sessionPhaseControllers.get(sessionId)?.abort();
         this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_CANCELLED, { sessionId });
-        // Destroy budget — releases any queued lock promises
-        const budget = this.budgets.get(sessionId);
-        if (budget) (budget as DebateBudget).destroy();
-        this.budgets.delete(sessionId);
-        // Destroy memory
-        const mem = this.memories.get(sessionId);
-        if (mem) mem.destroy();
-        this.memories.delete(sessionId);
-        // Abort orchestrator before destroying context
-        const ctx = this.sessionContexts.get(sessionId);
-        if (ctx) {
-            ctx.orchestrator.abort(sessionId);
-            ctx.destroy();
-        }
-        this.sessionContexts.delete(sessionId);
-        // Destroy session itself — clears phase listeners
-        session.destroy();
-        this.sessions.delete(sessionId);
-        // Clean per-session tracking
-        this.providerResolver.clearSession(sessionId);
-        this.preflightDone.delete(sessionId);
-        this.runningSessions.delete(sessionId);
-        // P1-2: clear the max-duration timeout timer
-        const timer = this.sessionTimeoutTimers.get(sessionId);
-        if (timer) {
-            clearTimeout(timer);
-            this.sessionTimeoutTimers.delete(sessionId);
-        }
-        this.sessionStartTimes.delete(sessionId);
+        cleanupMaps();
+        // Re-establish abort signal since ctx.destroy() removed it.
+        // The async generator may still be running (await in executor), and needs
+        // the signal to stop at the next `if (this.aborted.has(sessionId)) return;` check.
+        orchestrator?.abort(sessionId);
+        console.log('[cancelSession] cleanup done (active path)', {
+            sessionId,
+            sessionsLeft: this.sessions.size,
+        });
     }
 
     getSession(sessionId: string): DebateSessionSnapshot | undefined {
@@ -717,6 +847,26 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         return snapshotToSession(snapshot, { ...ctx, timeline });
     }
 
+    dumpSizes(): import('../../utils/memory-tracker').EngineSizes {
+        let abortControllersAgents = 0;
+        for (const ctrl of this.sessionAbortControllers.values())
+            abortControllersAgents += ctrl.size;
+        return {
+            sessionContexts: this.sessionContexts.size,
+            sessions: this.sessions.size,
+            budgets: this.budgets.size,
+            memories: this.memories.size,
+            sessionStartTimes: this.sessionStartTimes.size,
+            sessionTimeoutTimers: this.sessionTimeoutTimers.size,
+            sessionAbortControllers: this.sessionAbortControllers.size,
+            sessionAbortControllersAgents: abortControllersAgents,
+            sessionPhaseControllers: this.sessionPhaseControllers.size,
+            runningSessions: this.runningSessions.size,
+            preflightDone: this.preflightDone.size,
+            warmCache: DebateEngine.warmCache.size,
+        };
+    }
+
     destroy(): void {
         // Cancel all active sessions — cascades to budget/memory/context cleanup
         for (const sessionId of this.sessions.keys()) {
@@ -729,12 +879,19 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         this.sessionContexts.clear();
         this.providerResolver.clearAll();
         this.sessionAbortControllers.clear();
+        for (const [, ctrl] of this.sessionPhaseControllers) ctrl.abort();
+        this.sessionPhaseControllers.clear();
         this.runningSessions.clear();
         this.preflightDone.clear();
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
             this.cleanupInterval = null;
         }
+        if (this.warmCacheEvictInterval) {
+            clearInterval(this.warmCacheEvictInterval);
+            this.warmCacheEvictInterval = null;
+        }
+        DebateEngine.warmCache.clear();
         if (typeof window !== 'undefined' && this._beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this._beforeUnloadHandler);
             this._beforeUnloadHandler = undefined;
