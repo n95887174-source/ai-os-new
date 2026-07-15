@@ -3659,3 +3659,38 @@ Fix `as any` lint errors blocking pre-commit hook, verify pre-existing fixes, pu
 - `npx vite build` ✅ 22.38s
 - BUG_REPORT.md P2 progress: #31, #32, #34, #37 still 🔴 deferred (complex); all others 🟢 done or pre-existing
 - **Next**: Tackle remaining P2 (#31 DAL cycle, #32 god-files split, #34 constructor injection) or switch to another roadmap section
+
+---
+
+## Current Session (2026-07-14) — Duplicate React Keys Fix
+
+### Goal
+
+Fix React warning "Encountered two children with the same key" for `/dashboard`, `/debate-live`, `/debate-tournament`.
+
+### Root Cause
+
+React Router v7 + React 19.2.5: `<Routes location={location}>` with redundant `location` prop triggered internal route reconciliation that created duplicate route entries. Additionally, `/dashboard` had both a manual `<Route>` and a NAV_SECTIONS entry (filtered at runtime but still present in the reconciliation tree).
+
+### Changes
+
+| #   | File                     | Change                                                                                                                                                         |
+| :-- | :----------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `src/routes.tsx:206`     | Removed `location={location}` prop from `<Routes>` — redundant since component already reads location from context                                             |
+| 2   | `src/routes.tsx:217-225` | Removed manual `/dashboard` Route; dashboard now served only at root path `/` via `DashboardWrapper` (internal `useNavigate`)                                  |
+| 3   | `src/routes.tsx:228-255` | Removed `.filter(i => i.id !== 'dashboard')` from NAV_SECTIONS loop; `dashboard` skipped via `item.id === 'dashboard' ? undefined : PANEL_COMPONENTS[item.id]` |
+| 4   | `src/routes.tsx:163`     | 404 page "Go to Dashboard" button points to `/` instead of `/dashboard`                                                                                        |
+| 5   | `src/routes.tsx:246-250` | Added redirect: `path="/dashboard"` → `Navigate to="/"` — backward compat for deep links                                                                       |
+
+### Key Decisions
+
+- `DashboardWrapper` component extracts `useNavigate` so DashboardPanel still gets `onNavigate` prop
+- Root `key="root"` (not `key="/"`) to avoid path-like key confusion
+- `/dashboard` redirect preserves backward compatibility for existing bookmarks/sidebar navigation
+- `activeTab` in AppLayout correctly defaults to `'dashboard'` at root path (`location.pathname.split('/')[1] || 'dashboard'`)
+
+### Status
+
+- `npx vite build` ✅ 7.14s
+- Warning likely caused by React Router v7 internal handling of `<Routes location={location}>` — removed prop should fix all 3 duplicate key warnings
+- Cannot verify in browser from CLI; user should check browser console on next dev session

@@ -21,7 +21,7 @@ interface PersistedData {
 const AVAILABLE_MODELS = [
     { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', provider: 'groq' },
     { id: 'llama-3.1-70b', name: 'Llama 3.1 70B', provider: 'groq' },
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'gemini' },
+    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', provider: 'gemini' },
     { id: 'mistral-7b', name: 'Mistral 7B', provider: 'openrouter' },
     { id: 'mixtral-8x7b', name: 'Mixtral 8x7B', provider: 'openrouter' },
 ];

@@ -76,7 +76,7 @@ export interface GeminiRequestBody {
         role: 'user' | 'model';
         parts: GeminiPart[];
     }>;
-    systemInstruction?: { parts: Array<{ text: string }> };
+    system_instruction?: { parts: Array<{ text: string }> };
     tools?: Array<{
         functionDeclarations?: Array<{
             name: string;

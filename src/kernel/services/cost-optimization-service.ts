@@ -17,7 +17,7 @@ const CHEAPER_MAP: Record<string, Array<{ model: string; provider: string; savin
     'gpt-4o': [{ model: 'gpt-4o-mini', provider: 'openai', savings: '~94%' }],
     'claude-3-opus': [{ model: 'claude-3-5-sonnet', provider: 'anthropic', savings: '~80%' }],
     'claude-3-5-sonnet': [{ model: 'claude-3-haiku', provider: 'anthropic', savings: '~92%' }],
-    'gemini-2.5-pro': [{ model: 'gemini-2.0-flash', provider: 'google', savings: '~97%' }],
+    'gemini-3.1-pro': [{ model: 'gemini-3.1-flash-lite', provider: 'google', savings: '~97%' }],
 };
 
 let _tracker: IProviderTracker | null = null;

@@ -8,7 +8,7 @@ import { DebateBudget } from './debate-budget';
 import { DebateSessionRecordSchema } from '../../types/schema-types';
 import type { DebateStore } from '../../contracts/storage/debate-store';
 import { createPhaseChangeHandler } from './debate-phase-handler';
-import type { DebateSessionContext } from './debate-session-context';
+import { DebateSessionContext } from './debate-session-context';
 import type {
     DebateTopology,
     DebatePhase,
@@ -161,7 +161,19 @@ export class DebatePersistenceManager {
                         evaluator: this.deps.evaluator,
                     },
                     {
-                        getContext: (sid) => this.state.contexts.get(sid) as DebateSessionContext,
+                        getContext: (sid) => {
+                            let ctx = this.state.contexts.get(sid);
+                            if (!ctx) {
+                                ctx = new DebateSessionContext(
+                                    async () => '',
+                                    undefined,
+                                    undefined,
+                                    undefined,
+                                );
+                                this.state.contexts.set(sid, ctx);
+                            }
+                            return ctx;
+                        },
                         getMemory: (sid) => this.getMemory(sid),
                         getTimeline: (sid) =>
                             (

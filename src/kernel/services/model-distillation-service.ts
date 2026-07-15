@@ -20,7 +20,7 @@ const TEACHER_MODELS = [
     { id: 'llama-3.1-70b', name: 'Llama 3.1 70B', params: '70B' },
     { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', params: '8B' },
     { id: 'mixtral-8x22b', name: 'Mixtral 8x22B', params: '141B' },
-    { id: 'gemini-2.0-pro', name: 'Gemini 2.0 Pro', params: '—' },
+    { id: 'gemini-3-pro', name: 'Gemini 3 Pro', params: '—' },
 ];
 
 const STUDENT_ARCHITECTURES = [

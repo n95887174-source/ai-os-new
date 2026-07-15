@@ -321,9 +321,9 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                         </div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        {session.interpretation.insights.map((insight) => (
+                        {session.interpretation.insights.map((insight, idx) => (
                             <div
-                                key={insight}
+                                key={`insight-${idx}`}
                                 style={{
                                     display: 'flex',
                                     gap: '0.5rem',

@@ -7,19 +7,19 @@
 
 ---
 
-## Sprint A — Быстрые победы 🟢 Done (verified 2026-07-06)
+## Sprint A — Быстрые победы 🟢 Done (verified 2026-07-14 — A-08 closed)
 
-| #    | Что                                                     | Статус                                                                                                                                                                                                                                     |
-| ---- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A-01 | 38 orphan-файлов (~7400 LOC)                            | 🟢 Done (Sprint 1-2)                                                                                                                                                                                                                       |
-| A-02 | CI YAML branches `[main, master]`                       | 🟢 Done (pre-existing)                                                                                                                                                                                                                     |
-| A-03 | Root-level stray scripts                                | 🟢 Done — `migrate_eventbus.py` deleted; `.dependency-cruiser.cjs` kept (in use)                                                                                                                                                           |
-| A-04 | `nginx.conf.legacy-standalone`                          | 🟢 Done (not found — already removed)                                                                                                                                                                                                      |
-| A-05 | Unused deps (`leveldown`, `levelup`, `idb`, `react-is`) | 🟢 Done (all removed from package.json)                                                                                                                                                                                                    |
-| A-06 | Duplicate `architecture-constitution.mdc`               | 🟢 Done — root copy already deleted; `.opencode/rules/` copy is legitimate                                                                                                                                                                 |
-| A-07 | 9 `<div onClick>` → button/role                         | 🟢 Done — 4/6 remaining fixed (GroupsPanel ×2, ChatSessionsManager, ProviderDetailModal). 2 kept (useConfirm has keyboard support, PrimitiveCard is stopPropagation)                                                                       |
-| A-08 | 21 orphan events in event-registry                      | 🟡 Partial — 14 already removed in Sprint 1-2. 5 remain with orphan handlers (need wire-up or removal in Sprint B): PROVIDER_STATE_CHANGED, PROVIDER_RATE_LIMIT_SYNCED, PROVIDER_ERROR_SYNCED, DEBATE_AGENT_FALLBACK, DEBATE_AGENT_TIMEOUT |
-| A-09 | `prompt-vault/`                                         | 🟢 Done (not found — already removed)                                                                                                                                                                                                      |
+| #    | Что                                                     | Статус                                                                                                                                                                                                                                                                                                           |
+| ---- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A-01 | 38 orphan-файлов (~7400 LOC)                            | 🟢 Done (Sprint 1-2)                                                                                                                                                                                                                                                                                             |
+| A-02 | CI YAML branches `[main, master]`                       | 🟢 Done (pre-existing)                                                                                                                                                                                                                                                                                           |
+| A-03 | Root-level stray scripts                                | 🟢 Done — `migrate_eventbus.py` deleted; `.dependency-cruiser.cjs` kept (in use)                                                                                                                                                                                                                                 |
+| A-04 | `nginx.conf.legacy-standalone`                          | 🟢 Done (not found — already removed)                                                                                                                                                                                                                                                                            |
+| A-05 | Unused deps (`leveldown`, `levelup`, `idb`, `react-is`) | 🟢 Done (all removed from package.json)                                                                                                                                                                                                                                                                          |
+| A-06 | Duplicate `architecture-constitution.mdc`               | 🟢 Done — root copy already deleted; `.opencode/rules/` copy is legitimate                                                                                                                                                                                                                                       |
+| A-07 | 9 `<div onClick>` → button/role                         | 🟢 Done — 4/6 remaining fixed (GroupsPanel ×2, ChatSessionsManager, ProviderDetailModal). 2 kept (useConfirm has keyboard support, PrimitiveCard is stopPropagation)                                                                                                                                             |
+| A-08 | 21 orphan events in event-registry                      | 🟢 Done — 14 removed in Sprint 1-2. 5 remaining had emitters wired in Sprint B-09 (cross-tab-state.ts + debate-llm-caller.ts). Fixed payload mismatch in timeline-service.ts subscriber (PROVIDER_STATE_CHANGED expected wrong field names). All 5 now properly wired with matching emitter/subscriber payloads. |
+| A-09 | `prompt-vault/`                                         | 🟢 Done (not found — already removed)                                                                                                                                                                                                                                                                            |
 
 ---
 
@@ -86,10 +86,10 @@
 
 ## Сводка
 
-| Спринт    | Фокус                                | Items  | Время             |
-| --------- | ------------------------------------ | ------ | ----------------- |
-| **A**     | Быстрые победы                       | 9      | 🟢 Done           |
-| **B**     | Архитектура (DAL, LLM-cycle, events) | 9      | 🟢 Done           |
-| **C**     | Major refactors                      | 11     | 10/11 🟢 Done     |
-| **D**     | Долгосрочные                         | 16     | 13 🟢 1 🟡 2 🔴   |
-| **Всего** |                                      | **45** | **~12-15 недель** |
+| Спринт    | Фокус                                | Items  | Время               |
+| --------- | ------------------------------------ | ------ | ------------------- |
+| **A**     | Быстрые победы                       | 9      | 🟢 Done             |
+| **B**     | Архитектура (DAL, LLM-cycle, events) | 9      | 🟢 Done             |
+| **C**     | Major refactors                      | 11     | 10/11 🟢 Done       |
+| **D**     | Долгосрочные                         | 16     | 13 🟢 1 🟡 2 🔴     |
+| **Всего** |                                      | **45** | **42 🟢 1 🟡 2 🔴** |

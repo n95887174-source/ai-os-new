@@ -77,7 +77,7 @@ const GoogleCachePanel: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
     const [newPrompt, setNewPrompt] = useState('');
-    const [newModel, setNewModel] = useState('gemini-2.5-flash');
+    const [newModel, setNewModel] = useState('gemini-3.5-flash');
     const [newTtl, setNewTtl] = useState('1h');
     const [creating, setCreating] = useState(false);
 
@@ -302,14 +302,14 @@ const GoogleCachePanel: React.FC = () => {
                                                             }
                                                             style={INPUT}
                                                         >
-                                                            <option value="gemini-2.5-flash">
-                                                                Gemini 2.5 Flash
+                                                            <option value="gemini-3.5-flash">
+                                                                Gemini 3.5 Flash
                                                             </option>
-                                                            <option value="gemini-2.0-flash">
-                                                                Gemini 2.0 Flash
+                                                            <option value="gemini-3.1-flash-lite">
+                                                                Gemini 3.1 Flash Lite
                                                             </option>
-                                                            <option value="gemini-2.5-pro">
-                                                                Gemini 2.5 Pro
+                                                            <option value="gemini-3.1-pro">
+                                                                Gemini 3.1 Pro
                                                             </option>
                                                         </select>
                                                     </div>

@@ -160,7 +160,7 @@ const NotFound: React.FC = () => {
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate('/')}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -198,36 +198,25 @@ const NotFound: React.FC = () => {
     );
 };
 
-export const AppRoutes: React.FC = () => {
-    const location = useLocation();
+const DashboardWrapper: React.FC = () => {
     const navigate = useNavigate();
-
     return (
-        <Routes location={location}>
-            {/* ── Landing & dashboard (manual — special onNavigate prop) ── */}
-            <Route
-                key="/"
-                path="/"
-                element={
-                    <PanelLoader name="Dashboard">
-                        <DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />
-                    </PanelLoader>
-                }
-            />
-            <Route
-                key="/dashboard"
-                path="/dashboard"
-                element={
-                    <PanelLoader name="Dashboard">
-                        <DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />
-                    </PanelLoader>
-                }
-            />
+        <PanelLoader name="Dashboard">
+            <DashboardPanel onNavigate={(p) => navigate(`/${p}`)} />
+        </PanelLoader>
+    );
+};
+
+export const AppRoutes: React.FC = () => {
+    return (
+        <Routes>
+            {/* ── Landing & dashboard ── */}
+            <Route key="root" path="/" element={<DashboardWrapper />} />
 
             {/* ── Primary routes from registry ── */}
             {NAV_SECTIONS.flatMap((s) =>
                 s.items
-                    .filter((i) => i.id !== 'dashboard')
+                    .filter((item) => item.id !== 'dashboard')
                     .map((item) => {
                         const Component = PANEL_COMPONENTS[item.id];
                         if (!Component) return null;
@@ -255,6 +244,11 @@ export const AppRoutes: React.FC = () => {
             )}
 
             {/* ── Redirects ── */}
+            <Route
+                key="redirect-dashboard"
+                path="/dashboard"
+                element={<Navigate to="/" replace />}
+            />
             <Route
                 key="redirect-events"
                 path="/events"

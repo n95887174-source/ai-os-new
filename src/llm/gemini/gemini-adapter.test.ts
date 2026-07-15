@@ -53,7 +53,7 @@ describe('GeminiAdapter', () => {
 
         const result = await adapter.sendMessage(
             messages,
-            'gemini-2.5-flash',
+            'gemini-3.5-flash',
             'fake-api-key',
             undefined,
             {
@@ -78,7 +78,7 @@ describe('GeminiAdapter', () => {
 
         expect(mockHttpClient.post).toHaveBeenCalled();
         const [path, body, apiKey] = vi.mocked(mockHttpClient.post).mock.calls[0];
-        expect(path).toContain('gemini-2.5-flash:generateContent');
+        expect(path).toContain('gemini-3.5-flash:generateContent');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((body as any).tools[0].functionDeclarations[0].name).toBe('get_weather');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,7 +105,7 @@ describe('GeminiAdapter', () => {
             response: new Response(),
         });
 
-        await adapter.sendMessage(messages, 'gemini-2.5-flash', 'fake-api-key', undefined, {
+        await adapter.sendMessage(messages, 'gemini-3.5-flash', 'fake-api-key', undefined, {
             responseFormat: {
                 type: 'json_object',
                 schema: {
@@ -136,7 +136,7 @@ describe('GeminiAdapter', () => {
             response: new Response(),
         });
 
-        await adapter.sendMessage(messages, 'gemini-2.5-flash', 'fake-api-key', undefined, {
+        await adapter.sendMessage(messages, 'gemini-3.5-flash', 'fake-api-key', undefined, {
             safetySettings: [
                 { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
             ],

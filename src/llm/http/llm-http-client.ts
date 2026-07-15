@@ -40,6 +40,10 @@ export class LLMHttpClient {
         signal?: AbortSignal,
     ): Promise<HttpResult> {
         const start = Date.now();
+        const bodyStr = JSON.stringify(body);
+        if (import.meta.env.DEV) {
+            console.debug(`[${this.#provider}] POST ${path} body:`, bodyStr.slice(0, 2000));
+        }
         const mergedSignal = this.#withTimeout(signal);
         const res = await fetch(`${this.#baseUrl}${path}`, {
             method: 'POST',
@@ -48,7 +52,7 @@ export class LLMHttpClient {
                 ...this.#defaultHeaders,
                 [this.#authHeaderName]: apiKey,
             },
-            body: JSON.stringify(body),
+            body: bodyStr,
             signal: mergedSignal,
         });
 
@@ -63,7 +67,7 @@ export class LLMHttpClient {
         }
         if (res.status === 402) {
             res.body?.cancel()?.catch(() => {});
-            throw new LLMError('Payment Required', this.#provider, 402);
+            throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
         }
         if (res.status === 429) {
             res.body?.cancel()?.catch(() => {});
@@ -129,7 +133,7 @@ export class LLMHttpClient {
         }
         if (res.status === 402) {
             res.body?.cancel()?.catch(() => {});
-            throw new LLMError('Payment Required', this.#provider, 402);
+            throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
         }
         if (res.status === 429) {
             res.body?.cancel()?.catch(() => {});
@@ -190,7 +194,7 @@ export class LLMHttpClient {
         }
         if (res.status === 402) {
             res.body?.cancel()?.catch(() => {});
-            throw new LLMError('Payment Required', this.#provider, 402);
+            throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
         }
         if (res.status === 429) {
             res.body?.cancel()?.catch(() => {});

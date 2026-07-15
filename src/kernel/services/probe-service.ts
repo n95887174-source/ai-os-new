@@ -4,7 +4,7 @@ import type { ILifecycle } from '../contracts/lifecycle';
 import type { ApiKey } from '../types/metrics-types';
 import type { IKeyStateStore } from '../contracts/key-state';
 import type { IEventBus } from '../types/interfaces';
-import { LLMError } from '../../llm/core/errors';
+import { LLMError } from '../errors';
 import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
 
 import { rootLogger } from './logger-service';
@@ -15,7 +15,7 @@ const PROBE_TIMEOUT = 5000;
 const PROBE_MESSAGES = [{ role: 'user' as const, content: 'Reply only: OK' }];
 
 const PROVDER_DEFAULTS: Record<string, string> = {
-    gemini: 'gemini-2.0-flash',
+    gemini: 'gemini-3.1-flash-lite',
     groq: 'llama-3.3-70b-versatile',
     openrouter: PROVIDER_DEFAULT_MODELS.openrouter,
     nvidia: 'meta/llama-3.3-70b-instruct',
@@ -26,7 +26,7 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
     groq: ['llama-3.1-8b-instant'],
-    gemini: ['gemini-2.0-flash'],
+    gemini: ['gemini-3.1-flash-lite'],
     openrouter: ['openrouter/free', 'anthropic/claude-3-haiku-20240307'],
     nvidia: ['meta/llama-3.3-70b-instruct'],
 };

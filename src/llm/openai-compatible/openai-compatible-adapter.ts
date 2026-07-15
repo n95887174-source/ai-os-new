@@ -124,6 +124,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
             headers: {
                 Authorization: `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
+                ...(this.id === 'groq' ? { Origin: 'http://localhost:5173' } : {}),
             },
             body: JSON.stringify(body),
             signal,
@@ -161,6 +162,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
             headers: {
                 Authorization: `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
+                ...(this.id === 'groq' ? { Origin: 'http://localhost:5173' } : {}),
             },
             body: JSON.stringify(body),
             signal,

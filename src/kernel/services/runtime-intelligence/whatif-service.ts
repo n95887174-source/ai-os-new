@@ -308,7 +308,7 @@ export class WhatIfService implements ILifecycle, IWhatIfService {
                           latency: 1500,
                           cost: 0.008,
                           content: 'my email is secure@gmail.com',
-                          model: 'gemini-2.0-flash',
+                          model: 'gemini-3.1-flash-lite',
                       },
                       {
                           id: 'node_4',

@@ -45,7 +45,14 @@ function getCrumbs(
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ path, t }) => {
     const navigate = useNavigate();
-    const crumbs = getCrumbs(path, t);
+    // Deduplicate crumbs that share the same path (e.g. section-id === item-id → both '/debate')
+    const crumbs = getCrumbs(path, t).reduce<Array<{ label: string; path: string }>>(
+        (acc, crumb) => {
+            if (!acc.some((c) => c.path === crumb.path)) acc.push(crumb);
+            return acc;
+        },
+        [],
+    );
 
     return (
         <div

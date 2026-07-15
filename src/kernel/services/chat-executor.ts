@@ -2,7 +2,7 @@ import type { ILLMClientService, AdapterMessage } from '../contracts/provider-ad
 import type { ChatResponse, QueuedRequest } from '../types/chat-types';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
-import { LLMError } from '../../llm/core/errors';
+import { LLMError } from '../errors';
 import type { ChatServiceDeps } from '../contracts/chat';
 import { rootLogger, promptSecurityService } from '../instances';
 

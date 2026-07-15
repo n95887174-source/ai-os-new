@@ -71,71 +71,75 @@ function transformOpenAiSchemaToGemini(schema: OpenAISchema): GeminiSchema {
 
 export class GeminiRequestBuilder {
     static build(messages: ChatMessage[], config?: SendMessageOptions): GeminiRequestBody {
-        const systemParts = messages
-            .filter((m) => m.role === 'system')
-            .map((m) => ({ text: m.content }));
+        const systemMessages = messages.filter((m) => m.role === 'system');
+        const nonSystemMessages = messages.filter((m) => m.role !== 'system');
 
-        const contents = messages
-            .filter((m) => m.role !== 'system')
-            .map((m) => {
-                const role = m.role === 'assistant' ? ('model' as const) : ('user' as const);
-                const parts: GeminiPart[] = [];
+        const contents = nonSystemMessages.map((m) => {
+            const role = m.role === 'assistant' ? ('model' as const) : ('user' as const);
+            const parts: GeminiPart[] = [];
 
-                if (m.toolCalls && m.toolCalls.length > 0) {
-                    for (const tc of m.toolCalls) {
-                        let args: Record<string, unknown>;
-                        try {
-                            args =
-                                typeof tc.function.arguments === 'string'
-                                    ? (safeJsonParse(tc.function.arguments) ?? {})
-                                    : (tc.function.arguments as Record<string, unknown>);
-                        } catch {
-                            args = {
-                                error: 'Failed to parse arguments JSON',
-                                raw: tc.function.arguments,
-                            };
-                        }
-                        parts.push({
-                            functionCall: {
-                                name: tc.function.name,
-                                args,
-                            },
-                        });
-                    }
-                } else if (m.role === 'tool') {
-                    let responseJson: Record<string, unknown>;
+            if (m.toolCalls && m.toolCalls.length > 0) {
+                for (const tc of m.toolCalls) {
+                    let args: Record<string, unknown>;
                     try {
-                        responseJson =
-                            typeof m.content === 'string' && m.content.startsWith('{')
-                                ? (safeJsonParse(m.content) ?? {})
-                                : { result: m.content };
+                        args =
+                            typeof tc.function.arguments === 'string'
+                                ? (safeJsonParse(tc.function.arguments) ?? {})
+                                : (tc.function.arguments as Record<string, unknown>);
                     } catch {
-                        responseJson = { result: m.content };
+                        args = {
+                            error: 'Failed to parse arguments JSON',
+                            raw: tc.function.arguments,
+                        };
                     }
                     parts.push({
-                        functionResponse: {
-                            name: m.name || `fn_${Date.now()}`,
-                            response: responseJson,
+                        functionCall: {
+                            name: tc.function.name,
+                            args,
                         },
                     });
-                } else {
-                    // Handle multimodal inline data
-                    if (m.inlineData && m.inlineData.length > 0) {
-                        for (const d of m.inlineData) {
-                            parts.push({
-                                inlineData: { mimeType: d.mimeType, data: d.data },
-                            });
-                        }
-                    }
-                    if (m.content) {
-                        parts.push({ text: m.content });
-                    } else if (!m.inlineData || m.inlineData.length === 0) {
-                        parts.push({ text: '' });
+                }
+            } else if (m.role === 'tool') {
+                let responseJson: Record<string, unknown>;
+                try {
+                    responseJson =
+                        typeof m.content === 'string' && m.content.startsWith('{')
+                            ? (safeJsonParse(m.content) ?? {})
+                            : { result: m.content };
+                } catch {
+                    responseJson = { result: m.content };
+                }
+                parts.push({
+                    functionResponse: {
+                        name: m.name || `fn_${Date.now()}`,
+                        response: responseJson,
+                    },
+                });
+            } else {
+                // Handle multimodal inline data
+                if (m.inlineData && m.inlineData.length > 0) {
+                    for (const d of m.inlineData) {
+                        parts.push({
+                            inlineData: { mimeType: d.mimeType, data: d.data },
+                        });
                     }
                 }
+                if (m.content) {
+                    parts.push({ text: m.content });
+                } else if (!m.inlineData || m.inlineData.length === 0) {
+                    parts.push({ text: '' });
+                }
+            }
 
-                return { role, parts };
-            });
+            return { role, parts };
+        });
+
+        // Prepend system messages as user content (Gemini REST API rejects system_instruction
+        // on some proxy endpoints; inline is universally compatible)
+        if (systemMessages.length > 0) {
+            const preambleText = systemMessages.map((m) => m.content).join('\n');
+            contents.unshift({ role: 'user' as const, parts: [{ text: preambleText }] });
+        }
 
         // Merge consecutive same-role entries to avoid Gemini rejecting consecutive user/model turns
         const mergedContents: Array<{ role: 'user' | 'model'; parts: GeminiPart[] }> = [];
@@ -152,9 +156,6 @@ export class GeminiRequestBuilder {
         contents.push(...mergedContents);
 
         const body: GeminiRequestBody = { contents };
-        if (systemParts.length > 0) {
-            body.systemInstruction = { parts: systemParts };
-        }
 
         if (config) {
             if (config.cachedContent) {

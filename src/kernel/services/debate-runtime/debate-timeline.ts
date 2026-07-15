@@ -35,11 +35,29 @@ export class DebateTimeline implements IDebateTimeline {
 
     async persist(sessionId: string): Promise<void> {
         try {
-            const sessionEntries = this.entries.filter((e) => e.sessionId === sessionId);
+            const sessionEntries = this.entries
+                .filter((e) => e.sessionId === sessionId)
+                .sort((a, b) => a.timestamp - b.timestamp)
+                .slice(-500); // only keep last 500 — localStorage has ~5MB limit
             const { BucketStorageAdapter } = await import('../storage-adapter');
             await BucketStorageAdapter.RESEARCH.set(storageKey(sessionId), sessionEntries);
         } catch (e) {
-            console.warn('[DebateTimeline] Failed to persist entries', e);
+            // QuotaExceededError — try with even fewer entries
+            if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+                try {
+                    const sessionEntries = this.entries
+                        .filter((e) => e.sessionId === sessionId)
+                        .sort((a, b) => a.timestamp - b.timestamp)
+                        .slice(-100);
+                    const { BucketStorageAdapter } = await import('../storage-adapter');
+                    await BucketStorageAdapter.RESEARCH.set(storageKey(sessionId), sessionEntries);
+                    console.warn(
+                        `[DebateTimeline] localStorage full — persisted last 100 entries only`,
+                    );
+                } catch {
+                    // still failed — skip persistence entirely
+                }
+            }
         }
     }
 

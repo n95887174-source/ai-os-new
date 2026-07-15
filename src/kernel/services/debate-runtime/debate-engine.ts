@@ -484,18 +484,17 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     private toPipelineEngine(): PipelineEngine {
-        const eng = this;
         return {
-            sessions: eng.sessions,
-            budgets: eng.budgets,
-            deps: eng.deps as unknown as PipelineEngineDeps,
-            getMemory: (id) => eng.getMemory(id),
-            getContext: (id) => eng.getContext(id),
-            runProviderPreflight: (id) => eng.runProviderPreflight(id),
-            callLLM: (id, s, p, sig) => eng.callLLM(id, s, p, sig),
-            pauseSession: (id) => eng.pauseSession(id),
-            providerResolver: eng.providerResolver,
-            sessionAbortControllers: eng.sessionAbortControllers,
+            sessions: this.sessions,
+            budgets: this.budgets,
+            deps: this.deps as unknown as PipelineEngineDeps,
+            getMemory: (id) => this.getMemory(id),
+            getContext: (id) => this.getContext(id),
+            runProviderPreflight: (id) => this.runProviderPreflight(id),
+            callLLM: (id, s, p, sig) => this.callLLM(id, s, p, sig),
+            pauseSession: (id) => this.pauseSession(id),
+            providerResolver: this.providerResolver,
+            sessionAbortControllers: this.sessionAbortControllers,
         };
     }
 
@@ -579,7 +578,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     cancelSession(sessionId: string): void {
         const session = this.sessions.get(sessionId);
-        if (!session) return;
+        if (!session || session.phase === 'cancelled') return;
         // Abort ALL agents' controllers for this session
         const agentControllers = this.sessionAbortControllers.get(sessionId);
         if (agentControllers) {

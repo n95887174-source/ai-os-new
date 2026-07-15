@@ -34,7 +34,9 @@ export function createPhaseChangeHandler(
     logSuffix?: string,
 ): (from: string, to: string) => void {
     return (from: string, to: string) => {
-        getters.getContext(sessionId).timeline.record({
+        const ctx = getters.getContext(sessionId);
+        if (!ctx) return;
+        ctx.timeline?.record({
             sessionId,
             type: `session:${to}`,
             payload: { from, to },

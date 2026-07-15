@@ -69,7 +69,7 @@ const MOCK_AGENTS: AgentEntry[] = [
         name: 'Strategist',
         role: 'Strategic Planning',
         status: 'ready',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.1-flash-lite',
         providerId: 'Gemini',
         temperature: 0.5,
         tools: ['web_search', 'code_exec', 'data_analysis'],

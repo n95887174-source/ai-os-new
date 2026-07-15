@@ -113,7 +113,7 @@ export class AdapterFactory {
                 adapter = new OpenAiCompatibleAdapter(
                     'groq',
                     'https://api.groq.com/openai/v1',
-                    true,
+                    false, // bypass Vite proxy — Groq supports direct browser CORS
                 );
                 break;
             case 'openai':

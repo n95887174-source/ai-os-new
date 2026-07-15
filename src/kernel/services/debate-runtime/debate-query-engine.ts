@@ -19,7 +19,7 @@ const NON_CHAT_PREFIXES = [
 const NON_CHAT_PATTERNS = [/^gpt-3\.5-turbo-instruct/, /^text-davinci/, /^code-davinci/];
 
 export const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-    gemini: ['gemini-2.0-flash', 'gemini-2.5-flash'],
+    gemini: ['gemini-3.1-flash-lite', 'gemini-3.5-flash'],
     groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
     openrouter: [PROVIDER_DEFAULT_MODELS.openrouter, 'openrouter/free'],
     nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
@@ -52,8 +52,17 @@ export function getAllModelsForProvider(key: {
 
 export function isModelCompatibleWithProvider(model: string, provider: string): boolean {
     const p = provider.toLowerCase();
+    // Prefix-guarded providers: model MUST use the correct prefix or be bare
     if (p === 'openrouter' && !model.startsWith('openrouter/')) return false;
     if (p === 'nvidia' && !model.startsWith('meta/')) return false;
+    // Bare model format: reject provider-prefixed model strings sent to native providers
+    if (model.startsWith('gemini/')) return p === 'gemini';
+    if (model.startsWith('openai/')) return p === 'openai' || p === 'openrouter';
+    if (model.startsWith('anthropic/')) return false; // not supported in debates
+    if (model.startsWith('groq/')) return p === 'groq';
+    if (model.startsWith('mistral/')) return p === 'mistral';
+    if (model.startsWith('cohere/')) return p === 'cohere';
+    if (model.startsWith('deepseek/')) return p === 'deepseek';
     return true;
 }
 
@@ -241,6 +250,32 @@ export class DebateProviderResolver {
                         k.status === 'active' &&
                         !this.isKeyAuthFailed(k.id),
                 );
+            }
+        }
+
+        if (!resolvedKey) {
+            // CRITICAL: If participant specifies a modelId, find a provider that supports it
+            // BEFORE falling back to getDebateProviders (which prioritizes Groq and would
+            // incorrectly route e.g. "gemini-3.1-flash-lite" to the Groq adapter → 404 model_not_found.
+            if (participant.modelId && participant.modelId !== 'auto') {
+                const allKeys = keyService.getKeys();
+                const modelKey = allKeys.find((k) => {
+                    if (!this.providerCanBeUsed(k.provider, session)) return false;
+                    if (k.status !== 'active') return false;
+                    if (this.isKeyAuthFailed(k.id)) return false;
+                    // Check if this provider can handle the requested model
+                    if (isModelCompatibleWithProvider(participant.modelId!, k.provider)) {
+                        const avail = k.availableModels ?? [];
+                        if (avail.length === 0 || avail.includes(participant.modelId!)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+                if (modelKey) {
+                    this.participantProviderMap.set(pKey, modelKey.provider);
+                    resolvedKey = modelKey;
+                }
             }
         }
 
