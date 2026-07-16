@@ -208,6 +208,7 @@ export class GoogleGenAIService {
                 groundingMetadata,
             };
         } catch (e) {
+            if (e instanceof DOMException && e.name === 'AbortError') throw e;
             const latency = Date.now() - start;
             const errMsg = e instanceof Error ? e.message : String(e);
             LOGGER.error('GoogleGenAI', 'generateContent failed', { error: errMsg });
@@ -263,6 +264,7 @@ export class GoogleGenAIService {
                 groundingMetadata,
             };
         } catch (e) {
+            if (e instanceof DOMException && e.name === 'AbortError') throw e;
             const latency = Date.now() - start;
             const errMsg = e instanceof Error ? e.message : String(e);
             LOGGER.error('GoogleGenAI', 'streamContent failed', { error: errMsg });

@@ -100,28 +100,28 @@ export class MetricsService {
     destroy() {
         this._initialized = false;
         this.unsubs.forEach((u) => u());
+        this.unsubs = [];
         if (this.captureInterval) {
             clearInterval(this.captureInterval);
+            this.captureInterval = null;
         }
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
         }
+        this.recentLatencies.clear();
+        this.throughput.clear();
     }
 
     private startCleanup() {
         this.cleanupInterval = setInterval(() => {
             const cutoff = Date.now() - this.ALERT_RETENTION_MS;
             this.alerts = this.alerts.filter((a) => !a.resolved || a.timestamp > cutoff);
-            // Prune agent maps for entries not updated in the last hour
+            // Prune agent maps — evict entries not updated in the last hour
             const agentCutoff = Date.now() - 60 * 60 * 1000;
-            for (const [agentId] of this.recentLatencies) {
-                const buf = this.recentLatencies.get(agentId);
-                if (!buf || buf.length === 0) {
-                    this.recentLatencies.delete(agentId);
-                }
-            }
             for (const [agentId, entry] of this.throughput) {
-                if (entry.windowStart < agentCutoff && entry.count === 0) {
+                if (entry.windowStart < agentCutoff) {
+                    this.recentLatencies.delete(agentId);
                     this.throughput.delete(agentId);
                 }
             }
