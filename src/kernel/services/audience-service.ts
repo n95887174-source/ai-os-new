@@ -118,6 +118,9 @@ function classifyArgument(text: string): string[] {
 }
 
 export class AudienceService implements IAudienceService {
+    private readonly MAX_MEMBERS = 100;
+    private readonly MAX_REACTIONS = 500;
+    private readonly MAX_MESSAGES = 200;
     private members: AudienceMember[] = [];
     private reactions: AudienceReactionEvent[] = [];
     private messages: AudienceSideChatMessage[] = [];
@@ -160,7 +163,8 @@ export class AudienceService implements IAudienceService {
         this.totalEngagement = 0;
 
         const shuffled = [...AUDIENCE_ARCHETYPES].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < size; i++) {
+        const actualSize = Math.min(size, this.MAX_MEMBERS);
+        for (let i = 0; i < actualSize; i++) {
             const arch = shuffled[i % shuffled.length];
             const id = `audience-${++_counter}`;
             const nameSuffix =
@@ -290,6 +294,8 @@ export class AudienceService implements IAudienceService {
                 timestamp: Date.now(),
             };
             this.reactions.push(event);
+            if (this.reactions.length > this.MAX_REACTIONS)
+                this.reactions = this.reactions.slice(-this.MAX_REACTIONS);
             m.currentReaction = reaction;
             if (this.memberTimers.has(m.id)) clearTimeout(this.memberTimers.get(m.id)!);
             this.memberTimers.set(
@@ -317,6 +323,8 @@ export class AudienceService implements IAudienceService {
             sentiment: text.includes('!') || text.includes('??') ? 'sarcastic' : 'neutral',
         };
         this.messages.push(msg);
+        if (this.messages.length > this.MAX_MESSAGES)
+            this.messages = this.messages.slice(-this.MAX_MESSAGES);
         member.message = text;
         setTimeout(() => {
             member.message = null;

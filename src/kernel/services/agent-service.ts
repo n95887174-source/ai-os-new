@@ -64,6 +64,8 @@ const STATS_KEY = 'super_agents_agent_stats';
 const GROUPS_KEY = 'super_agents_agent_groups';
 
 export class AgentService {
+    private readonly MAX_AGENT_STATS = 500;
+    private readonly MAX_CLONE_IDS = 200;
     private deps: AgentServiceDeps;
     private stats: Map<string, AgentStats> = new Map();
     private groups: AgentGroup[] = [];
@@ -129,6 +131,7 @@ export class AgentService {
             if (parsed) {
                 for (const [nodeId, s] of Object.entries(parsed)) {
                     this.stats.set(nodeId, s);
+                    this._trimStats();
                 }
             }
         } catch (e) {
@@ -197,6 +200,7 @@ export class AgentService {
                     lastActive: Date.now(),
                     estimatedCost: cur.estimatedCost + cost,
                 });
+                this._trimStats();
                 this.persist();
             }),
             this.deps.eventBus.onSafe<{
@@ -230,6 +234,7 @@ export class AgentService {
                 );
                 cur.lastActive = Date.now();
                 this.stats.set(statsKey, cur);
+                this._trimStats();
                 this.persist();
             }),
             this.deps.eventBus.onSafe<{
@@ -243,6 +248,24 @@ export class AgentService {
                 if (this.autoSpawnConfig.enabled) this.evaluateAutoSpawn();
             }),
         );
+    }
+
+    private _trimStats(): void {
+        while (this.stats.size > this.MAX_AGENT_STATS) {
+            const key = this.stats.keys().next().value;
+            if (key !== undefined) this.stats.delete(key as string);
+            else break;
+        }
+    }
+
+    private _trimCloneIds(): void {
+        if (this.autoCloneIds.size > this.MAX_CLONE_IDS) {
+            const toDelete = [...this.autoCloneIds].slice(
+                0,
+                this.autoCloneIds.size - this.MAX_CLONE_IDS,
+            );
+            for (const id of toDelete) this.autoCloneIds.delete(id);
+        }
     }
 
     private emptyStats(): AgentStats {
@@ -405,6 +428,7 @@ export class AgentService {
         const current = this.lifecycleStates.get(agentId) || 'ready';
         this.transitionLifecycle(agentId, current, 'initializing');
         this.stats.set(agentId, this.emptyStats());
+        this._trimStats();
         this.deps.orchestrator.setNodeDisabled(agentId, false);
         await new Promise<void>((resolve, reject) => {
             const timer = setTimeout(resolve, 500);
@@ -484,6 +508,7 @@ export class AgentService {
 
     resetStats(nodeId: string) {
         this.stats.set(nodeId, this.emptyStats());
+        this._trimStats();
         this.persist();
     }
 
@@ -551,7 +576,10 @@ export class AgentService {
                     undefined,
                     structuredClone(sourceAgent.config),
                 );
-                if (newId) this.autoCloneIds.add(newId);
+                if (newId) {
+                    this.autoCloneIds.add(newId);
+                    this._trimCloneIds();
+                }
             }
         }
 

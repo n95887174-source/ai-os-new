@@ -70,12 +70,22 @@ export class OrchestrationService {
         nodeStats: {},
     };
     private queue: ExecutionQueue;
+    private readonly MAX_RATE_MAP_SIZE = 200;
+    private readonly MAX_LIFECYCLE_STATES = 500;
     private rateLimitTimestamps: Map<string, number[]> = new Map();
     private rateLimitTokenRecords: Map<string, Array<{ timestamp: number; value: number }>> =
         new Map();
     private rateLimitCostRecords: Map<string, Array<{ timestamp: number; value: number }>> =
         new Map();
     private lifecycleStates: Map<string, AgentLifecycleState> = new Map();
+
+    private _trimMap<K, V>(map: Map<K, V>, max: number): void {
+        while (map.size > max) {
+            const key = map.keys().next().value;
+            if (key !== undefined) map.delete(key as K);
+            else break;
+        }
+    }
 
     constructor(deps: OrchestrationServiceDeps) {
         this.deps = deps;
@@ -111,6 +121,7 @@ export class OrchestrationService {
         else this.disabledNodes.delete(nodeId);
         const lifecycle: AgentLifecycleState = disabled ? 'paused' : 'ready';
         this.lifecycleStates.set(nodeId, lifecycle);
+        this._trimMap(this.lifecycleStates, this.MAX_LIFECYCLE_STATES);
         if (this.activeTopology) {
             this.activeTopology = {
                 ...this.activeTopology,
@@ -157,6 +168,7 @@ export class OrchestrationService {
                 const lifecycle =
                     node.lifecycle || (this.disabledNodes.has(node.id) ? 'paused' : 'ready');
                 this.lifecycleStates.set(node.id, lifecycle);
+                this._trimMap(this.lifecycleStates, this.MAX_LIFECYCLE_STATES);
                 node.lifecycle = lifecycle;
             }
         }
@@ -584,6 +596,7 @@ export class OrchestrationService {
             return false;
         });
         this.rateLimitTimestamps.set(node.id, recent);
+        this._trimMap(this.rateLimitTimestamps, this.MAX_RATE_MAP_SIZE);
         const callsLastMin = recent.filter((t) => now - t < 60000).length;
         const callsLastHour = recent.filter((t) => now - t < 3600000).length;
         if (rl.maxCallsPerMinute && callsLastMin >= rl.maxCallsPerMinute) return true;
@@ -604,6 +617,7 @@ export class OrchestrationService {
         const timestamps = this.rateLimitTimestamps.get(node.id) || [];
         timestamps.push(now);
         this.rateLimitTimestamps.set(node.id, timestamps);
+        this._trimMap(this.rateLimitTimestamps, this.MAX_RATE_MAP_SIZE);
         if (rl.maxTokensPerDay) {
             const current = this.rateLimitTokenRecords.get(node.id) || [];
             current.push({ timestamp: now, value: estimateTokens(output) });
@@ -611,6 +625,7 @@ export class OrchestrationService {
                 node.id,
                 current.filter((r) => now - r.timestamp < 86400000),
             );
+            this._trimMap(this.rateLimitTokenRecords, this.MAX_RATE_MAP_SIZE);
         }
         if (rl.maxCostPerDay) {
             const current = this.rateLimitCostRecords.get(node.id) || [];
@@ -620,6 +635,7 @@ export class OrchestrationService {
                 node.id,
                 current.filter((r) => now - r.timestamp < 86400000),
             );
+            this._trimMap(this.rateLimitCostRecords, this.MAX_RATE_MAP_SIZE);
         }
     }
 
@@ -632,6 +648,7 @@ export class OrchestrationService {
         const from = this.lifecycleStates.get(node.id) || node.lifecycle || 'ready';
         if (from === to) return;
         this.lifecycleStates.set(node.id, to);
+        this._trimMap(this.lifecycleStates, this.MAX_LIFECYCLE_STATES);
         if (this.activeTopology) {
             this.activeTopology = {
                 ...this.activeTopology,

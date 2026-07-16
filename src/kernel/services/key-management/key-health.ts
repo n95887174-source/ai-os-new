@@ -20,6 +20,8 @@ export interface KeyHealthDeps {
 }
 
 export class KeyHealth implements IHealthCheckService {
+    private readonly MAX_HEALTH_KEYS = 200;
+
     destroy(): void {
         this.rateLimitHistory.clear();
         this.retryCounts.clear();
@@ -34,6 +36,24 @@ export class KeyHealth implements IHealthCheckService {
     private backoffMap = new Map<string, number>();
     private backoffDuration = new Map<string, number>();
     private backoffStartedAt = new Map<string, number>();
+
+    private _trimHealthMaps(): void {
+        const allMaps = [
+            this.rateLimitHistory,
+            this.retryCounts,
+            this.backoffMap,
+            this.backoffDuration,
+            this.backoffStartedAt,
+            this._healthCache,
+        ];
+        for (const map of allMaps) {
+            while (map.size > this.MAX_HEALTH_KEYS) {
+                const key = map.keys().next().value;
+                if (key !== undefined) map.delete(key as string);
+                else break;
+            }
+        }
+    }
 
     constructor(private deps: KeyHealthDeps) {}
 
@@ -73,6 +93,7 @@ export class KeyHealth implements IHealthCheckService {
         const timestamps = (this.rateLimitHistory.get(keyId) || []).filter((t) => t > window);
         timestamps.push(now);
         this.rateLimitHistory.set(keyId, timestamps);
+        this._trimHealthMaps();
         if (timestamps.length >= CONFIG.keys.rateLimitSpikeThreshold) {
             this.deps.addAlert(keyId, {
                 type: 'quota_exceeded',
@@ -88,6 +109,7 @@ export class KeyHealth implements IHealthCheckService {
         this.backoffMap.set(keyId, next);
         this.backoffDuration.set(keyId, current);
         this.backoffStartedAt.set(keyId, Date.now());
+        this._trimHealthMaps();
         return current;
     }
 
@@ -153,6 +175,7 @@ export class KeyHealth implements IHealthCheckService {
         } catch (e) {
             const latency = performance.now() - start;
             this._healthCache.set(keyId, Date.now());
+            this._trimHealthMaps();
             this.deps.modifyKey(keyId, (key) => {
                 if ((key.statusVersion ?? 0) === versionAtStart) {
                     key.status = 'error' as ApiKey['status'];
@@ -178,6 +201,7 @@ export class KeyHealth implements IHealthCheckService {
             this._healthCache.delete(keyId); // HIGH-K1: clear failure cache on success
         } else {
             this._healthCache.set(keyId, Date.now());
+            this._trimHealthMaps();
         }
 
         const newStatus = protectedStatuses.has(keyRef.status)
