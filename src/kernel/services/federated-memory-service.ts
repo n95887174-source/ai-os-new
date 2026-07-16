@@ -25,6 +25,10 @@ export interface FederatedMemoryServiceDeps {
  * Replace with real WebRTC/WebSocket sync before production use.
  */
 export class FederatedMemoryService implements IFederatedMemoryService {
+    destroy(): void {
+        /* no-op — all resources are method-scoped */
+    }
+
     private config: FederationConfig;
     private nodes: FederatedNode[] = [];
     private syncHistory: SyncSession[] = [];

@@ -11,6 +11,10 @@ const genAttachId = () => crypto.randomUUID();
 const MAX_SESSIONS = 50;
 
 export class VoiceInputService implements IVoiceInputService {
+    destroy(): void {
+        /* no-op — all resources are method-scoped */
+    }
+
     private sessions: VoiceInputSession[] = [];
     private attachments: MultimodalAttachment[] = [
         {

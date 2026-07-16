@@ -30,6 +30,10 @@ export interface RaceResult {
 }
 
 export class RaceExecutor {
+    destroy(): void {
+        /* no-op — all resources are method-scoped */
+    }
+
     constructor(private adapterRegistry: IAdapterRegistry) {}
 
     async race(

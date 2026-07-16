@@ -21,6 +21,10 @@ export class SleepEngine {
         this.pollIdle();
     }
 
+    destroy(): void {
+        this.stop();
+    }
+
     stop(): void {
         this.running = false;
         if (this.nightlyTimer) clearTimeout(this.nightlyTimer);

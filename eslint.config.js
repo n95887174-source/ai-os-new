@@ -4,6 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 import { defineConfig, globalIgnores } from 'eslint/config';
+import { mandatoryLifecycleRule } from './eslint/rule-mandatory-lifecycle.mjs';
 
 export default defineConfig([
     globalIgnores(['dist', 'audit', 'docs', 'e2e', 'coverage', 'prompt-vault']),
@@ -75,6 +76,19 @@ export default defineConfig([
                     ],
                 },
             ],
+        },
+    },
+    {
+        files: ['src/kernel/services/**/*.ts'],
+        plugins: {
+            'kernel-lifecycle': {
+                rules: {
+                    'mandatory-lifecycle': mandatoryLifecycleRule,
+                },
+            },
+        },
+        rules: {
+            'kernel-lifecycle/mandatory-lifecycle': 'error',
         },
     },
     {

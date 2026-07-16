@@ -332,6 +332,10 @@ function analyzeFailures(items: ConsistencyCheckItem[]): {
 }
 
 export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHealingPipeline {
+    destroy(): void {
+        /* no-op — all resources are method-scoped */
+    }
+
     private lastReport: ConsistencyReport | null = null;
     private healingPlan: HealingPlan | null = null;
     private manifest: CodeManifest;

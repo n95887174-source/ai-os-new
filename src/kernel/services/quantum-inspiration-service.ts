@@ -144,7 +144,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
 
         // Initialize multiple parallel solutions
         const numParticles = 10;
-        let particles: Record<string, number>[] = [];
+        const particles: Record<string, number>[] = [];
         for (let i = 0; i < numParticles; i++) {
             const p: Record<string, number> = {};
             for (const name of varNames) {

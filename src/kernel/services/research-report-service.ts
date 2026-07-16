@@ -6,6 +6,10 @@ import type {
 } from '../contracts/research-report';
 
 export class ResearchReportService implements IResearchReportService {
+    destroy(): void {
+        /* no-op — all resources are method-scoped */
+    }
+
     private reports: ResearchReport[] = [];
 
     constructor(private researchEngine: IResearchEngine) {}

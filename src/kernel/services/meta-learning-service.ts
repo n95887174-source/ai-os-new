@@ -161,6 +161,13 @@ export class MetaLearningService implements IMetaLearningService {
         this.patterns = patterns;
     }
 
+    destroy(): void {
+        if (this._analyzeTimer) {
+            clearTimeout(this._analyzeTimer);
+            this._analyzeTimer = null;
+        }
+    }
+
     private scheduleAnalysis(): void {
         if (this._analyzeTimer) return;
         this._analyzeTimer = setTimeout(() => {

@@ -20,6 +20,10 @@ interface LifecycleEntry {
 }
 
 export class LifecycleManager {
+    destroy(): void {
+        /* no-op — shutdown() handles lifecycle teardown */
+    }
+
     private entries: LifecycleEntry[] = [];
     private statuses: InitStatus[] = [];
     private _initializing = false;

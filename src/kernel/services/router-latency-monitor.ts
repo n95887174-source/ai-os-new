@@ -105,6 +105,10 @@ export class RouterLatencyMonitor {
         return this.deps.kernel.getState().providers[key]?.avgTTFT || 0;
     }
 
+    destroy(): void {
+        this.stopMonitoring();
+    }
+
     stopMonitoring(): void {
         if (this.latencyUnsub) {
             this.latencyUnsub();

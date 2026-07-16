@@ -55,6 +55,10 @@ export class EventBridge {
         this.preStartBuffer = [];
     }
 
+    destroy(): void {
+        this.stop();
+    }
+
     stop(): void {
         this.unsub?.();
         this.started = false;

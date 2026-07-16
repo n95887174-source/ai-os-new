@@ -266,7 +266,7 @@ export class AudienceService implements IAudienceService {
     vote(memberId: string, option: string): boolean {
         const member = this.members.find((m) => m.id === memberId);
         if (!member || !this.activePoll || this.activePoll.closed || member.hasVoted) return false;
-        if (!this.activePoll.votes.hasOwnProperty(option)) return false;
+        if (!Object.prototype.hasOwnProperty.call(this.activePoll.votes, option)) return false;
         member.hasVoted = true;
         this.activePoll.votes[option] = (this.activePoll.votes[option] || 0) + 1;
         this.activePoll.totalVotes++;
