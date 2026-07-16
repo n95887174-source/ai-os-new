@@ -203,10 +203,9 @@ export class FederatedMemoryService implements IFederatedMemoryService {
             startedAt: Date.now(),
         };
 
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT);
         try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT);
-
             const response = await fetch(node.endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -237,6 +236,7 @@ export class FederatedMemoryService implements IFederatedMemoryService {
             node.totalMemories = Math.max(node.totalMemories, node.syncedMemories);
             node.lastSync = Date.now();
         } catch (e) {
+            clearTimeout(timer);
             const msg = e instanceof Error ? e.message : String(e);
             LOGGER.warn('syncNode', `Sync failed for ${nodeId}`, { error: msg });
             session.status = 'failed';

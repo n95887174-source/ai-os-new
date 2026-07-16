@@ -265,22 +265,12 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                             }
 
                             if (!earlyExit && ROUND_DELAY_MS > 0) {
-                                const acMap = engine.sessionAbortControllers.get(sessionId);
-                                const anySignal = acMap?.values().next().value?.signal;
-                                await new Promise<void>((resolve, reject) => {
-                                    const timer = setTimeout(resolve, ROUND_DELAY_MS);
-                                    const onAbort2 = () => {
-                                        clearTimeout(timer);
-                                        reject(new Error('Debate cancelled during round delay'));
-                                    };
-                                    if (anySignal)
-                                        anySignal.addEventListener('abort', onAbort2, {
-                                            once: true,
-                                        });
-                                }).catch(() => {
+                                await new Promise<void>((resolve) =>
+                                    setTimeout(resolve, ROUND_DELAY_MS),
+                                );
+                                if (session.phase === 'cancelled' || session.phase === 'failed') {
                                     earlyExit = true;
-                                    return;
-                                });
+                                }
                             }
 
                             if (engine.deps.policyEngine && !earlyExit) {

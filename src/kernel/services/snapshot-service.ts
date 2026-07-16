@@ -369,6 +369,7 @@ export class SnapshotService {
             differences,
         };
         this.diffs.push(diff);
+        if (this.diffs.length > 100) this.diffs = this.diffs.slice(-100);
         void this.scheduleSave();
         return diff;
     }

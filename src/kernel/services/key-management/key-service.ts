@@ -395,6 +395,7 @@ export class KeyService implements IKeyRotationManager {
         this.unsubs = [];
         this.registry.destroy();
         this.lifecycle.destroy();
+        this.poolSelector.destroy();
     }
 
     async reload(): Promise<void> {
