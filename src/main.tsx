@@ -13,10 +13,8 @@ import { EVENTS } from './kernel/events/event-names';
 
 // Global unhandled rejection handler — catches ONLY errors that somehow bypass
 // both the runtime.start() try/catch and all service-level error handlers.
-window.addEventListener('unhandledrejection', (event) => {
-    // Only log if not already handled by a local try/catch (runtime.start wraps
-    // its await, so any rejection there is already caught). This guard prevents
-    // duplicate processing of the boot error.
+// Stored in variable so HMR dispose() can remove it.
+const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
     if (event.defaultPrevented) return;
     console.error('[UnhandledRejection]', event.reason);
     eventBus.emit(EVENTS.NOTIFICATION, {
@@ -24,12 +22,14 @@ window.addEventListener('unhandledrejection', (event) => {
         type: 'error',
     });
     event.preventDefault();
-});
+};
+window.addEventListener('unhandledrejection', unhandledRejectionHandler);
 
 // Memory monitor — logs every 30 seconds (DEV only)
+let memTimer: ReturnType<typeof setInterval> | undefined;
 if (import.meta.env.DEV && typeof window !== 'undefined') {
     let memCount = 0;
-    const memTimer = setInterval(() => {
+    memTimer = setInterval(() => {
         const mem = (
             performance as unknown as {
                 memory?: { usedJSHeapSize: number; totalJSHeapSize: number };
@@ -126,6 +126,8 @@ root.render(
 
 if (import.meta.hot) {
     import.meta.hot.dispose(() => {
+        window.removeEventListener('unhandledrejection', unhandledRejectionHandler);
+        if (memTimer !== undefined) clearInterval(memTimer);
         (window as unknown as { __cleanupKeyStore?: () => void }).__cleanupKeyStore?.();
         runtime.shutdown();
     });
