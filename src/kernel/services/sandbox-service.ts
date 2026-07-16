@@ -67,7 +67,10 @@ export class SandboxService {
         try {
             const res = await fetch(url, { signal: controller.signal });
             clearTimeout(timer);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
+                throw new Error(`HTTP ${res.status}`);
+            }
             return await res.text();
         } catch (e) {
             clearTimeout(timer);
@@ -80,8 +83,10 @@ export class SandboxService {
                     signal: proxyController.signal,
                 });
                 clearTimeout(proxyTimer);
-                if (!proxyRes.ok)
+                if (!proxyRes.ok) {
+                    proxyRes.body?.cancel()?.catch(() => {});
                     throw new Error(`Proxy returned HTTP ${proxyRes.status}`, { cause: e });
+                }
                 const text = await proxyRes.text();
                 try {
                     const err = safeJsonParse(text) as Record<string, unknown> | undefined;

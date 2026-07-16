@@ -45,7 +45,9 @@ const ConnectorsPanel: React.FC = () => {
                 const allConns = (await databaseService.getAllConnectors()) as Connector[];
                 if (allConns.length === 0) {
                     try {
-                        const res = await fetch('/connectors-defaults.json');
+                        const res = await fetch('/connectors-defaults.json', {
+                            signal: AbortSignal.timeout(10000),
+                        });
                         if (res.ok) {
                             const parsed: Connector[] = safeJsonParse(await res.text()) ?? [];
                             if (Array.isArray(parsed) && parsed.length) {
@@ -53,6 +55,8 @@ const ConnectorsPanel: React.FC = () => {
                                 setConnectors(parsed);
                                 return;
                             }
+                        } else {
+                            res.body?.cancel()?.catch(() => {});
                         }
                     } catch {
                         /* ignore */

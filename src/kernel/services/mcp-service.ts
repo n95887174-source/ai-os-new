@@ -165,7 +165,10 @@ export class MCPService {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        if (!response.ok) throw new Error(`MCP ${server.name} returned ${response.status}`);
+        if (!response.ok) {
+            response.body?.cancel()?.catch(() => {});
+            throw new Error(`MCP ${server.name} returned ${response.status}`);
+        }
         const data: JSONRPCResponse = await response.json();
         if (data.error) throw new Error(`MCP ${server.name} error: ${data.error.message}`);
         return data.result;

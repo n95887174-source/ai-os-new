@@ -410,8 +410,12 @@ export class GoogleGenAIService {
         try {
             const res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
                 headers: { 'x-goog-api-key': apiKey },
+                signal: AbortSignal.timeout(10000),
             });
-            if (!res.ok) return ['gemini-3.5-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'];
+            if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
+                return ['gemini-3.5-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'];
+            }
             const data = (await res.json()) as { models?: Array<{ name: string }> };
             if (data.models) {
                 return data.models

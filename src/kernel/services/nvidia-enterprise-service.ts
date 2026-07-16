@@ -195,6 +195,7 @@ export class NvidiaEnterpriseService implements INvidiaEnterpriseService {
                 signal: AbortSignal.timeout(10000),
             });
             if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
                 this.connectionStatus = {
                     connected: false,
                     error: `NGC API error: ${res.status} ${res.statusText}`,
@@ -235,7 +236,9 @@ export class NvidiaEnterpriseService implements INvidiaEnterpriseService {
                     signal: AbortSignal.timeout(10000),
                 }),
             ]);
-            if (entRes.status === 'fulfilled' && entRes.value.ok) {
+            if (entRes.status === 'fulfilled' && !entRes.value.ok) {
+                entRes.value.body?.cancel()?.catch(() => {});
+            } else if (entRes.status === 'fulfilled' && entRes.value.ok) {
                 const entData = (await entRes.value.json()) as Record<string, unknown>;
                 const entitlements = (entData.entitlements as Array<Record<string, unknown>>) ?? [];
                 this.cachedNgcOrg.features = entitlements.map(
@@ -248,7 +251,9 @@ export class NvidiaEnterpriseService implements INvidiaEnterpriseService {
                     }),
                 );
             }
-            if (regionRes.status === 'fulfilled' && regionRes.value.ok) {
+            if (regionRes.status === 'fulfilled' && !regionRes.value.ok) {
+                regionRes.value.body?.cancel()?.catch(() => {});
+            } else if (regionRes.status === 'fulfilled' && regionRes.value.ok) {
                 const regionData = (await regionRes.value.json()) as Record<string, unknown>;
                 const regions = (regionData.regions as Array<Record<string, unknown>>) ?? [];
                 this.cachedNgcOrg.regions = regions.map(

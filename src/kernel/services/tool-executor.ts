@@ -528,6 +528,7 @@ export class ToolService {
         try {
             const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
             if (!response.ok) {
+                response.body?.cancel()?.catch(() => {});
                 throw toolError(
                     toolId,
                     `Web fetch returned ${response.status} for ${url}`,
@@ -586,6 +587,7 @@ export class ToolService {
             try {
                 const proxyRes = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeoutMs) });
                 if (!proxyRes.ok) {
+                    proxyRes.body?.cancel()?.catch(() => {});
                     throw toolError(
                         toolId,
                         `Proxy fetch returned ${proxyRes.status} for ${url}`,

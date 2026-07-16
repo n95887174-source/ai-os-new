@@ -43,6 +43,7 @@ export class GeminiCacheService implements IGeminiCacheService {
                         contents: [{ role: 'user', parts: [{ text: content.systemPrompt }] }],
                         displayName: cached.displayName,
                     }),
+                    signal: AbortSignal.timeout(10000),
                 });
                 if (res.ok) {
                     const data = (await res.json()) as { name?: string };
@@ -50,6 +51,8 @@ export class GeminiCacheService implements IGeminiCacheService {
                         cached.id = data.name;
                         cached.name = data.name;
                     }
+                } else {
+                    res.body?.cancel()?.catch(() => {});
                 }
             } catch (e) {
                 console.warn('[GeminiCache] create failed:', e);
@@ -68,8 +71,12 @@ export class GeminiCacheService implements IGeminiCacheService {
         try {
             const res = await fetch(`${GEMINI_API_BASE}/cachedContents`, {
                 headers: { 'x-goog-api-key': apiKey },
+                signal: AbortSignal.timeout(10000),
             });
-            if (!res.ok) return;
+            if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
+                return;
+            }
             const data = (await res.json()) as {
                 cachedContents?: Array<{
                     name: string;
@@ -115,6 +122,7 @@ export class GeminiCacheService implements IGeminiCacheService {
                     await fetch(`${GEMINI_API_BASE}/${id}`, {
                         method: 'DELETE',
                         headers: { 'x-goog-api-key': apiKey },
+                        signal: AbortSignal.timeout(10000),
                     });
                 } catch (e) {
                     console.warn('[GeminiCache] delete remote failed:', e);
@@ -127,8 +135,13 @@ export class GeminiCacheService implements IGeminiCacheService {
         const apiKey = await this.#getApiKey();
         if (!apiKey) return [];
         try {
-            const res = await fetch(`${GEMINI_API_BASE}/models?key=${apiKey}&pageSize=50`);
-            if (!res.ok) return [];
+            const res = await fetch(`${GEMINI_API_BASE}/models?key=${apiKey}&pageSize=50`, {
+                signal: AbortSignal.timeout(10000),
+            });
+            if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
+                return [];
+            }
             const data = (await res.json()) as {
                 models?: Array<{
                     name: string;

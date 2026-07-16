@@ -53,7 +53,11 @@ async function safeFetch(
         const res = await fetch(url, { signal: combined, keepalive: true, headers });
         cleanup();
         clearTimeout(timer);
-        return res.ok ? res : null;
+        if (!res.ok) {
+            res.body?.cancel()?.catch(() => {});
+            return null;
+        }
+        return res;
     } catch {
         clearTimeout(timer);
         return null;
@@ -434,7 +438,10 @@ class SemanticScholarAdapter implements ISourceAdapter {
             );
             cleanup();
             clearTimeout(timer);
-            if (!res.ok) return [];
+            if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
+                return [];
+            }
             const data = asObj(await res.json());
             const papers = asArr(data.data);
             return papers.map((p) =>
@@ -643,7 +650,10 @@ class COREAdapter implements ISourceAdapter {
             );
             cleanup();
             clearTimeout(timer);
-            if (!res.ok) return [];
+            if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
+                return [];
+            }
             const data = asObj(await res.json());
             const results = asArr(data.results);
             return results.map((r) =>
@@ -1013,7 +1023,10 @@ class GitHubAdapter implements ISourceAdapter {
             );
             cleanup();
             clearTimeout(timer);
-            if (!res.ok) return [];
+            if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
+                return [];
+            }
             const data = asObj(await res.json());
             const items = asArr(data.items);
             return items.map((r: Record<string, unknown>) => {

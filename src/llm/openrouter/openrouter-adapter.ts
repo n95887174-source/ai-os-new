@@ -293,6 +293,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             });
             if (!res.ok) {
                 console.warn(`[OpenRouter] rotateKey returned ${res.status}`);
+                res.body?.cancel()?.catch(() => {});
                 return null;
             }
             const data = (await res.json()) as { key?: string; data?: { key?: string } };

@@ -49,6 +49,7 @@ export class KeyDiagnostics {
                     result['limit'] = data.data?.limit ?? 'unknown';
                     result['key_label'] = data.data?.key ?? 'unknown';
                 } else {
+                    res.body?.cancel()?.catch(() => {});
                     result['error'] = `HTTP ${res.status}: ${res.statusText}`;
                 }
             } else if (p === 'openai') {
@@ -70,6 +71,7 @@ export class KeyDiagnostics {
                     result['total_used'] = data.total_used ?? 'unknown';
                     result['total_available'] = data.total_available ?? 'unknown';
                 } else {
+                    res.body?.cancel()?.catch(() => {});
                     result['error'] = `HTTP ${res.status}: ${res.statusText}`;
                 }
             } else if (p === 'groq') {
@@ -94,6 +96,7 @@ export class KeyDiagnostics {
                     result['available_models'] = activeModels.length;
                     result['total_models'] = allModels.length;
                 } else {
+                    res.body?.cancel()?.catch(() => {});
                     result['error'] = `HTTP ${res.status}: ${res.statusText}`;
                 }
             } else if (p === 'nvidia' || p === 'nvidia-nim') {
@@ -114,6 +117,7 @@ export class KeyDiagnostics {
                     const models = (data.data as Array<{ id: string }> | undefined) ?? [];
                     result['available_models'] = models.length;
                 } else {
+                    res.body?.cancel()?.catch(() => {});
                     result['error'] = `HTTP ${res.status}: ${res.statusText}`;
                 }
             } else if (p === 'gemini') {
@@ -140,6 +144,7 @@ export class KeyDiagnostics {
                         m.supportedGenerationMethods?.includes('generateContent'),
                     );
                 } else {
+                    res.body?.cancel()?.catch(() => {});
                     result['note'] =
                         'Gemini tier info not available via API; check Google AI Studio dashboard.';
                     result['models_check'] = `HTTP ${res.status}`;

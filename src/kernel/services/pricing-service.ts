@@ -246,7 +246,10 @@ export class PricingService implements ICostCalculator {
                 } finally {
                     clearTimeout(timeout);
                 }
-                if (!res.ok) return;
+                if (!res.ok) {
+                    res.body?.cancel()?.catch(() => {});
+                    return;
+                }
                 const body = await res.json();
                 const models: { id: string; pricing: { prompt: string; completion: string } }[] =
                     body?.data || [];

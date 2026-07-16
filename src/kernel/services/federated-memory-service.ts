@@ -219,6 +219,7 @@ export class FederatedMemoryService implements IFederatedMemoryService {
             clearTimeout(timer);
 
             if (!response.ok) {
+                response.body?.cancel()?.catch(() => {});
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
