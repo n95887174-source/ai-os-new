@@ -6,6 +6,7 @@ import { FactCheckService } from '../fact-check-service';
 import { DebateGovernor } from './debate-governor';
 
 const LOGGER = rootLogger.child('DebatePostProcessor');
+const MAX_PROCESSED_IDS = 5000;
 
 // ── Socratic Quality Gate ──────────────────────────────────────────────
 const TRIVIAL_QUESTION_PATTERNS = [
@@ -140,6 +141,10 @@ export class DebatePostProcessor {
             if (this.processedArgIds.has(arg.id)) continue;
             if (arg.duplicateOf) continue;
             this.processedArgIds.add(arg.id);
+            if (this.processedArgIds.size > MAX_PROCESSED_IDS) {
+                const first = this.processedArgIds.values().next().value;
+                if (first !== undefined) this.processedArgIds.delete(first);
+            }
             governor.ingestArgument(
                 arg.content,
                 arg.id,
@@ -160,6 +165,10 @@ export class DebatePostProcessor {
         for (const arg of newArgs) {
             if (this.processedArgIds.has(arg.id)) continue;
             this.processedArgIds.add(arg.id);
+            if (this.processedArgIds.size > MAX_PROCESSED_IDS) {
+                const first = this.processedArgIds.values().next().value;
+                if (first !== undefined) this.processedArgIds.delete(first);
+            }
             void this.factCheckService
                 .checkArgument(arg)
                 .catch((e) =>

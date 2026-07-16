@@ -15,6 +15,8 @@ export interface DebateKnowledgeSyncDeps {
     memoryService: MemoryService;
 }
 
+const MAX_SYNCED_SESSIONS = 500;
+
 export class DebateKnowledgeSyncService {
     private synced = new Set<string>();
     private unsubs: Array<() => void> = [];
@@ -39,6 +41,10 @@ export class DebateKnowledgeSyncService {
     async syncSession(session: DebateSession): Promise<{ claims: number; openQuestions: number }> {
         if (this.synced.has(session.id)) return { claims: 0, openQuestions: 0 };
         this.synced.add(session.id);
+        if (this.synced.size > MAX_SYNCED_SESSIONS) {
+            const first = this.synced.values().next().value;
+            if (first !== undefined) this.synced.delete(first);
+        }
 
         const claims = this.extractClaims(session);
         const contradictions = this.findContradictions(session.arguments);

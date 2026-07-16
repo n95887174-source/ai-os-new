@@ -65,6 +65,8 @@ const AVAILABLE_PLUGINS: PluginManifest[] = [
     },
 ];
 
+const MAX_INSTALLED_PLUGINS = 200;
+
 export class PluginSdkService implements IPluginSdkService {
     private installed: PluginInstance[] = [
         {
@@ -103,6 +105,9 @@ export class PluginSdkService implements IPluginSdkService {
             lastActivated: Date.now(),
             config: {},
         };
+        if (this.installed.length >= MAX_INSTALLED_PLUGINS) {
+            this.installed.shift();
+        }
         this.installed.push(instance);
         return { ...instance };
     }

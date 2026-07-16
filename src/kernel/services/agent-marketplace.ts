@@ -4,6 +4,7 @@ import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('AgentMarketplace');
 const STORAGE_KEY = 'agent_marketplace_items';
+const MAX_ITEMS = 500;
 
 export interface MarketplaceItem {
     id: string;
@@ -136,6 +137,9 @@ export class AgentMarketplace implements ILifecycle {
             rating: 0,
             downloads: 0,
         };
+        if (this.items.length >= MAX_ITEMS) {
+            this.items.shift();
+        }
         this.items.push(newItem);
         void this.persist();
         return { ...newItem };

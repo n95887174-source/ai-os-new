@@ -326,9 +326,16 @@ export class AudienceService implements IAudienceService {
         if (this.messages.length > this.MAX_MESSAGES)
             this.messages = this.messages.slice(-this.MAX_MESSAGES);
         member.message = text;
-        setTimeout(() => {
-            member.message = null;
-        }, 8000);
+        const msgKey = `msg_${member.id}`;
+        const existingMsgTimer = this.memberTimers.get(msgKey);
+        if (existingMsgTimer) clearTimeout(existingMsgTimer);
+        this.memberTimers.set(
+            msgKey,
+            setTimeout(() => {
+                member.message = null;
+                this.memberTimers.delete(msgKey);
+            }, 8000),
+        );
     }
 
     processArgument(_agentId: string, agentName: string, text: string): void {

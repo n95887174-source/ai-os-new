@@ -34,6 +34,10 @@ export class SpatialMemoryStore implements IMemoryStore {
 
     setAnchor(entryId: string, anchor: SpatialAnchor): void {
         this.anchors.set(entryId, anchor);
+        if (this.anchors.size > MAX_SPATIAL) {
+            const oldest = this.anchors.keys().next().value;
+            if (oldest !== undefined) this.anchors.delete(oldest);
+        }
     }
 
     getAnchor(entryId: string): SpatialAnchor | undefined {

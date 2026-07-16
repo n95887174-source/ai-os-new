@@ -6,6 +6,7 @@ import type {
 import { BucketStorageAdapter } from './storage-adapter';
 
 const STORAGE_KEY = 'persona_marketplace_v1';
+const MAX_LISTINGS = 2000;
 
 const SEED_PERSONAS: PersonaListing[] = [
     {
@@ -245,6 +246,9 @@ export class PersonaMarketplaceService implements IPersonaMarketplaceService {
             downloads: 0,
             rating: 0,
         };
+        if (this.listings.length >= MAX_LISTINGS) {
+            this.listings.shift();
+        }
         this.listings.push(entry);
         this.#persist();
         return { ...entry };

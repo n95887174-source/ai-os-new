@@ -7,6 +7,9 @@ import type {
 
 const genId = () => crypto.randomUUID();
 
+const MAX_AGENTS = 1000;
+const MAX_MESSAGES = 10000;
+
 const DEFAULT_CAPABILITIES: AgentCapability[] = [
     {
         name: 'chat',
@@ -134,6 +137,9 @@ export class AgentProtocolService implements IAgentProtocolService {
             lastSeen: Date.now(),
             address: `agent://${agentId}`,
         };
+        if (this.agents.length >= MAX_AGENTS) {
+            this.agents.shift();
+        }
         this.agents.push(agent);
         return agent;
     }
@@ -144,6 +150,9 @@ export class AgentProtocolService implements IAgentProtocolService {
 
     sendMessage(message: Omit<AgentProtocolMessage, 'id' | 'timestamp'>): AgentProtocolMessage {
         const msg: AgentProtocolMessage = { ...message, id: genId(), timestamp: Date.now() };
+        if (this.messages.length >= MAX_MESSAGES) {
+            this.messages.shift();
+        }
         this.messages.push(msg);
         return msg;
     }

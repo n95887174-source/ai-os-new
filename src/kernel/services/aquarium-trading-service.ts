@@ -2,6 +2,8 @@ import type { IAquariumTradingService, TradeOffer } from '../contracts/aquarium-
 
 const genId = () => crypto.randomUUID();
 
+const MAX_TRADES = 1000;
+
 const CREATURES = [
     { id: 'c1', name: 'Golden Koi', rarity: 'Legendary' },
     { id: 'c2', name: 'Neon Tetra', rarity: 'Common' },
@@ -67,6 +69,9 @@ export class AquariumTradingService implements IAquariumTradingService {
             createdAt: Date.now(),
             note,
         };
+        if (this.trades.length >= MAX_TRADES) {
+            this.trades.shift();
+        }
         this.trades.push(offer);
         return { ...offer };
     }
@@ -92,6 +97,9 @@ export class AquariumTradingService implements IAquariumTradingService {
             createdAt: Date.now(),
             note,
         };
+        if (this.trades.length >= MAX_TRADES) {
+            this.trades.shift();
+        }
         this.trades.push(offer);
         return { ...offer };
     }

@@ -6,6 +6,8 @@ import type {
 
 const genId = () => crypto.randomUUID();
 
+const MAX_TEMPLATES = 1000;
+
 const SHARED_TEMPLATES: SharedTemplate[] = [
     {
         id: genId(),
@@ -117,6 +119,9 @@ export class TemplateSharingService implements ITemplateSharingService {
             createdAt: Date.now(),
             imported: true,
         };
+        if (this.templates.length >= MAX_TEMPLATES) {
+            this.templates.shift();
+        }
         this.templates.push(t);
         return { ...t };
     }
@@ -135,6 +140,9 @@ export class TemplateSharingService implements ITemplateSharingService {
             createdAt: Date.now(),
             imported: false,
         };
+        if (this.templates.length >= MAX_TEMPLATES) {
+            this.templates.shift();
+        }
         this.templates.push(t);
         return { ...t };
     }

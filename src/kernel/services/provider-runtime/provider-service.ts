@@ -231,6 +231,8 @@ export class ProviderRuntimeService {
     destroy(): void {
         this.state.destroy();
         this.budget.destroy();
+        for (const [, timer] of this.pendingDeletions) clearTimeout(timer);
+        this.pendingDeletions.clear();
         this.sessions.clear();
         this.instances.clear();
     }

@@ -7,6 +7,7 @@ import type {
 
 const MAX_SESSIONS = 100;
 const MAX_ISSUES = 200;
+const MAX_HISTORY_PER_SESSION = 100;
 
 export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
     private activeIssues: CognitiveIssue[] = [];
@@ -120,7 +121,7 @@ export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
     private recordHistory(sessionId: string, summary: CognitiveSessionSummary): void {
         const existing = this.history.get(sessionId) || [];
         existing.push(summary);
-        if (existing.length > 50) existing.shift();
+        if (existing.length > MAX_HISTORY_PER_SESSION) existing.shift();
         this.history.set(sessionId, existing);
         if (this.history.size > MAX_SESSIONS) {
             const oldest = this.history.keys().next().value;
