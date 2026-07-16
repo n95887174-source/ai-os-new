@@ -158,6 +158,8 @@ const MAX_AUTO_DEBATE_RESULTS = 100;
 export class AutoDebateService implements IAutoDebateService {
     private deps: AutoDebateServiceDeps;
     private results: AutoDebateResult[] = [];
+    private _abortController = new AbortController();
+    private _pendingPromise: Promise<unknown> | null = null;
 
     constructor(deps: AutoDebateServiceDeps) {
         this.deps = deps;
@@ -236,28 +238,34 @@ export class AutoDebateService implements IAutoDebateService {
     private waitForSessionCompletion(
         session: DebateSession,
         timeoutMs = 60_000,
+        signal?: AbortSignal,
     ): Promise<DebateSession> {
         if (TERMINAL_SESSION_STATUSES.has(session.status)) return Promise.resolve(session);
+        if (signal?.aborted) return Promise.resolve(session);
         // M-4: use Zustand subscribe instead of polling to avoid race with concurrent runAutoDebate
         return new Promise((resolve) => {
             const unsub = useActiveDebateStore.subscribe((state) => {
+                if (signal?.aborted) {
+                    unsub();
+                    clearTimeout(timer);
+                    resolve(structuredClone(session));
+                    return;
+                }
                 if (
                     state.session?.id === session.id &&
                     TERMINAL_SESSION_STATUSES.has(state.session.status)
                 ) {
                     unsub();
                     clearTimeout(timer);
-                    // CRITICAL: structuredClone the session BEFORE finalizeInternal()
-                    // runs and strips session.arguments = []. The Zustand subscription
-                    // fires synchronously inside syncSession()->setSession(), but
-                    // finalizeInternal() runs in the same .then() block immediately
-                    // after and mutates the SAME object. Without cloning, tournament
-                    // scoring reads empty arguments (always draw).
                     resolve(structuredClone(state.session));
                 }
             });
             const timer = setTimeout(() => {
                 unsub();
+                if (signal?.aborted) {
+                    resolve(structuredClone(session));
+                    return;
+                }
                 const final = useActiveDebateStore.getState().session;
                 if (final && final.id === session.id && TERMINAL_SESSION_STATUSES.has(final.status))
                     resolve(structuredClone(final));
@@ -267,6 +275,19 @@ export class AutoDebateService implements IAutoDebateService {
     }
 
     async runAutoDebate(options: AutoDebateOptions = {}): Promise<AutoDebateResult> {
+        if (this._abortController.signal.aborted)
+            return {
+                id: '',
+                timestamp: 0,
+                topic: '',
+                strategy: '',
+                maxRounds: 0,
+                participants: [],
+                session: null,
+                durationMs: 0,
+                completed: false,
+                error: 'Service destroyed',
+            } as AutoDebateResult;
         const start = Date.now();
         const topic = options.topic ?? this.pickTopic(options.category);
         const participants =
@@ -437,7 +458,11 @@ export class AutoDebateService implements IAutoDebateService {
                         language: 'ru',
                     },
                 );
-                const session = await this.waitForSessionCompletion(initialSession);
+                const session = await this.waitForSessionCompletion(
+                    initialSession,
+                    60_000,
+                    this._abortController.signal,
+                );
 
                 // Clean up store data + verdict cache to prevent memory leak
                 (
@@ -651,7 +676,14 @@ export class AutoDebateService implements IAutoDebateService {
             .sort((a, b) => b.winRate - a.winRate);
     }
 
-    destroy(): void {
+    async destroy(): Promise<void> {
+        this._abortController.abort();
+        if (this._pendingPromise) {
+            await Promise.race([
+                this._pendingPromise,
+                new Promise<void>((r) => setTimeout(r, 5000)),
+            ]);
+        }
         this.results = [];
     }
 }
