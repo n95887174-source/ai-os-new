@@ -72,6 +72,17 @@ export class RouterDebateSelector {
             }
             return true;
         });
+        console.log('[DEBATE_FALLBACK] getDebateProviders primary pass', {
+            totalKeys: allKeys.length,
+            activeCount: activeKeys.length,
+            activeProviders: activeKeys.map(
+                (k) =>
+                    `${k.provider}:${k.id.slice(0, 8)} health=${this.deps.keyStateStore?.get(k.id)?.healthScore ?? 'N/A'}`,
+            ),
+            skippedAuth: allKeys
+                .filter((k) => this.deps.keyStateStore?.get(k.id)?.flags.authFailed)
+                .map((k) => k.provider),
+        });
         if (activeKeys.length === 0) {
             activeKeys = allKeys.filter((k) => {
                 const ks = this.deps.keyStateStore?.get(k.id);
@@ -114,6 +125,13 @@ export class RouterDebateSelector {
                 return true;
             });
         }
+        console.log('[DEBATE_FALLBACK] getDebateProviders active after filter', {
+            fallbackUsed: activeKeys.length,
+            providers: activeKeys.map((k) => {
+                const ks = this.deps.keyStateStore?.get(k.id);
+                return `${k.provider}:${k.id.slice(0, 8)} health=${ks?.healthScore ?? 'N/A'} auth=${!ks?.flags.authFailed}`;
+            }),
+        });
         const uniqueProviders = new Map<string, ApiKey>();
         for (const k of activeKeys) {
             if (!uniqueProviders.has(k.provider)) {

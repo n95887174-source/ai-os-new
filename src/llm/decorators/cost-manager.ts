@@ -127,14 +127,6 @@ export class CostManagerDecorator extends BaseDecorator {
         return { model, blocked: true };
     }
 
-    private evictOldRecords(): void {
-        const cutoff = Date.now() - 31 * 24 * 60 * 60 * 1000;
-        const idx = this.records.findIndex((r) => r.timestamp >= cutoff);
-        if (idx > 0) {
-            this.records = this.records.slice(idx);
-        }
-    }
-
     getCosts(windowMs?: number): CostSummary {
         const now = Date.now();
         const filtered = windowMs
@@ -195,39 +187,27 @@ export class CostManagerDecorator extends BaseDecorator {
 
         const inputTokens = messages.reduce((s, m) => s + estimateTokenCount(m.content), 0);
 
-        try {
-            const res = await this.inner.sendMessage(
-                messages,
-                resolvedModel,
-                apiKey,
-                signal,
-                options,
-            );
-            const outputTokens = Math.max(0, (res.tokens ?? 0) - inputTokens);
-            const actualCost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
-            this.records.push({
-                timestamp: Date.now(),
-                model: resolvedModel,
-                inputTokens,
-                outputTokens,
-                cost: actualCost,
-            });
-            if (this.records.length > 100000) {
-                this.records = this.records.slice(-50000);
-            }
-            if (this.records.length > 1000) {
-                this.evictOldRecords();
-            }
-            if (this.config.logCosts)
-                LOGGER.debug(
-                    'CostManagerDecorator',
-                    `${resolvedModel}: $${actualCost.toFixed(6)} (${inputTokens}+${outputTokens}t)`,
-                );
-            this.checkBudget();
-            return res;
-        } catch (e) {
-            throw e;
+        const res = await this.inner.sendMessage(messages, resolvedModel, apiKey, signal, options);
+        const outputTokens = Math.max(0, (res.tokens ?? 0) - inputTokens);
+        const actualCost = this.calculateCost(resolvedModel, inputTokens, outputTokens);
+
+        this.records.push({
+            timestamp: Date.now(),
+            model: resolvedModel,
+            inputTokens,
+            outputTokens,
+            cost: actualCost,
+        });
+        if (this.records.length > 10000) {
+            this.records = this.records.slice(-5000);
         }
+        if (this.config.logCosts)
+            LOGGER.debug(
+                'CostManagerDecorator',
+                `${resolvedModel}: $${actualCost.toFixed(6)} (${inputTokens}+${outputTokens}t)`,
+            );
+        this.checkBudget();
+        return res;
     }
 
     async streamMessage(
@@ -259,48 +239,34 @@ export class CostManagerDecorator extends BaseDecorator {
             onChunk(chunk, meta);
         };
 
-        try {
-            if (!this.inner.streamMessage)
-                throw new Error('CostManager: inner adapter does not support streaming');
-            await this.inner.streamMessage(
-                messages,
-                resolvedModel,
-                apiKey,
-                wrapped,
-                signal,
-                options,
-            );
-            const usage = finalMeta?.usage as
-                { total_tokens?: number; totalTokens?: number } | undefined;
-            const totalTokens =
-                (finalMeta?.tokens as number) ??
-                usage?.total_tokens ??
-                usage?.totalTokens ??
-                outputTokens;
-            const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
-            const actualCost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
-            this.records.push({
-                timestamp: Date.now(),
-                model: resolvedModel,
-                inputTokens,
-                outputTokens: streamOutputTokens,
-                cost: actualCost,
-            });
-            if (this.records.length > 100000) {
-                this.records = this.records.slice(-50000);
-            }
-            if (this.records.length > 1000) {
-                this.evictOldRecords();
-            }
-            if (this.config.logCosts)
-                LOGGER.debug(
-                    'CostManagerDecorator',
-                    `${resolvedModel} stream: $${actualCost.toFixed(6)} (${inputTokens}+${streamOutputTokens}t)`,
-                );
-            this.checkBudget();
-        } catch (e) {
-            throw e;
+        if (!this.inner.streamMessage)
+            throw new Error('CostManager: inner adapter does not support streaming');
+        await this.inner.streamMessage(messages, resolvedModel, apiKey, wrapped, signal, options);
+        const usage = finalMeta?.usage as
+            { total_tokens?: number; totalTokens?: number } | undefined;
+        const totalTokens =
+            (finalMeta?.tokens as number) ??
+            usage?.total_tokens ??
+            usage?.totalTokens ??
+            outputTokens;
+        const streamOutputTokens = Math.max(0, totalTokens - inputTokens);
+        const actualCost = this.calculateCost(resolvedModel, inputTokens, streamOutputTokens);
+        this.records.push({
+            timestamp: Date.now(),
+            model: resolvedModel,
+            inputTokens,
+            outputTokens: streamOutputTokens,
+            cost: actualCost,
+        });
+        if (this.records.length > 10000) {
+            this.records = this.records.slice(-5000);
         }
+        if (this.config.logCosts)
+            LOGGER.debug(
+                'CostManagerDecorator',
+                `${resolvedModel} stream: $${actualCost.toFixed(6)} (${inputTokens}+${streamOutputTokens}t)`,
+            );
+        this.checkBudget();
     }
 
     destroy(): void {

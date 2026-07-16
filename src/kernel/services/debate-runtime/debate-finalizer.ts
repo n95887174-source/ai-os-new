@@ -10,7 +10,6 @@ import type { IEventBus } from '../../types/interfaces';
 
 export interface FinalizerDeps {
     interpreter: DebateInterpreter;
-    sessionManager: { saveToDebateHistory(session: DebateSession): void };
     eventBus: IEventBus;
 }
 
@@ -27,7 +26,8 @@ export function finalizeDebate(session: DebateSession, deps: FinalizerDeps): voi
     const quality = computeQualityMetrics(session.arguments, session.topic);
     if (quality) session.qualityMetrics = quality;
     session.interpretation = deps.interpreter.interpret(session);
-    deps.sessionManager.saveToDebateHistory(session);
+    // History save is deferred to finalizeInternal() after argument content is stripped,
+    // preventing structuredClone from duplicating large LLM response strings.
     deps.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
     deps.eventBus.emit(EVENTS.DEBATE_ENDED, {
         sessionId: session.id,

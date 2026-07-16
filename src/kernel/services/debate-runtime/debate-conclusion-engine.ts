@@ -259,7 +259,12 @@ export class DebateConclusionEngine {
             const combinedSignal = signal
                 ? combineSignals(signal, timeoutController.signal)
                 : timeoutController.signal;
-            const prompt = this.buildLLMPrompt(base, snapshot);
+            // Extract needed fields from snapshot BEFORE the await — the full
+            // snapshot holds all argument content strings and would otherwise
+            // stay alive in the async closure during the LLM call (2-10s).
+            const round = snapshot.round;
+            const agentCount = snapshot.agentStates.length;
+            const prompt = this.buildLLMPrompt(base, round, agentCount);
             const response = await this.llmCall(prompt, combinedSignal);
             clearTimeout(timeoutId);
             const enhanced = this.parseLLMResponse(response, base);
@@ -285,7 +290,7 @@ export class DebateConclusionEngine {
         }
     }
 
-    private buildLLMPrompt(verdict: DebateVerdict, snapshot: DebateSessionSnapshot): string {
+    private buildLLMPrompt(verdict: DebateVerdict, round: number, agentCount: number): string {
         const argsSummary = verdict.keyArguments
             .slice(0, 10)
             .map(
@@ -297,8 +302,8 @@ export class DebateConclusionEngine {
         return `You are a debate analyst. Analyze the following debate verdict and provide an enhanced summary and reasoning.
 
 DEBATE TOPIC: ${sanitizePromptVar(verdict.topic)}
-ROUNDS: ${snapshot.round}
-PARTICIPANTS: ${snapshot.agentStates.length}
+ROUNDS: ${round}
+PARTICIPANTS: ${agentCount}
 CONCLUSION TYPE: ${verdict.conclusionType}
 STANCE: ${verdict.stanceResult}
 

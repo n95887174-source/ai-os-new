@@ -26,13 +26,22 @@ interface PhaseHandlerGetters {
     saveSnapshot: (id: string) => Promise<void>;
 }
 
+const VERDICT_TIMEOUT_MS = 30_000;
+
 export function createPhaseChangeHandler(
     sessionId: string,
     session: DebateSessionClass,
     deps: PhaseHandlerDeps,
     getters: PhaseHandlerGetters,
+    abortSignal?: AbortSignal,
     logSuffix?: string,
 ): (from: string, to: string) => void {
+    const verdictAbortController = new AbortController();
+    const verdictSignal = verdictAbortController.signal;
+    const verdictTimer = setTimeout(
+        () => verdictAbortController.abort(new Error('VerdictTimedOut')),
+        VERDICT_TIMEOUT_MS,
+    );
     return (from: string, to: string) => {
         const ctx = getters.getContext(sessionId);
         if (!ctx) return;
@@ -68,8 +77,9 @@ export function createPhaseChangeHandler(
                 const tl = getters.getTimeline(sessionId);
                 getters
                     .getContext(sessionId)
-                    .conclusionEngine.generateVerdictWithLLM(snap, tl)
+                    .conclusionEngine.generateVerdictWithLLM(snap, tl, verdictSignal)
                     .then((verdict) => {
+                        clearTimeout(verdictTimer);
                         const store = deps.debateStore;
                         if (store) {
                             validateAndSaveVerdict(store, {
@@ -95,13 +105,14 @@ export function createPhaseChangeHandler(
                             verdict,
                         });
                     })
-                    .catch((e) =>
+                    .catch((e) => {
+                        clearTimeout(verdictTimer);
                         LOGGER.warn(
                             'DebatePhaseHandler',
                             'LLM-enhanced verdict failed, using heuristic',
                             { error: e },
-                        ),
-                    );
+                        );
+                    });
 
                 if (deps.memoryExtractor) {
                     try {
@@ -145,6 +156,7 @@ export function createPhaseChangeHandler(
                     }
                 }
             }
+            if (abortSignal?.aborted) return;
             getters
                 .saveSnapshot(sessionId)
                 .catch((e) =>

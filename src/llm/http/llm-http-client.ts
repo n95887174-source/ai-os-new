@@ -30,7 +30,32 @@ export class LLMHttpClient {
 
     #withTimeout(signal?: AbortSignal): AbortSignal {
         if (!signal) return AbortSignal.timeout(this.#timeoutMs);
-        return AbortSignal.any([signal, AbortSignal.timeout(this.#timeoutMs)]);
+        // Avoid AbortSignal.any() due to Chrome GC bug:
+        // AbortSignal.any() does not release internal onabort handlers
+        // from constituent signals when the composed signal is GC'd,
+        // causing the entire closure chain (including LLM response body)
+        // to remain pinned in memory.
+        // Instead, use a manual AbortController + setTimeout that avoids
+        // creating a composed signal whose lifecycle depends on GC.
+        const controller = new AbortController();
+        const timer = setTimeout(
+            () => controller.abort(new DOMException('Timeout', 'TimeoutError')),
+            this.#timeoutMs,
+        );
+        if (signal.aborted) {
+            clearTimeout(timer);
+            controller.abort(signal.reason || new DOMException('Aborted', 'AbortError'));
+        } else {
+            signal.addEventListener(
+                'abort',
+                () => {
+                    clearTimeout(timer);
+                    controller.abort(signal.reason || new DOMException('Aborted', 'AbortError'));
+                },
+                { once: true },
+            );
+        }
+        return controller.signal;
     }
 
     async post(
@@ -86,7 +111,10 @@ export class LLMHttpClient {
             );
         }
         if (!res.ok) {
-            const errorBody = await res.text().catch(() => '');
+            const errorBody = await res.text().catch(() => {
+                res.body?.cancel()?.catch(() => {});
+                return '';
+            });
             console.warn(`[${this.#provider}] POST ${res.status} body:`, errorBody.slice(0, 500));
             throw new LLMError(
                 `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
@@ -99,6 +127,7 @@ export class LLMHttpClient {
         try {
             data = await res.json();
         } catch {
+            res.body?.cancel()?.catch(() => {});
             const text = await res.text().catch(() => '');
             throw new LLMError(
                 `Invalid JSON response from ${this.#provider}: ${text.slice(0, 200)}`,
@@ -141,7 +170,10 @@ export class LLMHttpClient {
             throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
         }
         if (!res.ok) {
-            const errorBody = await res.text().catch(() => '');
+            const errorBody = await res.text().catch(() => {
+                res.body?.cancel()?.catch(() => {});
+                return '';
+            });
             console.warn(`[${this.#provider}] GET ${res.status} body:`, errorBody.slice(0, 500));
             throw new LLMError(
                 `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
@@ -154,6 +186,7 @@ export class LLMHttpClient {
         try {
             data = await res.json();
         } catch {
+            res.body?.cancel()?.catch(() => {});
             const text = await res.text().catch(() => '');
             throw new LLMError(
                 `Invalid JSON response from ${this.#provider}: ${text.slice(0, 200)}`,
@@ -202,7 +235,10 @@ export class LLMHttpClient {
             throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
         }
         if (!res.ok) {
-            const errorBody = await res.text().catch(() => '');
+            const errorBody = await res.text().catch(() => {
+                res.body?.cancel()?.catch(() => {});
+                return '';
+            });
             console.warn(`[${this.#provider}] STREAM ${res.status} body:`, errorBody.slice(0, 500));
             throw new LLMError(
                 `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,

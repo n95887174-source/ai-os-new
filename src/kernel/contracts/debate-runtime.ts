@@ -1,5 +1,6 @@
 import type { ITransaction } from './transaction';
 import type { TopologyType, DebatePhase, AgentPhase, TimelineEntry } from './debate-types';
+import type { EngineSizes } from '../utils/memory-tracker';
 export type { TimelineEntry, DebatePhase, TopologyType, AgentPhase } from './debate-types';
 
 // ── Topology ────────────────────────────────────────────────────────────
@@ -210,6 +211,9 @@ export interface ReasoningChain {
 export interface IDebateMemory {
     recordStep(step: ReasoningStep): void;
     getAllSteps(): ReasoningStep[];
+    getAgentSteps(agentId: string): ReasoningStep[];
+    getRecentSteps(count: number): ReasoningStep[];
+    trimContent(keepCount: number): void;
     getChain(agentId: string): ReasoningChain[];
     getClaimsForTopic(topic: string): Claim[];
     getWinningStrategies(): ReasoningChain[];
@@ -335,5 +339,6 @@ export interface IDebateEngine {
     getTimeline(sessionId: string): TimelineEntry[];
     saveSnapshot(sessionId: string): Promise<void>;
     restoreSession(sessionId: string): Promise<DebateSessionSnapshot | null>;
+    dumpSizes(): EngineSizes;
     destroy(): void;
 }

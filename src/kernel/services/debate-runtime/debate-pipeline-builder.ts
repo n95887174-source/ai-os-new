@@ -19,6 +19,7 @@ import type { DebateMemoryExtractor } from './debate-memory-extractor';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
 import type { DebateMemory } from './debate-memory';
 import type { DebateSessionContext } from './debate-session-context';
+import { DebateProviderResolver } from './debate-query-engine';
 const LOGGER = rootLogger.child('DebatePipelineBuilder');
 
 interface KeyServiceLike {
@@ -72,11 +73,7 @@ export interface PipelineEngine {
         signal?: AbortSignal,
     ): Promise<string>;
     pauseSession(sessionId: string): void;
-    providerResolver: {
-        isKeyAuthFailed(keyId: string): boolean;
-        clearSession(sessionId: string): void;
-        clearAll(): void;
-    };
+    providerResolver: DebateProviderResolver;
     sessionAbortControllers: Map<string, Map<string, AbortController>>;
 }
 
@@ -124,7 +121,8 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                     eventBus: engine.deps.eventBus,
                     getKeyService: () => engine.deps.getKeyService(),
                     callLLM: (id, s, p, signal) => engine.callLLM(id, s, p, signal),
-                    providerResolver: engine.providerResolver,
+                    providerResolver:
+                        engine.providerResolver as import('./debate-query-engine').DebateProviderResolver,
                     findParticipant: (_id, nodeId) =>
                         session.participants.find((p) => p.nodeId === nodeId),
                 }),
@@ -221,6 +219,11 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                                 sessionId,
                                 round: event.round,
                             });
+
+                            // Trim old step content after each round to cap memory.
+                            // Keep last 8 steps with full content for LLM context;
+                            // older steps retain structure but get empty content strings.
+                            engine.getMemory(sessionId).trimContent(8);
 
                             if (event.allErrored) {
                                 const msg = event.anyBudgetSkipped
@@ -337,7 +340,7 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                 session.phase === 'cancelled' ||
                 session.phase === 'paused'
             ) {
-                if (session.phase !== 'paused')
+                if (session.phase !== 'paused' && session.phase !== 'cancelled')
                     engine.getContext(sessionId).orchestrator.clearAbort(sessionId);
                 return { ok: true, earlyExit: true };
             }

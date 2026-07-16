@@ -154,5 +154,6 @@ export class DebateTimeline implements IDebateTimeline {
     destroy(): void {
         this.entries = [];
         this.cursor = 0;
+        this.loadedSessions.clear();
     }
 }

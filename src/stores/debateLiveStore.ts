@@ -5,6 +5,7 @@ import type { DebateEmotion } from '../kernel/contracts/debate-emotion';
 
 const MAX_AGENT_EVENTS = 500;
 const MAX_ROUND_EVENTS = 200;
+const MAX_EMOTIONS = 200;
 const METRICS_INTERVAL_MS = 30_000;
 export interface DebateAgentEvent {
     sessionId: string;
@@ -60,6 +61,19 @@ export interface DebateLiveState {
     setJudgeWeights: (weights: { pro: number; con: number; neutral: number }) => void;
     // B10-114: Cleanup event subscriptions on unmount
     destroy: () => void;
+}
+
+function setEmotion(
+    emotions: Map<string, DebateEmotion>,
+    key: string,
+    value: DebateEmotion,
+): Map<string, DebateEmotion> {
+    const m = new Map(emotions).set(key, value);
+    if (m.size > MAX_EMOTIONS) {
+        const oldest = m.keys().next().value;
+        if (oldest) m.delete(oldest);
+    }
+    return m;
 }
 
 function computeEmotion(
@@ -126,7 +140,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     }
                     const ek = `${d.sessionId}:${d.agentId}`;
                     m.set(ek, d.agentId);
-                    const em = new Map(s.emotions).set(
+                    const em = setEmotion(
+                        s.emotions,
                         ek,
                         computeEmotion(ek, 'thinking', s.agentEvents),
                     );
@@ -160,7 +175,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     if (m.get(ek) === d.agentId) m.delete(ek);
                     const sc = new Map(s.streamingContent);
                     sc.delete(ek);
-                    const em = new Map(s.emotions).set(
+                    const em = setEmotion(
+                        s.emotions,
                         ek,
                         computeEmotion(ek, 'responded', s.agentEvents),
                     );
@@ -192,7 +208,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     if (m.get(ek) === d.agentId) m.delete(ek);
                     const sc = new Map(s.streamingContent);
                     sc.delete(ek);
-                    const em = new Map(s.emotions).set(
+                    const em = setEmotion(
+                        s.emotions,
                         ek,
                         computeEmotion(ek, 'error', s.agentEvents),
                     );
@@ -224,7 +241,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     sc.delete(ek);
                     const ct = new Map(s.currentThinking);
                     ct.delete(ek);
-                    const em = new Map(s.emotions).set(
+                    const em = setEmotion(
+                        s.emotions,
                         ek,
                         computeEmotion(ek, 'timeout', s.agentEvents),
                     );
@@ -260,7 +278,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 sc.delete(ek);
                 const ct = new Map(s.currentThinking);
                 ct.delete(ek);
-                const em = new Map(s.emotions).set(
+                const em = setEmotion(
+                    s.emotions,
                     ek,
                     computeEmotion(ek, 'fallback', s.agentEvents),
                 );
@@ -389,20 +408,24 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         },
         clearSession: (sessionId) => {
             set((s) => {
+                const prefix = `${sessionId}:`;
+                const filterByPrefix = (m: Map<string, unknown>) => {
+                    for (const k of m.keys()) {
+                        if (k.startsWith(prefix)) m.delete(k);
+                    }
+                };
                 const sc = new Map(s.streamingContent);
                 const em = new Map(s.emotions);
                 const cd = new Map(s.agentCountdowns);
                 const aa = new Map(s.agentAddressing);
                 const mb = new Map(s.memoryBubbles);
-                for (const k of sc.keys()) {
-                    if (k.startsWith(`${sessionId}:`)) {
-                        sc.delete(k);
-                        em.delete(k);
-                        cd.delete(k);
-                        aa.delete(k);
-                        mb.delete(k);
-                    }
-                }
+                const ct = new Map(s.currentThinking);
+                filterByPrefix(sc);
+                filterByPrefix(em);
+                filterByPrefix(cd);
+                filterByPrefix(aa);
+                filterByPrefix(mb);
+                filterByPrefix(ct);
                 return {
                     agentEvents: s.agentEvents.filter((e) => e.sessionId !== sessionId),
                     roundEvents: s.roundEvents.filter((e) => e.sessionId !== sessionId),
@@ -411,6 +434,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     agentCountdowns: cd,
                     agentAddressing: aa,
                     memoryBubbles: mb,
+                    currentThinking: ct,
                 };
             });
         },

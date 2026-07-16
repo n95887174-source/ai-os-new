@@ -88,6 +88,8 @@ export interface IAdapterRegistry {
     resetCircuitBreaker(provider: string): void;
     syncCircuitBreakerState(provider: string, status: string): void;
     syncRateLimitState(provider: string, remaining: number): void;
+    /** Walk the decorator chain of all adapters and clear CacheDecorator caches */
+    clearAllCaches(): void;
 }
 
 export interface ILLMClientConfig {

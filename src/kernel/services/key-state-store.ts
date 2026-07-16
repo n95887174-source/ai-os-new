@@ -101,7 +101,13 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         this._flushPendingSeeds();
     }
 
-    /** Process seeds that were queued before loadPersisted() completed */
+    /** Process seeds that were queued before loadPersisted() completed.
+     * Only creates entries for IDs not yet in the map. The bootstrap
+     * phase will call seedFromKeys() later with proper provider/label/status
+     * data — but since states already exist (from this call), seedFromKeys()
+     * skips them. So we must match seedFromKeys() defaults here:
+     * active status → healthScore 100, unknown → 25.
+     */
     private _flushPendingSeeds(): void {
         if (!this._pendingSeedIds) return;
         const ids = this._pendingSeedIds;
@@ -113,7 +119,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
                     provider: 'unknown',
                     label: id,
                     status: 'unknown',
-                    healthScore: 25,
+                    healthScore: 100, // matches seedFromKeys default for active keys
                     lastProbe: { status: 'unknown', latency: 0, timestamp: Date.now() },
                     health: { ...DEFAULT_HEALTH },
                     quota: { ...DEFAULT_QUOTA },

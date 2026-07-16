@@ -14,6 +14,8 @@ const DEFAULT_PROMPTS: Record<PromptRole, string> = {
 };
 
 let _db: Promise<import('../types/interfaces').IDatabaseService> | null = null;
+let _overrideCache: Partial<Record<PromptRole, string>> | null = null;
+
 async function db(): Promise<import('../types/interfaces').IDatabaseService> {
     if (!_db)
         _db = (async () => {
@@ -23,10 +25,16 @@ async function db(): Promise<import('../types/interfaces').IDatabaseService> {
     return _db;
 }
 
+function invalidateCache(): void {
+    _overrideCache = null;
+}
+
 async function loadOverrides(): Promise<Partial<Record<PromptRole, string>>> {
+    if (_overrideCache) return _overrideCache;
     try {
         const raw = await (await db()).getKv<Partial<Record<PromptRole, string>>>(STORAGE_KEY);
-        return raw ?? {};
+        _overrideCache = raw ?? {};
+        return _overrideCache;
     } catch (e) {
         console.warn('[PromptStore] loadOverrides failed', e);
     }
@@ -50,6 +58,7 @@ export async function getPrompt(role: string | undefined): Promise<string> {
 export async function setPrompt(role: PromptRole, prompt: string): Promise<void> {
     const overrides = await loadOverrides();
     overrides[role] = prompt;
+    invalidateCache();
     await saveOverrides(overrides);
 }
 
@@ -63,6 +72,7 @@ export async function getAllPrompts(): Promise<Record<PromptRole, string>> {
 }
 
 export async function resetAllPrompts(): Promise<void> {
+    invalidateCache();
     try {
         await (await db()).setKv(STORAGE_KEY, {});
     } catch (e) {

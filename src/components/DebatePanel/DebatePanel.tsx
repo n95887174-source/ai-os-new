@@ -296,7 +296,7 @@ const DebatePanel: React.FC = () => {
         const top = orchestrator.getActiveTopology();
         if (top && selectedAgentsRef.current.length === 0) {
             const agents = top.nodes.filter((n) => n.type === 'agent').map((n) => n.id);
-            setSelectedAgents(agents);
+            setSelectedAgents(agents.slice(0, 10));
         }
 
         return () => {
@@ -321,6 +321,37 @@ const DebatePanel: React.FC = () => {
             unsubVerdict();
         };
     }, [session?.id, session?.status]);
+
+    // Listen for session terminal events (cancelled/completed/failed)
+    // to force UI refresh when Stop button or engine ends the session.
+    useEffect(() => {
+        const unsubCancel = eventBus.on(
+            EVENTS.DEBATE_SESSION_CANCELLED,
+            (payload: { sessionId: string }) => {
+                if (!isMountedRef.current) return;
+                if (sessionRef.current?.id && payload.sessionId !== sessionRef.current.id) return;
+                setSession(null);
+                setIsLoading(false);
+                setError(null);
+                setActionLoading(null);
+            },
+        );
+        const unsubFail = eventBus.on(
+            EVENTS.DEBATE_SESSION_FAILED,
+            (payload: { sessionId: string }) => {
+                if (!isMountedRef.current) return;
+                if (sessionRef.current?.id && payload.sessionId !== sessionRef.current.id) return;
+                setSession(null);
+                setIsLoading(false);
+                setError(null);
+                setActionLoading(null);
+            },
+        );
+        return () => {
+            unsubCancel();
+            unsubFail();
+        };
+    }, []);
 
     useEffect(() => {
         const thesis = searchParams.get('thesis');
@@ -612,57 +643,72 @@ const DebatePanel: React.FC = () => {
                                     <Play size={18} fill="currentColor" aria-hidden="true" />
                                 </button>
                             ) : null}
-                            {session.status !== 'completed' && (
-                                <button
-                                    onClick={() => {
-                                        try {
-                                            debateEngine.cancelSession(session.id);
-                                            setError(null);
-                                        } catch (e) {
-                                            if (isMountedRef.current) {
-                                                console.error('cancelSession failed:', e);
-                                                setError(t('debate.error_stop'));
-                                                clearError();
+                            {session.status !== 'completed' &&
+                                session.status !== 'cancelled' &&
+                                session.status !== 'failed' && (
+                                    <button
+                                        onClick={() => {
+                                            console.log('[DebatePanel] Stop clicked', {
+                                                id: session.id,
+                                                status: session.status,
+                                                phase: (session as { status?: string }).status,
+                                            });
+                                            try {
+                                                debateEngine.cancelSession(session.id);
+                                                console.log('[DebatePanel] cancelSession OK', {
+                                                    id: session.id,
+                                                });
+                                                setError(null);
+                                            } catch (e) {
+                                                if (isMountedRef.current) {
+                                                    console.error(
+                                                        '[DebatePanel] cancelSession failed:',
+                                                        e,
+                                                    );
+                                                    setError(t('debate.error_stop'));
+                                                    clearError();
+                                                }
                                             }
-                                        }
-                                    }}
-                                    className="btn-secondary"
-                                    style={{
-                                        ...btnControlBase,
-                                        color: '#ef4444',
-                                        borderColor: 'rgba(239,68,68,0.2)',
-                                        background: 'rgba(239,68,68,0.05)',
-                                    }}
-                                    title={t('debate.stop')}
-                                    aria-label={t('debate.stop')}
-                                >
-                                    <Square size={18} fill="currentColor" aria-hidden="true" />
-                                </button>
-                            )}
-                            {session.status !== 'completed' && (
-                                <select
-                                    value={factCheckLevel}
-                                    onChange={(e) => {
-                                        const v = e.target.value as 'off' | 'sampled' | 'all';
-                                        setFactCheckLevel(v);
-                                        debateService.factCheckService.setLevel(v);
-                                    }}
-                                    style={{
-                                        padding: '4px 8px',
-                                        borderRadius: 6,
-                                        fontSize: '0.75rem',
-                                        background: 'rgba(30,30,50,0.8)',
-                                        color: '#e2e8f0',
-                                        border: '1px solid rgba(100,116,139,0.3)',
-                                        cursor: 'pointer',
-                                    }}
-                                    title="Fact-Check Level"
-                                >
-                                    <option value="off">Fact-Check: Off</option>
-                                    <option value="sampled">Fact-Check: Sampled</option>
-                                    <option value="all">Fact-Check: All</option>
-                                </select>
-                            )}
+                                        }}
+                                        className="btn-secondary"
+                                        style={{
+                                            ...btnControlBase,
+                                            color: '#ef4444',
+                                            borderColor: 'rgba(239,68,68,0.2)',
+                                            background: 'rgba(239,68,68,0.05)',
+                                        }}
+                                        title={t('debate.stop')}
+                                        aria-label={t('debate.stop')}
+                                    >
+                                        <Square size={18} fill="currentColor" aria-hidden="true" />
+                                    </button>
+                                )}
+                            {session.status !== 'completed' &&
+                                session.status !== 'cancelled' &&
+                                session.status !== 'failed' && (
+                                    <select
+                                        value={factCheckLevel}
+                                        onChange={(e) => {
+                                            const v = e.target.value as 'off' | 'sampled' | 'all';
+                                            setFactCheckLevel(v);
+                                            debateService.factCheckService.setLevel(v);
+                                        }}
+                                        style={{
+                                            padding: '4px 8px',
+                                            borderRadius: 6,
+                                            fontSize: '0.75rem',
+                                            background: 'rgba(30,30,50,0.8)',
+                                            color: '#e2e8f0',
+                                            border: '1px solid rgba(100,116,139,0.3)',
+                                            cursor: 'pointer',
+                                        }}
+                                        title="Fact-Check Level"
+                                    >
+                                        <option value="off">Fact-Check: Off</option>
+                                        <option value="sampled">Fact-Check: Sampled</option>
+                                        <option value="all">Fact-Check: All</option>
+                                    </select>
+                                )}
                             {session.status === 'completed' && (
                                 <div
                                     style={{ position: 'relative', display: 'inline-flex', gap: 0 }}

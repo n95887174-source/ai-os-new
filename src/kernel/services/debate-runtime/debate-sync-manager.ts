@@ -25,6 +25,9 @@ import { persistActiveSession, loadActiveSession } from './debate-session-persis
 import { checkDebatePreflight } from './debate-preflight';
 import type { GovernorState } from './debate-governor/types';
 import { useActiveDebateStore } from '../../../stores/activeDebateStore';
+import { useDebateLiveStore } from '../../../stores/debateLiveStore';
+import { eventBus } from '../../events/event-bus';
+import { logMemoryStats, estimateSessionBytes } from '../../utils/memory-tracker';
 
 const LOGGER = rootLogger.child('DebateService.Sync');
 
@@ -92,6 +95,11 @@ export class DebateSyncManager {
         return this._verdictCache.get(sessionId);
     }
 
+    /** Clear all cached verdicts — used between tournament matches to free memory. */
+    clearVerdictCache(): void {
+        this._verdictCache.clear();
+    }
+
     /** Expose FactCheckService for UI consumers (DebatePanel, FactCheckBadge). */
     get factCheckService() {
         return this.postProcessor.factCheckService;
@@ -115,6 +123,11 @@ export class DebateSyncManager {
         this._initUnsubs.push(
             this.deps.eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
                 const payload = data as { sessionId: string; verdict: DebateVerdict };
+                // Only cache verdicts for the active session. DEBATE_VERDICT_GENERATED
+                // fires asynchronously (inside an LLM .then() callback), so it can arrive
+                // long after clearVerdictCache() and even after the next match has started.
+                // Without this guard, the cache grows unboundedly between tournament matches.
+                if (payload.sessionId !== this.runtimeSessionId) return;
                 this._setCachedVerdict(payload.sessionId, payload.verdict);
             }),
             this.deps.eventBus.on(EVENTS.SESSION_DELETED, (data) => {
@@ -161,7 +174,20 @@ export class DebateSyncManager {
         // M-3: clear stale timer BEFORE cancelSession — prevents timer firing during teardown
         this.clearTimers();
         if (this.engine && this.runtimeSessionId) {
-            this.engine.cancelSession(this.runtimeSessionId);
+            const prevSnap = this.engine.getSession(this.runtimeSessionId);
+            if (prevSnap) {
+                const isTerminal =
+                    prevSnap.phase === 'completed' ||
+                    prevSnap.phase === 'failed' ||
+                    prevSnap.phase === 'cancelled';
+                if (isTerminal && !this._finalized) {
+                    this.finalizeInternal();
+                } else if (isTerminal) {
+                    this.engine.cancelSession(this.runtimeSessionId);
+                } else {
+                    this.engine.cancelSession(this.runtimeSessionId);
+                }
+            }
         }
         const sessionConfig = this.resetDebateState();
         if (config) Object.assign(sessionConfig, config);
@@ -206,7 +232,20 @@ export class DebateSyncManager {
         // M-3: clear stale timer before cancelSession
         this.clearTimers();
         if (this.engine && this.runtimeSessionId) {
-            this.engine.cancelSession(this.runtimeSessionId);
+            const prevSnap = this.engine.getSession(this.runtimeSessionId);
+            if (prevSnap) {
+                const isTerminal =
+                    prevSnap.phase === 'completed' ||
+                    prevSnap.phase === 'failed' ||
+                    prevSnap.phase === 'cancelled';
+                if (isTerminal && !this._finalized) {
+                    this.finalizeInternal();
+                } else if (isTerminal) {
+                    this.engine.cancelSession(this.runtimeSessionId);
+                } else {
+                    this.engine.cancelSession(this.runtimeSessionId);
+                }
+            }
         }
         const sessionConfig = this.resetDebateState();
         if (config) Object.assign(sessionConfig, config);
@@ -229,8 +268,13 @@ export class DebateSyncManager {
 
     resetDebateState(): DebateConfig {
         this._finalized = false;
+        this.activeSession = null;
         this.clearTimers();
         this.clearListeners();
+        // Clear Zustand stores to release stale session objects and events:
+        // prevents stale agents/rounds/emotions from accumulating across debates.
+        useDebateLiveStore.getState().clearAll();
+        useActiveDebateStore.getState().clearAll();
         if (DEFAULT_CONFIG.useGovernor !== false) {
             this.governor = new DebateGovernor();
             useActiveDebateStore.getState().setGovernorState(this.governor.getState());
@@ -265,6 +309,7 @@ export class DebateSyncManager {
         );
         this.runtimeSessionId = runtimeId;
         this.bridgeCtx = bridgeCtx;
+        this.governor?.setMaxRounds(bridgeCtx.maxRounds);
         this.setupListeners(runtimeId);
         this.startHeartbeat();
         this.syncSession();
@@ -297,11 +342,48 @@ export class DebateSyncManager {
 
     startEngineWithFinalize(runtimeId: string): void {
         void this.engine!.startSession(runtimeId)
-            .then(() => this.finalizeInternal())
+            .then(() => {
+                // Don't finalize if session was paused — pause/stop buttons need
+                // runtimeSessionId to remain alive for engine-level operations.
+                // finalizeInternal() nulls runtimeSessionId and clears listeners,
+                // making the debate unreachable from the sync layer.
+                const snap = this.engine?.getSession(runtimeId);
+                if (snap && snap.phase === 'paused') {
+                    this.syncSession();
+                    return;
+                }
+                // GUARD: if runtimeSessionId changed (new debate started before old
+                // pipeline finished), skip finalize — the new debate owns the
+                // listeners now. finalizeInternal() would clear them, corrupting
+                // the new session.
+                if (this.runtimeSessionId !== runtimeId) {
+                    LOGGER.warn(
+                        'DebateSyncManager',
+                        'Skipping finalize — runtimeSessionId changed',
+                        {
+                            expected: runtimeId,
+                            actual: this.runtimeSessionId,
+                        },
+                    );
+                    // Still clean up the engine session to prevent memory leak
+                    this.engine?.cancelSession(runtimeId);
+                    return;
+                }
+                this.finalizeInternal();
+            })
             .catch((e) => {
                 LOGGER.warn('DebateSyncManager', 'Engine debate failed', { error: e });
                 try {
                     this.syncSession();
+                    if (this.runtimeSessionId !== runtimeId) {
+                        LOGGER.warn(
+                            'DebateSyncManager',
+                            'Skipping catch-body finalize — runtimeSessionId changed',
+                            { expected: runtimeId, actual: this.runtimeSessionId },
+                        );
+                        this.engine?.cancelSession(runtimeId);
+                        return;
+                    }
                     this.finalizeInternal();
                 } catch (inner) {
                     LOGGER.error('DebateSyncManager', 'Catch body failed', { error: inner });
@@ -344,8 +426,15 @@ export class DebateSyncManager {
         this.clearListeners();
         for (const unsub of this._initUnsubs) unsub();
         this._initUnsubs = [];
-        if (this.activeSession && this.deps)
+        if (this.activeSession && this.deps) {
             this.deps.sessionManager.saveToDebateHistory(this.activeSession);
+            if (this.activeSession.arguments) {
+                for (const arg of this.activeSession.arguments) {
+                    (arg as { content?: string }).content = '';
+                }
+                this.activeSession.arguments = [];
+            }
+        }
         useActiveDebateStore.getState().clearAll();
         this.activeSession = null;
         this.engine = null;
@@ -367,7 +456,13 @@ export class DebateSyncManager {
         );
         if (!session) return;
         this.activeSession = session;
-        useActiveDebateStore.getState().setSession(session);
+        // Check governor stop conditions BEFORE updating the Zustand store.
+        // checkGovernorStopConditions() sets this.activeSession.consensus from
+        // governor synthesis. Without this ordering, waitForSessionCompletion()
+        // resolves with a consensus-less session, making tournament scoring
+        // always produce draws (all scores = 0).
+        const shouldStop = this.governor && this.checkGovernorStopConditions();
+        useActiveDebateStore.getState().setSession(this.activeSession);
         for (const arg of newArgs) {
             this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
                 sessionId: this.runtimeSessionId,
@@ -375,7 +470,7 @@ export class DebateSyncManager {
             });
         }
         this.deps!.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
-        if (this.governor && this.checkGovernorStopConditions()) {
+        if (shouldStop) {
             if (this.engine && this.runtimeSessionId) {
                 this.engine.cancelSession(this.runtimeSessionId);
             }
@@ -415,6 +510,15 @@ export class DebateSyncManager {
 
     private finalizeInternal(): void {
         if (this._finalized) return;
+        // DEFENSE: if runtimeSessionId is already null, another finalize (or a new
+        // debate start) already cleaned up — don't touch listeners.
+        if (!this.runtimeSessionId) {
+            LOGGER.warn(
+                'DebateSyncManager',
+                'finalizeInternal: runtimeSessionId already null — skipping',
+            );
+            return;
+        }
         this._finalized = true;
         this.stopHeartbeat();
         this.clearTimers();
@@ -422,12 +526,70 @@ export class DebateSyncManager {
         if (!session) return;
         finalizeDebate(session, {
             interpreter: this._interpreter,
-            sessionManager: this.deps!.sessionManager,
             eventBus: this.deps!.eventBus,
         });
+        // Strip argument content AFTER metrics but BEFORE saveToDebateHistory.
+        // saveToDebateHistory does structuredClone(session) — stripping content first
+        // prevents cloning large LLM response strings, reducing old-gen promotion
+        // pressure between tournament matches.
+        if (session.arguments) {
+            for (const arg of session.arguments) {
+                (arg as { content?: string }).content = '';
+            }
+            session.arguments = [];
+        }
+        this.deps!.sessionManager.saveToDebateHistory(session);
+        // Clean up Zustand stores to release retained session objects
+        useDebateLiveStore.getState().clearSession(session.id);
+        useActiveDebateStore.getState().clearAll();
         this.clearListeners();
+        const oldRuntimeId = this.runtimeSessionId;
         this.runtimeSessionId = null;
         this.bridgeCtx = null;
+        this.activeSession = null;
+        // Clean up engine session data to prevent memory leaks
+        if (this.engine && oldRuntimeId) {
+            this.engine.cancelSession(oldRuntimeId);
+        }
+        // MEMORY TRACKER: log engine + sync manager + aggregate state after finalize
+        if (this.engine) {
+            const engineSizes = this.engine.dumpSizes();
+            const liveState = useDebateLiveStore.getState();
+            const streamingMapsSize =
+                liveState.streamingContent.size +
+                liveState.emotions.size +
+                liveState.agentCountdowns.size +
+                liveState.agentAddressing.size +
+                liveState.memoryBubbles.size +
+                liveState.currentThinking.size;
+            const ebStats = eventBus.getSubscriptionStats();
+            logMemoryStats(
+                'AfterFinalize',
+                engineSizes,
+                {
+                    unsubs: this._unsubs.length,
+                    initUnsubs: this._initUnsubs.length,
+                    verdictCache: this._verdictCache.size,
+                    runtimeSessionId: this.runtimeSessionId,
+                    activeSessionSize: estimateSessionBytes(
+                        this.activeSession as Record<string, unknown> | null,
+                    ),
+                },
+                {
+                    embeddingChunks: 0,
+                    policyRules: 0,
+                    policyFirings: 0,
+                    modeVersions: 0,
+                    strategyVersions: 0,
+                    eventBusListeners: ebStats.totalCallbacks,
+                    completedSessions: this.deps?.sessionManager.getDebateHistory().length ?? 0,
+                    liveStoreAgentEvents: liveState.agentEvents.length,
+                    liveStoreRoundEvents: liveState.roundEvents.length,
+                    liveStoreStreamingMaps: streamingMapsSize,
+                    activeDebateSession: useActiveDebateStore.getState().session ? 1 : 0,
+                },
+            );
+        }
     }
 
     private checkGovernorStopConditions(): boolean {

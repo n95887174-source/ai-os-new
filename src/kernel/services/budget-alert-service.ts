@@ -8,6 +8,7 @@ import { ssrSafeStorage } from '../utils/ssr-storage';
 
 const STORAGE_KEY = 'budget_alert_rules';
 const HISTORY_KEY = 'budget_alert_history';
+const MAX_HISTORY = 100;
 
 function id(): string {
     return `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
@@ -117,7 +118,7 @@ export class BudgetAlertService implements IBudgetAlertService {
 
         for (const rule of this.rules.filter((r) => r.enabled)) {
             let triggered = false;
-            let usage = 0;
+            let usage: number;
             let message = '';
 
             if (rule.condition === 'trending_up' || rule.condition === 'trending_down') {
@@ -145,6 +146,8 @@ export class BudgetAlertService implements IBudgetAlertService {
                     };
                     events.push(ev);
                     this.history.push(ev);
+                    if (this.history.length > MAX_HISTORY)
+                        this.history = this.history.slice(-MAX_HISTORY);
                 }
                 continue;
             }
@@ -181,6 +184,8 @@ export class BudgetAlertService implements IBudgetAlertService {
                 };
                 events.push(ev);
                 this.history.push(ev);
+                if (this.history.length > MAX_HISTORY)
+                    this.history = this.history.slice(-MAX_HISTORY);
             }
         }
         this.persist();

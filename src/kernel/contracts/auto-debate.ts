@@ -53,6 +53,7 @@ export interface TournamentMatch {
     winner: string | null;
     draw: boolean;
     completed: boolean;
+    sessionStatus?: string;
     durationMs: number;
     error?: string;
 }

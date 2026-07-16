@@ -333,14 +333,25 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             this._visibilityHandler = () => {
                 if (document.hidden) {
-                    for (const sessionId of this.sessions.keys()) {
-                        this.saveSnapshot(sessionId).catch((e) =>
-                            LOGGER.warn('DebateEngine', 'visibilitychange save failed', {
-                                error: e,
-                                sessionId,
-                            }),
-                        );
-                    }
+                    // Serialize saves to avoid Dexie transaction conflicts.
+                    // Per-session try-catch so one corrupt session doesn't
+                    // prevent others from persisting.
+                    (async () => {
+                        for (const sessionId of this.sessions.keys()) {
+                            try {
+                                await this.saveSnapshot(sessionId);
+                            } catch (e) {
+                                LOGGER.warn('DebateEngine', 'visibilitychange save failed', {
+                                    error: e,
+                                    sessionId,
+                                });
+                            }
+                        }
+                    })().catch((e) =>
+                        LOGGER.error('DebateEngine', 'visibilitychange save loop crashed', {
+                            error: e,
+                        }),
+                    );
                 }
             };
             document.addEventListener('visibilitychange', this._visibilityHandler);
@@ -437,6 +448,20 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     if (ctx) ctx.destroy();
                     this.sessionContexts.delete(sessionId);
                     this.providerResolver.clearSession(sessionId);
+                    const timer = this.sessionTimeoutTimers.get(sessionId);
+                    if (timer) clearTimeout(timer);
+                    this.sessionTimeoutTimers.delete(sessionId);
+                    this.sessionStartTimes.delete(sessionId);
+                    this.runningSessions.delete(sessionId);
+                    this.preflightDone.delete(sessionId);
+                    this.sessionPhaseControllers.get(sessionId)?.abort();
+                    this.sessionPhaseControllers.delete(sessionId);
+                    const abortCtls = this.sessionAbortControllers.get(sessionId);
+                    if (abortCtls) {
+                        for (const [, c] of abortCtls) c.abort(new Error('cleanup'));
+                        abortCtls.clear();
+                    }
+                    this.sessionAbortControllers.delete(sessionId);
                 }
             }
         }
@@ -902,5 +927,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             this._visibilityHandler = undefined;
         }
         this._started = false;
+    }
+
+    /** Clear the warm cache — called by MemoryWatchdog on heap pressure. */
+    clearWarmCache(): void {
+        DebateEngine.warmCache.clear();
     }
 }

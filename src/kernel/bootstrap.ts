@@ -330,6 +330,29 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.warn('Bootstrap', 'DebateService init failed (non-critical)', { error: e });
         }
 
+        // ── MemoryWatchdog: proactive pressure callbacks ──────────────
+        try {
+            const debateEngine = this.container.get<{ clearWarmCache?: () => void }>(
+                'debateEngine',
+            );
+            const debateService = this.container.get<{ clearVerdictCache?: () => void }>(
+                'debateService',
+            );
+            const providerRegistry = this.container.get<{ clearAllCaches?: () => void }>(
+                'providerAdapterRegistry',
+            );
+            this.memoryWatchdog?.onPressure(() => {
+                debateEngine.clearWarmCache?.();
+                debateService.clearVerdictCache?.();
+                providerRegistry.clearAllCaches?.();
+            });
+            this.logger.info('Bootstrap', 'MemoryWatchdog pressure callbacks registered');
+        } catch (e) {
+            this.logger.warn('Bootstrap', 'MemoryWatchdog pressure wiring failed (non-critical)', {
+                error: e,
+            });
+        }
+
         // Auto-resume interrupted debates
         try {
             const allSessions = await getDexieDb().debateSessions.toArray();

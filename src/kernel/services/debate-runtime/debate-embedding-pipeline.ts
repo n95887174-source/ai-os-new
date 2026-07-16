@@ -106,6 +106,10 @@ export class DebateEmbeddingPipeline {
         return this.chunks.get(sessionId) || [];
     }
 
+    removeSessionChunks(sessionId: string): void {
+        this.chunks.delete(sessionId);
+    }
+
     getStats(): { totalSessions: number; totalChunks: number } {
         let totalChunks = 0;
         for (const chunks of this.chunks.values()) {

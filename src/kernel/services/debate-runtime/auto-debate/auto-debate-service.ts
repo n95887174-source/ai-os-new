@@ -8,12 +8,18 @@ import type {
     TournamentMatch,
 } from '../../../contracts/auto-debate';
 import { rootLogger } from '../../logger-service';
+import { logMemoryStats } from '../../../utils/memory-tracker';
 import type { DebateRole } from '../../../contracts/debate-types';
 import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
 import { useActiveDebateStore } from '../../../../stores/activeDebateStore';
+import { eventBus } from '../../../events/event-bus';
 
 const LOGGER = rootLogger.child('AutoDebateService');
-import type { DebateParticipant, DebateSession } from '../../../contracts/debate-types';
+import type {
+    DebateArgument,
+    DebateParticipant,
+    DebateSession,
+} from '../../../contracts/debate-types';
 import type { ApiKey } from '../../../types/metrics-types';
 
 /**
@@ -89,6 +95,10 @@ function makeParticipantId(): string {
 }
 
 const ROLES: DebateRole[] = ['pro', 'con', 'neutral'];
+// 'paused' is included so waitForSessionCompletion detects
+// paused debates immediately instead of waiting for the 60s timeout.
+// Without this, a paused budget-exceeded debate stalls the auto-debate
+// sequence for a full minute before the next debate can start.
 const TERMINAL_SESSION_STATUSES = new Set(['completed', 'failed', 'cancelled', 'paused']);
 
 export interface AutoDebateServiceDeps {
@@ -237,14 +247,20 @@ export class AutoDebateService implements IAutoDebateService {
                 ) {
                     unsub();
                     clearTimeout(timer);
-                    resolve(state.session);
+                    // CRITICAL: structuredClone the session BEFORE finalizeInternal()
+                    // runs and strips session.arguments = []. The Zustand subscription
+                    // fires synchronously inside syncSession()->setSession(), but
+                    // finalizeInternal() runs in the same .then() block immediately
+                    // after and mutates the SAME object. Without cloning, tournament
+                    // scoring reads empty arguments (always draw).
+                    resolve(structuredClone(state.session));
                 }
             });
             const timer = setTimeout(() => {
                 unsub();
                 const final = useActiveDebateStore.getState().session;
                 if (final && final.id === session.id && TERMINAL_SESSION_STATUSES.has(final.status))
-                    resolve(final);
+                    resolve(structuredClone(final));
                 else resolve(session);
             }, timeoutMs);
         });
@@ -272,7 +288,7 @@ export class AutoDebateService implements IAutoDebateService {
         }
 
         try {
-            const session = await this.deps.debateService.startDebate(
+            const initialSession = await this.deps.debateService.startDebate(
                 topic,
                 participants,
                 options.strategy ?? 'round_robin',
@@ -286,7 +302,7 @@ export class AutoDebateService implements IAutoDebateService {
                     language: 'ru',
                 },
             );
-            await this.waitForSessionCompletion(session);
+            const session = await this.waitForSessionCompletion(initialSession);
 
             const result: AutoDebateResult = {
                 id: makeParticipantId(),
@@ -359,6 +375,12 @@ export class AutoDebateService implements IAutoDebateService {
     }
 
     async runTournament(topic: string, participantCount = 6): Promise<TournamentResult> {
+        // Clear all Zustand debate store state from any previous runs
+        const { useDebateLiveStore } = await import('../../../../stores/debateLiveStore');
+        useDebateLiveStore.getState().clearAll();
+        const { useActiveDebateStore } = await import('../../../../stores/activeDebateStore');
+        useActiveDebateStore.getState().clearAll();
+
         const start = Date.now();
         const allParticipants = this.createParticipants(participantCount);
         const names = allParticipants.map((p) => p.name);
@@ -400,52 +422,83 @@ export class AutoDebateService implements IAutoDebateService {
                 systemPrompt: `You are "Con-${pB.name}". Argue AGAINST the topic. Use evidence and logic.`,
             };
 
-            try {
-                const session = await this.deps.debateService.startDebate(
+            const matchScoring = async (): Promise<TournamentMatch> => {
+                const initialSession = await this.deps.debateService.startDebate(
                     topic,
                     [pro, con],
                     'round_robin',
                     2,
                     {
                         temperature: 0.7,
-                        maxTokens: 512,
+                        maxTokens: 256,
                         roundDelayMs: 50,
                         useModerator: true,
                         timeoutMs: 20000,
                         language: 'ru',
                     },
                 );
-                await this.waitForSessionCompletion(session);
+                const session = await this.waitForSessionCompletion(initialSession);
 
-                const consensusText = (session.consensus ?? '').toLowerCase();
-                const proId = pA.id.toLowerCase();
-                const proName = pA.name.toLowerCase();
-                const conId = pB.id.toLowerCase();
-                const conName = pB.name.toLowerCase();
-                const count = (haystack: string, needle: string) => {
-                    let c = 0,
-                        idx = 0;
-                    while ((idx = haystack.indexOf(needle, idx)) !== -1) {
-                        c++;
-                        idx += needle.length;
-                    }
-                    return c;
-                };
-                const proScore = count(consensusText, proId) + count(consensusText, proName);
-                const conScore = count(consensusText, conId) + count(consensusText, conName);
-                const proWon = proScore > conScore;
-                const conWon = conScore > proScore;
+                // Clean up store data + verdict cache to prevent memory leak
+                (
+                    this.deps.debateService as { clearVerdictCache?: () => void }
+                ).clearVerdictCache?.();
+                const { useDebateLiveStore } = await import('../../../../stores/debateLiveStore');
+                useDebateLiveStore.getState().clearSession(session.id);
+                const { useActiveDebateStore } =
+                    await import('../../../../stores/activeDebateStore');
+                useActiveDebateStore.getState().clearAll();
 
-                matches.push({
+                const proArgs = session.arguments.filter(
+                    (a) =>
+                        a.agentId.toLowerCase() === pA.id.toLowerCase() ||
+                        a.agentName.toLowerCase() === pA.name.toLowerCase(),
+                );
+                const conArgs = session.arguments.filter(
+                    (a) =>
+                        a.agentId.toLowerCase() === pB.id.toLowerCase() ||
+                        a.agentName.toLowerCase() === pB.name.toLowerCase(),
+                );
+                const proScore = scoreParticipant(proArgs);
+                const conScore = scoreParticipant(conArgs);
+                // Break reference chain to argument content after scoring.
+                // This lets V8 reclaim LLM response strings before finalizeInternal()
+                // strips the active session's arguments in a later microtask.
+                session.arguments = [];
+
+                return {
                     pairId: `match-${m}`,
                     participantA: pA.name,
                     participantB: pB.name,
                     topic,
-                    winner: proWon ? pA.name : conWon ? pB.name : null,
+                    winner: proScore > conScore ? pA.name : conScore > proScore ? pB.name : null,
                     draw: proScore === conScore,
                     completed: session.status === 'completed',
+                    sessionStatus: session.status,
+                    durationMs: Date.now() - pairStart,
+                };
+            };
+
+            try {
+                const matchResult = await matchScoring();
+                matches.push(matchResult);
+                LOGGER.info('AutoDebateService', `Match ${m + 1}/${pairs.length} OK`, {
+                    a: pA.name,
+                    b: pB.name,
                     durationMs: Date.now() - pairStart,
                 });
+                // GC-friendly delay between matches — session objects are now
+                // out of scope, so V8 can reclaim LLM response chains, decorator
+                // wrappers, and argument content from the completed match.
+                // 3s was insufficient for full GC sweep → increased to 10s.
+                // Also allocate+freed a large buffer to encourage V8 memory pressure GC.
+                try {
+                    const gcHint = new ArrayBuffer(64 * 1024 * 1024);
+                    gcHint.toString();
+                } catch {
+                    /* best-effort GC hint */
+                }
+                await new Promise((r) => setTimeout(r, 10000));
             } catch (e) {
                 matches.push({
                     pairId: `match-${m}`,
@@ -458,7 +511,35 @@ export class AutoDebateService implements IAutoDebateService {
                     durationMs: Date.now() - pairStart,
                     error: e instanceof Error ? e.message : String(e),
                 });
+                LOGGER.info('AutoDebateService', `Match ${m + 1}/${pairs.length} FAILED`, {
+                    a: pA.name,
+                    b: pB.name,
+                    error: e instanceof Error ? e.message : String(e),
+                    durationMs: Date.now() - pairStart,
+                });
             }
+            const liveState = useDebateLiveStore.getState();
+            const streamingMapsSize =
+                liveState.streamingContent.size +
+                liveState.emotions.size +
+                liveState.agentCountdowns.size +
+                liveState.agentAddressing.size +
+                liveState.memoryBubbles.size +
+                liveState.currentThinking.size;
+            const ebStats = eventBus.getSubscriptionStats();
+            logMemoryStats(`TournamentMatch${m + 1}`, undefined, undefined, {
+                embeddingChunks: 0,
+                policyRules: 0,
+                policyFirings: 0,
+                modeVersions: 0,
+                strategyVersions: 0,
+                eventBusListeners: ebStats.totalCallbacks,
+                completedSessions: 0,
+                liveStoreAgentEvents: liveState.agentEvents.length,
+                liveStoreRoundEvents: liveState.roundEvents.length,
+                liveStoreStreamingMaps: streamingMapsSize,
+                activeDebateSession: useActiveDebateStore.getState().session ? 1 : 0,
+            });
         }
 
         const results = new Map<string, { wins: number; losses: number }>();
@@ -533,10 +614,19 @@ export class AutoDebateService implements IAutoDebateService {
                 entry.debates++;
 
                 const session = r.session!;
-                const consensus = session.consensus ?? '';
+                const participantArgs = session.arguments.filter(
+                    (a) =>
+                        a.agentName.toLowerCase() === p.name.toLowerCase() ||
+                        a.agentId.toLowerCase() === p.name.toLowerCase(),
+                );
+                const opponentArgs = session.arguments.filter(
+                    (a) =>
+                        a.agentName.toLowerCase() !== p.name.toLowerCase() &&
+                        a.agentId.toLowerCase() !== p.name.toLowerCase(),
+                );
                 const isWinner =
-                    consensus.toLowerCase().includes(p.name.toLowerCase()) ||
-                    consensus.toLowerCase().includes(p.provider.toLowerCase());
+                    participantArgs.length > 0 &&
+                    scoreParticipant(participantArgs) > scoreParticipant(opponentArgs);
 
                 if (isWinner) entry.wins++;
                 map.set(p.provider, entry);
@@ -564,4 +654,11 @@ export class AutoDebateService implements IAutoDebateService {
     destroy(): void {
         this.results = [];
     }
+}
+
+function scoreParticipant(args: DebateArgument[]): number {
+    if (args.length === 0) return 0;
+    const totalWords = args.reduce((sum, a) => sum + a.content.split(/\s+/).length, 0);
+    const totalConfidence = args.reduce((sum, a) => sum + (a.confidence ?? 0), 0);
+    return args.length * 1_000_000 + Math.min(totalWords, 999_999) + Math.min(totalConfidence, 999);
 }

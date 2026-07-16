@@ -220,4 +220,8 @@ export class DebateModeManagerPersistent extends DebateModeManager {
             // Non-critical
         }
     }
+
+    destroy(): void {
+        this.versionHistories.clear();
+    }
 }

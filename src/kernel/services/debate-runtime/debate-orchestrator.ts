@@ -6,6 +6,20 @@ import type {
 } from '../../contracts/debate-runtime';
 import { DebateTopologyService } from './debate-topology';
 
+function getHeapMB(): number {
+    try {
+        const mem = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory;
+        return mem ? Math.round(mem.usedJSHeapSize / (1024 * 1024)) : 0;
+    } catch {
+        return 0;
+    }
+}
+
+// gcHint removed: allocating 128MB of strings to trigger V8 GC
+// was counterproductive — it promoted those strings to old gen,
+// making the memory leak WORSE. V8 GC cannot be triggered from
+// user code without --expose-gc flag.
+
 export class DebateOrchestrator implements IDebateOrchestrator {
     private aborted = new Set<string>();
     private executor: AgentExecutor | undefined;
@@ -30,6 +44,7 @@ export class DebateOrchestrator implements IDebateOrchestrator {
         startRound = 0,
     ): AsyncGenerator<OrchestratorEvent, void, unknown> {
         const rounds = this.topologyService.buildRounds(topology);
+        const startHeap = getHeapMB();
 
         for (let r = startRound; r < rounds.length; r++) {
             if (this.aborted.has(sessionId)) return;
@@ -37,6 +52,10 @@ export class DebateOrchestrator implements IDebateOrchestrator {
             const nodeGroup = rounds[r];
             const roundNum = r + 1;
             const nodeIds = nodeGroup.map((n) => n.id);
+            const roundHeapMB = getHeapMB();
+            console.log(
+                `[MEMORY] Round ${roundNum} start: ${roundHeapMB}MB (${nodeIds.length} agents)`,
+            );
             yield { type: 'round:start', round: roundNum, nodes: nodeIds };
 
             // Phase 2: orchestrator drives the full agent lifecycle.
@@ -89,6 +108,12 @@ export class DebateOrchestrator implements IDebateOrchestrator {
                 }
             }
 
+            const roundEndHeap = getHeapMB();
+            if (roundEndHeap - roundHeapMB > 5) {
+                console.log(
+                    `[MEMORY] Round ${roundNum} end: ${roundEndHeap}MB (Δ+${roundEndHeap - roundHeapMB}MB this round)`,
+                );
+            }
             yield {
                 type: 'round:end',
                 round: roundNum,
@@ -99,6 +124,13 @@ export class DebateOrchestrator implements IDebateOrchestrator {
             if (this.aborted.has(sessionId)) return;
         }
 
+        const endHeap = getHeapMB();
+        const totalDelta = endHeap - startHeap;
+        if (Math.abs(totalDelta) > 5) {
+            console.log(
+                `[MEMORY] === Debate complete: ${startHeap}MB → ${endHeap}MB (Δ${totalDelta >= 0 ? '+' : ''}${totalDelta}MB)`,
+            );
+        }
         yield { type: 'topology:complete' };
     }
 

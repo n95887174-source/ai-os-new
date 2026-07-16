@@ -22,7 +22,7 @@ const LOGGER = rootLogger.child('SessionManagerService');
 
 export class SessionManagerService implements ISessionManager {
     private completedSessions: DebateSession[] = [];
-    private readonly MAX_HISTORY = 20;
+    private readonly MAX_HISTORY = 5;
     private _historyLoaded = false;
     private _pendingHistorySaves: DebateSession[] = [];
 
@@ -387,6 +387,17 @@ export class SessionManagerService implements ISessionManager {
         }
     }
 
+    private static stripArgumentContent(session: DebateSession): DebateSession {
+        if (!session.arguments?.length) return session;
+        return {
+            ...session,
+            arguments: session.arguments.map((arg) => ({
+                ...arg,
+                content: '',
+            })),
+        };
+    }
+
     private persistDebateHistory(): void {
         void persistHistoryList(this.debateStore, this.completedSessions);
     }
@@ -401,11 +412,12 @@ export class SessionManagerService implements ISessionManager {
         if (this.completedSessions.some((s) => s.id === session.id)) return;
         const snapshot = structuredClone(session);
         // If history is still loading, buffer the save to replay after load completes
+        const stripped = SessionManagerService.stripArgumentContent(snapshot);
         if (!this._historyLoaded && this._pendingHistorySaves.length >= 0) {
-            this._pendingHistorySaves.push(snapshot);
+            this._pendingHistorySaves.push(stripped);
             return;
         }
-        this.completedSessions.unshift(snapshot);
+        this.completedSessions.unshift(stripped);
         if (this.completedSessions.length > this.MAX_HISTORY) {
             this.completedSessions = this.completedSessions.slice(0, this.MAX_HISTORY);
         }

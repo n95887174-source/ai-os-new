@@ -2,6 +2,7 @@ import type { TimelineEntry, IDebateQueryEngine } from '../../contracts/debate-t
 import type { DebateSession } from '../../contracts/debate-types';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import { PROVIDER_DEFAULT_MODELS } from '../../utils/provider-default-models';
+import { rootLogger } from '../logger-service';
 
 const NON_CHAT_PREFIXES = [
     'text-',
@@ -63,8 +64,12 @@ export function isModelCompatibleWithProvider(model: string, provider: string): 
     // Prefix-guarded providers: model MUST use the correct prefix or be bare
     if (p === 'openrouter' && !model.startsWith('openrouter/')) return false;
     if (p === 'nvidia' && !model.startsWith('meta/')) return false;
+    // Reverse guards: model with known provider prefix must only go to matching provider
+    if (model.startsWith('openrouter/')) return p === 'openrouter';
+    if (model.startsWith('meta/')) return p === 'nvidia';
     // Bare model format: reject provider-prefixed model strings sent to native providers
-    if (model.startsWith('gemini/')) return p === 'gemini';
+    // Gemini native models: can be gemini-X (hyphen) or gemini/X (slash format)
+    if (model.startsWith('gemini-') || model.startsWith('gemini/')) return p === 'gemini';
     if (model.startsWith('openai/')) return p === 'openai' || p === 'openrouter';
     if (model.startsWith('anthropic/')) return false; // not supported in debates
     if (model.startsWith('groq/')) return p === 'groq';
@@ -174,15 +179,18 @@ export class DebateProviderResolver {
         return state?.flags.authFailed === true;
     }
 
-    providerCanBeUsed(provider: string, session: SessionProviderState): boolean {
-        if (session.hasProviderFailed(provider)) return false;
+    private isCircuitOpen(provider: string): boolean {
         try {
             const registry = this.deps.adapterRegistry;
-            const cb = registry.getCircuitBreakerState(provider);
-            if (cb === 'open') return false;
+            return registry.getCircuitBreakerState(provider) === 'open';
         } catch {
-            /* best-effort */
+            return false;
         }
+    }
+
+    providerCanBeUsed(provider: string, session: SessionProviderState): boolean {
+        if (session.hasProviderFailed(provider)) return false;
+        if (this.isCircuitOpen(provider)) return false;
         return true;
     }
 
@@ -288,7 +296,20 @@ export class DebateProviderResolver {
         }
 
         if (!resolvedKey) {
-            const providerKeys = routerService.getDebateProviders(1);
+            // Request multiple providers — the top-priority ones may be in the
+            // session's failedProviders list (from previous agent errors). Having
+            // more candidates avoids "no available provider" cascading failures.
+            const DEBATE_PROVIDER_BATCH = 5;
+            const providerKeys = routerService.getDebateProviders(DEBATE_PROVIDER_BATCH);
+            const pkSummary = providerKeys.map((pk) => `${pk.provider}:${pk.key.id.slice(0, 8)}`);
+            console.log('[DEBATE_FALLBACK] Step 4: getDebateProviders(1)', {
+                count: providerKeys.length,
+                providers: pkSummary,
+            });
+            rootLogger.debug('DebateProviderResolver', 'Step 4: getDebateProviders(1)', {
+                count: providerKeys.length,
+                providers: pkSummary,
+            });
             const available = providerKeys.find(
                 (pk) =>
                     this.providerCanBeUsed(pk.key.provider, session) &&
@@ -296,8 +317,32 @@ export class DebateProviderResolver {
                     !this.isKeyAuthFailed(pk.key.id),
             );
             if (available) {
+                console.log('[DEBATE_FALLBACK] Step 4: found provider', {
+                    provider: available.key.provider,
+                    keyId: available.key.id.slice(0, 8),
+                });
+                rootLogger.debug('DebateProviderResolver', 'Step 4: found provider', {
+                    provider: available.key.provider,
+                    keyId: available.key.id.slice(0, 8),
+                });
                 this.participantProviderMap.set(pKey, available.key.provider);
                 resolvedKey = available.key;
+            } else {
+                const failedProvidersArr = Array.from(
+                    (session as { _failedProviders?: Set<string> })._failedProviders ?? [],
+                );
+                const triedDetails = providerKeys.map(
+                    (pk) =>
+                        `${pk.provider}:${pk.key.id.slice(0, 8)} canUse=${this.providerCanBeUsed(pk.key.provider, session)} active=${pk.key.status === 'active'} authOk=${!this.isKeyAuthFailed(pk.key.id)}`,
+                );
+                console.log('[DEBATE_FALLBACK] Step 4: no available provider', {
+                    triedKeys: triedDetails,
+                    failedProviders: failedProvidersArr,
+                });
+                rootLogger.warn('DebateProviderResolver', 'Step 4: no available provider', {
+                    triedKeys: triedDetails,
+                    failedProviders: failedProvidersArr,
+                });
             }
         }
 
@@ -314,13 +359,46 @@ export class DebateProviderResolver {
 
         if (!resolvedKey) {
             const allKeys = keyService.getKeys();
+            const fProviders = Array.from(
+                (session as { _failedProviders?: Set<string> })._failedProviders ?? [],
+            );
+            console.log('[DEBATE_FALLBACK] Step 6: brute-force ANY active key', {
+                totalKeys: allKeys.length,
+                failedProviders: fProviders,
+            });
+            rootLogger.warn('DebateProviderResolver', 'Step 6: brute-force ANY active key', {
+                totalKeys: allKeys.length,
+                failedProviders: fProviders,
+            });
+            // Step 6 is last-resort: ignore session-level hasProviderFailed (which is
+            // permanent per-session) because transient errors like 429 should not
+            // permanently block a provider. Still check circuit breaker (temporary).
             const anyAvailable = allKeys.find(
                 (k) =>
-                    this.providerCanBeUsed(k.provider, session) &&
                     k.status === 'active' &&
-                    !this.isKeyAuthFailed(k.id),
+                    !this.isKeyAuthFailed(k.id) &&
+                    !this.isCircuitOpen(k.provider),
             );
-            if (anyAvailable) resolvedKey = anyAvailable;
+            if (anyAvailable) {
+                console.log('[DEBATE_FALLBACK] Step 6: brute-force resolved', {
+                    provider: anyAvailable.provider,
+                    keyId: anyAvailable.id.slice(0, 8),
+                });
+                rootLogger.info('DebateProviderResolver', 'Step 6: brute-force resolved', {
+                    provider: anyAvailable.provider,
+                    keyId: anyAvailable.id.slice(0, 8),
+                });
+                resolvedKey = anyAvailable;
+            } else {
+                const ks = allKeys.map(
+                    (k) =>
+                        `${k.provider}:${k.id.slice(0, 8)} status=${k.status} canUse=${this.providerCanBeUsed(k.provider, session)} authOk=${!this.isKeyAuthFailed(k.id)}`,
+                );
+                console.log('[DEBATE_FALLBACK] Step 6: ALL keys unavailable!', { keySummary: ks });
+                rootLogger.error('DebateProviderResolver', 'Step 6: ALL keys unavailable!', {
+                    keySummary: ks,
+                });
+            }
         }
 
         if (!resolvedKey) return null;

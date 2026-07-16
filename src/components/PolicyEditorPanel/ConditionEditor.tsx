@@ -183,7 +183,7 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
                 {showValues && (
                     <input
                         type="text"
-                        value={(condition as { values: string[] }).values.join(', ')}
+                        value={(condition as unknown as { values: string[] }).values.join(', ')}
                         onChange={(e) =>
                             onChange({
                                 ...condition,
@@ -191,7 +191,7 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
                                     .split(',')
                                     .map((s) => s.trim())
                                     .filter(Boolean),
-                            } as PolicyCondition)
+                            } as unknown as PolicyCondition)
                         }
                         style={{ ...s.input, width: 140, fontSize: 10 }}
                         placeholder="phase1, phase2"

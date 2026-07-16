@@ -92,9 +92,55 @@ export class DebateBudget implements IDebateBudget {
         eventBus?: { emit: (event: string, data?: unknown) => void },
     ) {
         this._sessionId = sessionId;
-        this.limits = { ...DEFAULT_LIMITS, ...limits };
+        this.limits = {
+            ...DEFAULT_LIMITS,
+            ...limits,
+            // Prevent undefined or 0 from overriding defaults via spread
+            maxRounds: (limits?.maxRounds ?? DEFAULT_LIMITS.maxRounds) || DEFAULT_LIMITS.maxRounds,
+            maxTokensPerDebate: limits?.maxTokensPerDebate ?? DEFAULT_LIMITS.maxTokensPerDebate,
+            maxCostPerDebate: limits?.maxCostPerDebate ?? DEFAULT_LIMITS.maxCostPerDebate,
+            maxConcurrency: limits?.maxConcurrency ?? DEFAULT_LIMITS.maxConcurrency,
+            maxDurationMs: limits?.maxDurationMs ?? DEFAULT_LIMITS.maxDurationMs,
+        };
         this._startedAt = Date.now();
         this.emit = eventBus?.emit;
+    }
+
+    private sanityReset(): void {
+        // Guard: if counters exceed limits (stale budget reuse or corruption),
+        // reset to zero rather than blocking all agent calls.
+        if (this._tokensUsed > this.limits.maxTokensPerDebate) {
+            LOGGER.warn(
+                'DebateBudget',
+                `stale token counter ${this._tokensUsed} > limit — resetting`,
+                {
+                    sessionId: this._sessionId,
+                },
+            );
+            this._tokensUsed = 0;
+        }
+        if (this._costUsed > this.limits.maxCostPerDebate) {
+            LOGGER.warn(
+                'DebateBudget',
+                `stale cost counter ${this._costUsed} > limit — resetting`,
+                {
+                    sessionId: this._sessionId,
+                },
+            );
+            this._costUsed = 0;
+        }
+        // Duration sanity: if _startedAt is somehow in the past (epoch 0, or
+        // very old from a stale budget), reset it to now so the duration
+        // check doesn't immediately reject.
+        const elapsed = Date.now() - this._startedAt;
+        if (elapsed < 0 || elapsed > this.limits.maxDurationMs * 10) {
+            LOGGER.warn(
+                'DebateBudget',
+                `stale _startedAt ${this._startedAt} (elapsed ${elapsed}ms) — resetting to now`,
+                { sessionId: this._sessionId },
+            );
+            this._startedAt = Date.now();
+        }
     }
 
     private async acquireLock(): Promise<() => void> {
@@ -113,16 +159,30 @@ export class DebateBudget implements IDebateBudget {
         estimatedTokens: number,
         estimatedCost: number,
     ): Promise<boolean> {
+        this.sanityReset();
         if (sessionId !== this._sessionId) {
+            // This guard prevents budget reuse across sessions. If it fires on the first
+            // round, the budget's _sessionId was set during new DebateBudget(id) but the
+            // caller passes a different id — likely a closure mismatch in createAgentExecutor.
             LOGGER.warn(
                 'DebateBudget',
-                `sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`,
+                `sessionId mismatch: expected ${this._sessionId}, got ${sessionId} — caller sessionId doesn't match budget owner`,
             );
             return false;
         }
         const release = await this.acquireLock();
         try {
             if (this._tokensUsed + estimatedTokens > this.limits.maxTokensPerDebate) {
+                LOGGER.warn(
+                    'DebateBudget',
+                    `REJECT: tokens ${this._tokensUsed}+${estimatedTokens} > ${this.limits.maxTokensPerDebate}`,
+                    {
+                        sessionId,
+                        tokensUsed: this._tokensUsed,
+                        estimatedTokens,
+                        limit: this.limits.maxTokensPerDebate,
+                    },
+                );
                 this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, {
                     sessionId,
                     reason: 'tokens',
@@ -132,6 +192,16 @@ export class DebateBudget implements IDebateBudget {
                 return false;
             }
             if (this._costUsed + estimatedCost > this.limits.maxCostPerDebate) {
+                LOGGER.warn(
+                    'DebateBudget',
+                    `REJECT: cost ${this._costUsed}+${estimatedCost} > ${this.limits.maxCostPerDebate}`,
+                    {
+                        sessionId,
+                        costUsed: this._costUsed,
+                        estimatedCost,
+                        limit: this.limits.maxCostPerDebate,
+                    },
+                );
                 this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, {
                     sessionId,
                     reason: 'cost',
@@ -140,7 +210,12 @@ export class DebateBudget implements IDebateBudget {
                 });
                 return false;
             }
-            if (this._roundsUsed >= this.limits.maxRounds) {
+            if (this._roundsUsed > this.limits.maxRounds) {
+                LOGGER.warn(
+                    'DebateBudget',
+                    `REJECT: rounds ${this._roundsUsed} > ${this.limits.maxRounds}`,
+                    { sessionId, roundsUsed: this._roundsUsed, limit: this.limits.maxRounds },
+                );
                 this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, {
                     sessionId,
                     reason: 'rounds',
@@ -149,15 +224,39 @@ export class DebateBudget implements IDebateBudget {
                 });
                 return false;
             }
-            if (Date.now() - this._startedAt >= this.limits.maxDurationMs) {
+            const elapsed = Date.now() - this._startedAt;
+            if (elapsed >= this.limits.maxDurationMs) {
+                LOGGER.warn(
+                    'DebateBudget',
+                    `REJECT: duration ${elapsed}ms >= ${this.limits.maxDurationMs}ms`,
+                    {
+                        sessionId,
+                        elapsed,
+                        _startedAt: this._startedAt,
+                        limit: this.limits.maxDurationMs,
+                    },
+                );
                 this.emit?.(EVENTS.DEBATE_BUDGET_EXCEEDED, {
                     sessionId,
                     reason: 'duration',
                     limit: this.limits.maxDurationMs,
-                    used: Date.now() - this._startedAt,
+                    used: elapsed,
                 });
                 return false;
             }
+            LOGGER.debug(
+                'DebateBudget',
+                `ALLOWED: tokens ${this._tokensUsed}+${estimatedTokens}, cost ${this._costUsed}+${estimatedCost}, rounds ${this._roundsUsed}, elapsed ${elapsed}ms`,
+                {
+                    sessionId,
+                    tokensUsed: this._tokensUsed,
+                    estimatedTokens,
+                    costUsed: this._costUsed,
+                    estimatedCost,
+                    roundsUsed: this._roundsUsed,
+                    elapsed,
+                },
+            );
             this._tokensUsed += estimatedTokens;
             this._costUsed += estimatedCost;
             return true;
@@ -178,6 +277,18 @@ export class DebateBudget implements IDebateBudget {
             LOGGER.warn(
                 'DebateBudget',
                 `incrementRound sessionId mismatch: expected ${this._sessionId}, got ${sessionId}`,
+            );
+            return;
+        }
+        // Don't increment beyond the limit — prevents fencepost where
+        // incrementRound (called at round:start) makes _roundsUsed equal
+        // maxRounds, causing the next reserveAndRecord check to reject
+        // agents in the last allowed round.
+        if (this._roundsUsed >= this.limits.maxRounds) {
+            LOGGER.debug(
+                'DebateBudget',
+                `incrementRound: already at limit ${this.limits.maxRounds}, skipping`,
+                { sessionId, roundsUsed: this._roundsUsed },
             );
             return;
         }

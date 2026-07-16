@@ -103,4 +103,18 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     syncRateLimitState(provider: string, remaining: number): void {
         this.factory.syncRateLimitState(provider, remaining);
     }
+
+    clearAllCaches(): void {
+        for (const [, adapter] of this.adapters) {
+            let current: unknown = adapter;
+            const seen = new Set<unknown>();
+            while (current && !seen.has(current)) {
+                seen.add(current);
+                if (typeof (current as Record<string, unknown>).clearCache === 'function') {
+                    (current as { clearCache: () => void }).clearCache();
+                }
+                current = (current as Record<string, unknown>).inner;
+            }
+        }
+    }
 }

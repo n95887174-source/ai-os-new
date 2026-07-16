@@ -31,12 +31,18 @@ export class MemoryWatchdog {
     private readonly thresholdMB: number;
     private readonly absoluteThresholdMB: number;
     private enabled: boolean;
+    private pressureCallbacks: Array<() => void> = [];
 
     constructor(opts?: WatchdogOptions) {
         this.intervalMs = opts?.intervalMs ?? 5000;
         this.thresholdMB = opts?.thresholdMB ?? 100;
-        this.absoluteThresholdMB = opts?.absoluteThresholdMB ?? 500;
+        this.absoluteThresholdMB = opts?.absoluteThresholdMB ?? 400;
         this.enabled = typeof performance !== 'undefined' && 'memory' in performance;
+    }
+
+    /** Register a callback to fire when heap exceeds absoluteThresholdMB. */
+    onPressure(cb: () => void): void {
+        this.pressureCallbacks.push(cb);
     }
 
     start(): void {
@@ -98,6 +104,14 @@ export class MemoryWatchdog {
                         type: 'error',
                     }),
                 );
+                // Proactive: fire pressure callbacks to clear caches before OOM
+                for (const cb of this.pressureCallbacks) {
+                    try {
+                        cb();
+                    } catch (e) {
+                        LOGGER.warn('MemoryWatchdog', 'pressure callback failed', { error: e });
+                    }
+                }
             }
         } catch (e) {
             LOGGER.warn('MemoryWatchdog', 'tick failed', { error: e });

@@ -63,7 +63,7 @@ const STOP_WORDS = new Set([
 ]);
 
 export function extractStrongTopics(memory: DebateMemory, agentId: string): string[] {
-    const agentSteps = memory.getAllSteps().filter((s) => s.agentId === agentId);
+    const agentSteps = memory.getAgentSteps(agentId);
     if (agentSteps.length < 3) return [];
 
     const wordFreq = new Map<string, number>();
@@ -120,10 +120,11 @@ export class DebateMemory implements IDebateMemory {
         const existing = this.chains.get(step.agentId) || [];
         const lastChain = existing[existing.length - 1];
         if (lastChain && !lastChain.conclusion) {
+            const newSteps = [...lastChain.steps, step];
             existing[existing.length - 1] = {
                 ...lastChain,
-                steps: [...lastChain.steps, step],
-                coherence: this.calculateCoherence([...lastChain.steps, step]),
+                steps: newSteps,
+                coherence: this.calculateCoherence(newSteps),
             };
         } else {
             existing.push({
@@ -142,6 +143,31 @@ export class DebateMemory implements IDebateMemory {
 
     getAllSteps(): ReasoningStep[] {
         return [...this.steps];
+    }
+
+    getAgentSteps(agentId: string): ReasoningStep[] {
+        return this.steps.filter((s) => s.agentId === agentId);
+    }
+
+    getRecentSteps(count: number): ReasoningStep[] {
+        if (count <= 0) return [];
+        if (count >= this.steps.length) return [...this.steps];
+        return this.steps.slice(-count);
+    }
+
+    /**
+     * Strip content from steps older than the last `keepCount`, freeing
+     * LLM response strings for GC while preserving step structure (agentId,
+     * type, confidence, timestamp) for metrics and chain calculations.
+     * Call after each round completes to prevent unbounded memory growth
+     * (observed: +300MB/round with 10 agents on 70B models).
+     */
+    trimContent(keepCount: number): void {
+        if (keepCount <= 0 || this.steps.length <= keepCount) return;
+        const keepFrom = this.steps.length - keepCount;
+        for (let i = 0; i < keepFrom; i++) {
+            this.steps[i] = { ...this.steps[i], content: '' };
+        }
     }
 
     recordClaim(claim: Claim): void {

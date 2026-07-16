@@ -259,6 +259,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             const headers = this.buildHeaders(apiKey);
             const res = await fetch(`${this.baseURL}/models`, { headers, signal });
             if (!res.ok) {
+                res.body?.cancel()?.catch(() => {});
                 LOGGER.warn('OpenRouterAdapter', `getAvailableModels returned ${res.status}`, {
                     status: res.status,
                 });

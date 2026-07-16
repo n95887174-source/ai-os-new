@@ -12,6 +12,7 @@ export class DebateGovernor {
     private readonly NOVELTY_THRESHOLD = 2;
     private readonly CONVERGENCE_PLATEAU_ROUNDS = 3;
     private readonly CONVERGENCE_THRESHOLD = 85;
+    private maxRounds = 0;
 
     constructor() {
         this.diversityScorer = new DiversityScorer();
@@ -25,6 +26,11 @@ export class DebateGovernor {
             phase: 'active',
             lastUpdatedAt: Date.now(),
         };
+    }
+
+    /** Set maximum number of rounds before forced stop. */
+    setMaxRounds(n: number): void {
+        this.maxRounds = n;
     }
 
     ingestArgument(
@@ -191,6 +197,7 @@ export class DebateGovernor {
         if (this.state.phase !== 'active') return true;
         // Never stop before at least 1 full round after opening statements
         if (this.state.round < 2) return false;
+        if (this.maxRounds > 0 && this.state.round >= this.maxRounds) return true;
         if (this.hasNoNovelClaims()) return true;
         if (this.isConvergencePlateau()) return true;
         if (

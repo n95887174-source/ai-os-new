@@ -301,6 +301,7 @@ export class PromptSecurityService implements IPromptSecurityService {
     async addEvent(event: SecurityScanEvent): Promise<void> {
         await this.ensureLoaded();
         this.history.push(event);
+        if (this.history.length > MAX_HISTORY) this.history = this.history.slice(-MAX_HISTORY);
         await this.persist();
     }
 

@@ -44,6 +44,7 @@ import {
 
 const LOGGER = rootLogger.child('ResearchEngine');
 const MAX_SESSIONS = 50;
+const MAX_SUMMARIES_PER_SESSION = 20;
 
 interface ResearchEngineState {
     sessions: Record<string, ResearchSession>;
@@ -140,7 +141,41 @@ export class ResearchEngineService implements IResearchEngine {
             researchReports: Object.fromEntries(this.researchReports),
             discoveryResult: this._discoveryResult,
         };
-        await BucketStorageAdapter.RESEARCH.set('research_engine_v1', state);
+        try {
+            await BucketStorageAdapter.RESEARCH.set('research_engine_v1', state);
+        } catch (e) {
+            if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+                LOGGER.warn(
+                    'ResearchEngine',
+                    'localStorage quota exceeded — pruning old sessions and retrying',
+                );
+                const sorted = Array.from(this.sessions.entries()).sort(
+                    ([, a], [, b]) => b.updatedAt - a.updatedAt,
+                );
+                const toKeep = new Set(sorted.slice(0, 10).map(([id]) => id));
+                for (const id of this.sessions.keys()) {
+                    if (!toKeep.has(id)) this.sessions.delete(id);
+                }
+                this._pruneOrphanedMaps();
+                const trimmed: ResearchEngineState = {
+                    sessions: Object.fromEntries(this.sessions),
+                    citationGraphs: Object.fromEntries(this.citationGraphs),
+                    knowledgeGraphs: Object.fromEntries(this.knowledgeGraphs),
+                    systematicReviews: Object.fromEntries(this.systematicReviews),
+                    factCheckReports: Object.fromEntries(this.factCheckReports),
+                    anomalyReports: Object.fromEntries(this.anomalyReports),
+                    summarizations: Object.fromEntries(this.summarizations),
+                    citationExports: Object.fromEntries(this.citationExports),
+                    peerReviews: Object.fromEntries(this.peerReviews),
+                    researchReports: Object.fromEntries(this.researchReports),
+                    discoveryResult: this._discoveryResult,
+                };
+                await BucketStorageAdapter.RESEARCH.set('research_engine_v1', trimmed);
+                LOGGER.info('ResearchEngine', 'Pruned to 10 sessions after quota exceeded');
+            } else {
+                throw e;
+            }
+        }
     }
 
     getSourceAdapterRegistry() {
@@ -436,6 +471,8 @@ export class ResearchEngineService implements IResearchEngine {
 
         const existing = this.summarizations.get(sessionId) || [];
         existing.push(result);
+        if (existing.length > MAX_SUMMARIES_PER_SESSION)
+            existing.splice(0, existing.length - MAX_SUMMARIES_PER_SESSION);
         this.summarizations.set(sessionId, existing);
         await this.#persistState();
         return result;
