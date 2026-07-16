@@ -651,12 +651,18 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
                 continue;
             }
             try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), timeout);
-                const resp = await fetch(`/${file}`, { signal: controller.signal });
+                const timeoutController = new AbortController();
+                const timer = setTimeout(() => timeoutController.abort(), timeout);
+                const combinedSignal = signal
+                    ? (AbortSignal.any?.([timeoutController.signal, signal]) ??
+                      timeoutController.signal)
+                    : timeoutController.signal;
+                const resp = await fetch(`/${file}`, { signal: combinedSignal });
                 clearTimeout(timer);
                 if (resp.ok) {
                     contents[file] = await resp.text();
+                } else {
+                    resp.body?.cancel();
                 }
             } catch {
                 /* skip unavailable docs */

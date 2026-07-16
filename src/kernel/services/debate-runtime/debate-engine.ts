@@ -125,6 +125,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private preflightDone = new Set<string>();
     private persistence: DebatePersistenceManager;
 
+    // Track fire-and-forget async ops so destroy() can await them with timeout
+    private _pendingOps = new Map<string, Promise<unknown>>();
+    private _nextOpId = 0;
+    private _trackOp<T>(name: string, promise: Promise<T>): Promise<T> {
+        const id = `${name}-${++this._nextOpId}`;
+        this._pendingOps.set(id, promise);
+        promise.finally(() => this._pendingOps.delete(id)).catch(() => {});
+        return promise;
+    }
+
     constructor(deps: DebateEngineDeps) {
         this.deps = deps;
         this.topologyService = new DebateTopologyService();
@@ -336,18 +346,21 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     // Serialize saves to avoid Dexie transaction conflicts.
                     // Per-session try-catch so one corrupt session doesn't
                     // prevent others from persisting.
-                    (async () => {
-                        for (const sessionId of this.sessions.keys()) {
-                            try {
-                                await this.saveSnapshot(sessionId);
-                            } catch (e) {
-                                LOGGER.warn('DebateEngine', 'visibilitychange save failed', {
-                                    error: e,
-                                    sessionId,
-                                });
+                    this._trackOp(
+                        'visibilitySave',
+                        (async () => {
+                            for (const sessionId of this.sessions.keys()) {
+                                try {
+                                    await this.saveSnapshot(sessionId);
+                                } catch (e) {
+                                    LOGGER.warn('DebateEngine', 'visibilitychange save failed', {
+                                        error: e,
+                                        sessionId,
+                                    });
+                                }
                             }
-                        }
-                    })().catch((e) =>
+                        })(),
+                    ).catch((e) =>
                         LOGGER.error('DebateEngine', 'visibilitychange save loop crashed', {
                             error: e,
                         }),
@@ -542,7 +555,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             // them in memory forever.
             if (!isOrphan) {
                 this.sessionContexts.set(sessionId, ctx);
-                ctx.timeline.loadPersisted(sessionId).catch((e) =>
+                this._trackOp('loadTimeline', ctx.timeline.loadPersisted(sessionId)).catch((e) =>
                     LOGGER.warn('DebateEngine', `Failed to load timeline for ${sessionId}`, {
                         error: e,
                     }),
@@ -675,7 +688,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             return;
         }
         this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_PAUSED, { sessionId });
-        this.saveSnapshot(sessionId).catch((e) =>
+        this._trackOp('pauseCheckpoint', this.saveSnapshot(sessionId)).catch((e) =>
             LOGGER.warn('DebateEngine', 'pause checkpoint failed', { error: e }),
         );
     }
@@ -687,7 +700,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (phase !== 'paused') return;
         this.getContext(sessionId).orchestrator.clearAbort(sessionId);
         // DR-2: Don't set phase here — startSession handles transitions
-        this.startSession(sessionId, true)
+        this._trackOp('resumeSession', this.startSession(sessionId, true))
             .then(() => {
                 this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_RESUMED, { sessionId });
             })
@@ -892,10 +905,26 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         };
     }
 
-    destroy(): void {
+    async destroy(): Promise<void> {
         // Cancel all active sessions — cascades to budget/memory/context cleanup
         for (const sessionId of this.sessions.keys()) {
             this.cancelSession(sessionId);
+        }
+        // Await pending fire-and-forget ops with 5s timeout
+        if (this._pendingOps.size > 0) {
+            const pending = [...this._pendingOps.values()];
+            await Promise.race([
+                Promise.allSettled(pending),
+                new Promise<void>((resolve) =>
+                    setTimeout(() => {
+                        LOGGER.warn(
+                            'DebateEngine',
+                            `destroy timed out waiting for ${this._pendingOps.size} pending ops`,
+                        );
+                        resolve();
+                    }, 5000),
+                ),
+            ]);
         }
         // Safe-clear any remaining maps
         this.sessions.clear();
