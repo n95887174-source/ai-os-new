@@ -41,12 +41,15 @@ export class TimeMachineService implements ITimeMachineService {
     private snapshots: TimeSnapshot[] = [];
     private deps: TimeMachineServiceDeps;
     private _lastRestoredId: string | null = null;
+    private _initialized = false;
 
     constructor(deps?: TimeMachineServiceDeps) {
         this.deps = deps ?? {};
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             if (this.deps.database) {
                 const raw = await this.deps.database.getKv<TimeSnapshot[]>(STORAGE_KEY);

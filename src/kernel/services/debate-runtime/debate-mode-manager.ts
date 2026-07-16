@@ -33,6 +33,7 @@ const MODE_VERSION_PREFIX = 'debate-mode-version:';
 export class DebateModeManagerPersistent extends DebateModeManager {
     private storage: ModeStorage | undefined;
     private versionHistories = new Map<string, ModeVersion[]>();
+    private _initialized = false;
 
     constructor(storage?: ModeStorage) {
         super();
@@ -40,6 +41,8 @@ export class DebateModeManagerPersistent extends DebateModeManager {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         if (!this.storage) return;
         await this.loadPersistedModes();
         await this.loadVersionHistories();

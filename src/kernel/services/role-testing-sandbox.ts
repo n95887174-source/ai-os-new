@@ -51,6 +51,7 @@ export class RoleTestingSandboxService {
     private testCases: Map<string, TestCase[]> = new Map();
     private results: TestResult[] = [];
     private llmClient: ILLMClientService;
+    private _initialized = false;
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
         const { database } = await import('../instances');
         return database;
@@ -62,6 +63,8 @@ export class RoleTestingSandboxService {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         const saved = await (
             await this.db()
         ).getKv<{

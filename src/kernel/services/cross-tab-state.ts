@@ -59,6 +59,8 @@ class CrossTabStateSync implements ICrossTabStateSync {
     private localRateLimits: Map<string, RateLimitState> = new Map();
     private localErrors: ErrorEntry[] = [];
     private listeners: Map<string, Set<(data: CrossTabStateMessage) => void>> = new Map();
+    private static readonly MAX_TABS = 50;
+    private static readonly MAX_DEBATE_VERSIONS = 200;
     private knownTabTimestamps: Map<string, number> = new Map();
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private syncTimer: ReturnType<typeof setInterval> | null = null;
@@ -250,6 +252,10 @@ class CrossTabStateSync implements ICrossTabStateSync {
 
         if (message.timestamp > 0) {
             this.knownTabTimestamps.set(message.tabId, message.timestamp);
+            if (this.knownTabTimestamps.size > CrossTabStateSync.MAX_TABS) {
+                const oldest = this.knownTabTimestamps.keys().next().value;
+                if (oldest !== undefined) this.knownTabTimestamps.delete(oldest);
+            }
             this.persistTabTimestamps();
         }
 
@@ -374,6 +380,10 @@ class CrossTabStateSync implements ICrossTabStateSync {
             round: payload.round,
             seq: payload.seq,
         });
+        if (this.localDebateVersions.size > CrossTabStateSync.MAX_DEBATE_VERSIONS) {
+            const oldest = this.localDebateVersions.keys().next().value;
+            if (oldest !== undefined) this.localDebateVersions.delete(oldest);
+        }
     }
 
     private pruneStaleTabs(): void {
@@ -501,6 +511,10 @@ class CrossTabStateSync implements ICrossTabStateSync {
     updateDebate(sessionId: string, phase: string, round: number): void {
         const seq = ++this.debateSeqCounter;
         this.localDebateVersions.set(sessionId, { updatedAt: Date.now(), phase, round, seq });
+        if (this.localDebateVersions.size > CrossTabStateSync.MAX_DEBATE_VERSIONS) {
+            const oldest = this.localDebateVersions.keys().next().value;
+            if (oldest !== undefined) this.localDebateVersions.delete(oldest);
+        }
         this.broadcast({
             type: 'debate-update',
             timestamp: Date.now(),

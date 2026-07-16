@@ -71,8 +71,11 @@ export class HypothesisService implements IHypothesisService {
     private hypotheses: ResearchHypothesis[] = [];
 
     constructor(private deps: HypothesisServiceDeps) {}
+    private _initialized = false;
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         const saved = await this.deps.database.getKv<ResearchHypothesis[]>(STORAGE_KEY);
         if (saved?.length) {
             this.hypotheses = saved;

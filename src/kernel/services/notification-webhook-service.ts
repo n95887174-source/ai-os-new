@@ -48,6 +48,7 @@ export interface NotificationWebhookServiceDeps {
 }
 
 const WEBHOOKS_KEY = 'super_agents_webhooks';
+const MAX_WEBHOOKS = 50;
 const MAX_RETRIES = CONFIG.webhooks.maxRetries;
 const RETRY_DELAY_MS = CONFIG.webhooks.retryDelayMs;
 
@@ -279,6 +280,7 @@ export class NotificationWebhookService {
             createdAt: Date.now(),
         };
         this.webhooks.push(webhook);
+        if (this.webhooks.length > MAX_WEBHOOKS) this.webhooks = this.webhooks.slice(-MAX_WEBHOOKS);
         this.save();
         return webhook;
     }

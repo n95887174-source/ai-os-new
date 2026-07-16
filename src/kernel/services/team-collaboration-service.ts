@@ -32,8 +32,11 @@ export class TeamCollaborationService implements ITeamCollaborationService {
     private sharedSessions: SharedSession[] = [];
     private bc: BroadcastChannel | null = null;
     private reloadListeners: Array<() => void> = [];
+    private _initialized = false;
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const raw = ssrSafeStorage.getItem(STORAGE_KEY);
             if (raw) {

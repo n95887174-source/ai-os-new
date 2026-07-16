@@ -12,7 +12,7 @@ import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('PromptSecurityService');
 
 const STORAGE_KEY_HISTORY = 'security_scan_history';
-const MAX_HISTORY = 100;
+const MAX_HISTORY = 500;
 const STORAGE_KEY_CONFIG = 'security_scan_config';
 
 const DEFAULT_RULES: SecurityScanRule[] = [

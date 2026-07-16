@@ -75,12 +75,15 @@ const DEFAULT_SKILLS: CognitiveSkill[] = [
 export class SkillService {
     private deps: SkillServiceDeps;
     private skills: CognitiveSkill[] = [];
+    private _initialized = false;
 
     constructor(deps: SkillServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.load();
     }
 

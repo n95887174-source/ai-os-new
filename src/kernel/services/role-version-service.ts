@@ -20,12 +20,15 @@ const MAX_VERSIONS_PER_ROLE = 50;
 export class RoleVersionService {
     private versions: Map<string, RoleVersion[]> = new Map();
     private storage?: ILocalStorageAdapter;
+    private _initialized = false;
 
     constructor(storage?: ILocalStorageAdapter) {
         this.storage = storage;
     }
 
     init(): void {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const stored = this.storage?.getItem(STORAGE_KEY);
             if (stored) {

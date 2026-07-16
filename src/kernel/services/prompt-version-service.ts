@@ -20,8 +20,11 @@ interface PersistedData {
 export class PromptVersionService implements IPromptVersionService {
     private prompts: PromptMeta[] = [];
     private versions: PromptVersion[] = [];
+    private _initialized = false;
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const raw = ssrSafeStorage.getItem(STORAGE_KEY);
             if (raw) {

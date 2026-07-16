@@ -33,6 +33,7 @@ export class FederatedMemoryService implements IFederatedMemoryService {
     private nodes: FederatedNode[] = [];
     private syncHistory: SyncSession[] = [];
     private deps: FederatedMemoryServiceDeps;
+    private _initialized = false;
 
     constructor(deps?: FederatedMemoryServiceDeps) {
         this.deps = deps ?? {};
@@ -48,6 +49,8 @@ export class FederatedMemoryService implements IFederatedMemoryService {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const db = this.deps.database;
             if (!db) return;

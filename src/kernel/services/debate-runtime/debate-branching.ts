@@ -45,12 +45,15 @@ export class DebateBranching {
     private listeners = new Set<BranchChangeListener>();
     private deps: DebateBranchingDeps = {};
     private _savePromise = Promise.resolve();
+    private _initialized = false;
 
     constructor(deps?: DebateBranchingDeps) {
         this.deps = deps || {};
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.load();
     }
 

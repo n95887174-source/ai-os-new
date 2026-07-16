@@ -70,10 +70,13 @@ const DEFAULT_ELO_CONFIG: EloConfig = {
 
 export type DebateResult = 'win' | 'loss' | 'draw';
 
+const MAX_PROFILES = 500;
+
 export class EloRatingService {
     private profiles: Map<string, AgentEloProfile> = new Map();
     private storage: ILocalStorageAdapter;
     private config: EloConfig;
+    private _initialized = false;
 
     constructor(config: Partial<EloConfig> = {}) {
         this.storage = new LocalStorageAdapter();
@@ -81,6 +84,8 @@ export class EloRatingService {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         const saved = this.storage.getItem('elo-ratings:profiles');
         if (saved) {
             try {
@@ -115,6 +120,10 @@ export class EloRatingService {
                 ratingHistory: [],
             };
             this.profiles.set(agentId, profile);
+            if (this.profiles.size > MAX_PROFILES) {
+                const oldest = this.profiles.keys().next().value;
+                if (oldest !== undefined) this.profiles.delete(oldest);
+            }
         } else if (agentName && profile.agentName !== agentName) {
             profile.agentName = agentName;
         }

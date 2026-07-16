@@ -12,8 +12,11 @@ export class TutorialService implements ITutorialService {
     private tutorials: Map<string, Tutorial> = new Map();
     private progress: Map<string, TutorialProgress> = new Map();
     private storageKey = 'tutorial_progress';
+    private _initialized = false;
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         for (const t of BUILTIN_TUTORIALS) {
             this.tutorials.set(t.id, t);
         }

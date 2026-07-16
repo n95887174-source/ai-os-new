@@ -68,6 +68,7 @@ export class KeyLifecycle {
     private successCounters = new Map<string, number>();
     private config: LifecycleConfig;
     private recoveryTimer: ReturnType<typeof setInterval> | null = null;
+    private _initialized = false;
 
     constructor(
         private deps: KeyLifecycleDeps,
@@ -77,6 +78,8 @@ export class KeyLifecycle {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         await this._load();
     }
 

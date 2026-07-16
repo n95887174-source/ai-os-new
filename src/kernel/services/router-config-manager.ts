@@ -118,6 +118,7 @@ function routerConfigFromCONFIG(): RouterConfig {
 export class RouterConfigManager {
     private config: RouterConfig;
     private deps: RouterConfigManagerDeps;
+    private _initialized = false;
 
     constructor(deps: RouterConfigManagerDeps) {
         this.deps = deps;
@@ -129,6 +130,8 @@ export class RouterConfigManager {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const saved = await this.deps.database.getKv<Partial<RouterConfig>>(CONFIG_KEY);
             if (saved) {

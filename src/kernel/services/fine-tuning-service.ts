@@ -30,8 +30,11 @@ export class FineTuningService implements IFineTuningService {
     private datasets: FineTuningDataset[] = [];
     private jobs: FineTuningJob[] = [];
     private timers = new Map<string, ReturnType<typeof setInterval>>();
+    private _initialized = false;
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const raw = ssrSafeStorage.getItem(STORAGE_KEY);
             if (raw) {

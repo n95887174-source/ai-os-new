@@ -32,12 +32,15 @@ export interface TaskHandoffServiceDeps {
 export class TaskHandoffService {
     private deps: TaskHandoffServiceDeps;
     private handoffs: Map<string, HandoffRequest> = new Map();
+    private _initialized = false;
 
     constructor(deps: TaskHandoffServiceDeps) {
         this.deps = deps;
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         if (!this.deps.database) return;
         try {
             const saved = await this.deps.database.getKv<HandoffRequest[]>(HANDOFF_STORAGE_KEY);

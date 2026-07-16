@@ -10,7 +10,7 @@ import type {
 import type { CognitiveIssue, SessionDiagnostic } from '../../contracts/cognitive-intelligence';
 import type { CanonicalHealthStatus } from '../../contracts/health';
 
-const MAX_DIAGNOSTIC_HISTORY = 100;
+const MAX_DIAGNOSTIC_HISTORY = 200;
 const DIAGNOSTIC_INTERVAL_MS = 30000;
 
 export interface DiagnosticServiceDeps {

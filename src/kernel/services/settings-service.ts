@@ -215,17 +215,22 @@ function validateSettings(updates: Partial<SystemSettings>): Partial<SystemSetti
     return valid;
 }
 
+const MAX_PROFILES = 50;
+
 export class SettingsService implements ISettingsService {
     private deps: SettingsServiceDeps;
     private settings: SystemSettings = { ...DEFAULTS };
     private profiles: SettingsProfile[] = [];
     private listeners: Set<SettingsListener> = new Set();
+    private _initialized = false;
 
     constructor(deps: SettingsServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.load();
         await this.loadProfiles();
     }
@@ -378,6 +383,7 @@ export class SettingsService implements ISettingsService {
             created: Date.now(),
         };
         this.profiles.push(profile);
+        if (this.profiles.length > MAX_PROFILES) this.profiles = this.profiles.slice(-MAX_PROFILES);
         this.saveProfiles();
         return profile;
     }

@@ -46,6 +46,8 @@ export interface SummarizerMessage {
     timestamp: number;
 }
 
+const MAX_SUMMARIES = 200;
+
 export class ChatSummarizerService {
     private config: SummarizationConfig;
     private summaries: Map<string, ChatSummary> = new Map();
@@ -131,6 +133,10 @@ UNRESOLVED: [questions or topics that remain open]`;
 
             // Cache and persist the summary
             this.summaries.set(sessionId, summary);
+            if (this.summaries.size > MAX_SUMMARIES) {
+                const oldest = this.summaries.keys().next().value;
+                if (oldest !== undefined) this.summaries.delete(oldest);
+            }
             this.#persist().catch((e) =>
                 LOGGER.error('ChatSummarizer', 'Persist failed', { sessionId, error: e }),
             );

@@ -6,6 +6,7 @@ import type {
 } from '../../contracts/cognitive-intelligence';
 
 const MAX_SESSIONS = 100;
+const MAX_ISSUES = 200;
 
 export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
     private activeIssues: CognitiveIssue[] = [];
@@ -98,6 +99,8 @@ export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
         for (const sessionIssues of this.issuesBySession.values()) {
             this.activeIssues.push(...sessionIssues);
         }
+        if (this.activeIssues.length > MAX_ISSUES)
+            this.activeIssues = this.activeIssues.slice(-MAX_ISSUES);
 
         return {
             sessionId: session.id,

@@ -30,12 +30,15 @@ export class ResearchRunService {
     private static readonly MAX_RUNS = 200;
     /** 2b F2: flush on tab close so debounced writes aren't lost */
     private _onUnload: (() => void) | null = null;
+    private _initialized = false;
 
     constructor(deps: ResearchRunServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const stored = await this.deps.database.getKv<ResearchRun[]>(STORAGE_KEY);
             if (stored) this.runs = stored;

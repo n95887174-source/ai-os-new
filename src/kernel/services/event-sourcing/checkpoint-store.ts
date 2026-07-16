@@ -35,6 +35,7 @@ export class CheckpointStore {
     private autoInterval: ReturnType<typeof setInterval> | null = null;
     private store?: CheckpointPersistenceStore;
     private persistQueued = false;
+    private _initialized = false;
 
     constructor(config?: Partial<CheckpointStoreConfig>, store?: CheckpointPersistenceStore) {
         this.config = { ...DEFAULT_CONFIG, ...config };
@@ -42,6 +43,8 @@ export class CheckpointStore {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         if (!this.store) return;
         try {
             const checkpoints = await this.store.load();

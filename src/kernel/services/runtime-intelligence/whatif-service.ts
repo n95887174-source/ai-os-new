@@ -12,7 +12,7 @@ import type { ISPolicy } from '../policy-service';
 import { CONFIG } from '../config-registry';
 import { EVENTS } from '../../events/event-names';
 
-const MAX_HISTORY = CONFIG?.services?.whatif?.maxHistory ?? 100;
+const MAX_HISTORY = CONFIG?.services?.whatif?.maxHistory ?? 200;
 
 export interface WhatIfServiceDeps {
     eventBus: { emit: (event: string, data?: unknown) => void };

@@ -60,6 +60,8 @@ export interface Avatar {
     seed: string;
 }
 
+const MAX_AVATARS = 200;
+
 export class AgentAvatarService {
     private config: AvatarConfig;
     private customAvatars: Map<string, { emoji: string; color: string }> = new Map();
@@ -127,6 +129,10 @@ export class AgentAvatarService {
      */
     setCustomAvatar(agentId: string, emoji: string, color: string): void {
         this.customAvatars.set(agentId, { emoji, color });
+        if (this.customAvatars.size > MAX_AVATARS) {
+            const oldest = this.customAvatars.keys().next().value;
+            if (oldest !== undefined) this.customAvatars.delete(oldest);
+        }
         LOGGER.info('AgentAvatar', 'Custom avatar set', { agentId, emoji, color });
     }
 

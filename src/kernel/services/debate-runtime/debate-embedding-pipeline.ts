@@ -37,12 +37,15 @@ export class DebateEmbeddingPipeline {
     private chunks = new Map<string, EmbeddingChunk[]>();
     private deps: EmbeddingPipelineDeps;
     private chunkIdCounter = 0;
+    private _initialized = false;
 
     constructor(deps: EmbeddingPipelineDeps) {
         this.deps = deps;
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.loadChunks();
     }
 

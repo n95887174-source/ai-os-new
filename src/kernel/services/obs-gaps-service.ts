@@ -392,16 +392,27 @@ function buildRecommendations(
  * @deprecated STATIC — service inventory snapshot. Update `STATIC_SERVICES` and `SERVICE_FILE_MAP`
  * whenever a new service is added to bootstrap. Use `registerService()` at runtime for dynamic additions.
  */
+const MAX_SERVICES = 200;
+
 export class ObsGapsService implements IObsGapsService {
     private dynamicServices: Map<string, ServiceObsInfo> = new Map();
 
     registerService(info: ServiceObsInfo): void {
         this.dynamicServices.set(info.name, info);
+        if (this.dynamicServices.size > MAX_SERVICES) {
+            const oldest = this.dynamicServices.keys().next().value;
+            if (oldest !== undefined) this.dynamicServices.delete(oldest);
+        }
     }
 
     registerServices(infos: ServiceObsInfo[]): void {
         for (const info of infos) {
             this.dynamicServices.set(info.name, info);
+        }
+        while (this.dynamicServices.size > MAX_SERVICES) {
+            const oldest = this.dynamicServices.keys().next().value;
+            if (oldest !== undefined) this.dynamicServices.delete(oldest);
+            else break;
         }
     }
 

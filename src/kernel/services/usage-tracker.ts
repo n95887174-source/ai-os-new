@@ -36,12 +36,15 @@ export class UsageTracker implements IUsageTracker {
     private dirty = false;
     private flushTimer: ReturnType<typeof setTimeout> | null = null;
     private persistPromise: Promise<void> | null = null;
+    private _initialized = false;
 
     constructor(deps: UsageTrackerDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const saved = await this.deps.database.getKv<UsageRecord[]>(STORAGE_KEY);
             if (saved) this.records = saved;

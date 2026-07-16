@@ -54,12 +54,15 @@ export class MCPService {
     private static readonly MAX_RETRIES = 5;
     private static readonly BASE_BACKOFF_MS = 2000;
     private deps: MCPServiceDeps;
+    private _initialized = false;
 
     constructor(deps: MCPServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.load();
     }
 

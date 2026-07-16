@@ -19,6 +19,7 @@ const genExecId = () => crypto.randomUUID();
 const TEAMS_STORAGE_KEY = 'role_teams_v1';
 const EXECUTIONS_STORAGE_KEY = 'role_team_executions_v1';
 const MAX_EXECUTIONS = 200;
+const MAX_ABORT_TOKENS = 200;
 
 /**
  * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
@@ -302,6 +303,10 @@ export class RoleTeamService implements IRoleTeamService {
 
     abortExecution(executionId: string): void {
         this.abortTokens.add(executionId);
+        if (this.abortTokens.size > MAX_ABORT_TOKENS) {
+            const first = this.abortTokens.values().next().value;
+            if (first !== undefined) this.abortTokens.delete(first);
+        }
         const exec = this.executions.get(executionId);
         if (exec) {
             exec.status = 'aborted';

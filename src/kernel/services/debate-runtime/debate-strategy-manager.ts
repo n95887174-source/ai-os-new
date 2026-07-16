@@ -23,6 +23,7 @@ const STRATEGY_VERSION_PREFIX = 'debate-strategy-version:';
 export class StrategyManager extends StrategyRegistry {
     private storage: ConfigStore | undefined;
     private versionHistories = new Map<string, StrategyVersion[]>();
+    private _initialized = false;
 
     constructor(storage?: ConfigStore) {
         super();
@@ -30,6 +31,8 @@ export class StrategyManager extends StrategyRegistry {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         if (!this.storage) return;
         await this.loadPersistedStrategies();
         await this.loadVersionHistories();

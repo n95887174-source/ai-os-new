@@ -34,6 +34,8 @@ interface CollabServiceDeps {
     };
 }
 
+const MAX_SESSIONS = 100;
+
 export class CollaborativeService {
     private sessions = new Map<string, CollabSession>();
 
@@ -44,6 +46,10 @@ export class CollaborativeService {
         if (!session) {
             session = { sessionId, debateId: debateId ?? sessionId, participants: [] };
             this.sessions.set(sessionId, session);
+            if (this.sessions.size > MAX_SESSIONS) {
+                const oldest = this.sessions.keys().next().value;
+                if (oldest !== undefined) this.sessions.delete(oldest);
+            }
         }
         if (session.participants.some((p) => p.userName === userName)) return false;
         session.participants.push({ userName, role, joinedAt: Date.now() });

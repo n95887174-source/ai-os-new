@@ -250,12 +250,15 @@ export class ToolService {
     private executionHistory: ToolExecution[] = [];
     private rateLimitCounters: Map<string, { count: number; resetTime: number }> = new Map();
     private deps: ToolServiceDeps;
+    private _initialized = false;
 
     constructor(deps: ToolServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.load();
     }
 

@@ -67,12 +67,15 @@ export class PricingService implements ICostCalculator {
     protected userOverrides: Record<string, ModelPricing> = {};
     private fetchPromise: Promise<void> | null = null;
     private deps: PricingServiceDeps;
+    private _initialized = false;
 
     constructor(deps: PricingServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.loadCache();
         await this.loadOverrides();
     }

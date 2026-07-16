@@ -34,12 +34,15 @@ const CONFIG_HISTORY_KEY = 'config_history_v1';
 export class ConfigHistoryService {
     private history: ConfigVersion[] = [];
     private currentVersionSeq = 1;
+    private _initialized = false;
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
         const { database } = await import('../instances');
         return database;
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         const stored = await (
             await this.db()
         ).getKv<{ history: ConfigVersion[]; seq: number }>(CONFIG_HISTORY_KEY);

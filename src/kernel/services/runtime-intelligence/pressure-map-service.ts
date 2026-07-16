@@ -12,7 +12,7 @@ import { CONFIG } from '../config-registry';
 import { ProviderEvents } from '../../events/provider-events';
 import { EVENTS } from '../../events/event-names';
 
-const MAX_TREND_HISTORY = CONFIG?.services?.pressureMap?.maxTrendHistory ?? 200;
+const MAX_TREND_HISTORY = CONFIG?.services?.pressureMap?.maxTrendHistory ?? 500;
 const ALERT_COOLDOWN_MS = CONFIG?.services?.pressureMap?.alertCooldownMs ?? 60000;
 
 export interface PressureMapDeps {
@@ -252,7 +252,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
             }
         }
 
-        const bufferSize = CONFIG?.services?.pressureMap?.alertsBufferSize ?? 100;
+        const bufferSize = CONFIG?.services?.pressureMap?.alertsBufferSize ?? 200;
         if (this.alerts.length > bufferSize) {
             this.alerts = this.alerts.slice(-bufferSize);
         }

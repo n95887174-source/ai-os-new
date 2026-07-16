@@ -24,6 +24,7 @@ export class GroupManagerService implements IGroupManager {
     private passports: Map<string, KeyPassport> = new Map();
     private loaded = false;
     private unsubs: Array<() => void> = [];
+    private _initialized = false;
 
     get ready(): boolean {
         return this.loaded;
@@ -34,6 +35,8 @@ export class GroupManagerService implements IGroupManager {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         // HARD RULE: do NOT call getAllKeys() / syncExistingKeys() during init.
         // GroupManager init is a pure storage read of group/passport metadata.
         // Key-related operations are deliberately deferred to a later phase
