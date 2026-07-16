@@ -30,6 +30,7 @@ interface FactCheckServiceDeps {
         messages: Array<{ role: string; content: string }>,
         model: string,
         apiKey: string,
+        signal?: AbortSignal,
     ) => Promise<{ content: string }>;
 }
 
@@ -64,6 +65,7 @@ export class FactCheckService {
     private level: FactCheckLevel = 'sampled';
     private checkInterval = 0.2;
     private deps: FactCheckServiceDeps;
+    private _abortController = new AbortController();
 
     constructor(deps: FactCheckServiceDeps) {
         this.deps = deps;
@@ -91,21 +93,28 @@ export class FactCheckService {
         return sentences.filter((s) => CLAIM_PATTERNS.some((p) => p.test(s)));
     }
 
-    async checkArgument(arg: DebateArgument): Promise<ArgumentFactCheck | null> {
+    async checkArgument(
+        arg: DebateArgument,
+        externalSignal?: AbortSignal,
+    ): Promise<ArgumentFactCheck | null> {
         if (!this.shouldCheck()) return null;
         if (this.argumentResults.has(arg.id)) return this.argumentResults.get(arg.id)!;
+        if (this._abortController.signal.aborted) return null;
 
         const claims = this.extractClaims(arg.content);
         if (claims.length === 0) return null;
 
+        const effectiveSignal = externalSignal ?? this._abortController.signal;
+
         const results: FactCheckResult[] = [];
         for (const claim of claims.slice(0, 5)) {
+            if (effectiveSignal.aborted) break;
             const cached = this.cache.get(claim);
             if (cached) {
                 results.push(cached);
                 continue;
             }
-            const result = await this.verifyClaim(claim);
+            const result = await this.verifyClaim(claim, effectiveSignal);
             this.cache.set(claim, result);
             if (this.cache.size > MAX_CACHE) {
                 const oldest = this.cache.keys().next().value;
@@ -156,8 +165,17 @@ export class FactCheckService {
         return null;
     }
 
-    private async verifyClaim(claim: string): Promise<FactCheckResult> {
+    private async verifyClaim(claim: string, signal?: AbortSignal): Promise<FactCheckResult> {
         try {
+            if (signal?.aborted) {
+                return {
+                    claim,
+                    verdict: 'no_evidence',
+                    confidence: 0,
+                    reasoning: 'Cancelled',
+                    checkedAt: Date.now(),
+                };
+            }
             const cached = this.getCachedApiKey();
             if (!cached) {
                 return {
@@ -185,6 +203,7 @@ export class FactCheckService {
                 ],
                 model,
                 apiKey,
+                signal,
             );
 
             return this.parseVerdict(claim, response.content);
@@ -250,6 +269,7 @@ export class FactCheckService {
     }
 
     destroy(): void {
+        this._abortController.abort();
         this.cache.clear();
         this.argumentResults.clear();
     }

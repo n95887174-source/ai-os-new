@@ -397,7 +397,11 @@ export class CognitiveService {
     }
 
     // ================= EXECUTION =================
-    async executeAgentNode(node: ISNode, data: NodeContext): Promise<string> {
+    async executeAgentNode(
+        node: ISNode,
+        data: NodeContext,
+        externalSignal?: AbortSignal,
+    ): Promise<string> {
         const input = this.buildPrompt(node, data);
         const alternatives = this.evaluateAlternatives(node, data, input);
 
@@ -407,7 +411,7 @@ export class CognitiveService {
 
         this.deps.eventBus.emit(EVENTS.COGNITIVE_DECISION_MADE, decision);
 
-        return this.executeWithFallback(decision, node, data);
+        return this.executeWithFallback(decision, node, data, externalSignal);
     }
 
     private buildPrompt(node: ISNode, data: NodeContext): string {
@@ -467,6 +471,7 @@ export class CognitiveService {
         decision: DecisionAlternative,
         node: ISNode,
         data: NodeContext,
+        externalSignal?: AbortSignal,
     ): Promise<string> {
         const keyMeta = decision.metadata?.key as
             { provider: string; model: string; key: string } | undefined;
@@ -485,6 +490,11 @@ export class CognitiveService {
 
         // P0-4: AbortController for proper HTTP cancellation on timeout
         const abortController = new AbortController();
+        const onExternalAbort = () =>
+            abortController.abort(externalSignal?.reason || new Error('CancelledByParent'));
+        if (externalSignal && !externalSignal.aborted) {
+            externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+        }
         const timeoutTimer = setTimeout(
             () =>
                 abortController.abort(
@@ -523,6 +533,7 @@ export class CognitiveService {
             }
         } finally {
             clearTimeout(timeoutTimer);
+            if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
         }
 
         const tokens = estimateTokens(output.slice(-this.MAX_CHUNK_BUFFER));
