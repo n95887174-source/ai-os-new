@@ -344,15 +344,6 @@ export async function debateCallLlm(
             }
             govOp?.complete();
             const content = response.content;
-            // Help V8 GC: null large objects after use so they're not
-            // held alive by the try-block scope and promoted to old gen
-            // during long-running LLM calls (especially 70B models, 30s).
-            messages.length = 0;
-            (systemContent as unknown as string) = '';
-            (personaBlock as unknown as string) = '';
-            (historyMessages as unknown as Array<unknown>) = [];
-            (participantNameMap as unknown as Map<string, string>) = new Map();
-            (recentSteps as unknown as Array<unknown>) = [];
             deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
                 sessionId: session.id,
                 agentId: participant.agentId,

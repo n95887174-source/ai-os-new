@@ -20,4 +20,5 @@ export interface IGeminiLiveService {
     stop(): void;
     sendText(text: string): Promise<void>;
     isSupported(): boolean;
+    destroy(): void;
 }

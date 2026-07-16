@@ -1,9 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any --
- * 23 external API adapters with different response shapes. Each returns
- * `Promise<any>` from `res.json()` so `any` is unavoidable at the boundary.
- * When adding NEW adapters, import and use `asObj`/`asArr` below — they
- * return `Record<string,unknown>` / `Record<string,unknown>[]` for typed
- * downstream access. Existing adapters can be migrated incrementally. */
 import type { ResearchSource, SourceCategory, SourceType } from '../../contracts/research-engine';
 import type { ISourceAdapter, SourceAdapterConfig } from '../../contracts/research-adapter';
 import { genId } from '../../../utils/gen-id';
@@ -51,10 +45,13 @@ async function safeFetch(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-        const combined = signal ? combineSignals(signal, controller.signal) : controller.signal;
+        const { signal: combined, cleanup } = signal
+            ? combineSignals(signal, controller.signal)
+            : { signal: controller.signal, cleanup: () => {} };
         const headers: Record<string, string> = {};
         if (apiKey) headers['X-Api-Key'] = apiKey;
         const res = await fetch(url, { signal: combined, keepalive: true, headers });
+        cleanup();
         clearTimeout(timer);
         return res.ok ? res : null;
     } catch {
@@ -63,18 +60,37 @@ async function safeFetch(
     }
 }
 
-function combineSignals(...signals: AbortSignal[]): AbortSignal {
-    const ctrl = new AbortController();
-    for (const s of signals) {
-        if (s.aborted) {
-            ctrl.abort(s.reason);
-            return ctrl.signal;
+function combineSignals(
+    s1: AbortSignal,
+    s2: AbortSignal,
+): { signal: AbortSignal; cleanup: () => void } {
+    if (
+        typeof AbortSignal !== 'undefined' &&
+        typeof (AbortSignal as unknown as { any?: unknown }).any === 'function'
+    ) {
+        try {
+            const signal = (
+                AbortSignal as unknown as { any: (signals: AbortSignal[]) => AbortSignal }
+            ).any([s1, s2]);
+            return { signal, cleanup: () => {} };
+        } catch {
+            /* fall through */
         }
     }
-    for (const s of signals) {
-        s.addEventListener('abort', () => ctrl.abort(s.reason), { once: true });
-    }
-    return ctrl.signal;
+    if (s1.aborted) return { signal: AbortSignal.abort(s1.reason), cleanup: () => {} };
+    if (s2.aborted) return { signal: AbortSignal.abort(s2.reason), cleanup: () => {} };
+    const controller = new AbortController();
+    const onAbort1 = () => controller.abort(s1.reason);
+    const onAbort2 = () => controller.abort(s2.reason);
+    s1.addEventListener('abort', onAbort1, { once: true });
+    s2.addEventListener('abort', onAbort2, { once: true });
+    return {
+        signal: controller.signal,
+        cleanup: () => {
+            s1.removeEventListener('abort', onAbort1);
+            s2.removeEventListener('abort', onAbort2);
+        },
+    };
 }
 
 function stripHtml(text: string): string {
@@ -208,11 +224,14 @@ class GoogleCustomSearchAdapter implements ISourceAdapter {
         if (!apiKey || !cx) return [];
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 8000);
-        const combined = signal ? combineSignals(signal, controller.signal) : controller.signal;
+        const { signal: combined, cleanup } = signal
+            ? combineSignals(signal, controller.signal)
+            : { signal: controller.signal, cleanup: () => {} };
         const res = await fetch(
             `https://www.googleapis.com/customsearch/v1?cx=${cx}&q=${encodeURIComponent(query)}&num=10`,
             { signal: combined, keepalive: true, headers: { 'X-goog-api-key': apiKey } },
         );
+        cleanup();
         clearTimeout(timer);
 
         if (!res) return [];
@@ -403,14 +422,17 @@ class SemanticScholarAdapter implements ISourceAdapter {
         const apiKey = config.apiKeys.semantic_scholar;
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (apiKey) headers['x-api-key'] = apiKey;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const { signal: combined, cleanup } = signal
+            ? combineSignals(signal, controller.signal)
+            : { signal: controller.signal, cleanup: () => {} };
         try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 8000);
-            const combined = signal ? combineSignals(signal, controller.signal) : controller.signal;
             const res = await fetch(
                 `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=10&fields=title,url,abstract,authors,year,externalIds,citationCount`,
                 { headers, signal: combined, keepalive: true },
             );
+            cleanup();
             clearTimeout(timer);
             if (!res.ok) return [];
             const data = asObj(await res.json());
@@ -602,10 +624,12 @@ class COREAdapter implements ISourceAdapter {
     ): Promise<ResearchSource[]> {
         const apiKey = config.apiKeys.core;
         if (!apiKey) return [];
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const { signal: combined, cleanup } = signal
+            ? combineSignals(signal, controller.signal)
+            : { signal: controller.signal, cleanup: () => {} };
         try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 10000);
-            const combined = signal ? combineSignals(signal, controller.signal) : controller.signal;
             const res = await fetch(
                 `https://api.core.ac.uk/v3/search/works?q=${encodeURIComponent(query)}&limit=10`,
                 {
@@ -617,6 +641,7 @@ class COREAdapter implements ISourceAdapter {
                     keepalive: true,
                 },
             );
+            cleanup();
             clearTimeout(timer);
             if (!res.ok) return [];
             const data = asObj(await res.json());
@@ -976,14 +1001,17 @@ class GitHubAdapter implements ISourceAdapter {
         const token = config.apiKeys.github;
         const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const { signal: combined, cleanup } = signal
+            ? combineSignals(signal, controller.signal)
+            : { signal: controller.signal, cleanup: () => {} };
         try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 8000);
-            const combined = signal ? combineSignals(signal, controller.signal) : controller.signal;
             const res = await fetch(
                 `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=10`,
                 { headers, signal: combined, keepalive: true },
             );
+            cleanup();
             clearTimeout(timer);
             if (!res.ok) return [];
             const data = asObj(await res.json());

@@ -28,6 +28,8 @@ export class GeminiLiveService implements IGeminiLiveService {
     private synth: SpeechSynthesis | null = null;
     private voice: SpeechSynthesisVoice | null = null;
     private aborted = false;
+    private abortController: AbortController | null = null;
+    private restartTimer: ReturnType<typeof setTimeout> | null = null;
 
     isSupported(): boolean {
         return !!(
@@ -57,6 +59,7 @@ export class GeminiLiveService implements IGeminiLiveService {
             );
             this.stop();
         }
+        this.clearRestartTimer();
         this.aborted = false;
         this.session = { id: genId(), status: 'listening', messages: [], startedAt: Date.now() };
 
@@ -92,7 +95,8 @@ export class GeminiLiveService implements IGeminiLiveService {
         this.recognition.onend = () => {
             if (!this.aborted && this.session.status !== 'error') {
                 const currentStatus = this.session.status;
-                setTimeout(() => {
+                this.restartTimer = setTimeout(() => {
+                    this.restartTimer = null;
                     if (!this.aborted && this.session.status === currentStatus) {
                         this.recognition?.start();
                     }
@@ -109,17 +113,38 @@ export class GeminiLiveService implements IGeminiLiveService {
 
     stop(): void {
         this.aborted = true;
+        this.abortController?.abort(new Error('StoppedByUser'));
+        this.abortController = null;
+        this.clearRestartTimer();
         this.recognition?.stop();
         this.synth?.cancel();
         this.recognition = null;
         this.session = { ...this.session, status: 'idle' };
     }
 
+    destroy(): void {
+        this.stop();
+        this.synth = null;
+        this.voice = null;
+    }
+
     async sendText(text: string): Promise<void> {
         await this.handleUserInput(text);
     }
 
+    private clearRestartTimer(): void {
+        if (this.restartTimer !== null) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = null;
+        }
+    }
+
     private async handleUserInput(text: string): Promise<void> {
+        this.abortController?.abort(new Error('StoppedByUser'));
+        const abortController = new AbortController();
+        this.abortController = abortController;
+        const signal = abortController.signal;
+
         const recentMessages =
             this.session.messages.length >= GeminiLiveService.MAX_MESSAGES
                 ? this.session.messages.slice(-GeminiLiveService.MAX_MESSAGES + 2)
@@ -141,7 +166,11 @@ export class GeminiLiveService implements IGeminiLiveService {
                     fullText += chunk;
                 },
                 PROVIDER_DEFAULT_MODELS.gemini,
+                undefined,
+                signal,
             );
+
+            if (this.aborted || signal.aborted) return;
 
             const responseText = result.content || result.error || '(no response)';
             if (!fullText) fullText = responseText;
@@ -167,9 +196,14 @@ export class GeminiLiveService implements IGeminiLiveService {
                 this.session = { ...this.session, status: 'listening' };
             }
         } catch (e) {
+            if (e instanceof DOMException && e.name === 'AbortError') return;
             const errMsg = e instanceof Error ? e.message : String(e);
             LOGGER.error('GeminiLive', 'LLM call failed', { error: errMsg });
             this.session = { ...this.session, status: 'error', error: errMsg };
+        } finally {
+            if (this.abortController === abortController) {
+                this.abortController = null;
+            }
         }
     }
 }

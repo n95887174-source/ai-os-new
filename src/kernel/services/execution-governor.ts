@@ -232,6 +232,7 @@ export class ExecutionGovernorService implements IExecutionGovernor {
     private _onOpStateChange(op: ManagedOperationImpl): void {
         if (op.state !== 'running' && op.state !== 'pending') {
             this._removeTimer(op.id);
+            this._removeOp(op.id);
         }
     }
 
