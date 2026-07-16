@@ -161,6 +161,7 @@ export class DebateApiService {
     subscribeStream(
         sessionId: string,
         onEvent: (event: DebateApiStreamEvent) => void,
+        onClose?: () => void,
         _authToken?: string,
     ): () => void {
         if (!this.getSession(sessionId)) {
@@ -174,7 +175,7 @@ export class DebateApiService {
         }
         const sub: StreamSubscriber = {
             push: onEvent,
-            close: () => {},
+            close: onClose ?? (() => {}),
         };
         if (!this.subscribers.has(sessionId)) this.subscribers.set(sessionId, new Set());
         this.subscribers.get(sessionId)!.add(sub);
@@ -239,7 +240,13 @@ export class DebateApiService {
                     const line = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
                     controller.enqueue(encoder.encode(line));
                 };
-                unsubscribe = this.subscribeStream(sessionId, send);
+                unsubscribe = this.subscribeStream(sessionId, send, () => {
+                    try {
+                        controller.close();
+                    } catch {
+                        /* already closed */
+                    }
+                });
                 send({
                     type: 'updated',
                     sessionId,
