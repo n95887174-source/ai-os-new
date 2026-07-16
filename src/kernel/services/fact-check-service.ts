@@ -55,6 +55,9 @@ Rules:
 
 Claims to check:`;
 
+const MAX_CACHE = 200;
+const MAX_ARG_RESULTS = 200;
+
 export class FactCheckService {
     private cache = new Map<string, FactCheckResult>();
     private argumentResults = new Map<string, ArgumentFactCheck>();
@@ -104,6 +107,10 @@ export class FactCheckService {
             }
             const result = await this.verifyClaim(claim);
             this.cache.set(claim, result);
+            if (this.cache.size > MAX_CACHE) {
+                const oldest = this.cache.keys().next().value;
+                if (oldest !== undefined) this.cache.delete(oldest);
+            }
             results.push(result);
         }
 
@@ -120,6 +127,10 @@ export class FactCheckService {
         };
 
         this.argumentResults.set(arg.id, factCheck);
+        if (this.argumentResults.size > MAX_ARG_RESULTS) {
+            const oldest = this.argumentResults.keys().next().value;
+            if (oldest !== undefined) this.argumentResults.delete(oldest);
+        }
         this.deps.eventBus.emit(EVENTS.DEBATE_FACT_CHECKED, {
             argumentId: arg.id,
             factCheck,

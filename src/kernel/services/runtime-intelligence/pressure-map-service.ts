@@ -141,6 +141,21 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
                     }
                 },
             ),
+            this.deps.eventBus.onSafe<{ sessionId: string }>(
+                EVENTS.DEBATE_SESSION_COMPLETED,
+                (d) => {
+                    this.sessionPressures.delete(d.sessionId);
+                },
+            ),
+            this.deps.eventBus.onSafe<{ sessionId: string }>(
+                EVENTS.DEBATE_SESSION_CANCELLED,
+                (d) => {
+                    this.sessionPressures.delete(d.sessionId);
+                },
+            ),
+            this.deps.eventBus.onSafe<{ sessionId: string }>(EVENTS.DEBATE_SESSION_FAILED, (d) => {
+                this.sessionPressures.delete(d.sessionId);
+            }),
         );
 
         this.refreshInterval = setInterval(

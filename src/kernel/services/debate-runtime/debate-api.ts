@@ -187,7 +187,11 @@ export class DebateApiService {
             }
         }
         return () => {
-            this.subscribers.get(sessionId)?.delete(sub);
+            const set = this.subscribers.get(sessionId);
+            if (set) {
+                set.delete(sub);
+                if (set.size === 0) this.subscribers.delete(sessionId);
+            }
             sub.close();
         };
     }
