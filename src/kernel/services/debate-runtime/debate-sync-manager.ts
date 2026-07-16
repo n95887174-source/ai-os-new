@@ -62,6 +62,7 @@ export class DebateSyncManager {
     private static readonly MAX_VERDICT_CACHE = 50;
     private static readonly RESTART_COOLDOWN_MS = 10_000;
     private _lastStartTime = 0;
+    private _initialized = false;
 
     private _setCachedVerdict(sessionId: string, verdict: DebateVerdict): void {
         if (this._verdictCache.size >= DebateSyncManager.MAX_VERDICT_CACHE) {
@@ -113,6 +114,8 @@ export class DebateSyncManager {
 
     /** Initialize: load active session + register global event listeners. */
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         if (!this.deps) return;
         const loaded = await loadActiveSession(this.deps.debateStore);
         this.activeSession = loaded;

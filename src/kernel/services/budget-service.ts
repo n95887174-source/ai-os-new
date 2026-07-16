@@ -30,6 +30,7 @@ export class BudgetService implements IBudgetService {
     private sentAlerts = new Set<string>();
     private unsubs: Array<() => void> = [];
     private deps: BudgetServiceDeps;
+    private _initialized = false;
 
     private monthlyBudget: number = 50;
     private providerBudgets: Record<string, number> = {};
@@ -45,6 +46,8 @@ export class BudgetService implements IBudgetService {
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.loadAgentConfig();
         await this.loadBudget();
         await this.loadProviderBudgets();

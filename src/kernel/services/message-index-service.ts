@@ -46,6 +46,8 @@ export class MessageIndexService {
     private unsubClearData: (() => void) | null = null;
     private currentSessionId: string | null = null;
     private sessionUserBuffer = new Map<string, { content: string; timestamp: number }>();
+    private _initialized = false;
+
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
         const { database } = await import('../instances');
         return database;
@@ -54,6 +56,8 @@ export class MessageIndexService {
     constructor(_logger?: ILogger) {}
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         const stored = await (await this.db()).getKv<IndexedMessage[]>(STORAGE_KEY);
         this.messages = stored ?? [];
         for (const m of this.messages) {

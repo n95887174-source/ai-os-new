@@ -326,12 +326,15 @@ export class RoleService {
     private assignments: Map<string, string[]> = new Map();
     private usageStats: Map<string, RoleUsageStats> = new Map();
     private unsubs: Array<() => void> = [];
+    private _initialized = false;
 
     constructor(deps: RoleServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         this.setupListeners();
         await this.load();
     }

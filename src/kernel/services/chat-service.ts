@@ -7,6 +7,7 @@ export class ChatService {
     private deps: ChatServiceDeps;
     private executor: ChatExecutor;
     private unsubs: Array<() => void> = [];
+    private _initialized = false;
 
     constructor(deps: ChatServiceDeps) {
         this.deps = deps;
@@ -14,6 +15,8 @@ export class ChatService {
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         this.setupListeners();
     }
 

@@ -63,6 +63,7 @@ export class AdvisorService {
     private periodicInterval: ReturnType<typeof setInterval> | null = null;
     private staggerTimeout: ReturnType<typeof setTimeout> | null = null;
     private deps: AdvisorServiceDeps;
+    private _initialized = false;
 
     constructor(deps: AdvisorServiceDeps) {
         this.deps = deps;
@@ -106,6 +107,8 @@ export class AdvisorService {
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         this.setupListeners();
         await this.loadState();
         this.startPeriodicAnalysis();

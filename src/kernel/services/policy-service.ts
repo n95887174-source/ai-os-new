@@ -107,6 +107,7 @@ export class PolicyService {
     protected securityPatterns: SecurityPattern[] = [];
     private unsubs: Array<() => void> = [];
     private deps: PolicyServiceDeps;
+    private _initialized = false;
 
     constructor(deps: PolicyServiceDeps) {
         this.deps = deps;
@@ -138,6 +139,8 @@ export class PolicyService {
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.load();
         this.setupListeners();
     }

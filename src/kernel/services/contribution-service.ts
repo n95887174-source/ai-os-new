@@ -26,12 +26,15 @@ export class ContributionService implements IContributionService, ILifecycle {
     private unsubs: Array<() => void> = [];
     private persistTimer: ReturnType<typeof setTimeout> | null = null;
     private destroyed = false;
+    private _initialized = false;
 
     constructor(deps: ContributionServiceDeps) {
         this.deps = deps;
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const saved = await BucketStorageAdapter.UI.get<PersistedData>(STORAGE_KEY);
             if (saved?.days) this.days = saved.days;

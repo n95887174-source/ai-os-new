@@ -18,12 +18,15 @@ export class TimelineService implements ITimelineContract {
     private unsubs: Array<() => void> = [];
     private deps: TimelineServiceDeps;
     private eventIdCounter = 0;
+    private _initialized = false;
 
     constructor(deps: TimelineServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         this.setupAutoIngest();
     }
 

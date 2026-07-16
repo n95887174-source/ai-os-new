@@ -30,6 +30,7 @@ export class GeminiLiveService implements IGeminiLiveService {
     private aborted = false;
     private abortController: AbortController | null = null;
     private restartTimer: ReturnType<typeof setTimeout> | null = null;
+    private _started = false;
 
     isSupported(): boolean {
         return !!(
@@ -44,6 +45,8 @@ export class GeminiLiveService implements IGeminiLiveService {
     }
 
     async start(): Promise<void> {
+        if (this._started) return;
+        this._started = true;
         if (!this.isSupported()) {
             this.session = { ...this.session, status: 'error', error: 'Speech API not supported' };
             return;

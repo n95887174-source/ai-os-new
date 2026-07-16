@@ -65,12 +65,15 @@ export class ConfigService {
     private deps: ConfigServiceDeps;
     private overlays: ConfigOverlays = {};
     private unsub?: () => void;
+    private _initialized = false;
 
     constructor(deps: ConfigServiceDeps) {
         this.deps = deps;
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const saved = await this.deps.database.getKv<typeof this.overlays>(OVERLAYS_KEY);
             if (saved) {

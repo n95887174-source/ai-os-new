@@ -120,6 +120,7 @@ export class RouterService {
     private fallbackResolver: RouterFallbackResolver;
     private debateSelector: RouterDebateSelector;
     private deps: RouterServiceDeps;
+    private _initialized = false;
 
     constructor(deps: RouterServiceDeps) {
         this.deps = deps;
@@ -169,6 +170,8 @@ export class RouterService {
     }
 
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
         await this.configManager.init();
         this.config = this.configManager.raw;
         this.latencyMonitor.startMonitoring(this.config);
