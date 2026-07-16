@@ -1,3 +1,4 @@
+import type { ILifecycle } from '../contracts/lifecycle';
 import type {
     Workflow,
     WorkflowStep,
@@ -47,11 +48,19 @@ function interpolatePrompt(
     });
 }
 
-export class WorkflowService {
+export class WorkflowService implements ILifecycle {
     private workflows: Workflow[] = [];
     private runs: WorkflowRun[] = [];
     private loaded = false;
     private currentAbort: AbortController | null = null;
+
+    async init(): Promise<void> {
+        // Lazy init via ensureLoaded() — nothing to do upfront
+    }
+
+    async destroy(): Promise<void> {
+        this.cancelRun();
+    }
 
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
         const { database } = await import('../instances');

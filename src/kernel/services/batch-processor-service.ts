@@ -35,12 +35,22 @@ export interface BatchJob {
     completedAt?: number;
 }
 
+import type { ILifecycle } from '../contracts/lifecycle';
+
 const MAX_JOBS = 20;
 
-export class BatchProcessorService {
+export class BatchProcessorService implements ILifecycle {
     private jobs: BatchJob[] = [];
     private currentAbort: AbortController | null = null;
     private loaded = false;
+
+    async init(): Promise<void> {
+        // Lazy init via ensureLoaded() — nothing to do upfront
+    }
+
+    async destroy(): Promise<void> {
+        this.cancelJob();
+    }
 
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
         const { database } = await import('../instances');
