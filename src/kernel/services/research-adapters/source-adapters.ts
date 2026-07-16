@@ -44,13 +44,15 @@ async function safeFetch(
 ): Promise<Response | null> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let cleanup = () => {};
     try {
-        const { signal: combined, cleanup } = signal
+        const combined = signal
             ? combineSignals(signal, controller.signal)
             : { signal: controller.signal, cleanup: () => {} };
+        cleanup = combined.cleanup;
         const headers: Record<string, string> = {};
         if (apiKey) headers['X-Api-Key'] = apiKey;
-        const res = await fetch(url, { signal: combined, keepalive: true, headers });
+        const res = await fetch(url, { signal: combined.signal, keepalive: true, headers });
         cleanup();
         clearTimeout(timer);
         if (!res.ok) {
@@ -59,6 +61,7 @@ async function safeFetch(
         }
         return res;
     } catch {
+        cleanup();
         clearTimeout(timer);
         return null;
     }

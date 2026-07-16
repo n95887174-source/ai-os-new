@@ -165,6 +165,7 @@ const ANOMALY_PROMPT = `You are a research integrity analyst. Examine the sessio
 export class GeminiAugmentedResearchService implements IGeminiResearchService {
     private _initialized = false;
     private _model = PROVIDER_DEFAULT_MODELS.gemini;
+    private _abortController = new AbortController();
 
     constructor(
         private deps: {
@@ -188,16 +189,22 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
     }
 
     async destroy(): Promise<void> {
+        this._abortController.abort();
+        this._abortController = new AbortController();
         this._initialized = false;
     }
 
     async enhancedSearch(query: string): Promise<GeminiEnhancedSearchResult> {
         const start = Date.now();
         try {
+            if (this._abortController.signal.aborted) {
+                return { query, answer: 'Cancelled', sources: [], confidence: 0, latency: 0 };
+            }
             const resp = await this.deps.googleGenAI.generateContent(
                 buildMessages(SEARCH_PROMPT, query),
                 this._model,
                 { temperature: 0.3, googleSearchGrounding: true },
+                this._abortController.signal,
             );
             const parsed = extractJson(resp.content, SearchResponseSchema);
             if (parsed) {
@@ -244,6 +251,7 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
             const batchSize = 10;
             const results: GeminiClaimAnalysis[] = [];
             for (let i = 0; i < allClaims.length; i += batchSize) {
+                if (this._abortController.signal.aborted) break;
                 const batch = allClaims.slice(i, i + batchSize);
                 const context = batch
                     .map((c) => `[${c.id}] ${c.text} (confidence: ${c.confidence})`)
@@ -252,6 +260,7 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                     buildMessages(CLAIM_ANALYSIS_PROMPT, `Analyze these claims:\n${context}`),
                     this._model,
                     { temperature: 0.2 },
+                    this._abortController.signal,
                 );
                 const parsed = extractJson(resp.content, ClaimAnalysisResponseSchema);
                 if (parsed) {
@@ -286,6 +295,7 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                 ),
                 this._model,
                 { temperature: 0.3 },
+                this._abortController.signal,
             );
             const parsed = extractJson(resp.content, SummaryResponseSchema);
             if (parsed) {
@@ -334,6 +344,7 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                 buildMessages(ANOMALY_PROMPT, `Examine this research for anomalies:\n${context}`),
                 this._model,
                 { temperature: 0.2 },
+                this._abortController.signal,
             );
             const parsed = extractJson(resp.content, AnomalyResponseSchema);
             if (parsed) {
@@ -369,6 +380,7 @@ export class GeminiAugmentedResearchService implements IGeminiResearchService {
                 ),
                 this._model,
                 { temperature: 0.2 },
+                this._abortController.signal,
             );
             const parsed = extractJson(resp.content, PeerReviewResponseSchema);
             if (parsed) {

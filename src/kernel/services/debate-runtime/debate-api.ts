@@ -60,7 +60,8 @@ export class DebateApiService {
             this.deps.eventBus.onSafe<DebateSession>(EVENTS.DEBATE_UPDATED, (s) => {
                 const type = s.status === 'completed' ? 'completed' : 'updated';
                 this.broadcast(s.id, { type, sessionId: s.id, payload: s, timestamp: Date.now() });
-                if (s.status === 'completed') this.closeStream(s.id);
+                if (s.status === 'completed' || s.status === 'cancelled' || s.status === 'failed')
+                    this.closeStream(s.id);
             }),
             this.deps.eventBus.onSafe<{ sessionId: string; argument: unknown }>(
                 EVENTS.DEBATE_ARGUMENT,

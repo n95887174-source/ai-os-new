@@ -654,9 +654,10 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
                 // Skip invalid paths (traversal attempts, wrong extensions)
                 continue;
             }
+            const timeoutController = new AbortController();
+            let timer: ReturnType<typeof setTimeout> | undefined;
             try {
-                const timeoutController = new AbortController();
-                const timer = setTimeout(() => timeoutController.abort(), timeout);
+                timer = setTimeout(() => timeoutController.abort(), timeout);
                 const combinedSignal = signal
                     ? (AbortSignal.any?.([timeoutController.signal, signal]) ??
                       timeoutController.signal)
@@ -669,6 +670,7 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
                     resp.body?.cancel();
                 }
             } catch {
+                if (timer !== undefined) clearTimeout(timer);
                 /* skip unavailable docs */
             }
         }
