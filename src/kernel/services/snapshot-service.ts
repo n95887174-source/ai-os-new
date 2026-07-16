@@ -74,6 +74,7 @@ export class SnapshotService {
     private deps: SnapshotServiceDeps;
     private _pendingSave: Promise<void> = Promise.resolve();
     /** @internal C-94: Debounce guard — only one save() every 2s */
+    private _saveTimer: ReturnType<typeof setTimeout> | null = null;
     private _saveQueued = false;
     /** @internal C-94: Throttle guard — skip duplicate (traceId, nodeId) within 1s */
     private _lastStepTimestamps = new Map<string, number>();
@@ -96,6 +97,10 @@ export class SnapshotService {
 
     async destroy() {
         this._initialized = false;
+        if (this._saveTimer) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+        }
         await this.flush();
         this.unsubs.forEach((u) => u());
         if (this.autoCaptureInterval) {
@@ -188,8 +193,9 @@ export class SnapshotService {
         }
         if (this._saveQueued) return;
         this._saveQueued = true;
-        setTimeout(() => {
+        this._saveTimer = setTimeout(() => {
             this._saveQueued = false;
+            this._saveTimer = null;
             this._pendingSave = this.save();
         }, 2000);
     }

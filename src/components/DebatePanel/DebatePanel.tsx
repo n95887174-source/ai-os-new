@@ -234,6 +234,7 @@ const DebatePanel: React.FC = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const selectedAgentsRef = useRef(selectedAgents);
     const isMountedRef = useRef(true);
+    const timersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -277,11 +278,12 @@ const DebatePanel: React.FC = () => {
                     setIsLoading(false);
                     setError(null);
                     setActionLoading(null);
-                    setTimeout(() => {
+                    const scrollTimer = setTimeout(() => {
                         if (scrollRef.current) {
                             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
                         }
                     }, 100);
+                    timersRef.current.add(scrollTimer);
                 } catch {
                     if (isMountedRef.current) setError(tRef.current('debate.error_process_update'));
                 }
@@ -299,9 +301,12 @@ const DebatePanel: React.FC = () => {
             setSelectedAgents(agents.slice(0, 10));
         }
 
+        const timers = timersRef.current;
         return () => {
             unsub();
             clearTimeout(timer);
+            timers.forEach(clearTimeout);
+            timers.clear();
         };
     }, [syncHumanVotesFromSession, refreshHistory]);
 

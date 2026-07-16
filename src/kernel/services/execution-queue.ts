@@ -132,4 +132,14 @@ export class ExecutionQueue {
     clear() {
         for (const q of Object.values(this.queues)) q.length = 0;
     }
+
+    destroy() {
+        if (this.schedulerTimer) {
+            clearTimeout(this.schedulerTimer);
+            this.schedulerTimer = null;
+        }
+        this.clear();
+        this.inFlight = 0;
+        this._draining = false;
+    }
 }

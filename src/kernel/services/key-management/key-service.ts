@@ -89,6 +89,7 @@ export class KeyService implements IKeyRotationManager {
 
     private freeTierLimits: Record<string, FreeTierLimit> = { ...DEFAULT_FREE_TIER_LIMITS };
     private unsubs: Array<() => void> = [];
+    private _timers: Set<ReturnType<typeof setTimeout>> = new Set();
     private _initialized = false;
     private deps: KeyServiceDeps;
     private _globalSLAMode: string = 'BALANCED';
@@ -322,9 +323,10 @@ export class KeyService implements IKeyRotationManager {
                             message: `${keyEntry.provider} hit 429 — retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
                             type: 'warning',
                         });
-                        setTimeout(() => {
+                        const t = setTimeout(() => {
                             this.deps.eventBus.emit(EVENTS.CHECK_HEALTH, keyId);
                         }, backoffMs);
+                        this._timers.add(t);
                     }
                     this.registry.modifyKey(keyId, (key) => {
                         const previousState = key.status;
@@ -387,6 +389,8 @@ export class KeyService implements IKeyRotationManager {
 
     destroy() {
         this._initialized = false;
+        this._timers.forEach(clearTimeout);
+        this._timers.clear();
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
         this.registry.destroy();
@@ -520,9 +524,10 @@ export class KeyService implements IKeyRotationManager {
             message: `Key for ${data.provider} added`,
             type: 'success',
         });
-        setTimeout(() => {
+        const t = setTimeout(() => {
             this.deps.eventBus.emit(EVENTS.CHECK_HEALTH, newKey.id);
         }, 1000);
+        this._timers.add(t);
         return newKey;
     }
 

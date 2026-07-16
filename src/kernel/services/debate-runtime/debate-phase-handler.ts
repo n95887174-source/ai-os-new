@@ -156,12 +156,18 @@ export function createPhaseChangeHandler(
                     }
                 }
             }
-            if (abortSignal?.aborted) return;
+            if (abortSignal?.aborted) {
+                clearTimeout(verdictTimer);
+                return;
+            }
             getters
                 .saveSnapshot(sessionId)
                 .catch((e) =>
                     LOGGER.warn('DebatePhaseHandler', 'auto-checkpoint failed', { error: e }),
                 );
+            if (to === 'failed' || to === 'cancelled') {
+                clearTimeout(verdictTimer);
+            }
         }
     };
 }
