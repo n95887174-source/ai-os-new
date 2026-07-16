@@ -286,6 +286,7 @@ export async function debateCallLlm(
             });
 
             let govOp: { complete(): void; fail(e: Error): void; signal: AbortSignal } | undefined;
+            let cleanupGov: (() => void) | undefined;
             const gov = deps.getExecutionGovernor?.();
             if (gov && resolvedKey) {
                 govOp = gov.start({
@@ -303,6 +304,7 @@ export async function debateCallLlm(
                         controller.abort(new Error('CancelledByGovernor'));
                 };
                 govOp.signal.addEventListener('abort', onGovAbort, { once: true });
+                cleanupGov = () => govOp!.signal.removeEventListener('abort', onGovAbort);
             }
 
             console.log('[DEBATE_FALLBACK] Calling adapter.sendMessage', {
@@ -343,6 +345,7 @@ export async function debateCallLlm(
                 throw e;
             }
             govOp?.complete();
+            cleanupGov?.();
             const content = response.content;
             deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
                 sessionId: session.id,
@@ -379,6 +382,7 @@ export async function debateCallLlm(
             if (externalSignal) {
                 externalSignal.removeEventListener('abort', onExternalAbort);
             }
+            cleanupGov?.();
             const error = String(e);
             const isAbortError = e instanceof DOMException && e.name === 'AbortError';
             const abortReason = isAbortError

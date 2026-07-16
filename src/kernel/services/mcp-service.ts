@@ -55,6 +55,7 @@ export class MCPService {
     private static readonly BASE_BACKOFF_MS = 2000;
     private deps: MCPServiceDeps;
     private _initialized = false;
+    private _abortController = new AbortController();
 
     constructor(deps: MCPServiceDeps) {
         this.deps = deps;
@@ -67,6 +68,7 @@ export class MCPService {
     }
 
     destroy() {
+        this._abortController.abort();
         this.servers = [];
         this.connectionRetries.clear();
     }
@@ -188,8 +190,20 @@ export class MCPService {
         if (retries > 0) {
             const backoff = MCPService.BASE_BACKOFF_MS * Math.pow(2, retries - 1);
             const jitter = Math.random() * backoff * 0.1;
-            await new Promise((r) => setTimeout(r, backoff + jitter));
+            if (this._abortController.signal.aborted)
+                throw new Error('MCPService destroyed during backoff');
+            await new Promise<void>((resolve, reject) => {
+                const timer = setTimeout(resolve, backoff + jitter);
+                const onAbort = () => {
+                    clearTimeout(timer);
+                    reject(new Error('MCPService destroyed during backoff'));
+                };
+                this._abortController.signal.addEventListener('abort', onAbort, { once: true });
+            });
         }
+
+        if (this._abortController.signal.aborted)
+            throw new Error('MCPService destroyed during connect');
 
         try {
             server.error = undefined;
