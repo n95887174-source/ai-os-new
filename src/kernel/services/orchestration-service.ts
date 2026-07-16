@@ -78,6 +78,7 @@ export class OrchestrationService {
     private rateLimitCostRecords: Map<string, Array<{ timestamp: number; value: number }>> =
         new Map();
     private lifecycleStates: Map<string, AgentLifecycleState> = new Map();
+    private _abortController = new AbortController();
 
     private _trimMap<K, V>(map: Map<K, V>, max: number): void {
         while (map.size > max) {
@@ -105,6 +106,7 @@ export class OrchestrationService {
     }
 
     destroy() {
+        this._abortController.abort();
         this._initialized = false;
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
@@ -266,11 +268,19 @@ export class OrchestrationService {
         switch (node.type) {
             case 'agent':
                 return mode === 'simulation'
-                    ? await this.deps.cognitiveService.executeAgentNode(node, {
-                          ...data,
-                          output: `[SIM] ${data.output || ''}`,
-                      })
-                    : await this.deps.cognitiveService.executeAgentNode(node, data);
+                    ? await this.deps.cognitiveService.executeAgentNode(
+                          node,
+                          {
+                              ...data,
+                              output: `[SIM] ${data.output || ''}`,
+                          },
+                          this._abortController.signal,
+                      )
+                    : await this.deps.cognitiveService.executeAgentNode(
+                          node,
+                          data,
+                          this._abortController.signal,
+                      );
             case 'router':
                 return await this.executeRouterNode(node, data);
             case 'guardrail': {
@@ -490,6 +500,7 @@ export class OrchestrationService {
                         config: { ...node.config, model: routeModel, prompt: routingPrompt },
                     },
                     data,
+                    this._abortController.signal,
                 );
                 const idx = parseInt(decision.trim(), 10);
                 if (!isNaN(idx) && idx >= 0 && idx < destinations.length) {

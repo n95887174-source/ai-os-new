@@ -73,6 +73,7 @@ export class ResearchEngineService implements IResearchEngine {
     private _discoveryResult: DiscoveryResult | null = null;
     private researchReports: Map<string, ResearchReport> = new Map();
     private _initialized = false;
+    private _abortController = new AbortController();
 
     /** 2b E13: remove entries from related maps whose session no longer exists */
     private _pruneOrphanedMaps(): void {
@@ -218,6 +219,7 @@ export class ResearchEngineService implements IResearchEngine {
     }
 
     async destroy(): Promise<void> {
+        this._abortController.abort();
         this._initialized = false;
         await this.#persistState();
         this.sessions.clear();
@@ -264,10 +266,13 @@ export class ResearchEngineService implements IResearchEngine {
         return Array.from(this.sessions.values()).sort((a, b) => b.createdAt - a.createdAt);
     }
 
-    async runLoop(sessionId: string): Promise<EpistemicLoopResult> {
+    async runLoop(sessionId: string, externalSignal?: AbortSignal): Promise<EpistemicLoopResult> {
         await this.#ensureLoaded();
+        if (this._abortController.signal.aborted) throw new Error('ResearchEngine destroyed');
         const session = this.sessions.get(sessionId);
         if (!session) throw new Error(`Session ${sessionId} not found`);
+
+        const effectiveSignal = externalSignal ?? this._abortController.signal;
 
         const questionText = getNextQuestion(session);
         const question = {
@@ -291,14 +296,17 @@ export class ResearchEngineService implements IResearchEngine {
         };
 
         try {
+            if (effectiveSignal.aborted) throw new DOMException('Aborted', 'AbortError');
             result.status = 'searching';
             const sources = await searchSourcesAlgo(questionText, sourceAdapterRegistry);
             result.sources = sources;
 
+            if (effectiveSignal.aborted) throw new DOMException('Aborted', 'AbortError');
             result.status = 'extracting';
             const claims = extractClaims(sources, questionText);
             result.claims = claims;
 
+            if (effectiveSignal.aborted) throw new DOMException('Aborted', 'AbortError');
             result.status = 'synthesizing';
             const synthesis = synthesize(claims, questionText);
             result.synthesis = synthesis;

@@ -17,6 +17,7 @@ export class ChatExecutor {
     private readonly MAX_429_RETRIES = 3;
     private readonly ACTIVE_REQUEST_TTL = 10 * 60 * 1000;
     private _staleTimer: ReturnType<typeof setInterval> | null = null;
+    private _destroyed = false;
 
     constructor(deps: ChatServiceDeps, llmClient: ILLMClientService) {
         this.deps = deps;
@@ -44,6 +45,7 @@ export class ChatExecutor {
     }
 
     handleMessage(req: QueuedRequest): void {
+        if (this._destroyed) return;
         const requestId = req.requestId || crypto.randomUUID();
         if (this.executingMessages.has(requestId)) return;
         this.executingMessages.add(requestId);
@@ -61,6 +63,7 @@ export class ChatExecutor {
     }
 
     destroy(): void {
+        this._destroyed = true;
         this.stopStaleTimer();
         for (const [, entry] of this.activeRequests) {
             try {
@@ -71,6 +74,7 @@ export class ChatExecutor {
         }
         this.activeRequests.clear();
         this.executingMessages.clear();
+        this.cacheInflight.clear();
     }
 
     private async executeRequest(initialReq: QueuedRequest): Promise<void> {
