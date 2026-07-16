@@ -143,7 +143,7 @@ export class RuntimeManager {
         }
         await this.bootstrapper.shutdown();
         crossTabStateSync.destroy();
-        this.container.clear();
+        await this.container.clear();
         clearResolvedServices();
         coreEventBus.clearAllSubscriptions();
         this.registerCoreServices();

@@ -22,7 +22,7 @@ export interface IContainer {
     get<T>(id: ServiceIdentifier): T;
     getOptional<T>(id: ServiceIdentifier): T | undefined;
     has(id: ServiceIdentifier): boolean;
-    clear(): void;
+    clear(): Promise<void>;
     getDependencies(): Record<string, string[]>;
     getServices(): string[];
 }
@@ -59,7 +59,7 @@ export class Container implements IContainer {
         if (!this.factories.has(id) && !this.transientFactories.has(id)) {
             throw new Error(
                 `override() failed: '${String(id)}' is not registered as a factory. ` +
-                `Only factory/override-registered services can be overridden.`,
+                    `Only factory/override-registered services can be overridden.`,
             );
         }
         // Clear cached singleton so next get() re-runs the factory
@@ -134,14 +134,28 @@ export class Container implements IContainer {
         return this.services.has(id) || this.factories.has(id) || this.transientFactories.has(id);
     }
 
-    clear(): void {
+    async clear(): Promise<void> {
         const errors: Array<{ service: string; error: unknown }> = [];
+        const DESTROY_TIMEOUT_MS = 5000;
         // LIFO: destroy in reverse registration order (matches LifecycleManager.shutdown())
         for (const id of this.registrationOrder.slice().reverse()) {
             const service = this.services.get(id);
             if (service && typeof (service as Record<string, unknown>).destroy === 'function') {
                 try {
-                    (service as { destroy: () => void }).destroy();
+                    await Promise.race([
+                        (service as { destroy: () => Promise<void> | void }).destroy(),
+                        new Promise<never>((_, reject) =>
+                            setTimeout(
+                                () =>
+                                    reject(
+                                        new Error(
+                                            `destroy timed out after ${DESTROY_TIMEOUT_MS}ms`,
+                                        ),
+                                    ),
+                                DESTROY_TIMEOUT_MS,
+                            ),
+                        ),
+                    ]);
                 } catch (e) {
                     errors.push({ service: String(id), error: e });
                     getLogger().error('Container', 'destroy failed', {

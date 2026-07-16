@@ -66,6 +66,7 @@ export class LifecycleManager {
     async shutdown(): Promise<void> {
         if (this._shuttingDown) return;
         this._shuttingDown = true;
+        const DESTROY_TIMEOUT_MS = 5000;
         try {
             for (const entry of this.entries.slice().reverse()) {
                 const status = this.statuses.find((s) => s.name === entry.name);
@@ -77,7 +78,20 @@ export class LifecycleManager {
                     continue;
                 }
                 try {
-                    await entry.service.destroy();
+                    await Promise.race([
+                        entry.service.destroy(),
+                        new Promise<never>((_, reject) =>
+                            setTimeout(
+                                () =>
+                                    reject(
+                                        new Error(
+                                            `destroy timed out after ${DESTROY_TIMEOUT_MS}ms`,
+                                        ),
+                                    ),
+                                DESTROY_TIMEOUT_MS,
+                            ),
+                        ),
+                    ]);
                 } catch (e) {
                     LOGGER.error('LifecycleManager', `Error destroying ${entry.name}`, {
                         error: e,
