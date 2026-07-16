@@ -112,6 +112,7 @@ export class NotificationWebhookService {
     private unsubs: Array<() => void> = [];
     private deps: NotificationWebhookServiceDeps;
     private _initialized = false;
+    private retryTimers = new Set<ReturnType<typeof setTimeout>>();
 
     constructor(deps: NotificationWebhookServiceDeps) {
         this.deps = deps;
@@ -127,6 +128,8 @@ export class NotificationWebhookService {
     }
 
     destroy() {
+        for (const t of this.retryTimers) clearTimeout(t);
+        this.retryTimers.clear();
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
     }
@@ -207,16 +210,22 @@ export class NotificationWebhookService {
                 signal: AbortSignal.timeout(CONFIG.webhooks.timeoutMs),
             });
 
-            if (res.ok) return true;
+            if (res.ok) {
+                await res.body?.cancel();
+                return true;
+            }
 
             if (attempt < MAX_RETRIES && res.status >= 500) {
+                await res.body?.cancel();
                 const jitter = Math.random() * 0.5 + 0.75;
-                await new Promise((r) =>
-                    setTimeout(r, RETRY_DELAY_MS * Math.pow(2, attempt) * jitter),
-                );
+                await new Promise<void>((resolve) => {
+                    const t = setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt) * jitter);
+                    this.retryTimers.add(t);
+                });
                 return this.sendWithRetry(webhook, event, data, attempt + 1);
             }
 
+            await res.body?.cancel();
             LOGGER.warn('NotificationWebhookService', 'HTTP error sending webhook', {
                 webhookName: webhook.name,
                 event,
@@ -235,9 +244,10 @@ export class NotificationWebhookService {
         } catch (e) {
             if (attempt < MAX_RETRIES) {
                 const jitter = Math.random() * 0.5 + 0.75;
-                await new Promise((r) =>
-                    setTimeout(r, RETRY_DELAY_MS * Math.pow(2, attempt) * jitter),
-                );
+                await new Promise<void>((resolve) => {
+                    const t = setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt) * jitter);
+                    this.retryTimers.add(t);
+                });
                 return this.sendWithRetry(webhook, event, data, attempt + 1);
             }
             LOGGER.warn('NotificationWebhookService', 'Failed to send webhook after retries', {
@@ -304,7 +314,9 @@ export class NotificationWebhookService {
                 signal: AbortSignal.timeout(CONFIG.webhooks.timeoutMs),
             });
 
-            return { ok: res.ok, status: res.status };
+            const result = { ok: res.ok, status: res.status };
+            await res.body?.cancel();
+            return result;
         } catch (e) {
             LOGGER.warn('NotificationWebhookService', 'Test webhook failed', {
                 webhookId: id,
