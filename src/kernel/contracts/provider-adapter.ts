@@ -12,7 +12,17 @@ export type { ToolCall } from '../types/llm-types';
 export type { HealthCheckResult as AdapterHealthResult } from '../types/llm-types';
 
 export type AdapterFinishReason =
-    'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
+    | 'STOP'
+    | 'MAX_TOKENS'
+    | 'SAFETY'
+    | 'RECITATION'
+    | 'OTHER'
+    | 'TOOL_CALLS'
+    | 'LANGUAGE'
+    | 'BLOCKLIST'
+    | 'PROHIBITED_CONTENT'
+    | 'SPII'
+    | 'MALFORMED_FUNCTION_CALL';
 
 export interface StreamMeta {
     finishReason?: string;

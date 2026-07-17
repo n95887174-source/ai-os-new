@@ -50,7 +50,17 @@ export interface ProviderResponse {
     latency: number;
     tokens: number;
     error?: string;
-    finishReason?: 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER' | 'TOOL_CALLS';
+    finishReason?:
+        | 'STOP'
+        | 'MAX_TOKENS'
+        | 'SAFETY'
+        | 'RECITATION'
+        | 'LANGUAGE'
+        | 'BLOCKLIST'
+        | 'PROHIBITED_CONTENT'
+        | 'SPII'
+        | 'OTHER'
+        | 'TOOL_CALLS';
     safetyRatings?: SafetyRating[];
     toolCalls?: ToolCall[];
     /** Gemini grounding metadata (from Google Search) */

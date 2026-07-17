@@ -1,7 +1,14 @@
 import type { ProviderResponse, SafetyRating, ToolCall } from '../core/types';
 import type { GeminiResponse, GeminiCandidate, StreamMeta } from './gemini-types';
 
-const BLOCKED_REASONS = new Set(['SAFETY', 'RECITATION']);
+const BLOCKED_REASONS = new Set([
+    'SAFETY',
+    'RECITATION',
+    'LANGUAGE',
+    'BLOCKLIST',
+    'PROHIBITED_CONTENT',
+    'SPII',
+]);
 
 export function extractTokenCount(data: GeminiResponse): number {
     const meta = data.usageMetadata;
@@ -19,7 +26,7 @@ export function extractCandidateMeta(candidate: GeminiCandidate | undefined): {
     safetyRatings: SafetyRating[];
     blocked: boolean;
 } {
-    const finishReason = candidate?.finishReason;
+    const finishReason = candidate?.finishReason as ProviderResponse['finishReason'] | undefined;
     const safetyRatings = (candidate?.safetyRatings ?? []).map((r) => ({
         category: r.category,
         probability: r.probability,
@@ -50,6 +57,38 @@ export function extractGroundingMetadata(
 export function toProviderResponse(data: GeminiResponse, latency: number): ProviderResponse {
     const candidate = data.candidates?.[0];
     const { finishReason, safetyRatings, blocked } = extractCandidateMeta(candidate);
+
+    const pf = data.promptFeedback;
+
+    if (!data.candidates || data.candidates.length === 0) {
+        if (pf?.blockReason) {
+            const errMsg = `Response blocked by Gemini. Reason: ${pf.blockReason}${pf.blockReasonMessage ? ` — ${pf.blockReasonMessage}` : ''}.`;
+            if (import.meta.env.DEV) {
+                console.warn('[GeminiMapper] blocked —', errMsg);
+            }
+            return {
+                content: '',
+                finishReason,
+                safetyRatings,
+                latency,
+                tokens: extractTokenCount(data),
+                error: errMsg,
+                groundingMetadata: extractGroundingMetadata(data),
+            };
+        }
+        if (import.meta.env.DEV) {
+            console.warn('[GeminiMapper] no candidates, no blockReason — returning empty');
+        }
+        return {
+            content: '',
+            finishReason,
+            safetyRatings,
+            latency,
+            tokens: extractTokenCount(data),
+            error: 'Empty response — no candidates and no block reason',
+            groundingMetadata: extractGroundingMetadata(data),
+        };
+    }
 
     const toolCalls: ToolCall[] = [];
     const parts = candidate?.content?.parts || [];

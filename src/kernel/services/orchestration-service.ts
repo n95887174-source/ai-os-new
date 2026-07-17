@@ -44,7 +44,11 @@ export interface OrchestrationServiceDeps {
         ) => Promise<{ status: string; data?: unknown; error?: string }>;
     };
     cognitiveService: {
-        executeAgentNode: (node: ISNode, data: NodeContext) => Promise<string>;
+        executeAgentNode: (
+            node: ISNode,
+            data: NodeContext,
+            signal?: AbortSignal,
+        ) => Promise<string>;
     };
     policyService: {
         enforcePrivacy: (data: { nodeId: string; output?: string }) => {

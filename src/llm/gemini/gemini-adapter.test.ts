@@ -78,7 +78,7 @@ describe('GeminiAdapter', () => {
 
         expect(mockHttpClient.post).toHaveBeenCalled();
         const [path, body, apiKey] = vi.mocked(mockHttpClient.post).mock.calls[0];
-        expect(path).toContain('gemini-3.5-flash:generateContent');
+        expect(path).toContain('/v1beta/models/gemini-3.5-flash:generateContent');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((body as any).tools[0].functionDeclarations[0].name).toBe('get_weather');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

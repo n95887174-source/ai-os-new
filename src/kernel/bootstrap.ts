@@ -17,6 +17,7 @@ import { registerServices } from './service-registration/index';
 import { GroupManagerService } from './services/group-manager';
 import type { ApiKey } from './types/metrics-types';
 import { MemoryWatchdog } from './utils/memory-watchdog';
+import { LLMHttpClient } from '../llm/http/llm-http-client';
 import { clearBootstrapSnapshot } from './bootstrap-state';
 import {
     CRITICAL_SERVICES,
@@ -335,16 +336,34 @@ export class SystemBootstrap implements IBootstrap {
             const debateEngine = this.container.get<{ clearWarmCache?: () => void }>(
                 'debateEngine',
             );
-            const debateService = this.container.get<{ clearVerdictCache?: () => void }>(
-                'debateService',
-            );
+            const debateService = this.container.get<{
+                clearVerdictCache?: () => void;
+                truncateArguments?: (keepRounds?: number) => number;
+            }>('debateService');
             const providerRegistry = this.container.get<{ clearAllCaches?: () => void }>(
                 'providerAdapterRegistry',
             );
             this.memoryWatchdog?.onPressure(() => {
                 debateEngine.clearWarmCache?.();
                 debateService.clearVerdictCache?.();
+                debateService.truncateArguments?.(2);
                 providerRegistry.clearAllCaches?.();
+                // Cancel ALL in-flight HTTP requests — heap is at 200MB+
+                // and growing at ~30MB/s. Waiting is not an option.
+                const count = LLMHttpClient.cancelAll();
+                if (count > 0) {
+                    this.logger.info(
+                        'Bootstrap',
+                        `Cancelled ${count} in-flight HTTP requests under memory pressure`,
+                    );
+                }
+                // Force GC: allocate+free 64MB buffer to encourage V8 mark-sweep
+                try {
+                    const buf = new ArrayBuffer(64 * 1024 * 1024);
+                    buf.toString(); // touch
+                } catch {
+                    // best-effort GC hint
+                }
             });
             this.logger.info('Bootstrap', 'MemoryWatchdog pressure callbacks registered');
         } catch (e) {

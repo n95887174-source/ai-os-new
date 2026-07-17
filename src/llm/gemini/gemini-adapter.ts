@@ -4,6 +4,7 @@ import { LLMHttpClient } from '../http/llm-http-client';
 import { GeminiRequestBuilder } from './gemini-request-builder';
 import { toProviderResponse } from './gemini-response-mapper';
 import { GeminiStreamParser } from './gemini-stream-parser';
+import type { GeminiResponse } from './gemini-types';
 import { GeminiHealthCheck } from './gemini-health';
 import { validateModel, modelCache } from './gemini-model-validator';
 import { AuthError, SafetyError } from '../core/errors';
@@ -17,7 +18,14 @@ export class GeminiAdapter extends BaseLLMAdapter {
     constructor(httpClient?: LLMHttpClient, baseURL?: string) {
         super();
         const url = baseURL ?? import.meta.env.VITE_PROXY_GEMINI ?? '/proxy/gemini';
-        this.#httpClient = httpClient ?? new LLMHttpClient(url, {}, 'x-goog-api-key', 'Gemini');
+        this.#httpClient =
+            httpClient ??
+            new LLMHttpClient(
+                url,
+                { 'x-goog-api-client': 'genai-js/0.24.1' },
+                'x-goog-api-key',
+                'Gemini',
+            );
         this.healthCheck = new GeminiHealthCheck(this.#httpClient);
         modelCache.setFetcher((apiKey) =>
             this.healthCheck.getAvailableModels(apiKey).then((m) => new Set(m)),
@@ -41,19 +49,25 @@ export class GeminiAdapter extends BaseLLMAdapter {
             const safeModel = await validateModel(model, apiKey);
             const body = GeminiRequestBuilder.build(messages, options);
             const { data, latency } = await this.#httpClient.post(
-                `/v1/models/${encodeURIComponent(safeModel)}:generateContent`,
+                `/v1beta/models/${encodeURIComponent(safeModel)}:generateContent`,
                 body,
                 apiKey,
                 signal,
             );
-            const result = toProviderResponse(
-                data as Parameters<typeof toProviderResponse>[0],
-                latency,
-            );
+            if (import.meta.env.DEV) {
+                console.warn(
+                    `[GeminiAdapter] response for ${safeModel}:`,
+                    JSON.stringify(data).slice(0, 1000),
+                );
+            }
+            const raw = data as GeminiResponse;
+            const result = toProviderResponse(raw, latency);
             if (result.error?.includes('blocked')) {
                 throw new SafetyError(
                     this.id,
-                    result.finishReason as 'SAFETY' | 'RECITATION',
+                    (result.finishReason ||
+                        raw.promptFeedback?.blockReason ||
+                        'SAFETY') as SafetyError['finishReason'],
                     result.safetyRatings,
                 );
             }
@@ -76,7 +90,7 @@ export class GeminiAdapter extends BaseLLMAdapter {
             const safeModel = await validateModel(model, apiKey);
             const body = GeminiRequestBuilder.build(messages, options);
             const res = await this.#httpClient.streamPost(
-                `/v1/models/${encodeURIComponent(safeModel)}:streamGenerateContent?alt=sse`,
+                `/v1beta/models/${encodeURIComponent(safeModel)}:streamGenerateContent?alt=sse`,
                 body,
                 apiKey,
                 signal,

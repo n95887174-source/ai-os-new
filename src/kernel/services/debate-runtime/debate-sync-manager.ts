@@ -101,6 +101,39 @@ export class DebateSyncManager {
         this._verdictCache.clear();
     }
 
+    /**
+     * Strip argument content for rounds older than keepRounds behind the latest round.
+     * Called under memory pressure to free LLM response strings without destroying
+     * the argument structure (IDs, agentIds, metadata remain intact).
+     * The governor's internal state and finalizeDebate metrics are unaffected.
+     */
+    truncateArguments(keepRounds = 2): number {
+        if (!this.activeSession?.arguments?.length) return 0;
+        const args = this.activeSession.arguments;
+        let maxRound = 0;
+        for (const a of args) {
+            if (a.round > maxRound) maxRound = a.round;
+        }
+        const cutoff = maxRound - keepRounds;
+        let truncated = 0;
+        for (const a of args) {
+            if (a.round <= cutoff && a.content) {
+                (a as { content?: string }).content = '';
+                truncated++;
+            }
+        }
+        if (truncated > 0) {
+            LOGGER.info('DebateSyncManager', 'truncateArguments under memory pressure', {
+                truncated,
+                totalArgs: args.length,
+                maxRound,
+                keepRounds,
+                bytesFreed: truncated * 1024,
+            });
+        }
+        return truncated;
+    }
+
     /** Expose FactCheckService for UI consumers (DebatePanel, FactCheckBadge). */
     get factCheckService() {
         return this.postProcessor.factCheckService;

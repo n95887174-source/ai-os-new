@@ -36,7 +36,7 @@ export class MemoryWatchdog {
     constructor(opts?: WatchdogOptions) {
         this.intervalMs = opts?.intervalMs ?? 5000;
         this.thresholdMB = opts?.thresholdMB ?? 100;
-        this.absoluteThresholdMB = opts?.absoluteThresholdMB ?? 400;
+        this.absoluteThresholdMB = opts?.absoluteThresholdMB ?? 200;
         this.enabled = typeof performance !== 'undefined' && 'memory' in performance;
     }
 

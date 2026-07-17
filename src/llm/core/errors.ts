@@ -22,12 +22,14 @@ export class RetryableError extends LLMError {
 }
 
 export class SafetyError extends LLMError {
-    readonly finishReason: 'SAFETY' | 'RECITATION';
+    readonly finishReason:
+        'SAFETY' | 'RECITATION' | 'LANGUAGE' | 'BLOCKLIST' | 'PROHIBITED_CONTENT' | 'SPII';
     readonly safetyRatings?: Array<{ category: string; probability: string }>;
 
     constructor(
         provider: string,
-        finishReason: 'SAFETY' | 'RECITATION',
+        finishReason:
+            'SAFETY' | 'RECITATION' | 'LANGUAGE' | 'BLOCKLIST' | 'PROHIBITED_CONTENT' | 'SPII',
         safetyRatings?: Array<{ category: string; probability: string }>,
     ) {
         super(`Generation blocked due to ${finishReason}`, provider);

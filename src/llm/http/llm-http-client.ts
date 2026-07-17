@@ -14,6 +14,55 @@ export class LLMHttpClient {
     readonly #provider: string;
     readonly #timeoutMs: number;
 
+    /** Global registry of in-flight HTTP requests for memory-pressure cancellation. */
+    private static readonly _inflight = new Map<
+        symbol,
+        {
+            controller: AbortController;
+            startedAt: number;
+            provider: string;
+            path: string;
+        }
+    >();
+
+    /** Cancel the longest-running in-flight request. Returns true if cancelled. */
+    static cancelLongestRunning(): boolean {
+        let oldest: symbol | null = null;
+        let oldestStart = Infinity;
+        for (const [key, entry] of LLMHttpClient._inflight) {
+            if (entry.startedAt < oldestStart) {
+                oldestStart = entry.startedAt;
+                oldest = key;
+            }
+        }
+        if (oldest) {
+            const entry = LLMHttpClient._inflight.get(oldest);
+            entry?.controller.abort(
+                new DOMException('Cancelled under memory pressure', 'AbortError'),
+            );
+            LLMHttpClient._inflight.delete(oldest);
+            return true;
+        }
+        return false;
+    }
+
+    /** Cancel ALL in-flight requests. */
+    static cancelAll(): number {
+        const count = LLMHttpClient._inflight.size;
+        for (const [, entry] of LLMHttpClient._inflight) {
+            entry.controller.abort(
+                new DOMException('Cancelled under memory pressure', 'AbortError'),
+            );
+        }
+        LLMHttpClient._inflight.clear();
+        return count;
+    }
+
+    /** Number of currently in-flight requests. */
+    static getInFlightCount(): number {
+        return LLMHttpClient._inflight.size;
+    }
+
     constructor(
         baseUrl: string,
         defaultHeaders: Record<string, string> = {},
@@ -28,8 +77,15 @@ export class LLMHttpClient {
         this.#timeoutMs = timeoutMs;
     }
 
-    #withTimeout(signal?: AbortSignal): AbortSignal {
-        if (!signal) return AbortSignal.timeout(this.#timeoutMs);
+    #withTimeout(signal?: AbortSignal): { signal: AbortSignal; controller: AbortController } {
+        if (!signal) {
+            const ctrl = new AbortController();
+            setTimeout(
+                () => ctrl.abort(new DOMException('Timeout', 'TimeoutError')),
+                this.#timeoutMs,
+            );
+            return { signal: ctrl.signal, controller: ctrl };
+        }
         // Avoid AbortSignal.any() due to Chrome GC bug:
         // AbortSignal.any() does not release internal onabort handlers
         // from constituent signals when the composed signal is GC'd,
@@ -55,7 +111,21 @@ export class LLMHttpClient {
                 { once: true },
             );
         }
-        return controller.signal;
+        return { signal: controller.signal, controller };
+    }
+
+    /** Register an in-flight request and return a dispose function. */
+    #trackInFlight(controller: AbortController, path: string): () => void {
+        const key = Symbol('inflight');
+        LLMHttpClient._inflight.set(key, {
+            controller,
+            startedAt: Date.now(),
+            provider: this.#provider,
+            path,
+        });
+        return () => {
+            LLMHttpClient._inflight.delete(key);
+        };
     }
 
     async post(
@@ -69,133 +139,161 @@ export class LLMHttpClient {
         if (import.meta.env.DEV) {
             console.debug(`[${this.#provider}] POST ${path} body:`, bodyStr.slice(0, 2000));
         }
-        const mergedSignal = this.#withTimeout(signal);
-        const res = await fetch(`${this.#baseUrl}${path}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...this.#defaultHeaders,
-                [this.#authHeaderName]: apiKey,
-            },
-            body: bodyStr,
-            signal: mergedSignal,
-        });
-
-        if (mergedSignal.aborted) {
-            res.body?.cancel()?.catch(() => {});
-            throw new DOMException('Aborted', 'AbortError');
-        }
-
-        if (res.status === 401 || res.status === 403) {
-            res.body?.cancel()?.catch(() => {});
-            throw new AuthError(this.#provider);
-        }
-        if (res.status === 402) {
-            res.body?.cancel()?.catch(() => {});
-            throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
-        }
-        if (res.status === 429) {
-            res.body?.cancel()?.catch(() => {});
-            const retryAfter = parseRetryAfter(res);
-            throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
-        }
-        if (res.status >= 500) {
-            res.body?.cancel()?.catch(() => {});
-            const retryAfter = parseRetryAfter(res);
-            throw new RetryableError(
-                `Server error ${res.status}`,
-                this.#provider,
-                res.status,
-                undefined,
-                retryAfter,
-            );
-        }
-        if (!res.ok) {
-            const errorBody = await res.text().catch(() => {
-                res.body?.cancel()?.catch(() => {});
-                return '';
-            });
-            console.warn(`[${this.#provider}] POST ${res.status} body:`, errorBody.slice(0, 500));
-            throw new LLMError(
-                `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
-                this.#provider,
-                res.status,
-            );
-        }
-
-        let data: Record<string, unknown>;
+        const { signal: mergedSignal, controller } = this.#withTimeout(signal);
+        const done = this.#trackInFlight(controller, path);
         try {
-            data = await res.json();
-        } catch {
-            res.body?.cancel()?.catch(() => {});
-            const text = await res.text().catch(() => '');
-            throw new LLMError(
-                `Invalid JSON response from ${this.#provider}: ${text.slice(0, 200)}`,
-                this.#provider,
-                res.status,
-            );
+            const res = await fetch(`${this.#baseUrl}${path}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...this.#defaultHeaders,
+                    [this.#authHeaderName]: apiKey,
+                },
+                body: bodyStr,
+                signal: mergedSignal,
+            });
+
+            if (mergedSignal.aborted) {
+                res.body?.cancel()?.catch(() => {});
+                throw new DOMException('Aborted', 'AbortError');
+            }
+
+            if (res.status === 401 || res.status === 403) {
+                res.body?.cancel()?.catch(() => {});
+                throw new AuthError(this.#provider);
+            }
+            if (res.status === 402) {
+                res.body?.cancel()?.catch(() => {});
+                throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
+            }
+            if (res.status === 429) {
+                res.body?.cancel()?.catch(() => {});
+                const retryAfter = parseRetryAfter(res);
+                throw new RetryableError(
+                    `Rate limited`,
+                    this.#provider,
+                    429,
+                    undefined,
+                    retryAfter,
+                );
+            }
+            if (res.status >= 500) {
+                res.body?.cancel()?.catch(() => {});
+                const retryAfter = parseRetryAfter(res);
+                throw new RetryableError(
+                    `Server error ${res.status}`,
+                    this.#provider,
+                    res.status,
+                    undefined,
+                    retryAfter,
+                );
+            }
+            if (!res.ok) {
+                const errorBody = await res.text().catch(() => {
+                    res.body?.cancel()?.catch(() => {});
+                    return '';
+                });
+                console.warn(
+                    `[${this.#provider}] POST ${res.status} body:`,
+                    errorBody.slice(0, 500),
+                );
+                throw new LLMError(
+                    `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
+                    this.#provider,
+                    res.status,
+                );
+            }
+
+            let data: Record<string, unknown>;
+            try {
+                data = await res.json();
+            } catch {
+                res.body?.cancel()?.catch(() => {});
+                const text = await res.text().catch(() => '');
+                throw new LLMError(
+                    `Invalid JSON response from ${this.#provider}: ${text.slice(0, 200)}`,
+                    this.#provider,
+                    res.status,
+                );
+            }
+            const latency = Date.now() - start;
+            return { data, latency, response: res };
+        } finally {
+            done();
         }
-        const latency = Date.now() - start;
-        return { data, latency, response: res };
     }
 
     async get(path: string, apiKey: string, signal?: AbortSignal): Promise<HttpResult> {
         const start = Date.now();
-        const mergedSignal = this.#withTimeout(signal);
-        const res = await fetch(`${this.#baseUrl}${path}`, {
-            method: 'GET',
-            headers: {
-                ...this.#defaultHeaders,
-                [this.#authHeaderName]: apiKey,
-            },
-            signal: mergedSignal,
-        });
-
-        if (mergedSignal.aborted) {
-            res.body?.cancel()?.catch(() => {});
-            throw new DOMException('Aborted', 'AbortError');
-        }
-
-        if (res.status === 401 || res.status === 403) {
-            res.body?.cancel()?.catch(() => {});
-            throw new AuthError(this.#provider);
-        }
-        if (res.status === 402) {
-            res.body?.cancel()?.catch(() => {});
-            throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
-        }
-        if (res.status === 429) {
-            res.body?.cancel()?.catch(() => {});
-            const retryAfter = parseRetryAfter(res);
-            throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
-        }
-        if (!res.ok) {
-            const errorBody = await res.text().catch(() => {
-                res.body?.cancel()?.catch(() => {});
-                return '';
-            });
-            console.warn(`[${this.#provider}] GET ${res.status} body:`, errorBody.slice(0, 500));
-            throw new LLMError(
-                `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
-                this.#provider,
-                res.status,
-            );
-        }
-
-        let data: Record<string, unknown>;
+        const { signal: mergedSignal, controller } = this.#withTimeout(signal);
+        const done = this.#trackInFlight(controller, path);
         try {
-            data = await res.json();
-        } catch {
-            res.body?.cancel()?.catch(() => {});
-            const text = await res.text().catch(() => '');
-            throw new LLMError(
-                `Invalid JSON response from ${this.#provider}: ${text.slice(0, 200)}`,
-                this.#provider,
-                res.status,
-            );
+            const res = await fetch(`${this.#baseUrl}${path}`, {
+                method: 'GET',
+                headers: {
+                    ...this.#defaultHeaders,
+                    [this.#authHeaderName]: apiKey,
+                },
+                signal: mergedSignal,
+            });
+
+            if (mergedSignal.aborted) {
+                res.body?.cancel()?.catch(() => {});
+                throw new DOMException('Aborted', 'AbortError');
+            }
+
+            if (res.status === 401 || res.status === 403) {
+                res.body?.cancel()?.catch(() => {});
+                throw new AuthError(this.#provider);
+            }
+            if (res.status === 402) {
+                res.body?.cancel()?.catch(() => {});
+                throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
+            }
+            if (res.status === 429) {
+                res.body?.cancel()?.catch(() => {});
+                const retryAfter = parseRetryAfter(res);
+                throw new RetryableError(
+                    `Rate limited`,
+                    this.#provider,
+                    429,
+                    undefined,
+                    retryAfter,
+                );
+            }
+            if (!res.ok) {
+                const errorBody = await res.text().catch(() => {
+                    res.body?.cancel()?.catch(() => {});
+                    return '';
+                });
+                console.warn(
+                    `[${this.#provider}] GET ${res.status} body:`,
+                    errorBody.slice(0, 500),
+                );
+                throw new LLMError(
+                    `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
+                    this.#provider,
+                    res.status,
+                );
+            }
+
+            let data: Record<string, unknown>;
+            try {
+                data = await res.json();
+            } catch {
+                res.body?.cancel()?.catch(() => {});
+                const text = await res.text().catch(() => '');
+                throw new LLMError(
+                    `Invalid JSON response from ${this.#provider}: ${text.slice(0, 200)}`,
+                    this.#provider,
+                    res.status,
+                );
+            }
+            const latency = Date.now() - start;
+            return { data, latency, response: res };
+        } finally {
+            done();
         }
-        const latency = Date.now() - start;
-        return { data, latency, response: res };
     }
 
     async streamPost(
@@ -204,50 +302,64 @@ export class LLMHttpClient {
         apiKey: string,
         signal?: AbortSignal,
     ): Promise<Response> {
-        const mergedSignal = this.#withTimeout(signal);
-        const res = await fetch(`${this.#baseUrl}${path}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...this.#defaultHeaders,
-                [this.#authHeaderName]: apiKey,
-            },
-            body: JSON.stringify(body),
-            signal: mergedSignal,
-        });
-
-        if (mergedSignal.aborted) {
-            res.body?.cancel()?.catch(() => {});
-            throw new DOMException('Aborted', 'AbortError');
-        }
-
-        if (res.status === 401 || res.status === 403) {
-            res.body?.cancel()?.catch(() => {});
-            throw new AuthError(this.#provider);
-        }
-        if (res.status === 402) {
-            res.body?.cancel()?.catch(() => {});
-            throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
-        }
-        if (res.status === 429) {
-            res.body?.cancel()?.catch(() => {});
-            const retryAfter = parseRetryAfter(res);
-            throw new RetryableError(`Rate limited`, this.#provider, 429, undefined, retryAfter);
-        }
-        if (!res.ok) {
-            const errorBody = await res.text().catch(() => {
-                res.body?.cancel()?.catch(() => {});
-                return '';
+        const { signal: mergedSignal, controller } = this.#withTimeout(signal);
+        const done = this.#trackInFlight(controller, path);
+        try {
+            const res = await fetch(`${this.#baseUrl}${path}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...this.#defaultHeaders,
+                    [this.#authHeaderName]: apiKey,
+                },
+                body: JSON.stringify(body),
+                signal: mergedSignal,
             });
-            console.warn(`[${this.#provider}] STREAM ${res.status} body:`, errorBody.slice(0, 500));
-            throw new LLMError(
-                `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
-                this.#provider,
-                res.status,
-            );
-        }
 
-        return res;
+            if (mergedSignal.aborted) {
+                res.body?.cancel()?.catch(() => {});
+                throw new DOMException('Aborted', 'AbortError');
+            }
+
+            if (res.status === 401 || res.status === 403) {
+                res.body?.cancel()?.catch(() => {});
+                throw new AuthError(this.#provider);
+            }
+            if (res.status === 402) {
+                res.body?.cancel()?.catch(() => {});
+                throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
+            }
+            if (res.status === 429) {
+                res.body?.cancel()?.catch(() => {});
+                const retryAfter = parseRetryAfter(res);
+                throw new RetryableError(
+                    `Rate limited`,
+                    this.#provider,
+                    429,
+                    undefined,
+                    retryAfter,
+                );
+            }
+            if (!res.ok) {
+                const errorBody = await res.text().catch(() => {
+                    res.body?.cancel()?.catch(() => {});
+                    return '';
+                });
+                console.warn(
+                    `[${this.#provider}] STREAM ${res.status} body:`,
+                    errorBody.slice(0, 500),
+                );
+                throw new LLMError(
+                    `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
+                    this.#provider,
+                    res.status,
+                );
+            }
+
+            return res;
+        } finally {
+            done();
+        }
     }
 }
 

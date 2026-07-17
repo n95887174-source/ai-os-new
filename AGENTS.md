@@ -4025,3 +4025,32 @@ Complete remaining memory investigation items: add proactive MemoryWatchdog pres
 - `npx vite build` ✅ 10.56s
 - All 6 items 🟢 Complete
 - Remaining ~400MB/match is V8 old-gen GC timing, not a code leak. All known code-level leak sources eliminated."
+
+---
+
+## Current Session (2026-07-17) — Probe Fix Sprint: Gemini v1beta + Timeout + Fallback Models
+
+### Goal
+
+Fix all 4 provider probe failures so ALL 17 API keys participate in debates:
+
+- Gemini "Empty response" (all 5 keys)
+- NVIDIA "signal is aborted without reason" (all 3 keys)
+- OpenRouter 400 / "The user aborted a request" (2/3 keys)
+
+### Changes
+
+| #   | Fix                                                                                                                                                                                                          | Files                                                                                      |
+| :-- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- |
+| 1   | **Gemini REST endpoint v1→v1beta** — Google GenAI SDK (which works) uses `v1beta` internally. REST adapter used `v1` which doesn't recognize newer model names (`gemini-3.5-flash`, `gemini-3.1-flash-lite`) | `gemini-adapter.ts` (lines 44, 79), `gemini-health.ts` (line 17), `gemini-adapter.test.ts` |
+| 2   | **Probe abort with reason** — `controller.abort()` → `controller.abort(new DOMException('Probe timed out', 'AbortError'))` to avoid Chromium 130+ "signal is aborted without reason" bare-AbortError         | `probe-service.ts:204`                                                                     |
+| 3   | **PROBE_TIMEOUT 5s→15s** — NVIDIA NIM cold-starts and OpenRouter routing can take >5s, causing premature timeouts                                                                                            | `probe-service.ts:14`                                                                      |
+| 4   | **OpenRouter fallback model** — Replaced dead `anthropic/claude-3-haiku-20240307` with `meta-llama/llama-3.1-8b-instruct` (active on OpenRouter free tier)                                                   | `probe-service.ts:30`                                                                      |
+| 5   | **Gemini fallback models** — Added `gemini-3.5-flash`, `gemini-2.5-flash` alongside existing `gemini-3.1-flash-lite` for more probe model diversity                                                          | `probe-service.ts:29`                                                                      |
+| 6   | **NVIDIA fallback models** — Added `meta/llama-3.1-8b-instruct` (lightweight, fast cold-start) before `meta/llama-3.3-70b-instruct` (heavy, slow cold-start)                                                 | `probe-service.ts:31`                                                                      |
+
+### Status
+
+- `npx vite build` ✅ 17.99s
+- All 6 changes 🟢 Complete
+- Remaining: User to test Quick Test All in browser to verify all 17 keys now probe correctly"

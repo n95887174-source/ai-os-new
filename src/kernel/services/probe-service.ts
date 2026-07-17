@@ -6,19 +6,25 @@ import type { IKeyStateStore } from '../contracts/key-state';
 import type { IEventBus } from '../types/interfaces';
 import { LLMError } from '../errors';
 import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
-
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ProbeService');
 
-const PROBE_TIMEOUT = 5000;
-const PROBE_MESSAGES = [{ role: 'user' as const, content: 'Reply only: OK' }];
+const PROBE_TIMEOUT = 15000;
+const PROBE_MESSAGES = [
+    { role: 'user' as const, content: 'What is 2+2? Answer with just the number.' },
+];
+
+/** Per-provider overrides for SendMessageOptions in probes */
+const PROBE_OPTIONS_OVERRIDES: Record<string, Partial<{ maxOutputTokens: number }>> = {
+    gemini: { maxOutputTokens: 100 },
+};
 
 const PROVDER_DEFAULTS: Record<string, string> = {
     gemini: 'gemini-3.1-flash-lite',
     groq: 'llama-3.3-70b-versatile',
     openrouter: PROVIDER_DEFAULT_MODELS.openrouter,
-    nvidia: 'meta/llama-3.3-70b-instruct',
+    nvidia: 'meta/llama-3.1-8b-instruct',
     deepseek: 'deepseek-chat',
     cohere: 'command-r-plus',
 };
@@ -26,8 +32,8 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
     groq: ['llama-3.1-8b-instant'],
-    gemini: ['gemini-3.1-flash-lite'],
-    openrouter: ['openrouter/free', 'anthropic/claude-3-haiku-20240307'],
+    gemini: ['gemini-3.5-flash', 'gemini-2.5-flash'],
+    openrouter: ['openrouter/free', 'meta-llama/llama-3.1-8b-instruct'],
     nvidia: ['meta/llama-3.3-70b-instruct'],
 };
 
@@ -174,8 +180,8 @@ export class ProbeService implements IProbeService, ILifecycle {
         } else {
             const allCandidates = [primaryModel, ...fallbacks, ...keyModels];
             modelsToTry = [...new Set(allCandidates)].filter((m) => m && m !== 'auto');
-            // Limit to first 5 models to avoid probing 21+ models sequentially
-            if (modelsToTry.length > 5) modelsToTry = modelsToTry.slice(0, 5);
+            // Limit to first 2 models — reduces memory pressure during probe cycle
+            if (modelsToTry.length > 2) modelsToTry = modelsToTry.slice(0, 2);
         }
 
         this.deps.adapterRegistry.resetCircuitBreaker(provider);
@@ -201,16 +207,20 @@ export class ProbeService implements IProbeService, ILifecycle {
             const currentModel = modelsToTry[attemptIdx];
 
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
+            const timeout = setTimeout(
+                () => controller.abort(new DOMException('Probe timed out', 'AbortError')),
+                PROBE_TIMEOUT,
+            );
             const start = performance.now();
 
+            const providerOpts = PROBE_OPTIONS_OVERRIDES[key.provider.toLowerCase()] ?? {};
             try {
                 const res = await adapter.sendMessage(
                     PROBE_MESSAGES,
                     currentModel,
                     key.key,
                     controller.signal,
-                    { maxOutputTokens: 3 },
+                    { maxOutputTokens: 10, ...providerOpts },
                 );
                 clearTimeout(timeout);
                 const latency = Math.round(performance.now() - start);
@@ -383,10 +393,40 @@ export class ProbeService implements IProbeService, ILifecycle {
         );
     }
 
+    /** Check current JS heap in MB. Returns 0 if unavailable. */
+    private currentHeapMB(): number {
+        try {
+            const mem = (performance as unknown as { memory: { usedJSHeapSize: number } }).memory;
+            return mem ? mem.usedJSHeapSize / (1024 * 1024) : 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    /** Force GC hint by allocating+freeding a large buffer. */
+    private forceGCHint(): void {
+        try {
+            new ArrayBuffer(64 * 1024 * 1024);
+        } catch {
+            // best-effort
+        }
+    }
+
     async probeAll(): Promise<ProbeResult[]> {
         const keys = this.deps.keyService.getKeys();
         const results: ProbeResult[] = [];
         for (const key of keys) {
+            // Stop probing if heap is too high — let MemoryWatchdog + existing
+            // cancellations free up space. Abandoned keys will be probed on next cycle.
+            const heapMB = this.currentHeapMB();
+            if (heapMB > 0 && heapMB > 180) {
+                LOGGER.warn('ProbeService', 'Heap too high — aborting probe cycle', {
+                    heapMB: heapMB.toFixed(1),
+                    keysRemaining: keys.length - results.length,
+                    keysTested: results.length,
+                });
+                break;
+            }
             if (key.status === 'error') {
                 results.push({
                     status: 'broken',
@@ -425,8 +465,10 @@ export class ProbeService implements IProbeService, ILifecycle {
             }
             const result = await this.probeKey(key.id);
             results.push(result);
-            // 100ms delay between probes to let GC process pending allocations
-            await new Promise((r) => setTimeout(r, 100));
+            // GC hint: allocate+free large buffer to encourage V8 mark-sweep
+            this.forceGCHint();
+            // 500ms delay between probes to let GC process pending allocations
+            await new Promise((r) => setTimeout(r, 500));
         }
         return results;
     }

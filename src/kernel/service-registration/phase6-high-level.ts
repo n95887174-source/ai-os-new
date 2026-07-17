@@ -383,14 +383,14 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         (c) =>
             new SmartRoutingService({
                 providerTracker: c.get('providerTracker'),
-                pricingService: c.get('costCalculator'),
+                pricingService: c.get('pricingService'),
             }),
     );
     // ── NVIDIA Enterprise Service ─────────────────
     register('nvidiaEnterpriseService', (c) => {
         const deps: NvidiaEnterpriseDeps = {
             providerTracker: c.get<IProviderTracker>('providerTracker'),
-            pricingService: c.get<ICostCalculator>('costCalculator'),
+            pricingService: c.get<ICostCalculator>('pricingService'),
         };
         return new NvidiaEnterpriseService(deps);
     });

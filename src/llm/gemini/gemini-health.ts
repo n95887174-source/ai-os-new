@@ -14,7 +14,7 @@ export class GeminiHealthCheck {
 
     async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
         try {
-            const result = await this.#httpClient.get('/v1/models', apiKey, signal);
+            const result = await this.#httpClient.get('/v1beta/models', apiKey, signal);
             const data = result.data;
             if (result.response.status === 401 || result.response.status === 403) {
                 throw new AuthError(`Gemini health check failed: HTTP ${result.response.status}`);

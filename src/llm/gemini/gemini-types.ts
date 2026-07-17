@@ -1,4 +1,14 @@
-export type GeminiFinishReason = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER';
+export type GeminiFinishReason =
+    | 'STOP'
+    | 'MAX_TOKENS'
+    | 'SAFETY'
+    | 'RECITATION'
+    | 'LANGUAGE'
+    | 'BLOCKLIST'
+    | 'PROHIBITED_CONTENT'
+    | 'SPII'
+    | 'MALFORMED_FUNCTION_CALL'
+    | 'OTHER';
 
 export interface GeminiSafetyRating {
     category: string;
@@ -56,8 +66,23 @@ export interface GeminiGroundingMetadata {
     webSearchQueries?: string[];
 }
 
+export type GeminiBlockReason =
+    | 'BLOCKED_REASON_UNSPECIFIED'
+    | 'SAFETY'
+    | 'OTHER'
+    | 'BLOCKLIST'
+    | 'PROHIBITED_CONTENT'
+    | 'IMAGE_SAFETY';
+
+export interface GeminiPromptFeedback {
+    blockReason?: GeminiBlockReason;
+    blockReasonMessage?: string;
+    safetyRatings?: GeminiSafetyRating[];
+}
+
 export interface GeminiResponse {
     candidates?: GeminiCandidate[];
+    promptFeedback?: GeminiPromptFeedback;
     usageMetadata?: GeminiUsageMetadata;
     groundingMetadata?: GeminiGroundingMetadata;
 }
