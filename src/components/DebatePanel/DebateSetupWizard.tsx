@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type {
     AutoDebateResult,
@@ -24,8 +23,8 @@ interface DebateSetupWizardProps {
     onMaxRoundsChange: (value: number) => void;
     debateTemperature: number;
     onTemperatureChange: (value: number) => void;
-    agentArchetypes: Record<string, DebateArchetypeId>;
-    onArchetypeChange: (id: DebateArchetypeId | 'auto') => void;
+    agentArchetypes: Record<string, string>;
+    onArchetypeChange: (id: string) => void;
     selectedAgents: string[];
     onToggleAgent: (id: string) => void;
     onSelectAll: () => void;

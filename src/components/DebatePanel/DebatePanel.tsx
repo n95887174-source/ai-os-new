@@ -28,12 +28,13 @@ import type {
 } from '../../kernel/instances';
 import type { DebateVerdict, DebateSessionStrategy } from '../../kernel/contracts/debate-types';
 import type { ProviderWinRate } from '../../kernel/contracts/auto-debate';
-import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import {
-    DEBATE_ARCHETYPES,
+    getArchetypePrompt,
+    getArchetypeName,
     getArchetypesForRole,
-} from '../../kernel/services/debate-runtime/debate-archetypes';
+    getRecommendedArchetypes,
+} from '../../kernel/instances';
 import { orchestrator } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 
@@ -48,7 +49,7 @@ import { useChatStore } from '../../stores/chat/store';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useNow } from '../../hooks/useNow';
 import { HistoricalFiguresPicker } from './HistoricalFiguresPicker';
-import { getHistoricalFigure } from '../../kernel/services/debate-runtime/debate-historical-figures';
+import { getHistoricalFigure } from '../../kernel/instances';
 import {
     btnControlBase,
     debatePanelRoot,
@@ -185,7 +186,7 @@ const DebatePanel: React.FC = () => {
             // would kill subscriptions for the other panel. Cleanup happens at app shutdown.
         };
     }, []);
-    const [agentArchetypes, setAgentArchetypes] = useState<Record<string, DebateArchetypeId>>({});
+    const [agentArchetypes, setAgentArchetypes] = useState<Record<string, string>>({});
     const [agentConstraints, setAgentConstraints] = useState<Record<string, string>>({});
     const [debateTemperature, setDebateTemperature] = useState(5);
     const [factCheckLevel, setFactCheckLevel] = useState<'off' | 'sampled' | 'all'>('sampled');
@@ -246,6 +247,22 @@ const DebatePanel: React.FC = () => {
     useEffect(() => {
         selectedAgentsRef.current = selectedAgents;
     }, [selectedAgents]);
+
+    useEffect(() => {
+        const agents = selectedAgentsRef.current;
+        if (!topic || agents.length === 0) return;
+        const recommended = getRecommendedArchetypes(topic);
+        if (recommended) {
+            setAgentArchetypes((prev) => {
+                if (Object.keys(prev).length > 0) return prev;
+                const next: Record<string, string> = {};
+                for (let i = 0; i < agents.length; i++) {
+                    next[agents[i]] = recommended[i % recommended.length];
+                }
+                return next;
+            });
+        }
+    }, [topic]);
 
     useEffect(() => {
         const unsub = eventBus.onSafe<DebateSession>('debate:updated', (data) => {
@@ -400,21 +417,19 @@ const DebatePanel: React.FC = () => {
                 const nodeStrategy = node?.config?.strategy as string | undefined;
                 const role = roleOrder[i % roleOrder.length];
                 const archetypeId = agentArchetypes[id];
-                const archetype = archetypeId ? DEBATE_ARCHETYPES[archetypeId] : undefined;
+                const archetypePrompt = archetypeId ? getArchetypePrompt(archetypeId) : undefined;
+                const archetypeName = archetypeId ? getArchetypeName(archetypeId) : undefined;
                 const archetypesForRole = getArchetypesForRole(role);
-                const fallbackArchetype =
-                    archetype ??
-                    archetypesForRole[i % archetypesForRole.length] ??
-                    DEBATE_ARCHETYPES.scientist;
-                const systemPrompt = archetype
-                    ? `${archetype.systemPrompt}\n\n`
-                    : `${fallbackArchetype.systemPrompt}\n\n\n\n### Argument Style\n`;
+                const systemPrompt =
+                    archetypePrompt ??
+                    archetypesForRole[i % archetypesForRole.length]?.systemPrompt ??
+                    '';
                 const constraint = agentConstraints[id] || 'none';
                 return {
                     id,
-                    name: archetype ? `${archetype.name}` : node?.label || id,
+                    name: archetypeName || node?.label || id,
                     role,
-                    systemPrompt,
+                    systemPrompt: systemPrompt ? `${systemPrompt}\n\n` : '',
                     provider: provider || undefined,
                     modelId: nodeModel !== 'auto' ? nodeModel : undefined,
                     strategy: nodeStrategy as ArgumentStrategy | undefined,
@@ -551,11 +566,9 @@ const DebatePanel: React.FC = () => {
                                         const firstTs =
                                             roundArgs.length > 0
                                                 ? Math.min(
-                                                      ...roundArgs.map(
-                                                          (a) => a.timestamp ?? Date.now(),
-                                                      ),
+                                                      ...roundArgs.map((a) => a.timestamp ?? now),
                                                   )
-                                                : Date.now();
+                                                : now;
                                         const elapsed = Math.floor((now - firstTs) / 1000);
                                         const mins = Math.floor(elapsed / 60);
                                         const secs = elapsed % 60;
@@ -846,8 +859,8 @@ const DebatePanel: React.FC = () => {
                         if (key === 'auto') {
                             setAgentArchetypes({});
                         } else {
-                            const next: Record<string, DebateArchetypeId> = {};
-                            for (const id of selectedAgents) next[id] = key as DebateArchetypeId;
+                            const next: Record<string, string> = {};
+                            for (const id of selectedAgents) next[id] = key;
                             setAgentArchetypes(next);
                         }
                     },

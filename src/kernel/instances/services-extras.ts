@@ -166,3 +166,16 @@ export const promptLibraryService = lazyService<PromptLibraryServiceType>('promp
 export const batchProcessorService =
     lazyService<BatchProcessorServiceType>('batchProcessorService');
 export const agentAvatarService = lazyService<AgentAvatarService>('agentAvatarService');
+
+// ── Debate archetype helpers (data/config, not service instances) ───────────
+export {
+    DEBATE_ARCHETYPES,
+    getArchetypePrompt,
+    getArchetypeName,
+    getArchetypesForRole,
+    getRecommendedArchetypes,
+    getPersonaArchetypes,
+} from '../services/debate-runtime/debate-archetypes';
+
+// ── Historical figure helpers ──────────────────────────────────────────────
+export { getHistoricalFigure } from '../services/debate-runtime/debate-historical-figures';

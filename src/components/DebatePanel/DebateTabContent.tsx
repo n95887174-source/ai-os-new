@@ -15,7 +15,6 @@ import { InjectBarSection } from './InjectBarSection';
 import VotePanelSection from './VotePanelSection';
 import VerdictActionButtons from './VerdictActionButtons';
 import type { DebateSession, DebateVerdict, HumanVote } from '../../kernel/contracts';
-import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
 import type { ProbeResult } from '../../kernel/contracts/probe';
 import type { AutoDebateResult, ProviderWinRate } from '../../kernel/contracts/auto-debate';
 import { probeService, autoDebateService as autoDebate } from '../../kernel/instances';
@@ -106,7 +105,7 @@ export function DebateTabContent({
     onMaxRoundsChange: (r: number) => void;
     debateTemperature: number;
     onTemperatureChange: (t: number) => void;
-    agentArchetypes: Record<string, DebateArchetypeId>;
+    agentArchetypes: Record<string, string>;
     onArchetypeChange: (key: string) => void;
     agentConstraints: Record<string, string>;
     selectedHistoricalIds: string[];

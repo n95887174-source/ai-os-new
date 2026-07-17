@@ -1,3 +1,5 @@
+import { PERSONA_DEFINITIONS } from '../persona-definitions';
+
 export type DebateArchetypeId =
     'scientist' | 'skeptic' | 'devils-advocate' | 'pragmatist' | 'optimist' | 'cynic';
 
@@ -8,6 +10,16 @@ export interface ArchetypeConfig {
     systemPrompt: string;
     argumentStyle: string;
     roleBias: 'pro' | 'con' | 'neutral' | 'any';
+}
+
+export interface PersonaArchetypeMeta {
+    id: string;
+    name: string;
+    description: string;
+    systemPrompt: string;
+    icon: string;
+    color: string;
+    field: string;
 }
 
 export const DEBATE_ARCHETYPES: Record<DebateArchetypeId, ArchetypeConfig> = {
@@ -77,4 +89,80 @@ export function getArchetypesForRole(
     return Object.values(DEBATE_ARCHETYPES).filter(
         (a) => a.roleBias === roleBias || a.roleBias === 'any' || roleBias === 'any',
     );
+}
+
+export function getPersonaArchetypes(): PersonaArchetypeMeta[] {
+    return PERSONA_DEFINITIONS.filter((p) => p.personaType === 'archetypal').map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        systemPrompt: p.systemPrompt,
+        icon: p.icon,
+        color: p.color,
+        field: p.field,
+    }));
+}
+
+export function getPersonaMetaById(id: string): PersonaArchetypeMeta | undefined {
+    const entry = PERSONA_DEFINITIONS.find((p) => p.id === id && p.personaType === 'archetypal');
+    if (!entry) return undefined;
+    return {
+        id: entry.id,
+        name: entry.name,
+        description: entry.description,
+        systemPrompt: entry.systemPrompt,
+        icon: entry.icon,
+        color: entry.color,
+        field: entry.field,
+    };
+}
+
+export function getArchetypePrompt(id: string): string | undefined {
+    const builtin = DEBATE_ARCHETYPES[id as DebateArchetypeId];
+    if (builtin) return builtin.systemPrompt;
+    const persona = PERSONA_DEFINITIONS.find((p) => p.id === id && p.personaType === 'archetypal');
+    return persona?.systemPrompt;
+}
+
+export function getArchetypeName(id: string): string | undefined {
+    const builtin = DEBATE_ARCHETYPES[id as DebateArchetypeId];
+    if (builtin) return builtin.name;
+    const persona = PERSONA_DEFINITIONS.find((p) => p.id === id && p.personaType === 'archetypal');
+    return persona?.name;
+}
+
+const TOPIC_PRESETS: Array<{ keywords: string[]; archetypeIds: string[] }> = [
+    {
+        keywords: [
+            'вода',
+            'воздух',
+            'волнорез',
+            'ashdod',
+            'атмосферный',
+            'конденсация',
+            'водяной пар',
+        ],
+        archetypeIds: [
+            'persona-engineer',
+            'persona-physicist',
+            'persona-ecologist',
+            'persona-climate-scientist',
+            'persona-chemist',
+            'persona-economist',
+            'persona-risk-analyst',
+            'persona-systems-thinker',
+            'persona-innovation-catalyst',
+            'persona-project-manager',
+        ],
+    },
+];
+
+export function getRecommendedArchetypes(topic: string): string[] | undefined {
+    const lower = topic.toLowerCase();
+    for (const preset of TOPIC_PRESETS) {
+        if (preset.keywords.some((kw) => lower.includes(kw))) {
+            return preset.archetypeIds;
+        }
+    }
+    return undefined;
 }

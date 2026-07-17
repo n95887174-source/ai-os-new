@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Bot } from 'lucide-react';
-import { DEBATE_ARCHETYPES } from '../../kernel/services/debate-runtime/debate-archetypes';
-import type { DebateArchetypeId } from '../../kernel/services/debate-runtime/debate-archetypes';
+import { DEBATE_ARCHETYPES } from '../../kernel/instances';
 
 const TEMPERATURE_LABELS = [
     'Pure Logic',
@@ -68,9 +67,15 @@ export const TemperatureSlider: React.FC<TemperatureSliderProps> = ({ value, onC
 );
 
 interface ArchetypeSelectorProps {
-    agentArchetypes: Record<string, DebateArchetypeId>;
-    onChange: (id: DebateArchetypeId | 'auto') => void;
+    agentArchetypes: Record<string, string>;
+    onChange: (id: string) => void;
     t: (key: string) => string;
+}
+
+function getArchetypeDisplayName(key: string): string {
+    const builtin = DEBATE_ARCHETYPES[key as keyof typeof DEBATE_ARCHETYPES];
+    if (builtin) return builtin.name;
+    return key.replace(/^persona-/, '').replace(/-/g, ' ');
 }
 
 export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({
@@ -81,11 +86,7 @@ export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({
     <div>
         <label className="debate-label debate-label--block">{t('debate.archetype')}</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {(
-                ['auto', ...(Object.keys(DEBATE_ARCHETYPES) as DebateArchetypeId[])] as Array<
-                    'auto' | DebateArchetypeId
-                >
-            ).map((key) => {
+            {(['auto', ...Object.keys(DEBATE_ARCHETYPES)] as const).map((key) => {
                 const isActive =
                     key === 'auto'
                         ? Object.keys(agentArchetypes).length === 0
@@ -108,7 +109,7 @@ export const ArchetypeSelector: React.FC<ArchetypeSelectorProps> = ({
                             color: isActive ? '#a855f7' : '#94a3b8',
                         }}
                     >
-                        {key === 'auto' ? 'Auto' : DEBATE_ARCHETYPES[key].name}
+                        {key === 'auto' ? 'Auto' : getArchetypeDisplayName(key)}
                     </button>
                 );
             })}
