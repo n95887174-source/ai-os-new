@@ -60,7 +60,8 @@ export interface ProviderResponse {
         | 'PROHIBITED_CONTENT'
         | 'SPII'
         | 'OTHER'
-        | 'TOOL_CALLS';
+        | 'TOOL_CALLS'
+        | 'MALFORMED_FUNCTION_CALL';
     safetyRatings?: SafetyRating[];
     toolCalls?: ToolCall[];
     /** Gemini grounding metadata (from Google Search) */

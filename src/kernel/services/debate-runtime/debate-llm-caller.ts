@@ -14,6 +14,8 @@ import type { IDebateSession, ParticipantConfig } from '../../contracts/debate-r
 import type { IEventBus } from '../../types/interfaces';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 import type { DebateRAGRetriever } from './debate-rag-retriever';
+import { buildArgumentPrompt } from './debate-prompt-builder';
+import type { DebateArgument, DebateParticipant } from '../../contracts/debate-types';
 
 const LOGGER = rootLogger.child('DebateLlmCaller');
 
@@ -131,6 +133,8 @@ export async function debateCallLlm(
         let modelTimeout = 0;
         let startedAt = 0;
 
+        let cleanupGov: (() => void) | undefined;
+
         try {
             const resolved = deps.providerResolver.resolveProvider(
                 session,
@@ -222,41 +226,65 @@ export async function debateCallLlm(
             }));
 
             const mem = deps.getMemory(sessionId);
-            const personaBlock =
-                mem.getAgentSteps(participant.agentId).length >= 3
-                    ? buildPersonaMemory(mem, participant.agentId)
-                    : '';
 
-            console.log('[DEBATE_TRACE] before getDefaultPrompt', {
-                agentId: participant.agentId,
-                ts: Date.now(),
-            });
-            const defaultPrompt = await deps.getDefaultPrompt(participant.nodeId, session);
-            console.log('[DEBATE_TRACE] after getDefaultPrompt', {
-                agentId: participant.agentId,
-                ts: Date.now(),
-            });
-            const sanitizedSystemPrompt = sanitizePromptVar(
-                (participant.systemPrompt || '').replace(/<[^>]*>/g, '').slice(0, 800),
+            // Convert memory steps to DebateArguments for the rich prompt builder
+            const allSteps = mem.getAllSteps();
+            const previousArguments: DebateArgument[] = allSteps.map((s, i) => ({
+                id: `${sessionId}-${s.agentId}-${i}`,
+                agentId: s.agentId,
+                agentName: participantNameMap.get(s.agentId) || s.agentId,
+                content: s.content,
+                confidence: s.confidence,
+                timestamp: s.timestamp,
+                round: s.round ?? 1,
+                position: (session.participants.find((p) => p.agentId === s.agentId)?.role ||
+                    'neutral') as DebateArgument['position'],
+                source: 'llm' as const,
+            }));
+
+            // Build participants list for prompt builder
+            const allDebateParticipants: DebateParticipant[] = session.participants.map((p) => ({
+                id: p.agentId,
+                name: participantNameMap.get(p.agentId) || p.agentId,
+                role: (p.role || 'neutral') as DebateParticipant['role'],
+                systemPrompt: p.systemPrompt,
+            }));
+
+            // Use the rich prompt builder instead of the simple inline prompt
+            let systemContent = buildArgumentPrompt(
+                {
+                    id: participant.agentId,
+                    name: currentName,
+                    role: (participant.role || 'neutral') as DebateParticipant['role'],
+                    systemPrompt:
+                        (participant.systemPrompt || '').replace(/<[^>]*>/g, '').slice(0, 800) ||
+                        undefined,
+                },
+                session.round,
+                previousArguments,
+                session.topic,
+                undefined,
+                undefined,
+                allDebateParticipants,
+                undefined,
+                undefined,
+                session.language,
             );
-            let systemContent = `You are ${sanitizePromptVar(currentName)}. ${sanitizedSystemPrompt || defaultPrompt}${personaBlock}\n\nCRITICAL: You must provide a UNIQUE perspective based on your specific role and expertise. Do NOT repeat arguments that other agents have already made. If a point has been covered, acknowledge it and ADD new reasoning from your domain. Your response must be distinguishable from every other agent's response.`;
+
+            // Append persona memory block (from past debates — adds 3+ step history)
+            if (mem.getAgentSteps(participant.agentId).length >= 3) {
+                const personaBlock = buildPersonaMemory(mem, participant.agentId);
+                if (personaBlock) systemContent += personaBlock;
+            }
 
             // RAG: inject relevant memory from past debates
             if (deps.ragRetriever) {
                 try {
-                    console.log('[DEBATE_TRACE] before RAG injection', {
-                        agentId: participant.agentId,
-                        ts: Date.now(),
-                    });
                     systemContent = await deps.ragRetriever.injectMemoryIntoDebate(
                         sessionId,
                         session.topic,
                         systemContent,
                     );
-                    console.log('[DEBATE_TRACE] after RAG injection', {
-                        agentId: participant.agentId,
-                        ts: Date.now(),
-                    });
                 } catch {
                     LOGGER.warn('DebateEngine', 'RAG memory injection failed', {
                         sessionId,
@@ -265,29 +293,13 @@ export async function debateCallLlm(
                 }
             }
 
-            console.log('[DEBATE_TRACE] before build messages', {
-                agentId: participant.agentId,
-                ts: Date.now(),
-            });
             const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-                {
-                    role: 'system',
-                    content: systemContent,
-                },
+                { role: 'system', content: systemContent },
                 ...historyMessages,
-                {
-                    role: 'user',
-                    content: `Topic: ${sanitizePromptVar(session.topic)}\nRound ${session.round}: Provide your argument.\n\nDo not repeat arguments already made above. Present new reasoning or evidence. Respond in ${session.language}.`,
-                },
             ];
-            console.log('[DEBATE_TRACE] after build messages', {
-                agentId: participant.agentId,
-                ts: Date.now(),
-            });
 
-            let govOp: { complete(): void; fail(e: Error): void; signal: AbortSignal } | undefined;
-            let cleanupGov: (() => void) | undefined;
             const gov = deps.getExecutionGovernor?.();
+            let govOp: { complete(): void; fail(e: Error): void; signal: AbortSignal } | undefined;
             if (gov && resolvedKey) {
                 govOp = gov.start({
                     type: 'debate',
