@@ -39,7 +39,7 @@ function logMemory(label: string, beforeMB: number): void {
 }
 
 const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
-const LARGE_MODEL_TIMEOUT_MS = CONFIG?.services?.debate?.largeModelTimeoutMs ?? 30000;
+const LARGE_MODEL_TIMEOUT_MS = CONFIG?.services?.debate?.largeModelTimeoutMs ?? 90000;
 const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
 const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
@@ -89,6 +89,7 @@ export interface LlmCallerDeps {
     getDefaultPrompt(nodeId: string, session: IDebateSession): Promise<string>;
     sessionAbortControllers: Map<string, Map<string, AbortController>>;
     ragRetriever?: DebateRAGRetriever;
+    isSessionCancelled?: (sessionId: string) => boolean;
 }
 
 export async function debateCallLlm(
@@ -110,7 +111,17 @@ export async function debateCallLlm(
     const triedModels = new Set<string>();
     const triedKeys = new Set<string>();
 
+    // If session was cancelled by the time this call starts, bail out early.
+    // Prevents re-creating sessionAbortControllers after cleanupMaps() deleted
+    // them, which would leave a leaked entry in the map.
+    if (deps.isSessionCancelled?.(sessionId)) {
+        return 'cancelled';
+    }
     while (retries < MAX_RETRIES) {
+        // Merge session-level failed models so cross-agent cache is effective
+        // (e.g., Agent A got 413 on llama-3.1-8b-instant → session.markModelFailed →
+        //  Agent B skips it without re-trying)
+        for (const m of session.failedModels) triedModels.add(m);
         const controller = new AbortController();
         if (!deps.sessionAbortControllers.has(sessionId))
             deps.sessionAbortControllers.set(sessionId, new Map());
@@ -438,7 +449,8 @@ export async function debateCallLlm(
             // Try fallback models for the same provider before marking it as failed
             if (resolvedKey) {
                 const errSc = (e as { statusCode?: number }).statusCode;
-                const isRateLimit = errSc === 429;
+                const errStr = String(e);
+                const isRateLimit = errSc === 429 || /[^\d]413[^\d]/.test(errStr); // 413 from Groq = TPM exceeded
                 const isPaymentRequired = errSc === 402;
 
                 triedModels.add(modelId);
@@ -462,6 +474,38 @@ export async function debateCallLlm(
                             /* best-effort */
                         }
                     }
+                    session.markProviderFailed(resolvedKey.provider);
+                    deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                    continue;
+                }
+
+                // 413 Payload Too Large — model context window exceeded (common on Groq
+                // llama-3.1-8b-instant free tier ~4K context). Mark the model at session
+                // level so ALL agents skip it, but DON'T mark the provider as failed
+                // (different models on the same provider may work fine).
+                if (errSc === 413) {
+                    session.markModelFailed(modelId);
+                    LOGGER.warn('DebateLlmCaller', `Model 413 (context exceeded): ${modelId}`, {
+                        agentId: participant.agentId,
+                        provider: resolvedKey.provider,
+                        sessionId,
+                    });
+                    deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                    continue;
+                }
+
+                // DEATH SPIRAL GUARD: HALF-OPEN circuit breaker means the entire provider
+                // is degraded — only 1 concurrent test request allowed. Don't waste time
+                // trying model fallbacks or alt keys for the same provider; skip it now.
+                if (error.includes('HALF-OPEN')) {
+                    LOGGER.warn(
+                        'DebateLlmCaller',
+                        `Provider circuit HALF-OPEN — skipping: ${resolvedKey.provider}`,
+                        {
+                            agentId: participant.agentId,
+                            model: modelId,
+                        },
+                    );
                     session.markProviderFailed(resolvedKey.provider);
                     deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                     continue;
@@ -500,15 +544,34 @@ export async function debateCallLlm(
                 // The circuit breaker handles backoff timing; providerCanBeUsed will
                 // skip it while the circuit is open and allow retry when it closes.
                 if (isRateLimit) {
+                    const rateBackoff = Math.min(
+                        BASE_BACKOFF_MS * Math.pow(2, retries),
+                        MAX_BACKOFF_MS,
+                    );
+                    // Add ±25% jitter to prevent thundering herd
+                    const jitter = rateBackoff * (0.75 + Math.random() * 0.5);
                     LOGGER.warn(
                         'DebateLlmCaller',
                         `Provider rate-limited (429): ${resolvedKey.provider}`,
                         {
                             agentId: participant.agentId,
                             model: modelId,
+                            backoffMs: Math.round(jitter),
                         },
                     );
                     deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                    let _rlOnAbort: (() => void) | undefined;
+                    await new Promise<void>((resolve, reject) => {
+                        const timer = setTimeout(resolve, jitter);
+                        _rlOnAbort = () => {
+                            clearTimeout(timer);
+                            reject(new Error('Debate cancelled during backoff'));
+                        };
+                        if (externalSignal)
+                            externalSignal.addEventListener('abort', _rlOnAbort, { once: true });
+                    });
+                    if (externalSignal && _rlOnAbort)
+                        externalSignal.removeEventListener('abort', _rlOnAbort);
                     continue;
                 }
 

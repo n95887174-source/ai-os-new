@@ -426,6 +426,9 @@ class DexieDebateStore implements DebateStore {
             const current = await getDexieDb().debateSessions.get(record.id);
             const currentVersion = (current as { version?: number })?.version ?? 0;
             if (current && record.version != null && record.version < currentVersion) {
+                console.error(
+                    `[DexieDebateStore] version conflict: id=${record.id} db=${currentVersion} attempted=${record.version} record.hasVersion=${'version' in record}`,
+                );
                 eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
                     sessionId: record.id,
                     currentVersion,

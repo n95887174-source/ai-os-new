@@ -538,7 +538,11 @@ export const EVENT_REGISTRY = {
     // ── Debate Runtime Events ──────────────────────────────────────────────
     DEBATE_SESSION_CREATED: event(
         'debate:runtime:session:created',
-        z.object({ sessionId: z.string(), topic: z.string(), topologyType: z.string() }),
+        z.object({
+            sessionId: z.string(),
+            topic: z.string().optional().default(''),
+            topologyType: z.string().optional().default('roundtable'),
+        }),
     ),
     DEBATE_SESSION_STARTED: event(
         'debate:runtime:session:started',

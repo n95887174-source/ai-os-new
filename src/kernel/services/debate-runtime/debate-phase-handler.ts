@@ -160,11 +160,27 @@ export function createPhaseChangeHandler(
                 clearTimeout(verdictTimer);
                 return;
             }
-            getters
-                .saveSnapshot(sessionId)
-                .catch((e) =>
-                    LOGGER.warn('DebatePhaseHandler', 'auto-checkpoint failed', { error: e }),
-                );
+            // DEFENSE: skip saveSnapshot for cancelled/failed — the session's
+            // internal data structures (maps, agentStates) may already be destroyed
+            // by engine.cancelSession() which runs before the phase transition handler
+            // fires. saveSnapshot() calls session.snapshot() which accesses those
+            // structures and will crash with undefined/null access.
+            if (to === 'failed' || to === 'cancelled' || to === 'completed') {
+                LOGGER.info('DebatePhaseHandler', `Skipping saveSnapshot for ${to}`, {
+                    sessionId,
+                });
+            } else {
+                getters.saveSnapshot(sessionId).catch((e) => {
+                    LOGGER.error(
+                        'DebatePhaseHandler',
+                        `auto-checkpoint failed during ${from}→${to}`,
+                        {
+                            error: e,
+                            sessionId,
+                        },
+                    );
+                });
+            }
             if (to === 'failed' || to === 'cancelled') {
                 clearTimeout(verdictTimer);
             }

@@ -1,8 +1,4 @@
-import type {
-    DebateSessionSnapshot,
-    TimelineEntry,
-    AgentStateEntry,
-} from '../../contracts/debate-runtime';
+import type { DebateSessionSnapshot, TimelineEntry } from '../../contracts/debate-runtime';
 import type {
     DebateVerdict,
     ConclusionType,
@@ -57,7 +53,7 @@ export class DebateConclusionEngine {
 
     generateVerdict(snapshot: DebateSessionSnapshot, timeline: TimelineEntry[]): DebateVerdict {
         const agentResponses = timeline.filter((e) => e.type === 'agent:responded');
-        const keyArguments = this.extractKeyArguments(agentResponses, snapshot.agentStates);
+        const keyArguments = this.extractKeyArguments(agentResponses, snapshot);
         const conclusionType = this.determineConclusionType(snapshot, keyArguments);
         const stanceResult = this.determineStanceResult(keyArguments);
         const summary = this.buildSummary(snapshot, conclusionType, stanceResult, keyArguments);
@@ -83,8 +79,14 @@ export class DebateConclusionEngine {
 
     private extractKeyArguments(
         responses: TimelineEntry[],
-        _agentStates: AgentStateEntry[],
+        snapshot: DebateSessionSnapshot,
     ): VerdictKeyArgument[] {
+        const nameMap = new Map<string, string>();
+        if (snapshot.topology?.nodes) {
+            for (const node of snapshot.topology.nodes) {
+                nameMap.set(node.id, node.label);
+            }
+        }
         const args: VerdictKeyArgument[] = [];
         for (const resp of responses) {
             const payload = resp.payload as { agentId: string; content: string; round: number };
@@ -92,7 +94,7 @@ export class DebateConclusionEngine {
             const stance = this.inferStance(payload.content);
             args.push({
                 agentId: payload.agentId,
-                agentName: payload.agentId,
+                agentName: nameMap.get(payload.agentId) || payload.agentId,
                 content: payload.content.slice(0, 500),
                 stance,
                 strength: this.estimateStrength(payload.content),

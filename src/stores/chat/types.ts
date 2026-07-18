@@ -10,7 +10,7 @@ export const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
     'claude-3-sonnet': 200000,
     'claude-3-haiku': 200000,
     'gemini-3.1-flash-lite': 1048576,
-    'gemini-3.5-flash': 1000000,
+    'gemini-2.0-flash': 1000000,
     'gemini-3.1-pro': 1000000,
     'llama-3.3-70b-versatile': 128000,
     'llama-3.1-8b-instant': 128000,

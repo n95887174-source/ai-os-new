@@ -616,7 +616,7 @@ export class KeyService implements IKeyRotationManager {
                         'openrouter/free',
                         'anthropic/claude-3-haiku-20240307',
                     ],
-                    Gemini: ['gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.1-pro'],
+                    Gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'],
                     Groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
                     NVIDIA: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
                     Cerebras: ['cerebras-gpt-3.5'],

@@ -123,21 +123,32 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     private toProviderResponse(raw: unknown, latency: number): ProviderResponse {
         const parsed = OpenRouterResponseSchema.safeParse(raw);
         if (!parsed.success) {
+            LOGGER.warn('OpenRouterAdapter', 'Response shape mismatch', {
+                error: parsed.error.message,
+                raw:
+                    typeof raw === 'object'
+                        ? JSON.stringify(raw).slice(0, 500)
+                        : String(raw).slice(0, 500),
+            });
             throw new LLMError(
                 `Invalid OpenRouter response shape: ${parsed.error.message}`,
                 'openrouter',
             );
         }
         const data = parsed.data;
-        if (data.error) {
+        const openRouterErr = data.error;
+        if (openRouterErr?.message) {
             throw new LLMError(
-                `OpenRouter API error: ${sanitizeError(data.error.message)}`,
+                `OpenRouter API error: ${sanitizeError(String(openRouterErr.message))}`,
                 'openrouter',
+                typeof (openRouterErr as { code?: unknown }).code === 'number'
+                    ? (openRouterErr as { code: number }).code
+                    : undefined,
             );
         }
         const choice = data.choices?.[0];
         const content = choice?.message?.content ?? choice?.delta?.content ?? '';
-        const finishReason = normalizeFinishReason(choice?.finish_reason);
+        const finishReason = normalizeFinishReason(choice?.finish_reason ?? undefined);
         const tokens = data.usage?.total_tokens ?? estimateTokenCount(content);
 
         return { content, latency, tokens, finishReason, reasoning: undefined };

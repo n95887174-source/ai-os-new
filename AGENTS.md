@@ -4054,3 +4054,66 @@ Fix all 4 provider probe failures so ALL 17 API keys participate in debates:
 - `npx vite build` ✅ 17.99s
 - All 6 changes 🟢 Complete
 - Remaining: User to test Quick Test All in browser to verify all 17 keys now probe correctly"
+
+---
+
+## Current Session (2026-07-18) — 3 Debate Console Error Fixes
+
+### Goal
+
+Fix 3 remaining console errors in governor-cancelled debates: "session not found" from double `cancelSession`, `abortC=1` leak in MemoryTracker, and misleading "Skipping finalize — runtimeSessionId changed" WARN for cancelled sessions.
+
+### Changes
+
+| #   | Bug                                                                             | File                                                   | Fix                                                                                                                                                                                                   |
+| :-- | :------------------------------------------------------------------------------ | :----------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Redundant `cancelSession(oldRuntimeId)`** → "session not found"               | `debate-sync-manager.ts:761`                           | Removed `engine.cancelSession(oldRuntimeId)` from `finalizeInternal()` — `stopDebateInternal()` already called it; second call finds deleted session                                                  |
+| 2   | **`sessionAbortControllers` recreated after `cleanupMaps()`** → `abortC=1` leak | `debate-llm-caller.ts:117`, `debate-engine.ts:664,783` | Added `isSessionCancelled` to `LlmCallerDeps`, check at top of `debateCallLlm()` returns `'cancelled'` early. Added `queueMicrotask` re-check in `cleanupMaps()` as defense-in-depth                  |
+| 3   | **"Skipping finalize" WARN for cancelled sessions**                             | `debate-sync-manager.ts:394-415`                       | Added terminal-phase guard (`completed`/`cancelled`/`failed`) BEFORE `runtimeSessionId` check — cancelled sessions skip silently instead of emitting misleading WARN. Same guard added to catch block |
+
+### Status
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅ zero errors
+- `npx vite build` ✅ 8.08s
+- All 3 remaining console errors now fixed. Roadmap: 🔴 Future items remain only for Veo (Phase 7) and Lyria (Phase 8) — blocked by Google API availability.
+
+## Current Session (2026-07-18) — debate-persistence-manager Restore Fix
+
+### Problem
+
+Rolldown build error: `debate-persistence-manager.ts` — `topology` declared as `const` then reassigned; TypeScript error: `restoredSnapshot` not defined.
+
+### Fix
+
+| #   | Problem                                                            | Fix                                                                                                                                                  |
+| :-- | :----------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `restoreInternalState(restoredSnapshot)` called undefined variable | Built proper `DebateSessionSnapshot` from parsed `record` fields (phase, round, agentStates, totalTokens, totalCost, startedAt, updatedAt, language) |
+| 2   | `const topology` reassigned in defensive block                     | Changed to `let topology`                                                                                                                            |
+| 3   | Unused `DebatePhase` import + `agentStates` variable               | Removed                                                                                                                                              |
+| 4   | `record.language` typed as optional by Zod                         | Cast: `(record as { language?: string }).language ?? DEFAULT_DEBATE_LANGUAGE`                                                                        |
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ 5.87s
+- Commit: `d635db15`
+
+### Changes
+
+| #   | Fix                                                                                                                                       | File                  |
+| :-- | :---------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- |
+| 1   | **Pricing: strip `meta-llama/` prefix** — OpenRouter sends `meta-llama/llama-3.1-8b-instruct` (slashed provider), not in strip regex      | `pricing-service.ts`  |
+| 2   | **Pricing: add `openrouter/free` model** — openrouter/free tier = $0                                                                      | `pricing-service.ts`  |
+| 3   | **DebateAnalytics: deduplicate participants** — restored sessions may have duplicate participant IDs, causing React duplicate-key warning | `DebateAnalytics.tsx` |
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ 6.41s
+- Commit: `ae37df08`
+- Runtime confirmed: debates work, provider fallback (Gemini 429→Groq) works, cancel/stop clean
+- Memory: V8 old-gen GC still accumulates ~120MB/round (intrinsic, requires `--expose-gc` flag to force GC)
+
+### Memory Note
+
+Heap grows 58MB→473MB→92MB (GC)→227MB→520MB across 2 rounds. GC runs between rounds (drops to 92MB), but old-gen fills again. Root cause: LLM response strings (~100-180MB per OpenRouter call) promoted to old-gen faster than V8's lazy GC. Fix requires adding `global.gc = require('v8').gc` to the dev server and calling it explicitly in MemoryWatchdog pressure callbacks. Not fixable via code alone — requires Node.js `--expose-gc` flag.

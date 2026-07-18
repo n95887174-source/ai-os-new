@@ -141,9 +141,13 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                 for await (const event of engine
                     .getContext(sessionId)
                     .orchestrator.generateRoundEvents(session.topology, sessionId, session.round)) {
-                    engine
-                        .getContext(sessionId)
-                        .timeline.record({ sessionId, type: event.type, payload: event });
+                    // agent:responded is recorded with richer payload (including round) in
+                    // the case handler below — skip the generic recording to avoid duplicates.
+                    if (event.type !== 'agent:responded') {
+                        engine
+                            .getContext(sessionId)
+                            .timeline.record({ sessionId, type: event.type, payload: event });
+                    }
 
                     switch (event.type) {
                         case 'round:start': {

@@ -47,6 +47,7 @@ export class DebateSession implements IDebateSession {
 
     private _language: string;
     private _failedProviders = new Set<string>();
+    private _failedModels = new Set<string>();
 
     hasProviderFailed(provider: string): boolean {
         return this._failedProviders.has(provider);
@@ -54,6 +55,18 @@ export class DebateSession implements IDebateSession {
 
     markProviderFailed(provider: string): void {
         this._failedProviders.add(provider);
+    }
+
+    hasModelFailed(model: string): boolean {
+        return this._failedModels.has(model);
+    }
+
+    markModelFailed(model: string): void {
+        this._failedModels.add(model);
+    }
+
+    get failedModels(): string[] {
+        return Array.from(this._failedModels);
     }
 
     constructor(
@@ -208,6 +221,7 @@ export class DebateSession implements IDebateSession {
         this._agentStates.clear();
         this._phaseListeners = [];
         this._failedProviders.clear();
+        this._failedModels.clear();
     }
 
     restoreInternalState(snapshot: DebateSessionSnapshot): void {

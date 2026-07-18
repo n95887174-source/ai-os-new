@@ -62,6 +62,9 @@ export interface IDebateSession {
 
     hasProviderFailed(provider: string): boolean;
     markProviderFailed(provider: string): void;
+    hasModelFailed(model: string): boolean;
+    markModelFailed(model: string): void;
+    readonly failedModels: string[];
     transition(to: DebatePhase, tx?: ITransaction): boolean;
     incrementRound(): void;
     setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void;

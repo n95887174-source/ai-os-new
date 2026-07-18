@@ -10,6 +10,9 @@ import type {
     DebateServiceDeps,
     DebateStrategy,
     DebateVerdict,
+    VerdictKeyArgument,
+    ConclusionType,
+    StanceResult,
 } from '../../contracts/debate-types';
 import type { IDebateEngine, DebateTopology } from '../../contracts/debate-runtime';
 import { rootLogger } from '../logger-service';
@@ -21,7 +24,7 @@ import {
 } from './debate-session-bridge';
 import type { SnapshotBridgeContext } from './debate-session-bridge';
 import { finalizeDebate } from './debate-finalizer';
-import { persistActiveSession, loadActiveSession } from './debate-session-persistence';
+import { loadActiveSession } from './debate-session-persistence';
 import { checkDebatePreflight } from './debate-preflight';
 import type { GovernorState } from './debate-governor/types';
 import { useActiveDebateStore } from '../../../stores/activeDebateStore';
@@ -63,6 +66,11 @@ export class DebateSyncManager {
     private static readonly RESTART_COOLDOWN_MS = 10_000;
     private _lastStartTime = 0;
     private _initialized = false;
+    /** Re-entrancy guard for syncSession() to prevent infinite recursion between
+     *  syncSession → cancelSession (DEBATE_SESSION_CANCELLED event) → syncIfOurs → syncSession.
+     *  Without this guard, stopDebateInternal() calling syncSession() while inside syncSession()
+     *  creates an unbounded call stack that never reaches finalizeInternal(). */
+    private _syncing = false;
 
     private _setCachedVerdict(sessionId: string, verdict: DebateVerdict): void {
         if (this._verdictCache.size >= DebateSyncManager.MAX_VERDICT_CACHE) {
@@ -388,6 +396,17 @@ export class DebateSyncManager {
                     this.syncSession();
                     return;
                 }
+                // TERMINAL PHASE GUARD: if session is already completed/cancelled/failed,
+                // stopDebateInternal() already finalized it (nulled runtimeSessionId
+                // and called cancelSession). Skip silently — no WARN, no double-cancel.
+                if (
+                    snap &&
+                    (snap.phase === 'completed' ||
+                        snap.phase === 'cancelled' ||
+                        snap.phase === 'failed')
+                ) {
+                    return;
+                }
                 // GUARD: if runtimeSessionId changed (new debate started before old
                 // pipeline finished), skip finalize — the new debate owns the
                 // listeners now. finalizeInternal() would clear them, corrupting
@@ -401,8 +420,6 @@ export class DebateSyncManager {
                             actual: this.runtimeSessionId,
                         },
                     );
-                    // Still clean up the engine session to prevent memory leak
-                    this.engine?.cancelSession(runtimeId);
                     return;
                 }
                 this.finalizeInternal();
@@ -411,6 +428,16 @@ export class DebateSyncManager {
                 LOGGER.warn('DebateSyncManager', 'Engine debate failed', { error: e });
                 try {
                     this.syncSession();
+                    // Terminal phase guard — same as then-block above
+                    const catchSnap = this.engine?.getSession(runtimeId);
+                    if (
+                        catchSnap &&
+                        (catchSnap.phase === 'completed' ||
+                            catchSnap.phase === 'cancelled' ||
+                            catchSnap.phase === 'failed')
+                    ) {
+                        return;
+                    }
                     if (this.runtimeSessionId !== runtimeId) {
                         LOGGER.warn(
                             'DebateSyncManager',
@@ -437,12 +464,114 @@ export class DebateSyncManager {
                 snap.phase !== 'failed' &&
                 snap.phase !== 'cancelled'
             ) {
+                // Generate heuristic verdict BEFORE cancelSession destroys the
+                // session data. The phase handler only generates an LLM verdict on
+                // phase transition to 'completed', but governor stop / manual stop
+                // transition directly to 'cancelled', bypassing the normal verdict path.
+                // Without this, the UI shows "empty messages" instead of a verdict.
+                if (this.activeSession && this.activeSession.arguments?.length > 0) {
+                    this.emitHeuristicVerdict(this.activeSession);
+                }
+                // Save snapshot BEFORE cancelSession destroys engine maps.
+                // finalizeInternal() save cannot find the session once destroyed.
+                this.engine
+                    .saveSnapshot(sid)
+                    .catch((e) =>
+                        LOGGER.error(
+                            'DebateSyncManager',
+                            'saveSnapshot in stopDebateInternal failed',
+                            { error: e, sessionId: sid },
+                        ),
+                    );
                 this.engine.cancelSession(sid);
             }
             if (sid !== this.runtimeSessionId) return;
             this.syncSession();
             this.finalizeInternal();
         }
+    }
+
+    private emitHeuristicVerdict(session: DebateSession): void {
+        const agentScores = new Map<
+            string,
+            { count: number; totalWords: number; totalConfidence: number }
+        >();
+        for (const arg of session.arguments ?? []) {
+            if (!arg.agentId || arg.agentId === 'human') continue;
+            const entry = agentScores.get(arg.agentId) ?? {
+                count: 0,
+                totalWords: 0,
+                totalConfidence: 0,
+            };
+            entry.count++;
+            entry.totalWords += (arg.content ?? '').split(/\s+/).filter(Boolean).length;
+            entry.totalConfidence += arg.confidence ?? 0.7;
+            agentScores.set(arg.agentId, entry);
+        }
+
+        const allArgs = session.arguments ?? [];
+        const keyArguments: VerdictKeyArgument[] = allArgs.slice(-5).map((a) => ({
+            agentId: a.agentId ?? 'unknown',
+            agentName: a.agentName ?? a.agentId ?? 'unknown',
+            content: (a.content ?? '').slice(0, 500),
+            stance: (a.position as 'pro' | 'con' | 'neutral') ?? 'neutral',
+            strength: a.confidence ?? 0.7,
+        }));
+
+        let bestAgentId = '';
+        let bestScore = -1;
+        for (const [agentId, s] of agentScores) {
+            const score =
+                s.count * 1_000_000 +
+                Math.min(s.totalWords, 999_999) +
+                Math.min(Math.round(s.totalConfidence * 100), 999);
+            if (score > bestScore) {
+                bestScore = score;
+                bestAgentId = agentId;
+            }
+        }
+
+        const convergenceScore = session.convergenceScore ?? 0;
+        let conclusionType: ConclusionType;
+        let stanceResult: StanceResult;
+        if (convergenceScore > 75) {
+            conclusionType = 'consensus';
+            stanceResult = 'balanced';
+        } else if (bestAgentId && agentScores.size > 1) {
+            const bestEntry = agentScores.get(bestAgentId)!;
+            if (bestEntry.count > allArgs.length * 0.4) {
+                conclusionType = 'dominance';
+                stanceResult = 'pro_wins';
+            } else {
+                conclusionType = 'partial_agreement';
+                stanceResult = 'no_clear_winner';
+            }
+        } else {
+            conclusionType = 'inconclusive';
+            stanceResult = 'no_clear_winner';
+        }
+
+        const verdict: DebateVerdict = {
+            sessionId: session.id,
+            topic: session.topic,
+            summary:
+                session.consensus ??
+                `Debate concluded after ${session.currentRound ?? 0} rounds with ${allArgs.length} total arguments.`,
+            conclusionType,
+            stanceResult,
+            keyArguments,
+            reasoning: `Heuristic verdict (governor stop). ${bestAgentId ? `Leading participant: ${bestAgentId}` : 'No clear leader.'}`,
+            confidence: Math.min(0.7, 0.3 + allArgs.length * 0.02),
+            generatedAt: Date.now(),
+            roundsTotal: session.currentRound ?? 0,
+            totalTokens: 0,
+        };
+
+        this._setCachedVerdict(session.id, verdict);
+        this.deps!.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, {
+            sessionId: session.id,
+            verdict,
+        });
     }
 
     destroy(): void {
@@ -481,36 +610,65 @@ export class DebateSyncManager {
     }
 
     syncSession(): void {
-        if (!this.engine || !this.runtimeSessionId || !this.bridgeCtx) return;
-        const { session, newArgs } = mergeAndProcessSession(
-            this.engine,
-            this.runtimeSessionId,
-            this.bridgeCtx,
-            this.postProcessor,
-            this.governor,
-            this.activeSession,
-        );
-        if (!session) return;
-        this.activeSession = session;
-        // Check governor stop conditions BEFORE updating the Zustand store.
-        // checkGovernorStopConditions() sets this.activeSession.consensus from
-        // governor synthesis. Without this ordering, waitForSessionCompletion()
-        // resolves with a consensus-less session, making tournament scoring
-        // always produce draws (all scores = 0).
-        const shouldStop = this.governor && this.checkGovernorStopConditions();
-        useActiveDebateStore.getState().setSession(this.activeSession);
-        for (const arg of newArgs) {
-            this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
-                sessionId: this.runtimeSessionId,
-                argument: arg,
-            });
-        }
-        this.deps!.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
-        if (shouldStop) {
-            if (this.engine && this.runtimeSessionId) {
-                this.engine.cancelSession(this.runtimeSessionId);
+        if (this._syncing || !this.engine || !this.runtimeSessionId || !this.bridgeCtx) return;
+        // Async fire-and-forget for the governor-stop saveSnapshot path.
+        // The _syncing flag prevents re-entrancy while awaiting saveSnapshot.
+        void this._syncSessionImpl();
+    }
+
+    private async _syncSessionImpl(): Promise<void> {
+        if (this._syncing || !this.engine || !this.runtimeSessionId || !this.bridgeCtx) return;
+        this._syncing = true;
+        try {
+            const { session, newArgs } = mergeAndProcessSession(
+                this.engine,
+                this.runtimeSessionId,
+                this.bridgeCtx,
+                this.postProcessor,
+                this.governor,
+                this.activeSession,
+            );
+            if (!session) return;
+            this.activeSession = session;
+            // Check governor stop conditions BEFORE updating the Zustand store.
+            // checkGovernorStopConditions() sets this.activeSession.consensus from
+            // governor synthesis. Without this ordering, waitForSessionCompletion()
+            // resolves with a consensus-less session, making tournament scoring
+            // always produce draws (all scores = 0).
+            const shouldStop = this.governor && this.checkGovernorStopConditions();
+            useActiveDebateStore.getState().setSession(this.activeSession);
+            for (const arg of newArgs) {
+                this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
+                    sessionId: this.runtimeSessionId,
+                    argument: arg,
+                });
             }
-            this.stopDebateInternal();
+            this.deps!.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+            if (shouldStop) {
+                if (this.engine && this.runtimeSessionId) {
+                    // AWAIT saveSnapshot — the async save builds the record with the
+                    // current in-memory session state. DO NOT call cancelSession here:
+                    // stopDebateInternal handles it naturally, which allows finalizeInternal
+                    // to save the snapshot and persist arguments to debate history
+                    // BEFORE cleanupMaps destroys the engine session.
+                    try {
+                        await this.engine.saveSnapshot(this.runtimeSessionId);
+                    } catch (e) {
+                        console.error(
+                            '[DebateSyncManager] saveSnapshot in syncSession (governor stop) failed',
+                            e,
+                        );
+                        LOGGER.error(
+                            'DebateSyncManager',
+                            'saveSnapshot in syncSession (governor stop) failed',
+                            { error: e, sessionId: this.runtimeSessionId },
+                        );
+                    }
+                }
+                this.stopDebateInternal();
+            }
+        } finally {
+            this._syncing = false;
         }
     }
 
@@ -555,38 +713,71 @@ export class DebateSyncManager {
             );
             return;
         }
+        // DEFENSE: if the session is already cancelled/failed, skip verdict generation
+        // and history persistence — the pipeline never reached natural completion.
+        // Just clean up listeners, null the runtimeId, and let the engine's own
+        // cancelSession path handle persistence (governor stop already saved snapshot).
+        const session = this.activeSession;
+        if (session && (session.status === 'cancelled' || session.status === 'failed')) {
+            this._finalized = true;
+            this.stopHeartbeat();
+            this.clearTimers();
+            this.clearListeners();
+            this.runtimeSessionId = null;
+            this.bridgeCtx = null;
+            this.activeSession = null;
+            LOGGER.info('DebateSyncManager', 'finalizeInternal: terminal session — skipping', {
+                status: session.status,
+            });
+            return;
+        }
         this._finalized = true;
         this.stopHeartbeat();
         this.clearTimers();
-        const session = this.activeSession;
         if (!session) return;
         finalizeDebate(session, {
             interpreter: this._interpreter,
             eventBus: this.deps!.eventBus,
         });
-        // Strip argument content AFTER metrics but BEFORE saveToDebateHistory.
-        // saveToDebateHistory does structuredClone(session) — stripping content first
-        // prevents cloning large LLM response strings, reducing old-gen promotion
-        // pressure between tournament matches.
+        // Update Zustand store with a DEEP COPY of the completed session so the
+        // UI displays argument content (what each agent said). Then strip content
+        // from the original session for memory-efficient history persistence.
+        // structuredClone ensures the store copy is independent — mutating the
+        // original session later won't empty the store's argument content.
+        const storeSession = structuredClone(session);
+        useDebateLiveStore.getState().clearSession(session.id);
+        useActiveDebateStore.getState().setSession(storeSession);
+        // Strip argument content BEFORE saveToDebateHistory. saveToDebateHistory
+        // does structuredClone(session) — stripping content first prevents cloning
+        // large LLM response strings, reducing old-gen promotion pressure between
+        // tournament matches. The store already has the contentful copy.
         if (session.arguments) {
             for (const arg of session.arguments) {
                 (arg as { content?: string }).content = '';
             }
-            session.arguments = [];
         }
         this.deps!.sessionManager.saveToDebateHistory(session);
-        // Clean up Zustand stores to release retained session objects
-        useDebateLiveStore.getState().clearSession(session.id);
-        useActiveDebateStore.getState().clearAll();
+        // Save engine snapshot BEFORE cleanupMaps destroys the session.
+        // Phase handler skips saveSnapshot for completed (see createPhaseChangeHandler),
+        // so we must persist it here. Fire-and-forget is safe here because this runs
+        // when the pipeline resolves naturally (no concurrent auto-checkpoint racing).
+        const sid = this.runtimeSessionId;
+        if (this.engine && sid) {
+            this.engine.saveSnapshot(sid).catch((e) =>
+                LOGGER.error('DebateSyncManager', 'saveSnapshot in finalizeInternal failed', {
+                    error: e,
+                    sessionId: sid,
+                }),
+            );
+        }
         this.clearListeners();
-        const oldRuntimeId = this.runtimeSessionId;
         this.runtimeSessionId = null;
         this.bridgeCtx = null;
         this.activeSession = null;
-        // Clean up engine session data to prevent memory leaks
-        if (this.engine && oldRuntimeId) {
-            this.engine.cancelSession(oldRuntimeId);
-        }
+        // Note: engine.cancelSession() is NOT called here — it was already called
+        // by stopDebateInternal() for cancelled/failed sessions, or the session
+        // naturally completed via the pipeline. Calling it again on an already-
+        // deleted session would produce a misleading "session not found" warning.
         // MEMORY TRACKER: log engine + sync manager + aggregate state after finalize
         if (this.engine) {
             const engineSizes = this.engine.dumpSizes();
@@ -651,11 +842,13 @@ export class DebateSyncManager {
 
     private startHeartbeat(): void {
         this.stopHeartbeat();
-        this._heartbeatTimer = setInterval(() => {
-            if (this.activeSession && this.deps) {
-                persistActiveSession(this.deps.debateStore, this.activeSession);
-            }
-        }, 30_000);
+        // Heartbeat intentionally does NOT persist — the engine's saveSnapshot
+        // path (via auto-checkpoints + syncSession) tracks Dexie version numbers
+        // through attemptSave → incrementVersion. Calling persistActiveSession here
+        // (which saves without a version field) would bump the DB version without
+        // the engine session knowing, causing "version conflict" errors on the
+        // next engine save — including the awaited governor-stop save, which loses
+        // all arguments and prevents verdict generation.
     }
 
     private stopHeartbeat(): void {

@@ -27,8 +27,8 @@ export function isLargeModel(model: string): boolean {
 }
 
 export const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-    gemini: ['gemini-3.1-flash-lite', 'gemini-3.5-flash'],
-    groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
+    gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
+    groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
     openrouter: [PROVIDER_DEFAULT_MODELS.openrouter, 'openrouter/free'],
     // Fast model first; 70B+ models are fallback due to cold-start latency on NIM
     nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
@@ -76,6 +76,14 @@ export function isModelCompatibleWithProvider(model: string, provider: string): 
     if (model.startsWith('mistral/')) return p === 'mistral';
     if (model.startsWith('cohere/')) return p === 'cohere';
     if (model.startsWith('deepseek/')) return p === 'deepseek';
+    // Bare model name (no known provider prefix): only allow on the provider that
+    // lists it in DEBATE_MODEL_PRIORITY. Without this guard, e.g. llama-3.1-8b-instant
+    // (a Groq model) gets routed to Gemini when Gemini's availableModels is empty,
+    // causing 404 with ~5s wasted per call. Unknown bare models (not in any priority
+    // list) fall through to return true for backward compatibility.
+    for (const [prioProvider, prioModels] of Object.entries(DEBATE_MODEL_PRIORITY)) {
+        if (prioModels.includes(model)) return p === prioProvider;
+    }
     return true;
 }
 
@@ -160,6 +168,8 @@ export interface ProviderResolverDeps {
 export interface SessionProviderState {
     hasProviderFailed(provider: string): boolean;
     markProviderFailed(provider: string): void;
+    hasModelFailed(model: string): boolean;
+    markModelFailed(model: string): void;
 }
 
 export class DebateProviderResolver {
@@ -182,7 +192,12 @@ export class DebateProviderResolver {
     private isCircuitOpen(provider: string): boolean {
         try {
             const registry = this.deps.adapterRegistry;
-            return registry.getCircuitBreakerState(provider) === 'open';
+            const state = registry.getCircuitBreakerState(provider);
+            // HALF-OPEN also counts as unavailable — only 1 concurrent test request is allowed,
+            // which is insufficient for multi-agent debates. All 10+ agents would compete for
+            // that single slot, causing ''max concurrent test requests reached'' cascade.
+            // Probes/health-checks handle recovery independently.
+            return state === 'open' || state === 'half-open';
         } catch {
             return false;
         }

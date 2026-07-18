@@ -91,7 +91,9 @@ export function snapshotToSession(
     snapshot: DebateSessionSnapshot,
     ctx: SnapshotBridgeContext,
 ): DebateSession {
-    const participants = Array.isArray(ctx.participants) ? ctx.participants : [];
+    const participants = Array.isArray(ctx.participants)
+        ? ctx.participants.filter((p, i, arr) => arr.findIndex((o) => o.id === p.id) === i)
+        : [];
     const args = ctx.timeline ? timelineToArguments(ctx.timeline, participants) : [];
     const round = Math.max(1, snapshot.round);
     const socraticQuestioner =

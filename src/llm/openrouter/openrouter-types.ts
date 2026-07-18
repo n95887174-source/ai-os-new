@@ -41,30 +41,34 @@ export interface OpenRouterResponse {
 }
 
 export const OpenRouterResponseSchema = z.object({
-    id: z.string().optional(),
+    id: z.string().nullish(),
     choices: z
         .array(
             z.object({
-                index: z.number().optional(),
-                message: z
-                    .object({ role: z.string(), content: z.string().nullable().optional() })
-                    .optional(),
+                index: z.number().nullish(),
+                message: z.object({ role: z.string(), content: z.string().nullish() }).nullish(),
                 delta: z
-                    .object({ content: z.string().optional(), reasoning: z.string().optional() })
-                    .optional(),
-                finish_reason: z.string().optional(),
+                    .object({ content: z.string().nullish(), reasoning: z.string().nullish() })
+                    .nullish(),
+                finish_reason: z.string().nullish(),
             }),
         )
-        .optional(),
+        .nullish(),
     usage: z
         .object({
-            prompt_tokens: z.number().optional(),
-            completion_tokens: z.number().optional(),
-            total_tokens: z.number().optional(),
+            prompt_tokens: z.number().nullish(),
+            completion_tokens: z.number().nullish(),
+            total_tokens: z.number().nullish(),
         })
-        .optional(),
-    error: z.object({ message: z.string(), type: z.string() }).optional(),
-    model: z.string().optional(),
-    provider: z.string().optional(),
-    system_fingerprint: z.string().optional(),
+        .nullish(),
+    error: z
+        .object({
+            message: z.string(),
+            type: z.string().nullish(),
+            code: z.union([z.string(), z.number()]).nullish(),
+        })
+        .nullish(),
+    model: z.string().nullish(),
+    provider: z.string().nullish(),
+    system_fingerprint: z.string().nullish(),
 });

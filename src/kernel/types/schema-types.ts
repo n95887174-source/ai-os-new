@@ -544,8 +544,8 @@ export const OptimizationSuggestionSchema = z.object({
 
 export const DebateSessionRecordSchema = z.object({
     id: z.string().min(1),
-    topic: z.string().min(1),
-    topologyType: z.string().min(1),
+    topic: z.string().min(1).optional().default('(no topic)'),
+    topologyType: z.string().min(1).optional().default('roundtable'),
     phase: z.string().min(1),
     round: z.number().int().min(0),
     totalTokens: z.number().min(0),

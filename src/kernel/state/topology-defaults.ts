@@ -10,7 +10,7 @@ const SEARCH_TOOLS = ['web_search', 'summarize', 'document_query'];
 // ── Model distribution ──
 
 const PROVIDER_MODEL_MAP: Record<string, string[]> = {
-    gemini: ['gemini-3.1-flash-lite', 'gemini-3.5-flash'],
+    gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
     groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
     openrouter: [PROVIDER_DEFAULT_MODELS.openrouter, 'openrouter/free'],
     nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],

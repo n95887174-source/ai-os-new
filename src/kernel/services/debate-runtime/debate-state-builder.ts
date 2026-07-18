@@ -37,6 +37,11 @@ function normalizeClaim(text: string): string {
         .trim();
 }
 
+// Maximum rounds to include in context — limits token burst for strict TPM providers (Groq, etc.)
+const MAX_CONTEXT_ROUNDS = 5;
+// Maximum claims per agent per round to prevent context explosion
+const MAX_CLAIMS_PER_AGENT_PER_ROUND = 5;
+
 export function buildDebateState(args: DebateArgument[], currentAgentId: string): DebateState {
     const byRound = new Map<number, DebateArgument[]>();
     for (const a of args) {
@@ -48,11 +53,14 @@ export function buildDebateState(args: DebateArgument[], currentAgentId: string)
     const currentRound = roundNumbers[roundNumbers.length - 1];
     const previousRound = roundNumbers.length >= 2 ? roundNumbers[roundNumbers.length - 2] : -1;
 
-    const rounds: DebateRoundState[] = roundNumbers.map((r) => {
+    // Only include the last MAX_CONTEXT_ROUNDS rounds to limit token burst
+    const recentRoundNumbers = roundNumbers.slice(-MAX_CONTEXT_ROUNDS);
+
+    const rounds: DebateRoundState[] = recentRoundNumbers.map((r) => {
         const raws = byRound.get(r)!;
         const claims: ClaimEntry[] = [];
         for (const raw of raws) {
-            const texts = extractClaims(raw);
+            const texts = extractClaims(raw).slice(0, MAX_CLAIMS_PER_AGENT_PER_ROUND);
             for (const t of texts) {
                 claims.push({ agentName: raw.agentName, role: raw.position, text: t, round: r });
             }
