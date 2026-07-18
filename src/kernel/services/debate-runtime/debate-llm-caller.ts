@@ -19,6 +19,54 @@ import type { DebateArgument, DebateParticipant } from '../../contracts/debate-t
 
 const LOGGER = rootLogger.child('DebateLlmCaller');
 
+// ── Response validation ─────────────────────────────────────────────
+// Detect instruction-leakage responses where the LLM returns
+// meta-commentary ("Извините, но вы не выполнили инструкции") instead
+// of an actual debate argument. These patterns indicate the model is
+// rejecting the prompt rather than participating.
+const INSTRUCTION_LEAKAGE_PATTERNS = [
+    // Russian: apology + instruction not followed
+    /извините,?\s+но\s+(кажется|похоже|вы)\s+(не\s+)?(выполнили|следуете|поняли|прочитали)/iu,
+    /вы\s+(не\s+)?(выполнили|соблюдаете|следуете|учли)\s+(мои|все|указанные)\s+инструкци/u,
+    /пожалуйста,\s*(внимательно|еще раз|заново)\s*(прочитайте|ознакомьтесь)/iu,
+    /кажется,\s*вы\s+(забыли|пропустили|не учли|не указали)/iu,
+    /я\s+не\s+(могу|буду)\s+(выполнять|участвовать|продолжать)\s+в\s+этой\s+(роли|дискуссии)/iu,
+    /это\s+(нарушает|противоречит)\s+(мои|моим)\s+(принцип|правил|политик)/iu,
+    /я\s+(не\s+)?(могу|должен|буду)\s+(отвечать|ответить|генерировать|создавать|писать)\s+(от\s+имени|в\s+роли|как)/iu,
+    /как\s+языковая\s+модель|как\s+искусственный\s+интеллект|как\s+AI\s+ассистент/iu,
+
+    // English: meta-rejection patterns
+    /i\s+(can't|cannot|won't|shouldn't|will\s+not)\s+(respond|participate|continue|engage)/iu,
+    /this\s+(goes\s+against|violates|breaches)\s+my\s+(guidelines|principles|policy|rules)/iu,
+    /i\s+apologize[^.!]*?but\s+(i\s+)?(can't|cannot|won't)/iu,
+    /i'm\s+(sorry|afraid)[^.!]*?(but\s+)?(i\s+)?(can't|cannot|won't)/iu,
+    /as\s+an\s+(AI|artificial\s+intelligence)\s+(language\s+model|assistant)/iu,
+    /i\s+wasn't\s+(designed|created|programmed)\s+to/iu,
+    /it\s+would\s+be\s+inappropriate\s+(for\s+me|to)/iu,
+    /i\s+(don't|do\s+not)\s+have\s+a\s+personal\s+(opinion|position|view)/iu,
+
+    // Short vacuous responses (under 40 chars of real content)
+    /^(interesting\s+(point|question)|that's?\s+a\s+(good|great)\s+(point|question)|i\s+(agree|disagree)|согласен|не\s+согласен)\s*\.?\s*$/iu,
+];
+
+function isValidDebateResponse(content: string): { valid: boolean; reason?: string } {
+    const trimmed = content.trim();
+    if (!trimmed || trimmed.length < 10) {
+        return { valid: false, reason: 'Empty or too short' };
+    }
+
+    for (const pat of INSTRUCTION_LEAKAGE_PATTERNS) {
+        if (pat.test(trimmed)) {
+            return {
+                valid: false,
+                reason: `Instruction leakage pattern matched: ${pat.source.slice(0, 60)}`,
+            };
+        }
+    }
+
+    return { valid: true };
+}
+
 // Memory profiling: log heap changes per LLM call (visible in DevTools console)
 function getHeapMB(): number {
     try {
@@ -210,12 +258,22 @@ export async function debateCallLlm(
             const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
             if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
 
-            // Build participant display name map — avoids leaking internal agentId to LLM.
+            // Build participant display name map — uses human-readable labels from
+            // topology nodes, never raw internal nodeIds like "agent-database".
+            const topologyLabelById = new Map<string, string>(
+                session.topology.nodes.map((n) => [n.id, n.label || n.id]),
+            );
             const participantNameMap: Map<string, string> = new Map<string, string>(
-                session.participants.map((p) => [
-                    p.agentId,
-                    p.role || p.nodeId || `Agent ${p.agentId.slice(0, 8)}`,
-                ]),
+                session.participants.map((p) => {
+                    const label =
+                        topologyLabelById.get(p.nodeId) ?? topologyLabelById.get(p.agentId);
+                    return [
+                        p.agentId,
+                        label && label !== p.agentId
+                            ? label
+                            : p.role || `Agent ${p.agentId.slice(0, 8)}`,
+                    ];
+                }),
             );
             const currentName = participantNameMap.get(participant.agentId) || participant.agentId;
 
@@ -369,7 +427,53 @@ export async function debateCallLlm(
             }
             govOp?.complete();
             cleanupGov?.();
-            const content = response.content;
+
+            // Strip speaker label prefix — agents sometimes copy the history
+            // format `[Name (self/opponent)]: content` with wrong speaker name.
+            const filtered = stripSpeakerPrefix(response.content);
+            const content = filtered || response.content;
+
+            // Cross-agent duplicate check — reject content copied verbatim
+            // from other agents' recent responses.
+            if (isCrossAgentDuplicate(content, recentSteps, participant.agentId)) {
+                LOGGER.warn('DebateLlmCaller', 'Response rejected — cross-agent duplicate', {
+                    agentId: participant.agentId,
+                    provider: resolvedKey?.provider,
+                    model: modelId,
+                    preview: content.slice(0, 120),
+                });
+                if (resolvedKey) {
+                    triedModels.add(modelId);
+                    // Force provider switch: mark the provider as failed so the retry
+                    // loop picks a DIFFERENT provider, not just a different model or key
+                    // on the same provider (which would produce the same duplicate content).
+                    session.markProviderFailed(resolvedKey.provider);
+                }
+                throw new Error('Response validation failed: cross-agent duplicate');
+            }
+
+            // Validate response — reject instruction leakage, meta-commentary,
+            // and empty/vacuous responses. This prevents the cascade failure
+            // where one agent's broken output poisons the context for others.
+            const validation = isValidDebateResponse(content);
+            if (!validation.valid) {
+                LOGGER.warn('DebateLlmCaller', 'Response rejected by validation', {
+                    agentId: participant.agentId,
+                    provider: resolvedKey?.provider,
+                    model: modelId,
+                    reason: validation.reason,
+                    preview: content.slice(0, 120),
+                });
+                // Throw so the catch block retries via fallback logic
+                if (resolvedKey) {
+                    triedModels.add(modelId);
+                    // Same as duplicate: force provider switch so retry doesn't just
+                    // try the same provider with a different model/key.
+                    session.markProviderFailed(resolvedKey.provider);
+                }
+                throw new Error(`Response validation failed: ${validation.reason}`);
+            }
+
             deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
                 sessionId: session.id,
                 agentId: participant.agentId,
@@ -685,6 +789,75 @@ export async function debateGetDefaultPrompt(
 ): Promise<string> {
     const node = session.topology.nodes.find((n) => n.id === nodeId);
     return (await getPrompt(node?.role)) + `\nRespond in ${session.language}.`;
+}
+
+/**
+ * Strip speaker label prefixes from LLM response.
+ * Agents copy the history format `[Name (self/opponent)]: content` or bare
+ * `[Name]: content` including the wrong speaker's name. Strip iteratively
+ * until no more prefix patterns remain at the start.
+ *
+ * Also handles Gemini timestamp prefix (e.g. "19:40\n[Name]: ...") by
+ * stripping leading timestamps before the prefix pattern matching.
+ */
+function stripSpeakerPrefix(content: string): string {
+    // Strip leading timestamps that Gemini sometimes prepends before the
+    // speaker label (e.g. "19:40\n[Economist / Экономист]: Коллеги...")
+    const TIMESTAMP = /^\d{1,2}:\d{2}(?::\d{2})?\s*\n*/;
+    const PREFIX = /^\[[^\]]+(?:\s+(?:self|opponent|я|оппонент))?\]:\s*/i;
+    let prev: string;
+    let result = content.replace(TIMESTAMP, '');
+    do {
+        prev = result;
+        result = result.replace(PREFIX, '');
+    } while (result !== prev);
+    return result;
+}
+
+/**
+ * Compute Jaccard similarity of word sets between two texts.
+ */
+function jaccardText(a: string, b: string): number {
+    const norm = (t: string) =>
+        new Set(
+            t
+                .toLowerCase()
+                .replace(/[^a-zа-яё0-9\s]/g, '')
+                .split(/\s+/)
+                .filter((w) => w.length > 3),
+        );
+    const aWords = norm(a);
+    const bWords = norm(b);
+    if (aWords.size < 3 || bWords.size < 3) return 0;
+    const intersection = new Set([...aWords].filter((w) => bWords.has(w)));
+    const union = new Set([...aWords, ...bWords]);
+    return intersection.size / union.size;
+}
+
+/**
+ * Check if response is a near-duplicate of any recent argument from other agents.
+ * Prevents content repetition cascade where one agent's response gets copied
+ * verbatim by subsequent agents. Checks both full text and opening (first 200 chars)
+ * separately — identical openings are treated as duplicates even if middles diverge.
+ */
+function isCrossAgentDuplicate(
+    content: string,
+    recentSteps: Array<{ agentId: string; content: string }>,
+    currentAgentId: string,
+): boolean {
+    const opening = content.slice(0, 200);
+
+    for (const step of recentSteps) {
+        if (step.agentId === currentAgentId) continue;
+
+        // Full-text check: threshold 0.45 (was 0.55 — lowered to catch more
+        // subtle duplicates that share the same framing but differ in examples)
+        if (jaccardText(content, step.content) > 0.45) return true;
+
+        // Opening check: if first 200 chars overlap > 0.3, it's a copied framing
+        if (jaccardText(opening, step.content.slice(0, 200)) > 0.3) return true;
+    }
+    return false;
 }
 
 export function estimateConfidence(content: string): number {

@@ -143,6 +143,22 @@ CRITICAL: Do NOT repeat or paraphrase arguments that other agents have already m
 Be direct and persuasive. This is the opening round - make it count. Respond in ${language}.`;
 }
 
+// Rotating unique angles assigned by participant index to force content
+// diversity when multiple agents share the same provider/model. Each agent
+// gets a different analytical lens so output differs even from the same LLM.
+const UNIQUE_ANGLES = [
+    'Focus primarily on ECONOMIC implications — costs, benefits, incentives, market dynamics, and resource allocation.',
+    'Focus primarily on SOCIAL/HUMANITARIAN impact — equity, access, human rights, community effects, and quality of life.',
+    'Focus primarily on TECHNICAL/ENGINEERING feasibility — architecture, implementation challenges, performance metrics, and system design.',
+    'Focus primarily on ETHICAL/PHILOSOPHICAL dimensions — moral frameworks, rights, duties, fairness, and long-term consequences.',
+    'Focus primarily on ENVIRONMENTAL/ECOLOGICAL consequences — sustainability, resource depletion, pollution, biodiversity, and climate effects.',
+    'Focus primarily on POLITICAL/GOVERNANCE aspects — regulation, policy, power structures, institutional capacity, and geopolitical implications.',
+    'Focus primarily on HISTORICAL/CULTURAL context — precedents, traditions, cultural norms, path dependence, and lessons from the past.',
+    'Focus primarily on LEGAL/JURIDICAL analysis — laws, regulations, contracts, liability, intellectual property, and compliance requirements.',
+    'Focus primarily on STRATEGIC/MILITARY/SECURITY concerns — risk assessment, threat modeling, defensive measures, and geopolitical stability.',
+    'Focus primarily on SCIENTIFIC/RESEARCH evidence — empirical studies, experimental data, peer-reviewed findings, and methodological rigor.',
+];
+
 export function buildArgumentPrompt(
     participant: DebateParticipant,
     round: number,
@@ -194,6 +210,14 @@ export function buildArgumentPrompt(
         ? `\n\n### Argument Strategy\n${ARGUMENT_STRATEGY_INSTRUCTIONS[participant.strategy]}`
         : '';
 
+    // Assign a rotating unique angle based on agent position so each participant
+    // approaches the topic from a distinct analytical lens — prevents all agents
+    // on the same provider/model from producing near-identical content.
+    const agentIndex = participants.indexOf(participant);
+    const uniqueAngle =
+        agentIndex >= 0 ? UNIQUE_ANGLES[agentIndex % UNIQUE_ANGLES.length] : UNIQUE_ANGLES[0];
+    const angleBlock = `\n\n### Your Unique Lens\n${uniqueAngle}\n\nYour job is to apply THIS lens to the debate. Other participants have different lenses. Do NOT borrow their lens — stay in your assigned lane.`;
+
     const socraticBlock = isSocratic
         ? isSocrates
             ? '\n\n### Socratic Mode\nAsk a deep, probing question based on what others have said. Challenge assumptions. Do NOT agree or disagree — question.'
@@ -205,7 +229,7 @@ export function buildArgumentPrompt(
 
     return `## Topic: ${sanitizeForPrompt(topic)}
 
-${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${tempBlock}
+${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${angleBlock}${tempBlock}
 
 ${statePrompt}
 

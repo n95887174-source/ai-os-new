@@ -503,6 +503,7 @@ export class DebateSyncManager {
     }
 
     private emitHeuristicVerdict(session: DebateSession): void {
+        const participantNameById = new Map(session.participants.map((p) => [p.id, p.name]));
         const agentScores = new Map<
             string,
             { count: number; totalWords: number; totalConfidence: number }
@@ -571,7 +572,7 @@ export class DebateSyncManager {
             conclusionType,
             stanceResult,
             keyArguments,
-            reasoning: `Heuristic verdict (governor stop). ${bestAgentId ? `Leading participant: ${bestAgentId}` : 'No clear leader.'}`,
+            reasoning: `Heuristic verdict (governor stop). ${bestAgentId ? `Leading participant: ${participantNameById.get(bestAgentId) || bestAgentId}` : 'No clear leader.'}`,
             confidence: Math.min(0.7, 0.3 + allArgs.length * 0.02),
             generatedAt: Date.now(),
             roundsTotal: session.currentRound ?? 0,

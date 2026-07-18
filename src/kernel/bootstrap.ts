@@ -337,6 +337,19 @@ export class SystemBootstrap implements IBootstrap {
             this.logger.error('Bootstrap', 'Failed to mount topology', { error: e });
         }
 
+        // ── Second init pass: catch lazy-registered services ────────────
+        // Services registered via registerFactory() (lazy DI) whose factories
+        // were triggered by container.get() above (or during topology init)
+        // missed the INIT_TIERS loop — init them now.
+        for (const entry of this.lifecycle.getEntries()) {
+            const hasStatus = this.lifecycle
+                .getStatuses()
+                .some((s) => s.name === entry.name && s.status === 'ok');
+            if (!hasStatus) {
+                await this.lifecycle.tryInit(entry.name, () => entry.service.init());
+            }
+        }
+
         // ── Start all lifecycle services (tiered) ─────────────────────────
         try {
             await this.lifecycle.startAll();

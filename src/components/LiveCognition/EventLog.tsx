@@ -24,9 +24,9 @@ const EventLog: React.FC<Props> = ({ logs }) => {
                 Waiting for system events...
             </div>
         ) : (
-            logs.map((log) => (
+            logs.map((log, idx) => (
                 <div
-                    key={`log-${log.time}`}
+                    key={`log-${log.time}-${idx}`}
                     style={{
                         display: 'flex',
                         gap: '0.75rem',

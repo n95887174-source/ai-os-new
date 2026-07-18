@@ -141,17 +141,45 @@ export class DebatePersistenceManager {
                 `saveSnapshot validation failed for ${sessionId}: ${parsed.error.issues.map((i) => i.message).join(', ')}`,
             );
         }
-        const newVersion = await this.deps.debateStore!.saveSnapshot(
-            parsed.data as Parameters<DebateStore['saveSnapshot']>[0],
-        );
-        session.incrementVersion?.(newVersion);
-        const ctx = this.state.contexts.get(sessionId);
-        if (ctx) {
-            ctx.timeline.persist(sessionId).catch((e) =>
-                LOGGER.warn('DebatePersistence', `Failed to persist timeline for ${sessionId}`, {
-                    error: e,
-                }),
-            );
+        const MAX_RETRIES = 3;
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            try {
+                const newVersion = await this.deps.debateStore!.saveSnapshot(
+                    parsed.data as Parameters<DebateStore['saveSnapshot']>[0],
+                );
+                session.incrementVersion?.(newVersion);
+                const ctx = this.state.contexts.get(sessionId);
+                if (ctx) {
+                    ctx.timeline.persist(sessionId).catch((e) =>
+                        LOGGER.warn(
+                            'DebatePersistence',
+                            `Failed to persist timeline for ${sessionId}`,
+                            {
+                                error: e,
+                            },
+                        ),
+                    );
+                }
+                return;
+            } catch (err) {
+                const errStr = String(err);
+                if (errStr.includes('version conflict') && attempt < MAX_RETRIES - 1) {
+                    LOGGER.warn(
+                        'DebatePersistence',
+                        `Version conflict on save, retrying (${attempt + 1}/${MAX_RETRIES})`,
+                        {
+                            sessionId,
+                        },
+                    );
+                    const current = await this.deps.debateStore!.getSnapshot(sessionId);
+                    if (current) {
+                        const dbVersion = (current as { version?: number })?.version ?? 0;
+                        parsed.data.version = dbVersion;
+                    }
+                    continue;
+                }
+                throw err;
+            }
         }
     }
 

@@ -97,7 +97,7 @@ const SYNONYM_GROUPS: string[][] = [
     ['отвергать', 'отрицать', 'опровергать', 'оспаривать', 'возражать'],
 ];
 
-function normalizeSynonyms(word: string): string {
+export function normalizeSynonyms(word: string): string {
     for (const group of SYNONYM_GROUPS) {
         if (group.includes(word)) return group[0];
     }

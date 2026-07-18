@@ -118,6 +118,14 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
         }
     }
 
+    init(): void {
+        /* no-op — registry is ready after construction */
+    }
+
+    start(): void {
+        /* no-op — registry has no async startup */
+    }
+
     destroy(): void {
         for (const [, adapter] of this.adapters) {
             let current: unknown = adapter;

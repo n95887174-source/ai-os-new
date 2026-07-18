@@ -1,7 +1,7 @@
 import { rootLogger } from '../logger-service';
 import type { DebateSession, DebateArgument } from '../../contracts/debate-types';
 import { updateConvergenceScore } from './debate-stop-conditions';
-import { isDuplicateArgument } from './debate-duplicate-detection';
+import { isDuplicateArgument, normalizeSynonyms } from './debate-duplicate-detection';
 import { FactCheckService } from '../fact-check-service';
 import { DebateGovernor } from './debate-governor';
 
@@ -118,14 +118,17 @@ function scoreSocraticQuestion(
 export class DebatePostProcessor {
     public factCheckService: FactCheckService;
     private processedArgIds: Set<string>;
+    private fedContents: Array<{ agentId: string; content: string }>;
 
     constructor(deps: { factCheckService: FactCheckService }) {
         this.factCheckService = deps.factCheckService;
         this.processedArgIds = new Set();
+        this.fedContents = [];
     }
 
     clearProcessedIds(): void {
         this.processedArgIds.clear();
+        this.fedContents = [];
     }
 
     process(session: DebateSession): DebateArgument[] {
@@ -135,16 +138,67 @@ export class DebatePostProcessor {
         return session.arguments;
     }
 
+    /** Check if content is a near-duplicate of something already fed to governor */
+    private isNearDuplicateOfFedContent(content: string, agentId: string): boolean {
+        const norm = content
+            .toLowerCase()
+            .replace(/[^a-zа-яё0-9\s]/g, '')
+            .trim();
+        if (!norm || norm.split(/\s+/).length < 5) return false;
+
+        const tokens = norm.split(/\s+/).filter(Boolean);
+        const words = new Set(tokens);
+        const synWords = new Set(tokens.map(normalizeSynonyms));
+
+        for (const fed of this.fedContents) {
+            if (fed.agentId === agentId) continue;
+
+            const fedTokens = fed.content.split(/\s+/).filter(Boolean);
+            const fedWords = new Set(fedTokens);
+            const fedSynWords = new Set(fedTokens.map(normalizeSynonyms));
+
+            // Combined: word Jaccard + synonym Jaccard
+            const wordSim = this.jaccardSimilarityRaw(words, fedWords);
+            const synSim = this.jaccardSimilarityRaw(synWords, fedSynWords);
+            const combined = wordSim * 0.6 + synSim * 0.4;
+            if (combined > 0.55) return true;
+        }
+        return false;
+    }
+
+    private jaccardSimilarityRaw(a: Set<string>, b: Set<string>): number {
+        if (a.size === 0 && b.size === 0) return 0;
+        const intersection = new Set([...a].filter((x) => b.has(x)));
+        const union = new Set([...a, ...b]);
+        return intersection.size / union.size;
+    }
+
     processGovernorFeeding(newArgs: DebateArgument[], governor: DebateGovernor | null): void {
         if (!governor) return;
         for (const arg of newArgs) {
             if (this.processedArgIds.has(arg.id)) continue;
             if (arg.duplicateOf) continue;
+
+            // Near-duplicate check across agents — prevents feeding the same
+            // content from multiple agents, which would create false contradictions
+            // in the governor (similar claims from different speakers flagged as
+            // conflicting when they're actually in agreement).
+            if (this.isNearDuplicateOfFedContent(arg.content, arg.agentId)) {
+                arg.duplicateOf = 'cross-agent-near-duplicate';
+                continue;
+            }
+
             this.processedArgIds.add(arg.id);
             if (this.processedArgIds.size > MAX_PROCESSED_IDS) {
                 const first = this.processedArgIds.values().next().value;
                 if (first !== undefined) this.processedArgIds.delete(first);
             }
+
+            this.fedContents.push({ agentId: arg.agentId, content: arg.content });
+            if (this.fedContents.length > 200) {
+                this.fedContents.shift();
+            }
+
             governor.ingestArgument(
                 arg.content,
                 arg.id,

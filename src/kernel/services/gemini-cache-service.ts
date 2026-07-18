@@ -135,7 +135,7 @@ export class GeminiCacheService implements IGeminiCacheService {
         const apiKey = await this.#getApiKey();
         if (!apiKey) return [];
         try {
-            const res = await fetch(`${GEMINI_API_BASE}/models?key=${apiKey}&pageSize=50`, {
+            const res = await fetch(`${GEMINI_API_BASE}/v1beta/models?key=${apiKey}&pageSize=50`, {
                 signal: AbortSignal.timeout(10000),
             });
             if (!res.ok) {

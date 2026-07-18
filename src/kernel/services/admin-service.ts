@@ -183,9 +183,12 @@ export class AdminService {
 
     private async saveAuditLog() {
         try {
-            await this.deps.database.setKv(AUDIT_LOG_KEY, this.auditLog);
+            // Strip undefined values — Dexie/IDB structured clone rejects them
+            const clean = JSON.parse(JSON.stringify(this.auditLog));
+            await this.deps.database.setKv(AUDIT_LOG_KEY, clean);
         } catch (e) {
-            LOGGER.warn('AdminService', 'Failed to save audit log', { error: e });
+            const msg = e instanceof Error ? e.message : String(e);
+            LOGGER.warn('AdminService', `Failed to save audit log: ${msg}`);
         }
     }
 

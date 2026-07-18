@@ -369,7 +369,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                             const agentCount = args.filter((a) => a.agentId === p.id).length;
                             return (
                                 <motion.div
-                                    key={p.id}
+                                    key={`${p.id}-${idx}`}
                                     layout
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
