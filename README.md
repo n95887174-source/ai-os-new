@@ -219,10 +219,17 @@ cd ai-os-new
 # Install dependencies
 npm install
 
-# Start development server (in terminal 1)
+# Start everything (dev server + proxy + typecheck)
+npm run dev:shared
+```
+
+Or for separate terminals:
+
+```bash
+# Terminal 1: Dev server
 npm run dev
 
-# Start proxy for sandboxed tool execution (in terminal 2)
+# Terminal 2: Proxy for sandboxed tool execution
 npm run proxy
 ```
 

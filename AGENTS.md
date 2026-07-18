@@ -23,7 +23,7 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 2. **No Globals in Kernel** — only DI constructor injection (`src/kernel/container.ts`)
 3. **Dependency Rule** — UI → Application → Kernel → Infrastructure (kernel never imports UI)
 4. **Contracts at Boundaries** — interfaces in `src/kernel/contracts/`, implementations in `src/kernel/services/`
-5. **Legacy Wrappers** — fully migrated to `src/kernel/services/`; `src/services/` now holds only workers
+5. **Legacy Wrappers** — fully migrated to `src/kernel/services/`; `src/kernel/workers/` now holds only workers
 
 ## Architecture Layers
 
@@ -34,7 +34,7 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 - `src/kernel/services/provider-runtime/` — instances, sessions, state, budget
 - `src/kernel/services/event-sourcing/` — recorder, checkpoints, replay engine
 - `src/llm/` — provider adapters + decorators (infrastructure)
-- `src/services/` — workers (`memory.worker.ts`, `sandbox.worker.ts`) (all legacy wrappers migrated to kernel/services/)
+- `src/kernel/workers/` — workers (`memory.worker.ts`, `sandbox.worker.ts`) (all legacy wrappers migrated to kernel/services/)
 
 ## Code Rules
 
@@ -103,7 +103,7 @@ npx eslint src/      # lint
 - `src/kernel/utils/` — kernel utilities (`tokenEstimate.ts`)
 - `src/kernel/DEPENDENCY_MAP.md` — full DI injection graph
 - `src/core/` — DELETED (all legacy modules migrated to `src/kernel/`)
-- `src/services/` — tests + web workers (legacy wrappers fully migrated to kernel/services/)
+- `src/kernel/workers/` — web workers (`memory.worker.ts`, `sandbox.worker.ts`)
 - `src/llm/` — LLM adapters + decorators (OpenRouter, Gemini, Groq, NVIDIA, OpenAI)
 - `src/components/` — React UI (75+ panels)
 - `src/stores/` — Zustand stores
@@ -2756,7 +2756,7 @@ Fix all Critical/High findings from `audit/new/arheterktura.md` (98 findings tot
 | T-07 | 🟠 High  | `src/kernel/services/health-sla-service.ts`                                  | Replaced `Math.random() * threshold` with deterministic `threshold * 0.8` in `evaluateProfile()`                         |
 | S-04 | 🟠 High  | `src/kernel/services/chat-executor.ts`                                       | Wired `promptSecurityService.scan()` before LLM calls — blocks unsafe prompts with score threshold                       |
 | S-05 | 🟠 High  | `src/kernel/services/debate-runtime/debate-rag-retriever.ts`                 | Wrapped injected debate memory in `<external_data>` safety wrapper (same pattern as tool-executor.ts)                    |
-| S-07 | 🟠 High  | `src/services/sandbox.worker.ts`                                             | AST validator now catches computed `MemberExpression` calls (`obj['eval']()`, `obj['Function']()`) — closes AST bypass   |
+| S-07 | 🟠 High  | `src/kernel/workers/sandbox.worker.ts`                                       | AST validator now catches computed `MemberExpression` calls (`obj['eval']()`, `obj['Function']()`) — closes AST bypass   |
 
 ### Verified Pre-Fixed (No Change Needed)
 
@@ -2897,8 +2897,8 @@ Fix all remaining unfixed findings from `audit/new/AUDIT_REPORT.md` (74 findings
 
 | ID   | Fix                                                                                                                         | File                                       |
 | :--- | :-------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------- |
-| C-15 | Added CSP eval detection (`isEvalBlockedByCSP()`) before `new Function` call; try-catch guard                               | `src/services/sandbox.worker.ts`           |
-| C-15 | Runtime check returns clear error if CSP blocks eval                                                                        | `src/services/sandbox.worker.ts`           |
+| C-15 | Added CSP eval detection (`isEvalBlockedByCSP()`) before `new Function` call; try-catch guard                               | `src/kernel/workers/sandbox.worker.ts`     |
+| C-15 | Runtime check returns clear error if CSP blocks eval                                                                        | `src/kernel/workers/sandbox.worker.ts`     |
 | H-07 | `cleanupExpiredUndos()` now deletes expired entries (not just flips `canUndo`); caps at MAX_REWINDS=500 / MAX_SNAPSHOTS=100 | `src/kernel/services/rewind-service.ts`    |
 | H-08 | Removed `console.warn` with raw `errorText`; uses `sanitized` only                                                          | `src/llm/openrouter/openrouter-adapter.ts` |
 | H-10 | `costMonth` computed from `this.records` instead of all-time `cumulativeCost`; `resetBudget()` clears records               | `src/llm/decorators/cost-manager.ts`       |

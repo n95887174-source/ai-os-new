@@ -59,7 +59,7 @@
 ### 🤖 LLM Layer (`/src/llm/`)
 
 - Provider adapters (7 implementations, 25 supported names): Gemini, OpenRouter, Groq (via OpenAI-compatible), NVIDIA, OpenAI, Cerebras, Cloudflare, Azure, Anthropic, Custom, etc.
-- Decorators (11): Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, Priority Queue, Canary Router, Cost Manager, Metrics, Compression, Logging — all extend `BaseDecorator` with `destroy()` propagation
+- Decorators (11): Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, Priority Queue, Canary Router, Cost Manager, Semantic Router, Compression, Logging — all extend `BaseDecorator` with `destroy()` propagation
 - `LLM client` in `src/kernel/services/llm-client-service.ts` — adapters send directly, no facade layer
 - `core/` — types, SSE parser, token counter, HTTP client, `BaseDecorator`, middleware pipeline, errors
 - Zod response schemas: `OpenRouterResponseSchema`, `NvidiaNIMResponseSchema` — `.safeParse()` on API responses
