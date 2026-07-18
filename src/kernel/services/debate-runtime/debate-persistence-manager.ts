@@ -222,6 +222,10 @@ export class DebatePersistenceManager {
                 memory: memJson,
                 language: snap.language ?? DEFAULT_DEBATE_LANGUAGE,
                 version: snap.version ?? 1,
+                failedProviders: JSON.stringify(
+                    snap.failedProviders ? [...snap.failedProviders] : [],
+                ),
+                failedModels: JSON.stringify(snap.failedModels ? [...snap.failedModels] : []),
             };
             if (snap.version === 1) {
                 console.warn(
@@ -276,6 +280,10 @@ export class DebatePersistenceManager {
                     memory: '{}',
                     language: snap.language ?? DEFAULT_DEBATE_LANGUAGE,
                     version: snap.version ?? 1,
+                    failedProviders: JSON.stringify(
+                        snap.failedProviders ? [...snap.failedProviders] : [],
+                    ),
+                    failedModels: JSON.stringify(snap.failedModels ? [...snap.failedModels] : []),
                 };
                 await this.attemptSave(
                     minimalRecord as Record<string, unknown>,
@@ -373,6 +381,12 @@ export class DebatePersistenceManager {
                 language: (record as { language?: string }).language ?? DEFAULT_DEBATE_LANGUAGE,
                 version: record.version || 1,
                 arguments: parsedArgs,
+                failedProviders:
+                    safeJsonParse(
+                        (record as { failedProviders?: string }).failedProviders ?? '[]',
+                    ) ?? [],
+                failedModels:
+                    safeJsonParse((record as { failedModels?: string }).failedModels ?? '[]') ?? [],
             };
             session.restoreInternalState(restoredSnapshot);
 

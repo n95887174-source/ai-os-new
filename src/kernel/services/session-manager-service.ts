@@ -17,6 +17,7 @@ import { loadHistoryList, persistHistoryList } from './debate-runtime/debate-ses
 import { DebateTimelineRepository } from '../dal/debate-timeline-repository';
 import { DebateOverrideRepository } from '../dal/debate-override-repository';
 import { SessionLinkRepository } from '../dal/session-link-repository';
+import type { IDebateEngine } from '../contracts/debate-runtime';
 
 const LOGGER = rootLogger.child('SessionManagerService');
 
@@ -33,6 +34,7 @@ export class SessionManagerService implements ISessionManager {
         private timelineRepo: DebateTimelineRepository,
         private overrideRepo: DebateOverrideRepository,
         private linkRepo: SessionLinkRepository,
+        private debateEngine?: IDebateEngine,
     ) {}
 
     async create(
@@ -135,6 +137,14 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async pause(id: string): Promise<void> {
+        // Route through engine first if active runtime session exists
+        if (this.debateEngine) {
+            try {
+                this.debateEngine.pauseSession(id);
+            } catch {
+                /* session not active in engine */
+            }
+        }
         const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             await this.debateStore.saveSnapshot({
@@ -148,6 +158,14 @@ export class SessionManagerService implements ISessionManager {
     }
 
     async resume(id: string): Promise<void> {
+        // Route through engine first if active runtime session exists
+        if (this.debateEngine) {
+            try {
+                this.debateEngine.resumeSession(id);
+            } catch {
+                /* session not active in engine */
+            }
+        }
         const debate = await this.debateStore.getSnapshot(id);
         if (debate) {
             await this.debateStore.saveSnapshot({

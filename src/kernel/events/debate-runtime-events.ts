@@ -19,6 +19,7 @@ export const DebateRuntimeEvents = {
     BUDGET_UPDATED: EVENT_REGISTRY.DEBATE_BUDGET_UPDATED.name,
     BUDGET_PRESSURE_CHANGED: EVENT_REGISTRY.DEBATE_BUDGET_PRESSURE_CHANGED.name,
     CONSENSUS_REACHED: EVENT_REGISTRY.DEBATE_CONSENSUS_REACHED.name,
+    AGENT_SCORED: EVENT_REGISTRY.DEBATE_AGENT_SCORED.name,
 } as const;
 
 export type DebateRuntimeEvent = (typeof DebateRuntimeEvents)[keyof typeof DebateRuntimeEvents];
@@ -42,4 +43,5 @@ export type DebateRuntimeEventMap = Pick<
     | 'debate:runtime:budget:updated'
     | 'debate:runtime:budget:pressure'
     | 'debate:runtime:consensus:reached'
+    | 'debate:runtime:agent:scored'
 >;

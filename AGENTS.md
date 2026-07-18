@@ -4310,3 +4310,25 @@ Add auto-refresh (usePolling, 15s interval) to 6 🟡 Partial panels from the pa
 - `npx tsc --noEmit --project tsconfig.app.json` ✅ zero errors
 - `npx vite build` ✅ 10.36s, 4058 modules
 - All 6 panels now 🟢 Live with auto-refresh (15s polling, pauses when tab hidden)
+
+---
+
+## Current Session (2026-07-18) — Debate Audit Fixes (Отчёт об аудите модуля дебатов AI OS)
+
+### Goal
+
+Fix all 3 remaining open findings from Manus AI debate module audit (8/11 were already fixed in prior sessions).
+
+### Changes
+
+| #   | Finding                                                                                                                                                    | File                                                                       | Fix                                                                                                                                                                                  |
+| :-- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **failedProviders/failedModels not persisted** — `saveSnapshot()` didn't include them in DB record; `restoreSession()` didn't read them back               | `debate-persistence-manager.ts`                                            | Added `failedProviders` and `failedModels` as JSON.stringify'd arrays to both primary and minimal records in `saveSnapshot()`, and restored them in `restoreSession()`               |
+| 2   | **SessionManagerService pause/resume bypass DebateEngine** — wrote `paused`/`active` phase directly to DB without calling engine, risking engine-UI desync | `session-manager-service.ts`                                               | Added optional `debateEngine?: IDebateEngine` to constructor; `pause()`/`resume()` now call `engine.pauseSession(id)` / `engine.resumeSession(id)` before DB write                   |
+| 3   | **DEBATE_AGENT_PHASE_CHANGED event misuse** — `to` field contained `JSON.stringify(score)` (AgentScore object) instead of a phase string                   | `event-registry.ts`, `debate-phase-handler.ts`, `debate-runtime-events.ts` | Created new `DEBATE_AGENT_SCORED` event with proper typed Zod schema (6 score fields). Phase-handler now emits the new event instead of JSON-stringifying score into the phase field |
+
+### Status
+
+- `npx vite build` ✅ 21.87s, 4059 modules
+- All 11 audit findings resolved (8 pre-existing, 3 fixed this session)
+- Roadmap: 2 🔴 Future items remain (Veo/Lyria — blocked by Google API)

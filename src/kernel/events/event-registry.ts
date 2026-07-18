@@ -652,6 +652,19 @@ export const EVENT_REGISTRY = {
         'debate:runtime:agent:phase:changed',
         z.object({ sessionId: z.string(), agentId: z.string(), from: z.string(), to: z.string() }),
     ),
+    DEBATE_AGENT_SCORED: event(
+        'debate:runtime:agent:scored',
+        z.object({
+            sessionId: z.string(),
+            agentId: z.string(),
+            overall: z.number(),
+            argumentQuality: z.number(),
+            rebuttalStrength: z.number(),
+            coherence: z.number(),
+            persuasiveness: z.number(),
+            factuality: z.number(),
+        }),
+    ),
     DEBATE_TRANSITION_INVALID: event(
         'debate:transition:invalid',
         z.object({ from: z.string(), to: z.string(), sessionId: z.string() }),

@@ -136,11 +136,15 @@ export function createPhaseChangeHandler(
                                     claims,
                                     chain,
                                 );
-                                deps.eventBus.emit(EVENTS.DEBATE_AGENT_PHASE_CHANGED, {
+                                deps.eventBus.emit(EVENTS.DEBATE_AGENT_SCORED, {
                                     sessionId,
                                     agentId: p.agentId,
-                                    from: 'completed',
-                                    to: JSON.stringify(score),
+                                    overall: score.overall,
+                                    argumentQuality: score.argumentQuality,
+                                    rebuttalStrength: score.rebuttalStrength,
+                                    coherence: score.coherence,
+                                    persuasiveness: score.persuasiveness,
+                                    factuality: score.factuality,
                                 });
                             }
                         }
