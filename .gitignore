@@ -41,8 +41,6 @@ scripts/insert-all-keys.ts
 scripts/tmp-show-bytes.ps1
 scripts/tmp-show-lines.ps1
 fix-imports.ps1
-build_errors.txt
-test.txt
 
 # Production TLS certificates
 certs/
@@ -70,8 +68,7 @@ test-summary.txt
 playwright-report/
 playwright/.cache/
 
-# Prompt vault (dead code — superseded by prompt-store.ts)
-prompt-vault/
+
 
 # Temp analysis files
 temp_*.txt

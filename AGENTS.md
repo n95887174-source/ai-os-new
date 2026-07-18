@@ -111,7 +111,6 @@ npx eslint src/      # lint
 - `docs/` — architecture docs, specs, manifest
 - `docs/STRUCTURE.md` — detailed project structure
 - `.superagents/` — system rules
-- `prompt-vault/` — reusable prompts
 - `CHANGELOG.md` — full version history
 
 ## Naming
@@ -754,12 +753,12 @@ Groups stored via `DatabaseService.setKv()` → Dexie `keyValue` table, bypassin
 
 ### Changes
 
-| #   | Fix                                                                                           | File                        |
-| :-- | :-------------------------------------------------------------------------------------------- | :-------------------------- |
-| 1   | `GroupManager.storage` routed from `DatabaseService` (Dexie keyValue) → SQLite `config` store | `service-registration.ts`   |
-| 2   | `persistSqliteDb()` added to `SqliteConfigStore.set()`, `.delete()`, `.clear()`               | `sqlite-storage.ts:475-484` |
-| 3   | `persistSqliteDb()` added to `SqliteRolesStore.saveAll()`, `.clear()`                         | `sqlite-storage.ts:535-567` |
-| 4   | `persistSqliteDb()` added to `SqliteSkillsStore.saveAll()`, `.clear()`                        | `sqlite-storage.ts:589-613` |
+| #   | Fix                                                                                           | File                       |
+| :-- | :-------------------------------------------------------------------------------------------- | :------------------------- |
+| 1   | `GroupManager.storage` routed from `DatabaseService` (Dexie keyValue) → SQLite `config` store | `service-registration.ts`  |
+| 2   | `persistSqliteDb()` added to `SqliteConfigStore.set()`, `.delete()`, `.clear()`               | (service refactored since) |
+| 3   | `persistSqliteDb()` added to `SqliteRolesStore.saveAll()`, `.clear()`                         | (service refactored since) |
+| 4   | `persistSqliteDb()` added to `SqliteSkillsStore.saveAll()`, `.clear()`                        | (service refactored since) |
 
 ### TypeScript
 
