@@ -52,7 +52,7 @@ export class WorkflowService implements ILifecycle {
     private workflows: Workflow[] = [];
     private runs: WorkflowRun[] = [];
     private loaded = false;
-    private currentAbort: AbortController | null = null;
+    private runningAborts = new Map<string, AbortController>();
 
     async init(): Promise<void> {
         // Lazy init via ensureLoaded() — nothing to do upfront
@@ -164,7 +164,6 @@ export class WorkflowService implements ILifecycle {
 
         const { adapterRegistry, keyService } = await import('../instances');
         const abortController = new AbortController();
-        this.currentAbort = abortController;
 
         const run: WorkflowRun = {
             id: uid(),
@@ -176,6 +175,7 @@ export class WorkflowService implements ILifecycle {
             currentStepIndex: 0,
         };
         this.runs.push(run);
+        this.runningAborts.set(run.id, abortController);
         await this.persist();
 
         const allKeys = keyService.getKeys();
@@ -242,15 +242,23 @@ export class WorkflowService implements ILifecycle {
             }
         } finally {
             run.completedAt = Date.now();
-            this.currentAbort = null;
+            this.runningAborts.delete(run.id);
             await this.persist();
         }
 
         return run;
     }
 
-    cancelRun(): void {
-        this.currentAbort?.abort();
-        this.currentAbort = null;
+    cancelRun(runId?: string): void {
+        if (runId) {
+            const ctrl = this.runningAborts.get(runId);
+            if (ctrl) {
+                ctrl.abort();
+                this.runningAborts.delete(runId);
+            }
+        } else {
+            for (const [, ctrl] of this.runningAborts) ctrl.abort();
+            this.runningAborts.clear();
+        }
     }
 }

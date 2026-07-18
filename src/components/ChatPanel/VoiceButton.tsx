@@ -88,10 +88,16 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
         };
 
         recognition.onend = () => {
+            // Ownership check: if recognitionRef has been replaced by a newer
+            // session (e.g. user clicked mic twice quickly), do NOT touch state.
+            if (recognitionRef.current !== recognition) return;
             if (isMountedRef.current) setIsListening(false);
             if (isMountedRef.current) recognitionRef.current = null;
         };
         recognition.onerror = (event: unknown) => {
+            // Ownership check: same as onend — ignore callbacks from stale
+            // recognition instances that raced ahead of a new startListening().
+            if (recognitionRef.current !== recognition) return;
             const err = event as { error: string };
             if (isMountedRef.current) setIsListening(false);
             if (isMountedRef.current) recognitionRef.current = null;

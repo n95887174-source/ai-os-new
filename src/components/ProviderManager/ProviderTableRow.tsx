@@ -99,9 +99,17 @@ const ProviderTableRow: React.FC<
     const isMountedRef = useRef(true);
     const testInitiatedRef = useRef(false);
     const testPromptRef = React.useRef(testPrompt);
+    const testModelRef = React.useRef(testModel);
+    const testTempRef = React.useRef(testTemperature);
+    const testMaxTokensRef = React.useRef(testMaxTokens);
+    const apiKeyIdRef = React.useRef(apiKey.id);
     useEffect(() => {
         testPromptRef.current = testPrompt;
-    }, [testPrompt]);
+        testModelRef.current = testModel;
+        testTempRef.current = testTemperature;
+        testMaxTokensRef.current = testMaxTokens;
+        apiKeyIdRef.current = apiKey.id;
+    }, [testPrompt, testModel, testTemperature, testMaxTokens, apiKey.id]);
 
     const handleTest = (e: React.SyntheticEvent) => {
         e.stopPropagation();
@@ -120,22 +128,22 @@ const ProviderTableRow: React.FC<
         const prompt = testPromptRef.current;
         if (!prompt.trim()) return;
 
-        const reqId = `quick-test-tbl-${apiKey.id}-${crypto.randomUUID().slice(0, 6)}`;
-        const start = Date.now();
-        let isDone = false;
-
+        const keyId = apiKeyIdRef.current;
         const p = apiKey.provider.toLowerCase();
         const defaultModel = PROVIDER_DEFAULT_MODELS[p] || 'auto';
+        const resolvedModel = testModelRef.current || apiKey.availableModels?.[0] || defaultModel;
 
-        const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
+        const reqId = `quick-test-tbl-${keyId}-${crypto.randomUUID().slice(0, 6)}`;
+        const start = Date.now();
+        let isDone = false;
 
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,
             model: resolvedModel,
             messages: [{ role: 'user', content: prompt }],
             requestId: reqId,
-            keyId: apiKey.id,
-            options: { temperature: testTemperature, maxTokens: testMaxTokens },
+            keyId,
+            options: { temperature: testTempRef.current, maxTokens: testMaxTokensRef.current },
         });
 
         const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
@@ -182,12 +190,18 @@ const ProviderTableRow: React.FC<
             if (!isMountedRef.current) return;
             if (!isDone) {
                 isDone = true;
+                eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: reqId });
                 setTestStatus('error');
                 setTestError('Request timed out');
             }
         }, 15000);
 
         return () => {
+            // Cancel the in-flight request on unmount/re-fire so it doesn't
+            // continue consuming quota in the background after the UI is gone.
+            if (!isDone) {
+                eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: reqId });
+            }
             isMountedRef.current = false;
             testInitiatedRef.current = false;
             subResp();
@@ -196,7 +210,7 @@ const ProviderTableRow: React.FC<
             clearTimeout(timeout);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [testStatus, apiKey.id, testModel, testTemperature, testMaxTokens]);
+    }, [testStatus]);
 
     return (
         <>

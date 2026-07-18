@@ -105,12 +105,12 @@ export class ReconnectionService {
                     'ReconnectionService',
                     `onReconnect timed out for stream ${state.config.streamId}`,
                 );
-                if (this.streams.get(state.config.streamId) === state) {
-                    this.streams.delete(state.config.streamId);
-                }
-                // C-25: only fire onGiveUp if this state is still the current one for this streamId
+                // Check ownership BEFORE deleting — the delete would make the
+                // subsequent ownership check always fail, silencing onGiveUp.
                 if (this.streams.get(state.config.streamId) !== state) return;
+                state.destroyed = true;
                 state.config.onGiveUp(state.config.streamId, state.config.provider);
+                this.streams.delete(state.config.streamId);
             }, 30000);
             try {
                 const success = await state.config.onReconnect(
