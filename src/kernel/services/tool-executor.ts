@@ -423,7 +423,7 @@ export class ToolService {
                 );
             } else if (toolId === 't-code') {
                 const code = tool.code || 'return data';
-                resultData = await this.deps.sandboxService?.execute(code, input);
+                resultData = await this.deps.sandboxService?.execute(code, input, undefined, []);
             } else if (toolId === 't-web') {
                 const url =
                     typeof input === 'string' ? input : (input as Record<string, string>).url || '';

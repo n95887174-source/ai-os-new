@@ -197,12 +197,14 @@ const ExportImportPanel: React.FC = () => {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
             };
+            const failed: string[] = [];
             for (const section of sections) {
                 if (selected.has(section.id)) {
                     try {
                         const sectionData = await section.exportData();
                         data[section.id] = sectionData;
                     } catch {
+                        failed.push(section.label);
                         data[section.id] = { error: 'Failed to export' };
                     }
                 }
@@ -214,7 +216,12 @@ const ExportImportPanel: React.FC = () => {
             a.download = `superagents-export-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            setResult({ ok: true, msg: `Export complete! ${selected.size} sections exported.` });
+            const succeeded = selected.size - failed.length;
+            const msg =
+                failed.length === 0
+                    ? `Export complete! ${succeeded} sections exported.`
+                    : `Export complete (${succeeded}/${selected.size}): ${failed.join(', ')} failed. Check logs.`;
+            setResult({ ok: failed.length === 0, msg });
         } catch (e) {
             setResult({
                 ok: false,

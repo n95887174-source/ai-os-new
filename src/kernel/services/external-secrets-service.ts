@@ -73,7 +73,7 @@ export class ExternalSecretsService {
 
     private verifyAdminToken(token?: string): boolean {
         const expected = CONFIG.security?.adminToken;
-        if (!expected) return true;
+        if (!expected) return false;
         if (!token) return false;
         return token === expected;
     }
@@ -137,13 +137,6 @@ export class ExternalSecretsService {
                     });
                     return null;
                 });
-                if (value != null) {
-                    store.set(ref, value).catch((e) =>
-                        LOGGER.warn('ExternalSecretsService', 'Replication to store failed:', {
-                            error: e,
-                        }),
-                    );
-                }
             }
         }
 
@@ -155,16 +148,6 @@ export class ExternalSecretsService {
         if (!store) return false;
 
         const ok = await store.set(ref, value);
-        // Replicate to local store for resilience
-        if (ok && this.activeBackend !== 'local') {
-            const local = this.backends.get('local');
-            if (local)
-                local.set(ref, value).catch((e) =>
-                    LOGGER.warn('ExternalSecretsService', 'Local replication failed:', {
-                        error: e,
-                    }),
-                );
-        }
         return ok;
     }
 

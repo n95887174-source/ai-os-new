@@ -124,7 +124,7 @@ export class VirtualKeyService implements IVirtualKeyService {
 
     private verifyAdminToken(token?: string): boolean {
         const expected = CONFIG.security?.adminToken;
-        if (!expected) return true;
+        if (!expected) return false;
         if (!token) return false;
         return token === expected;
     }

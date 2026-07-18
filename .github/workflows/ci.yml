@@ -145,7 +145,6 @@ jobs:
               if: steps.audit-npm-cache.outputs.cache-hit != 'true'
               run: npm ci --legacy-peer-deps
             - name: Run npm audit
-              continue-on-error: true
               run: npm audit --audit-level=high
 
     circular-check:

@@ -100,7 +100,7 @@ describe('ExternalSecretsService', () => {
     it('should get status of all backends', async () => {
         const deps = makeDeps();
         const svc = new ExternalSecretsService(deps);
-        svc.register('custom', mockStore({ type: 'local', label: 'Custom' }));
+        svc.register('vault', mockStore({ type: 'vault', label: 'Custom' }));
         await svc.init();
         const status = await svc.getStatus();
         expect(status.length).toBeGreaterThanOrEqual(2);
@@ -123,14 +123,38 @@ describe('ExternalSecretsService', () => {
         expect(v1).toBe('v1');
     });
 
-    it('should fallback to local when active backend misses', async () => {
+    it('should fallback to local when active backend throws', async () => {
         const deps = makeDeps();
+        // Override factory BEFORE init so activateBackend creates the broken store
+        deps.storeFactories!.vault = () =>
+            mockStore({
+                type: 'vault',
+                label: 'Broken Vault',
+                get: vi.fn().mockRejectedValue(new Error('Vault unreachable')),
+            });
+        const svc = new ExternalSecretsService(deps);
+        await svc.init();
+        await svc.setSecret({ path: 'shared/key' }, 'fallback-value');
+        await svc.activateBackend('vault', { type: 'vault', label: 'Broken Vault' });
+        const val = await svc.getSecret({ path: 'shared/key' });
+        expect(val).toBe('fallback-value');
+    });
+
+    it('should return null when active backend has no secret (no fallback)', async () => {
+        const deps = makeDeps();
+        // vault store returns null (key not found), not throw
+        deps.storeFactories!.vault = () =>
+            mockStore({
+                type: 'vault',
+                label: 'Vault',
+                get: vi.fn().mockResolvedValue(null),
+            });
         const svc = new ExternalSecretsService(deps);
         await svc.init();
         await svc.setSecret({ path: 'shared/key' }, 'fallback-value');
         await svc.activateBackend('vault', { type: 'vault', label: 'Vault' });
         const val = await svc.getSecret({ path: 'shared/key' });
-        expect(val).toBe('fallback-value');
+        expect(val).toBeNull();
     });
 
     it('should return null for missing secret on all backends', async () => {

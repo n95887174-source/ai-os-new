@@ -156,11 +156,7 @@ export class SandboxService {
                     const { requestId, method, params } = event.data;
 
                     if (method === 'executeTool') {
-                        if (
-                            allowedTools.length > 0 &&
-                            !allowedTools.includes('*') &&
-                            !allowedTools.includes(params.toolId)
-                        ) {
+                        if (!allowedTools.includes('*') && !allowedTools.includes(params.toolId)) {
                             worker.postMessage({
                                 type: 'cap_response',
                                 requestId,
