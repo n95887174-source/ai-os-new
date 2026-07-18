@@ -17,7 +17,7 @@ const FALLBACK_PRICING: Record<string, { input: number; output: number; provider
     'claude-2': { input: 8.0, output: 24.0, provider: 'anthropic' },
     'gemini-3.1-flash-lite': { input: 0.25, output: 1.5, provider: 'google' },
     'gemini-3.1-flash': { input: 0.5, output: 2.0, provider: 'google' },
-    'gemini-3.5-flash': { input: 2.5, output: 10.0, provider: 'google' },
+    'gemini-2.0-flash': { input: 2.5, output: 10.0, provider: 'google' },
     'gemini-3.1-pro': { input: 3.0, output: 12.0, provider: 'google' },
     'llama-3.3-70b': { input: 0.6, output: 0.8, provider: 'meta' },
     'meta/llama-3.3-70b-instruct': { input: 0.9, output: 0.9, provider: 'nvidia' },
@@ -36,6 +36,7 @@ const FALLBACK_PRICING: Record<string, { input: number; output: number; provider
     'mixtral-8x7b': { input: 0.5, output: 0.5, provider: 'mistral' },
     'command-r-plus': { input: 3.0, output: 15.0, provider: 'cohere' },
     'dbrx-instruct': { input: 0.6, output: 2.4, provider: 'databricks' },
+    free: { input: 0, output: 0, provider: 'openrouter' },
 };
 
 const OVERRIDES_KEY = 'super_agents_pricing_overrides';
@@ -125,7 +126,21 @@ export class PricingService implements ICostCalculator {
     }
 
     protected lookup(model: string): { input: number; output: number; provider?: string } {
-        const key = model.toLowerCase().trim();
+        // Strip provider prefixes (openrouter/, groq/, nvidia/, meta-llama/, etc.) so model names
+        // match the bare names in FALLBACK_PRICING (e.g. "llama-3.1-8b-instant")
+        // Handle both slash-separated (openrouter/, meta-llama/) and colon-separated (groq:, etc.)
+        const stripped = model
+            .replace(
+                /^(openrouter|groq|nvidia|gemini|openai|anthropic|mistral|cohere|deepseek|alibaba|meta-llama)\//i,
+                '',
+            )
+            .replace(
+                /^(openrouter|groq|nvidia|gemini|openai|anthropic|mistral|cohere|deepseek|alibaba|meta-llama):/i,
+                '',
+            )
+            .toLowerCase()
+            .trim();
+        const key = stripped;
         const override = this.userOverrides[key];
         if (override) return override;
         const exact = this.pricingData[key];

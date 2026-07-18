@@ -360,45 +360,50 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                     layout
                     style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
                 >
-                    {(session.participants ?? []).map((p, idx) => {
-                        const agentCount = args.filter((a) => a.agentId === p.id).length;
-                        return (
-                            <motion.div
-                                key={p.id}
-                                layout
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ type: 'spring', delay: idx * 0.1 }}
-                                className="debate-participant"
-                            >
-                                <div
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: 12,
-                                        background: 'rgba(59,130,246,0.15)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        border: '1px solid rgba(59,130,246,0.3)',
-                                    }}
+                    {[...(session.participants ?? [])]
+                        .reduce<typeof session.participants>((acc, p) => {
+                            if (!acc.find((e) => e.id === p.id)) acc.push(p);
+                            return acc;
+                        }, [])
+                        .map((p, idx) => {
+                            const agentCount = args.filter((a) => a.agentId === p.id).length;
+                            return (
+                                <motion.div
+                                    key={p.id}
+                                    layout
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ type: 'spring', delay: idx * 0.1 }}
+                                    className="debate-participant"
                                 >
-                                    <Bot size={22} color="#3b82f6" />
-                                </div>
-                                <div style={{ flex: 1 }}>
                                     <div
-                                        className="debate-agent-name"
-                                        style={{ fontSize: '0.95rem' }}
+                                        style={{
+                                            width: 44,
+                                            height: 44,
+                                            borderRadius: 12,
+                                            background: 'rgba(59,130,246,0.15)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            border: '1px solid rgba(59,130,246,0.3)',
+                                        }}
                                     >
-                                        {getAgentLabel(p.id)}
+                                        <Bot size={22} color="#3b82f6" />
                                     </div>
-                                    <div className="debate-secondary-text">
-                                        {agentCount} {t('debate.total_arguments').toLowerCase()}
+                                    <div style={{ flex: 1 }}>
+                                        <div
+                                            className="debate-agent-name"
+                                            style={{ fontSize: '0.95rem' }}
+                                        >
+                                            {getAgentLabel(p.id)}
+                                        </div>
+                                        <div className="debate-secondary-text">
+                                            {agentCount} {t('debate.total_arguments').toLowerCase()}
+                                        </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
+                                </motion.div>
+                            );
+                        })}
                 </motion.div>
             </div>
         </div>
