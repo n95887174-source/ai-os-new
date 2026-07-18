@@ -29,7 +29,7 @@ SuperAgents OS — это **интегрированная среда выпол
 - **Visual Builder:** Интерактивная среда для рисования топологий (агенты, роутеры, инструменты).
 - **Hot Swap:** Изменения в топологии применяются без перезагрузки системы.
 
-## Architecture Stack (v4.1.0)
+## Architecture Stack (v4.5.0)
 
 - **Runtime**: Event-Driven Multi-Agent Orchestrator.
 - **Kernel Pattern**: Reducer-pattern state machine with deep immutable state.
@@ -42,13 +42,13 @@ SuperAgents OS — это **интегрированная среда выпол
 - **Coordination**: Blackboard Pattern (Shared State).
 - **Protocol**: MCP (Model Context Protocol).
 
-## 4. Тестирование (v4.0.3)
+## 4. Тестирование (v4.5.0)
 
 - **TypeScript**: 0 errors (`npx tsc --noEmit`).
 - **Build**: Successful in ~4s (`npx vite build`).
 - **All kernel runtime errors**: fixed (race conditions, timers, lifecycle, state persistence).
 
-## 5. Kernel Hardening (v4.0.3)
+## 5. Kernel Hardening (v4.5.0)
 
 Ядро системы (`src/kernel/kernel.ts`) реализует защиту в глубину:
 

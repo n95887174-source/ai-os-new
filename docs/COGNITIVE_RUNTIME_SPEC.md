@@ -81,4 +81,4 @@ interface CognitiveStep {
 
 ---
 
-**Revision:** 4.5.0 (Multi-Agent Dialectic Arena — 25 agents, 71 strategies, metrics layer)
+**Revision:** 4.5.0 (Multi-Agent Dialectic Arena — 25 agents, 13 base strategies + 33 built-in presets, metrics layer)

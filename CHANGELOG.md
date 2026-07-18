@@ -4,9 +4,9 @@
 
 ## [v4.5.0] - 2026-05-27
 
-### 🌐 Multi-Agent Dialectic Arena — 20 Agents, 3 Strategies, Metrics Layer
+### 🌐 Multi-Agent Dialectic Arena — 25 Agents, 3 Strategies, Metrics Layer
 
-- **20 Agent Workforce**: `topology-defaults.ts` rewritten: 22 nodes (router → 20 agents → aggregator). Distinct roles, prompts, temperatures, tools, models. All agents selectable in DebatePanel ("Select All"/"Deselect All" buttons)
+- **25 Agent Workforce**: `topology-defaults.ts` rewritten: 22 nodes (router → 25 agents → aggregator). Distinct roles, prompts, temperatures, tools, models. All agents selectable in DebatePanel ("Select All"/"Deselect All" buttons)
 - **3 new debate strategies**: Socratic Method (Q&A rotation), Argument Tree (parent-child hierarchy), Constrained Debates (6 constraint types per agent). Strategy dispatch in `getNextParticipant()`
 - **Parser hardening**: `ParentResolution` type with 4-stage fallback chain (explicit → fallback_latest → orphan → invalid_reference). `DebateArgument.parentResolution` + `rawParentRef` fields
 - **Structural Graph Metrics**: `DebateGraphMetrics` (totalNodes, maxDepth, avgDepth, orphanRate, branchingFactor, challengeDensity, refinementDensity). `computeGraphMetrics()` in `stopDebate()`
@@ -34,8 +34,8 @@
 ### 🧠 Debate Model Fix Sprint — Groq & Model Selection
 
 - **Auto-debate default model fix**: `auto-debate-service.ts:96` changed from hardcoded `'gpt-3.5-turbo'` to `undefined` — provider-appropriate default used instead (was causing 404 on all providers)
-- **Model selection guard**: `debate-service.ts:450-457` — `callLLM` ignores `participant.modelId` when participant didn't specify a matching provider. Topology's bare model names (e.g. `model: 'gpt-3.5-turbo'` without `provider:model` format) get replaced with provider default
-- **Groq model updated**: `llama3-8b-8192` (decommissioned) → `llama-3.1-8b-instant` in 4 files (`debate-service.ts`, `InstalledProvidersView.tsx` ×2, `SandboxTab.tsx`)
+- **Model selection guard**: `debate-runtime/debate-sync-manager.ts:450-457` — `callLLM` ignores `participant.modelId` when participant didn't specify a matching provider. Topology's bare model names (e.g. `model: 'gpt-3.5-turbo'` without `provider:model` format) get replaced with provider default
+- **Groq model updated**: `llama3-8b-8192` (decommissioned) → `llama-3.1-8b-instant` in 4 files (`debate-runtime/debate-sync-manager.ts`, `InstalledProvidersView.tsx` ×2, `SandboxTab.tsx`)
 - **Streaming → sendMessage**: Debate now uses `adapter.sendMessage()` directly instead of `streamMessage()`. Groq streaming via Vite proxy consistently timed out at 30s; non-streaming returns in ~2-6s
 - **Logger safety**: Removed `this.deps.logger.warn()` — `DebateServiceDeps` doesn't include `logger`; replaced with `console.warn`
 - **Build clean**: `npx vite build` succeeds (2.94s), `npx tsc -b --noEmit` passes with zero errors

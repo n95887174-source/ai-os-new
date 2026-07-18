@@ -19,7 +19,7 @@ The system is architected around a **kernel with services, not plugins**. Every 
 ├─────────────────────────────────────────────────────────────┤
 │                    Service Layer                              │
 │                                                              │
-│  DebateService  ─── orchestrates debates                     │
+│  DebateSyncManager  ─── orchestrates debates                     │
 │    ├─ DebateGovernor ─── claim graph, contradictions         │
 │    ├─ DebateInterpreter ─── post-hoc analysis                │
 │    ├─ DebateStateBuilder ─── prompt context builder          │
@@ -50,10 +50,10 @@ The system is architected around a **kernel with services, not plugins**. Every 
 │    ├─ LifecycleManager ─── init/start/destroy               │
 │    ├─ TransactionContext ─── atomic multi-mutation          │
 │    ├─ LoggerService ─── structured logging                  │
-│    ├─ FeatureFlagService ─── runtime feature control        │
+│    ├─ config-mutations.ts ─── runtime feature control       │
 │    ├─ ConfigService ─── configuration overlays              │
 │    ├─ ConsistencyChecker ─── docs↔code validation           │
-│    └─ ConsistencyHealingPipeline ─── auto-healing flow      │
+│    └─ ConsistencyChecker (implements IConsistencyHealingPipeline) ─── auto-healing flow │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,7 +61,7 @@ The system is architected around a **kernel with services, not plugins**. Every 
 
 | Component            | Location                                                                |
 | -------------------- | ----------------------------------------------------------------------- |
-| DebateService        | `src/kernel/services/debate-runtime/debate-service.ts`                  |
+| DebateSyncManager    | `src/kernel/services/debate-runtime/debate-sync-manager.ts`             |
 | DebateGovernor       | `src/kernel/services/debate-runtime/debate-governor/`                   |
 | DebateInterpreter    | `src/kernel/services/debate-runtime/debate-interpreter.ts`              |
 | DebateStateBuilder   | `src/kernel/services/debate-runtime/debate-state-builder.ts`            |
@@ -73,10 +73,10 @@ The system is architected around a **kernel with services, not plugins**. Every 
 | Bootstrap            | `src/kernel/bootstrap.ts`                                               |
 | Event Names          | `src/kernel/events/`                                                    |
 
-### Dependency Graph (DebateService)
+### Dependency Graph (DebateSyncManager)
 
 ```
-DebateService
+DebateSyncManager
   → IDatabaseService     (persistence: Dexie KV)
   → IProviderAdapterRegistry  (getAdapter, resetCircuitBreaker)
   → IKeyService          (getKeys, recordUsage)
@@ -87,7 +87,7 @@ DebateService
 ConsistencyChecker
   → (standalone, no DI deps — operates on code manifest)
 
-ConsistencyHealingPipeline
+ConsistencyChecker (implements IConsistencyHealingPipeline)
   → IConsistencyChecker  (checkDocs for validation/verification)
 ```
 
@@ -95,9 +95,9 @@ ConsistencyHealingPipeline
 
 At startup, bootstrap registers ~50 services, inits them in parallel (with critical/optional classification), mounts the default agent topology, and starts observability subsystems. At runtime:
 
-- `DebateService.startDebate()` is the main entry point — it validates inputs, creates a session, runs opening statements, then enters a round loop
+- `DebateSyncManager.startDebate()` is the main entry point — it validates inputs, creates a session, runs opening statements, then enters a round loop
 - Each argument feeds the `DebateGovernor` which maintains a claim graph internally
 - After each round, governor stop conditions are checked (no novel claims, convergence plateau, all contradictions resolved)
 - On stop, metrics and interpretation are computed, results are persisted, and the UI is updated via events
 - `DebateEngine` is a separate, more formal engine that can be used programmatically — it has its own session lifecycle, budget tracking, and consensus engine
-- `ConsistencyChecker.checkDocs()` validates doc references against the code manifest at any point; `ConsistencyHealingPipeline.analyze()` wraps detection + planning + debate dispatch for auto-healing
+- `ConsistencyChecker.checkDocs()` validates doc references against the code manifest at any point; `ConsistencyChecker (implements IConsistencyHealingPipeline).analyze()` wraps detection + planning + debate dispatch for auto-healing

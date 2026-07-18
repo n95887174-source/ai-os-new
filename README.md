@@ -56,13 +56,7 @@ SuperAgents OS reimagines the browser as an AI operating system. Every component
 │  React components, Zustand stores                    │
 │  (imports services + contracts only)                 │
 └────────────────────────┬────────────────────────────┘
-                         │ EventBus
-┌────────────────────────▼────────────────────────────┐
-│               Legacy Service Layer                    │
-│  src/services/ — thin Proxy wrappers                 │
-│  (delegate to kernel, no business logic)             │
-└────────────────────────┬────────────────────────────┘
-                         │ DI injection
+                          │ EventBus
 ┌────────────────────────▼────────────────────────────┐
 │                   Kernel Layer                        │
 │  SystemKernel  EventBus  Container  Bootstrap        │
@@ -111,7 +105,7 @@ Connect any LLM provider through API keys. Keys are encrypted using AES-GCM with
 Each provider adapter wraps the vendor API through a decorator chain:
 
 ```
-Request → RateLimiter → CircuitBreaker → Retry → Cache → Adapter
+Request → Logging → Cache → CostManager → PriorityQueue → CircuitBreaker → Retry → RateLimit → Adapter
 ```
 
 ### Chat & Execution
@@ -162,7 +156,7 @@ Visual workflow builder for creating multi-node cognitive pipelines using React 
 Multi-agent debate system with configurable strategies and comprehensive metrics:
 
 - **3 positions**: Pro, Con, Neutral
-- **6 strategies**: Round-robin, Moderated, Free-for-all, Socratic Method, Argument Tree, Constrained Debates
+- **13 strategies** (33 built-in presets): Round-robin, Moderated, Free-for-all, Socratic Method, Argument Tree, Constrained Debates
 - **25 agent workforce**: Distinct roles, prompts, temperatures, tools, models
 - **Debate temperature slider**: Pure Logic → Balanced → Pure Emotion tone control
 - **Structural graph metrics**: Depth, branching, orphan rate, challenge/refinement density
@@ -203,7 +197,7 @@ Multi-agent debate system with configurable strategies and comprehensive metrics
 | **Icons**        | Lucide React                                       |
 | **Validation**   | Zod 4.x                                            |
 | **Testing**      | Vitest + React Testing Library                     |
-| **Charts**       | Custom SVG + ECharts                               |
+| **Charts**       | Custom SVG + Recharts                              |
 
 ---
 
@@ -250,7 +244,7 @@ Open `http://localhost:5173` in your browser.
 src/
 ├── kernel/              # Kernel (DI, contracts, services, events, state)
 │   ├── contracts/       # 123 contract interfaces (IKeyVault, IProviderAdapter, etc.)
-│   ├── services/        # 277 files across 18 subdirs (key-management, provider-runtime,
+│   ├── services/        # 299 files across 18 subdirs (key-management, provider-runtime,
 │   │                   #   debate-runtime, debate-governor, agent-diversity,
 │   │                   #   routing-policy, rotation, cognitive-intelligence,
 │   │                   #   event-sourcing, advisor, runtime-intelligence,
@@ -282,10 +276,10 @@ src/
 │           Traces, Analytics, Audience, Guardians, Deploy, Workflows,
 │           Prompts, Security, GoogleStudio, GeminiLive, EvalDatasets,
 │           CustomMetrics, Aquarium, Ecosystem, etc.)
-├── services/            # Web Workers (2 files)
+├── kernel/workers/      # Web Workers (2 files)
 │   ├── memory.worker.ts   # Web Worker: BM25 + semantic search
 │   └── sandbox.worker.ts  # Web Worker: AST-based code validation
-├── llm/                 # LLM provider adapters (7 adapters, 25 supported names, 12 decorators)
+├── llm/                 # LLM provider adapters (7 adapters, 25 supported names, 11 decorators)
 │   ├── gemini/          # Gemini adapter + Google GenAI SDK integration
 │   ├── openai-compatible/ # OpenAI-compatible (Groq, Cerebras, Cloudflare, etc.)
 │   ├── openrouter/      # OpenRouter adapter
@@ -350,6 +344,14 @@ Adjust routing behavior in **Settings → SLA Mode**:
 | `npm run check:circular-kernel` | Check circular deps in kernel       |
 | `npm run check:deps`            | Check unused/missing dependencies   |
 | `npm run proxy`                 | Start CORS proxy server             |
+| `npm run build:unsafe`          | Build with increased memory         |
+| `npm run check:deps:graph`      | Generate dependency graph SVG       |
+| `npm run dev:shared`            | Runs Vite + sync-server together    |
+| `npm run fix:unused`            | Remove unused exports               |
+| `npm run prepare`               | Install husky hooks                 |
+| `npm run sync-server`           | Start collaboration sync server     |
+| `npm run test:watch`            | Watch mode tests                    |
+| `npm run typecheck:watch`       | Watch mode type checking            |
 
 ---
 

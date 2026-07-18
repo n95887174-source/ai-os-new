@@ -22,20 +22,20 @@ DebateParticipant {
 
 The 25 default agents come from `topology-defaults.ts`:
 
-| Category | Agents |
-|----------|--------|
-| **Technical (6)** | System Architect, Security Engineer, DevOps Engineer, Database Engineer, Network Engineer, Performance Engineer |
-| **Analytical (5)** | Critical Auditor, Data Scientist, Risk Analyst, Research Analyst, Quality Engineer |
-| **Creative (4)** | Creative Visionary, Product Designer, Content Strategist, UX Researcher |
-| **Management (3)** | Project Manager, Product Owner, Team Lead |
-| **Specialized (2)** | Technical Writer, Ethics Officer |
-| **Documentation (5)** | Architect Agent, Auditor Agent, Simplifier Agent, Historian Agent, Consistency Checker |
+| Category              | Agents                                                                                                          |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Technical (6)**     | System Architect, Security Engineer, DevOps Engineer, Database Engineer, Network Engineer, Performance Engineer |
+| **Analytical (5)**    | Critical Auditor, Data Scientist, Risk Analyst, Research Analyst, Quality Engineer                              |
+| **Creative (4)**      | Creative Visionary, Product Designer, Content Strategist, UX Researcher                                         |
+| **Management (3)**    | Project Manager, Product Owner, Team Lead                                                                       |
+| **Specialized (2)**   | Technical Writer, Ethics Officer                                                                                |
+| **Documentation (5)** | Architect Agent, Auditor Agent, Simplifier Agent, Historian Agent, Consistency Checker                          |
 
 ### Behavior Layer
 
 - Agents fire in strategy-defined order, not all at once
 - Each agent gets a prompt built from: role context + archetype block + constraint block + temperature tone + debate state context
-- An agent that fails (provider error, timeout) is retried up to 10 times across different providers
+- An agent that fails (provider error, timeout) is retried up to 3 times across different providers
 - After speaking, the agent's argument is scored for confidence, fed to the governor for claim extraction, and checked for parent references (argument tree)
 
 ## 2.2 Debate
@@ -66,15 +66,16 @@ DebateSession {
 }
 ```
 
-**6 strategies** (`DebateStrategy`):
-| Strategy | Behavior | Use Case |
-|----------|----------|----------|
-| `round_robin` | Fixed modulo order | Balanced, predictable debates |
-| `moderated` | LLM picks next speaker | Dynamic, adaptive turn-taking |
-| `free_for_all` | Random ≠ last speaker | Unpredictable, chaotic exploration |
-| `socratic` | Socrates ↔ respondent Q&A | Logical drilling, hidden assumptions |
-| `argument_tree` | Hierarchical `[parent:id]` references | Structured argument mapping |
-| `constrained` | Round-robin with per-agent constraints | Controlled reasoning experiments |
+**13 strategies (33 built-in presets)** (`DebateStrategy`):
+
+| Strategy        | Behavior                               | Use Case                             |
+| --------------- | -------------------------------------- | ------------------------------------ |
+| `round_robin`   | Fixed modulo order                     | Balanced, predictable debates        |
+| `moderated`     | LLM picks next speaker                 | Dynamic, adaptive turn-taking        |
+| `free_for_all`  | Random ≠ last speaker                  | Unpredictable, chaotic exploration   |
+| `socratic`      | Socrates ↔ respondent Q&A              | Logical drilling, hidden assumptions |
+| `argument_tree` | Hierarchical `[parent:id]` references  | Structured argument mapping          |
+| `constrained`   | Round-robin with per-agent constraints | Controlled reasoning experiments     |
 
 ### Behavior Layer
 
@@ -120,6 +121,7 @@ ClaimGraph {
 ```
 
 Managed by `src/kernel/services/debate-governor/`:
+
 - `claim-extractor.ts` — parses an argument text into claim objects
 - `claim-graph.ts` — insert claims, query by speaker/status, detect cross-edges
 - `contradiction-detector.ts` — pairwise semantic overlap detection with configurable threshold

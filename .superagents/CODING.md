@@ -18,7 +18,7 @@
 - NO React/DOM imports in `src/kernel/`
 - NO global singletons in kernel — only DI constructor injection
 - NO circular dependencies — services import contracts, not other services
-- `src/services/` contains only Web Workers (`memory.worker.ts`, `sandbox.worker.ts`). All business logic lives in `src/kernel/services/`.
+- `src/kernel/workers/` contains only Web Workers (`memory.worker.ts`, `sandbox.worker.ts`). All business logic lives in `src/kernel/services/`.
 - Async init() NEVER in constructor — always in separate async method
 
 ## Patterns

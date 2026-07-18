@@ -89,7 +89,7 @@ SystemKernel (kernel.ts)
   → IProviderTracker   (providerTracker)        [optional]
   → ICostCalculator    (costCalculator)         [optional]
 
-DebateService (debate-runtime/debate-service.ts)
+DebateSyncManager (debate-runtime/debate-sync-manager.ts)
   → IDatabaseService   (database.getKv, setKv)
   → IProviderAdapterRegistry (adapterRegistry.getAdapter, resetCircuitBreaker)
   → IKeyService        (keyService.getKeys, getActiveKeys, recordUsage)
@@ -102,7 +102,7 @@ KeyStateStore (key-state-store.ts)
   → IDatabaseService   (database.getKv, setKv)
   → IKeyService        (keyService)             [optional]
 
-FeatureFlagService (feature-flag-service.ts)
+config-mutations.ts
   → IEventBus          (eventBus)
   → IDatabaseService   (database.getKv, setKv)
   → ILogger            (logger)                 [optional]
@@ -122,7 +122,7 @@ CacheService (cache-service.ts)
   → IEventBus          (eventBus)
   → IDatabaseService   (database.getKv, setKv)
 
-HealthService (health-service.ts)
+HealthSlaService (health-sla-service.ts)
   → IEventBus          (eventBus)
   → IKeyService        (keyService.getKeys)
   → IDatabaseService   (database.getKv, setKv)
@@ -143,7 +143,7 @@ NotificationWebhookService (notification-webhook-service.ts)
 ConsistencyChecker (consistency-checker.ts)
   → (standalone — reads code manifest)
 
-ConsistencyHealingPipeline (consistency-healing-pipeline.ts)
+ConsistencyChecker (consistency-checker.ts)
   → IConsistencyChecker (checker.checkDocs)
 
 ### Full Dependency Graph (textual)

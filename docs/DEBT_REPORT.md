@@ -1,7 +1,7 @@
 # Debt Report — Технический долг системы
 
 > SuperAgents OS v4.5.0
-> Основание: аудит 1986 файлов, 277 сервисов, 145+ панелей
+> Основание: аудит 1986 файлов, 299 .ts файлов, 145+ панелей
 
 ---
 
@@ -15,7 +15,7 @@
 
 ---
 
-### D-02: `debate-service.ts` — split ✅
+### D-02: `debate-runtime/debate-sync-manager.ts` — split ✅
 
 Было 1447 строк. Вынесено в модули:
 
@@ -26,7 +26,7 @@
 - `debate-session-persistence.ts` — localStorage + DB + history
 - `debate-runtime-adapter.ts` — feature-flag runtime engine bridge
 
-**`debate-service.ts`** — ~747 строк: start/stop/rounds, opening statements, argument loop, governor hooks.
+**`debate-runtime/debate-sync-manager.ts`** — ~747 строк: start/stop/rounds, opening statements, argument loop, governor hooks.
 
 ---
 
@@ -36,34 +36,35 @@
 | ------------------------- | ----- | ------------------------------------------------- |
 | **HealthPanel** (пчёлки)  | 512   | probe control, health check, полноценная приборка |
 | **AquariumPanel** (рыбки) | 608   | 0 — чистая анимация тех же данных                 |
-| **HivePanel** (соты)      | 374   | 0 — чистая анимация тех же данных                 |
+| **HivePanel** (соты)      | 374   | 0 — чистая анимация тех же данных (удалён)        |
 
 Все три читают одни и те же данные из `useKeyStore()`. Aquarium и Hive — 0% уникальной логики, только визуальный gimmick.
 
-**Статус:** ✅ Done — `ui.experimentalVisuals` feature flag (default off), sidebar filter in App.tsx, Settings toggle, header comments on panels. Routes `/aquarium` and `/hive` remain for deep links.
+**Статус:** ✅ Done — `ui.experimentalVisuals` feature flag (default off), sidebar filter, Settings toggle, header comments. HivePanel удалён, маршрут `/hive` перенаправляет на `/health`. Маршрут `/aquarium` сохранён.
 
 ---
 
-### D-04: EventsPanel дублирует EventsTimeline
+### D-04: EventsPanel (заменён на LogsPanel/TimelinePanel)
 
 | Панель             | Строк | Фичи                                                     |
 | ------------------ | ----- | -------------------------------------------------------- |
-| **EventsPanel**    | 352   | ring buffer 200, search, pause, export                   |
+| **EventsPanel**    | 352   | ring buffer 200, search, pause, export (заменён)         |
 | **EventsTimeline** | 324   | localStorage 500, search, pause, grouping, timeline view |
+| **LogsPanel**      | ~400  | structured log viewer, level filter, service filter      |
 
-EventsTimeline строго лучше — умеет всё то же самое + сохраняет историю + группировка.
+LogsPanel + EventsTimeline покрывают все сценарии. EventsPanel удалён.
 
-**Статус:** ✅ Done — `/events` → redirect to `/timeline`; EventsPanel file kept with DEPRECATED header.
+**Статус:** ✅ Done — `/events` → redirect to `/logs`; EventsPanel удалён.
 
 ---
 
 ## P1 — Высокий приоритет
 
-### D-05: ConsistencyHealingPipeline дублирует ConsistencyChecker
+### D-05: ConsistencyChecker (бывш. ConsistencyHealingPipeline)
 
-**ConsistencyChecker** (182 строки) — валидация docs ↔ code. **ConsistencyHealingPipeline** (226 строк) — обёртка: check → analyze → plan → fix. 100% зависимость от Checker.
+**ConsistencyChecker** (182 строки) — валидация docs ↔ code. Ранее существовал `ConsistencyHealingPipeline` (226 строк) — обёртка: check → analyze → plan → fix. Слит в единый `ConsistencyChecker`.
 
-**Статус:** ✅ Done — `ConsistencyChecker` implements both interfaces; `consistencyHealingPipeline` DI alias points to same instance.
+**Статус:** ✅ Done — `ConsistencyChecker` implements both interfaces; DI alias points to same instance.
 
 ---
 
@@ -124,18 +125,18 @@ EventsTimeline строго лучше — умеет всё то же само�
 
 ## Сводка
 
-| ID   | Долг                          | Тип       | Приоритет | Усилия | Эффект                                       |
-| ---- | ----------------------------- | --------- | --------- | ------ | -------------------------------------------- |
-| D-01 | Мёртвый код (3 шт)            | clean     | **P0**    | —      | ✅                                           |
-| D-02 | debate-service.ts split       | split     | **P0**    | —      | ✅ ~747 lines core + 7 modules               |
-| D-03 | Aquarium+Hive дубли           | deprecate | **P0**    | —      | ✅                                           |
-| D-04 | EventsPanel дубль             | deprecate | **P0**    | —      | ✅                                           |
-| D-05 | HealingPipeline в Checker     | merge     | **P1**    | —      | ✅                                           |
-| D-06 | RoutingIntelligenceView дубль | re-route  | **P1**    | —      | ✅                                           |
-| D-07 | latency-tracker контракт      | clean     | **P2**    | —      | ✅                                           |
-| D-08 | oversized UI                  | split     | **P2**    | —      | ✅ All 5 files split                         |
-| D-09 | 7 as any                      | watch     | **P3**    | 0      | не увеличивать                               |
-| D-10 | kernel circular deps check    | infra     | **P3**    | —      | ✅ `check:circular-kernel` (19 known cycles) |
+| ID   | Долг                                        | Тип       | Приоритет | Усилия | Эффект                                       |
+| ---- | ------------------------------------------- | --------- | --------- | ------ | -------------------------------------------- |
+| D-01 | Мёртвый код (3 шт)                          | clean     | **P0**    | —      | ✅                                           |
+| D-02 | debate-runtime/debate-sync-manager.ts split | split     | **P0**    | —      | ✅ ~747 lines core + 7 modules               |
+| D-03 | Aquarium+Hive дубли                         | deprecate | **P0**    | —      | ✅ HivePanel удалён                          |
+| D-04 | EventsPanel дубль                           | deprecate | **P0**    | —      | ✅ заменён на LogsPanel/TimelinePanel        |
+| D-05 | HealingPipeline в Checker                   | merge     | **P1**    | —      | ✅                                           |
+| D-06 | RoutingIntelligenceView дубль               | re-route  | **P1**    | —      | ✅                                           |
+| D-07 | latency-tracker контракт                    | clean     | **P2**    | —      | ✅                                           |
+| D-08 | oversized UI                                | split     | **P2**    | —      | ✅ All 5 files split                         |
+| D-09 | 7 as any                                    | watch     | **P3**    | 0      | не увеличивать                               |
+| D-10 | kernel circular deps check                  | infra     | **P3**    | —      | ✅ `check:circular-kernel` (19 known cycles) |
 
 **Итого:**
 

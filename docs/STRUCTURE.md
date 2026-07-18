@@ -3,7 +3,7 @@
 ## 📂 Root Directory
 
 - `docs/ПОЛНЫЙ_РЕЕСТР.md`: Complete system passport (246 entries, Russian).
-- `docs/SERVICES_RU.md`: All 277 DI services catalog (Russian).
+- `docs/SERVICES_RU.md`: All 299 DI services catalog (Russian).
 - `docs/events.md`: 198+ typed events with payloads and Zod schemas.
 - `docs/STRUCTURE.md`: This file — detailed project structure.
 - `docs/07-ui-layer_RU.md`: All 145 UI panels with categories, event maps (Russian).
@@ -12,7 +12,6 @@
 - `AGENTS.md`: Root-level OpenCode agent guide with commands, patterns, and kernel details.
 - `TASKS.md`: Bug tracking and audit task list.
 - `.superagents/`: System rules (ARCHITECTURE.md, CODING.md, RULES.md).
-- `prompt-vault/`: Reusable prompt templates.
 
 ## 📂 Source Code (`/src`)
 
@@ -33,28 +32,26 @@
 - `state/`: State shape interfaces + defaults (`topology-defaults.ts`).
 - `utils/`: Kernel utilities (`tokenEstimate.ts`, `ssr-storage.ts`, `sanitize.ts`).
 - `instances.ts`: 126 lazyService singleton exports for runtime resolution
-- `services/`: 303 files across 18 subdirectories:
+- `services/`: 303 files across 15 subdirectories:
   - `key-management/` — vault, registry, health, quotas, analytics, fingerprints, alerts, lifecycle, facade, pool-selector
   - `provider-runtime/` — instances, sessions, state, budget
   - `event-sourcing/` — recorder, checkpoints, replay engine
   - `advisor/` — advisor logic, optimization engine
-  - `rotation/` — key rotation engine
   - `cognitive-intelligence/` — cognitive orchestration, trace service
   - `debate-runtime/` — engine, session, budget, memory, orchestrator, evaluator, timeline, consensus, conclusion, bridge
-  - `debate-governor/` — claim extraction, contradiction detection, claim graph, synthesis generation
   - `agent-diversity/` — semantic clustering, diversity scoring, influence tracking, reasoning patterns
   - `routing-policy/` — routing policies
   - `runtime-intelligence/` — whatif-service, pressure-map-service, diagnostic-service
   - `storage/` — storage-adapter (5 singleton buckets)
   - `memory/` — 7-store architecture (working, episodic, semantic, procedural, emotional, social, spatial)
   - `research-adapters/` — 34 API source adapters (ArXiv, PubMed, Semantic Scholar, GitHub, etc.)
-  - `guardian/` — registry with 7 guardians (Sprinter, Guardian, Titan, Phantom, Merchant, Hermit, Muse)
-  - `debate-interpreter/` — interpretation engine (summary, disagreement peak, trajectory changers)
-  - `epoch/` — time cycles, weather, achievements, streaks
-- _Standalone service files_ (50+): `chat-service.ts`, `chat-executor.ts`, `config-service.ts`, `config-registry.ts`, `config-history.ts`, `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `memory-engine.ts`, `memory-orchestrator.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `policy-service.ts`, `snapshot-service.ts`, `health-service.ts`, `key-state-store.ts`, `feature-flag-service.ts`, `debate-service.ts`, `debate-archetypes.ts`, `debate-interpreter.ts`, `debate-metrics.ts`, `settings-service.ts`, `group-manager.ts`, `orchestration-service.ts`, `metrics-service.ts`, `admin-service.ts`, `consistency-checker.ts`, `consistency-healing-pipeline.ts`, `prompt-store.ts`, `cross-tab-state.ts`, `deploy-service.ts`, `fine-tuning-service.ts`, `model-distillation-service.ts`, `team-collaboration-service.ts`, `tutorial-service.ts`, `audience-service.ts`, `ecosystem-engine.ts`, `research-engine-service.ts`, `unified-role-service.ts`, `prompt-library-service.ts`, `prompt-security-service.ts`, `workflow-service.ts`, `reconnection-service.ts`, `bridge-keeper-service.ts`, `google-genai-service.ts`, `gemini-live-service.ts`, `agent-avatar-service.ts`, `eval-dataset-service.ts`, `custom-metrics-service.ts`
+  - `elo/` — ELO rating system for provider ranking and leaderboard
+  - `event-bridge/` — cross-service event bridging and routing
+  - `projections/` — state projections and materialized views
+- _Standalone service files_ (50+): `chat-service.ts`, `chat-executor.ts`, `config-service.ts`, `config-registry.ts`, `config-history.ts`, `provider-adapter-registry.ts`, `llm-client-service.ts`, `virtual-key-service.ts`, `memory-engine.ts`, `memory-orchestrator.ts`, `tool-executor.ts`, `pricing-service.ts`, `budget-service.ts`, `cache-service.ts`, `logger-service.ts`, `external-secrets-service.ts`, `compromise-webhook-service.ts`, `notification-webhook-service.ts`, `policy-service.ts`, `snapshot-service.ts`, `health-sla-service.ts`, `key-state-store.ts`, `config-mutations.ts` (feature flags), `debate-service.ts`, `debate-archetypes.ts`, `debate-interpreter.ts`, `debate-metrics.ts`, `settings-service.ts`, `group-manager.ts`, `orchestration-service.ts`, `metrics-service.ts`, `admin-service.ts`, `consistency-checker.ts`, `ConsistencyChecker` (implements `IConsistencyHealingPipeline`), `prompt-store.ts`, `cross-tab-state.ts`, `deploy-service.ts`, `fine-tuning-service.ts`, `model-distillation-service.ts`, `team-collaboration-service.ts`, `tutorial-service.ts`, `audience-service.ts`, `ecosystem-engine.ts`, `research-engine-service.ts`, `unified-role-service.ts`, `prompt-library-service.ts`, `prompt-security-service.ts`, `workflow-service.ts`, `reconnection-service.ts`, `guardian-registry.ts`, `google-genai-service.ts`, `gemini-live-service.ts`, `agent-avatar-service.ts`, `eval-dataset-service.ts`, `custom-metrics-service.ts`
 - `DEPENDENCY_MAP.md`: Full DI injection graph.
 
-### ⚙️ Services (`/src/services/`) — 2 Web Workers
+### ⚙️ Workers (`/src/kernel/workers/`) — 2 Web Workers
 
 - `memory.worker.ts`: BM25 + semantic embeddings (Transformers.js) for memory search.
 - `sandbox.worker.ts`: AST-based code validation via meriyah. No business logic here — all services live in `src/kernel/services/`.
@@ -62,7 +59,7 @@
 ### 🤖 LLM Layer (`/src/llm/`)
 
 - Provider adapters (7 implementations, 25 supported names): Gemini, OpenRouter, Groq (via OpenAI-compatible), NVIDIA, OpenAI, Cerebras, Cloudflare, Azure, Anthropic, Custom, etc.
-- Decorators (12): Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, Priority Queue, Canary Router, Cost Manager, Metrics, Compression, Semantic Router, Logging — all extend `BaseDecorator` with `destroy()` propagation
+- Decorators (11): Circuit Breaker, Cache, Retry, Fallback, Rate Limiter, Priority Queue, Canary Router, Cost Manager, Metrics, Compression, Logging — all extend `BaseDecorator` with `destroy()` propagation
 - `LLM client` in `src/kernel/services/llm-client-service.ts` — adapters send directly, no facade layer
 - `core/` — types, SSE parser, token counter, HTTP client, `BaseDecorator`, middleware pipeline, errors
 - Zod response schemas: `OpenRouterResponseSchema`, `NvidiaNIMResponseSchema` — `.safeParse()` on API responses

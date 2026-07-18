@@ -8,33 +8,34 @@ The metrics system transforms debate artifacts (arguments, claims, participant a
 
 ### Graph Metrics — `DebateGraphMetrics`
 
-Computed by `computeGraphMetrics()` in `debate-service.ts`. Only meaningful for `argument_tree` strategy.
+Computed by `computeGraphMetrics()` in DebateEngine. Only meaningful for `argument_tree` strategy.
 
-| Field | Calculation | What It Measures |
-|-------|-----------|-----------------|
-| `totalNodes` | Count of arguments | Debate size |
-| `maxDepth` | Longest parent→child chain | Reasoning depth |
-| `avgDepth` | Mean depth across all nodes | Average chain length |
-| `orphanRate` | Nodes without valid parent / total | Tree fragmentation |
-| `branchingFactor` | Average children per parent | Argument diversification |
-| `challengeDensity` | Cross-position parent links / total | Counter-argument engagement |
-| `refinementDensity` | Same-position parent links / total | Elaboration vs. challenge |
+| Field               | Calculation                         | What It Measures            |
+| ------------------- | ----------------------------------- | --------------------------- |
+| `totalNodes`        | Count of arguments                  | Debate size                 |
+| `maxDepth`          | Longest parent→child chain          | Reasoning depth             |
+| `avgDepth`          | Mean depth across all nodes         | Average chain length        |
+| `orphanRate`        | Nodes without valid parent / total  | Tree fragmentation          |
+| `branchingFactor`   | Average children per parent         | Argument diversification    |
+| `challengeDensity`  | Cross-position parent links / total | Counter-argument engagement |
+| `refinementDensity` | Same-position parent links / total  | Elaboration vs. challenge   |
 
 ### Activity Metrics — `ActivityMetrics`
 
-Computed by `computeActivityMetrics()` in `debate-service.ts`. Independent of strategy.
+Computed by `computeActivityMetrics()` in DebateEngine. Independent of strategy.
 
-| Component | Fields | What It Measures |
-|-----------|--------|-----------------|
-| `perAgent[]` | `argumentCount`, `wordCount`, `avgConfidence`, `avgDepth`, `childrenReceived` | Per-agent contribution |
-| `mostDiscussed[]` | Top-5 arguments by `childCount` | Which arguments received most responses |
-| `roundIntensity[]` | Arguments per round index | Debate pacing |
+| Component          | Fields                                                                        | What It Measures                        |
+| ------------------ | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `perAgent[]`       | `argumentCount`, `wordCount`, `avgConfidence`, `avgDepth`, `childrenReceived` | Per-agent contribution                  |
+| `mostDiscussed[]`  | Top-5 arguments by `childCount`                                               | Which arguments received most responses |
+| `roundIntensity[]` | Arguments per round index                                                     | Debate pacing                           |
 
 ### Quality Metrics — `QualityMetrics`
 
-Computed by `computeQualityMetrics()` in `debate-service.ts`. Three composites:
+Computed by `computeQualityMetrics()` in DebateEngine. Three composites:
 
 **DepthMetric** — composite of:
+
 - `uniqueArguments` — distinct bigram-signature arguments
 - `lexicalDiversity` — unique words / total words
 - `uniqueBigrams` — distinct character bigrams
@@ -42,11 +43,13 @@ Computed by `computeQualityMetrics()` in `debate-service.ts`. Three composites:
 - `depthScore` = 0.25 * uniqueRatio + 0.25 * lexical + 0.25 * topicBreadth + 0.25 * bigrams/50
 
 **OriginalityMetric** — composite of:
+
 - `selfRepetition` — avg Jaccard similarity between same-agent consecutive arguments
 - `crossRepetition` — avg Jaccard similarity between different agents (last 3 each)
 - `noveltyScore` = 1 − (0.4 * selfRep + 0.6 * crossRep)
 
 **UsefulnessMetric** — composite of:
+
 - `relevanceScore` — topic word overlap in arguments
 - `evidenceScore` — fraction of arguments with numbers/citations/evidence patterns
 - `structureScore` — 0.4 * hasParentLinks + 0.3 * balance + 0.3

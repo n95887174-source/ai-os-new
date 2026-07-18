@@ -6,7 +6,7 @@
 2. **No globals in kernel** — DI injection only (`src/kernel/container.ts`)
 3. **Events first** — all cross-service communication via EventBus
 4. **Contracts at boundaries** — interfaces in `contracts/`, implementations in `services/`
-5. **No legacy wrappers** — `src/services/` contains only Web Workers. All business logic in `src/kernel/services/`
+5. **No legacy wrappers** — `src/kernel/workers/` contains only Web Workers. All business logic in `src/kernel/services/`
 
 ## File structure rules
 

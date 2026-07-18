@@ -17,12 +17,12 @@ The system is organized as a layered runtime:
 
 There are **two parallel debate engines**:
 
-| Engine | File | Purpose |
-|--------|------|---------|
-| `DebateService` | `debate-service.ts` | High-level, synchronous, single-session. Used by UI. Has metrics + interpretation |
-| `DebateEngine` | `debate-runtime/debate-engine.ts` | Contract-driven, DAG topology, formal phase lifecycle. Budget, memory, consensus |
+| Engine              | File                                    | Purpose                                                                           |
+| ------------------- | --------------------------------------- | --------------------------------------------------------------------------------- |
+| `DebateSyncManager` | `debate-runtime/debate-sync-manager.ts` | High-level, synchronous, single-session. Used by UI. Has metrics + interpretation |
+| `DebateEngine`      | `debate-runtime/debate-engine.ts`       | Contract-driven, DAG topology, formal phase lifecycle. Budget, memory, consensus  |
 
-The documentation focuses on `DebateService` — the primary engine used for interactive debates.
+The documentation focuses on `DebateSyncManager` — the primary engine used for interactive debates.
 
 ## Behavior Layer
 
@@ -37,7 +37,8 @@ At runtime, the system:
 7. **Emits events** at every step so the UI can react in real-time
 
 The system does NOT:
+
 - Pretend LLM output is reliable (everything is measured and fallback chains exist)
 - Use a single LLM call for complex tasks (multi-agent decomposition is built in)
-- Assume the first provider will work (retry with provider fallback across up to 10 attempts)
+- Assume the first provider will work (retry with provider fallback across up to 3 attempts)
 - Store mutable state (deep-freeze + structured clone for state reads)

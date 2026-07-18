@@ -32,37 +32,44 @@ This layered architecture is the system's primary research contribution: it make
 │  Layer 1: Generation                                         │
 │  callLLM() → DebateArgument                                  │
 │  buildOpeningPrompt() / buildArgumentPrompt()                │
-│  → provider fallback (up to 10 retries, 3 tiers)             │
+│  → provider fallback (up to 3 retries, 3 tiers)             │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-| Layer | File(s) | Key Function |
-|-------|---------|-------------|
-| Generation | `debate-service.ts` | `callLLM()`, `buildOpeningPrompt()`, `buildArgumentPrompt()` |
-| Control | `debate-governor/` | `ingestArgument()`, `shouldStop()`, `detectContradictions()` |
-| Diversity | `debate-governor/diversity-scorer.ts` | `update()`, speaker diversity, constraint enforcement |
-| Measurement | `debate-service.ts` | `computeGraphMetrics()`, `computeActivityMetrics()`, `computeQualityMetrics()` |
-| Interpretation | `debate-interpreter.ts` | `interpret()`, `buildDisagreementTimeline()`, `findTrajectoryChangers()` |
+| Layer          | File(s)                                 | Key Function                                                                   |
+| -------------- | --------------------------------------- | ------------------------------------------------------------------------------ |
+| Generation     | `debate-runtime/debate-sync-manager.ts` | `callLLM()`, `buildOpeningPrompt()`, `buildArgumentPrompt()`                   |
+| Control        | `debate-governor/`                      | `ingestArgument()`, `shouldStop()`, `detectContradictions()`                   |
+| Diversity      | `debate-governor/diversity-scorer.ts`   | `update()`, speaker diversity, constraint enforcement                          |
+| Measurement    | `debate-runtime/debate-sync-manager.ts` | `computeGraphMetrics()`, `computeActivityMetrics()`, `computeQualityMetrics()` |
+| Interpretation | `debate-interpreter.ts`                 | `interpret()`, `buildDisagreementTimeline()`, `findTrajectoryChangers()`       |
 
 ## Behavior Layer
 
 ### Layer 1 — Generation
-Builds LLM prompts with structural context (role, constraints, temperature tone, debate state, parent references). Calls LLM with up to 10 retries across 3 fallback tiers. Returns structured `DebateArgument` with confidence score.
+
+Builds LLM prompts with structural context (role, constraints, temperature tone, debate state, parent references). Calls LLM with up to 3 retries across 3 fallback tiers. Returns structured `DebateArgument` with confidence score.
 
 ### Layer 2 — Control (Governor)
+
 After each argument, extracts claims, adds to claim graph, checks for contradictions with existing claims, computes convergence score. Determines whether debate should stop based on novelty, convergence, and contradiction resolution.
 
 ### Layer 3 — Diversity
+
 Tracks which speakers have contributed, what positions they've taken, and whether constraints are being respected. Prevents any single speaker from dominating. For `constrained` strategy, checks compliance via heuristic patterns.
 
 ### Layer 4 — Measurement
+
 Computed at debate stop:
+
 - **Graph metrics**: tree structure stats (depth, branching, orphan rate)
 - **Activity metrics**: per-agent participation (count, words, confidence, responses)
 - **Quality metrics**: depth (lexical diversity, topic breadth), originality (self/cross repetition via Jaccard), usefulness (relevance, evidence, structure)
 
 ### Layer 5 — Interpretation
+
 Pure computation (no LLM) over debate artifacts:
+
 - **Summary**: one-line quantitative description
 - **Disagreement peak**: round and intensity of maximum divergence
 - **Trajectory changers**: arguments that shifted focus, deepened, contradicted, or shifted consensus

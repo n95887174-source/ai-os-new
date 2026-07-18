@@ -2,7 +2,7 @@
 
 ## Concept Layer
 
-The experiments framework enables systematic comparison of debate configurations. It is built on the `AutoDebateService` which wraps `DebateService.startDebate()` and records results. The framework is designed for A/B testing of strategies, archetypes, constraints, and temperature settings.
+The experiments framework enables systematic comparison of debate configurations. It is built on the `AutoDebateService` which wraps `DebateSyncManager.startDebate()` and records results. The framework is designed for A/B testing of strategies, archetypes, constraints, and temperature settings.
 
 ## System Mapping Layer
 
@@ -10,19 +10,19 @@ The experiments framework enables systematic comparison of debate configurations
 
 **Location**: `src/kernel/services/auto-debate/auto-debate-service.ts`
 
-**Dependencies**: `keyService`, `debateService` (via `startDebate`)
+**Dependencies**: `keyService`, `DebateSyncManager` (via `startDebate`)
 
 **Methods**:
 
-| Method | Purpose |
-|--------|---------|
-| `runAutoDebate(options?)` | Single debate with auto-selected participants and random topic |
-| `runQuickTest()` | Quick single debate with default settings |
-| `stressTest(count)` | Run N debates sequentially, measure throughput and failure rate |
-| `batchTest(topic, runs)` | Run N debates on the same topic, compare outcomes |
-| `getResults()` | Return `AutoDebateResult[]` with timings per debate |
-| `getWinRates()` | Compute `ProviderWinRate[]` — how often each provider appears in consensus text |
-| `clearResults()` | Reset accumulated results |
+| Method                    | Purpose                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| `runAutoDebate(options?)` | Single debate with auto-selected participants and random topic                  |
+| `runQuickTest()`          | Quick single debate with default settings                                       |
+| `stressTest(count)`       | Run N debates sequentially, measure throughput and failure rate                 |
+| `batchTest(topic, runs)`  | Run N debates on the same topic, compare outcomes                               |
+| `getResults()`            | Return `AutoDebateResult[]` with timings per debate                             |
+| `getWinRates()`           | Compute `ProviderWinRate[]` — how often each provider appears in consensus text |
+| `clearResults()`          | Reset accumulated results                                                       |
 
 **Topics**: 25 topics across 5 categories (Technology, Science, Philosophy, Business, Society).
 
@@ -32,14 +32,14 @@ The experiments framework enables systematic comparison of debate configurations
 
 The UI supports experiment configuration:
 
-| Control | Range | Purpose |
-|---------|-------|---------|
-| Strategy selector | 6 strategies | Compare turn-taking strategies |
-| Max rounds | 2–50 | Vary debate length |
-| Temperature slider | 0–10 | Compare tone effects |
-| Archetype toggles | 6 archetypes + Auto | Compare thinking styles |
-| Constraint per-agent | 7 options | Compare reasoning restrictions |
-| Agent selection | 20 agents | Test different team compositions |
+| Control              | Range                       | Purpose                          |
+| -------------------- | --------------------------- | -------------------------------- |
+| Strategy selector    | 13 strategies (33 built-in) | Compare turn-taking strategies   |
+| Max rounds           | 2–50                        | Vary debate length               |
+| Temperature slider   | 0–10                        | Compare tone effects             |
+| Archetype toggles    | 6 archetypes + Auto         | Compare thinking styles          |
+| Constraint per-agent | 7 options                   | Compare reasoning restrictions   |
+| Agent selection      | 20 agents                   | Test different team compositions |
 
 ## Behavior Layer
 
@@ -53,14 +53,14 @@ The UI supports experiment configuration:
 
 ### What to Measure
 
-| Question | Metric to Check |
-|----------|----------------|
-| Which strategy produces deepest reasoning? | `graphMetrics.maxDepth`, `qualityMetrics.depth.depthScore` |
-| Which archetype creates most original arguments? | `qualityMetrics.originality.noveltyScore` |
-| Do constraints reduce relevance? | `qualityMetrics.usefulness.relevanceScore` |
-| Does temperature affect convergence? | `convergenceScore` at round 5 vs. round 10 |
-| Which provider is most reliable? | `getWinRates()` from AutoDebateService |
-| Does team size affect quality? | Compare 5 vs. 10 vs. 20 agents on same topic |
+| Question                                         | Metric to Check                                            |
+| ------------------------------------------------ | ---------------------------------------------------------- |
+| Which strategy produces deepest reasoning?       | `graphMetrics.maxDepth`, `qualityMetrics.depth.depthScore` |
+| Which archetype creates most original arguments? | `qualityMetrics.originality.noveltyScore`                  |
+| Do constraints reduce relevance?                 | `qualityMetrics.usefulness.relevanceScore`                 |
+| Does temperature affect convergence?             | `convergenceScore` at round 5 vs. round 10                 |
+| Which provider is most reliable?                 | `getWinRates()` from AutoDebateService                     |
+| Does team size affect quality?                   | Compare 5 vs. 10 vs. 20 agents on same topic               |
 
 ### Known Limitations
 

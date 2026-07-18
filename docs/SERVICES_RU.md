@@ -1,6 +1,6 @@
 # Сервисы Ядра — Полный Справочник
 
-> SuperAgents OS v4.5.0 — 277 DI-сервисов, 18 подсистем
+> SuperAgents OS v4.5.0 — 299 .ts файлов, 18 подсистем
 
 ## Архитектура
 
@@ -72,7 +72,7 @@ Bootstrap → service-list.ts → LifecycleManager.initAll() → .startAll()
 - **Методы**: `register(name, service)`, `initAll()`, `startAll()`, `shutdown()`
 - **Поведение**: LIFO shutdown. Дедупликация по имени. `shutdown()` вместо ручного списка уничтожения
 
-### Feature Flags (`config-mutations.ts` + `contracts/feature-flags.ts`)
+### config-mutations.ts (`config-mutations.ts` + `contracts/feature-flags.ts`)
 
 - **Назначение**: Управление feature flags (набор функций, не класс)
 - **Имплементирует**: `IFeatureFlagService` (контракт)
@@ -209,7 +209,7 @@ Bootstrap → service-list.ts → LifecycleManager.initAll() → .startAll()
 - **События**: эмитит `key:probe:result`, `chat:stream:end` (для аналитики)
 - **Поведение**: Пробует все ключи независимо от статуса. Перед пробоем сбрасывает circuit breaker. После пробоя классифицирует: ready/limited/broken/error/auth_error/timeout/unknown. Результаты идут в KeyStateStore. Таймаут 5с, промпт "Reply only: OK"
 
-### HealthService (`health-service.ts`)
+### HealthSlaService (`health-sla-service.ts`)
 
 - **Назначение**: Периодическая проверка здоровья ключей
 - **События**: подписывается на `key:health:check`, `key:health:check:all`
@@ -323,10 +323,10 @@ Bootstrap → service-list.ts → LifecycleManager.initAll() → .startAll()
 
 ## 8. Дебаты
 
-### DebateService (`debate-service.ts`)
+### DebateSyncManager (`debate-runtime/debate-sync-manager.ts`)
 
 - **Назначение**: Полная оркестрация многогерентных дебатов
-- **6 стратегий**: round_robin, moderated, free_for_all, socratic, argument_tree, constrained
+- **13 стратегий (33 встроенных пресета)**: round_robin, moderated, free_for_all, socratic, argument_tree, constrained
 - **События**: `debate:updated`, `debate:started`, `debate:argument`, `debate:consensus`
 - **Поведение**: Управление сессией, выбор следующего участника по стратегии, LLM-вызовы через адаптеры, сбор метрик (graph metrics, activity metrics, quality metrics), interpretation layer, constraint compliance scoring. Поддержка инъекций человека. 25 агентов в топологии workforce-001
 
@@ -636,10 +636,10 @@ Bootstrap → service-list.ts → LifecycleManager.initAll() → .startAll()
 - **Имплементирует**: `IConsistencyChecker`
 - **Поведение**: Regex-based парсинг .md файлов (извлекает `src/...paths`, PascalCase типы, `event:names`), сверка с CodeManifest. 380+ записей в манифесте
 
-### ConsistencyHealingPipeline (`consistency-healing-pipeline.ts`)
+### ConsistencyChecker (`consistency-checker.ts`)
 
-- **Назначение**: Автоматическое исцеление документации
-- **Имплементирует**: `IConsistencyHealingPipeline`
+- **Назначение**: Валидация документации против кода
+- **Имплементирует**: `IConsistencyChecker`
 - **Поведение**: analyze → plan (группировка ошибок по файлам) → execute (Documentation Debate с 5 агентами) → verify (ConsistencyChecker)
 
 ---
@@ -656,12 +656,12 @@ Bootstrap → service-list.ts → LifecycleManager.initAll() → .startAll()
 | CognitiveService           | `cognitive:trace:updated`, `cognitive:step:active`, `cognitive:step:completed`, `cognitive:decision:made`, `request:incoming`, `request:completed` | —                                                                    |
 | CompromiseWebhookService   | `key:compromise:signal`                                                                                                                            | —                                                                    |
 | ConfigService              | `settings:updated`                                                                                                                                 | —                                                                    |
-| DebateService              | `debate:updated`, `debate:started`, `debate:argument`, `debate:consensus`                                                                          | —                                                                    |
+| DebateSyncManager          | `debate:updated`, `debate:started`, `debate:argument`, `debate:consensus`                                                                          | —                                                                    |
 | DebateEngine               | `debate-runtime:*` (полный набор)                                                                                                                  | —                                                                    |
 | ExternalSecretsService     | `system:notification`                                                                                                                              | —                                                                    |
-| FeatureFlagService         | —                                                                                                                                                  | —                                                                    |
+| config-mutations.ts        | —                                                                                                                                                  | —                                                                    |
 | GroupManagerService        | `key:group:sync`                                                                                                                                   | —                                                                    |
-| HealthService              | —                                                                                                                                                  | `key:health:check`, `key:health:check:all`                           |
+| HealthSlaService           | —                                                                                                                                                  | `key:health:check`, `key:health:check:all`                           |
 | KeyService                 | `key:added`, `key:removed`, `key:updated`, `key:compromised`, `key:state:changed`                                                                  | —                                                                    |
 | KeyStateStore              | `keystate:updated`, `keystate:removed`                                                                                                             | `key:state:changed`, `key:quota:exceeded`, `key:health:check:failed` |
 | MCPService                 | `mcp:updated`                                                                                                                                      | —                                                                    |
