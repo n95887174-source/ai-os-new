@@ -584,22 +584,27 @@ export class KeyRegistry {
             throw e;
         }
         try {
-            if (typeof this.deps.keyStore?.bulkPut === 'function') {
-                await this.deps.keyStore.bulkPut(keysToSave);
-            }
-            // Dexie is the source of truth. This keeps the IndexedDB mirror in
-            // sync by deleting stale records that are no longer present in the
-            // current snapshot.
+            // Compute stale set BEFORE bulkPut to eliminate the async gap.
+            // If we computed after bulkPut, a concurrent addKey could create
+            // a new key that gets immediately deleted as "stale".
+            const currentIds = new Set(snapshot.map((k) => k.id));
+            let staleIds: string[] = [];
             if (
                 typeof this.deps.keyStore?.listKeys === 'function' &&
                 typeof this.deps.keyStore?.deleteKey === 'function'
             ) {
                 const allStored = await this.deps.keyStore.listKeys();
-                const currentIds = new Set(snapshot.map((k) => k.id));
-                const stale = allStored.filter((k) => !currentIds.has(k.id));
-                if (stale.length > 0) {
-                    await Promise.all(stale.map((k) => this.deps.keyStore.deleteKey(k.id)));
-                }
+                staleIds = allStored.filter((k) => !currentIds.has(k.id)).map((k) => k.id);
+            }
+
+            if (typeof this.deps.keyStore?.bulkPut === 'function') {
+                await this.deps.keyStore.bulkPut(keysToSave);
+            }
+            // Delete stale records after bulkPut. If this fails, stale records
+            // remain but the new snapshot is persisted — no data loss, only
+            // garbage that will be cleaned on the next saveKeys().
+            if (staleIds.length > 0) {
+                await Promise.all(staleIds.map((id) => this.deps.keyStore.deleteKey(id)));
             }
         } catch (e) {
             LOGGER.error('KeyRegistry', 'IndexedDB save failed', { error: e });
@@ -695,18 +700,15 @@ export class KeyRegistry {
         const preRemoveSnapshot = [...this.keys];
         const next = this.keys.filter((k) => k.id !== id);
         this.setKeysInternal('removeKey', next, { force: true });
-        // Directly delete from Dexie — bulkPut in saveKeys() is upsert-only and
-        // the stale cleanup is timing-dependent. This ensures the key is gone
-        // before the next bootstrap reads Dexie.
-        try {
-            await this.deps.keyStore.deleteKey(id);
-        } catch {
-            /* non-critical — saveKeys handles the rest */
-        }
         try {
             await this.saveKeys();
+            // Delete from Dexie AFTER saveKeys succeeds to prevent ghost records.
+            // saveKeys() upserts via bulkPut but doesn't delete stale keys if
+            // stale computation was skipped. This direct delete is the final
+            // guarantee that the key is gone from Dexie.
+            await this.deps.keyStore.deleteKey(id).catch(() => {});
         } catch (e) {
-            // P0-11: rollback in-memory state on persist failure
+            // Rollback in-memory state on persist failure
             this.keys = preRemoveSnapshot;
             this.#keyMap = new Map(preRemoveSnapshot.map((k, i) => [k.id, i]));
             throw e;

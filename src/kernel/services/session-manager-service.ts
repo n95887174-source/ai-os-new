@@ -277,38 +277,31 @@ export class SessionManagerService implements ISessionManager {
             /* ignore */
         }
 
-        await Promise.allSettled([
-            this.debateStore.deleteSession(id).catch((e) => {
-                LOGGER.error('SessionManager', 'delete debateStore failed', { id, error: e });
-            }),
-            this.sessionStore.deleteSession(id).catch((e) => {
-                LOGGER.error('SessionManager', 'delete sessions failed', { id, error: e });
-            }),
-            this.timelineRepo.deleteBySessionId(id).catch((e) => {
-                LOGGER.error('SessionManager', 'delete debateTimeline failed', {
+        // Sequential deletes to prevent partial orphan state.
+        // Promise.allSettled would allow some deletes to succeed while others fail,
+        // leaving orphan records. Abort on first failure instead.
+        const operations: Array<{ name: string; run: () => Promise<void> }> = [
+            { name: 'debateStore', run: () => this.debateStore.deleteSession(id) },
+            { name: 'sessionStore', run: () => this.sessionStore.deleteSession(id) },
+            { name: 'debateTimeline', run: () => this.timelineRepo.deleteBySessionId(id) },
+            { name: 'debateOverrides', run: () => this.overrideRepo.deleteBySessionId(id) },
+            { name: 'sessionLinks(from)', run: () => this.linkRepo.deleteByFromId(id) },
+            { name: 'sessionLinks(to)', run: () => this.linkRepo.deleteByToId(id) },
+        ];
+        let lastError: unknown;
+        for (const op of operations) {
+            try {
+                await op.run();
+            } catch (e) {
+                LOGGER.error('SessionManager', `delete ${op.name} failed — aborting`, {
                     id,
                     error: e,
                 });
-            }),
-            this.overrideRepo.deleteBySessionId(id).catch((e) => {
-                LOGGER.error('SessionManager', 'delete debateOverrides failed', {
-                    id,
-                    error: e,
-                });
-            }),
-            this.linkRepo.deleteByFromId(id).catch((e) => {
-                LOGGER.error('SessionManager', 'delete sessionLinks(from) failed', {
-                    id,
-                    error: e,
-                });
-            }),
-            this.linkRepo.deleteByToId(id).catch((e) => {
-                LOGGER.error('SessionManager', 'delete sessionLinks(to) failed', {
-                    id,
-                    error: e,
-                });
-            }),
-        ]);
+                lastError = e;
+                break;
+            }
+        }
+        if (lastError) throw lastError;
 
         this.eventBus.emit(EVENTS.SESSION_DELETED, { id, type });
     }

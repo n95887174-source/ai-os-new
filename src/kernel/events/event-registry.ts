@@ -30,7 +30,7 @@ function event<N extends string, S extends z.ZodType>(name: N, schema: S) {
 export const EVENT_REGISTRY = {
     KEYS_LOADED: event('key:loaded', z.array(ApiKeySchema)),
     KEY_ADDED: event('key:added', ApiKeySchema),
-    KEY_REMOVED: event('key:removed', z.string()),
+    KEY_REMOVED: event('key:removed', z.object({ id: z.string() })),
     KEY_UPDATED: event('key:updated', z.array(ApiKeySchema)),
     KEY_STATE_CHANGED: event(
         'key:state:changed',

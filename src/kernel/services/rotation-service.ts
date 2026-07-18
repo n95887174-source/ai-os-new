@@ -20,6 +20,7 @@ export interface RotationServiceDeps {
     eventBus: {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        onSafe: <T>(event: string, handler: (data: T) => void) => () => void;
     };
     adapterRegistry?: IAdapterRegistry;
     logger?: ILogger;
@@ -61,8 +62,8 @@ export class RotationService implements IRotationService {
     private setupListeners() {
         this.unsubs.push(
             this.deps.eventBus.on(EVENTS.KEY_ADDED, () => this.restoreTimers()),
-            this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) =>
-                this.cancelRotation(String(id)),
+            this.deps.eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) =>
+                this.cancelRotation(data.id),
             ),
         );
     }

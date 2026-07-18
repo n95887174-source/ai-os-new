@@ -56,6 +56,21 @@ export class MemoryService implements IMemoryEngine {
     private memoryRepo: MemoryRepository;
     private _listenersSetup = false;
     private readonly PENDING_TIMEOUT_MS = 30_000;
+    private _memoriesLock: Promise<void> = Promise.resolve();
+
+    private async withMemoriesLock<T>(fn: () => Promise<T>): Promise<T> {
+        let release: () => void;
+        const prev = this._memoriesLock;
+        this._memoriesLock = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        await prev;
+        try {
+            return await fn();
+        } finally {
+            release!();
+        }
+    }
 
     constructor(deps: MemoryServiceDeps) {
         this.deps = deps;
@@ -103,11 +118,13 @@ export class MemoryService implements IMemoryEngine {
             const cutoff = Date.now() - MEMORY_TTL_MS;
             const removed = this.memories.filter((m) => (m.metadata.timestamp ?? 0) < cutoff);
             await this.memoryRepo.prune(cutoff);
-            this.memories = this.memories.filter((m) => (m.metadata.timestamp ?? 0) >= cutoff);
-            for (const m of removed) {
-                this.sendToWorker('remove', { id: m.id }).catch(() => {});
-            }
-            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+            await this.withMemoriesLock(async () => {
+                this.memories = this.memories.filter((m) => (m.metadata.timestamp ?? 0) >= cutoff);
+                for (const m of removed) {
+                    this.sendToWorker('remove', { id: m.id }).catch(() => {});
+                }
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+            });
         } catch (e) {
             LOGGER.error('MemoryEngine', 'Prune cycle failed', { error: e });
         }
@@ -175,18 +192,20 @@ export class MemoryService implements IMemoryEngine {
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await this.memoryRepo.update(id, { vector } as any);
-            const mem = this.memories.find((m) => m.id === id);
-            if (mem) {
-                const idx = this.memories.indexOf(mem);
-                if (idx >= 0) {
-                    this.memories = [
-                        ...this.memories.slice(0, idx),
-                        { ...mem, vector },
-                        ...this.memories.slice(idx + 1),
-                    ];
-                    this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+            await this.withMemoriesLock(async () => {
+                const mem = this.memories.find((m) => m.id === id);
+                if (mem) {
+                    const idx = this.memories.indexOf(mem);
+                    if (idx >= 0) {
+                        this.memories = [
+                            ...this.memories.slice(0, idx),
+                            { ...mem, vector },
+                            ...this.memories.slice(idx + 1),
+                        ];
+                        this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+                    }
                 }
-            }
+            });
         } catch (e) {
             LOGGER.warn('MemoryEngine', 'Failed to persist embedding vector', { error: e });
         }
@@ -220,7 +239,10 @@ export class MemoryService implements IMemoryEngine {
     private async load() {
         try {
             if ((await this.memoryRepo.getCount()) > 0) {
-                this.memories = (await this.memoryRepo.getAll()).slice(0, MAX_MEMORY_ENTRIES);
+                const loaded = (await this.memoryRepo.getAll()).slice(0, MAX_MEMORY_ENTRIES);
+                await this.withMemoriesLock(async () => {
+                    this.memories = loaded;
+                });
                 return;
             }
         } catch (e) {
@@ -311,32 +333,36 @@ export class MemoryService implements IMemoryEngine {
             ...entry,
             id: await this.computeId(entry.content, source, type),
         } as MemoryEntry;
-        try {
-            await this.memoryRepo.save(newEntry);
-            this.memories.unshift(newEntry);
-            if (this.memories.length > MAX_MEMORY_ENTRIES)
-                this.memories.length = MAX_MEMORY_ENTRIES;
-            this.ensureWorker()
-                .then(() => {
-                    if (this.worker) {
-                        this.sendToWorker('upsert', {
-                            entry: newEntry,
-                            generateEmbedding: this.semanticReady,
-                        }).catch((e) => {
-                            LOGGER.warn('MemoryEngine', 'Worker insert failed', { error: e });
-                            this.semanticReady = false;
+        await this.withMemoriesLock(async () => {
+            try {
+                await this.memoryRepo.save(newEntry);
+                this.memories.unshift(newEntry);
+                if (this.memories.length > MAX_MEMORY_ENTRIES)
+                    this.memories.length = MAX_MEMORY_ENTRIES;
+                this.ensureWorker()
+                    .then(() => {
+                        if (this.worker) {
+                            this.sendToWorker('upsert', {
+                                entry: newEntry,
+                                generateEmbedding: this.semanticReady,
+                            }).catch((e) => {
+                                LOGGER.warn('MemoryEngine', 'Worker insert failed', { error: e });
+                                this.semanticReady = false;
+                            });
+                        }
+                    })
+                    .catch((e) => {
+                        LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', {
+                            error: e,
                         });
-                    }
-                })
-                .catch((e) => {
-                    LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e });
-                    this.semanticReady = false;
-                });
-            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-        } catch (e) {
-            LOGGER.error('MemoryEngine', 'Failed to persist to Dexie', { error: e });
-            throw e;
-        }
+                        this.semanticReady = false;
+                    });
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+            } catch (e) {
+                LOGGER.error('MemoryEngine', 'Failed to persist to Dexie', { error: e });
+                throw e;
+            }
+        });
     }
 
     async upsert(entry: Omit<MemoryEntry, 'id'>) {
@@ -346,37 +372,41 @@ export class MemoryService implements IMemoryEngine {
         const type = entry.metadata.type ?? 'generic';
         const deterministicId = await this.computeId(entry.content, source, type);
         const newEntry: MemoryEntry = { ...entry, id: deterministicId } as MemoryEntry;
-        try {
-            await this.memoryRepo.save(newEntry);
-            const existing = this.memories.findIndex((m) => m.id === deterministicId);
-            if (existing >= 0) {
-                this.memories[existing] = newEntry;
-            } else {
-                this.memories.unshift(newEntry);
-                if (this.memories.length > MAX_MEMORY_ENTRIES)
-                    this.memories.length = MAX_MEMORY_ENTRIES;
-            }
-            this.ensureWorker()
-                .then(() => {
-                    if (this.worker) {
-                        this.sendToWorker('upsert', {
-                            entry: newEntry,
-                            generateEmbedding: this.semanticReady,
-                        }).catch((e) => {
-                            LOGGER.warn('MemoryEngine', 'Worker upsert failed', { error: e });
-                            this.semanticReady = false;
+        await this.withMemoriesLock(async () => {
+            try {
+                await this.memoryRepo.save(newEntry);
+                const existing = this.memories.findIndex((m) => m.id === deterministicId);
+                if (existing >= 0) {
+                    this.memories[existing] = newEntry;
+                } else {
+                    this.memories.unshift(newEntry);
+                    if (this.memories.length > MAX_MEMORY_ENTRIES)
+                        this.memories.length = MAX_MEMORY_ENTRIES;
+                }
+                this.ensureWorker()
+                    .then(() => {
+                        if (this.worker) {
+                            this.sendToWorker('upsert', {
+                                entry: newEntry,
+                                generateEmbedding: this.semanticReady,
+                            }).catch((e) => {
+                                LOGGER.warn('MemoryEngine', 'Worker upsert failed', { error: e });
+                                this.semanticReady = false;
+                            });
+                        }
+                    })
+                    .catch((e) => {
+                        LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', {
+                            error: e,
                         });
-                    }
-                })
-                .catch((e) => {
-                    LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e });
-                    this.semanticReady = false;
-                });
-            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-        } catch (e) {
-            LOGGER.error('MemoryEngine', 'Upsert failed', { error: e });
-            throw e;
-        }
+                        this.semanticReady = false;
+                    });
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+            } catch (e) {
+                LOGGER.error('MemoryEngine', 'Upsert failed', { error: e });
+                throw e;
+            }
+        });
     }
 
     private async computeId(content: string, source: string, type: string): Promise<string> {
@@ -407,42 +437,49 @@ export class MemoryService implements IMemoryEngine {
             timeoutMs: 30_000,
             metadata: { operation: 'storeBatch', count: newEntries.length },
         });
-        try {
-            const persisted = await this.memoryRepo.storeBatch(
-                newEntries.map((e) => ({
-                    content: e.content,
-                    metadata: e.metadata,
-                })),
-            );
-            this.memories = [...persisted, ...this.memories];
-            if (this.memories.length > MAX_MEMORY_ENTRIES) {
-                this.memories = this.memories.slice(0, MAX_MEMORY_ENTRIES);
+        await this.withMemoriesLock(async () => {
+            try {
+                const persisted = await this.memoryRepo.storeBatch(
+                    newEntries.map((e) => ({
+                        content: e.content,
+                        metadata: e.metadata,
+                    })),
+                );
+                this.memories = [...persisted, ...this.memories];
+                if (this.memories.length > MAX_MEMORY_ENTRIES) {
+                    this.memories = this.memories.slice(0, MAX_MEMORY_ENTRIES);
+                }
+                this.ensureWorker()
+                    .then(() => {
+                        if (this.worker) {
+                            Promise.all(
+                                newEntries.map((e) =>
+                                    this.sendToWorker('upsert', {
+                                        entry: e,
+                                        generateEmbedding: false,
+                                    }),
+                                ),
+                            ).catch((err) =>
+                                LOGGER.warn('MemoryEngine', 'Batch insert to worker failed', {
+                                    error: err,
+                                }),
+                            );
+                        }
+                    })
+                    .catch((e) => {
+                        LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', {
+                            error: e,
+                        });
+                        this.semanticReady = false;
+                    });
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+                govOp?.complete();
+            } catch (e) {
+                govOp?.fail(e instanceof Error ? e : new Error(String(e)));
+                LOGGER.error('MemoryEngine', 'Batch store failed', { error: e });
+                throw e;
             }
-            this.ensureWorker()
-                .then(() => {
-                    if (this.worker) {
-                        Promise.all(
-                            newEntries.map((e) =>
-                                this.sendToWorker('upsert', { entry: e, generateEmbedding: false }),
-                            ),
-                        ).catch((err) =>
-                            LOGGER.warn('MemoryEngine', 'Batch insert to worker failed', {
-                                error: err,
-                            }),
-                        );
-                    }
-                })
-                .catch((e) => {
-                    LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', { error: e });
-                    this.semanticReady = false;
-                });
-            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-            govOp?.complete();
-        } catch (e) {
-            govOp?.fail(e instanceof Error ? e : new Error(String(e)));
-            LOGGER.error('MemoryEngine', 'Batch store failed', { error: e });
-            throw e;
-        }
+        });
     }
 
     getMemories(limit?: number): MemoryEntry[] {
@@ -464,17 +501,21 @@ export class MemoryService implements IMemoryEngine {
             });
             return;
         }
-        this.memories.splice(idx, 1);
-        if (!this.worker) {
-            await this.ensureWorker().catch((e) =>
-                LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
-            );
-        }
-        if (this.worker)
-            this.sendToWorker('remove', { id }).catch((e) =>
-                LOGGER.warn('MemoryEngine', 'Worker remove failed', { error: e }),
-            );
-        this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+        await this.withMemoriesLock(async () => {
+            const newIdx = this.memories.findIndex((m) => m.id === id);
+            if (newIdx === -1) return;
+            this.memories.splice(newIdx, 1);
+            if (!this.worker) {
+                await this.ensureWorker().catch((e) =>
+                    LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
+                );
+            }
+            if (this.worker)
+                this.sendToWorker('remove', { id }).catch((e) =>
+                    LOGGER.warn('MemoryEngine', 'Worker remove failed', { error: e }),
+                );
+            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+        });
     }
 
     async updateMemory(id: string, content: string): Promise<string | undefined> {
@@ -484,57 +525,61 @@ export class MemoryService implements IMemoryEngine {
         const type = entry.metadata.type ?? 'generic';
         const newId = await this.computeId(content, source, type);
         let resultId: string | undefined;
-        if (newId === id) {
-            const updated = { ...entry, content };
-            try {
-                await this.memoryRepo.save(updated);
-                resultId = id;
-            } catch (e) {
-                LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', {
-                    error: e,
-                });
-                return undefined;
-            }
-            Object.assign(entry, updated);
-        } else {
-            const newEntry: MemoryEntry = {
-                ...entry,
-                id: newId,
-                content,
-                metadata: { ...entry.metadata, originalId: id },
-            } as MemoryEntry;
-            try {
-                await this.memoryRepo.delete(id);
-                await this.memoryRepo.save(newEntry);
-                resultId = newId;
-            } catch (e) {
-                LOGGER.error('MemoryEngine', 'Dexie update failed — in-memory unchanged', {
-                    error: e,
-                });
-                return undefined;
-            }
-            const idx = this.memories.findIndex((m) => m.id === id);
-            if (idx !== -1) this.memories[idx] = newEntry;
-        }
-        if (!this.worker) {
-            await this.ensureWorker().catch((e) =>
-                LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
-            );
-        }
-        if (this.worker)
-            this.sendToWorker('remove', { id })
-                .then(() => {
-                    const workerEntry: MemoryEntry =
-                        newId === id
-                            ? (entry as MemoryEntry)
-                            : ({ ...entry, id: newId, content } as MemoryEntry);
-                    return this.sendToWorker('insert', {
-                        entry: workerEntry,
-                        generateEmbedding: false,
+        await this.withMemoriesLock(async () => {
+            if (newId === id) {
+                const updated = { ...entry, content };
+                try {
+                    await this.memoryRepo.save(updated);
+                    resultId = id;
+                } catch (e) {
+                    LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', {
+                        error: e,
                     });
-                })
-                .catch((e) => LOGGER.warn('MemoryEngine', 'Worker update failed', { error: e }));
-        this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+                    return;
+                }
+                Object.assign(entry, updated);
+            } else {
+                const newEntry: MemoryEntry = {
+                    ...entry,
+                    id: newId,
+                    content,
+                    metadata: { ...entry.metadata, originalId: id },
+                } as MemoryEntry;
+                try {
+                    await this.memoryRepo.delete(id);
+                    await this.memoryRepo.save(newEntry);
+                    resultId = newId;
+                } catch (e) {
+                    LOGGER.error('MemoryEngine', 'Dexie update failed — in-memory unchanged', {
+                        error: e,
+                    });
+                    return;
+                }
+                const idx = this.memories.findIndex((m) => m.id === id);
+                if (idx !== -1) this.memories[idx] = newEntry;
+            }
+            if (!this.worker) {
+                await this.ensureWorker().catch((e) =>
+                    LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
+                );
+            }
+            if (this.worker)
+                this.sendToWorker('remove', { id })
+                    .then(() => {
+                        const workerEntry: MemoryEntry =
+                            newId === id
+                                ? (entry as MemoryEntry)
+                                : ({ ...entry, id: newId, content } as MemoryEntry);
+                        return this.sendToWorker('insert', {
+                            entry: workerEntry,
+                            generateEmbedding: false,
+                        });
+                    })
+                    .catch((e) =>
+                        LOGGER.warn('MemoryEngine', 'Worker update failed', { error: e }),
+                    );
+            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+        });
         return resultId;
     }
 
@@ -654,9 +699,11 @@ export class MemoryService implements IMemoryEngine {
             if (old.length > 0) {
                 if (!options.dryRun) {
                     await this.memoryRepo.prune(cutoff);
-                    this.memories = this.memories.filter(
-                        (m) => (m.metadata.timestamp ?? 0) >= cutoff,
-                    );
+                    await this.withMemoriesLock(async () => {
+                        this.memories = this.memories.filter(
+                            (m) => (m.metadata.timestamp ?? 0) >= cutoff,
+                        );
+                    });
                 }
                 details.push({ type: 'olderThan', count: old.length });
             }
@@ -679,9 +726,11 @@ export class MemoryService implements IMemoryEngine {
                                 ),
                             );
                     }
-                    this.memories = this.memories.filter(
-                        (m) => (m.metadata.importance ?? 0) >= importanceBelow,
-                    );
+                    await this.withMemoriesLock(async () => {
+                        this.memories = this.memories.filter(
+                            (m) => (m.metadata.importance ?? 0) >= importanceBelow,
+                        );
+                    });
                 }
             }
         }
@@ -695,14 +744,16 @@ export class MemoryService implements IMemoryEngine {
     }
 
     async clear() {
-        this.memories = [];
-        this.semanticReady = false;
-        await this.memoryRepo.clear();
-        if (this.worker)
-            this.sendToWorker('init', { memories: [] }).catch((e) =>
-                LOGGER.warn('MemoryEngine', 'Worker re-init after clear failed', { error: e }),
-            );
-        this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+        await this.withMemoriesLock(async () => {
+            this.memories = [];
+            this.semanticReady = false;
+            await this.memoryRepo.clear();
+            if (this.worker)
+                this.sendToWorker('init', { memories: [] }).catch((e) =>
+                    LOGGER.warn('MemoryEngine', 'Worker re-init after clear failed', { error: e }),
+                );
+            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+        });
     }
 
     get isSemanticReady() {

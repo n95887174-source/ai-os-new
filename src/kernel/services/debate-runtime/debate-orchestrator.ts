@@ -22,6 +22,7 @@ function getHeapMB(): number {
 
 export class DebateOrchestrator implements IDebateOrchestrator {
     private aborted = new Set<string>();
+    private abortControllers = new Map<string, AbortController>();
     private executor: AgentExecutor | undefined;
 
     constructor(private topologyService: DebateTopologyService) {}
@@ -32,16 +33,19 @@ export class DebateOrchestrator implements IDebateOrchestrator {
 
     abort(sessionId: string): void {
         this.aborted.add(sessionId);
+        this.abortControllers.get(sessionId)?.abort();
     }
 
     clearAbort(sessionId: string): void {
         this.aborted.delete(sessionId);
+        this.abortControllers.delete(sessionId);
     }
 
     async *generateRoundEvents(
         topology: DebateTopology,
         sessionId: string,
         startRound = 0,
+        skipAgents?: ReadonlySet<string>,
     ): AsyncGenerator<OrchestratorEvent, void, unknown> {
         const rounds = this.topologyService.buildRounds(topology);
         const startHeap = getHeapMB();
@@ -66,6 +70,15 @@ export class DebateOrchestrator implements IDebateOrchestrator {
 
             for (const node of nodeGroup) {
                 if (this.aborted.has(sessionId)) return;
+
+                // On resume, skip agents that already produced an argument in this round
+                if (skipAgents?.has(node.id)) {
+                    console.log(
+                        `[Orchestrator] Skipping ${node.id} — already responded in round ${roundNum} (resume)`,
+                    );
+                    continue;
+                }
+
                 if (!this.executor) {
                     yield { type: 'agent:error', agentId: node.id, error: 'No executor set' };
                     continue;
@@ -74,10 +87,16 @@ export class DebateOrchestrator implements IDebateOrchestrator {
                 yield { type: 'agent:thinking', agentId: node.id };
 
                 try {
+                    let ac = this.abortControllers.get(sessionId);
+                    if (!ac) {
+                        ac = new AbortController();
+                        this.abortControllers.set(sessionId, ac);
+                    }
                     const result = await this.executor({
                         sessionId,
                         agentId: node.id,
                         nodeId: node.id,
+                        signal: ac.signal,
                     });
 
                     if (result.budgetSkipped) {

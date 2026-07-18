@@ -48,6 +48,11 @@ export class DebateSession implements IDebateSession {
     private _language: string;
     private _failedProviders = new Set<string>();
     private _failedModels = new Set<string>();
+    private _arguments: DebateSessionSnapshot['arguments'] = [];
+
+    get arguments(): DebateSessionSnapshot['arguments'] {
+        return this._arguments;
+    }
 
     hasProviderFailed(provider: string): boolean {
         return this._failedProviders.has(provider);
@@ -210,6 +215,9 @@ export class DebateSession implements IDebateSession {
             startedAt: this._startedAt || this.createdAt,
             updatedAt: Date.now(),
             language: this.language,
+            arguments: this._arguments ? [...this._arguments] : [],
+            failedProviders: Array.from(this._failedProviders),
+            failedModels: Array.from(this._failedModels),
         };
     }
 
@@ -236,6 +244,16 @@ export class DebateSession implements IDebateSession {
         this._agentStates.clear();
         for (const as of snapshot.agentStates) {
             this._agentStates.set(as.agentId, as);
+        }
+        this._arguments = snapshot.arguments ? [...snapshot.arguments] : [];
+
+        this._failedProviders.clear();
+        for (const p of snapshot.failedProviders ?? []) {
+            this._failedProviders.add(p);
+        }
+        this._failedModels.clear();
+        for (const m of snapshot.failedModels ?? []) {
+            this._failedModels.add(m);
         }
     }
 }

@@ -155,8 +155,11 @@ export class MCPService {
             () => controller.abort(),
             CONFIG?.services?.mcp?.safeFetchTimeoutMs ?? 5000,
         );
+        const combinedSignal = init?.signal
+            ? (AbortSignal.any?.([init.signal, controller.signal]) ?? init.signal)
+            : controller.signal;
         try {
-            return await fetch(url, { ...init, signal: controller.signal });
+            return await fetch(url, { ...init, signal: combinedSignal });
         } finally {
             clearTimeout(timeout);
         }

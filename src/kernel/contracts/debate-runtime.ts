@@ -70,6 +70,14 @@ export interface IDebateSession {
     setAgentPhase(agentId: string, phase: AgentPhase, tx?: ITransaction): void;
     setAgentError(agentId: string, error: string): void;
     recordUsage(agentId: string, tokens: number, cost: number, latency: number): void;
+    readonly arguments?: ReadonlyArray<{
+        agentId: string;
+        content: string;
+        round: number;
+        timestamp: number;
+        confidence: number;
+        position?: string;
+    }>;
     snapshot(): DebateSessionSnapshot;
     incrementVersion?(newVersion: number): void;
     destroy(): void;
@@ -96,6 +104,8 @@ export interface DebateSessionSnapshot {
         confidence: number;
         position?: string;
     }>;
+    readonly failedProviders?: readonly string[];
+    readonly failedModels?: readonly string[];
     readonly participants?: ReadonlyArray<ParticipantConfig>;
 }
 
@@ -271,6 +281,7 @@ export interface AgentExecutionRequest {
     readonly sessionId: string;
     readonly agentId: string;
     readonly nodeId: string;
+    readonly signal?: AbortSignal;
 }
 
 export interface AgentExecutionResult {
@@ -288,6 +299,7 @@ export interface IDebateOrchestrator {
         topology: DebateTopology,
         sessionId: string,
         startRound?: number,
+        skipAgents?: ReadonlySet<string>,
     ): AsyncGenerator<OrchestratorEvent, void, unknown>;
     setAgentExecutor(executor: AgentExecutor): void;
     abort(sessionId: string): void;

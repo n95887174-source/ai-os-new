@@ -80,107 +80,141 @@ const _sendLocks = new Map<string, boolean>();
 export const useChatStore = create<ChatStoreShape>((set, get) => {
     const uas = updateActiveSession(set, get);
 
+    const _unsubs: Array<() => void> = [];
+
     // Subscribe to response events (set up once, per closure over set/get)
     // These bridge SEND_MESSAGE → ChatExecutor → response events
-    eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: ChatResponse) => {
-        const ref = requestEntryMap.get(res.requestId);
-        if (!ref) return;
-        set((s) => {
-            const newActiveIds = new Set(s.activeRequestIds);
-            if (
-                res.status === 'done' ||
-                res.status === 'error' ||
-                res.status === 'cancelled' ||
-                res.status === 'timeout'
-            ) {
-                newActiveIds.delete(res.requestId);
-            }
-            return {
-                sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
-                    ...entry,
-                    responses: entry.responses.map((r) =>
-                        r.requestId === res.requestId ? { ...r, ...res } : r,
+    _unsubs.push(
+        eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: ChatResponse) => {
+            const ref = requestEntryMap.get(res.requestId);
+            if (!ref) return;
+            set((s) => {
+                const newActiveIds = new Set(s.activeRequestIds);
+                if (
+                    res.status === 'done' ||
+                    res.status === 'error' ||
+                    res.status === 'cancelled' ||
+                    res.status === 'timeout'
+                ) {
+                    newActiveIds.delete(res.requestId);
+                }
+                return {
+                    sessions: updateEntryInSession(
+                        s.sessions,
+                        ref.sessionId,
+                        ref.entryId,
+                        (entry) => ({
+                            ...entry,
+                            responses: entry.responses.map((r) =>
+                                r.requestId === res.requestId ? { ...r, ...res } : r,
+                            ),
+                        }),
                     ),
-                })),
-                activeRequestIds: newActiveIds,
-            };
-        });
-    });
+                    activeRequestIds: newActiveIds,
+                };
+            });
+        }),
+    );
 
-    eventBus.on(EVENTS.STREAM_START, (payload) => {
-        const ref = requestEntryMap.get(payload.requestId);
-        if (!ref) return;
-        set((s) => ({
-            sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
-                ...entry,
-                responses: entry.responses.map((r) =>
-                    r.requestId === payload.requestId ? { ...r, status: 'streaming' as const } : r,
-                ),
-            })),
-        }));
-    });
-
-    eventBus.on(EVENTS.STREAM_CHUNK, (payload) => {
-        const ref = requestEntryMap.get(payload.requestId);
-        if (!ref) return;
-        set((s) => ({
-            sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
-                ...entry,
-                responses: entry.responses.map((r) =>
-                    r.requestId === payload.requestId
-                        ? { ...r, content: r.content + payload.chunk }
-                        : r,
-                ),
-            })),
-        }));
-    });
-
-    eventBus.on(EVENTS.STREAM_END, (payload) => {
-        if (!payload.requestId) return;
-        const ref = requestEntryMap.get(payload.requestId);
-        if (!ref) return;
-        set((s) => {
-            const newActiveIds = new Set(s.activeRequestIds);
-            newActiveIds.delete(payload.requestId);
-            return {
+    _unsubs.push(
+        eventBus.on(EVENTS.STREAM_START, (payload) => {
+            const ref = requestEntryMap.get(payload.requestId);
+            if (!ref) return;
+            set((s) => ({
                 sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
                     ...entry,
                     responses: entry.responses.map((r) =>
                         r.requestId === payload.requestId
-                            ? {
-                                  ...r,
-                                  content: payload.fullContent || r.content,
-                                  latency: payload.latency || r.latency,
-                                  tokens: payload.tokens ?? r.tokens,
-                                  status: 'done' as const,
-                              }
+                            ? { ...r, status: 'streaming' as const }
                             : r,
                     ),
                 })),
-                activeRequestIds: newActiveIds,
-            };
-        });
-    });
+            }));
+        }),
+    );
 
-    eventBus.on(EVENTS.STREAM_ERROR, (payload) => {
-        const ref = requestEntryMap.get(payload.requestId);
-        if (!ref) return;
-        set((s) => {
-            const newActiveIds = new Set(s.activeRequestIds);
-            newActiveIds.delete(payload.requestId);
-            return {
+    _unsubs.push(
+        eventBus.on(EVENTS.STREAM_CHUNK, (payload) => {
+            const ref = requestEntryMap.get(payload.requestId);
+            if (!ref) return;
+            set((s) => ({
                 sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
                     ...entry,
                     responses: entry.responses.map((r) =>
                         r.requestId === payload.requestId
-                            ? { ...r, content: '', error: payload.error, status: 'error' as const }
+                            ? { ...r, content: r.content + payload.chunk }
                             : r,
                     ),
                 })),
-                activeRequestIds: newActiveIds,
-            };
-        });
-    });
+            }));
+        }),
+    );
+
+    _unsubs.push(
+        eventBus.on(EVENTS.STREAM_END, (payload) => {
+            if (!payload.requestId) return;
+            const ref = requestEntryMap.get(payload.requestId);
+            if (!ref) return;
+            set((s) => {
+                const newActiveIds = new Set(s.activeRequestIds);
+                newActiveIds.delete(payload.requestId);
+                return {
+                    sessions: updateEntryInSession(
+                        s.sessions,
+                        ref.sessionId,
+                        ref.entryId,
+                        (entry) => ({
+                            ...entry,
+                            responses: entry.responses.map((r) =>
+                                r.requestId === payload.requestId
+                                    ? {
+                                          ...r,
+                                          content: payload.fullContent || r.content,
+                                          latency: payload.latency || r.latency,
+                                          tokens: payload.tokens ?? r.tokens,
+                                          status: 'done' as const,
+                                      }
+                                    : r,
+                            ),
+                        }),
+                    ),
+                    activeRequestIds: newActiveIds,
+                };
+            });
+        }),
+    );
+
+    _unsubs.push(
+        eventBus.on(EVENTS.STREAM_ERROR, (payload) => {
+            const ref = requestEntryMap.get(payload.requestId);
+            if (!ref) return;
+            set((s) => {
+                const newActiveIds = new Set(s.activeRequestIds);
+                newActiveIds.delete(payload.requestId);
+                return {
+                    sessions: updateEntryInSession(
+                        s.sessions,
+                        ref.sessionId,
+                        ref.entryId,
+                        (entry) => ({
+                            ...entry,
+                            responses: entry.responses.map((r) =>
+                                r.requestId === payload.requestId
+                                    ? {
+                                          ...r,
+                                          content: '',
+                                          error: payload.error,
+                                          status: 'error' as const,
+                                      }
+                                    : r,
+                            ),
+                        }),
+                    ),
+                    activeRequestIds: newActiveIds,
+                };
+            });
+        }),
+    );
 
     return {
         sessions: [DEFAULT_SESSION],
@@ -833,5 +867,20 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                   }
                 : undefined;
         },
+
+        destroy: () => {
+            _unsubs.forEach((u) => u());
+            _unsubs.length = 0;
+        },
     };
 });
+
+let _chatStoreDestroyed = false;
+if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+        if (!_chatStoreDestroyed) {
+            _chatStoreDestroyed = true;
+            useChatStore.getState().destroy();
+        }
+    });
+}

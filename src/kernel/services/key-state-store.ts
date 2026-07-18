@@ -232,8 +232,8 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         }, 300000);
 
         this.unsubs.push(
-            this.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-                if (typeof id === 'string') this.remove(id);
+            this.eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+                this.remove(data.id);
             }),
         );
 

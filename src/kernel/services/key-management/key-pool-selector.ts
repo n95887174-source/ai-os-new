@@ -10,6 +10,7 @@ export interface KeyPoolSelectorDeps {
     eventBus: {
         emit: (event: string, data?: unknown) => void;
         on: (event: string, handler: (id: unknown) => void) => () => void;
+        onSafe: <T>(event: string, handler: (data: T) => void) => () => void;
     };
     getPoolKeys: (provider: string) => ApiKey[];
     getKeysByProvider: (provider: string) => ApiKey[];
@@ -35,10 +36,8 @@ export class KeyPoolSelector implements IPoolSelectorService {
      */
     start(): void {
         this.unsubs.push(
-            this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-                const keyId = String(id);
-                LOGGER.debug('KeyPoolSelector', 'key removed', { keyId });
-                // Reset round-robin cursors to avoid stale provider entries
+            this.deps.eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+                LOGGER.debug('KeyPoolSelector', 'key removed', { keyId: data.id });
                 this.index = {};
             }),
         );
@@ -110,9 +109,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
         };
     }
 
-    getPoolKeyDistribution(
-        provider: string,
-    ): Array<{
+    getPoolKeyDistribution(provider: string): Array<{
         id: string;
         label: string;
         used: number;

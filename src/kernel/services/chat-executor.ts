@@ -513,6 +513,23 @@ export class ChatExecutor {
                             },
                         );
 
+                        const isAbort =
+                            error instanceof DOMException && error.name === 'AbortError';
+                        if (isAbort) {
+                            this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+                                id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+                                requestId,
+                                provider: currentProvider,
+                                model: effectiveModel,
+                                keyId: req.keyId,
+                                content: '',
+                                latency: Math.round(performance.now() - startTime),
+                                status: 'cancelled',
+                                error: 'Request cancelled by user',
+                            } satisfies ChatResponse);
+                            return;
+                        }
+
                         const isRateLimit =
                             /\b429\b/.test(errMsg) ||
                             (error instanceof LLMError && error.statusCode === 429);

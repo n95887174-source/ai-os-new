@@ -117,4 +117,19 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
             }
         }
     }
+
+    destroy(): void {
+        for (const [, adapter] of this.adapters) {
+            let current: unknown = adapter;
+            const seen = new Set<unknown>();
+            while (current && !seen.has(current)) {
+                seen.add(current);
+                if (typeof (current as Record<string, unknown>).destroy === 'function') {
+                    (current as { destroy: () => void }).destroy();
+                }
+                current = (current as Record<string, unknown>).inner;
+            }
+        }
+        this.adapters.clear();
+    }
 }

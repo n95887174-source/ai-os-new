@@ -4117,3 +4117,143 @@ Rolldown build error: `debate-persistence-manager.ts` — `topology` declared as
 ### Memory Note
 
 Heap grows 58MB→473MB→92MB (GC)→227MB→520MB across 2 rounds. GC runs between rounds (drops to 92MB), but old-gen fills again. Root cause: LLM response strings (~100-180MB per OpenRouter call) promoted to old-gen faster than V8's lazy GC. Fix requires adding `global.gc = require('v8').gc` to the dev server and calling it explicitly in MemoryWatchdog pressure callbacks. Not fixable via code alone — requires Node.js `--expose-gc` flag.
+
+---
+
+## Current Session (2026-07-18) — Deep Audit Sprint 1: 5 Data-Loss + Bootstrap Fixes
+
+### Goal
+
+Fix 5 Critical findings from deep audit consolidated plan (`audit-deep/_CONSOLIDATED_PLAN.md` Sprint 1) — data-loss races and bootstrap stability.
+
+### Changes
+
+| #   | Audit | File                         | Fix                                                                                                                                                        |
+| :-- | :---- | :--------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | A6    | `memory-engine.ts:456-478`   | `deleteMemory` re-finds array index after `await memoryRepo.delete(id)` — prevents TOCTOU where concurrent mutation removes the wrong entry                |
+| 2   | A6    | `debate-human-service.ts:44` | `addArgument` now calls `persistActiveSession()` after push — prevents race with `_syncSessionImpl` where the new argument is lost on concurrent serialize |
+| 3   | A12   | `bootstrap.ts:89`            | `loadBootstrapSnapshot()` wrapped in try/catch — Dexie DB failure no longer crashes bootstrap                                                              |
+| 4   | A12   | `bootstrap.ts:78`            | `registerMigratedServices()` wrapped in try/catch — any phase registration throw no longer crashes bootstrap                                               |
+| 5   | A12   | `bootstrap.ts:268`           | Added critical-failure check after Tier 4-6 init loop (mirrors existing Tier 0-3 check) — defense-in-depth for critical services registered in later tiers |
+
+### Status
+
+- `npx vite build` ✅ 11.15s, 4058 modules
+- **Sprint 1 complete** — 5/5 items 🟢 Done
+- Next: **Sprint 2** — Pipeline errors + Session lifecycle (6 items)
+
+---
+
+## Current Session (2026-07-18) — Deep Audit Sprint 2: Pipeline Errors + Session Lifecycle
+
+### Goal
+
+Fix 5 items from `audit-deep/_CONSOLIDATED_PLAN.md` Sprint 2 — pipeline stage error propagation, session lifecycle transitions on failure.
+
+### Changes
+
+| #   | File                                 | Fix                                                                             |
+| :-- | :----------------------------------- | :------------------------------------------------------------------------------ |
+| 6   | `debate-pipeline.ts:37-43`           | Stage throws now re-throw instead of being silently swallowed as `{ok:false}`   |
+| 7   | `debate-engine.ts:621-631`           | `startSession` checks `result.ok`, transitions to `'failed'` on error           |
+| 8   | `debate-sync-manager.ts:427-454`     | Catch block calls `cancelSession` for stuck sessions                            |
+| 9   | `debate-pipeline-builder.ts:346-368` | `consensusAndFinalize` wrapped in try/catch with graceful `'failed'` transition |
+| 10  | `debate-engine.ts:716-727`           | `resumeSession` catch transitions session to `'failed'`                         |
+
+### Status
+
+- **Sprint 2 complete** — 5/5 items 🟢 Done
+
+---
+
+## Current Session (2026-07-18) — Deep Audit Sprint 3: Snapshot Restore
+
+### Goal
+
+Fix 4 items from `audit-deep/_CONSOLIDATED_PLAN.md` Sprint 3 — snapshot restore bugs.
+
+### Changes
+
+| #   | Task                                                           | File                                                   | Fix                                                                                                                                                |
+| :-- | :------------------------------------------------------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1 | Off-by-one in resume startRound                                | `debate-pipeline-builder.ts:143`                       | On resume, pass `session.round - 1` as startRound. Guard `round:start` handler to skip transition/increment on resume                              |
+| 3.2 | `deliberating` phase not handled in `_restoreOrphanedSessions` | `debate-engine.ts:415-441`                             | Added `record.phase === 'deliberating'` alongside `'active'`                                                                                       |
+| 3.3 | Arguments saved to DB but not restored from snapshot           | `debate-persistence-manager.ts`, `debate-session.ts`   | Added `_arguments` field to `DebateSession`, included in `snapshot()`/`restoreInternalState()`, parsed from `record.arguments` in `restoreSession` |
+| 3.4 | No skip-already-spoke logic on restore                         | `debate-orchestrator.ts`, `debate-pipeline-builder.ts` | Added `skipAgents` param to `generateRoundEvents()`. Pipeline builds skip set from restored arguments                                              |
+
+### Files Modified
+
+- `src/kernel/contracts/debate-runtime.ts` — `IDebateOrchestrator.generateRoundEvents` +skipAgents, `IDebateSession.arguments`
+- `src/kernel/services/debate-runtime/debate-pipeline-builder.ts` — off-by-one, round:start guard, skipAgents computation
+- `src/kernel/services/debate-runtime/debate-engine.ts` — deliberating phase in _restoreOrphanedSessions
+- `src/kernel/services/debate-runtime/debate-persistence-manager.ts` — record.arguments parsed in restored snapshot
+- `src/kernel/services/debate-runtime/debate-session.ts` — _arguments field, getter, snapshot, restore
+- `src/kernel/services/debate-runtime/debate-orchestrator.ts` — skipAgents parameter, agent skip logic
+
+### Status
+
+- **Sprint 3 complete** — 4/4 items 🟢 Done
+- Next: **Sprint 4** — Transaction + State mutation (6 items)
+
+---
+
+## Current Session (2026-07-18) — Deep Audit Sprint 4: Transaction + State Mutation
+
+### Goal
+
+Fix 6 items from `audit-deep/_CONSOLIDATED_PLAN.md` Sprint 4 — atomicity violations and missing synchronization.
+
+### Changes
+
+| #   | Item | File                                                | Fix                                                                                                                                                                                                                                                                                          |
+| :-- | :--- | :-------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 15  | A14  | `session-manager-service.ts:270-313`                | Sequential deletes with abort-on-first-failure instead of `Promise.allSettled` — orphan records no longer created on partial failure                                                                                                                                                         |
+| 16  | A14  | `key-registry.ts:575-608`                           | Compute stale ID set BEFORE `bulkPut` — prevents concurrent `addKey` from being immediately deleted as "stale"                                                                                                                                                                               |
+| 17  | A14  | `key-service.ts:535-543`, `key-registry.ts:699-718` | `removeKey` moved `deleteKey` AFTER `saveKeys` (was before, causing ghost records on rollback). Health/lifecycle cleanup wrapped in `try-finally`                                                                                                                                            |
+| 18  | A14  | `key-migration.ts:136-147`                          | Rollback `bulkPut` IDs on `setKv` failure — no partial migration state                                                                                                                                                                                                                       |
+| 19  | A6   | `debate-sync-manager.ts:831`                        | Preserve previous session.consensus after `mergeAndProcessSession()` — zombie-recovery consensus no longer overwritten by merge                                                                                                                                                              |
+| 20  | A6   | `memory-engine.ts:46-745`                           | Added `_memoriesLock` (promise-chain mutex) + `withMemoriesLock()` helper. All 10 mutating methods (store, upsert, storeBatch, deleteMemory, updateMemory, pruneOldEntries, prune, backfillVector, clear, load) now serialize access to `this.memories` — eliminates TOCTOU between `await`s |
+
+### Files Modified
+
+- `src/kernel/services/session-manager-service.ts` — sequential deletes
+- `src/kernel/services/key-management/key-registry.ts` — stale computation ordering, removeKey ordering
+- `src/kernel/services/key-management/key-service.ts` — try-finally cleanup
+- `src/kernel/dal/key-migration.ts` — rollback on setKv failure
+- `src/kernel/services/debate-runtime/debate-sync-manager.ts` — consensus preservation
+- `src/kernel/services/memory-engine.ts` — promise-chain mutex for memories array
+
+### Status
+
+- **Sprint 4 complete** — 6/6 items 🟢 Done
+- **Next**: Sprint 5 — Event leaks + Store cleanup (6 items)
+
+---
+
+## Current Session (2026-07-18) — Deep Audit Sprint 5-6 Completion + P1 Remaining Fixes
+
+### Context
+
+After Sprint 4, we completed:
+
+- **Sprint 5** (Event leaks + Store cleanup): chat/store destroy+HMR, QuickTestSection cleanup, provider-adapter-registry destroy(), scheduler-service LifecycleManager, debateLiveStore cancel cleanup, DashboardPanel event name fix
+- **Sprint 6** (AbortSignal + Contracts): agent-executor signal propagation, mcp-service safeFetch, KEY_REMOVED schema fix, RUNTIME_FAILED subscription
+- **Memory Leak Mega-Sprint**: destroy() in 12+ services, _initialized guards in 44 services, collection caps in 10+, HTTP body cancel(), AbortSignal propagation, timer leaks, MemoryWatchdog proactive
+- **Debate Runtime Fixes**: NIM 70B timeout cascade, Gemini v1beta, OpenRouter 402→AuthError, LLMError/AuthError→kernel/errors.ts, 3 console errors, restoreSession snapshot fix, 50+ persona roles
+
+### This Session — Remaining P1 Audit Fixes
+
+| #   | Item                                           | File                                                                    | Fix                                                                                                                                                               |
+| --- | ---------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | AbortError → provider error pollution          | `chat-executor.ts:505`                                                  | Added `isAbort` check before `handleProviderError()` — user cancellations now emit `status: 'cancelled'` and return early                                         |
+| 2   | tool-executor lacks AbortSignal                | `tool-executor.ts:374`                                                  | Added `signal?: AbortSignal` to `execute()`, `signal?.throwIfAborted()` at start, merged caller signal with timeout via `AbortSignal.any()` in `fetchWithTimeout` |
+| 3   | _failedProviders/_failedModels not in snapshot | `debate-runtime.ts`, `debate-session.ts`                                | Added `failedProviders`/`failedModels` to `DebateSessionSnapshot` interface, `snapshot()`, and `restoreInternalState()`                                           |
+| 4   | void _syncSessionImpl missing outer .catch     | `debate-sync-manager.ts:627`                                            | Added `.catch((e) => LOGGER.warn(...))`                                                                                                                           |
+| 5   | TournamentPanel no isMounted guard             | `TournamentPanel.tsx:14-28`                                             | Added `useRef(true)` + `useEffect` cleanup, guards on all `setState` calls after await                                                                            |
+| 6   | onSafe type errors in 3 services               | `key-pool-selector.ts`, `rotation-service.ts`, `virtual-key-service.ts` | Added `onSafe` method to minimal `eventBus` interface in each deps type                                                                                           |
+
+### Status
+
+- `npx tsc -b --noEmit` ✅ zero errors
+- `npx vite build` ✅ 9.63s
+- All 6 remaining P1 items from audit-deep/_CONSOLIDATED_PLAN.md resolved 🟢

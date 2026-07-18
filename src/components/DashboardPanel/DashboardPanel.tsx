@@ -171,7 +171,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         }
 
         const unsubscribeTraces = eventBus.onSafe<CognitiveTrace[]>(
-            'trace:updated',
+            EVENTS.COGNITIVE_TRACE_UPDATED,
             (newTraces) => {
                 if (!isMountedRef.current) return;
                 try {

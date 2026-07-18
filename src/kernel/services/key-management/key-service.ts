@@ -356,18 +356,16 @@ export class KeyService implements IKeyRotationManager {
         });
 
         this.unsubs.push(
-            this.deps.eventBus.on(EVENTS.KEY_REMOVED, async (id: unknown) => {
-                if (typeof id === 'string') {
-                    try {
-                        const { getDexieDb } = await import('../database-service');
-                        const db = getDexieDb();
-                        const notes = await db.notes.where('keyId').equals(id).toArray();
-                        if (notes.length > 0) {
-                            await db.notes.bulkDelete(notes.map((n) => n.id!));
-                        }
-                    } catch {
-                        /* note cleanup is best-effort */
+            this.deps.eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, async (data) => {
+                try {
+                    const { getDexieDb } = await import('../database-service');
+                    const db = getDexieDb();
+                    const notes = await db.notes.where('keyId').equals(data.id).toArray();
+                    if (notes.length > 0) {
+                        await db.notes.bulkDelete(notes.map((n) => n.id!));
                     }
+                } catch {
+                    /* note cleanup is best-effort */
                 }
             }),
         );
@@ -533,13 +531,24 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async removeKey(id: string) {
-        await this.registry.removeKey(id);
-        // NOTE: registry.removeKey() already calls saveKeys() internally.
-        // A second call is redundant � the snapshot hasn't changed.
-        this.health.cleanupKey(id);
-        this.lifecycle.cleanupKey(id);
+        try {
+            await this.registry.removeKey(id);
+        } finally {
+            // Always cleanup health/lifecycle even if registry fails,
+            // to prevent ghost state from accumulating.
+            try {
+                this.health.cleanupKey(id);
+            } catch {
+                /* best-effort */
+            }
+            try {
+                this.lifecycle.cleanupKey(id);
+            } catch {
+                /* best-effort */
+            }
+        }
         this.notify();
-        this.deps.eventBus.emit(EVENTS.KEY_REMOVED, id);
+        this.deps.eventBus.emit(EVENTS.KEY_REMOVED, { id });
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key removed', type: 'info' });
     }
 

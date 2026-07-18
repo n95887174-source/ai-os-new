@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { autoDebateService } from '../kernel/instances';
 import PanelLoader from './PanelLoader';
@@ -10,6 +10,13 @@ const TournamentPanel: React.FC = () => {
     const [running, setRunning] = useState(false);
     const [result, setResult] = useState<TournamentResult | null>(null);
     const [progress, setProgress] = useState('');
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     const run = useCallback(async () => {
         setRunning(true);
@@ -18,12 +25,14 @@ const TournamentPanel: React.FC = () => {
         try {
             const t = topic.trim() || 'Should AI be regulated?';
             const r = await autoDebateService.runTournament(t, participantCount);
+            if (!mountedRef.current) return;
             setResult(r);
             setProgress('');
         } catch (e) {
+            if (!mountedRef.current) return;
             setProgress(`Error: ${e instanceof Error ? e.message : String(e)}`);
         } finally {
-            setRunning(false);
+            if (mountedRef.current) setRunning(false);
         }
     }, [topic, participantCount]);
 

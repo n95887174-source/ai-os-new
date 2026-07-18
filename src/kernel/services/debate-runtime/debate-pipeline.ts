@@ -35,11 +35,11 @@ export class DebatePipeline {
                     return result;
                 }
             } catch (e) {
-                LOGGER.error('DebatePipeline', `Stage "${stage.name}" threw`, {
+                LOGGER.error('DebatePipeline', `Stage "${stage.name}" threw unexpectedly`, {
                     sessionId,
                     error: String(e),
                 });
-                return { ok: false, error: String(e) };
+                throw e;
             }
         }
         return { ok: true };

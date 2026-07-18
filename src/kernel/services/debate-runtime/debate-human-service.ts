@@ -48,6 +48,7 @@ export class DebateHumanService implements IDebateHumanService {
             argument: arg,
         });
         this.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+        void persistActiveSession(this.debateStore, session);
     }
 
     recordHumanVote(session: DebateSession | null, vote: HumanVote): void {

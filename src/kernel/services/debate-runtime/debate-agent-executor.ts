@@ -69,7 +69,7 @@ export function createAgentExecutor(sessionId: string, deps: AgentExecutorDeps):
 
         const startTime = performance.now();
         try {
-            const content = await deps.callLLM(sessionId, session, participant);
+            const content = await deps.callLLM(sessionId, session, participant, request.signal);
             const latency = performance.now() - startTime;
 
             if (budget) {

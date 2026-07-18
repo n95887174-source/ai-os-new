@@ -34,6 +34,7 @@ export interface VirtualKeyServiceDeps {
     eventBus: {
         emit: (event: string, data?: unknown) => void;
         on: (event: string, cb: (data: unknown) => void) => () => void;
+        onSafe: <T>(event: string, handler: (data: T) => void) => () => void;
     };
     keyService: {
         getKeys: () => Array<{ id: string; provider: string }>;
@@ -100,8 +101,8 @@ export class VirtualKeyService implements IVirtualKeyService {
 
         try {
             this.unsubs.push(
-                this.deps.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-                    if (typeof id === 'string') this.cleanupRealKey(id);
+                this.deps.eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+                    this.cleanupRealKey(data.id);
                 }),
             );
         } catch (e) {

@@ -75,7 +75,30 @@ export class SystemBootstrap implements IBootstrap {
         });
         this.memoryWatchdog.start();
 
-        this.registerMigratedServices();
+        try {
+            this.registerMigratedServices();
+        } catch (e) {
+            this.logger.error('Bootstrap', 'Service registration failed', { error: e });
+            this.phase = 'failed';
+            this.error = 'Service registration failed';
+            return this.getReport();
+        }
+
+        // Register schedulerService (created in RuntimeManager.registerCoreServices) with LifecycleManager
+        try {
+            const schedulerSvc = this.container.get<{
+                init: () => Promise<void>;
+                destroy: () => void;
+            }>('schedulerService');
+            if (schedulerSvc) {
+                this.registerWithLifecycle('schedulerService', schedulerSvc);
+            }
+        } catch {
+            this.logger.warn(
+                'Bootstrap',
+                'schedulerService not available for lifecycle registration',
+            );
+        }
 
         const configService = this.container.get<ConfigService>('configService');
         await this.lifecycle.tryInit('configService', () => configService.init());
@@ -86,7 +109,13 @@ export class SystemBootstrap implements IBootstrap {
         // ════════════════════════════════════════════════════════════════════
         //   BOOTSTRAP SNAPSHOT — read from KeyStore
         // ════════════════════════════════════════════════════════════════════
-        await loadBootstrapSnapshot(this.container, this.logger);
+        try {
+            await loadBootstrapSnapshot(this.container, this.logger);
+        } catch (e) {
+            this.logger.warn('Bootstrap', 'Bootstrap snapshot load failed (non-critical)', {
+                error: e,
+            });
+        }
 
         // ════════════════════════════════════════════════════════════════════
         //   HYDRATE KEY STORAGE — normalize keys in KeyStore
@@ -264,6 +293,36 @@ export class SystemBootstrap implements IBootstrap {
                 if (!hasStatus) {
                     await this.lifecycle.tryInit(name, () => svc.init());
                 }
+            }
+        }
+
+        // ── Check critical service failures after all tiers ──────────────
+        for (const status of this.lifecycle.getStatuses()) {
+            if (status.status === 'error') {
+                if (CRITICAL_SERVICES.has(status.name)) {
+                    this.logger.error(
+                        'Bootstrap',
+                        `Critical service ${status.name} failed in Tier 4-6 — aborting`,
+                        { error: status.error },
+                    );
+                    this.phase = 'failed';
+                    this.error = `Critical service ${status.name} failed: ${status.error}`;
+                    this.eventBus.emit(EVENTS.RUNTIME_FAILED, {
+                        error: this.error,
+                        phase: this.phase,
+                    });
+                    return false;
+                }
+                this.logger.warn(
+                    'Bootstrap',
+                    `Optional service ${status.name} failed in Tier 4-6 — continuing`,
+                    { error: status.error },
+                );
+                this.eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: `Service ${status.name} failed to init`,
+                    type: 'warning',
+                    source: 'bootstrap',
+                });
             }
         }
 

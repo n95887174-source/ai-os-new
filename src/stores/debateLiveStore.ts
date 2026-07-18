@@ -372,8 +372,16 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
     }, METRICS_INTERVAL_MS);
 
     const countdownInterval = setInterval(() => {
-        set((s) => {
-            const cd = new Map(s.agentCountdowns);
+        const s = get();
+        if (
+            s.agentCountdowns.size === 0 &&
+            s.agentEvents.length === 0 &&
+            s.roundEvents.length === 0
+        ) {
+            return;
+        }
+        set((st) => {
+            const cd = new Map(st.agentCountdowns);
             let changed = false;
             for (const [k, v] of cd) {
                 if (v.secondsLeft <= 0) {

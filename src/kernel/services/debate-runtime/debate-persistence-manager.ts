@@ -320,6 +320,17 @@ export class DebatePersistenceManager {
             const session = new DebateSessionClass(record.id, safeTopic, topology, participants);
 
             // Build snapshot from record for restore
+            const parsedArgs: DebateSessionSnapshot['arguments'] = (() => {
+                try {
+                    if (record.arguments) {
+                        const a = safeJsonParse(record.arguments);
+                        return Array.isArray(a) ? a : [];
+                    }
+                } catch {
+                    /* arguments optional */
+                }
+                return [];
+            })();
             const restoredSnapshot: DebateSessionSnapshot = {
                 id: record.id,
                 topic: safeTopic,
@@ -333,6 +344,7 @@ export class DebatePersistenceManager {
                 updatedAt: record.updatedAt || Date.now(),
                 language: (record as { language?: string }).language ?? DEFAULT_DEBATE_LANGUAGE,
                 version: record.version || 1,
+                arguments: parsedArgs,
             };
             session.restoreInternalState(restoredSnapshot);
 

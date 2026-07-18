@@ -63,7 +63,6 @@
 
 | #    | Что                                                                                   | Оценка | Статус                                                                                       |
 | ---- | ------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
-| D-01 | Mobile-first responsive (27 panels)                                                   | XL     | 🔴 Pending                                                                                   |
 | D-02 | All Zustand stores → liveQuery (chat ✅, keys ✅, debate sessions ✅; others pure UI) | XL     | 🟢 Done (2026-07-13 — debate-session-store migrated; remaining stores are pure UI/transient) |
 | D-03 | 60% test coverage                                                                     | XL     | 🔴 Pending                                                                                   |
 | D-04 | 1400+ missing i18n keys (~180 added in D-20)                                          | XL     | 🟡 Partial (~12% done)                                                                       |

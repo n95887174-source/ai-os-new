@@ -104,6 +104,7 @@ export interface ChatActions {
     switchModel: (provider: string, model: string) => void;
     switchKey: (keyId: string) => void;
     getSessionConfig: () => { provider?: string; model?: string; keyId?: string } | undefined;
+    destroy: () => void;
 }
 
 export type ChatStoreShape = ChatState & ChatActions;

@@ -138,9 +138,27 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
             let earlyExit = false;
 
             try {
+                // On resume, session.round was already incremented by the previous
+                // round:start handler. Subtract 1 to resume the same round.
+                const startRound = isResume ? Math.max(0, session.round - 1) : session.round;
+                // Build set of agentIds that already spoke in the resumed round
+                // (from arguments restored via snapshot). The generator's roundNum = r+1,
+                // so the current round number is startRound + 1.
+                const skipAgents: Set<string> | undefined = isResume
+                    ? new Set(
+                          (session.arguments ?? [])
+                              .filter((a) => a.round === startRound + 1)
+                              .map((a) => a.agentId),
+                      )
+                    : undefined;
                 for await (const event of engine
                     .getContext(sessionId)
-                    .orchestrator.generateRoundEvents(session.topology, sessionId, session.round)) {
+                    .orchestrator.generateRoundEvents(
+                        session.topology,
+                        sessionId,
+                        startRound,
+                        skipAgents,
+                    )) {
                     // agent:responded is recorded with richer payload (including round) in
                     // the case handler below — skip the generic recording to avoid duplicates.
                     if (event.type !== 'agent:responded') {
@@ -151,9 +169,13 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
 
                     switch (event.type) {
                         case 'round:start': {
-                            session.transition('deliberating');
-                            session.incrementRound();
-                            engine.budgets.get(sessionId)?.incrementRound(sessionId);
+                            // On resume, the round was already started — skip
+                            // transition, round counter increment, and budget increment.
+                            if (!isResume) {
+                                session.transition('deliberating');
+                                session.incrementRound();
+                                engine.budgets.get(sessionId)?.incrementRound(sessionId);
+                            }
                             engine.deps.eventBus.emit(EVENTS.DEBATE_ROUND_STARTED, {
                                 sessionId,
                                 round: event.round,
@@ -346,24 +368,49 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
     pipeline.addStage({
         name: 'consensusAndFinalize',
         run: async (sessionId) => {
-            const session = engine.sessions.get(sessionId)!;
-            session.transition('consensus');
-            const claims = gatherClaims(
-                sessionId,
-                session.participants,
-                (sid) => engine.getMemory(sid),
-                session.round,
-            );
-            const result = engine.getContext(sessionId).consensus.evaluate(claims);
-            engine.deps.eventBus.emit(EVENTS.DEBATE_CONSENSUS_REACHED, {
-                sessionId,
-                confidence: result.confidence,
-                agreements: result.agreements.length,
-                conflicts: result.conflicts.length,
-            });
-            session.transition('summarizing');
-            session.transition('completed');
-            return { ok: true };
+            try {
+                const session = engine.sessions.get(sessionId)!;
+                session.transition('consensus');
+                const claims = gatherClaims(
+                    sessionId,
+                    session.participants,
+                    (sid) => engine.getMemory(sid),
+                    session.round,
+                );
+                const result = engine.getContext(sessionId).consensus.evaluate(claims);
+                engine.deps.eventBus.emit(EVENTS.DEBATE_CONSENSUS_REACHED, {
+                    sessionId,
+                    confidence: result.confidence,
+                    agreements: result.agreements.length,
+                    conflicts: result.conflicts.length,
+                });
+                session.transition('summarizing');
+                session.transition('completed');
+                return { ok: true };
+            } catch (e) {
+                LOGGER.error('DebatePipeline', 'consensusAndFinalize threw', {
+                    sessionId,
+                    error: String(e),
+                });
+                const s = engine.sessions.get(sessionId);
+                if (
+                    s &&
+                    s.phase !== 'cancelled' &&
+                    s.phase !== 'failed' &&
+                    s.phase !== 'completed'
+                ) {
+                    try {
+                        s.transition('failed');
+                    } catch {
+                        /* ignore */
+                    }
+                }
+                engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                    sessionId,
+                    error: String(e),
+                });
+                return { ok: false, error: String(e) };
+            }
         },
     });
 

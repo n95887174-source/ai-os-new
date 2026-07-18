@@ -91,8 +91,8 @@ class CrossTabStateSync implements ICrossTabStateSync {
         // Without this, deleted keys leave orphaned entries keyed by `${provider}:${keyId}`
         // that block new keys with the same ID on re-add, and leak memory.
         this.unsubs.push(
-            eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-                const keyId = String(id);
+            eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+                const keyId = data.id;
                 for (const key of this.localCircuitBreakers.keys()) {
                     if (key.endsWith(`:${keyId}`)) this.localCircuitBreakers.delete(key);
                 }

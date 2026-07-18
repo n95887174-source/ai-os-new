@@ -54,8 +54,8 @@ export class SessionAffinityStore implements ISessionAffinityStore, ILifecycle {
             }),
         );
         this.unsubs.push(
-            this.eventBus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-                if (typeof id === 'string') this.removeKey(id);
+            this.eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+                this.removeKey(data.id);
             }),
         );
         this._cleanupTimer = setInterval(() => this.reapExpired(), 60_000);

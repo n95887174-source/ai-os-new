@@ -427,14 +427,25 @@ export class DebateSyncManager {
             .catch((e) => {
                 LOGGER.warn('DebateSyncManager', 'Engine debate failed', { error: e });
                 try {
-                    this.syncSession();
-                    // Terminal phase guard — same as then-block above
+                    // Defensive: if pipeline threw but session stuck in non-terminal
+                    // phase (e.g. 'deliberating'), transition to 'failed'
                     const catchSnap = this.engine?.getSession(runtimeId);
                     if (
                         catchSnap &&
-                        (catchSnap.phase === 'completed' ||
-                            catchSnap.phase === 'cancelled' ||
-                            catchSnap.phase === 'failed')
+                        catchSnap.phase !== 'completed' &&
+                        catchSnap.phase !== 'cancelled' &&
+                        catchSnap.phase !== 'failed'
+                    ) {
+                        this.engine?.cancelSession(runtimeId);
+                    }
+                    this.syncSession();
+                    // Terminal phase guard — same as then-block above
+                    const catchSnap2 = this.engine?.getSession(runtimeId);
+                    if (
+                        catchSnap2 &&
+                        (catchSnap2.phase === 'completed' ||
+                            catchSnap2.phase === 'cancelled' ||
+                            catchSnap2.phase === 'failed')
                     ) {
                         return;
                     }
@@ -613,7 +624,9 @@ export class DebateSyncManager {
         if (this._syncing || !this.engine || !this.runtimeSessionId || !this.bridgeCtx) return;
         // Async fire-and-forget for the governor-stop saveSnapshot path.
         // The _syncing flag prevents re-entrancy while awaiting saveSnapshot.
-        void this._syncSessionImpl();
+        void this._syncSessionImpl().catch((e) =>
+            LOGGER.warn('DebateSyncManager', '_syncSessionImpl failed', { error: e }),
+        );
     }
 
     private async _syncSessionImpl(): Promise<void> {
@@ -630,6 +643,17 @@ export class DebateSyncManager {
             );
             if (!session) return;
             this.activeSession = session;
+            // Preserve consensus from previous session if merge produced none.
+            // Zombie-recovery (loadActiveSession) sets consensus on the store session,
+            // but mergeAndProcessSession creates a fresh object without it.
+            // This also protects against a concurrent syncSession overwriting consensus
+            // that was set by an earlier governor stop check.
+            if (!this.activeSession.consensus) {
+                const prev = useActiveDebateStore.getState().session;
+                if (prev?.consensus) {
+                    this.activeSession.consensus = prev.consensus;
+                }
+            }
             // Check governor stop conditions BEFORE updating the Zustand store.
             // checkGovernorStopConditions() sets this.activeSession.consensus from
             // governor synthesis. Without this ordering, waitForSessionCompletion()

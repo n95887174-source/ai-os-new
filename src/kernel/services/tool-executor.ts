@@ -374,6 +374,7 @@ export class ToolService {
     async execute(
         toolId: string,
         input: unknown,
+        signal?: AbortSignal,
     ): Promise<{
         status: string;
         data?: unknown;
@@ -386,6 +387,8 @@ export class ToolService {
         if (!tool && !pluginTool) throw toolError(toolId, `Tool ${toolId} not found`, 'NOT_FOUND');
         if (tool && tool.enabled === false)
             throw toolError(toolId, `Tool ${tool.name} is currently disabled`);
+
+        signal?.throwIfAborted();
 
         if (tool && !this.checkRateLimit(toolId)) {
             return {
@@ -430,6 +433,7 @@ export class ToolService {
                         url,
                         tool.timeout ?? CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000,
                         tool.allowedDomains,
+                        signal,
                     ),
                 );
             } else if (toolId === 't-mcp') {
@@ -492,6 +496,7 @@ export class ToolService {
         url: string,
         timeoutMs = CONFIG?.services?.toolExecutor?.defaultTimeoutMs ?? 10000,
         allowedDomains?: string[],
+        signal?: AbortSignal,
     ): Promise<string> {
         let parsed: URL;
         try {
@@ -528,8 +533,11 @@ export class ToolService {
                 );
             }
         }
+        const combinedSignal = signal
+            ? (AbortSignal.any?.([signal, AbortSignal.timeout(timeoutMs)]) ?? signal)
+            : AbortSignal.timeout(timeoutMs);
         try {
-            const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+            const response = await fetch(url, { signal: combinedSignal });
             if (!response.ok) {
                 response.body?.cancel()?.catch(() => {});
                 throw toolError(
@@ -588,7 +596,7 @@ export class ToolService {
                 ? `${proxyBase}${encodeURIComponent(url)}`
                 : `${proxyBase}?url=${encodeURIComponent(url)}`;
             try {
-                const proxyRes = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeoutMs) });
+                const proxyRes = await fetch(proxyUrl, { signal: combinedSignal });
                 if (!proxyRes.ok) {
                     proxyRes.body?.cancel()?.catch(() => {});
                     throw toolError(

@@ -418,18 +418,22 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const ZOMBIE_THRESHOLD = 5 * 60 * 1000;
         const records = await store.listSessions();
         for (const record of records) {
-            if (record.phase === 'active') {
+            if (record.phase === 'active' || record.phase === 'deliberating') {
                 if (Date.now() - record.updatedAt > ZOMBIE_THRESHOLD) {
                     record.phase = 'failed';
                     await store.saveSnapshot(record);
-                    LOGGER.warn('DebateEngine', 'Orphaned active session auto-failed (zombie)', {
-                        sessionId: record.id,
-                        age: Date.now() - record.updatedAt,
-                    });
+                    LOGGER.warn(
+                        'DebateEngine',
+                        `Orphaned ${record.phase} session auto-failed (zombie)`,
+                        {
+                            sessionId: record.id,
+                            age: Date.now() - record.updatedAt,
+                        },
+                    );
                 } else {
                     record.phase = 'paused';
                     await store.saveSnapshot(record);
-                    LOGGER.info('DebateEngine', 'Active session auto-paused on reload', {
+                    LOGGER.info('DebateEngine', `${record.phase} session auto-paused on reload`, {
                         sessionId: record.id,
                     });
                 }
@@ -619,7 +623,26 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }
 
         try {
-            await buildPipeline(this.toPipelineEngine(), isResume).run(sessionId);
+            const result = await buildPipeline(this.toPipelineEngine(), isResume).run(sessionId);
+            if (!result.ok) {
+                const s = this.sessions.get(sessionId);
+                if (
+                    s &&
+                    s.phase !== 'cancelled' &&
+                    s.phase !== 'failed' &&
+                    s.phase !== 'completed'
+                ) {
+                    try {
+                        s.transition('failed');
+                    } catch {
+                        /* phase already terminal */
+                    }
+                    this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                        sessionId,
+                        error: result.error,
+                    });
+                }
+            }
         } finally {
             this.runningSessions.delete(sessionId);
             const timer = this.sessionTimeoutTimers.get(sessionId);
@@ -718,7 +741,23 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_RESUMED, { sessionId });
             })
             .catch((e) => {
-                LOGGER.error('DebateEngine', 'resumeSession failed', { sessionId, error: e });
+                LOGGER.error('DebateEngine', 'resumeSession failed', {
+                    sessionId,
+                    error: e,
+                });
+                const s = this.sessions.get(sessionId);
+                if (
+                    s &&
+                    s.phase !== 'completed' &&
+                    s.phase !== 'cancelled' &&
+                    s.phase !== 'failed'
+                ) {
+                    try {
+                        s.transition('failed');
+                    } catch {
+                        /* phase already terminal */
+                    }
+                }
                 this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
                     sessionId,
                     error: String(e),

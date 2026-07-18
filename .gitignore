@@ -57,6 +57,8 @@ temp-*.txt
 staged_ts_files.txt
 # Audit artifacts (not part of source)
 audit/
+audit-deep/
+audit-new/
 
 # opencode temp files
 .opencode/

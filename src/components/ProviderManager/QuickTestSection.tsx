@@ -59,10 +59,16 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             options: { temperature: 0.7, maxTokens: 1024 },
         });
 
+        const cleanup = () => {
+            subResp();
+            subStreamEnd();
+        };
+
         const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
             if (isDone) return;
             if (res.requestId === reqId) {
                 isDone = true;
+                cleanup();
                 if (res.status === 'error') {
                     setTestStatus('error');
                     setTestError(res.error || 'Unknown error');
@@ -81,6 +87,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             if (isDone) return;
             if (requestId === reqId) {
                 isDone = true;
+                cleanup();
                 setTestStatus('success');
                 setTestResult({
                     content: fullContent,
@@ -90,13 +97,12 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             }
         });
 
-        setTimeout(() => {
+        void setTimeout(() => {
             if (isDone) return;
             isDone = true;
+            cleanup();
             setTestStatus('error');
             setTestError('Request timed out');
-            subResp();
-            subStreamEnd();
         }, 15000);
     };
 

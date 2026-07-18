@@ -133,8 +133,10 @@ export async function runOnce(deps: MigrationDeps): Promise<{ migrated: number; 
 
     const persistable = deduped.filter((k) => k.isEncrypted || !k.key);
 
+    let persistedIds: string[] = [];
     if (persistable.length > 0) {
         await deps.keyStore.bulkPut(persistable);
+        persistedIds = persistable.map((k) => k.id);
     }
 
     if (skippedCount > 0) {
@@ -144,7 +146,15 @@ export async function runOnce(deps: MigrationDeps): Promise<{ migrated: number; 
     }
 
     if (skippedCount === 0) {
-        await deps.db.setKv(MIGRATION_FLAG, { done: true, timestamp: Date.now() });
+        try {
+            await deps.db.setKv(MIGRATION_FLAG, { done: true, timestamp: Date.now() });
+        } catch (e) {
+            // Rollback bulkPut if setKv fails — prevents partial migration state
+            if (persistedIds.length > 0) {
+                await Promise.allSettled(persistedIds.map((id) => deps.keyStore.deleteKey(id)));
+            }
+            throw e;
+        }
         LOGGER.info('KeyMigration', 'Migration complete', {
             totalSources: allKeys.length,
             afterDedup: deduped.length,

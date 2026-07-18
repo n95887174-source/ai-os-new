@@ -75,9 +75,8 @@ export class ProviderTracker implements IProviderTracker {
         if (!bus || this.unsubs.length > 0) return; // already subscribed or no bus
         this.eventBus = bus;
         this.unsubs.push(
-            bus.on(EVENTS.KEY_REMOVED, (id: unknown) => {
-                const keyId = String(id);
-                this.latencyWarnings.delete(keyId);
+            bus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+                this.latencyWarnings.delete(data.id);
             }),
             bus.on(EVENTS.STREAM_END, (raw: unknown) => {
                 const data = raw as {
