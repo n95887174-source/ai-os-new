@@ -9,6 +9,8 @@ import type {
     TeamCompatibilityEntry,
 } from '../contracts/role-team';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
+import type { ApiKey } from '../types/metrics-types';
+import type { AdapterMessage } from '../contracts/provider-adapter';
 import { EVENTS } from '../events/event-registry';
 import { TEAM_TEMPLATES } from './team-template-definitions';
 import { BucketStorageAdapter } from './storage-adapter';
@@ -21,43 +23,61 @@ const EXECUTIONS_STORAGE_KEY = 'role_team_executions_v1';
 const MAX_EXECUTIONS = 200;
 const MAX_ABORT_TOKENS = 200;
 
-/**
- * @deprecated MOCK — simulated backend. Replace with real implementation before production use.
- */
+const ROLE_LLM_TIMEOUT = 30000;
+
+export interface RoleTeamServiceDeps {
+    eventBus: IEventBus;
+    database: IDatabaseService;
+    keyService: {
+        getKeys: () => ApiKey[];
+    };
+    adapterRegistry: {
+        getAdapter: (provider: string) =>
+            | {
+                  sendMessage: (
+                      messages: AdapterMessage[],
+                      model: string,
+                      apiKey: string,
+                      signal?: AbortSignal,
+                  ) => Promise<{ content: string; latency?: number }>;
+              }
+            | undefined;
+    };
+}
+
 export class RoleTeamService implements IRoleTeamService {
     private teams = new Map<string, RoleTeam>();
     private executions = new Map<string, TeamExecution>();
     private analyticsCache = new Map<string, TeamAnalytics>();
     private abortTokens = new Set<string>();
-    private eventBus?: IEventBus;
-    private database: IDatabaseService;
+    private deps: RoleTeamServiceDeps;
 
-    constructor(eventBus: IEventBus, database: IDatabaseService) {
-        this.eventBus = eventBus;
-        this.database = database;
+    constructor(deps: RoleTeamServiceDeps) {
+        this.deps = deps;
     }
 
     async init(): Promise<void> {
         try {
-            const savedTeams = await this.database.getKv<RoleTeam[]>(TEAMS_STORAGE_KEY);
+            const savedTeams = await this.deps.database.getKv<RoleTeam[]>(TEAMS_STORAGE_KEY);
             if (savedTeams) {
                 for (const t of savedTeams) this.teams.set(t.id, t);
             } else {
                 const lsTeams = await migrateTeamsFromLocalStorage();
                 if (lsTeams) {
                     for (const t of lsTeams) this.teams.set(t.id, t);
-                    await this.database.setKv(TEAMS_STORAGE_KEY, lsTeams);
+                    await this.deps.database.setKv(TEAMS_STORAGE_KEY, lsTeams);
                     await BucketStorageAdapter.UI.remove(TEAMS_STORAGE_KEY);
                 }
             }
-            const savedExecs = await this.database.getKv<TeamExecution[]>(EXECUTIONS_STORAGE_KEY);
+            const savedExecs =
+                await this.deps.database.getKv<TeamExecution[]>(EXECUTIONS_STORAGE_KEY);
             if (savedExecs) {
                 for (const e of savedExecs) this.executions.set(e.id, e);
             } else {
                 const lsExecs = await migrateExecsFromLocalStorage();
                 if (lsExecs) {
                     for (const e of lsExecs) this.executions.set(e.id, e);
-                    await this.database.setKv(EXECUTIONS_STORAGE_KEY, lsExecs);
+                    await this.deps.database.setKv(EXECUTIONS_STORAGE_KEY, lsExecs);
                     await BucketStorageAdapter.UI.remove(EXECUTIONS_STORAGE_KEY);
                 }
             }
@@ -67,18 +87,20 @@ export class RoleTeamService implements IRoleTeamService {
     }
 
     private persistTeams(): void {
-        this.database.setKv(TEAMS_STORAGE_KEY, Array.from(this.teams.values())).catch(() => {});
+        this.deps.database
+            .setKv(TEAMS_STORAGE_KEY, Array.from(this.teams.values()))
+            .catch(() => {});
     }
 
     private persistExecutions(): void {
-        this.database
+        this.deps.database
             .setKv(EXECUTIONS_STORAGE_KEY, Array.from(this.executions.values()))
             .catch(() => {});
     }
 
     private tryEmit(name: string, payload: Record<string, unknown>): void {
         try {
-            this.eventBus?.emit(name, payload);
+            this.deps.eventBus?.emit(name, payload);
         } catch {
             /* event emission is best-effort */
         }
@@ -420,94 +442,195 @@ export class RoleTeamService implements IRoleTeamService {
     }
 
     // ════════════════════════════════════════════════
-    // Private — Strategy implementations
+    // Private — LLM helpers
     // ════════════════════════════════════════════════
 
-    private simulateRoleOutput(roleId: string, task: string, context?: string): RoleOutput {
-        const startedAt = Date.now();
-        const simLatency = 50 + Math.random() * 200;
-        const simTokens = Math.floor(50 + Math.random() * 200);
-        const simCost = simTokens * 0.000002;
-        return {
-            roleId,
-            status: 'completed',
-            output: `[${roleId}] Analysis of: "${task.slice(0, 60)}"${context ? '\nContext: ' + context.slice(0, 100) : ''}\n- Key observations and findings\n- Recommended actions\n- Confidence: ${(0.6 + Math.random() * 0.35).toFixed(2)}`,
-            latency: Math.round(simLatency),
-            tokens: simTokens,
-            cost: simCost,
-            startedAt,
-            completedAt: startedAt + Math.round(simLatency),
+    private pickProviderAndKey(): { provider: string; key: string; model: string } | undefined {
+        const keys = this.deps.keyService.getKeys().filter((k) => k.status === 'active');
+        if (keys.length === 0) return undefined;
+        const key = keys[Math.floor(Math.random() * keys.length)];
+        const adapter = this.deps.adapterRegistry.getAdapter(key.provider);
+        if (!adapter) return undefined;
+        const providerDefaults: Record<string, string> = {
+            gemini: 'gemini-3.1-flash-lite',
+            groq: 'llama-3.3-70b-versatile',
+            openrouter: 'meta-llama/llama-3.1-8b-instruct',
+            nvidia: 'meta/llama-3.1-8b-instruct',
         };
+        return {
+            provider: key.provider,
+            key: key.key,
+            model: providerDefaults[key.provider] || 'gpt-3.5-turbo',
+        };
+    }
+
+    private async callRoleLLM(
+        systemPrompt: string,
+        task: string,
+        _executionId: string,
+    ): Promise<RoleOutput> {
+        const startedAt = Date.now();
+        const pk = this.pickProviderAndKey();
+        if (!pk) {
+            return {
+                roleId: 'unknown',
+                status: 'failed',
+                error: 'No active API keys available',
+                startedAt,
+                completedAt: Date.now(),
+            };
+        }
+        const adapter = this.deps.adapterRegistry.getAdapter(pk.provider);
+        if (!adapter) {
+            return {
+                roleId: 'unknown',
+                status: 'failed',
+                error: `No adapter for provider ${pk.provider}`,
+                startedAt,
+                completedAt: Date.now(),
+            };
+        }
+        const controller = new AbortController();
+        const timer = setTimeout(
+            () => controller.abort(new DOMException('Role LLM timeout', 'AbortError')),
+            ROLE_LLM_TIMEOUT,
+        );
+        try {
+            const result = await adapter.sendMessage(
+                [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: task },
+                ],
+                pk.model,
+                pk.key,
+                controller.signal,
+            );
+            return {
+                roleId: 'unknown',
+                status: 'completed',
+                output: result.content,
+                latency: result.latency || Date.now() - startedAt,
+                tokens: 0,
+                cost: 0,
+                startedAt,
+                completedAt: Date.now(),
+            };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return {
+                roleId: 'unknown',
+                status: 'failed',
+                error: msg,
+                startedAt,
+                completedAt: Date.now(),
+            };
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    private async callRoleWithId(
+        roleId: string,
+        systemPrompt: string,
+        task: string,
+        executionId: string,
+    ): Promise<RoleOutput> {
+        const result = await this.callRoleLLM(systemPrompt, task, executionId);
+        result.roleId = roleId;
+        return result;
     }
 
     private checkAborted(executionId: string): boolean {
         return this.abortTokens.has(executionId);
     }
 
+    // ════════════════════════════════════════════════
+    // Private — Strategy implementations
+    // ════════════════════════════════════════════════
+
     private async executeParallel(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeParallel for team ${team.name} — no real LLM calls`,
-        );
-        await new Promise((r) => setTimeout(r, 100));
         const roles = [...team.roleIds];
-        for (const roleId of roles) {
+        const results = await Promise.allSettled(
+            roles.map((roleId) =>
+                this.callRoleWithId(
+                    roleId,
+                    `You are ${roleId} in a parallel team. Analyze the task independently and provide your best output.`,
+                    execution.task,
+                    execution.id,
+                ),
+            ),
+        );
+        for (let i = 0; i < roles.length; i++) {
             if (this.checkAborted(execution.id)) return;
-            execution.roleOutputs[roleId] = this.simulateRoleOutput(roleId, execution.task);
+            const settled = results[i];
+            if (settled.status === 'fulfilled') {
+                execution.roleOutputs[roles[i]] = (
+                    settled as PromiseFulfilledResult<RoleOutput>
+                ).value;
+            } else {
+                execution.roleOutputs[roles[i]] = {
+                    roleId: roles[i],
+                    status: 'failed',
+                    error:
+                        ((settled as PromiseRejectedResult).reason as Error)?.message ||
+                        'Execution failed',
+                };
+            }
         }
     }
 
     private async executeSequential(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeSequential for team ${team.name} — no real LLM calls`,
-        );
         let context = '';
         for (const roleId of team.roleIds) {
             if (this.checkAborted(execution.id)) return;
             execution.currentRoleId = roleId;
-            execution.roleOutputs[roleId] = this.simulateRoleOutput(
+            const systemPrompt = `You are ${roleId} in a sequential team. Previous work:\n${context || '(none yet)'}\n\nBuild upon the previous output.`;
+            execution.roleOutputs[roleId] = await this.callRoleWithId(
                 roleId,
+                systemPrompt,
                 execution.task,
-                context,
+                execution.id,
             );
             context = execution.roleOutputs[roleId].output || '';
-            await new Promise((r) => setTimeout(r, 50));
         }
         execution.currentRoleId = undefined;
     }
 
     private async executePipeline(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executePipeline for team ${team.name} — no real LLM calls`,
-        );
         let pipelineInput = execution.task;
         for (const roleId of team.roleIds) {
             if (this.checkAborted(execution.id)) return;
             execution.currentRoleId = roleId;
-            execution.roleOutputs[roleId] = this.simulateRoleOutput(roleId, pipelineInput);
+            const systemPrompt = `You are ${roleId} in a pipeline. Your input:\n${pipelineInput}\n\nProcess this input and pass the result to the next stage. Be concise and focused.`;
+            execution.roleOutputs[roleId] = await this.callRoleWithId(
+                roleId,
+                systemPrompt,
+                execution.task,
+                execution.id,
+            );
             pipelineInput = execution.roleOutputs[roleId].output || pipelineInput;
-            await new Promise((r) => setTimeout(r, 50));
         }
         execution.currentRoleId = undefined;
     }
 
     private async executeDebate(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeDebate for team ${team.name} — no real LLM calls`,
-        );
         const maxRounds = team.executionConfig.maxRounds || 3;
         const debateLog: string[] = [execution.task];
         for (let round = 0; round < maxRounds; round++) {
             if (this.checkAborted(execution.id)) return;
             for (const roleId of team.roleIds) {
                 execution.currentRoleId = roleId;
-                execution.roleOutputs[roleId] = this.simulateRoleOutput(
+                const context = `Debate round ${round + 1}/${maxRounds}\nRecent discussion:\n${debateLog.slice(-5).join('\n')}`;
+                const systemPrompt = `You are ${roleId} in a team debate. ${context}\n\nArgue your position persuasively based on the discussion so far.`;
+                execution.roleOutputs[roleId] = await this.callRoleWithId(
                     roleId,
+                    systemPrompt,
                     execution.task,
-                    `Round ${round + 1}\n${debateLog.join('\n')}`,
+                    execution.id,
                 );
                 if (execution.roleOutputs[roleId].output) {
                     debateLog.push(
-                        `[${roleId}]: ${execution.roleOutputs[roleId].output?.slice(0, 100)}`,
+                        `[${roleId}]: ${execution.roleOutputs[roleId].output?.slice(0, 200)}`,
                     );
                 }
             }
@@ -516,170 +639,170 @@ export class RoleTeamService implements IRoleTeamService {
     }
 
     private async executeConsensus(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeConsensus for team ${team.name} — no real LLM calls`,
-        );
         const threshold = team.executionConfig.consensusThreshold || 0.7;
-        let votesFor = 0;
-        const totalRoles = team.roleIds.length;
+        const votes: Array<{ roleId: string; approve: boolean; reasoning: string }> = [];
         for (const roleId of team.roleIds) {
             if (this.checkAborted(execution.id)) return;
-            execution.roleOutputs[roleId] = this.simulateRoleOutput(
+            execution.roleOutputs[roleId] = await this.callRoleWithId(
                 roleId,
-                `${execution.task}\nCast vote: approve or reject?`,
+                `You are ${roleId}. Review the task and decide: APPROVE or REJECT. Start your response with "APPROVE:" or "REJECT:" then provide your reasoning.`,
+                execution.task,
+                execution.id,
             );
-            const approves = Math.random() > 0.3;
-            if (approves) votesFor++;
-            execution.roleOutputs[roleId].output =
-                (approves ? '✅ APPROVE' : '❌ REJECT') +
-                '\n' +
-                (execution.roleOutputs[roleId].output || '');
-            await new Promise((r) => setTimeout(r, 50));
+            const output = execution.roleOutputs[roleId].output || '';
+            const approves = output.toUpperCase().startsWith('APPROVE');
+            votes.push({ roleId, approve: approves, reasoning: output.slice(0, 200) });
         }
-        const consensus = votesFor / totalRoles >= threshold;
-        execution.synthesis = `Consensus ${consensus ? 'REACHED' : 'NOT REACHED'} — ${votesFor}/${totalRoles} approved (threshold: ${threshold})`;
+        const votesFor = votes.filter((v) => v.approve).length;
+        const consensus = votesFor / team.roleIds.length >= threshold;
+        execution.synthesis = `Consensus ${consensus ? 'REACHED' : 'NOT REACHED'} — ${votesFor}/${team.roleIds.length} approved (threshold: ${threshold})\n\n${votes.map((v) => `[${v.roleId}]: ${v.approve ? '✅' : '❌'} ${v.reasoning}`).join('\n')}`;
     }
 
     private async executeHierarchical(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeHierarchical for team ${team.name} — no real LLM calls`,
-        );
         const leaderId = team.leaderRoleId || team.roleIds[0];
         const subRoles = team.roleIds.filter((r) => r !== leaderId);
         execution.currentRoleId = leaderId;
-        execution.roleOutputs[leaderId] = this.simulateRoleOutput(
+        execution.roleOutputs[leaderId] = await this.callRoleWithId(
             leaderId,
-            `${execution.task}\nAssign sub-tasks to: ${subRoles.join(', ')}`,
+            `You are the team leader (${leaderId}). Delegate sub-tasks to: ${subRoles.join(', ')}. Provide clear directives for each sub-role.`,
+            execution.task,
+            execution.id,
         );
         const leaderDirectives = execution.roleOutputs[leaderId].output || '';
         execution.currentRoleId = undefined;
         for (const roleId of subRoles) {
             if (this.checkAborted(execution.id)) return;
             execution.currentRoleId = roleId;
-            execution.roleOutputs[roleId] = this.simulateRoleOutput(
+            execution.roleOutputs[roleId] = await this.callRoleWithId(
                 roleId,
-                `Directive from ${leaderId}: ${leaderDirectives.slice(0, 100)}`,
+                `You are ${roleId}. Leader's directives:\n${leaderDirectives.slice(0, 500)}\n\nExecute your assigned sub-task.`,
+                execution.task,
+                execution.id,
             );
-            await new Promise((r) => setTimeout(r, 50));
         }
         execution.currentRoleId = undefined;
     }
 
     private async executeSwarm(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeSwarm for team ${team.name} — no real LLM calls`,
-        );
         const maxMessages = team.executionConfig.maxRounds || 5;
         const messages: string[] = [execution.task];
         for (let i = 0; i < maxMessages; i++) {
             if (this.checkAborted(execution.id)) return;
             for (const roleId of team.roleIds) {
                 execution.currentRoleId = roleId;
-                execution.roleOutputs[roleId] = this.simulateRoleOutput(
+                const context = messages.slice(-3).join('\n');
+                const systemPrompt = `You are ${roleId} in a free-form swarm discussion (message ${i + 1}/${maxMessages}). Recent conversation:\n${context}\n\nContribute your perspective based on the discussion.`;
+                execution.roleOutputs[roleId] = await this.callRoleWithId(
                     roleId,
-                    `Swarm message ${i + 1}`,
-                    messages.slice(-3).join('\n'),
+                    systemPrompt,
+                    execution.task,
+                    execution.id,
                 );
                 if (execution.roleOutputs[roleId].output) {
                     messages.push(
-                        `[${roleId}]: ${execution.roleOutputs[roleId].output?.slice(0, 80)}`,
+                        `[${roleId}]: ${execution.roleOutputs[roleId].output?.slice(0, 200)}`,
                     );
                 }
-                await new Promise((r) => setTimeout(r, 30));
             }
         }
         execution.currentRoleId = undefined;
     }
 
     private async executeTournament(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeTournament for team ${team.name} — no real LLM calls`,
-        );
         const roles = [...team.roleIds];
         let round = 1;
-        let bracket = roles.map((id) => ({ id, score: Math.random() }));
+        let bracket: Array<{ id: string }> = roles.map((id) => ({ id }));
+        const scores = new Map<string, number>();
+        for (const id of roles) scores.set(id, 0);
         while (bracket.length > 1) {
             if (this.checkAborted(execution.id)) return;
-            const nextRound: typeof bracket = [];
+            const nextBracket: Array<{ id: string }> = [];
             for (let i = 0; i < bracket.length; i += 2) {
                 if (i + 1 >= bracket.length) {
-                    nextRound.push(bracket[i]);
+                    nextBracket.push(bracket[i]);
                     break;
                 }
                 const a = bracket[i];
                 const b = bracket[i + 1];
-                execution.roleOutputs[a.id] = this.simulateRoleOutput(
+                execution.roleOutputs[a.id] = await this.callRoleWithId(
                     a.id,
-                    `${execution.task}\nTournament Round ${round}: vs ${b.id}`,
+                    `Tournament Round ${round}: You are competing against ${b.id}. Make your best case.`,
+                    execution.task,
+                    execution.id,
                 );
-                execution.roleOutputs[b.id] = this.simulateRoleOutput(
+                execution.roleOutputs[b.id] = await this.callRoleWithId(
                     b.id,
-                    `${execution.task}\nTournament Round ${round}: vs ${a.id}`,
+                    `Tournament Round ${round}: You are competing against ${a.id}. Make your best case.`,
+                    execution.task,
+                    execution.id,
                 );
-                const winner = a.score > b.score ? a : b;
-                nextRound.push({ id: winner.id, score: winner.score + Math.random() * 0.1 });
-                await new Promise((r) => setTimeout(r, 30));
+                const outputA = execution.roleOutputs[a.id].output || '';
+                const outputB = execution.roleOutputs[b.id].output || '';
+                const winner = outputA.length >= outputB.length ? a : b;
+                scores.set(winner.id, (scores.get(winner.id) || 0) + 1);
+                nextBracket.push(winner);
             }
-            bracket = nextRound;
+            bracket = nextBracket;
             round++;
         }
         if (bracket.length === 1) {
-            execution.synthesis = `🏆 Tournament winner: ${bracket[0].id}`;
+            execution.synthesis = `🏆 Tournament winner: ${bracket[0].id} (${scores.get(bracket[0].id) || 0} wins)`;
         }
     }
 
     private async executeRoundRobin(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeRoundRobin for team ${team.name} — no real LLM calls`,
-        );
         const rounds = team.executionConfig.maxRounds || 3;
         for (let r = 0; r < rounds; r++) {
             if (this.checkAborted(execution.id)) return;
             for (const roleId of team.roleIds) {
                 execution.currentRoleId = roleId;
-                execution.roleOutputs[roleId] = this.simulateRoleOutput(
+                execution.roleOutputs[roleId] = await this.callRoleWithId(
                     roleId,
+                    `You are ${roleId} in a round-robin team (Round ${r + 1}/${rounds}). Take your turn and contribute.`,
                     execution.task,
-                    `Round ${r + 1}/${rounds}`,
+                    execution.id,
                 );
-                await new Promise((r2) => setTimeout(r2, 30));
             }
         }
         execution.currentRoleId = undefined;
     }
 
     private async executeReview(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        console.warn(
-            `[RoleTeamService] MOCK executeReview for team ${team.name} — no real LLM calls`,
-        );
         if (team.roleIds.length < 2) {
-            execution.roleOutputs[team.roleIds[0]] = this.simulateRoleOutput(
+            execution.roleOutputs[team.roleIds[0]] = await this.callRoleWithId(
                 team.roleIds[0],
+                `You are ${team.roleIds[0]}. Produce a thorough analysis.`,
                 execution.task,
+                execution.id,
             );
             return;
         }
         const authorId = team.roleIds[0];
         const reviewerIds = team.roleIds.slice(1);
         execution.currentRoleId = authorId;
-        execution.roleOutputs[authorId] = this.simulateRoleOutput(
+        execution.roleOutputs[authorId] = await this.callRoleWithId(
             authorId,
-            `${execution.task}\nProduce a first draft.`,
+            `You are ${authorId}. Produce a first draft or analysis.`,
+            execution.task,
+            execution.id,
         );
         const draft = execution.roleOutputs[authorId].output || '';
         for (const reviewerId of reviewerIds) {
             if (this.checkAborted(execution.id)) return;
             execution.currentRoleId = reviewerId;
-            execution.roleOutputs[reviewerId] = this.simulateRoleOutput(
+            execution.roleOutputs[reviewerId] = await this.callRoleWithId(
                 reviewerId,
-                `${execution.task}\nReview draft:\n${draft.slice(0, 200)}`,
+                `You are ${reviewerId}. Review this draft and provide constructive feedback:\n\n${draft.slice(0, 1000)}`,
+                execution.task,
+                execution.id,
             );
-            await new Promise((r2) => setTimeout(r2, 50));
         }
         execution.currentRoleId = authorId;
-        execution.roleOutputs[authorId] = this.simulateRoleOutput(
+        execution.roleOutputs[authorId] = await this.callRoleWithId(
             authorId,
-            `${execution.task}\nRevise based on ${reviewerIds.length} reviews:\n${draft.slice(0, 100)}`,
+            `You are ${authorId}. Revise your work based on ${reviewerIds.length} reviews. Previous draft:\n${draft.slice(0, 500)}`,
+            execution.task,
+            execution.id,
         );
         execution.currentRoleId = undefined;
     }

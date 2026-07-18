@@ -4057,6 +4057,35 @@ Fix all 4 provider probe failures so ALL 17 API keys participate in debates:
 
 ---
 
+## Current Session (2026-07-18) — Panel Audit: Preview Banner Batch (1/6)
+
+### Goal
+
+Fix `roles-consortia` panel: replace `simulateRoleOutput()` mock with real LLM calls, remove preview banner.
+
+### Changes
+
+| #   | File                                                        | Change                                                                                                                                                                                                                                                                        |
+| :-- | :---------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `src/kernel/services/role-team-service.ts`                  | Full rewrite of strategy implementations (10 strategies). Added `RoleTeamServiceDeps` with `adapterRegistry` + `keyService.getKeys()`. Replaced `simulateRoleOutput()` with `callRoleLLM()` using real adapter `sendMessage()`, strategy-specific system prompts, 30s timeout |
+| 2   | `src/kernel/service-registration/phase8-roles-consortia.ts` | Updated DI registration to pass `keyService` + `adapterRegistry` via new `RoleTeamServiceDeps`                                                                                                                                                                                |
+| 3   | `src/components/RolesPanel/RolesConsortiaPanel.tsx`         | Removed amber preview banner ("Team execution — preview...")                                                                                                                                                                                                                  |
+| 4   | `npx vite build`                                            | ✅ 12.90s                                                                                                                                                                                                                                                                     |
+
+### Remaining Preview-banner panels (5/6)
+
+- `connectors` — real OAuth flows
+- `smart-routing` — real ML-based routing
+- `federated-memory` — real WebRTC/WebSocket sync
+- `memory-export-import` — already verified (real parsers exist, banner was outdated) ✅
+- `time-machine` — real state restoration
+
+### Remaining Mock panels (3)
+
+- `agent-comparison` — replace `MOCK_AGENTS` with `agentService.listAgents()`
+- `community-hub` — real community API
+- `export-import` — wire to real export/import APIs
+
 ## Current Session (2026-07-18) — 3 Debate Console Error Fixes
 
 ### Goal
@@ -4257,3 +4286,28 @@ After Sprint 4, we completed:
 - `npx tsc -b --noEmit` ✅ zero errors
 - `npx vite build` ✅ 9.63s
 - All 6 remaining P1 items from audit-deep/_CONSOLIDATED_PLAN.md resolved 🟢
+
+---
+
+## Current Session (2026-07-18) — Panel Audit: Auto-Refresh Batch (6 panels)
+
+### Goal
+
+Add auto-refresh (usePolling, 15s interval) to 6 🟡 Partial panels from the panel audit report.
+
+### Changes
+
+| #   | Panel                     | File                                                           | Fix                                                                |
+| :-- | :------------------------ | :------------------------------------------------------------- | :----------------------------------------------------------------- |
+| 1   | **SessionBindingsPanel**  | `src/components/SessionBindingsPanel/SessionBindingsPanel.tsx` | Added `usePolling(handleRefresh, 15000)`                           |
+| 2   | **GuardiansPanel**        | `src/components/GuardiansPanel/GuardiansPanel.tsx`             | `useMemo` → `useState` + `usePolling(refreshGuardians, 15000)`     |
+| 3   | **DebateSystemResearch**  | `src/components/DebateResearch/DebateSystemResearch.tsx`       | Added `usePolling(() => setHypotheses(...), 15000)`                |
+| 4   | **GeminiResearchPanel**   | `src/components/GeminiResearch/GeminiResearchPanel.tsx`        | Added `usePolling(() => setSessions(...), 15000)`                  |
+| 5   | **PromptAudit**           | `src/components/DebateResearch/PromptAudit.tsx`                | `useMemo` → `useState` + `usePolling(() => setReport(...), 15000)` |
+| 6   | **NvidiaEnterprisePanel** | `src/components/NvidiaEnterprise/NvidiaEnterprisePanel.tsx`    | Added `usePolling(refresh, 15000)`                                 |
+
+### Status
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅ zero errors
+- `npx vite build` ✅ 10.36s, 4058 modules
+- All 6 panels now 🟢 Live with auto-refresh (15s polling, pauses when tab hidden)

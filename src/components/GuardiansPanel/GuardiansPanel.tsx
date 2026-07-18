@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
 import { Shield, Zap, Sparkles, DollarSign, Mountain, Ghost } from 'lucide-react';
 import { t as translate } from '../../i18n/translations';
 import type { GuardianAspect, IGuardian } from '../../kernel/contracts/guardian';
 import { bridgeKeeperService } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 
 const ASPECT_ICONS: Record<GuardianAspect, React.ReactNode> = {
     speed: <Zap size={20} />,
@@ -158,7 +159,10 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
 };
 
 const GuardiansPanel: React.FC = () => {
-    const guardians = useMemo(() => bridgeKeeper.getAllGuardians(), []);
+    const [guardians, setGuardians] = useState<IGuardian[]>(() => bridgeKeeper.getAllGuardians());
+
+    const refreshGuardians = () => setGuardians(bridgeKeeper.getAllGuardians());
+    usePolling(refreshGuardians, 15000);
 
     return (
         <div style={{ padding: '1.5rem', maxWidth: 1200, margin: '0 auto' }}>

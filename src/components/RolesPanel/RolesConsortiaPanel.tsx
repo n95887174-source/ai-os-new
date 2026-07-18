@@ -277,25 +277,6 @@ const RolesConsortiaPanel: React.FC = () => {
                 </div>
             </div>
 
-            <div
-                style={{
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: 8,
-                    padding: '8px 12px',
-                    marginBottom: 16,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontSize: '0.8rem',
-                }}
-            >
-                <span>
-                    Team execution — preview. executeTeam is a synchronous mock with no real LLM
-                    calls. Real team collaboration coming in a future update.
-                </span>
-            </div>
-
             <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
                 {(['roles', 'consilia', 'templates', 'teams'] as Tab[]).map((t) => (
                     <button key={t} style={tabStyle(tab === t)} onClick={() => setTab(t)}>

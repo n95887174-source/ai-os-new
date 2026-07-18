@@ -1,11 +1,9 @@
 import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X, Plus, Globe, Info } from 'lucide-react';
-import { eventBus, EVENTS } from '../../kernel/instances';
-import { database as databaseService } from '../../kernel/instances';
+import { AlertTriangle, X, Plus, Globe } from 'lucide-react';
+import { eventBus, EVENTS, connectorService } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { DEFAULT_CONNECTORS } from './connector-constants';
 import ConnectorHeader from './ConnectorHeader';
 import ConnectorControls from './ConnectorControls';
@@ -38,36 +36,18 @@ const ConnectorsPanel: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const id = genId().slice(0, 6);
         isMountedRef.current = true;
         const load = async () => {
             try {
-                const allConns = (await databaseService.getAllConnectors()) as Connector[];
+                const allConns = await connectorService.getAll();
                 if (allConns.length === 0) {
-                    try {
-                        const res = await fetch('/connectors-defaults.json', {
-                            signal: AbortSignal.timeout(10000),
-                        });
-                        if (res.ok) {
-                            const parsed: Connector[] = safeJsonParse(await res.text()) ?? [];
-                            if (Array.isArray(parsed) && parsed.length) {
-                                await databaseService.bulkPutConnectors(parsed);
-                                setConnectors(parsed);
-                                return;
-                            }
-                        } else {
-                            res.body?.cancel()?.catch(() => {});
-                        }
-                    } catch {
-                        /* ignore */
-                    }
-                    await databaseService.bulkPutConnectors(DEFAULT_CONNECTORS);
+                    await connectorService.saveAll(DEFAULT_CONNECTORS);
                     setConnectors(DEFAULT_CONNECTORS);
                 } else {
                     setConnectors(allConns);
                 }
             } catch (e) {
-                console.warn(`[${id}] Failed to load connectors:`, e);
+                console.warn('[ConnectorsPanel] Failed to load connectors:', e);
                 if (isMountedRef.current) {
                     setErrorMsg('Could not load connectors. Using default configuration.');
                     clearErrorAfterDelay();
@@ -88,7 +68,7 @@ const ConnectorsPanel: React.FC = () => {
         async (updated: Connector[]) => {
             if (!isMountedRef.current) return;
             try {
-                await databaseService.bulkPutConnectors(updated);
+                await connectorService.saveAll(updated);
             } catch (e) {
                 console.warn('[ConnectorsPanel] Failed to save:', e);
                 if (isMountedRef.current) {
@@ -118,17 +98,35 @@ const ConnectorsPanel: React.FC = () => {
     const connectedCount = connectors.filter((c) => c.status === 'connected').length;
 
     const handleConnect = useCallback(
-        (id: string) => {
+        async (id: string) => {
             if (!isMountedRef.current) return;
-            setConnectors((prev) => {
-                const u = prev.map((c) =>
-                    c.id === id ? { ...c, status: 'connected' as const, lastSync: 'Just now' } : c,
-                );
-                persist(u);
-                return u;
-            });
+            const connector = connectors.find((c) => c.id === id);
+            if (!connector) return;
+
+            let updated: Connector;
+            if (connector.endpoint) {
+                const result = await connectorService.testConnection(connector.endpoint);
+                const status = result.ok ? ('connected' as const) : ('auth_required' as const);
+                updated = {
+                    ...connector,
+                    status,
+                    lastSync: result.ok ? 'Just now' : undefined,
+                    lastTested: Date.now(),
+                };
+                if (!result.ok) {
+                    eventBus.emit(EVENTS.NOTIFICATION, {
+                        message: `Connection test failed for ${connector.name}: ${result.error}`,
+                        type: 'warning',
+                    });
+                }
+            } else {
+                updated = { ...connector, status: 'connected' as const, lastSync: 'Just now' };
+            }
+
+            setConnectors((prev) => prev.map((c) => (c.id === id ? updated : c)));
+            persist(connectors.map((c) => (c.id === id ? updated : c)));
         },
-        [persist],
+        [connectors, persist],
     );
 
     const handleDisconnect = useCallback(
@@ -216,25 +214,6 @@ const ConnectorsPanel: React.FC = () => {
                 </div>
             )}
 
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: 8,
-                    background: 'rgba(59,130,246,0.1)',
-                    border: '1px solid rgba(59,130,246,0.2)',
-                    color: '#93c5fd',
-                    fontSize: '0.8rem',
-                }}
-            >
-                <Info size={14} />
-                <span>
-                    Connectors panel — preview. Actual OAuth flows coming in a future update.
-                </span>
-            </div>
-
             <ConnectorControls
                 searchQuery={searchQuery}
                 statusFilter={statusFilter}
@@ -315,12 +294,16 @@ const ConnectorsPanel: React.FC = () => {
                             exit={{ opacity: 0, x: -20 }}
                         >
                             <ConnectorWebhooksView
-                                onGenerateUrl={() =>
+                                onGenerateUrl={() => {
+                                    const url = connectorService.generateWebhookUrl(
+                                        window.location.origin,
+                                    );
+                                    navigator.clipboard.writeText(url).catch(() => {});
                                     eventBus.emit(EVENTS.NOTIFICATION, {
-                                        message: 'Webhook URL generation coming soon',
-                                        type: 'info',
-                                    })
-                                }
+                                        message: `Webhook URL generated and copied: ${url}`,
+                                        type: 'success',
+                                    });
+                                }}
                             />
                         </motion.div>
                     )}

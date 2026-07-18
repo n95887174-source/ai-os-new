@@ -1,82 +1,96 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PanelLoader from '../PanelLoader';
 
-const SAMPLE_ITEMS = [
-    {
-        type: 'topology',
-        name: 'Debate Flow v2',
-        author: 'system',
-        downloads: 128,
-        rating: 4.5,
-        description: 'Multi-agent debate with router, 4 agents, and aggregator',
-        tags: ['debate', 'multi-agent'],
-    },
-    {
-        type: 'topology',
-        name: 'Research Pipeline',
-        author: 'system',
-        downloads: 95,
-        rating: 4.2,
-        description: 'Epistemic loop: question → search → analyze → synthesize',
-        tags: ['research', 'pipeline'],
-    },
-    {
-        type: 'prompt',
-        name: 'Socratic Questioner',
-        author: 'system',
-        downloads: 212,
-        rating: 4.8,
-        description: 'Guides discussion through probing questions',
-        tags: ['debate', 'teaching'],
-    },
-    {
-        type: 'prompt',
-        name: 'Code Reviewer',
-        author: 'system',
-        downloads: 167,
-        rating: 4.6,
-        description: 'Reviews code for bugs, style, and security',
-        tags: ['code', 'review'],
-    },
-    {
-        type: 'template',
-        name: 'Strategy Showdown',
-        author: 'system',
-        downloads: 73,
-        rating: 4.0,
-        description: 'Compare 4 strategies on the same topic',
-        tags: ['debate', 'comparison'],
-    },
-    {
-        type: 'prompt',
-        name: 'Interview Panel',
-        author: 'system',
-        downloads: 54,
-        rating: 3.9,
-        description: 'Multi-agent interview with different personas',
-        tags: ['interview', 'roleplay'],
-    },
-];
+interface CommunityItem {
+    id: string;
+    type: 'topology' | 'prompt' | 'template' | 'persona';
+    name: string;
+    author: string;
+    downloads: number;
+    rating: number;
+    description: string;
+    tags: string[];
+    source: 'template' | 'persona';
+}
 
 const TYPE_ICONS: Record<string, string> = {
     topology: '\uD83D\uDD17',
     prompt: '\uD83D\uDCDD',
     template: '\uD83D\uDCCB',
+    persona: '\uD83D\uDC64',
 };
 const TYPE_COLORS: Record<string, string> = {
     topology: '#8b5cf6',
     prompt: '#3b82f6',
     template: '#10b981',
+    persona: '#f59e0b',
 };
 
 const CommunityHubPanel: React.FC = () => {
-    const [tab, setTab] = useState<'topologies' | 'prompts' | 'templates'>('topologies');
+    const [tab, setTab] = useState<'topologies' | 'prompts' | 'templates' | 'personas'>(
+        'topologies',
+    );
     const [search, setSearch] = useState('');
+    const [items, setItems] = useState<CommunityItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [importing, setImporting] = useState<string | null>(null);
 
-    const filtered = SAMPLE_ITEMS.filter((i) => {
-        if (tab === 'topologies' && i.type !== 'topology') return false;
-        if (tab === 'prompts' && i.type !== 'prompt') return false;
-        if (tab === 'templates' && i.type !== 'template') return false;
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const m = await import('../../kernel/instances');
+                const templates = m.templateSharingService.getSharedTemplates();
+                const personas = m.personaMarketplaceService.getListings();
+                const merged: CommunityItem[] = [
+                    ...templates.map((t) => ({
+                        id: t.id,
+                        type: (t.category === 'prompt'
+                            ? 'prompt'
+                            : t.category === 'debate'
+                              ? 'template'
+                              : 'topology') as CommunityItem['type'],
+                        name: t.name,
+                        author: t.author || 'system',
+                        downloads: t.downloads || 0,
+                        rating: 4.0,
+                        description: t.description,
+                        tags: t.tags || [],
+                        source: 'template' as const,
+                    })),
+                    ...personas.map((p) => ({
+                        id: p.id,
+                        type: 'persona' as CommunityItem['type'],
+                        name: p.name,
+                        author: p.author || 'community',
+                        downloads: p.downloads || 0,
+                        rating: p.rating || 4.0,
+                        description: p.description,
+                        tags: [p.category || 'custom'],
+                        source: 'persona' as const,
+                    })),
+                ];
+                if (!cancelled) setItems(merged);
+            } catch {
+                if (!cancelled) setItems([]);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        load();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const filtered = items.filter((i) => {
+        const typeMap: Record<string, string> = {
+            topologies: 'topology',
+            prompts: 'prompt',
+            templates: 'template',
+            personas: 'persona',
+        };
+        if (i.type !== typeMap[tab]) return false;
         if (
             search &&
             !i.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -86,9 +100,23 @@ const CommunityHubPanel: React.FC = () => {
         return true;
     });
 
+    const handleImport = async (item: CommunityItem) => {
+        setImporting(item.id);
+        try {
+            const m = await import('../../kernel/instances');
+            if (item.source === 'template') {
+                m.templateSharingService.importTemplate(item.id);
+            } else {
+                m.personaMarketplaceService.install(item.id);
+            }
+        } catch {
+        } finally {
+            setImporting(null);
+        }
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Tabs */}
             <div
                 style={{
                     display: 'flex',
@@ -98,24 +126,10 @@ const CommunityHubPanel: React.FC = () => {
                 }}
             >
                 {[
-                    {
-                        id: 'topologies' as const,
-                        label: 'Topologies',
-                        icon: '\uD83D\uDD17',
-                        count: SAMPLE_ITEMS.filter((i) => i.type === 'topology').length,
-                    },
-                    {
-                        id: 'prompts' as const,
-                        label: 'Prompts',
-                        icon: '\uD83D\uDCDD',
-                        count: SAMPLE_ITEMS.filter((i) => i.type === 'prompt').length,
-                    },
-                    {
-                        id: 'templates' as const,
-                        label: 'Templates',
-                        icon: '\uD83D\uDCCB',
-                        count: SAMPLE_ITEMS.filter((i) => i.type === 'template').length,
-                    },
+                    { id: 'topologies' as const, label: 'Topologies', icon: '\uD83D\uDD17' },
+                    { id: 'prompts' as const, label: 'Prompts', icon: '\uD83D\uDCDD' },
+                    { id: 'templates' as const, label: 'Templates', icon: '\uD83D\uDCCB' },
+                    { id: 'personas' as const, label: 'Personas', icon: '\uD83D\uDC64' },
                 ].map((t) => (
                     <button
                         key={t.id}
@@ -133,10 +147,7 @@ const CommunityHubPanel: React.FC = () => {
                             gap: '0.3rem',
                         }}
                     >
-                        <span>{t.icon}</span> {t.label}{' '}
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                            ({t.count})
-                        </span>
+                        <span>{t.icon}</span> {t.label}
                     </button>
                 ))}
                 <div style={{ flex: 1 }} />
@@ -156,7 +167,32 @@ const CommunityHubPanel: React.FC = () => {
                 />
             </div>
 
-            {/* Grid */}
+            {loading && (
+                <div
+                    style={{
+                        textAlign: 'center',
+                        padding: '2rem',
+                        color: 'var(--text-muted)',
+                        fontSize: '0.8rem',
+                    }}
+                >
+                    Loading community items...
+                </div>
+            )}
+
+            {!loading && filtered.length === 0 && (
+                <div
+                    style={{
+                        textAlign: 'center',
+                        padding: '2rem',
+                        color: 'var(--text-muted)',
+                        fontSize: '0.8rem',
+                    }}
+                >
+                    No items found. Check that templates/personas are available.
+                </div>
+            )}
+
             <div
                 style={{
                     display: 'grid',
@@ -166,7 +202,7 @@ const CommunityHubPanel: React.FC = () => {
             >
                 {filtered.map((item) => (
                     <div
-                        key={item.name}
+                        key={`${item.source}-${item.id}`}
                         style={{
                             padding: '0.75rem',
                             borderRadius: '8px',
@@ -231,21 +267,30 @@ const CommunityHubPanel: React.FC = () => {
                             }}
                         >
                             <span>by {item.author}</span>
-                            <span>\u2B50 {item.rating}</span>
-                            <span>\u2B07 {item.downloads}</span>
+                            <span>
+                                {'\u2B50'} {item.rating}
+                            </span>
+                            <span>
+                                {'\u2B07'} {item.downloads}
+                            </span>
                             <div style={{ flex: 1 }} />
                             <button
+                                onClick={() => handleImport(item)}
+                                disabled={importing === item.id}
                                 style={{
                                     padding: '0.2rem 0.6rem',
                                     borderRadius: '4px',
                                     border: 'none',
-                                    background: 'rgba(59,130,246,0.2)',
-                                    color: '#60a5fa',
-                                    cursor: 'pointer',
+                                    background:
+                                        importing === item.id
+                                            ? 'rgba(59,130,246,0.4)'
+                                            : 'rgba(59,130,246,0.2)',
+                                    color: importing === item.id ? '#93c5fd' : '#60a5fa',
+                                    cursor: importing === item.id ? 'default' : 'pointer',
                                     fontSize: '0.65rem',
                                 }}
                             >
-                                Import
+                                {importing === item.id ? 'Importing...' : 'Import'}
                             </button>
                         </div>
                     </div>

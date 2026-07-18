@@ -13,6 +13,7 @@ import {
     Loader2,
 } from 'lucide-react';
 import { nvidiaEnterpriseService, providerAchievementService } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 import { AchievementList } from '../ProviderManager/AchievementList';
 import type {
     NvidiaEnterpriseConfig,
@@ -69,6 +70,8 @@ export default function NvidiaEnterprisePanel() {
         setCosts(nvidiaEnterpriseService.getEstimatedCosts());
         setConnStatus(nvidiaEnterpriseService.getConnectionStatus());
     }, []);
+
+    usePolling(refresh, 15000);
 
     const handleToggleFeature = (id: string, enabled: boolean) => {
         nvidiaEnterpriseService.toggleFeature(id, enabled);

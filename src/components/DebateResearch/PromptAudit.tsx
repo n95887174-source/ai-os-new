@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, AlertTriangle, Lightbulb, Search, X } from 'lucide-react';
 import { promptAuditService } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 import AuditStatCards from './AuditStatCards';
 import TempDistribution from './TempDistribution';
 import GroupDistribution from './GroupDistribution';
@@ -15,8 +16,10 @@ const PromptAudit: React.FC = () => {
     const [sortBy, setSortBy] = useState<'name' | 'temp' | 'words'>('name');
     const [groupFilter, setGroupFilter] = useState<string>('all');
     const [showSuggestions, setShowSuggestions] = useState(true);
+    const [report, setReport] = useState(() => promptAuditService.buildAuditReport());
 
-    const report = useMemo(() => promptAuditService.buildAuditReport(), []);
+    usePolling(() => setReport(promptAuditService.buildAuditReport()), 15000);
+
     const agents = report.agents;
     const collisions = report.collisions;
 

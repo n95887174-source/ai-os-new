@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
-import { BarChart3, Search, Bot, Users, Activity, Zap, Clock, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    BarChart3,
+    Search,
+    Bot,
+    Users,
+    Activity,
+    Zap,
+    Clock,
+    AlertCircle,
+    Loader2,
+} from 'lucide-react';
 import PanelLoader from '../PanelLoader';
 import { AgentComparison } from '../AgentsPanel/AgentComparison';
 
@@ -21,119 +31,64 @@ interface AgentEntry {
         avgTokensPerCall?: number;
         lastActive?: number;
     };
+    elo?: number;
 }
-
-const MOCK_AGENTS: AgentEntry[] = [
-    {
-        id: 'a1',
-        name: 'Analyst',
-        role: 'Critical Analysis',
-        status: 'ready',
-        model: 'llama-3.1-8b-instant',
-        providerId: 'Groq',
-        temperature: 0.3,
-        tools: ['web_search', 'code_exec'],
-        systemPrompt:
-            'You are a meticulous analyst who evaluates arguments for logical consistency and evidentiary support.',
-        stats: {
-            calls: 1542,
-            tokens: 892000,
-            latency: 423,
-            errors: 12,
-            avgTokensPerCall: 578,
-            lastActive: Date.now() - 300000,
-        },
-    },
-    {
-        id: 'a2',
-        name: 'Debater',
-        role: 'Persuasive Argumentation',
-        status: 'ready',
-        model: 'llama-3.3-70b-versatile',
-        providerId: 'Groq',
-        temperature: 0.7,
-        tools: ['web_search'],
-        systemPrompt:
-            'You are a skilled debater who constructs compelling arguments and anticipates counterpoints.',
-        stats: {
-            calls: 2103,
-            tokens: 1450000,
-            latency: 891,
-            errors: 34,
-            avgTokensPerCall: 689,
-            lastActive: Date.now() - 60000,
-        },
-    },
-    {
-        id: 'a3',
-        name: 'Strategist',
-        role: 'Strategic Planning',
-        status: 'ready',
-        model: 'gemini-3.1-flash-lite',
-        providerId: 'Gemini',
-        temperature: 0.5,
-        tools: ['web_search', 'code_exec', 'data_analysis'],
-        systemPrompt:
-            'You are a strategic planner who thinks multiple steps ahead and considers long-term implications.',
-        stats: {
-            calls: 876,
-            tokens: 612000,
-            latency: 1240,
-            errors: 8,
-            avgTokensPerCall: 698,
-            lastActive: Date.now() - 7200000,
-        },
-    },
-    {
-        id: 'a4',
-        name: 'Critic',
-        role: 'Constructive Criticism',
-        status: 'ready',
-        model: 'mixtral-8x7b-32768',
-        providerId: 'Groq',
-        temperature: 0.4,
-        tools: ['code_exec'],
-        systemPrompt:
-            'You are a constructive critic who identifies flaws and proposes concrete improvements.',
-        stats: {
-            calls: 654,
-            tokens: 445000,
-            latency: 567,
-            errors: 5,
-            avgTokensPerCall: 680,
-            lastActive: Date.now() - 3600000,
-        },
-    },
-    {
-        id: 'a5',
-        name: 'Researcher',
-        role: 'Deep Research',
-        status: 'ready',
-        model: 'llama-3.3-70b-versatile',
-        providerId: 'Groq',
-        temperature: 0.2,
-        tools: ['web_search', 'data_analysis'],
-        systemPrompt:
-            'You are a thorough researcher who gathers and synthesizes information from multiple sources.',
-        stats: {
-            calls: 3210,
-            tokens: 2800000,
-            latency: 756,
-            errors: 45,
-            avgTokensPerCall: 872,
-            lastActive: Date.now() - 900000,
-        },
-    },
-];
 
 const AgentComparisonPanelContent: React.FC = () => {
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
+    const [agents, setAgents] = useState<AgentEntry[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const filtered = MOCK_AGENTS.filter(
-        (a) =>
-            a.name.toLowerCase().includes(search.toLowerCase()) ||
-            a.role.toLowerCase().includes(search.toLowerCase()),
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const m = await import('../../kernel/instances');
+                const agentList = m.agentService.getAgents();
+                const leaderboard = m.eloService.getLeaderboard(100);
+                const eloMap = new Map(leaderboard.map((e) => [e.agentId, e.elo]));
+                const merged: AgentEntry[] = agentList.map((a) => ({
+                    id: a.id,
+                    name: a.name,
+                    role: a.role || 'General',
+                    status: a.status || 'ready',
+                    model: '—',
+                    providerId: '—',
+                    temperature: 0.5,
+                    tools: [],
+                    systemPrompt: '',
+                    stats: {
+                        calls: a.stats.calls || 0,
+                        tokens: a.stats.tokens || 0,
+                        latency: a.stats.latency || 0,
+                        errors: a.stats.errors || 0,
+                        avgTokensPerCall: a.stats.avgTokensPerCall || 0,
+                        lastActive: a.stats.lastActive || Date.now(),
+                    },
+                    elo: eloMap.get(a.id) || 1000,
+                }));
+                if (!cancelled) setAgents(merged);
+            } catch {
+                if (!cancelled) setAgents([]);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        load();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const filtered = useMemo(
+        () =>
+            agents.filter(
+                (a) =>
+                    a.name.toLowerCase().includes(search.toLowerCase()) ||
+                    a.role.toLowerCase().includes(search.toLowerCase()),
+            ),
+        [agents, search],
     );
 
     const toggle = (id: string) => {
@@ -147,8 +102,26 @@ const AgentComparisonPanelContent: React.FC = () => {
     };
 
     const selectedAgents = selected
-        .map((id) => MOCK_AGENTS.find((a) => a.id === id))
+        .map((id) => agents.find((a) => a.id === id))
         .filter(Boolean) as AgentEntry[];
+
+    if (loading) {
+        return (
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 200,
+                    gap: 8,
+                    color: '#94a3b8',
+                }}
+            >
+                <Loader2 size={20} className="animate-spin" />
+                Loading agents...
+            </div>
+        );
+    }
 
     return (
         <div
@@ -304,6 +277,18 @@ const AgentComparisonPanelContent: React.FC = () => {
                                     />{' '}
                                     {agent.stats.errors || 0} errors
                                 </div>
+                                {agent.elo != null && (
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                            gridColumn: '1 / -1',
+                                        }}
+                                    >
+                                        <BarChart3 size={12} color="#a855f7" /> ELO: {agent.elo}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );

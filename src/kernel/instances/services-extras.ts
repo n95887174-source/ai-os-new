@@ -62,6 +62,7 @@ import type { SourceAdapterRegistry as SourceAdapterRegistryType } from '../serv
 import type { PromptLibraryService as PromptLibraryServiceType } from '../services/prompt-library-service';
 import type { BatchProcessorService as BatchProcessorServiceType } from '../services/batch-processor-service';
 import type { AgentAvatarService } from '../services/agent-avatar-service';
+import type { ConnectorService } from '../services/connector-service';
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',
@@ -166,6 +167,7 @@ export const promptLibraryService = lazyService<PromptLibraryServiceType>('promp
 export const batchProcessorService =
     lazyService<BatchProcessorServiceType>('batchProcessorService');
 export const agentAvatarService = lazyService<AgentAvatarService>('agentAvatarService');
+export const connectorService = lazyService<ConnectorService>('connectorService');
 
 // ── Debate archetype helpers (data/config, not service instances) ───────────
 export {

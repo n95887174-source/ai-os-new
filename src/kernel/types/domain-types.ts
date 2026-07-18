@@ -6,6 +6,8 @@ export interface Connector {
     readonly color: string;
     readonly status: 'connected' | 'auth_required' | 'disconnected';
     readonly lastSync?: string;
+    readonly endpoint?: string;
+    readonly lastTested?: number;
 }
 
 export interface NodeContext {

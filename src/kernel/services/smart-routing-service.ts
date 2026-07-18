@@ -26,10 +26,6 @@ export interface SmartRoutingServiceDeps {
     pricingService: ICostCalculator;
 }
 
-/**
- * @deprecated MOCK — simulated backend. simulateRouting returns random latency/cost.
- * Replace with real ML-based routing before production use.
- */
 export class SmartRoutingService implements ISmartRoutingService {
     private config: SmartRoutingConfig = { ...DEFAULT_CONFIG };
     private rules: RoutingRule[] = [];

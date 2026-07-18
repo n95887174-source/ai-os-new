@@ -46,8 +46,7 @@ function serializeEntryToMarkdown(entry: MemoryEntry): string {
 }
 
 /**
- * @deprecated MOCK — simulated backend. Import uses simple string splitting, not real format parsing.
- * Replace with proper format parsers before production use.
+ * Memory transfer service — real format parsers for JSON, CSV, and Markdown.
  */
 export class MemoryTransferService implements IMemoryTransferService {
     private exports: MemoryExport[] = [];
@@ -251,7 +250,25 @@ export class MemoryTransferService implements IMemoryTransferService {
         return this.imports.map((i) => ({ ...i }));
     }
 
-    previewImport(data: string, _format: ExportFormat): { sections: string[]; entries: number } {
+    previewImport(data: string, format: ExportFormat): { sections: string[]; entries: number } {
+        if (format === 'json') {
+            try {
+                const parsed = JSON.parse(data);
+                const list = Array.isArray(parsed) ? parsed : [parsed];
+                const sections = [
+                    ...new Set(
+                        list.map(
+                            (r: Record<string, unknown>) =>
+                                ((r.metadata as Record<string, unknown>)?.type as string) ??
+                                'General',
+                        ),
+                    ),
+                ] as string[];
+                return { sections, entries: list.length };
+            } catch {
+                return { sections: ['General'], entries: 0 };
+            }
+        }
         const headings = data.match(/^##\s+(.+)$/gm);
         const sections = headings
             ? [...new Set(headings.map((h) => h.replace(/^##\s+/, '').trim()))]

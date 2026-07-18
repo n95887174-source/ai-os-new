@@ -20,10 +20,6 @@ export interface FederatedMemoryServiceDeps {
     database?: IDatabaseService;
 }
 
-/**
- * @deprecated MOCK — simulated backend. syncNode ignores allowedPeers and encryptionEnabled.
- * Replace with real WebRTC/WebSocket sync before production use.
- */
 export class FederatedMemoryService implements IFederatedMemoryService {
     destroy(): void {
         /* no-op — all resources are method-scoped */

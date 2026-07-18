@@ -6,6 +6,7 @@ import {
     researchEngine,
     geminiResearchService as _geminiResearchService,
 } from '../../kernel/instances';
+import { usePolling } from '../Common/usePolling';
 const geminiResearch = _geminiResearchService;
 import { GeminiSearchTab } from './GeminiSearchTab';
 import { GeminiFactCheckTab } from './GeminiFactCheckTab';
@@ -42,6 +43,10 @@ const GeminiResearchPanel: React.FC = () => {
             setSessions(researchEngine.getAllSessions());
         }
     }, []);
+
+    usePolling(() => {
+        if (researchEngine) setSessions(researchEngine.getAllSessions());
+    }, 15000);
 
     const renderTab = () => {
         if (!geminiResearch) {

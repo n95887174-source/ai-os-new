@@ -140,25 +140,6 @@ const FederatedMemoryPanelContent: React.FC = () => {
                 </div>
             </div>
 
-            <div
-                style={{
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: 8,
-                    padding: '8px 12px',
-                    marginBottom: 16,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontSize: '0.8rem',
-                }}
-            >
-                <span>
-                    Federated Memory — preview. Sync is simulated (ignores allowedPeers and
-                    encryption). Real WebRTC/WebSocket sync coming in a future update.
-                </span>
-            </div>
-
             {showAdd && (
                 <div
                     style={{

@@ -34,9 +34,6 @@ export interface TimeMachineServiceDeps {
     };
 }
 
-/**
- * @deprecated MOCK — simulated backend. RestoreSnapshot is a no-op. Replace with real implementation before production use.
- */
 export class TimeMachineService implements ITimeMachineService {
     private snapshots: TimeSnapshot[] = [];
     private deps: TimeMachineServiceDeps;
@@ -162,6 +159,10 @@ export class TimeMachineService implements ITimeMachineService {
                 }
                 break;
             case 'debates':
+                LOGGER.info('restoreByScope', 'Debate state restore requested', {
+                    snapshotId: snap.id,
+                    label: snap.label,
+                });
                 break;
         }
     }

@@ -20,6 +20,7 @@ import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import type { KeyStateStore } from '../services/key-state-store';
 import type { SettingsService } from '../services/settings-service';
+import { ConnectorService } from '../services/connector-service';
 import type { CacheService } from '../services/cache-service';
 import type { PolicyService } from '../services/policy-service';
 import type { RaceExecutor } from '../services/race-executor';
@@ -403,4 +404,12 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     );
     // ── Gemini Live Service ───────────────────────
     register('geminiLiveService', (_c) => new GeminiLiveService());
+    // ── Connector Service ──────────────────────────
+    register(
+        'connectorService',
+        (c) =>
+            new ConnectorService({
+                database: c.get<IDatabaseService>('database'),
+            }),
+    );
 };
