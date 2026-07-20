@@ -12,6 +12,7 @@ import {
 } from '../../styles/common';
 import { badgeGreen, badgeAmber } from './debate-analytics-badges';
 import GraphMetricsSection from './GraphMetricsSection';
+import CausalAnalysisSection from './CausalAnalysisSection';
 import QualityMetricsSection from './QualityMetricsSection';
 import ActivitySection from './ActivitySection';
 import RoundTimeline from './RoundTimeline';
@@ -195,6 +196,8 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
             )}
 
             <GraphMetricsSection session={session} t={t} />
+
+            <CausalAnalysisSection args={args} participants={session.participants ?? []} t={t} />
 
             {session.status === 'completed' &&
                 session.strategy === 'constrained' &&
