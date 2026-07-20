@@ -1147,7 +1147,8 @@ export function buildArgumentPrompt(
             : '';
 
     const triangulationBlock =
-        isQ('evidence-triangulation', qualitySettings) && round > 2
+        (isQ('evidence-triangulation', qualitySettings) || isQ('triangulation', qualitySettings)) &&
+        round > 2
             ? buildTriangulationPrompt(language)
             : '';
 
@@ -1166,10 +1167,16 @@ export function buildArgumentPrompt(
     const criticSelfBlock =
         isQ('critic', qualitySettings) && round > 1 ? buildCriticPrompt(language) : '';
 
-    const pivotBlock =
+    const socraticPivotBlock =
         isQ('socratic-pivot', qualitySettings) && round > 3
             ? buildSocraticPivotPrompt(language)
             : '';
+
+    const changePivotBlock =
+        isQ('pivot', qualitySettings) && round >= 3 ? buildPivotStrategyPrompt(language) : '';
+
+    const synthesizeBlock =
+        isQ('synthesis', qualitySettings) && round >= 4 ? buildSynthesisPrompt(language) : '';
 
     const concessionBlock = isQ('concession', qualitySettings)
         ? buildConcessionPrompt(language)
@@ -1361,7 +1368,7 @@ export function buildArgumentPrompt(
         : '';
 
     return `## Topic: ${sanitizeForPrompt(topic)}
-${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${angleBlock}${tempBlock}${entanglementBlock}${anchorsBlock}${vulnerabilityBlock}${adversarialBlock}${beliefConflictsBlock}${minimaxBlock}${tacticalBlock}${steelmanBlock}${bopBlock}${consistencyBlock}${credibilityBlock}${crossExBlock}${deltaBlock}${objectionBlock}${triangulationBlock}${criticBlock}${criticSelfBlock}${pivotBlock}${concessionBlock}${concessionEngineBlock}${counterfactualBlock}${synthesisBlock}${shadowBlock}${empathyBlock}${humilityBlock}${heatBlock}${sentinelBlock}${redundancyBlock}${driftBlock}${insightBlock}${replayBlock}${enthymemeBlock}${multiHopBlock}${dpoBlock}${uncertaintyBlock}${biasBlock}${interruptBlock}${stakeholderBlock}${calibrationBlock}${factCheckBlock}${personaMixBlock}${frameBlock}${expertBlock}${driftCalloutBlock}${rhetoricalBlock}${rhetoricBlock}${biddingBlock}${scratchpadBlock}${narrativeBlock}${levelBlock}${reversalBlock}${fogBlock}${evidenceBlock}${humorBlock}${statusBlock}${styleBlock}${adaptiveBlock}${personaBlock}${strategistBlock}${whisperBlock}${audienceBlock}${allianceBlock}${predictionBlock}${rtomBlock}${blindBlock}${fingerprintBlock}${causalBlock}
+${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${angleBlock}${tempBlock}${entanglementBlock}${anchorsBlock}${vulnerabilityBlock}${adversarialBlock}${beliefConflictsBlock}${minimaxBlock}${tacticalBlock}${steelmanBlock}${bopBlock}${consistencyBlock}${credibilityBlock}${crossExBlock}${deltaBlock}${objectionBlock}${triangulationBlock}${criticBlock}${criticSelfBlock}${socraticPivotBlock}${changePivotBlock}${synthesizeBlock}${concessionBlock}${concessionEngineBlock}${counterfactualBlock}${synthesisBlock}${shadowBlock}${empathyBlock}${humilityBlock}${heatBlock}${sentinelBlock}${redundancyBlock}${driftBlock}${insightBlock}${replayBlock}${enthymemeBlock}${multiHopBlock}${dpoBlock}${uncertaintyBlock}${biasBlock}${interruptBlock}${stakeholderBlock}${calibrationBlock}${factCheckBlock}${personaMixBlock}${frameBlock}${expertBlock}${driftCalloutBlock}${rhetoricalBlock}${rhetoricBlock}${biddingBlock}${scratchpadBlock}${narrativeBlock}${levelBlock}${reversalBlock}${fogBlock}${evidenceBlock}${humorBlock}${statusBlock}${styleBlock}${adaptiveBlock}${personaBlock}${strategistBlock}${whisperBlock}${audienceBlock}${allianceBlock}${predictionBlock}${rtomBlock}${blindBlock}${fingerprintBlock}${causalBlock}
 
 ${statePrompt}
 
@@ -1455,6 +1462,27 @@ function buildBlindEvaluationPrompt(_language = DEFAULT_LANGUAGE): string {
         'The judge will evaluate your argument without knowing which participant made it. ' +
         'Your name, role, and persona are irrelevant — only the quality of your reasoning matters. ' +
         'Focus entirely on making the clearest, most evidence-backed case possible.'
+    );
+}
+
+/** P1: Pivot Strategy — change argument direction when current approach is failing */
+function buildPivotStrategyPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Pivot Strategy Assessment\n' +
+        'Consider whether your current argument approach is working. If you have been making the same type of ' +
+        'argument for multiple rounds without gaining traction, PIVOT. Change your framing, use different evidence, ' +
+        'or attack from a different angle. Stale approaches lose debates.'
+    );
+}
+
+/** P1: Synthesis Engine — combine best arguments from both sides */
+function buildSynthesisPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Synthesis Opportunity\n' +
+        'The debate has reached a stage where synthesis is valuable. Identify the strongest points from ALL sides ' +
+        'and propose a coherent resolution that incorporates the best of each position. ' +
+        'A good synthesis does not compromise — it transcends the original disagreement by finding a higher-level ' +
+        'framework that accommodates the valid insights from every perspective.'
     );
 }
 
