@@ -1631,6 +1631,19 @@ const ru = {
     'webhooks.webhooks': 'Вебхуки',
     'provider_manager.aria.add_account': 'Добавить аккаунт',
     'provider_manager.aria.introspection': 'Интроспекция провайдера',
+    // --- debate quality ---
+    'nav.debate_quality': 'Качество дебатов',
+    'quality.nav_title': 'Качество дебатов',
+    'quality.description':
+        'Включай и отключай 56 техник улучшения дебатов. P0 — Базовые, P1 — Продвинутые, P2 — Экспериментальные.',
+    'quality.active': 'активно',
+    'quality.enable_all': 'Включить все',
+    'quality.disable_all': 'Выключить все',
+    'quality.reset': 'Сброс',
+    'quality.enable': 'Вкл',
+    'quality.disable': 'Выкл',
+    'quality.footer_info':
+        'Настройки сохраняются автоматически и применяются к новым дебатам. Уже запущенные используют настройки на момент старта.',
 };
 
 export { ru };

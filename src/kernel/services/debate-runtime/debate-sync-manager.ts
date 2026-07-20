@@ -350,6 +350,7 @@ export class DebateSyncManager {
             topic,
             participantsToConfig(participants),
             sessionConfig.language === 'en' ? 'English' : DEFAULT_DEBATE_LANGUAGE,
+            sessionConfig.qualitySettings,
         );
         this.runtimeSessionId = runtimeId;
         this.bridgeCtx = bridgeCtx;

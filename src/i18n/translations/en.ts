@@ -2079,6 +2079,19 @@ const en = {
     // --- provider manager aria ---
     'provider_manager.aria.add_account': 'Add Account',
     'provider_manager.aria.introspection': 'Provider introspection',
+    // --- debate quality ---
+    'nav.debate_quality': 'Debate Quality',
+    'quality.nav_title': 'Debate Quality',
+    'quality.description':
+        'Toggle 56 debate quality techniques. P0 — Core, P1 — Advanced, P2 — Experimental.',
+    'quality.active': 'active',
+    'quality.enable_all': 'Enable All',
+    'quality.disable_all': 'Disable All',
+    'quality.reset': 'Reset',
+    'quality.enable': 'On',
+    'quality.disable': 'Off',
+    'quality.footer_info':
+        'Settings auto-save and apply to new debates. Running debates use settings from start.',
 };
 
 export { en };

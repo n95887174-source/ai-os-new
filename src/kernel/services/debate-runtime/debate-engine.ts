@@ -569,9 +569,13 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         topic: string,
         participants: ParticipantConfig[],
         language?: string,
+        qualitySettings?: Record<string, boolean>,
     ): string {
         const id = genId('debate');
         const session = new DebateSessionClass(id, topic, topology, participants, language);
+        if (qualitySettings) {
+            session.setQualitySettings(qualitySettings);
+        }
         const budget = new DebateBudget(id, { maxRounds: topology.maxRounds });
         const phaseAbort = new AbortController();
         this.sessionPhaseControllers.set(id, phaseAbort);

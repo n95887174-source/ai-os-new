@@ -210,6 +210,9 @@ const KeyUsageAnalyticsPanelLazy = React.lazy(
 const PromptVersionPanelLazy = React.lazy(
     () => import('./components/PromptVersionHistory/PromptVersionPanel'),
 );
+const DebateQualityPanelLazy = React.lazy(
+    () => import('./components/DebateQualityPanel/DebateQualityPanel'),
+);
 
 // ── Section 11 P2+P3 Lazy Imports ─────────────────────────────────────────────
 const FederatedMemoryPanelLazy = React.lazy(
@@ -392,6 +395,7 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'policy-editor': PolicyEditorPanelLazy,
     audit: AuditLogViewLazy,
     history: ConfigHistoryViewLazy,
+    'debate-quality': DebateQualityPanelLazy,
     'federated-memory': FederatedMemoryPanelLazy,
     'plugin-sdk': PluginSdkPanelLazy,
     'persona-marketplace': PersonaMarketplacePanelLazy,

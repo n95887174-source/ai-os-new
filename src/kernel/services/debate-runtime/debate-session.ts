@@ -49,6 +49,11 @@ export class DebateSession implements IDebateSession {
     private _failedProviders = new Set<string>();
     private _failedModels = new Set<string>();
     private _arguments: DebateSessionSnapshot['arguments'] = [];
+    private _qualitySettings?: Record<string, boolean>;
+
+    get qualitySettings(): Record<string, boolean> | undefined {
+        return this._qualitySettings;
+    }
 
     get arguments(): DebateSessionSnapshot['arguments'] {
         return this._arguments;
@@ -218,7 +223,12 @@ export class DebateSession implements IDebateSession {
             arguments: this._arguments ? [...this._arguments] : [],
             failedProviders: Array.from(this._failedProviders),
             failedModels: Array.from(this._failedModels),
+            qualitySettings: this._qualitySettings ? { ...this._qualitySettings } : undefined,
         };
+    }
+
+    setQualitySettings(settings: Record<string, boolean> | undefined): void {
+        this._qualitySettings = settings ? { ...settings } : undefined;
     }
 
     incrementVersion(newVersion: number): void {
@@ -255,5 +265,8 @@ export class DebateSession implements IDebateSession {
         for (const m of snapshot.failedModels ?? []) {
             this._failedModels.add(m);
         }
+        this._qualitySettings = snapshot.qualitySettings
+            ? { ...snapshot.qualitySettings }
+            : undefined;
     }
 }

@@ -264,6 +264,14 @@ export const CORE_SECTIONS: NavSection[] = [
                 lazy: true,
                 level: 'L1',
             },
+            {
+                id: 'debate-quality',
+                labelKey: 'nav.debate_quality',
+                icon: Icons.slidersHorizontal,
+                color: '#a855f7',
+                lazy: true,
+                level: 'L1',
+            },
         ],
     },
 ];

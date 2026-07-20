@@ -203,6 +203,7 @@ export interface DebateConfig {
     maxDurationMs?: number;
     useGovernor?: boolean;
     language?: 'ru' | 'en';
+    qualitySettings?: Record<string, boolean>;
 }
 
 export interface HumanVote {

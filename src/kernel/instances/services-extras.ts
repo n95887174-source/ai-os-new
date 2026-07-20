@@ -181,3 +181,12 @@ export {
 
 // ── Historical figure helpers ──────────────────────────────────────────────
 export { getHistoricalFigure } from '../services/debate-runtime/debate-historical-figures';
+
+// ── Debate quality settings (data/config, not service instances) ──────────
+export {
+    getAllSettings,
+    setSetting,
+    setAllSettings,
+    resetAllSettings,
+    getTechniques,
+} from '../services/debate-runtime/quality-settings-store';

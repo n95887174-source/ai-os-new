@@ -242,6 +242,10 @@ export async function debateCallLlm(
     const triedModels = new Set<string>();
     const triedKeys = new Set<string>();
 
+    // Quality settings: check if a specific technique is enabled
+    // (default: enabled if not explicitly disabled)
+    const isQ = (id: string): boolean => session.qualitySettings?.[id] !== false;
+
     // If session was cancelled by the time this call starts, bail out early.
     // Prevents re-creating sessionAbortControllers after cleanupMaps() deleted
     // them, which would leave a leaked entry in the map.
@@ -429,7 +433,7 @@ export async function debateCallLlm(
 
             // P0.1: Compute entanglement constraint (direct claim-by-claim response)
             let entanglementConstraint = null;
-            if (deps.entanglementEngine && previousArguments.length >= 2) {
+            if (isQ('entanglement') && deps.entanglementEngine && previousArguments.length >= 2) {
                 try {
                     entanglementConstraint = deps.entanglementEngine.getConstraint(
                         participant.agentId,
@@ -451,7 +455,11 @@ export async function debateCallLlm(
 
             // P0.5: Extract anchors (agreed-upon claims) to focus on delta
             let anchors: import('../../contracts/debate-entanglement').AnchorClaim[] | undefined;
-            if (deps.anchoringService && previousArguments.length >= 6) {
+            if (
+                isQ('agreement-anchoring') &&
+                deps.anchoringService &&
+                previousArguments.length >= 6
+            ) {
                 try {
                     anchors = deps.anchoringService.extractAnchors(
                         previousArguments,
@@ -467,6 +475,7 @@ export async function debateCallLlm(
             let vulnerabilityTargets:
                 import('../../contracts/debate-vulnerability').VulnerabilityTarget[] | undefined;
             if (
+                isQ('vulnerability-targeting') &&
                 deps.vulnerabilityTargeting &&
                 deps.argumentGraphService?.initialized &&
                 previousArguments.length >= 4
@@ -493,7 +502,11 @@ export async function debateCallLlm(
             let adversarialWarnings:
                 | import('../../contracts/debate-adversarial-source').SourceVerificationResult[]
                 | undefined;
-            if (deps.adversarialSource && previousArguments.length >= 2) {
+            if (
+                isQ('adversarial-source') &&
+                deps.adversarialSource &&
+                previousArguments.length >= 2
+            ) {
                 try {
                     // Scan opponent claims (not current agent's) for source URLs
                     const opponentClaims = previousArguments
@@ -522,7 +535,7 @@ export async function debateCallLlm(
             // detect cross-agent belief conflicts
             let beliefConflicts:
                 import('../../contracts/debate-belief-mining').BeliefConflict[] | undefined;
-            if (deps.beliefMiningService && previousArguments.length >= 4) {
+            if (isQ('belief-mining') && deps.beliefMiningService && previousArguments.length >= 4) {
                 try {
                     const miningInput = previousArguments.map((a) => ({
                         id: a.id,
@@ -552,6 +565,7 @@ export async function debateCallLlm(
             let minimaxMove:
                 import('../../contracts/debate-minimax').MinimaxMove | null | undefined;
             if (
+                isQ('graph-minimax') &&
                 deps.minimaxPlanner &&
                 deps.argumentGraphService?.initialized &&
                 previousArguments.length >= 4
@@ -579,6 +593,7 @@ export async function debateCallLlm(
             let tacticalDirective:
                 import('../../contracts/debate-meta-agent').TacticalDirective | null | undefined;
             if (
+                isQ('meta-agent') &&
                 deps.metaAgent &&
                 deps.argumentGraphService?.initialized &&
                 previousArguments.length >= 3
@@ -610,7 +625,7 @@ export async function debateCallLlm(
 
             // P0.10: Burden of Proof — check for this agent's unmet burdens
             let unmetBurdens: UnmetBurden[] | undefined;
-            if (deps.boPTracker && previousArguments.length >= 1) {
+            if (isQ('burden-of-proof') && deps.boPTracker && previousArguments.length >= 1) {
                 try {
                     // Record this agent's past claims as burden entries
                     for (const arg of previousArguments) {
@@ -641,7 +656,11 @@ export async function debateCallLlm(
             // past claims. Results inject a warning in the current prompt so the
             // agent can address/resolve inconsistencies.
             let consistencyContradictions: Contradiction[] | undefined;
-            if (deps.consistencyService && previousArguments.length >= 3) {
+            if (
+                isQ('consistency-check') &&
+                deps.consistencyService &&
+                previousArguments.length >= 3
+            ) {
                 try {
                     const ownArgs = previousArguments.filter(
                         (a) => a.agentId === participant.agentId,
@@ -682,7 +701,7 @@ export async function debateCallLlm(
             // P0.9: Steelmanning Protocol — select opponent's claim to restate
             // in strongest form before rebuttal
             let steelmanTarget: SteelmanTarget | null | undefined;
-            if (deps.steelmanService && previousArguments.length >= 2) {
+            if (isQ('steelman') && deps.steelmanService && previousArguments.length >= 2) {
                 try {
                     const miningInput = previousArguments.map((a) => ({
                         id: a.id,
@@ -709,7 +728,11 @@ export async function debateCallLlm(
             // P0.12: Source Credibility Scoring — assess credibility of
             // sources cited in previous arguments and inject awareness
             let sourceCredibilityScores: SourceCredibility[] | undefined;
-            if (deps.credibilityScorer && previousArguments.length >= 1) {
+            if (
+                isQ('credibility-scoring') &&
+                deps.credibilityScorer &&
+                previousArguments.length >= 1
+            ) {
                 try {
                     const allSourceMatches: string[] = [];
                     for (const arg of previousArguments) {
@@ -736,7 +759,7 @@ export async function debateCallLlm(
             // P1.26: Echo chamber / redundancy detection — warn agent if recent
             // arguments are too similar to their own prior turns.
             let redundancyScore: number | undefined;
-            if (deps.similarityMonitor) {
+            if (isQ('redundancy') && deps.similarityMonitor) {
                 try {
                     const prevRedundancy = deps.similarityMonitor.getRedundancy(
                         participant.agentId,
@@ -750,7 +773,7 @@ export async function debateCallLlm(
 
             // P1.16: Persona drift detection — register persona and check drift
             let driftScore: number | undefined;
-            if (deps.driftDetector) {
+            if (isQ('stance-drift') && deps.driftDetector) {
                 try {
                     deps.driftDetector.registerPersona(
                         participant.agentId,
@@ -769,7 +792,7 @@ export async function debateCallLlm(
 
             // P1.21: InsightBus — ingest previous round arguments, get formatted insights
             let insightText: string | undefined;
-            if (deps.insightBus && session.round > 1) {
+            if (isQ('insight-bus') && deps.insightBus && session.round > 1) {
                 try {
                     // Ingest all available previous arguments (across all agents)
                     const allRoundArgs = previousArguments.map((a) => ({
@@ -785,7 +808,7 @@ export async function debateCallLlm(
 
             // P1.22: Key-moment replay — ingest previous round for pivotal moment detection
             let replayText: string | undefined;
-            if (deps.replaySelector && session.round > 1) {
+            if (isQ('replay') && deps.replaySelector && session.round > 1) {
                 try {
                     const allRoundArgs = previousArguments.map((a) => ({
                         agentId: a.agentId,
@@ -803,7 +826,7 @@ export async function debateCallLlm(
 
             // P1.25: Logical form extraction / enthymeme detection
             let enthymemeText: string | undefined;
-            if (deps.logicalFormExtractor && session.round > 1) {
+            if (isQ('enthymeme') && deps.logicalFormExtractor && session.round > 1) {
                 try {
                     const prevArgs = previousArguments.filter((a) => a.round === session.round - 1);
                     for (const a of prevArgs) {
@@ -821,7 +844,7 @@ export async function debateCallLlm(
 
             // P1.18: Cognitive bias profiling — check opponent's arguments
             let biasExploitText: string | undefined;
-            if (deps.biasProfiler && session.round > 1) {
+            if (isQ('bias-exploit') && deps.biasProfiler && session.round > 1) {
                 try {
                     const prevArgs = previousArguments.filter((a) => a.round === session.round - 1);
                     for (const a of prevArgs) {
@@ -846,7 +869,7 @@ export async function debateCallLlm(
 
             // P1.17: Micro-interrupt queue — check for pending clarification requests
             let interruptText: string | undefined;
-            if (deps.interruptQueue && session.round > 1) {
+            if (isQ('interrupt') && deps.interruptQueue && session.round > 1) {
                 try {
                     interruptText = deps.interruptQueue.getFormattedInterrupts(
                         participant.agentId,
@@ -860,7 +883,7 @@ export async function debateCallLlm(
 
             // P1.24: Stakeholder Impact Multi-Perspective Analysis
             let stakeholderText: string | undefined;
-            if (deps.stakeholderMapper && session.round > 1) {
+            if (isQ('stakeholder') && deps.stakeholderMapper && session.round > 1) {
                 try {
                     const stakeholders = deps.stakeholderMapper.analyzeTopic(session.topic);
                     if (stakeholders.length > 0) {
@@ -880,7 +903,7 @@ export async function debateCallLlm(
 
             // P1.2: Fact-check — check previous round's arguments for false/disputed claims
             let factCheckText: string | undefined;
-            if (deps.factCheckService && session.round > 1) {
+            if (isQ('fact-checking') && deps.factCheckService && session.round > 1) {
                 try {
                     const prevArgs = previousArguments.filter((a) => a.round === session.round - 1);
                     const warnings: string[] = [];
@@ -909,7 +932,7 @@ export async function debateCallLlm(
 
             // P1.3: Epistemic uncertainty calibration — score claims and enforce
             let calibrationText: string | undefined;
-            if (deps.calibrationService && session.round > 1) {
+            if (isQ('epistemic-calibration') && deps.calibrationService && session.round > 1) {
                 try {
                     // Score opponent claims from previous round
                     const prevArgs = previousArguments.filter((a) => a.round === session.round - 1);
@@ -935,7 +958,7 @@ export async function debateCallLlm(
 
             // P1.9: Adaptive Persona Mixer — generate persona variation
             let personaMixText: string | undefined;
-            if (deps.personaMixer) {
+            if (isQ('persona-mixer') && deps.personaMixer) {
                 try {
                     const mix = deps.personaMixer.getMix({
                         agentId: participant.agentId,
@@ -964,7 +987,7 @@ export async function debateCallLlm(
 
             // P1.12: Framing Contests Engine — detect & surface dominant frame
             let frameText: string | undefined;
-            if (deps.frameTracker && session.round > 1) {
+            if (isQ('frame') && deps.frameTracker && session.round > 1) {
                 try {
                     // Register frames for previous round's arguments
                     const prevRound = previousArguments.filter(
@@ -981,7 +1004,7 @@ export async function debateCallLlm(
 
             // P1.14: Expert Witness — find and summon relevant domain expert
             let expertText: string | undefined;
-            if (deps.expertWitness && session.round > 1) {
+            if (isQ('expert-witness') && deps.expertWitness && session.round > 1) {
                 try {
                     const expert = deps.expertWitness.findExpert(session.topic);
                     if (expert && !deps.expertWitness.wasSummoned(expert.id)) {
@@ -999,7 +1022,7 @@ export async function debateCallLlm(
 
             // P1.8: Stance Drift — register opponent arguments, get call-out prompt
             let driftText: string | undefined;
-            if (deps.stanceDriftTracker && session.round > 1) {
+            if (isQ('stance-drift') && deps.stanceDriftTracker && session.round > 1) {
                 try {
                     // Register previous round's arguments from all agents for stance tracking
                     const prevRound = previousArguments.filter(
@@ -1033,7 +1056,7 @@ export async function debateCallLlm(
 
             // P2.6: Rhetorical Device — select device for current agent
             let rhetoricalText: string | undefined;
-            if (deps.rhetoricalDeviceSelector) {
+            if (isQ('rhetorical-device') && deps.rhetoricalDeviceSelector) {
                 try {
                     rhetoricalText = deps.rhetoricalDeviceSelector.getDevicePrompt(
                         participant.role || 'neutral',
@@ -1047,7 +1070,7 @@ export async function debateCallLlm(
 
             // P2.11: Hidden scratchpad — tactical analysis before argument generation
             let scratchpadText: string | undefined;
-            if (deps.scratchpadService && session.round > 1) {
+            if (isQ('scratchpad') && deps.scratchpadService && session.round > 1) {
                 try {
                     const analysis = deps.scratchpadService.analyze(
                         participant.agentId,
@@ -1070,7 +1093,7 @@ export async function debateCallLlm(
 
             // P2.14: Narrative Arc — storytelling structure instruction
             let narrativeText: string | undefined;
-            if (session.round >= 2) {
+            if (isQ('narrative-arc') && session.round >= 2) {
                 try {
                     const { NarrativeBuilder } = await import('./narrative-builder');
                     const builder = new NarrativeBuilder();
@@ -1087,7 +1110,7 @@ export async function debateCallLlm(
 
             // P2.20: Abstraction Ladder Switcher
             let levelText: string | undefined;
-            if (session.round >= 2) {
+            if (isQ('abstraction-ladder') && session.round >= 2) {
                 try {
                     const { LevelTracker } = await import('./level-tracker');
                     const tracker = new LevelTracker();
@@ -1103,7 +1126,7 @@ export async function debateCallLlm(
 
             // P2.23: Role-Reversal Exercise — forced perspective-taking (every 4 rounds, from round 3)
             let reversalText: string | undefined;
-            if (session.round >= 3 && session.round % 4 === 0) {
+            if (isQ('role-reversal') && session.round >= 3 && session.round % 4 === 0) {
                 const opponents = previousArguments
                     .filter((a) => a.agentId !== participant.agentId)
                     .map((a) => a.agentName);
@@ -1122,27 +1145,31 @@ export async function debateCallLlm(
                 'the debate transcript plus classified intelligence on the topic',
                 'only the debate transcript — no external knowledge',
             ];
-            const fogIndex =
-                Math.abs(
-                    (participant.agentId.charCodeAt(0) * 7 + session.round * 3) % FOG_SCOPES.length,
-                ) % FOG_SCOPES.length;
-            const fogOfWarScope = FOG_SCOPES[fogIndex];
+            const fogIndex = isQ('fog-of-war')
+                ? Math.abs(
+                      (participant.agentId.charCodeAt(0) * 7 + session.round * 3) %
+                          FOG_SCOPES.length,
+                  ) % FOG_SCOPES.length
+                : 0;
+            const fogOfWarScope = isQ('fog-of-war') ? FOG_SCOPES[fogIndex] : undefined;
 
             // P2.16: Progressive Evidence Revelation — evidence tier increases
             // with round number. Early rounds get foundational evidence, later
             // rounds get deeper, more specific evidence tiers.
-            const evidenceRevelationRound = session.round;
+            const evidenceRevelationRound = isQ('evidence-revelation') ? session.round : undefined;
 
             // P2.17: Humor & Wit Injector — humor level based on agent personality
             // and round (more humor in later rounds when tension is higher)
             const HUMOR_LEVELS = ['light wit', 'dry humor', 'ironic commentary', 'sharp satire'];
-            const humorIdx =
-                Math.abs(
-                    (participant.agentId.charCodeAt(participant.agentId.length - 1) * 13 +
-                        session.round * 5) %
-                        HUMOR_LEVELS.length,
-                ) % HUMOR_LEVELS.length;
-            const humorLevel = session.round >= 3 ? HUMOR_LEVELS[humorIdx] : undefined;
+            const humorIdx = isQ('humor')
+                ? Math.abs(
+                      (participant.agentId.charCodeAt(participant.agentId.length - 1) * 13 +
+                          session.round * 5) %
+                          HUMOR_LEVELS.length,
+                  ) % HUMOR_LEVELS.length
+                : 0;
+            const humorLevel =
+                isQ('humor') && session.round >= 3 ? HUMOR_LEVELS[humorIdx] : undefined;
 
             // P2.21: Status & Power Dynamics — assign status based on agent role
             // and debate progress. Pro/con sides rotate status each round.
@@ -1152,26 +1179,32 @@ export async function debateCallLlm(
                 'Challenger — an upstart questioning the established order',
                 'Neutral Observer — an impartial analyst with no stake in the outcome',
             ];
-            const statusIdx =
-                Math.abs(
-                    (participant.agentId.charCodeAt(2) * 3 + session.round) % STATUS_BADGES.length,
-                ) % STATUS_BADGES.length;
-            const statusBadge = STATUS_BADGES[statusIdx];
+            const statusIdx = isQ('status-dynamics')
+                ? Math.abs(
+                      (participant.agentId.charCodeAt(2) * 3 + session.round) %
+                          STATUS_BADGES.length,
+                  ) % STATUS_BADGES.length
+                : 0;
+            const statusBadge = isQ('status-dynamics') ? STATUS_BADGES[statusIdx] : undefined;
 
             // P2.22: Linguistic Style Matching — pick an agent to mirror style
-            const styleTarget = (() => {
-                if (session.round < 2) return undefined;
-                const others = allDebateParticipants.filter((p) => p.id !== participant.agentId);
-                if (others.length === 0) return undefined;
-                const idx = Math.abs(
-                    (participant.agentId.length + session.round * 11) % others.length,
-                );
-                return others[idx % others.length].name;
-            })();
+            const styleTarget = isQ('style-matching')
+                ? (() => {
+                      if (session.round < 2) return undefined;
+                      const others = allDebateParticipants.filter(
+                          (p) => p.id !== participant.agentId,
+                      );
+                      if (others.length === 0) return undefined;
+                      const idx = Math.abs(
+                          (participant.agentId.length + session.round * 11) % others.length,
+                      );
+                      return others[idx % others.length].name;
+                  })()
+                : undefined;
 
             // P2.1: Dynamic Persona Selection — match persona to topic
             let personaText: string | undefined;
-            if (session.round >= 1) {
+            if (isQ('dynamic-persona') && session.round >= 1) {
                 try {
                     const { PersonaSelector } = await import('./persona-selector');
                     const selector = new PersonaSelector();
@@ -1191,7 +1224,11 @@ export async function debateCallLlm(
 
             // P2.18: Whisper Channels — private coordination with allied agent
             let whisperText: string | undefined;
-            if (session.round >= 2 && allDebateParticipants.length >= 3) {
+            if (
+                isQ('whisper-channels') &&
+                session.round >= 2 &&
+                allDebateParticipants.length >= 3
+            ) {
                 const allies = allDebateParticipants.filter(
                     (p) => p.id !== participant.agentId && p.role === participant.role,
                 );
@@ -1206,7 +1243,7 @@ export async function debateCallLlm(
 
             // P2.15: Dynamic Alliance & Coalition — formal alliance formation
             let allianceText: string | undefined;
-            if (session.round >= 3 && allDebateParticipants.length >= 4) {
+            if (isQ('alliance') && session.round >= 3 && allDebateParticipants.length >= 4) {
                 const allies = allDebateParticipants.filter(
                     (p) => p.id !== participant.agentId && p.role === participant.role,
                 );
@@ -1228,7 +1265,7 @@ export async function debateCallLlm(
 
             // P2.19: Internal Prediction Market — predict debate trajectory
             let predictionText: string | undefined;
-            if (session.round >= 2) {
+            if (isQ('prediction-market') && session.round >= 2) {
                 const proCount = previousArguments.filter((a) => a.role === 'pro').length;
                 const conCount = previousArguments.filter((a) => a.role === 'con').length;
                 const proTokens = previousArguments
@@ -1251,7 +1288,7 @@ export async function debateCallLlm(
 
             // P2.5: Theory of Mind — compute agent belief context
             let rtomText: string | undefined;
-            if (session.round >= 2) {
+            if (isQ('rtom') && session.round >= 2) {
                 try {
                     if (!sessionRToMMap.has(sessionId)) {
                         const { RToMGraphService } = await import('./debate-rtom-service');
@@ -1271,7 +1308,11 @@ export async function debateCallLlm(
 
             // P2.7: Strategy Fingerprinting — detect opponent patterns
             let fingerprintText: string | undefined;
-            if (session.round >= 2 && previousArguments.length >= 4) {
+            if (
+                isQ('strategy-fingerprint') &&
+                session.round >= 2 &&
+                previousArguments.length >= 4
+            ) {
                 try {
                     if (!sessionFingerprintMap.has(sessionId)) {
                         const { StrategyFingerprintService } =
@@ -1297,7 +1338,7 @@ export async function debateCallLlm(
 
             // P0.16: Causal Loop Mapping — detect linear thinking, force systemic reasoning
             let causalText: string | undefined;
-            if (session.round >= 1) {
+            if (isQ('causal-graph') && session.round >= 1) {
                 try {
                     if (!sessionCausalGraphMap.has(sessionId)) {
                         const { CausalGraphBuilder } = await import('./causal-graph-builder');
@@ -1322,7 +1363,7 @@ export async function debateCallLlm(
 
             // P2.9: Dynamic Demographic Audience — compute audience reaction context
             let audienceReactionText: string | undefined;
-            if (session.round >= 2 && previousArguments.length >= 3) {
+            if (isQ('audience') && session.round >= 2 && previousArguments.length >= 3) {
                 const lastArgs = previousArguments.slice(-6);
                 let proStrength = 0;
                 let conStrength = 0;
@@ -1371,7 +1412,7 @@ export async function debateCallLlm(
 
             // P2.3: Strategist — adaptive strategic planning
             let strategistText: string | undefined;
-            if (session.round >= 1) {
+            if (isQ('strategist') && session.round >= 1) {
                 try {
                     const { Strategist } = await import('./debate-strategist');
                     const strategist = new Strategist();
@@ -1657,7 +1698,7 @@ export async function debateCallLlm(
             }
 
             // P0.2: Shadow Opponent — self-critique + strengthen
-            if (deps.shadowOpponent) {
+            if (isQ('shadow-opponent') && deps.shadowOpponent) {
                 try {
                     const shadowResult = await deps.shadowOpponent.strengthenArgument(
                         content,
@@ -1690,7 +1731,7 @@ export async function debateCallLlm(
             }
 
             // P1.26: Record this argument for future redundancy checks
-            if (deps.similarityMonitor) {
+            if (isQ('redundancy') && deps.similarityMonitor) {
                 try {
                     deps.similarityMonitor.recordArgument(
                         participant.agentId,
@@ -1703,7 +1744,7 @@ export async function debateCallLlm(
             }
 
             // P1.16: Record this argument for persona drift tracking
-            if (deps.driftDetector) {
+            if (isQ('stance-drift') && deps.driftDetector) {
                 try {
                     deps.driftDetector.recordArgument(participant.agentId, session.round, content);
                 } catch {
@@ -1712,29 +1753,33 @@ export async function debateCallLlm(
             }
 
             // P2.5: Ingest argument into RToM graph for theory-of-mind tracking
-            try {
-                const rtom = sessionRToMMap.get(sessionId);
-                if (rtom && resolvedKey) {
-                    rtom.ingestArgument(
-                        participant.agentId,
-                        currentName,
-                        content,
-                        session.round,
-                        participant.role || 'neutral',
-                    );
+            if (isQ('rtom')) {
+                try {
+                    const rtom = sessionRToMMap.get(sessionId);
+                    if (rtom && resolvedKey) {
+                        rtom.ingestArgument(
+                            participant.agentId,
+                            currentName,
+                            content,
+                            session.round,
+                            participant.role || 'neutral',
+                        );
+                    }
+                } catch {
+                    LOGGER.warn('DebateLlmCaller', 'RToM ingest error', { sessionId });
                 }
-            } catch {
-                LOGGER.warn('DebateLlmCaller', 'RToM ingest error', { sessionId });
             }
 
             // P0.16: Ingest response into causal graph for subsequent loop detection
-            try {
-                const cg = sessionCausalGraphMap.get(sessionId);
-                if (cg) {
-                    cg.ingestClaim(sessionId, participant.agentId, content, session.round);
+            if (isQ('causal-graph')) {
+                try {
+                    const cg = sessionCausalGraphMap.get(sessionId);
+                    if (cg) {
+                        cg.ingestClaim(sessionId, participant.agentId, content, session.round);
+                    }
+                } catch {
+                    LOGGER.warn('DebateLlmCaller', 'Causal graph ingest error', { sessionId });
                 }
-            } catch {
-                LOGGER.warn('DebateLlmCaller', 'Causal graph ingest error', { sessionId });
             }
 
             clearTimeout(timeout);

@@ -79,6 +79,7 @@ export interface IDebateSession {
         confidence: number;
         position?: string;
     }>;
+    readonly qualitySettings?: Record<string, boolean>;
     snapshot(): DebateSessionSnapshot;
     incrementVersion?(newVersion: number): void;
     destroy(): void;
@@ -108,6 +109,7 @@ export interface DebateSessionSnapshot {
     readonly failedProviders?: readonly string[];
     readonly failedModels?: readonly string[];
     readonly participants?: ReadonlyArray<ParticipantConfig>;
+    readonly qualitySettings?: Record<string, boolean>;
 }
 
 // ── Budget ──────────────────────────────────────────────────────────────
@@ -347,6 +349,7 @@ export interface IDebateEngine {
         topic: string,
         participants: ParticipantConfig[],
         language?: string,
+        qualitySettings?: Record<string, boolean>,
     ): string;
     startSession(sessionId: string): Promise<void>;
     pauseSession(sessionId: string): void;
