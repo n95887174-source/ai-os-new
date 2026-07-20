@@ -136,8 +136,11 @@ export function createPhaseChangeHandler(
                         if (deps.evaluator) {
                             const claims = deps.memoryExtractor.extractClaims(extracted.units);
 
+                            const bayesianEnabled =
+                                session.qualitySettings?.['bayesian-judges'] !== false;
+
                             // P1.6: Reset Bayesian judge at start of scoring
-                            if (deps.bayesianJudge) {
+                            if (bayesianEnabled && deps.bayesianJudge) {
                                 deps.bayesianJudge.reset(
                                     session.participants.map((p) => p.agentId),
                                 );
@@ -164,7 +167,7 @@ export function createPhaseChangeHandler(
                                         };
 
                                         // Apply Bayesian adjustment and drift penalty anyway
-                                        if (deps.bayesianJudge) {
+                                        if (bayesianEnabled && deps.bayesianJudge) {
                                             deps.bayesianJudge.update(
                                                 p.agentId,
                                                 score.overall * 2 - 1,
@@ -173,12 +176,13 @@ export function createPhaseChangeHandler(
                                         const driftPenalty = deps.stanceDriftTracker
                                             ? deps.stanceDriftTracker.getDriftPenalty(p.agentId)
                                             : 1.0;
-                                        const bayesianAdjusted = deps.bayesianJudge
-                                            ? deps.bayesianJudge.getAdjustedScore(
-                                                  p.agentId,
-                                                  score.overall,
-                                              )
-                                            : score.overall;
+                                        const bayesianAdjusted =
+                                            bayesianEnabled && deps.bayesianJudge
+                                                ? deps.bayesianJudge.getAdjustedScore(
+                                                      p.agentId,
+                                                      score.overall,
+                                                  )
+                                                : score.overall;
                                         const adjustedOverall = bayesianAdjusted * driftPenalty;
 
                                         deps.eventBus.emit(EVENTS.DEBATE_AGENT_SCORED, {
@@ -209,7 +213,7 @@ export function createPhaseChangeHandler(
                                     );
 
                                     // P1.6: Update Bayesian belief with argument-level strength
-                                    if (deps.bayesianJudge) {
+                                    if (bayesianEnabled && deps.bayesianJudge) {
                                         deps.bayesianJudge.update(p.agentId, score.overall * 2 - 1);
                                     }
 
@@ -219,12 +223,13 @@ export function createPhaseChangeHandler(
                                         : 1.0;
 
                                     // Apply Bayesian adjustment
-                                    const bayesianAdjusted = deps.bayesianJudge
-                                        ? deps.bayesianJudge.getAdjustedScore(
-                                              p.agentId,
-                                              score.overall,
-                                          )
-                                        : score.overall;
+                                    const bayesianAdjusted =
+                                        bayesianEnabled && deps.bayesianJudge
+                                            ? deps.bayesianJudge.getAdjustedScore(
+                                                  p.agentId,
+                                                  score.overall,
+                                              )
+                                            : score.overall;
 
                                     const adjustedOverall = bayesianAdjusted * driftPenalty;
 

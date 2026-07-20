@@ -969,6 +969,10 @@ function buildCalibrationPrompt(calibrationText: string, _language = DEFAULT_LAN
     return `\n\n### Confidence Calibration Enforcement\n${calibrationText}`;
 }
 
+function isQ(id: string, qualitySettings?: Record<string, boolean>): boolean {
+    return qualitySettings?.[id] !== false;
+}
+
 export function buildArgumentPrompt(
     participant: DebateParticipant,
     round: number,
@@ -1024,6 +1028,7 @@ export function buildArgumentPrompt(
     rtomText?: string,
     fingerprintText?: string,
     causalText?: string,
+    qualitySettings?: Record<string, boolean>,
 ): string {
     const isSocratic = strategy === 'socratic';
     const isArgumentTree = strategy === 'argument_tree';
@@ -1124,68 +1129,131 @@ export function buildArgumentPrompt(
             ? buildCredibilityPrompt(sourceCredibilityScores, language)
             : '';
 
-    const objectionBlock = round > 1 ? buildObjectionAnticipationPrompt(language) : '';
+    // ── P0 internal blocks (gated by qualitySettings) ─────────────────
 
-    const triangulationBlock = round > 2 ? buildTriangulationPrompt(language) : '';
+    const crossExBlock =
+        isQ('cross-examination', qualitySettings) && round > 1
+            ? buildCrossExaminationPrompt(language)
+            : '';
 
-    const criticBlock = round > 1 ? buildPrePublishCriticPrompt(language) : '';
+    const deltaBlock =
+        isQ('delta-focusing', qualitySettings) && round > 1
+            ? buildDeltaFocusingPrompt(language)
+            : '';
 
-    // P1.4: Socratic pivot — after round 4+, if debate is stagnating,
-    // force a deconstructive question instead of more claims.
-    const pivotBlock = round > 3 ? buildSocraticPivotPrompt(language) : '';
+    const objectionBlock =
+        isQ('objection-anticipation', qualitySettings) && round > 1
+            ? buildObjectionAnticipationPrompt(language)
+            : '';
 
-    // P1.5: Strategic concession — encourages graceful concession on
-    // points that don't undermine the agent's main argument, making
-    // the agent appear more human-like and reasonable.
-    const concessionBlock = buildConcessionPrompt(language);
+    const triangulationBlock =
+        isQ('evidence-triangulation', qualitySettings) && round > 2
+            ? buildTriangulationPrompt(language)
+            : '';
 
-    // P1.13: Counterfactual reasoning — after round 3, prompt what-if scenarios
-    const counterfactualBlock = round >= 3 ? buildCounterfactualPrompt(language) : '';
+    const shadowBlock =
+        isQ('shadow-opponent', qualitySettings) && round > 1
+            ? buildShadowOpponentPrompt(language)
+            : '';
 
-    // P1.15: Hegelian synthesis — after round 5, push agents toward synthesis
-    const synthesisBlock = round >= 5 ? buildHegelianSynthesisPrompt(language) : '';
+    // ── P1 internal blocks (gated by qualitySettings) ─────────────────
 
-    // P0.2: Shadow opponent — after round 2, simulate internal red-team critique
-    const shadowBlock = round > 1 ? buildShadowOpponentPrompt(language) : '';
+    const criticBlock =
+        isQ('pre-publish-critic', qualitySettings) && round > 1
+            ? buildPrePublishCriticPrompt(language)
+            : '';
 
-    // P1.19: Empathy mirror — after round 2, acknowledge opponent's stake before attacking
-    const empathyBlock = round > 1 ? buildEmpathyMirrorPrompt(language) : '';
+    const criticSelfBlock =
+        isQ('critic', qualitySettings) && round > 1 ? buildCriticPrompt(language) : '';
 
-    // P1.7: Epistemic humility — after round 2, calibrate confidence on claims
-    const humilityBlock = round > 1 ? buildEpistemicHumilityPrompt(language) : '';
+    const pivotBlock =
+        isQ('socratic-pivot', qualitySettings) && round > 3
+            ? buildSocraticPivotPrompt(language)
+            : '';
 
-    // P1.20: Heat-adaptive tone — adjusts to debate intensity (round-based heuristic)
+    const concessionBlock = isQ('concession', qualitySettings)
+        ? buildConcessionPrompt(language)
+        : '';
+
+    const concessionEngineBlock = isQ('concession-engine', qualitySettings)
+        ? buildConcessionPrompt(language)
+        : '';
+
+    const counterfactualBlock =
+        isQ('counterfactual', qualitySettings) && round >= 3
+            ? buildCounterfactualPrompt(language)
+            : '';
+
+    const synthesisBlock =
+        isQ('hegelian-synthesis', qualitySettings) && round >= 5
+            ? buildHegelianSynthesisPrompt(language)
+            : '';
+
+    const empathyBlock =
+        isQ('empathy', qualitySettings) && round > 1 ? buildEmpathyMirrorPrompt(language) : '';
+
+    const humilityBlock =
+        isQ('humility-scoring', qualitySettings) && round > 1
+            ? buildEpistemicHumilityPrompt(language)
+            : '';
+
     const heatLevel = Math.min(1, round / 8);
-    const heatBlock = buildHeatAdaptivePrompt(heatLevel, language);
+    const heatBlock = isQ('heat', qualitySettings)
+        ? buildHeatAdaptivePrompt(heatLevel, language)
+        : '';
 
-    // P1.11: Fallacy & drift sentinel — after round 2, check topic focus and logical fallacies
-    const sentinelBlock = round > 1 ? buildFallacySentinelPrompt(topic, language) : '';
+    const sentinelBlock =
+        isQ('sentinel', qualitySettings) && round > 1
+            ? buildFallacySentinelPrompt(topic, language)
+            : '';
 
-    // P1.26: Echo chamber / redundancy warning
+    const multiHopBlock =
+        isQ('multi-hop', qualitySettings) && round > 1 ? buildMultiHopPrompt(language) : '';
+
+    const dpoBlock =
+        isQ('dpo-sampler', qualitySettings) && round > 1 ? buildDpoSamplerPrompt(language) : '';
+
+    const uncertaintyBlock =
+        isQ('uncertainty-propagation', qualitySettings) && round >= 2
+            ? buildUncertaintyPropagationPrompt(language)
+            : '';
+
+    // ── P2 internal blocks (gated by qualitySettings) ─────────────────
+
+    const rhetoricBlock = isQ('rhetoric-safety', qualitySettings)
+        ? buildRhetoricSafetyPrompt(language)
+        : '';
+
+    const biddingBlock = isQ('bidding-time', qualitySettings)
+        ? buildBiddingTimePrompt(language)
+        : '';
+
+    const adaptiveBlock =
+        isQ('adaptive-order', qualitySettings) && round >= 2
+            ? buildAdaptiveOrderPrompt(language)
+            : '';
+
+    const blindBlock = isQ('blind-evaluation', qualitySettings)
+        ? buildBlindEvaluationPrompt(language)
+        : '';
+
+    // ── Ungated blocks (passed as params from caller with isQ there) ──
+
     const redundancyBlock =
         redundancyScore !== undefined && redundancyScore >= 0.65
             ? buildRedundancyWarningPrompt(redundancyScore, language)
             : '';
 
-    // P1.16: Persona drift correction
     const driftBlock =
         driftScore !== undefined && driftScore >= 0.55
             ? buildDriftCorrectionPrompt(driftScore, language)
             : '';
 
-    // P1.21: Cross-round insight injection
     const insightBlock = insightText || '';
-
-    // P1.22: Key-moment replay (every 3 rounds)
     const replayBlock = replayText || '';
 
-    // P1.25: Enthymeme / hidden premise attack targets
     const enthymemeBlock = enthymemeText ? buildEnthymemePrompt(enthymemeText, language) : '';
 
-    // P1.23: Multi-hop justification requirement (from round 2+)
-    const multiHopBlock = round > 1 ? buildMultiHopPrompt(language) : '';
-
-    // P1.18: Bias exploit intelligence
     const biasBlock = biasExploitText ? buildBiasExploitPrompt(biasExploitText, language) : '';
 
     // P1.17: Clarification / micro-interrupt requests
@@ -1293,7 +1361,7 @@ export function buildArgumentPrompt(
         : '';
 
     return `## Topic: ${sanitizeForPrompt(topic)}
-${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${angleBlock}${tempBlock}${entanglementBlock}${anchorsBlock}${vulnerabilityBlock}${adversarialBlock}${beliefConflictsBlock}${minimaxBlock}${tacticalBlock}${steelmanBlock}${bopBlock}${consistencyBlock}${credibilityBlock}${objectionBlock}${triangulationBlock}${criticBlock}${pivotBlock}${concessionBlock}${counterfactualBlock}${synthesisBlock}${shadowBlock}${empathyBlock}${humilityBlock}${heatBlock}${sentinelBlock}${redundancyBlock}${driftBlock}${insightBlock}${replayBlock}${enthymemeBlock}${multiHopBlock}${biasBlock}${interruptBlock}${stakeholderBlock}${calibrationBlock}${factCheckBlock}${personaMixBlock}${frameBlock}${expertBlock}${driftCalloutBlock}${rhetoricalBlock}${scratchpadBlock}${narrativeBlock}${levelBlock}${reversalBlock}${fogBlock}${evidenceBlock}${humorBlock}${statusBlock}${styleBlock}${personaBlock}${strategistBlock}${whisperBlock}${audienceBlock}${allianceBlock}${predictionBlock}${rtomBlock}${fingerprintBlock}${causalBlock}
+${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${angleBlock}${tempBlock}${entanglementBlock}${anchorsBlock}${vulnerabilityBlock}${adversarialBlock}${beliefConflictsBlock}${minimaxBlock}${tacticalBlock}${steelmanBlock}${bopBlock}${consistencyBlock}${credibilityBlock}${crossExBlock}${deltaBlock}${objectionBlock}${triangulationBlock}${criticBlock}${criticSelfBlock}${pivotBlock}${concessionBlock}${concessionEngineBlock}${counterfactualBlock}${synthesisBlock}${shadowBlock}${empathyBlock}${humilityBlock}${heatBlock}${sentinelBlock}${redundancyBlock}${driftBlock}${insightBlock}${replayBlock}${enthymemeBlock}${multiHopBlock}${dpoBlock}${uncertaintyBlock}${biasBlock}${interruptBlock}${stakeholderBlock}${calibrationBlock}${factCheckBlock}${personaMixBlock}${frameBlock}${expertBlock}${driftCalloutBlock}${rhetoricalBlock}${rhetoricBlock}${biddingBlock}${scratchpadBlock}${narrativeBlock}${levelBlock}${reversalBlock}${fogBlock}${evidenceBlock}${humorBlock}${statusBlock}${styleBlock}${adaptiveBlock}${personaBlock}${strategistBlock}${whisperBlock}${audienceBlock}${allianceBlock}${predictionBlock}${rtomBlock}${blindBlock}${fingerprintBlock}${causalBlock}
 
 ${statePrompt}
 
@@ -1302,6 +1370,92 @@ ${participant.systemPrompt ? `\n### Your Character:\n${sanitizeForPrompt(partici
 CRITICAL RULE: Do NOT repeat or paraphrase arguments that other agents have already made. You must contribute a UNIQUE perspective from your specific area of expertise. If a point has already been covered, acknowledge it and ADD new reasoning or evidence that has not been mentioned before.
 
 Respond in ${language}.`;
+}
+
+/** P0: Cross-examination — directly question opponent claims */
+function buildCrossExaminationPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Cross-Examination Mode\n' +
+        'Directly QUESTION one specific claim made by another participant. Do NOT make your own argument — ' +
+        'instead, ask a pointed question that exposes a gap, inconsistency, or unsupported assumption in their ' +
+        'reasoning. Good cross-examination: targets the WEAKEST link in their argument chain. ' +
+        'Your question should force them to either provide missing evidence or concede the point.'
+    );
+}
+
+/** P0: Delta-focusing — highlight only disagreements, skip consensus */
+function buildDeltaFocusingPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Delta-Focusing Mode\n' +
+        'Do NOT repeat or acknowledge points of agreement. Focus EXCLUSIVELY on areas where you disagree ' +
+        'with other participants. If a claim has already been made and you agree with it, ignore it and move ' +
+        'on. Your contribution must advance the debate by sharpening points of contention, not restating common ground.'
+    );
+}
+
+/** P1: Per-agent critic (uses same text as pre-publish critic) */
+function buildCriticPrompt(_language = DEFAULT_LANGUAGE): string {
+    return buildPrePublishCriticPrompt(_language);
+}
+
+/** P1: DPO-inspired sampler — emulate high-quality argument patterns */
+function buildDpoSamplerPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Argument Quality Standard\n' +
+        'Before writing, recall the characteristics of a STRONG argument: specific evidence, clear logical ' +
+        'structure, acknowledgment of counter-points, and precise language. Your argument will be evaluated ' +
+        'against this quality standard. Avoid vagueness, unsupported claims, and rhetorical fluff.'
+    );
+}
+
+/** P1: Uncertainty propagation — propagate confidence through reasoning chains */
+function buildUncertaintyPropagationPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Uncertainty Propagation\n' +
+        'After each claim in your argument, append your confidence level: [HIGH], [MEDIUM], or [LOW]. ' +
+        'If your claim depends on a previous claim with lower confidence, your conclusion inherits that ' +
+        'uncertainty. Be honest about what you know vs. what you infer. A chain is only as strong as its weakest link.'
+    );
+}
+
+/** P2: Rhetoric safety layer — discourages manipulation */
+function buildRhetoricSafetyPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Rhetoric Safety Guidelines\n' +
+        'Argue against POSITIONS, not people. Avoid: ad hominem attacks, inflammatory language, ' +
+        'straw man arguments, emotional manipulation, and false dichotomies. ' +
+        'You may be passionate, but you must remain respectful and logically rigorous.'
+    );
+}
+
+/** P2: Bidding for speaking time — concise, high-impact arguments */
+function buildBiddingTimePrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Speaking Time Auction\n' +
+        'Not all participants will speak this round. Your argument must be CONCISE and HIGH-IMPACT to earn ' +
+        'the floor. Make your strongest point in 2-3 sentences. If you ramble or repeat points already made, ' +
+        'you will lose your speaking slot. Quality over quantity.'
+    );
+}
+
+/** P2: Adaptive speaking order — be ready to speak at any position */
+function buildAdaptiveOrderPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Adaptive Speaking Order\n' +
+        'The speaking order has been dynamically adjusted this round. You may be speaking earlier or later ' +
+        'than usual. If speaking early: set up key framing. If speaking late: address points raised by ' +
+        'others and push toward resolution. Adapt your approach to your position in the order.'
+    );
+}
+
+/** P2: Blind evaluation reminder — judge reads argument without author info */
+function buildBlindEvaluationPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Blind Evaluation Context\n' +
+        'The judge will evaluate your argument without knowing which participant made it. ' +
+        'Your name, role, and persona are irrelevant — only the quality of your reasoning matters. ' +
+        'Focus entirely on making the clearest, most evidence-backed case possible.'
+    );
 }
 
 export function getDefaultSystemPrompt(

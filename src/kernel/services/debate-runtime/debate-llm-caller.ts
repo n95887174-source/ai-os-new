@@ -1499,6 +1499,7 @@ export async function debateCallLlm(
                 rtomText,
                 fingerprintText,
                 causalText,
+                session.qualitySettings,
             );
 
             // Append persona memory block (from past debates — adds 3+ step history)
