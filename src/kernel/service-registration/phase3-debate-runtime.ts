@@ -21,11 +21,73 @@ import type { OrchestrationService } from '../services/orchestration-service';
 import type { MemoryService } from '../services/memory-engine';
 import type { ChatMessage } from '../types/llm-types';
 import type { DebateServiceDeps } from '../contracts/debate-types';
+import type { IEntanglementEngine, IAnchoringService } from '../contracts/debate-entanglement';
+import type { IArgumentGraphService } from '../contracts/debate-argument-graph';
+import type { IVulnerabilityTargetingService } from '../contracts/debate-vulnerability';
+import type { IShadowOpponentService } from '../contracts/debate-shadow-opponent';
+import type { IAdversarialSourceService } from '../contracts/debate-adversarial-source';
+import type { IBeliefMiningService } from '../contracts/debate-belief-mining';
+import type { IMinimaxPlanner } from '../contracts/debate-minimax';
+import type { IMetaAgentController } from '../contracts/debate-meta-agent';
+import type { ISteelmanService } from '../contracts/debate-steelman';
+import type { IBoPTrackerService } from '../contracts/debate-bop';
+import type { IConsistencyService } from '../contracts/debate-consistency';
+import type { ICredibilityScorer } from '../contracts/debate-credibility';
+import type { ISimilarityMonitor } from '../contracts/debate-similarity';
+import type { IPersonaDriftDetector } from '../contracts/debate-drift';
+import type { IInsightBus } from '../contracts/debate-insight-bus';
+import type { ILogicalFormExtractor } from '../contracts/debate-logic';
+import type { IJustificationEnforcer } from '../contracts/debate-justification';
+import type { IBiasProfiler } from '../contracts/debate-bias';
+import type { IInterruptQueue } from '../contracts/debate-interrupt';
+import type { IStakeholderMapper } from '../contracts/debate-stakeholder';
+import type { ICalibrationService } from '../contracts/debate-calibration';
+import type { IPersonaMixer } from '../contracts/debate-persona-mixer';
+import type { IFrameTracker } from '../contracts/debate-frame-tracker';
+import type { IExpertWitnessService } from '../contracts/debate-expert-witness';
+import type { IStanceDriftTracker } from '../contracts/debate-stance-drift';
+import type { IRhetoricalDeviceSelector } from '../contracts/debate-rhetorical-device';
+import type { IScratchpadService } from '../contracts/debate-scratchpad';
+import type { IBlindEvaluationService } from '../contracts/debate-blind-eval';
+
+import { SimilarityMonitor } from '../services/debate-runtime/similarity-monitor';
+import { PersonaDriftDetector } from '../services/debate-runtime/persona-drift-detector';
+import { InsightBus } from '../services/debate-runtime/insight-bus';
+import { LogicalFormExtractor } from '../services/debate-runtime/logical-form-extractor';
+import { JustificationEnforcer } from '../services/debate-runtime/justification-enforcer';
+import { BiasProfiler } from '../services/debate-runtime/bias-profiler';
+import { InterruptQueue } from '../services/debate-runtime/interrupt-queue';
+import { StakeholderMapper } from '../services/debate-runtime/stakeholder-mapper';
+import { CalibrationService } from '../services/debate-runtime/calibration-service';
+import { PersonaMixer } from '../services/debate-runtime/persona-mixer';
+import { FrameTracker } from '../services/debate-runtime/frame-tracker';
+import { ExpertWitnessService } from '../services/debate-runtime/expert-witness-service';
+import { BayesianJudge } from '../services/debate-runtime/bayesian-judge';
+import { StanceDriftTracker } from '../services/debate-runtime/stance-drift-tracker';
+import { RhetoricalDeviceSelector } from '../services/debate-runtime/rhetorical-device-selector';
+import { ScratchpadService } from '../services/debate-runtime/scratchpad-service';
+import { BlindEvaluationService } from '../services/debate-runtime/blind-evaluation-service';
+import { DpoStrategySampler } from '../services/debate-runtime/dpo-strategy-sampler';
+import { MinimaxPlanner } from '../services/debate-runtime/debate-minimax-planner';
+import { MetaAgentController } from '../services/debate-runtime/debate-meta-agent-controller';
+import { SteelmanService } from '../services/debate-runtime/debate-steelman-service';
+import { BoPTrackerService } from '../services/debate-runtime/debate-bop-service';
+import { ConsistencyService } from '../services/debate-runtime/debate-consistency-service';
+import { CredibilityScorer } from '../services/debate-runtime/debate-credibility-service';
+import { ArgumentGraphService } from '../services/debate-runtime/debate-argument-graph-service';
+import { VulnerabilityTargetingService } from '../services/debate-runtime/debate-vulnerability-service';
+import { ShadowOpponentService } from '../services/debate-runtime/debate-shadow-opponent-service';
+import { AdversarialSourceService } from '../services/debate-runtime/debate-adversarial-source-service';
+import { BeliefMiningService } from '../services/debate-runtime/debate-belief-mining-service';
 import { FactCheckService } from '../services/fact-check-service';
 import { DebatePostProcessor } from '../services/debate-runtime/debate-post-processor';
 import { DebateSyncManager } from '../services/debate-runtime/debate-sync-manager';
 import { DebateHumanService } from '../services/debate-runtime/debate-human-service';
 import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
+import {
+    EntanglementEngine,
+    AnchoringService,
+} from '../services/debate-runtime/debate-entanglement-engine';
 import { CollaborativeService } from '../services/collaborative-service';
 import { DebateApiService } from '../services/debate-runtime/debate-api';
 import { DebateKnowledgeSyncService } from '../services/debate-runtime/debate-knowledge-sync';
@@ -100,7 +162,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     // A-04: embedPipeline created once as a plain const — used directly by
     // all dependent services (debateRAGRetriever, debateEngine).
     const embedPipeline = new DebateEmbeddingPipeline({ embedText: simpleEmbedText });
-    const debateEvaluator = new DebateEvaluator();
+    const debateEvaluator = new DebateEvaluator(new DpoStrategySampler());
     const debateMemoryExtractor = new DebateMemoryExtractor();
     const debateRAGRetriever = new DebateRAGRetriever({ embeddingPipeline: embedPipeline });
 
@@ -134,6 +196,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             return { content: res.content };
         },
     });
+    _container.register('factCheckService', _factCheckService);
     const _postProcessor = new DebatePostProcessor({ factCheckService: _factCheckService });
     const _syncManager = new DebateSyncManager(_postProcessor);
     _syncManager.setDeps(
@@ -280,6 +343,63 @@ export const registerPhase3: Phase = (helpers, ctx) => {
 
     register('debatePolicyEngine', (_c) => new DebatePolicyEngine());
 
+    register('entanglementEngine', (c) => {
+        const engine = new EntanglementEngine();
+        try {
+            engine.setGraph(c.get<IArgumentGraphService>('argumentGraphService'));
+        } catch {
+            /* graph may not be registered yet */
+        }
+        return engine;
+    });
+    register('anchoringService', (c) => {
+        const svc = new AnchoringService();
+        try {
+            svc.setGraph(c.get<IArgumentGraphService>('argumentGraphService'));
+        } catch {
+            /* graph may not be registered yet */
+        }
+        return svc;
+    });
+    register('argumentGraphService', (_c) => new ArgumentGraphService());
+    register('vulnerabilityTargetingService', (c) => {
+        const graph = c.get<IArgumentGraphService>('argumentGraphService');
+        return new VulnerabilityTargetingService(graph);
+    });
+    register('shadowOpponentService', (_c) => new ShadowOpponentService());
+    register('adversarialSourceService', (_c) => new AdversarialSourceService());
+    register('beliefMiningService', (_c) => new BeliefMiningService());
+    register('minimaxPlannerService', (c) => {
+        const graph = c.get<IArgumentGraphService>('argumentGraphService');
+        return new MinimaxPlanner(graph);
+    });
+    register('metaAgentController', (c) => {
+        const graph = c.get<IArgumentGraphService>('argumentGraphService');
+        return new MetaAgentController(graph);
+    });
+
+    register('steelmanService', (_c) => new SteelmanService());
+    register('boPTrackerService', (_c) => new BoPTrackerService());
+    register('consistencyService', (_c) => new ConsistencyService());
+    register('credibilityScorer', (_c) => new CredibilityScorer());
+    register('similarityMonitor', (_c) => new SimilarityMonitor());
+    register('driftDetector', (_c) => new PersonaDriftDetector());
+    register('insightBus', (_c) => new InsightBus());
+    register('logicalFormExtractor', (_c) => new LogicalFormExtractor());
+    register('justificationEnforcer', (_c) => new JustificationEnforcer());
+    register('biasProfiler', (_c) => new BiasProfiler());
+    register('interruptQueue', (_c) => new InterruptQueue());
+    register('stakeholderMapper', (_c) => new StakeholderMapper());
+    register('calibrationService', (_c) => new CalibrationService());
+    register('personaMixer', (_c) => new PersonaMixer());
+    register('frameTracker', (_c) => new FrameTracker());
+    register('expertWitnessService', (_c) => new ExpertWitnessService());
+    register('bayesianJudge', (_c) => new BayesianJudge());
+    register('stanceDriftTracker', (_c) => new StanceDriftTracker());
+    register('rhetoricalDeviceSelector', (_c) => new RhetoricalDeviceSelector());
+    register('scratchpadService', (_c) => new ScratchpadService());
+    register('blindEval', (_c) => new BlindEvaluationService());
+
     // A-04: embedPipeline, evaluator, extractor created as plain consts above.
     // They are singletons but not registered individually — they are passed
     // directly to services that need them, avoiding extra factory indirection.
@@ -345,6 +465,38 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             ragRetriever: debateRAGRetriever,
             memoryExtractor: debateMemoryExtractor,
             evaluator: debateEvaluator,
+            entanglementEngine: c.get<IEntanglementEngine>('entanglementEngine'),
+            anchoringService: c.get<IAnchoringService>('anchoringService'),
+            argumentGraphService: c.get<IArgumentGraphService>('argumentGraphService'),
+            vulnerabilityTargeting: c.get<IVulnerabilityTargetingService>(
+                'vulnerabilityTargetingService',
+            ),
+            shadowOpponent: c.get<IShadowOpponentService>('shadowOpponentService'),
+            adversarialSource: c.get<IAdversarialSourceService>('adversarialSourceService'),
+            beliefMiningService: c.get<IBeliefMiningService>('beliefMiningService'),
+            minimaxPlanner: c.get<IMinimaxPlanner>('minimaxPlannerService'),
+            metaAgent: c.get<IMetaAgentController>('metaAgentController'),
+            steelmanService: c.get<ISteelmanService>('steelmanService'),
+            boPTracker: c.get<IBoPTrackerService>('boPTrackerService'),
+            consistencyService: c.get<IConsistencyService>('consistencyService'),
+            credibilityScorer: c.get<ICredibilityScorer>('credibilityScorer'),
+            similarityMonitor: c.get<ISimilarityMonitor>('similarityMonitor'),
+            driftDetector: c.get<IPersonaDriftDetector>('driftDetector'),
+            insightBus: c.get<IInsightBus>('insightBus'),
+            logicalFormExtractor: c.get<ILogicalFormExtractor>('logicalFormExtractor'),
+            justificationEnforcer: c.get<IJustificationEnforcer>('justificationEnforcer'),
+            biasProfiler: c.get<IBiasProfiler>('biasProfiler'),
+            interruptQueue: c.get<IInterruptQueue>('interruptQueue'),
+            stakeholderMapper: c.get<IStakeholderMapper>('stakeholderMapper'),
+            calibrationService: c.get<ICalibrationService>('calibrationService'),
+            personaMixer: c.get<IPersonaMixer>('personaMixer'),
+            frameTracker: c.get<IFrameTracker>('frameTracker'),
+            expertWitness: c.get<IExpertWitnessService>('expertWitnessService'),
+            factCheckService: c.get<FactCheckService>('factCheckService'),
+            stanceDriftTracker: c.get<IStanceDriftTracker>('stanceDriftTracker'),
+            rhetoricalDeviceSelector: c.get<IRhetoricalDeviceSelector>('rhetoricalDeviceSelector'),
+            scratchpadService: c.get<IScratchpadService>('scratchpadService'),
+            blindEval: c.get<IBlindEvaluationService>('blindEval'),
         });
     });
 

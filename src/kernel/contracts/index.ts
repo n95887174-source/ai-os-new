@@ -644,3 +644,90 @@ export type {
 } from './role-team';
 
 export type { ChatServiceDeps } from './chat';
+
+// ── Debate Entanglement ──────────────────────────────────────────────
+export type {
+    EntanglementConstraint,
+    EntanglementResponseType,
+    ResponseValidationResult,
+    IEntanglementEngine,
+    AnchorClaim,
+    IAnchoringService,
+} from './debate-entanglement';
+
+// ── Unified Argument Graph (Phase A) ──────────────────────────────────
+export type {
+    ArgumentEdgeType,
+    EdgeDetectionMethod,
+    ArgumentNode,
+    ArgumentEdge,
+    ArgumentGraphStats,
+    UnattackedClaim,
+    ConstraintCandidate,
+    GraphBuildInput,
+    IArgumentGraphService,
+} from './debate-argument-graph';
+
+// ── Vulnerability Targeting (P0.4) ─────────────────────────────────────
+export type {
+    VulnerabilityType,
+    VulnerabilityTarget,
+    IVulnerabilityTargetingService,
+} from './debate-vulnerability';
+export type { IShadowOpponentService, ShadowCritique } from './debate-shadow-opponent';
+export type {
+    IAdversarialSourceService,
+    SourceVerificationResult,
+} from './debate-adversarial-source';
+export type {
+    IBeliefMiningService,
+    MinedBelief,
+    BeliefConflict,
+    BeliefType,
+    ConflictType,
+} from './debate-belief-mining';
+export { BELIEF_DETECTION_PATTERNS } from './debate-belief-mining';
+
+// ── Graph Minimax (P0.7) ───────────────────────────────────────────────
+export type { MinimaxActionType, MinimaxMove, IMinimaxPlanner } from './debate-minimax';
+
+// ── Meta-Agent Controller (P0.8) ───────────────────────────────────────
+export type { TacticalRole, TacticalDirective, IMetaAgentController } from './debate-meta-agent';
+
+// ── Steelmanning Protocol (P0.9) ─────────────────────────────────────
+export type { SteelmanTarget, ISteelmanService } from './debate-steelman';
+
+// ── Burden of Proof Tracker (P0.10) ─────────────────────────────────
+export type { BoPStatus, BurdenEntry, UnmetBurden, IBoPTrackerService } from './debate-bop';
+
+// ── Consistency Enforcer (P0.11) ──────────────────────────────────
+export type { Contradiction, ConsistencyWarning, IConsistencyService } from './debate-consistency';
+
+// ── Source Credibility Rater (P0.12) ─────────────────────────────
+export type { SourceCredibility, ICredibilityScorer } from './debate-credibility';
+
+// ── Echo Chamber / Redundancy Monitor (P1.26) ──────────────────
+export type { IReplaySelector, PivotalMoment } from './debate-replay';
+export type { ISimilarityMonitor, RedundancyRecord } from './debate-similarity';
+
+// ── Persona Drift Detector (P1.16) ────────────────────────────
+export type { IPersonaDriftDetector, DriftRecord, PersonaProfile } from './debate-drift';
+
+// ── InsightBus (P1.21) ───────────────────────────────────────
+export type { IInsightBus, Insight, InsightType } from './debate-insight-bus';
+export type {
+    ILogicalFormExtractor,
+    LogicalForm,
+    LogicalFormType,
+    EnthymemeTarget,
+} from './debate-logic';
+export type {
+    IJustificationEnforcer,
+    JustificationChain,
+    JustificationHop,
+} from './debate-justification';
+export type { IBiasProfiler, BiasProfile, BiasType, BiasScore } from './debate-bias';
+export type { IInterruptQueue, InterruptRequest } from './debate-interrupt';
+
+// ── Blind Evaluation (P2.12) ──────────────────────────────────────
+export type { IBlindEvaluationService } from './debate-blind-eval';

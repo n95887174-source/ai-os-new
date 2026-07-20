@@ -25,6 +25,35 @@ import { EVENTS } from '../../events/event-names';
 import type { DebatePolicyEngine } from './debate-policy-engine';
 import type { DebateRAGRetriever } from './debate-rag-retriever';
 import type { DebateMemoryExtractor } from './debate-memory-extractor';
+import type { IEntanglementEngine, IAnchoringService } from '../../contracts/debate-entanglement';
+import type { IArgumentGraphService } from '../../contracts/debate-argument-graph';
+import type { IVulnerabilityTargetingService } from '../../contracts/debate-vulnerability';
+import type { IShadowOpponentService } from '../../contracts/debate-shadow-opponent';
+import type { IAdversarialSourceService } from '../../contracts/debate-adversarial-source';
+import type { IBeliefMiningService } from '../../contracts/debate-belief-mining';
+import type { IMinimaxPlanner } from '../../contracts/debate-minimax';
+import type { IMetaAgentController } from '../../contracts/debate-meta-agent';
+import type { ISteelmanService } from '../../contracts/debate-steelman';
+import type { IBoPTrackerService } from '../../contracts/debate-bop';
+import type { IConsistencyService } from '../../contracts/debate-consistency';
+import type { ICredibilityScorer } from '../../contracts/debate-credibility';
+import type { ISimilarityMonitor } from '../../contracts/debate-similarity';
+import type { IPersonaDriftDetector } from '../../contracts/debate-drift';
+import type { IInsightBus } from '../../contracts/debate-insight-bus';
+import type { ILogicalFormExtractor } from '../../contracts/debate-logic';
+import type { IJustificationEnforcer } from '../../contracts/debate-justification';
+import type { IBiasProfiler } from '../../contracts/debate-bias';
+import type { IInterruptQueue } from '../../contracts/debate-interrupt';
+import type { IStakeholderMapper } from '../../contracts/debate-stakeholder';
+import type { ICalibrationService } from '../../contracts/debate-calibration';
+import type { IPersonaMixer } from '../../contracts/debate-persona-mixer';
+import type { IFrameTracker } from '../../contracts/debate-frame-tracker';
+import type { IExpertWitnessService } from '../../contracts/debate-expert-witness';
+import type { IBayesianJudge } from '../../contracts/debate-bayesian';
+import type { IStanceDriftTracker } from '../../contracts/debate-stance-drift';
+import type { IRhetoricalDeviceSelector } from '../../contracts/debate-rhetorical-device';
+import type { IScratchpadService } from '../../contracts/debate-scratchpad';
+import type { IBlindEvaluationService } from '../../contracts/debate-blind-eval';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
 import { createPhaseChangeHandler } from './debate-phase-handler';
 
@@ -97,6 +126,44 @@ interface DebateEngineDeps {
     memoryExtractor?: DebateMemoryExtractor;
     evaluator?: IDebateEvaluator;
     providerResolver?: DebateProviderResolver;
+    entanglementEngine?: IEntanglementEngine;
+    anchoringService?: IAnchoringService;
+    argumentGraphService?: IArgumentGraphService;
+    vulnerabilityTargeting?: IVulnerabilityTargetingService;
+    shadowOpponent?: IShadowOpponentService;
+    adversarialSource?: IAdversarialSourceService;
+    beliefMiningService?: IBeliefMiningService;
+    minimaxPlanner?: IMinimaxPlanner;
+    metaAgent?: IMetaAgentController;
+    steelmanService?: ISteelmanService;
+    boPTracker?: IBoPTrackerService;
+    consistencyService?: IConsistencyService;
+    credibilityScorer?: ICredibilityScorer;
+    similarityMonitor?: ISimilarityMonitor;
+    driftDetector?: IPersonaDriftDetector;
+    insightBus?: IInsightBus;
+    logicalFormExtractor?: ILogicalFormExtractor;
+    justificationEnforcer?: IJustificationEnforcer;
+    biasProfiler?: IBiasProfiler;
+    interruptQueue?: IInterruptQueue;
+    stakeholderMapper?: IStakeholderMapper;
+    calibrationService?: ICalibrationService;
+    personaMixer?: IPersonaMixer;
+    frameTracker?: IFrameTracker;
+    expertWitness?: IExpertWitnessService;
+    bayesianJudge?: IBayesianJudge;
+    stanceDriftTracker?: IStanceDriftTracker;
+    rhetoricalDeviceSelector?: IRhetoricalDeviceSelector;
+    scratchpadService?: IScratchpadService;
+    blindEval?: IBlindEvaluationService;
+    factCheckService?: {
+        getForArgument(argumentId: string):
+            | {
+                  overallScore: number;
+                  results: Array<{ verdict: string; claim: string; reasoning: string }>;
+              }
+            | undefined;
+    };
 }
 
 // P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
@@ -518,6 +585,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     debateStore: this.deps.debateStore,
                     memoryExtractor: this.deps.memoryExtractor,
                     evaluator: this.deps.evaluator,
+                    bayesianJudge: this.deps.bayesianJudge,
+                    stanceDriftTracker: this.deps.stanceDriftTracker,
+                    blindEval: this.deps.blindEval,
                 },
                 {
                     getContext: (sid) => this.getContext(sid),
@@ -687,7 +757,76 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             sessionAbortControllers: this.sessionAbortControllers,
             ragRetriever: this.deps.ragRetriever,
             isSessionCancelled: (id) => this._cancelledSessionIds.has(id),
+            entanglementEngine: this.deps.entanglementEngine,
+            anchoringService: this.deps.anchoringService,
+            argumentGraphService: this.deps.argumentGraphService,
+            vulnerabilityTargeting: this.deps.vulnerabilityTargeting,
+            shadowOpponent: this.deps.shadowOpponent,
+            adversarialSource: this.deps.adversarialSource,
+            beliefMiningService: this.deps.beliefMiningService,
+            minimaxPlanner: this.deps.minimaxPlanner,
+            metaAgent: this.deps.metaAgent,
+            steelmanService: this.deps.steelmanService,
+            boPTracker: this.deps.boPTracker,
+            consistencyService: this.deps.consistencyService,
+            credibilityScorer: this.deps.credibilityScorer,
+            similarityMonitor: this.deps.similarityMonitor,
+            driftDetector: this.deps.driftDetector,
+            insightBus: this.deps.insightBus,
+            logicalFormExtractor: this.deps.logicalFormExtractor,
+            justificationEnforcer: this.deps.justificationEnforcer,
+            biasProfiler: this.deps.biasProfiler,
+            interruptQueue: this.deps.interruptQueue,
+            stakeholderMapper: this.deps.stakeholderMapper,
+            calibrationService: this.deps.calibrationService,
+            personaMixer: this.deps.personaMixer,
+            frameTracker: this.deps.frameTracker,
+            expertWitness: this.deps.expertWitness,
+            stanceDriftTracker: this.deps.stanceDriftTracker,
+            rhetoricalDeviceSelector: this.deps.rhetoricalDeviceSelector,
+            scratchpadService: this.deps.scratchpadService,
+            factCheckService: this.deps.factCheckService,
         };
+
+        // P2.4: Best-of-N — generate N responses and pick the best.
+        // Configurable via session metadata. Default: 1 (disabled).
+        const bestOfN = (session as { metadata?: Record<string, unknown> }).metadata?.bestOfN as
+            number | undefined;
+        if (bestOfN && bestOfN > 1 && session.round >= 2) {
+            const candidates: Array<{ content: string; score: number }> = [];
+            for (let i = 0; i < Math.min(bestOfN, 3); i++) {
+                try {
+                    const content = await debateCallLlm(
+                        sessionId,
+                        session,
+                        participant,
+                        deps,
+                        externalSignal,
+                    );
+                    if (content && content !== 'cancelled' && content.length > 20) {
+                        // Score: prefer longer responses with more substance
+                        const score =
+                            content.length +
+                            (content.split(' ').length > 15 ? 50 : 0) +
+                            (content.includes('because') ||
+                            content.includes('therefore') ||
+                            content.includes('however')
+                                ? 30
+                                : 0);
+                        candidates.push({ content, score });
+                    }
+                } catch {
+                    // Individual generation failure — skip this candidate
+                }
+            }
+            if (candidates.length > 0) {
+                candidates.sort((a, b) => b.score - a.score);
+                return candidates[0].content;
+            }
+            // Fallthrough: if Best-of-N produced no valid candidates, return the
+            // single-call result below
+        }
+
         return debateCallLlm(sessionId, session, participant, deps, externalSignal);
     }
 

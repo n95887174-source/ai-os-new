@@ -137,7 +137,12 @@ export interface ToolServiceDeps {
         search: (query: string, limit?: number) => Promise<unknown[]>;
     };
     sandboxService?: {
-        execute: (code: string, data: unknown) => Promise<unknown>;
+        execute: (
+            code: string,
+            data: unknown,
+            timeoutMs?: number,
+            allowedTools?: string[],
+        ) => Promise<unknown>;
     };
     pluginRegistry?: {
         getTool: (

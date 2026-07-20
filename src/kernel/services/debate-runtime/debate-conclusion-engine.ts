@@ -20,6 +20,12 @@ const LOGGER = rootLogger.child('DebateConclusionEngine');
 
 export type LlmCallFn = (prompt: string, signal?: AbortSignal) => Promise<string>;
 
+interface JudgeResult {
+    label: string;
+    summary: string;
+    reasoning: string;
+}
+
 function combineSignals(...signals: AbortSignal[]): AbortSignal {
     const controller = new AbortController();
     for (const sig of signals) {
@@ -252,24 +258,78 @@ export class DebateConclusionEngine {
 
         this.enhancementInFlight = true;
         try {
-            const timeoutMs = 30_000;
-            const timeoutController = new AbortController();
-            const timeoutId = setTimeout(
-                () => timeoutController.abort(new Error('ConclusionTimedOut')),
-                timeoutMs,
-            );
-            const combinedSignal = signal
-                ? combineSignals(signal, timeoutController.signal)
-                : timeoutController.signal;
-            // Extract needed fields from snapshot BEFORE the await — the full
-            // snapshot holds all argument content strings and would otherwise
-            // stay alive in the async closure during the LLM call (2-10s).
             const round = snapshot.round;
             const agentCount = snapshot.agentStates.length;
-            const prompt = this.buildLLMPrompt(base, round, agentCount);
-            const response = await this.llmCall(prompt, combinedSignal);
-            clearTimeout(timeoutId);
-            const enhanced = this.parseLLMResponse(response, base);
+
+            // P2.2 Judge Deliberation: call LLM from 3 perspectives and merge
+            const perspectives: Array<{ label: string; instruction: string }> = [
+                {
+                    label: 'Pro-Judge',
+                    instruction:
+                        'You are a judge sympathetic to the PRO side. Evaluate which arguments for the proposition were strongest and why they should carry more weight.',
+                },
+                {
+                    label: 'Con-Judge',
+                    instruction:
+                        'You are a judge sympathetic to the CON side. Evaluate which arguments against the proposition were strongest and why they should carry more weight.',
+                },
+                {
+                    label: 'Neutral-Judge',
+                    instruction:
+                        'You are a neutral judge seeking the most objective truth. Weigh both sides impartially and identify the strongest overall case regardless of stance.',
+                },
+            ];
+
+            const timeoutMs = 30_000;
+            const perJudgeTimeoutMs = Math.min(15_000, Math.floor(timeoutMs / perspectives.length));
+
+            const judgeResults: JudgeResult[] = [];
+
+            for (const perspective of perspectives) {
+                const judgeController = new AbortController();
+                const judgeTimer = setTimeout(
+                    () => judgeController.abort(new Error(`${perspective.label}TimedOut`)),
+                    perJudgeTimeoutMs,
+                );
+                const combinedSig = signal
+                    ? combineSignals(signal, judgeController.signal)
+                    : judgeController.signal;
+
+                try {
+                    const prompt = this.buildLLMPrompt(
+                        base,
+                        round,
+                        agentCount,
+                        perspective.label,
+                        perspective.instruction,
+                    );
+                    const response = await this.llmCall(prompt, combinedSig);
+                    clearTimeout(judgeTimer);
+                    const parsed = this.parseJudgeResponse(response);
+                    judgeResults.push({
+                        label: perspective.label,
+                        summary: parsed.summary || `[${perspective.label}] No summary generated`,
+                        reasoning:
+                            parsed.reasoning || `[${perspective.label}] No reasoning generated`,
+                    });
+                } catch {
+                    clearTimeout(judgeTimer);
+                    judgeResults.push({
+                        label: perspective.label,
+                        summary: `[${perspective.label}] Judge deliberation failed`,
+                        reasoning: `[${perspective.label}] Unable to complete analysis`,
+                    });
+                }
+            }
+
+            const mergedSummary = this.mergeJudgeSummaries(judgeResults, base);
+            const mergedReasoning = this.mergeJudgeReasonings(judgeResults, base);
+
+            const enhanced: DebateVerdict = {
+                ...base,
+                summary: mergedSummary,
+                reasoning: mergedReasoning,
+            };
             this.enhancedSessions.add(snapshot.id);
             this.pruneEnhancedSessions();
             return enhanced;
@@ -292,7 +352,44 @@ export class DebateConclusionEngine {
         }
     }
 
-    private buildLLMPrompt(verdict: DebateVerdict, round: number, agentCount: number): string {
+    private parseJudgeResponse(response: string): { summary?: string; reasoning?: string } {
+        const cleaned = response
+            .replace(/```json\n?/g, '')
+            .replace(/```\n?/g, '')
+            .trim();
+        const parsed = safeJsonParse(cleaned) as { summary?: string; reasoning?: string };
+        return parsed;
+    }
+
+    private mergeJudgeSummaries(results: JudgeResult[], base: DebateVerdict): string {
+        const nonEmpty = results.filter((r) => r.summary && !r.summary.includes('failed'));
+        if (nonEmpty.length === 0) return base.summary;
+        if (nonEmpty.length === 1) return nonEmpty[0].summary;
+
+        const neutral = nonEmpty.find((r) => r.label === 'Neutral-Judge');
+        if (neutral) return neutral.summary;
+
+        return nonEmpty.map((r) => `[${r.label}] ${r.summary}`).join(' ');
+    }
+
+    private mergeJudgeReasonings(results: JudgeResult[], base: DebateVerdict): string {
+        const nonEmpty = results.filter((r) => r.reasoning && !r.reasoning.includes('failed'));
+        if (nonEmpty.length === 0) return base.reasoning;
+
+        const sections = nonEmpty.map((r) => `=== ${r.label} Analysis ===\n${r.reasoning}`);
+        sections.push(
+            `=== Aggregate ===\nMulti-perspective deliberation across ${results.length} judges.`,
+        );
+        return sections.join('\n\n');
+    }
+
+    private buildLLMPrompt(
+        verdict: DebateVerdict,
+        round: number,
+        agentCount: number,
+        judgeLabel?: string,
+        judgeInstruction?: string,
+    ): string {
         const argsSummary = verdict.keyArguments
             .slice(0, 10)
             .map(
@@ -301,7 +398,11 @@ export class DebateConclusionEngine {
             )
             .join('\n');
 
-        return `You are a debate analyst. Analyze the following debate verdict and provide an enhanced summary and reasoning.
+        const judgePrefix = judgeLabel
+            ? `\n\nYou are acting as ${judgeLabel}.\n${judgeInstruction}\n`
+            : '';
+
+        return `You are a debate analyst. Analyze the following debate verdict and provide an enhanced summary and reasoning.${judgePrefix}
 
 DEBATE TOPIC: ${sanitizePromptVar(verdict.topic)}
 ROUNDS: ${round}
@@ -314,24 +415,11 @@ ${argsSummary}
 
 Respond in JSON format:
 {
-  "summary": "A concise 2-3 sentence summary of the debate outcome",
-  "reasoning": "A detailed explanation of WHY this conclusion was reached, citing specific arguments and patterns"
+  "summary": "A concise 2-3 sentence summary of the debate outcome from your perspective",
+  "reasoning": "A detailed explanation of WHY this conclusion was reached from your perspective, citing specific arguments and patterns"
 }
 
 Respond ONLY with valid JSON, no markdown.`;
-    }
-
-    private parseLLMResponse(response: string, base: DebateVerdict): DebateVerdict {
-        const cleaned = response
-            .replace(/```json\n?/g, '')
-            .replace(/```\n?/g, '')
-            .trim();
-        const parsed = safeJsonParse(cleaned) as { summary?: string; reasoning?: string };
-        return {
-            ...base,
-            summary: parsed.summary || base.summary,
-            reasoning: parsed.reasoning || base.reasoning,
-        };
     }
 
     destroy(): void {

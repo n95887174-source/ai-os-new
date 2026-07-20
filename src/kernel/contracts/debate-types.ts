@@ -159,6 +159,7 @@ export type ArgumentStrategy =
 
 export interface DebateParticipant {
     id: string;
+    agentId?: string;
     name: string;
     role: DebateRole;
     systemPrompt?: string;
@@ -187,6 +188,7 @@ export interface DebateArgument {
     parentResolution?: ParentResolution;
     rawParentRef?: string;
     duplicateOf?: string;
+    role?: DebateRole;
     socraticQuality?: number;
     socraticQualityReasons?: string[];
 }

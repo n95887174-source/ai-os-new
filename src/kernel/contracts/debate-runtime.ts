@@ -59,6 +59,7 @@ export interface IDebateSession {
     readonly agentStates: Map<string, AgentStateEntry>;
     readonly createdAt: number;
     readonly language: string;
+    readonly maxRounds?: number;
 
     hasProviderFailed(provider: string): boolean;
     markProviderFailed(provider: string): void;
@@ -258,6 +259,9 @@ export interface AgentScore {
     readonly coherence: number;
     readonly persuasiveness: number;
     readonly factuality: number;
+    /** P0.9: How well the agent restates opponent positions before rebutting.
+     *  0 = pure strawman, 1 = perfect steelman. */
+    readonly steelmanQuality: number;
 }
 
 export interface IDebateEvaluator {
