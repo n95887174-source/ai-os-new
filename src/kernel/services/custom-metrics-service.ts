@@ -74,11 +74,25 @@ export class CustomMetricsService implements ICustomMetricsService {
                 if (typeof v === 'number') values.push(v);
             }
             if (values.length > 0) value = aggregate(values, metric.aggregation);
+        } else if (metric.source === 'debate') {
+            const { qualityImpactCollector } = await import('../instances');
+            const allMetrics = qualityImpactCollector.getAllMetrics();
+            const techniqueFilter = metric.filter?.techniqueId as string | undefined;
+            const filtered = techniqueFilter
+                ? allMetrics.filter((m) => m.techniqueId === techniqueFilter)
+                : allMetrics;
+            const values = filtered
+                .map((m) => {
+                    const v = (m as unknown as Record<string, unknown>)[metric.field];
+                    return typeof v === 'number' ? v : undefined;
+                })
+                .filter((v): v is number => v !== undefined);
+            if (values.length > 0) value = aggregate(values, metric.aggregation);
         } else {
             throw new Error(
                 'Unsupported metric source: ' +
                     metric.source +
-                    '. Only provider source is supported.',
+                    '. Only provider and debate sources are supported.',
             );
         }
 

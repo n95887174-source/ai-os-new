@@ -26,6 +26,7 @@ import type { SnapshotBridgeContext } from './debate-session-bridge';
 import { finalizeDebate } from './debate-finalizer';
 import { loadActiveSession } from './debate-session-persistence';
 import { checkDebatePreflight } from './debate-preflight';
+import { getAllSettings } from './quality-settings-store';
 import type { GovernorState } from './debate-governor/types';
 import { useActiveDebateStore } from '../../../stores/activeDebateStore';
 import { useDebateLiveStore } from '../../../stores/debateLiveStore';
@@ -345,6 +346,15 @@ export class DebateSyncManager {
         bridgeCtx: SnapshotBridgeContext,
     ): DebateSession {
         if (!this.engine) throw new Error('No DebateEngine configured');
+
+        // If experiment engine is active, randomize technique settings before session starts
+        if (this.deps?.experimentEngine && sessionConfig.qualitySettings) {
+            const enabledTechniques = Object.keys(sessionConfig.qualitySettings);
+            const tempId = crypto.randomUUID();
+            this.deps.experimentEngine.generateAssignmentForSession(tempId, enabledTechniques);
+            sessionConfig.qualitySettings = getAllSettings();
+        }
+
         const runtimeId = this.engine.createSession(
             topology,
             topic,

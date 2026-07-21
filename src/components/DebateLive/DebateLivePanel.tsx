@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import { CircularLayout } from './CircularLayout';
 import { JudgeCenter } from './JudgeCenter';
 import { SocratesMascot } from './SocratesMascot';
-import { debateEngine } from '../../kernel/instances';
+import { debateEngine, qualityImpactCollector } from '../../kernel/instances';
 import { ARENA_LAYOUTS } from '../../kernel/contracts/debate-emotion';
 import type { ArenaLayout } from '../../kernel/contracts/debate-emotion';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -30,12 +30,29 @@ export const DebateLivePanel: React.FC = () => {
         sessions.length > 0 ? sessions[sessions.length - 1].id : null,
     );
     const [layout, setLayout] = React.useState<ArenaLayout>('circle');
+    const [activeTechniques, setActiveTechniques] = useState(0);
+
+    const refreshImpact = useCallback(() => {
+        try {
+            const all = qualityImpactCollector.getAllMetrics();
+            const total = all.reduce((s, m) => s + m.totalActivations, 0);
+            setActiveTechniques(total);
+        } catch {
+            /* not initialized */
+        }
+    }, []);
+
+    useEffect(() => {
+        refreshImpact();
+        const id = setInterval(refreshImpact, 5000);
+        return () => clearInterval(id);
+    }, [refreshImpact]);
 
     React.useEffect(() => {
         if (activeSessionId === null && sessions.length > 0) {
             setActiveSessionId(sessions[sessions.length - 1].id);
         }
-    }, [activeSessionId, sessions.length]);
+    }, [activeSessionId, sessions]);
 
     const sessionIndex = useMemo(
         () => sessions.findIndex((s) => s.id === activeSessionId),
@@ -131,6 +148,22 @@ export const DebateLivePanel: React.FC = () => {
                         role="status"
                     >
                         {session.phase} · {t('debate_live.round_label', { n: session.round })}
+                    </span>
+                )}
+                {activeTechniques > 0 && (
+                    <span
+                        style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            color: '#22c55e',
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            background: 'rgba(34, 197, 94, 0.15)',
+                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                        }}
+                        title="Quality technique activations across all sessions"
+                    >
+                        ✦ {activeTechniques} quality
                     </span>
                 )}
             </div>

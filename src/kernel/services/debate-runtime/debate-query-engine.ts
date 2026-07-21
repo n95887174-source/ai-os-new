@@ -248,13 +248,27 @@ export class DebateProviderResolver {
         participant: { agentId: string; provider?: string; nodeId: string; modelId?: string },
         sessionId: string,
         triedModels: Set<string>,
-        _triedKeys: Set<string>,
+        triedKeys: Set<string>,
+        rejectedCombos: Set<string> = new Set(),
     ): {
         key: { id: string; key: string; provider: string; availableModels?: string[] };
         modelId: string;
     } | null {
         const keyService = this.deps.keyService;
         const routerService = this.deps.routerService;
+
+        // Build a fast lookup for rejected (provider|model|keyId) combos.
+        // Any (provider, model) in a rejected combo is poisoned for the rest of
+        // this callLLM — adding it to triedModels so pickBestModelForDebate skips it.
+        const isComboRejected = (provider: string, model: string, keyId: string): boolean =>
+            rejectedCombos.has(`${provider}|${model}|${keyId}`);
+        const isModelRejectedAnyKey = (provider: string, model: string): boolean => {
+            for (const c of rejectedCombos) {
+                const [p, m] = c.split('|');
+                if (p === provider && m === model) return true;
+            }
+            return false;
+        };
 
         let resolvedKey:
             { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
@@ -329,7 +343,8 @@ export class DebateProviderResolver {
                 (pk) =>
                     this.providerCanBeUsed(pk.key.provider, session) &&
                     pk.key.status === 'active' &&
-                    !this.isKeyAuthFailed(pk.key.id),
+                    !this.isKeyAuthFailed(pk.key.id) &&
+                    !triedKeys.has(pk.key.id),
             );
             if (available) {
                 console.log('[DEBATE_FALLBACK] Step 4: found provider', {
@@ -348,7 +363,7 @@ export class DebateProviderResolver {
                 );
                 const triedDetails = providerKeys.map(
                     (pk) =>
-                        `${pk.provider}:${pk.key.id.slice(0, 8)} canUse=${this.providerCanBeUsed(pk.key.provider, session)} active=${pk.key.status === 'active'} authOk=${!this.isKeyAuthFailed(pk.key.id)}`,
+                        `${pk.provider}:${pk.key.id.slice(0, 8)} canUse=${this.providerCanBeUsed(pk.key.provider, session)} active=${pk.key.status === 'active'} authOk=${!this.isKeyAuthFailed(pk.key.id)} triedAlready=${triedKeys.has(pk.key.id)}`,
                 );
                 console.log('[DEBATE_FALLBACK] Step 4: no available provider', {
                     triedKeys: triedDetails,
@@ -366,6 +381,7 @@ export class DebateProviderResolver {
             const allKeys = keyService.getKeys();
             const available = ranked.find((k) => {
                 if (!this.providerCanBeUsed(k.provider, session)) return false;
+                if (triedKeys.has(k.id)) return false;
                 const key = allKeys.find((key) => key.id === k.id);
                 return key?.status === 'active' && !this.isKeyAuthFailed(k.id);
             });
@@ -380,20 +396,39 @@ export class DebateProviderResolver {
             console.log('[DEBATE_FALLBACK] Step 6: brute-force ANY active key', {
                 totalKeys: allKeys.length,
                 failedProviders: fProviders,
+                triedKeys: triedKeys.size,
+                rejectedCombos: rejectedCombos.size,
             });
             rootLogger.warn('DebateProviderResolver', 'Step 6: brute-force ANY active key', {
                 totalKeys: allKeys.length,
                 failedProviders: fProviders,
+                triedKeys: triedKeys.size,
+                rejectedCombos: rejectedCombos.size,
             });
             // Step 6 is last-resort: ignore session-level hasProviderFailed (which is
             // permanent per-session) because transient errors like 429 should not
             // permanently block a provider. Still check circuit breaker (temporary).
-            const anyAvailable = allKeys.find(
-                (k) =>
-                    k.status === 'active' &&
-                    !this.isKeyAuthFailed(k.id) &&
-                    !this.isCircuitOpen(k.provider),
-            );
+            //
+            // CRITICAL: filter by triedKeys + reject any key whose ALL priority models
+            // have already been rejected as duplicates for some other key. Otherwise
+            // brute-force loops: pick key A → 8B duplicate → try 70B duplicate → try
+            // alt key B → 8B duplicate again (same model produces same content).
+            const anyAvailable = allKeys.find((k) => {
+                if (k.status !== 'active') return false;
+                if (this.isKeyAuthFailed(k.id)) return false;
+                if (this.isCircuitOpen(k.provider)) return false;
+                if (triedKeys.has(k.id)) return false;
+                // If every model on this (provider, key) has been rejected as
+                // duplicate somewhere, this key has no fresh models to offer.
+                const priority = DEBATE_MODEL_PRIORITY[k.provider.toLowerCase()] ?? [];
+                const availModels = k.availableModels ?? [];
+                const allModels = new Set([...priority, ...availModels]);
+                if (allModels.size === 0) return true; // no model info — let auto fallback try
+                for (const m of allModels) {
+                    if (!isModelRejectedAnyKey(k.provider, m)) return true;
+                }
+                return false;
+            });
             if (anyAvailable) {
                 console.log('[DEBATE_FALLBACK] Step 6: brute-force resolved', {
                     provider: anyAvailable.provider,
@@ -407,25 +442,87 @@ export class DebateProviderResolver {
             } else {
                 const ks = allKeys.map(
                     (k) =>
-                        `${k.provider}:${k.id.slice(0, 8)} status=${k.status} canUse=${this.providerCanBeUsed(k.provider, session)} authOk=${!this.isKeyAuthFailed(k.id)}`,
+                        `${k.provider}:${k.id.slice(0, 8)} status=${k.status} canUse=${this.providerCanBeUsed(k.provider, session)} authOk=${!this.isKeyAuthFailed(k.id)} triedAlready=${triedKeys.has(k.id)}`,
                 );
-                console.log('[DEBATE_FALLBACK] Step 6: ALL keys unavailable!', { keySummary: ks });
+                console.log('[DEBATE_FALLBACK] Step 6: ALL keys unavailable!', {
+                    keySummary: ks,
+                    rejectedCombos: Array.from(rejectedCombos),
+                });
                 rootLogger.error('DebateProviderResolver', 'Step 6: ALL keys unavailable!', {
                     keySummary: ks,
+                    rejectedCombos: Array.from(rejectedCombos),
                 });
             }
         }
 
         if (!resolvedKey) return null;
 
+        // Merge rejectedCombos into a per-key skip set so pickBestModelForDebate
+        // never picks a (provider, model) that's been flagged as duplicate.
+        // Without this, brute-force finds a fresh key, then pickBestModelForDebate
+        // returns the same model from priority list, producing the same duplicate.
+        const effectiveTriedModels = new Set(triedModels);
+        if (rejectedCombos.size > 0) {
+            for (const c of rejectedCombos) {
+                const [p, m] = c.split('|');
+                if (m) {
+                    // If the rejected combo was on a different key of the same provider,
+                    // we still skip the model on this key — same model = same content.
+                    if (p === resolvedKey.provider) effectiveTriedModels.add(m);
+                    // If the rejected combo was on THIS key, also skip (exact match).
+                    if (c === `${resolvedKey.provider}|${m}|${resolvedKey.id}`) {
+                        effectiveTriedModels.add(m);
+                    }
+                }
+            }
+        }
+
         const avail = resolvedKey.availableModels ?? [];
         const modelId =
-            pickBestModelForDebate(resolvedKey.provider, avail, participant.modelId, triedModels) ||
-            (avail.length > 0 ? avail.find((m) => !triedModels.has(m)) : undefined) ||
+            pickBestModelForDebate(
+                resolvedKey.provider,
+                avail,
+                participant.modelId,
+                effectiveTriedModels,
+            ) ||
+            (avail.length > 0 ? avail.find((m) => !effectiveTriedModels.has(m)) : undefined) ||
             (DEBATE_MODEL_PRIORITY[resolvedKey.provider.toLowerCase()] ?? []).find(
-                (m) => !triedModels.has(m),
+                (m) => !effectiveTriedModels.has(m),
             ) ||
             'auto';
+
+        // Final guard: if modelId resolves to 'auto' but every model for this key
+        // has been tried/rejected, abort the resolve rather than returning a doomed
+        // combo (auto fallback would re-pick a tried model and hit dedup again).
+        if (modelId === 'auto') {
+            const priority = DEBATE_MODEL_PRIORITY[resolvedKey.provider.toLowerCase()] ?? [];
+            const allModelsForKey = new Set([...priority, ...avail]);
+            let hasUntriedAndUnrejected = false;
+            for (const m of allModelsForKey) {
+                if (
+                    !effectiveTriedModels.has(m) &&
+                    !isComboRejected(resolvedKey.provider, m, resolvedKey.id)
+                ) {
+                    hasUntriedAndUnrejected = true;
+                    break;
+                }
+            }
+            if (!hasUntriedAndUnrejected && allModelsForKey.size > 0) {
+                console.log('[DEBATE_FALLBACK] resolveProvider: no fresh model for key', {
+                    provider: resolvedKey.provider,
+                    keyId: resolvedKey.id.slice(0, 8),
+                    allModels: Array.from(allModelsForKey),
+                    tried: Array.from(effectiveTriedModels),
+                    rejected: Array.from(rejectedCombos),
+                });
+                rootLogger.warn('DebateProviderResolver', 'No fresh model for resolved key', {
+                    provider: resolvedKey.provider,
+                    keyId: resolvedKey.id.slice(0, 8),
+                    rejectedCombos: Array.from(rejectedCombos),
+                });
+                return null;
+            }
+        }
 
         return { key: resolvedKey, modelId };
     }

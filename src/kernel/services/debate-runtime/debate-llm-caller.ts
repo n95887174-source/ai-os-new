@@ -145,6 +145,11 @@ const LARGE_MODEL_TIMEOUT_MS = CONFIG?.services?.debate?.largeModelTimeoutMs ?? 
 const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
 const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
 const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
+// Cap on consecutive cross-agent-duplicate rejections within a single callLLM.
+// Beyond this we assume the LLM cluster is producing pathological content
+// (same response regardless of model/key) and we abort the call rather than
+// spinning forever in the brute-force fallback loop.
+const MAX_DUPLICATE_REJECTIONS = 3;
 
 function getModelTimeout(modelId: string): number {
     return isLargeModel(modelId) ? LARGE_MODEL_TIMEOUT_MS : DEBATE_TIMEOUT_MS;
@@ -243,6 +248,12 @@ export async function debateCallLlm(
     deps.providerResolver.deleteLlmFailureCount(failKey);
     const triedModels = new Set<string>();
     const triedKeys = new Set<string>();
+    // Track (provider|model|keyId) combos that produced cross-agent duplicate
+    // responses. The resolver consults this set to avoid re-picking the same
+    // (provider, model) on a different key — same model = same content = same
+    // duplicate. Without this guard, brute-force fallback loops forever.
+    const rejectedCombos = new Set<string>();
+    let duplicateRejectCount = 0;
 
     // Quality settings: check if a specific technique is enabled
     // (default: enabled if not explicitly disabled)
@@ -290,6 +301,7 @@ export async function debateCallLlm(
                 sessionId,
                 triedModels,
                 triedKeys,
+                rejectedCombos,
             );
             if (!resolved) {
                 // Fast-fail: if ALL providers are already dead, skip retry loop
@@ -1672,19 +1684,41 @@ export async function debateCallLlm(
             // Cross-agent duplicate check — reject content copied verbatim
             // from other agents' recent responses.
             if (isCrossAgentDuplicate(content, recentSteps, participant.agentId)) {
+                duplicateRejectCount++;
                 LOGGER.warn('DebateLlmCaller', 'Response rejected — cross-agent duplicate', {
                     agentId: participant.agentId,
                     provider: resolvedKey?.provider,
                     model: modelId,
+                    keyId: resolvedKey?.id?.slice(0, 8),
+                    rejectCount: duplicateRejectCount,
+                    maxRejects: MAX_DUPLICATE_REJECTIONS,
                     preview: content.slice(0, 120),
                 });
                 if (resolvedKey) {
                     triedModels.add(modelId);
-                    // Force provider switch: mark the provider as failed so the retry
-                    // loop picks a DIFFERENT provider, not just a different model or key
-                    // on the same provider (which would produce the same duplicate content).
-                    session.markProviderFailed(resolvedKey.provider);
+                    triedKeys.add(resolvedKey.id);
+                    // Mark this exact (provider, model, key) combo as rejected so
+                    // the resolver skips it on the next retry. Same model on a
+                    // different key would produce the same content — we mark the
+                    // (provider, model) pair as rejected across all keys via the
+                    // wildcard combo `${provider}|${model}|*`. The resolver's
+                    // isModelRejectedAnyKey() matches this regardless of keyId.
+                    rejectedCombos.add(`${resolvedKey.provider}|${modelId}|${resolvedKey.id}`);
+                    rejectedCombos.add(`${resolvedKey.provider}|${modelId}|*`);
                 }
+                // Bail out cleanly if the LLM cluster is producing pathological
+                // duplicates — better to fail loudly than spin forever. The
+                // engine handles the error by skipping this argument and moving
+                // on to the next agent.
+                if (duplicateRejectCount >= MAX_DUPLICATE_REJECTIONS) {
+                    throw new Error(
+                        `Cross-agent duplicate produced ${duplicateRejectCount} times consecutively — aborting callLLM (provider=${resolvedKey?.provider}, model=${modelId})`,
+                    );
+                }
+                // Note: do NOT call session.markProviderFailed() here. A cross-
+                // agent duplicate is a content-level failure, not a provider
+                // failure. Marking the provider as failed would prevent ALL
+                // other agents from using it for the rest of the session.
                 throw new Error('Response validation failed: cross-agent duplicate');
             }
 
@@ -2011,7 +2045,17 @@ export async function debateCallLlm(
                     continue;
                 }
 
-                // Try alternative keys for same provider
+                // Try alternative keys for same provider.
+                // CRITICAL: do NOT call triedModels.clear() here. Same model on a
+                // different key produces the same content (especially for cross-agent
+                // duplicate cases where the model is generating the same boilerplate
+                // regardless of API key). The dedup memory must survive key switches
+                // — clearing it allows brute-force to re-pick a tried model and
+                // re-trigger the same duplicate, looping forever.
+                // The resolver consults rejectedCombos to skip bad (provider,model)
+                // pairs, so the alt key's resolveProvider will fall through to a
+                // different model on the same provider, or to Step 6 brute-force
+                // for a fresh provider.
                 const allKeys = keyService.getKeys();
                 const altKey = allKeys.find(
                     (k) =>
@@ -2027,7 +2071,10 @@ export async function debateCallLlm(
                         fromProvider: resolvedKey!.provider,
                         toProvider: altKey.provider,
                     });
-                    triedModels.clear();
+                    // Intentionally NOT clearing triedModels/rejectedCombos here —
+                    // see comment above. The resolver uses these to pick a fresh
+                    // model on the alt key, or escalate to Step 6 if the entire
+                    // provider is exhausted.
                     deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                     continue;
                 }

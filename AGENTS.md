@@ -4436,6 +4436,32 @@ Complete the last 2 remaining P2 debate quality improvement items: wire P2.5 RTo
 
 ---
 
+## Current Session (2026-07-21) — Bootstrap Fix: adversarialSourceService init TypeError
+
+### Problem
+
+Console showed `adversarialSourceService` failing init 4× in Tier 4-6 (1s + 2s + 4s = 7s wasted), then 4 more times in the second-init pass (another 7s). Total 8 attempts = 14s of useless waiting. App booted in degraded mode (service marked optional).
+
+### Root Cause
+
+`registerWithLifecycle` in `bootstrap.ts:483` was checking `init OR destroy` — too permissive. `AdversarialSourceService` only has a no-op `destroy()`, no `init()`. So it got registered as ILifecycle, and `LifecycleManager.tryInit()` called `.init()` on it → `TypeError: init is not a function` → 4 retries → error.
+
+The second-init pass at `bootstrap.ts:344` then re-ran `tryInit` on the same failed service because the status check only looked for `status === 'ok'`, ignoring `'error'`.
+
+### Changes
+
+| File                                       | Change                                                                                                                                                                                                                                       |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/kernel/bootstrap.ts:483`              | Tightened `registerWithLifecycle`: now requires BOTH `init` AND `destroy` functions (matches actual ILifecycle contract). Services with only no-op `destroy()` (stateless helpers) are no longer misregistered.                              |
+| `src/kernel/bootstrap.ts:285`              | First tier loop: uses `tryInitIfPresent()` instead of `tryInit(..., () => svc.init())` — defensive measure.                                                                                                                                  |
+| `src/kernel/bootstrap.ts:340`              | Second-init pass: now uses `tryInitIfPresent()` AND only retries services with NO status entry yet. Services that already failed in the first pass (status `error`/`skipped`) are no longer re-tried — failure is structural, not transient. |
+| `src/kernel/services/lifecycle-manager.ts` | Added `tryInitIfPresent(name, service, retries?)` — if `service.init` is missing, marks as `status: 'ok'` instead of throwing. Belt-and-suspenders against future bugs of the same shape.                                                    |
+
+### Status
+
+- `npx tsc --noEmit --project tsconfig.app.json` ✅ zero errors
+- `npx vite build` ✅ 4.13s
+
 ## Current Session (2026-07-21) — Quality Impact Tracker P0 MVP (Implementation + Verification)
 
 ### Goal

@@ -63,6 +63,7 @@ import type { PromptLibraryService as PromptLibraryServiceType } from '../servic
 import type { BatchProcessorService as BatchProcessorServiceType } from '../services/batch-processor-service';
 import type { AgentAvatarService } from '../services/agent-avatar-service';
 import type { ConnectorService } from '../services/connector-service';
+import type { IQualityImpactCollector, IExperimentEngine } from '../contracts/quality-impact';
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',
@@ -168,6 +169,9 @@ export const batchProcessorService =
     lazyService<BatchProcessorServiceType>('batchProcessorService');
 export const agentAvatarService = lazyService<AgentAvatarService>('agentAvatarService');
 export const connectorService = lazyService<ConnectorService>('connectorService');
+export const qualityImpactCollector =
+    lazyService<IQualityImpactCollector>('qualityImpactCollector');
+export const experimentEngine = lazyService<IExperimentEngine>('experimentEngine');
 
 // ── Debate archetype helpers (data/config, not service instances) ───────────
 export {

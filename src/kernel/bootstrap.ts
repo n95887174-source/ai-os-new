@@ -291,7 +291,7 @@ export class SystemBootstrap implements IBootstrap {
                     .getStatuses()
                     .some((s) => s.name === name && s.status === 'ok');
                 if (!hasStatus) {
-                    await this.lifecycle.tryInit(name, () => svc.init());
+                    await this.lifecycle.tryInitIfPresent(name, svc);
                 }
             }
         }
@@ -341,12 +341,14 @@ export class SystemBootstrap implements IBootstrap {
         // Services registered via registerFactory() (lazy DI) whose factories
         // were triggered by container.get() above (or during topology init)
         // missed the INIT_TIERS loop — init them now.
+        // Only retry services that have NO status entry yet (truly lazy
+        // services newly registered). Services that already failed in the
+        // first pass (status 'error'/'skipped') won't be re-tried — their
+        // failure is structural, not transient.
         for (const entry of this.lifecycle.getEntries()) {
-            const hasStatus = this.lifecycle
-                .getStatuses()
-                .some((s) => s.name === entry.name && s.status === 'ok');
-            if (!hasStatus) {
-                await this.lifecycle.tryInit(entry.name, () => entry.service.init());
+            const hasAnyStatus = this.lifecycle.getStatuses().some((s) => s.name === entry.name);
+            if (!hasAnyStatus) {
+                await this.lifecycle.tryInitIfPresent(entry.name, entry.service);
             }
         }
 
@@ -481,10 +483,14 @@ export class SystemBootstrap implements IBootstrap {
     }
 
     private registerWithLifecycle(name: string, instance: unknown) {
+        // ILifecycle contract requires init() + destroy(); start is optional.
+        // Check both — services that only have a no-op destroy() (e.g. stateless
+        // helpers like AdversarialSourceService) must not be registered here,
+        // otherwise LifecycleManager.tryInit() will throw "init is not a function".
         if (
             instance &&
-            (typeof (instance as ILifecycle).init === 'function' ||
-                typeof (instance as ILifecycle).destroy === 'function')
+            typeof (instance as ILifecycle).init === 'function' &&
+            typeof (instance as ILifecycle).destroy === 'function'
         ) {
             this.lifecycle.register(name, instance as ILifecycle);
         }

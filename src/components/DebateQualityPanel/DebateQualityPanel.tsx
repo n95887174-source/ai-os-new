@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, RotateCcw, Sliders, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -8,8 +8,25 @@ import {
     setAllSettings,
     resetAllSettings,
     getTechniques,
+    qualityImpactCollector,
 } from '../../kernel/instances';
 import type { QualityTechnique } from '../../kernel/contracts/debate-quality-settings';
+import type { TechniqueImpactMetrics } from '../../kernel/contracts/quality-impact';
+
+const CONFIDENCE_COLOR: Record<string, string> = {
+    very_high: '#22c55e',
+    high: '#86efac',
+    medium: '#facc15',
+    low: '#f97316',
+    none: '#6b7280',
+};
+
+const formatPct = (v: number): string => {
+    if (v === 0) return '0%';
+    const abs = Math.abs(v);
+    if (abs < 0.001) return '<0.1%';
+    return `${(v * 100).toFixed(1)}%`;
+};
 
 const CATEGORY_ORDER: Array<{ key: QualityTechnique['category']; color: string }> = [
     { key: 'P0', color: '#ef4444' },
@@ -69,7 +86,8 @@ const QualityCard: React.FC<{
     technique: QualityTechnique;
     enabled: boolean;
     onToggle: (id: string, v: boolean) => void;
-}> = ({ technique, enabled, onToggle }) => {
+    metrics?: TechniqueImpactMetrics;
+}> = ({ technique, enabled, onToggle, metrics }) => {
     return (
         <div
             style={{
@@ -107,7 +125,7 @@ const QualityCard: React.FC<{
                 </div>
                 <p
                     style={{
-                        margin: 0,
+                        margin: '0 0 6px 0',
                         fontSize: 12,
                         color: '#94a3b8',
                         lineHeight: 1.4,
@@ -115,6 +133,46 @@ const QualityCard: React.FC<{
                 >
                     {technique.descriptionRu}
                 </p>
+                {metrics && metrics.totalSessions > 0 && (
+                    <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                    >
+                        <span
+                            style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: metrics.avgJudgeScoreDelta >= 0 ? '#22c55e' : '#ef4444',
+                            }}
+                        >
+                            {metrics.avgJudgeScoreDelta >= 0 ? '+' : ''}
+                            {formatPct(metrics.avgJudgeScoreDelta)}
+                        </span>
+                        <span
+                            style={{
+                                display: 'inline-block',
+                                padding: '1px 6px',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                background: `${CONFIDENCE_COLOR[metrics.confidence] ?? '#6b7280'}20`,
+                                color: CONFIDENCE_COLOR[metrics.confidence] ?? '#6b7280',
+                            }}
+                        >
+                            {metrics.confidence}
+                        </span>
+                        <span style={{ fontSize: 10, color: '#64748b' }}>
+                            n={metrics.totalActivations}
+                        </span>
+                        <span style={{ fontSize: 10, color: '#475569' }}>
+                            {metrics.sampleSizeOn}/{metrics.totalSessions} сессий
+                        </span>
+                    </div>
+                )}
+                {(!metrics || metrics.totalSessions === 0) && (
+                    <div style={{ fontSize: 10, color: '#475569', fontStyle: 'italic' }}>
+                        Нет данных о влиянии
+                    </div>
+                )}
             </div>
             <Toggle checked={enabled} onChange={(v) => onToggle(technique.id, v)} />
         </div>
@@ -125,6 +183,33 @@ export const DebateQualityPanel: React.FC = () => {
     const { t } = useTranslation();
     const [settings, setSettings] = useState(() => getAllSettings());
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+    const [impactMetrics, setImpactMetrics] = useState<Record<string, TechniqueImpactMetrics>>({});
+
+    useEffect(() => {
+        try {
+            const all = qualityImpactCollector.getAllMetrics();
+            const map: Record<string, TechniqueImpactMetrics> = {};
+            for (const m of all) {
+                map[m.techniqueId] = m;
+            }
+            setImpactMetrics(map);
+        } catch {
+            // collector not ready
+        }
+        const interval = setInterval(() => {
+            try {
+                const all = qualityImpactCollector.getAllMetrics();
+                const map: Record<string, TechniqueImpactMetrics> = {};
+                for (const m of all) {
+                    map[m.techniqueId] = m;
+                }
+                setImpactMetrics(map);
+            } catch {
+                // collector not ready
+            }
+        }, 15000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleToggle = useCallback((id: string, value: boolean) => {
         setSetting(id, value);
@@ -389,6 +474,7 @@ export const DebateQualityPanel: React.FC = () => {
                                                 technique={tech}
                                                 enabled={settings[tech.id] ?? tech.defaultEnabled}
                                                 onToggle={handleToggle}
+                                                metrics={impactMetrics[tech.id]}
                                             />
                                         ))}
                                     </div>

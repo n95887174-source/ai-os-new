@@ -272,6 +272,14 @@ export const CORE_SECTIONS: NavSection[] = [
                 lazy: true,
                 level: 'L1',
             },
+            {
+                id: 'quality-impact',
+                labelKey: 'nav.quality_impact',
+                icon: Icons.barChart3,
+                color: '#06b6d4',
+                lazy: true,
+                level: 'L1',
+            },
         ],
     },
 ];

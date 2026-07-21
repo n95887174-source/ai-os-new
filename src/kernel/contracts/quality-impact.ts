@@ -98,6 +98,82 @@ export interface QualitySessionRecord {
     timestamp: number;
 }
 
+export interface QualityBaselineRecord {
+    sessionId: string;
+    topic: string;
+    strategy: string;
+    participantCount: number;
+    roundCount: number;
+    totalTokens: number;
+    durationMs: number;
+    judgeScore: number;
+    avgConfidence: number;
+    timestamp: number;
+}
+
+export interface QualityExperiment {
+    id: string;
+    name: string;
+    description: string;
+    techniqueIds: string[];
+    enabledOnInit: boolean;
+    sessionsPlanned: number;
+    sessionsCompleted: number;
+    status: 'draft' | 'running' | 'completed' | 'cancelled';
+    result?: {
+        techniqueResults: Array<{
+            techniqueId: string;
+            avgScoreOn: number;
+            avgScoreOff: number;
+            sessionsOn: number;
+            sessionsOff: number;
+            confidence: 'none' | 'low' | 'medium' | 'high' | 'very_high';
+            pValue?: number;
+        }>;
+    };
+    createdAt: number;
+}
+
+export interface IExperimentEngine {
+    startExperiment(config: {
+        techniqueIds: string[];
+        name?: string;
+        enabledOnInit?: boolean;
+    }): Promise<string>;
+    stopExperiment(experimentId: string): Promise<void>;
+    deleteExperiment(experimentId: string): Promise<void>;
+    getExperiment(id: string): QualityExperiment | undefined;
+    getAllExperiments(): QualityExperiment[];
+    isExperimentRunning(): boolean;
+    getAssignmentForSession(sessionId: string): Record<string, boolean> | undefined;
+    recordSessionCompletion(
+        sessionId: string,
+        techniqueResults: Record<string, number>,
+    ): Promise<void>;
+}
+
+export interface SessionScoreSnapshot {
+    sessionId: string;
+    enabledTechniques: string[];
+    judgeScore: number;
+    avgConfidence: number;
+    roundCount: number;
+    totalTokens: number;
+    participantCount: number;
+    strategy: string;
+    topic: string;
+    durationMs: number;
+    timestamp: number;
+}
+
+export interface BestConditions {
+    techniqueId: string;
+    bestRoundRange?: [number, number];
+    bestAgentCount?: number;
+    bestTopicCategory?: string;
+    confidence: 'none' | 'low' | 'medium' | 'high' | 'very_high';
+}
+
 export interface IQualityImpactCollector {
     record(event: QualityImpactEvent): void;
     finalizeSession(
@@ -115,4 +191,12 @@ export interface IQualityImpactCollector {
     ): Promise<void>;
     getMetrics(techniqueId: string): TechniqueImpactMetrics | undefined;
     getAllMetrics(): TechniqueImpactMetrics[];
+    getSessionHistory(): QualitySessionRecord[];
+    getBaselineSessions(): QualityBaselineRecord[];
+    getBestConditions(techniqueId: string): BestConditions;
+    getSignificance(techniqueId: string): {
+        pValue: number;
+        confidence: 'none' | 'low' | 'medium' | 'high' | 'very_high';
+    };
+    getScoreSnapshots(): SessionScoreSnapshot[];
 }

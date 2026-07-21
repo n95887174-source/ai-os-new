@@ -139,6 +139,24 @@ export class LifecycleManager {
         return false;
     }
 
+    /**
+     * Init a service that may or may not have an init() method. If the service
+     * has no init() (e.g. stateless helper that only registered a destroy() no-op),
+     * treat the init step as a success and return immediately. This prevents
+     * "TypeError: init is not a function" cascades in bootstrap.
+     */
+    async tryInitIfPresent(
+        name: string,
+        service: { init?: () => Promise<void> | void },
+        retries = 3,
+    ): Promise<boolean> {
+        if (typeof service.init !== 'function') {
+            this.statuses.push({ name, status: 'ok' });
+            return true;
+        }
+        return this.tryInit(name, () => service.init!(), retries);
+    }
+
     async initAllSequential(names?: string[]): Promise<boolean[]> {
         const toInit = names ? this.entries.filter((e) => names.includes(e.name)) : this.entries;
 

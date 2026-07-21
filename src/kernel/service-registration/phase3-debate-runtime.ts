@@ -110,6 +110,7 @@ import { WhatIfService } from '../services/runtime-intelligence/whatif-service';
 import { PressureMapService } from '../services/runtime-intelligence/pressure-map-service';
 import { DiagnosticService } from '../services/runtime-intelligence/diagnostic-service';
 import { QualityImpactCollector } from '../services/quality-impact-collector';
+import { ExperimentEngine } from '../services/quality-experiment-engine';
 
 /** Simple hash-based embedding for keyword overlap without an external embedding API. */
 function simpleEmbedText(text: string): Promise<Float32Array> {
@@ -172,6 +173,13 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     const _qualityCollector = new QualityImpactCollector();
     _container.register('qualityImpactCollector', _qualityCollector);
 
+    // ExperimentEngine — A/B testing of quality techniques, registered in DI
+    const _experimentEngine = new ExperimentEngine();
+    _experimentEngine
+        .init()
+        .catch((e: unknown) => console.warn('[phase3] ExperimentEngine.init failed', String(e)));
+    _container.register('experimentEngine', _experimentEngine);
+
     // FactCheckService, DebatePostProcessor, DebateSyncManager — created eagerly
     // as singletons (same pattern as embedPipeline) and wired to DI.
     const _eventBus = _container.get<IEventBus>('eventBus');
@@ -231,6 +239,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                 >('sessionManagerService');
             },
             qualityCollector: _qualityCollector,
+            experimentEngine: _experimentEngine,
         }),
     );
     const _humanService = new DebateHumanService(

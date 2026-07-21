@@ -213,6 +213,9 @@ const PromptVersionPanelLazy = React.lazy(
 const DebateQualityPanelLazy = React.lazy(
     () => import('./components/DebateQualityPanel/DebateQualityPanel'),
 );
+const QualityImpactDashboardLazy = React.lazy(
+    () => import('./components/QualityImpactDashboard/QualityImpactDashboardPanel'),
+);
 
 // ── Section 11 P2+P3 Lazy Imports ─────────────────────────────────────────────
 const FederatedMemoryPanelLazy = React.lazy(
@@ -396,6 +399,7 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     audit: AuditLogViewLazy,
     history: ConfigHistoryViewLazy,
     'debate-quality': DebateQualityPanelLazy,
+    'quality-impact': QualityImpactDashboardLazy,
     'federated-memory': FederatedMemoryPanelLazy,
     'plugin-sdk': PluginSdkPanelLazy,
     'persona-marketplace': PersonaMarketplacePanelLazy,

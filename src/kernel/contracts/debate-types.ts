@@ -374,6 +374,12 @@ export interface DebateServiceDeps {
     queryEngine: IDebateQueryEngine;
     debateStore: DebateStore;
     qualityCollector?: IQualityImpactCollector;
+    experimentEngine?: {
+        generateAssignmentForSession(
+            sessionId: string,
+            enabledTechniques: string[],
+        ): Record<string, boolean>;
+    };
 }
 
 export function jaccardSimilarity(a: string, b: string): number {
