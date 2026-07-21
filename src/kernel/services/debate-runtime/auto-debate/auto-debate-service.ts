@@ -13,6 +13,7 @@ import type { DebateRole } from '../../../contracts/debate-types';
 import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
 import { useActiveDebateStore } from '../../../../stores/activeDebateStore';
 import { eventBus } from '../../../events/event-bus';
+import { getAllSettings } from '../../../instances';
 
 const LOGGER = rootLogger.child('AutoDebateService');
 import type {
@@ -148,6 +149,7 @@ export interface AutoDebateServiceDeps {
                 useModerator: boolean;
                 timeoutMs: number;
                 language: string;
+                qualitySettings: Record<string, boolean>;
             }>,
         ) => Promise<DebateSession>;
     };
@@ -321,6 +323,7 @@ export class AutoDebateService implements IAutoDebateService {
                     useModerator: true,
                     timeoutMs: 30000,
                     language: 'ru',
+                    qualitySettings: getAllSettings(),
                 },
             );
             const session = await this.waitForSessionCompletion(initialSession);
@@ -456,6 +459,7 @@ export class AutoDebateService implements IAutoDebateService {
                         useModerator: true,
                         timeoutMs: 20000,
                         language: 'ru',
+                        qualitySettings: getAllSettings(),
                     },
                 );
                 const session = await this.waitForSessionCompletion(
