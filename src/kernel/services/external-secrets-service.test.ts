@@ -1,6 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ExternalSecretsService } from './external-secrets-service';
+import { setConfig } from './config-mutations';
+import { CONFIG } from './config-registry';
 import type { SecretStore } from '../contracts/secret-store';
+
+const TEST_ADMIN_TOKEN = 'test-admin-token';
 
 function mockStore(overrides?: Partial<SecretStore>): SecretStore {
     const data = new Map<string, string>();
@@ -46,6 +50,12 @@ function makeDeps(): ExternalSecretsServiceDeps {
 }
 
 describe('ExternalSecretsService', () => {
+    beforeEach(() => {
+        setConfig('security', { ...CONFIG.security, adminToken: TEST_ADMIN_TOKEN });
+    });
+    afterEach(() => {
+        setConfig('security', { ...CONFIG.security, adminToken: undefined });
+    });
     it('should init with local store', async () => {
         const deps = makeDeps();
         const svc = new ExternalSecretsService(deps);
@@ -72,7 +82,7 @@ describe('ExternalSecretsService', () => {
         const svc = new ExternalSecretsService(deps);
         await svc.init();
         await svc.setSecret({ path: 'del/key' }, 'value');
-        const deleted = await svc.deleteSecret({ path: 'del/key' });
+        const deleted = await svc.deleteSecret({ path: 'del/key' }, TEST_ADMIN_TOKEN);
         expect(deleted).toBe(true);
         const val = await svc.getSecret({ path: 'del/key' });
         expect(val).toBeNull();
@@ -92,7 +102,11 @@ describe('ExternalSecretsService', () => {
         const deps = makeDeps();
         const svc = new ExternalSecretsService(deps);
         await svc.init();
-        const ok = await svc.activateBackend('vault', { type: 'vault', label: 'Vault' });
+        const ok = await svc.activateBackend(
+            'vault',
+            { type: 'vault', label: 'Vault' },
+            TEST_ADMIN_TOKEN,
+        );
         expect(ok).toBe(true);
         expect(svc.getActiveBackend()).toBe('vault');
     });
@@ -116,7 +130,7 @@ describe('ExternalSecretsService', () => {
         svc.register('vault', target);
         await source.set({ path: 'mig/k1' }, 'v1');
         await source.set({ path: 'mig/k2' }, 'v2');
-        const result = await svc.migrateSecrets('local', 'vault');
+        const result = await svc.migrateSecrets('local', 'vault', TEST_ADMIN_TOKEN);
         expect(result.migrated).toBe(2);
         expect(result.failed).toBe(0);
         const v1 = await target.get({ path: 'mig/k1' });
@@ -125,7 +139,6 @@ describe('ExternalSecretsService', () => {
 
     it('should fallback to local when active backend throws', async () => {
         const deps = makeDeps();
-        // Override factory BEFORE init so activateBackend creates the broken store
         deps.storeFactories!.vault = () =>
             mockStore({
                 type: 'vault',
@@ -135,14 +148,17 @@ describe('ExternalSecretsService', () => {
         const svc = new ExternalSecretsService(deps);
         await svc.init();
         await svc.setSecret({ path: 'shared/key' }, 'fallback-value');
-        await svc.activateBackend('vault', { type: 'vault', label: 'Broken Vault' });
+        await svc.activateBackend(
+            'vault',
+            { type: 'vault', label: 'Broken Vault' },
+            TEST_ADMIN_TOKEN,
+        );
         const val = await svc.getSecret({ path: 'shared/key' });
         expect(val).toBe('fallback-value');
     });
 
     it('should return null when active backend has no secret (no fallback)', async () => {
         const deps = makeDeps();
-        // vault store returns null (key not found), not throw
         deps.storeFactories!.vault = () =>
             mockStore({
                 type: 'vault',
@@ -152,7 +168,7 @@ describe('ExternalSecretsService', () => {
         const svc = new ExternalSecretsService(deps);
         await svc.init();
         await svc.setSecret({ path: 'shared/key' }, 'fallback-value');
-        await svc.activateBackend('vault', { type: 'vault', label: 'Vault' });
+        await svc.activateBackend('vault', { type: 'vault', label: 'Vault' }, TEST_ADMIN_TOKEN);
         const val = await svc.getSecret({ path: 'shared/key' });
         expect(val).toBeNull();
     });

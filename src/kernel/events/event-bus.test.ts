@@ -221,10 +221,10 @@ describe('EventBus', () => {
     });
 
     describe('getSubscriptionStats', () => {
-        it('should return zero callbacks initially', () => {
+        it('should return backpressure handler initially', () => {
             const stats = bus.getSubscriptionStats();
-            expect(stats.totalCallbacks).toBe(0);
-            expect(stats.perEvent).toEqual({});
+            expect(stats.totalCallbacks).toBe(1);
+            expect(stats.perEvent['system:eventbus:backpressure']).toBe(1);
         });
 
         it('should report correct counts after subscriptions', () => {
@@ -232,7 +232,7 @@ describe('EventBus', () => {
             bus.on(e('test:stats-a'), vi.fn());
             bus.on(e('test:stats-b'), vi.fn());
             const stats = bus.getSubscriptionStats();
-            expect(stats.totalCallbacks).toBe(3);
+            expect(stats.totalCallbacks).toBe(4);
             expect(stats.perEvent[e('test:stats-a')]).toBe(2);
             expect(stats.perEvent[e('test:stats-b')]).toBe(1);
         });
@@ -326,6 +326,7 @@ describe('EventBus', () => {
                 query: vi.fn(() => []),
                 clear: vi.fn(),
                 setTraceContext: vi.fn(),
+                exportLogs: vi.fn(() => ''),
             };
             expect(() => bus.setLogger(logger)).not.toThrow();
         });
@@ -377,7 +378,7 @@ describe('EventBus', () => {
             const unsub = bus.on(e('test:leak'), handler);
             unsub();
             const stats = bus.getSubscriptionStats();
-            expect(stats.totalCallbacks).toBe(0);
+            expect(stats.totalCallbacks).toBe(1);
         });
     });
 });
