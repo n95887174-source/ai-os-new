@@ -746,3 +746,23 @@ export type {
     ScoreChangedPayload,
     ArgumentFeaturePayload,
 } from './quality-impact';
+
+// ── Hidden Incentives Mining (P0.17) ─────────────────────────────
+export type { IncentiveProfile, IncentiveAnalysis, IIncentiveDetector } from './debate-incentives';
+
+// ── Graph-of-Thoughts Deliberation (P1.28) ─────────────────────
+export type { GoTBranchType, GoTBranch, GoTResult, IGoTDeliberation } from './debate-got';
+
+// ── Semantic Concept Blending (P1.29) ──────────────────────────
+export type {
+    DeadlockSignal,
+    BlendedConcept,
+    BlendResult,
+    IConceptBlender,
+} from './debate-blending';
+
+// ── Outcome Forecaster (P1.30) ──────────────────────────────────
+export type { ArgumentVariant, ForecastResult, IOutcomeForecaster } from './debate-forecaster';
+
+// ── Best-of-N Selection (P2.4) ──────────────────────────────────
+export type { VariantScore, BestOfNResult, LlmCallFn, IBestOfNSelector } from './debate-best-of-n';

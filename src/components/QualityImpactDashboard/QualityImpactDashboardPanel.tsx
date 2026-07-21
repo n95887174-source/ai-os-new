@@ -370,6 +370,48 @@ const ImpactTab: React.FC = () => {
                                         p-value: {m.pValue.toFixed(4)}
                                     </div>
                                 )}
+                                <div
+                                    style={{
+                                        marginTop: '10px',
+                                        paddingTop: '10px',
+                                        borderTop: '1px solid rgba(148,163,184,0.15)',
+                                    }}
+                                >
+                                    <div style={{ marginBottom: '6px' }}>
+                                        <strong>
+                                            {t('quality_impact.attribution_title') ?? 'Attribution'}
+                                            :
+                                        </strong>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '20px', fontSize: '13px' }}>
+                                        <div>
+                                            <span style={{ color: '#94a3b8' }}>
+                                                {t('quality_impact.last_touch') ?? 'Last-touch'}:
+                                            </span>{' '}
+                                            <span style={{ color: '#60a5fa', fontWeight: 600 }}>
+                                                {m.lastTouchCount ?? 0}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: '#94a3b8' }}>
+                                                {t('quality_impact.frequency_title') ?? 'Frequency'}
+                                                :
+                                            </span>{' '}
+                                            <span style={{ color: '#a78bfa', fontWeight: 600 }}>
+                                                {((m.frequencyInBestRounds ?? 0) * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: '#94a3b8' }}>Composite:</span>{' '}
+                                            <span style={{ color: '#f472b6', fontWeight: 600 }}>
+                                                {(
+                                                    (m.lastTouchCount ?? 0) * 2 +
+                                                    (m.frequencyInBestRounds ?? 0) * 100
+                                                ).toFixed(0)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </React.Fragment>

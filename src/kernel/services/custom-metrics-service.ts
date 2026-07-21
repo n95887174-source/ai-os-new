@@ -5,6 +5,7 @@ import type {
     ICustomMetricsService,
     MetricAggregation,
 } from '../contracts/custom-metrics';
+import type { MemoryStats } from '../types/memory-types';
 import type { IProviderTracker } from './provider-tracker';
 
 const METRICS_KEY = 'custom_metrics';
@@ -20,6 +21,16 @@ async function readJSON<T>(key: string): Promise<T[]> {
 async function writeJSON<T>(key: string, data: T[]): Promise<void> {
     const { storageAdapter } = await import('../instances');
     storageAdapter.setItem(key, JSON.stringify(data));
+}
+
+function getNested(obj: Record<string, unknown>, path: string): number {
+    const parts = path.split('.');
+    let current: unknown = obj;
+    for (const part of parts) {
+        if (current == null || typeof current !== 'object') return 0;
+        current = (current as Record<string, unknown>)[part];
+    }
+    return typeof current === 'number' ? current : 0;
 }
 
 export class CustomMetricsService implements ICustomMetricsService {
@@ -63,10 +74,7 @@ export class CustomMetricsService implements ICustomMetricsService {
         if (!metric) throw new Error(`Metric ${metricId} not found`);
 
         let value = 0;
-        if (
-            metric.source === 'provider' &&
-            typeof this.providerTracker.getProviderRankings === 'function'
-        ) {
+        if (metric.source === 'provider') {
             const rankings = this.providerTracker.getProviderRankings();
             const values: number[] = [];
             for (const r of rankings) {
@@ -88,11 +96,59 @@ export class CustomMetricsService implements ICustomMetricsService {
                 })
                 .filter((v): v is number => v !== undefined);
             if (values.length > 0) value = aggregate(values, metric.aggregation);
+        } else if (metric.source === 'memory') {
+            const { memoryOrchestrator } = await import('../instances');
+            const stats = await memoryOrchestrator.getStats();
+            const numericStats = stats as unknown as Record<string, MemoryStats>;
+            const values: number[] = [];
+            const field = metric.field;
+            const parts = field.split('.');
+            if (parts.length === 1) {
+                for (const storeStats of Object.values(numericStats)) {
+                    const v = (storeStats as unknown as Record<string, unknown>)[field];
+                    if (typeof v === 'number') values.push(v);
+                }
+            } else if (parts.length === 2) {
+                const storeStats = numericStats[parts[0]];
+                if (storeStats) {
+                    const v = (storeStats as unknown as Record<string, unknown>)[parts[1]];
+                    if (typeof v === 'number') values.push(v);
+                }
+            }
+            if (values.length > 0) value = aggregate(values, metric.aggregation);
+        } else if (metric.source === 'system') {
+            const { debateEngine } = await import('../instances');
+            const sessions = debateEngine.getAllSessions();
+            const rankings = this.providerTracker.getProviderRankings();
+            switch (metric.field) {
+                case 'activeSessions':
+                    value = sessions.filter(
+                        (s) => s.phase === 'active' || s.phase === 'deliberating',
+                    ).length;
+                    break;
+                case 'totalSessions':
+                    value = sessions.length;
+                    break;
+                case 'totalProviders':
+                    value = rankings.length;
+                    break;
+                default:
+                    value = getNested(
+                        {
+                            activeSessions: sessions.filter(
+                                (s) => s.phase === 'active' || s.phase === 'deliberating',
+                            ).length,
+                            totalSessions: sessions.length,
+                            totalProviders: rankings.length,
+                        },
+                        metric.field,
+                    );
+            }
         } else {
             throw new Error(
                 'Unsupported metric source: ' +
                     metric.source +
-                    '. Only provider and debate sources are supported.',
+                    '. Supported sources: provider, debate, memory, system.',
             );
         }
 

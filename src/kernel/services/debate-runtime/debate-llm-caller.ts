@@ -45,6 +45,10 @@ import type { IStanceDriftTracker } from '../../contracts/debate-stance-drift';
 import type { IRhetoricalDeviceSelector } from '../../contracts/debate-rhetorical-device';
 import type { IScratchpadService } from '../../contracts/debate-scratchpad';
 import type { IQualityImpactCollector } from '../../contracts/quality-impact';
+import type { IIncentiveDetector } from '../../contracts/debate-incentives';
+import type { IGoTDeliberation } from '../../contracts/debate-got';
+import type { IConceptBlender } from '../../contracts/debate-blending';
+import type { IOutcomeForecaster } from '../../contracts/debate-forecaster';
 
 /** Minimal fact-check accessor for prompt-time claim verification (P1.2). */
 interface FactCheckAccessor {
@@ -228,6 +232,10 @@ export interface LlmCallerDeps {
     rhetoricalDeviceSelector?: IRhetoricalDeviceSelector;
     scratchpadService?: IScratchpadService;
     qualityCollector?: IQualityImpactCollector;
+    incentiveDetector?: IIncentiveDetector;
+    gotDeliberation?: IGoTDeliberation;
+    conceptBlender?: IConceptBlender;
+    outcomeForecaster?: IOutcomeForecaster;
 }
 
 export async function debateCallLlm(
@@ -600,8 +608,15 @@ export async function debateCallLlm(
                             topSeverity: beliefConflicts[0].severity.toFixed(2),
                         });
                     }
-                } catch {
-                    LOGGER.warn('DebateLlmCaller', 'Belief mining error', { sessionId });
+                } catch (e) {
+                    LOGGER.warn('DebateLlmCaller', 'Belief mining error', {
+                        sessionId,
+                        error: e instanceof Error ? e.message : String(e),
+                        stack:
+                            e instanceof Error
+                                ? e.stack?.split('\n').slice(0, 3).join(' | ')
+                                : undefined,
+                    });
                 }
             }
 
@@ -1522,6 +1537,109 @@ export async function debateCallLlm(
                 }
             }
 
+            // P0.17: Hidden Incentives Mining — detect conflicts of interest
+            let hiddenIncentivesText: string | undefined;
+            if (
+                isQ('hidden-incentives') &&
+                deps.incentiveDetector &&
+                previousArguments.length > 0
+            ) {
+                try {
+                    const lastArg = previousArguments[previousArguments.length - 1];
+                    const analysis = deps.incentiveDetector.analyze(
+                        lastArg.agentId,
+                        lastArg.agentName,
+                        lastArg.content,
+                        session.topic,
+                    );
+                    if (analysis && analysis.conflictOfInterest) {
+                        hiddenIncentivesText = analysis.disclosurePrompt;
+                    }
+                } catch {
+                    LOGGER.warn('DebateLlmCaller', 'IncentiveDetector error', { sessionId });
+                }
+            }
+
+            // P1.28: Graph-of-Thoughts Deliberation — multi-branch reasoning
+            let gotText: string | undefined;
+            if (isQ('graph-of-thoughts') && deps.gotDeliberation && session.round > 1) {
+                try {
+                    const opposing = previousArguments
+                        .filter((a) => a.agentId !== participant.agentId)
+                        .slice(-3)
+                        .map((a) => a.content);
+                    const gotResult = await deps.gotDeliberation.deliberate(
+                        session.topic,
+                        participant.role || 'neutral',
+                        opposing,
+                    );
+                    if (gotResult && gotResult.branches.length > 0) {
+                        gotText = gotResult.branches
+                            .map(
+                                (b, i) =>
+                                    `Branch ${i + 1} (${b.type}): ${b.premise.slice(0, 120)}...`,
+                            )
+                            .join('\n');
+                        gotText += `\n→ Selected: ${gotResult.selectedType} (diversity: ${Math.round(gotResult.diversityScore * 100)}%)`;
+                    }
+                } catch {
+                    LOGGER.warn('DebateLlmCaller', 'GoT deliberation error', { sessionId });
+                }
+            }
+
+            // P1.29: Semantic Concept Blending — detect deadlock, generate blends
+            let blendingText: string | undefined;
+            if (
+                isQ('semantic-blending') &&
+                deps.conceptBlender &&
+                session.round >= 4 &&
+                previousArguments.length >= 6
+            ) {
+                try {
+                    const deadlock = deps.conceptBlender.detectDeadlock(
+                        participant.agentId,
+                        currentName,
+                        previousArguments,
+                        session.round,
+                    );
+                    if (deadlock && deadlock.present) {
+                        const blend = deps.conceptBlender.generateBlend(
+                            deadlock,
+                            session.topic,
+                            session.language,
+                        );
+                        if (blend && blend.bestBlendText) {
+                            blendingText = blend.bestBlendText;
+                        }
+                    }
+                } catch {
+                    LOGGER.warn('DebateLlmCaller', 'ConceptBlender error', { sessionId });
+                }
+            }
+
+            // P1.30: Outcome Forecaster — predict judge score impact
+            let forecasterText: string | undefined;
+            if (isQ('outcome-forecaster') && deps.outcomeForecaster && session.round > 1) {
+                try {
+                    const opponentStrengths = previousArguments
+                        .filter((a) => a.agentId !== participant.agentId)
+                        .slice(-5)
+                        .map((a) => a.content.slice(0, 100));
+                    const forecast = deps.outcomeForecaster.forecast(
+                        [],
+                        participant.role || 'neutral',
+                        opponentStrengths,
+                        session.topic,
+                        session.language,
+                    );
+                    if (forecast && forecast.variants.length > 0) {
+                        forecasterText = `Recommended angle: ${forecast.recommendedLabel}\nExpected gain: +${(forecast.expectedScoreGain * 100).toFixed(0)}%\nApproach: ${forecast.recommendedAngle}`;
+                    }
+                } catch {
+                    LOGGER.warn('DebateLlmCaller', 'OutcomeForecaster error', { sessionId });
+                }
+            }
+
             // Use the rich prompt builder instead of the simple inline prompt
             let systemContent = buildArgumentPrompt(
                 {
@@ -1585,6 +1703,10 @@ export async function debateCallLlm(
                 rtomText,
                 fingerprintText,
                 causalText,
+                hiddenIncentivesText,
+                gotText,
+                blendingText,
+                forecasterText,
                 session.qualitySettings,
             );
 

@@ -35,7 +35,7 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
     persist(
         (set, get) => ({
             onboardingCompleted: false,
-            userLevel: 'L0',
+            userLevel: 'L2',
             theme: 'dark',
             defaultLayout: 'default' as LayoutMode,
             perRouteLayout: {},
@@ -92,13 +92,13 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
         }),
         {
             name: 'super-agents-ui-prefs',
-            version: 1,
+            version: 2,
             migrate: (persisted: unknown, version: number) => {
                 if (version === 0) {
                     const v0 = persisted as Partial<UiPreferencesState>;
                     return {
                         onboardingCompleted: v0.onboardingCompleted ?? false,
-                        userLevel: v0.userLevel ?? ('L0' as UserLevel),
+                        userLevel: v0.userLevel ?? ('L2' as UserLevel),
                         theme: v0.theme ?? 'dark',
                         defaultLayout: v0.defaultLayout ?? ('default' as LayoutMode),
                         perRouteLayout: v0.perRouteLayout ?? {},
@@ -106,6 +106,18 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
                         pinnedSidebar: v0.pinnedSidebar ?? [],
                         recentCommands: v0.recentCommands ?? [],
                         designTokenOverrides: v0.designTokenOverrides ?? {},
+                    } as UiPreferencesState;
+                }
+                // v1 → v2: existing users were defaulted to L0, which locks
+                // all L1/L2 panels behind "Access Restricted". Auto-promote
+                // everyone to L2 on next load (the owner/dev sees everything
+                // by default; they can still drop to L0/L1 in Settings if they
+                // want progressive disclosure back).
+                if (version === 1) {
+                    const v1 = persisted as Partial<UiPreferencesState>;
+                    return {
+                        ...v1,
+                        userLevel: 'L2' as UserLevel,
                     } as UiPreferencesState;
                 }
                 return persisted as UiPreferencesState;

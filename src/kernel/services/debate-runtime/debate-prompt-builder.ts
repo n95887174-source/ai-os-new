@@ -1028,6 +1028,10 @@ export function buildArgumentPrompt(
     rtomText?: string,
     fingerprintText?: string,
     causalText?: string,
+    hiddenIncentivesText?: string,
+    gotText?: string,
+    blendingText?: string,
+    forecasterText?: string,
     qualitySettings?: Record<string, boolean>,
 ): string {
     const isSocratic = strategy === 'socratic';
@@ -1367,8 +1371,42 @@ export function buildArgumentPrompt(
         ? `\n\n### Systems Thinking — Causal Loop Mapping\n${causalText}`
         : '';
 
+    // P0.15: Executable Evidence — write code to numerically verify claims
+    const executableEvidenceBlock =
+        isQ('executable-evidence', qualitySettings) && round > 1
+            ? buildExecutableEvidencePrompt(language)
+            : '';
+
+    // P0.17: Hidden Incentives Mining — conflict of interest analysis
+    const hiddenIncentivesBlock =
+        isQ('hidden-incentives', qualitySettings) && round > 1 && hiddenIncentivesText
+            ? buildHiddenIncentivesPrompt(hiddenIncentivesText, language)
+            : '';
+
+    // P1.28: Graph-of-Thoughts Deliberation — multi-branch reasoning
+    const gotBlock =
+        isQ('graph-of-thoughts', qualitySettings) && round > 1 && gotText
+            ? buildGoTPrompt(gotText, language)
+            : '';
+
+    // P1.29: Semantic Concept Blending — new frameworks from deadlock
+    const blendingBlock =
+        isQ('semantic-blending', qualitySettings) && round >= 4 && blendingText
+            ? buildBlendingPrompt(blendingText, language)
+            : '';
+
+    // P1.30: Outcome Forecaster — predicted judge score impact
+    const forecasterBlock =
+        isQ('outcome-forecaster', qualitySettings) && round > 1 && forecasterText
+            ? buildForecasterPrompt(forecasterText, language)
+            : '';
+
+    // P2.4: Best-of-N Selection — variant chosen by best-of-N
+    const bestOfNBlock =
+        isQ('best-of-n', qualitySettings) && round > 1 ? buildBestOfNPrompt(language) : '';
+
     return `## Topic: ${sanitizeForPrompt(topic)}
-${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${angleBlock}${tempBlock}${entanglementBlock}${anchorsBlock}${vulnerabilityBlock}${adversarialBlock}${beliefConflictsBlock}${minimaxBlock}${tacticalBlock}${steelmanBlock}${bopBlock}${consistencyBlock}${credibilityBlock}${crossExBlock}${deltaBlock}${objectionBlock}${triangulationBlock}${criticBlock}${criticSelfBlock}${socraticPivotBlock}${changePivotBlock}${synthesizeBlock}${concessionBlock}${concessionEngineBlock}${counterfactualBlock}${synthesisBlock}${shadowBlock}${empathyBlock}${humilityBlock}${heatBlock}${sentinelBlock}${redundancyBlock}${driftBlock}${insightBlock}${replayBlock}${enthymemeBlock}${multiHopBlock}${dpoBlock}${uncertaintyBlock}${biasBlock}${interruptBlock}${stakeholderBlock}${calibrationBlock}${factCheckBlock}${personaMixBlock}${frameBlock}${expertBlock}${driftCalloutBlock}${rhetoricalBlock}${rhetoricBlock}${biddingBlock}${scratchpadBlock}${narrativeBlock}${levelBlock}${reversalBlock}${fogBlock}${evidenceBlock}${humorBlock}${statusBlock}${styleBlock}${adaptiveBlock}${personaBlock}${strategistBlock}${whisperBlock}${audienceBlock}${allianceBlock}${predictionBlock}${rtomBlock}${blindBlock}${fingerprintBlock}${causalBlock}
+${roleContext}${constraintBlock}${socraticBlock}${treePrompt}${strategyBlock}${angleBlock}${tempBlock}${entanglementBlock}${anchorsBlock}${vulnerabilityBlock}${adversarialBlock}${beliefConflictsBlock}${minimaxBlock}${tacticalBlock}${steelmanBlock}${bopBlock}${consistencyBlock}${credibilityBlock}${crossExBlock}${deltaBlock}${objectionBlock}${triangulationBlock}${criticBlock}${criticSelfBlock}${socraticPivotBlock}${changePivotBlock}${synthesizeBlock}${concessionBlock}${concessionEngineBlock}${counterfactualBlock}${synthesisBlock}${shadowBlock}${empathyBlock}${humilityBlock}${heatBlock}${sentinelBlock}${redundancyBlock}${driftBlock}${insightBlock}${replayBlock}${enthymemeBlock}${multiHopBlock}${dpoBlock}${uncertaintyBlock}${biasBlock}${interruptBlock}${stakeholderBlock}${calibrationBlock}${factCheckBlock}${personaMixBlock}${frameBlock}${expertBlock}${driftCalloutBlock}${rhetoricalBlock}${rhetoricBlock}${biddingBlock}${scratchpadBlock}${narrativeBlock}${levelBlock}${reversalBlock}${fogBlock}${evidenceBlock}${humorBlock}${statusBlock}${styleBlock}${adaptiveBlock}${personaBlock}${strategistBlock}${whisperBlock}${audienceBlock}${allianceBlock}${predictionBlock}${rtomBlock}${blindBlock}${fingerprintBlock}${causalBlock}${executableEvidenceBlock}${hiddenIncentivesBlock}${gotBlock}${blendingBlock}${forecasterBlock}${bestOfNBlock}
 
 ${statePrompt}
 
@@ -1483,6 +1521,69 @@ function buildSynthesisPrompt(_language = DEFAULT_LANGUAGE): string {
         'and propose a coherent resolution that incorporates the best of each position. ' +
         'A good synthesis does not compromise — it transcends the original disagreement by finding a higher-level ' +
         'framework that accommodates the valid insights from every perspective.'
+    );
+}
+
+// ── P0.15: Executable Evidence ────────────────────────────────────────
+function buildExecutableEvidencePrompt(language: string): string {
+    return (
+        '\n\n### Executable Evidence Requirement\n' +
+        'If you make a factual claim that can be numerically verified, write a short Python or JavaScript ' +
+        'code snippet to DEMONSTRATE it. Put the code in a code block. The code should:\n' +
+        '1. Define the claim as a testable assertion\n' +
+        '2. Compute the relevant numbers or probabilities\n' +
+        '3. Print the result showing whether your claim holds\n\n' +
+        'Example: If claiming "X is more efficient than Y", write code that computes both and compares them.\n' +
+        'Only include code for claims that are actually testable — do not fabricate data.\n' +
+        `Respond in ${language}.`
+    );
+}
+
+// ── P0.17: Hidden Incentives Mining ─────────────────────────────────
+function buildHiddenIncentivesPrompt(text: string, _language = DEFAULT_LANGUAGE): string {
+    return `\n\n### ⚠️ Conflict of Interest Disclosure\n${text}\n\nAcknowledge or address these potential conflicts honestly in your argument.`;
+}
+
+// ── P1.28: Graph-of-Thoughts Deliberation ──────────────────────────
+function buildGoTPrompt(text: string, _language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### Graph-of-Thoughts Deliberation — Reasoning Branches\n' +
+        'Before writing your argument, internally explore the reasoning branches the system has identified:\n' +
+        `${text}\n\n` +
+        'Synthesize the strongest logic from these branches into your public argument. ' +
+        'Your final response should reflect the best reasoning across all explored angles.'
+    );
+}
+
+// ── P1.29: Semantic Concept Blending ────────────────────────────────
+function buildBlendingPrompt(text: string, _language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### 🔄 Semantic Concept Blending\n' +
+        'The debate may be stuck in a false dichotomy. Consider this blended framework:\n' +
+        `${text}\n\n` +
+        'Instead of defending one pole, propose a resolution that transcends the apparent contradiction. ' +
+        'Use the blended concept as a starting point for a more nuanced position.'
+    );
+}
+
+// ── P1.30: Outcome Forecaster ───────────────────────────────────────
+function buildForecasterPrompt(text: string, _language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### 📊 Outcome Forecast — Strategic Guidance\n' +
+        `${text}\n\n` +
+        'Consider this forecast before writing your argument. ' +
+        'The recommended angle has the highest expected judge score based on current debate dynamics. ' +
+        'Use it as strategic guidance — adapt your argument for maximum impact.'
+    );
+}
+
+// ── P2.4: Best-of-N Selection ────────────────────────────────────────
+function buildBestOfNPrompt(_language = DEFAULT_LANGUAGE): string {
+    return (
+        '\n\n### 🔬 Best-of-N Selection\n' +
+        'Your argument was selected as the strongest variant from multiple candidates. ' +
+        'It was chosen for its combination of novelty and rebuttal strength. ' +
+        'Deliver it with confidence — the selection process has already filtered for quality.'
     );
 }
 

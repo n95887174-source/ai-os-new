@@ -41,6 +41,7 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
     const emotionColor = DEBATE_EMOTION_COLORS[emotion];
     const countdown = useDebateLiveStore((s) => s.agentCountdowns.get(key) ?? null);
     const memoryBubble = useDebateLiveStore((s) => s.memoryBubbles.get(key) ?? null);
+    const qualityActivations = useDebateLiveStore((s) => s.agentQualityActivations.get(key) ?? 0);
 
     return (
         <div
@@ -113,6 +114,24 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
                     title={DEBATE_EMOTION_LABELS[emotion]}
                 >
                     {EMOTION_ICONS[emotion] ?? '😐'}
+                </div>
+            )}
+
+            {qualityActivations > 0 && (
+                <div
+                    style={{
+                        fontSize: '0.55rem',
+                        fontWeight: 700,
+                        color: '#22c55e',
+                        background: 'rgba(34, 197, 94, 0.15)',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                        borderRadius: 4,
+                        padding: '1px 5px',
+                        lineHeight: '1.2',
+                    }}
+                    title={`${qualityActivations} quality technique activations`}
+                >
+                    ✦{qualityActivations}
                 </div>
             )}
 

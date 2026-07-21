@@ -9,7 +9,8 @@ import {
     type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { eventBus, EVENTS, debateService } from '../../kernel/instances';
+import { eventBus, EVENTS } from '../../kernel/instances';
+import { useActiveDebateStore } from '../../stores/activeDebateStore';
 import type {
     GovernorState,
     Claim,
@@ -198,9 +199,11 @@ function buildRoundLayout(claims: Claim[]): Map<number, string[]> {
 }
 
 const ArgumentGraphPanel: React.FC = () => {
-    const [govState, setGovState] = useState<GovernorState | null>(
-        debateService.getDebateGovernorState(),
-    );
+    // Source of truth: useActiveDebateStore.governorState (Zustand).
+    // debateService.getDebateGovernorState() returned a stale `this._governorState`
+    // that was never written — fixes Argument Graph always empty.
+    const storeGovernorState = useActiveDebateStore((s) => s.governorState);
+    const [govState, setGovState] = useState<GovernorState | null>(storeGovernorState);
     const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
     const [showContradictions, setShowContradictions] = useState(true);
     const [showResolved, setShowResolved] = useState(false);
@@ -208,12 +211,19 @@ const ArgumentGraphPanel: React.FC = () => {
     const [influenceMode, setInfluenceMode] = useState(false);
     const isMountedRef = useRef(true);
 
+    // Sync local state when Zustand state changes
+    useEffect(() => {
+        if (!isMountedRef.current) return;
+        setGovState(storeGovernorState);
+    }, [storeGovernorState]);
+
     useEffect(() => {
         isMountedRef.current = true;
 
         const handler = () => {
             if (!isMountedRef.current) return;
-            setGovState(debateService.getDebateGovernorState());
+            // Re-read from store (may have updated during async events)
+            setGovState(useActiveDebateStore.getState().governorState);
         };
 
         const unsubs = [

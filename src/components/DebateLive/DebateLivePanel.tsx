@@ -7,6 +7,7 @@ import { debateEngine, qualityImpactCollector } from '../../kernel/instances';
 import { ARENA_LAYOUTS } from '../../kernel/contracts/debate-emotion';
 import type { ArenaLayout } from '../../kernel/contracts/debate-emotion';
 import { useTranslation } from '../../i18n/useTranslation';
+import { getTechniques } from '../../kernel/services/debate-runtime/quality-settings-store';
 
 const containerStyle: React.CSSProperties = {
     position: 'relative',
@@ -17,6 +18,16 @@ const containerStyle: React.CSSProperties = {
     justifyContent: 'center',
     overflow: 'hidden',
 };
+
+const CATEGORY_COLORS: Record<string, string> = {
+    P0: '#22c55e',
+    P1: '#3b82f6',
+    P2: '#a855f7',
+};
+
+const TECHNIQUE_CATEGORY_MAP = new Map<string, string>(
+    getTechniques().map((t) => [t.id, t.category]),
+);
 
 export const DebateLivePanel: React.FC = () => {
     const { t } = useTranslation();
@@ -30,13 +41,20 @@ export const DebateLivePanel: React.FC = () => {
         sessions.length > 0 ? sessions[sessions.length - 1].id : null,
     );
     const [layout, setLayout] = React.useState<ArenaLayout>('circle');
-    const [activeTechniques, setActiveTechniques] = useState(0);
+    const [metricsByCategory, setMetricsByCategory] = useState<Record<string, number>>({});
+    const [totalActivations, setTotalActivations] = useState(0);
 
     const refreshImpact = useCallback(() => {
         try {
             const all = qualityImpactCollector.getAllMetrics();
             const total = all.reduce((s, m) => s + m.totalActivations, 0);
-            setActiveTechniques(total);
+            setTotalActivations(total);
+            const byCat: Record<string, number> = {};
+            for (const m of all) {
+                const cat = TECHNIQUE_CATEGORY_MAP.get(m.techniqueId) ?? 'P2';
+                byCat[cat] = (byCat[cat] ?? 0) + m.totalActivations;
+            }
+            setMetricsByCategory(byCat);
         } catch {
             /* not initialized */
         }
@@ -150,20 +168,36 @@ export const DebateLivePanel: React.FC = () => {
                         {session.phase} · {t('debate_live.round_label', { n: session.round })}
                     </span>
                 )}
-                {activeTechniques > 0 && (
+                {totalActivations > 0 && (
                     <span
                         style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            color: '#22c55e',
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                            background: 'rgba(34, 197, 94, 0.15)',
-                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                            display: 'flex',
+                            gap: 4,
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
                         }}
-                        title="Quality technique activations across all sessions"
                     >
-                        ✦ {activeTechniques} quality
+                        {['P0', 'P1', 'P2'].map((cat) => {
+                            const count = metricsByCategory[cat] ?? 0;
+                            if (count === 0) return null;
+                            return (
+                                <span
+                                    key={cat}
+                                    style={{
+                                        fontSize: '0.65rem',
+                                        fontWeight: 600,
+                                        color: CATEGORY_COLORS[cat],
+                                        padding: '1px 6px',
+                                        borderRadius: 4,
+                                        background: `${CATEGORY_COLORS[cat]}22`,
+                                        border: `1px solid ${CATEGORY_COLORS[cat]}44`,
+                                    }}
+                                    title={`${cat} technique activations: ${count}`}
+                                >
+                                    ✦{cat} {count}
+                                </span>
+                            );
+                        })}
                     </span>
                 )}
             </div>

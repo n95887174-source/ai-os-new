@@ -47,6 +47,11 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
 }) => {
     const { userLevel } = useUiPreferences();
 
+    // Dev-mode bypass: the owner/dev always sees everything, no need to
+    // fiddle with the level selector. The progressive-disclosure L0/L1/L2
+    // system only matters in production demos, not day-to-day dev work.
+    if (import.meta.env.DEV) return <>{children}</>;
+
     if (!requiredLevel) return <>{children}</>;
 
     const userRank = LEVEL_RANK[userLevel];

@@ -2,6 +2,8 @@ import { ssrSafeStorage } from '../utils/ssr-storage';
 import type { QualityExperiment, IExperimentEngine } from '../contracts/quality-impact';
 import { setSetting } from './debate-runtime/quality-settings-store';
 import { rootLogger } from './logger-service';
+import { eventBus } from '../events/event-bus';
+import { EVENTS } from '../events/event-names';
 
 const LOGGER = rootLogger.child('ExperimentEngine');
 
@@ -60,6 +62,17 @@ export class ExperimentEngine implements IExperimentEngine {
         }
         exp.status = 'completed';
         await this.persist();
+        // Emit experiment completed event
+        try {
+            eventBus.emit(EVENTS.DEBATE_QUALITY_EXPERIMENT_COMPLETED, {
+                experimentId,
+                techniqueIds: exp.techniqueIds,
+                sessionsCompleted: exp.sessionsCompleted,
+                timestamp: Date.now(),
+            });
+        } catch {
+            /* event bus may not be ready */
+        }
 
         // Reset all technique settings to defaults after experiment ends
         for (const techId of exp.techniqueIds) {

@@ -1,6 +1,6 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { DebateStore, ConclusionType, StanceResult } from './storage/debate-store';
-import type { IQualityImpactCollector } from './quality-impact';
+import type { IQualityImpactCollector, IExperimentEngine } from './quality-impact';
 
 export type { ConclusionType, StanceResult };
 
@@ -374,12 +374,7 @@ export interface DebateServiceDeps {
     queryEngine: IDebateQueryEngine;
     debateStore: DebateStore;
     qualityCollector?: IQualityImpactCollector;
-    experimentEngine?: {
-        generateAssignmentForSession(
-            sessionId: string,
-            enabledTechniques: string[],
-        ): Record<string, boolean>;
-    };
+    experimentEngine?: IExperimentEngine;
 }
 
 export function jaccardSimilarity(a: string, b: string): number {

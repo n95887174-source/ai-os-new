@@ -49,6 +49,10 @@ import type { IStanceDriftTracker } from '../contracts/debate-stance-drift';
 import type { IRhetoricalDeviceSelector } from '../contracts/debate-rhetorical-device';
 import type { IScratchpadService } from '../contracts/debate-scratchpad';
 import type { IBlindEvaluationService } from '../contracts/debate-blind-eval';
+import type { IIncentiveDetector } from '../contracts/debate-incentives';
+import type { IGoTDeliberation } from '../contracts/debate-got';
+import type { IConceptBlender } from '../contracts/debate-blending';
+import type { IOutcomeForecaster } from '../contracts/debate-forecaster';
 
 import { SimilarityMonitor } from '../services/debate-runtime/similarity-monitor';
 import { PersonaDriftDetector } from '../services/debate-runtime/persona-drift-detector';
@@ -67,6 +71,10 @@ import { StanceDriftTracker } from '../services/debate-runtime/stance-drift-trac
 import { RhetoricalDeviceSelector } from '../services/debate-runtime/rhetorical-device-selector';
 import { ScratchpadService } from '../services/debate-runtime/scratchpad-service';
 import { BlindEvaluationService } from '../services/debate-runtime/blind-evaluation-service';
+import { IncentiveDetector } from '../services/debate-runtime/incentive-detector';
+import { GoTDeliberation } from '../services/debate-runtime/got-deliberation';
+import { ConceptBlender } from '../services/debate-runtime/concept-blender';
+import { OutcomeForecaster } from '../services/debate-runtime/outcome-forecaster';
 import { DpoStrategySampler } from '../services/debate-runtime/dpo-strategy-sampler';
 import { MinimaxPlanner } from '../services/debate-runtime/debate-minimax-planner';
 import { MetaAgentController } from '../services/debate-runtime/debate-meta-agent-controller';
@@ -416,6 +424,11 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     register('scratchpadService', (_c) => new ScratchpadService());
     register('blindEval', (_c) => new BlindEvaluationService());
 
+    register('incentiveDetector', (_c) => new IncentiveDetector());
+    register('gotDeliberation', (_c) => new GoTDeliberation());
+    register('conceptBlender', (_c) => new ConceptBlender());
+    register('outcomeForecaster', (_c) => new OutcomeForecaster());
+
     // A-04: embedPipeline, evaluator, extractor created as plain consts above.
     // They are singletons but not registered individually — they are passed
     // directly to services that need them, avoiding extra factory indirection.
@@ -514,6 +527,10 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             scratchpadService: c.get<IScratchpadService>('scratchpadService'),
             blindEval: c.get<IBlindEvaluationService>('blindEval'),
             qualityCollector: _qualityCollector,
+            incentiveDetector: c.get<IIncentiveDetector>('incentiveDetector'),
+            gotDeliberation: c.get<IGoTDeliberation>('gotDeliberation'),
+            conceptBlender: c.get<IConceptBlender>('conceptBlender'),
+            outcomeForecaster: c.get<IOutcomeForecaster>('outcomeForecaster'),
         });
     });
 

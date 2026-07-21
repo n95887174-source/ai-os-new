@@ -196,7 +196,33 @@ function formatLog(entry: LogEntry): string {
     } else if (entry.error) {
         error = `: ${String(entry.error).slice(0, 120)}`;
     }
-    return `[${ts}] ${entry.level.toUpperCase().padEnd(5)} [${entry.service}]${trace}${extra} ${entry.message}${error}`;
+    const metaStr = formatMeta(entry.meta);
+    return `[${ts}] ${entry.level.toUpperCase().padEnd(5)} [${entry.service}]${trace}${extra} ${entry.message}${error}${metaStr}`;
+}
+
+function formatMeta(meta?: Record<string, unknown>): string {
+    if (!meta) return '';
+    const parts: string[] = [];
+    for (const [k, v] of Object.entries(meta)) {
+        if (v === undefined || v === null) continue;
+        let val: string;
+        if (v instanceof Error) {
+            val = v.message;
+        } else if (typeof v === 'string') {
+            val = v.length > 200 ? v.slice(0, 200) + '…' : v;
+        } else {
+            try {
+                val = JSON.stringify(v);
+                if (val && val.length > 200) val = val.slice(0, 200) + '…';
+            } catch {
+                val = String(v);
+            }
+        }
+        // Single-line: collapse newlines so the log entry stays one line
+        val = val.replace(/\s+/g, ' ');
+        parts.push(`${k}=${val}`);
+    }
+    return parts.length > 0 ? ` {${parts.join(', ')}}` : '';
 }
 
 export const rootLogger = new LoggerService(

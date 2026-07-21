@@ -1211,6 +1211,7 @@ export const EVENT_REGISTRY = {
             techniqueId: z.string(),
             eventType: z.string(),
             round: z.number(),
+            agentId: z.string().optional(),
             timestamp: z.number(),
         }),
     ),
@@ -1219,6 +1220,16 @@ export const EVENT_REGISTRY = {
         z.object({
             sessionId: z.string(),
             techniqueCount: z.number(),
+            techniqueDelta: z.number().optional(),
+            timestamp: z.number(),
+        }),
+    ),
+    DEBATE_QUALITY_EXPERIMENT_COMPLETED: event(
+        'debate:quality:experiment:completed',
+        z.object({
+            experimentId: z.string(),
+            techniqueIds: z.array(z.string()),
+            sessionsCompleted: z.number(),
             timestamp: z.number(),
         }),
     ),

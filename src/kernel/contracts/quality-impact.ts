@@ -81,6 +81,8 @@ export interface TechniqueImpactMetrics {
     sampleSizeOff: number;
     confidence: 'none' | 'low' | 'medium' | 'high' | 'very_high';
     pValue?: number;
+    lastTouchCount: number;
+    frequencyInBestRounds: number;
     lastUpdated: number;
 }
 
@@ -145,6 +147,10 @@ export interface IExperimentEngine {
     getExperiment(id: string): QualityExperiment | undefined;
     getAllExperiments(): QualityExperiment[];
     isExperimentRunning(): boolean;
+    generateAssignmentForSession(
+        sessionId: string,
+        enabledTechniques: string[],
+    ): Record<string, boolean>;
     getAssignmentForSession(sessionId: string): Record<string, boolean> | undefined;
     recordSessionCompletion(
         sessionId: string,
@@ -174,6 +180,13 @@ export interface BestConditions {
     confidence: 'none' | 'low' | 'medium' | 'high' | 'very_high';
 }
 
+export interface AttributionEntry {
+    techniqueId: string;
+    lastTouchCount: number;
+    frequencyInBestRounds: number;
+    compositeScore: number;
+}
+
 export interface IQualityImpactCollector {
     record(event: QualityImpactEvent): void;
     finalizeSession(
@@ -199,4 +212,6 @@ export interface IQualityImpactCollector {
         confidence: 'none' | 'low' | 'medium' | 'high' | 'very_high';
     };
     getScoreSnapshots(): SessionScoreSnapshot[];
+    getAttribution(): AttributionEntry[];
+    getAttributionLeaderboard(limit?: number): AttributionEntry[];
 }

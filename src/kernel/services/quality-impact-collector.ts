@@ -1,6 +1,9 @@
 import type { ILifecycle } from '../contracts/lifecycle';
 import { rootLogger } from './logger-service';
 import { BucketStorageAdapter } from './storage-adapter';
+import { getTechniques } from './debate-runtime/quality-settings-store';
+import { eventBus } from '../events/event-bus';
+import { EVENTS } from '../events/event-names';
 import type {
     QualityImpactEvent,
     TechniqueImpactMetrics,
@@ -9,6 +12,7 @@ import type {
     IQualityImpactCollector,
     BestConditions,
     SessionScoreSnapshot,
+    AttributionEntry,
 } from '../contracts/quality-impact';
 
 const LOGGER = rootLogger.child('QualityImpactCollector');
@@ -17,6 +21,8 @@ const STORAGE_PREFIX = 'quality-metrics-';
 const SESSION_PREFIX = 'quality-session-';
 const BASELINE_PREFIX = 'quality-baseline-';
 const STORAGE_KEY_SNAPSHOTS = 'quality-snapshots';
+const STORAGE_KEY_SESSION_INDEX = 'quality-sessions-index';
+const STORAGE_KEY_BASELINE_INDEX = 'quality-baselines-index';
 
 const SNAP_MAX = 500;
 
@@ -126,6 +132,19 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
             this.sessionBuffers.set(event.sessionId, buf);
         }
         buf.push(event);
+        // Emit live event for real-time UI indicators
+        try {
+            eventBus.emit(EVENTS.DEBATE_QUALITY_TECHNIQUE_APPLIED, {
+                sessionId: event.sessionId,
+                techniqueId: event.techniqueId,
+                eventType: event.eventType,
+                round: event.round,
+                agentId: event.agentId,
+                timestamp: event.timestamp,
+            });
+        } catch {
+            /* event bus may not be ready */
+        }
     }
 
     async finalizeSession(
@@ -245,8 +264,58 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
             });
         }
 
+        // Layer 1: Last-touch attribution — which technique fired last before score improvement
+        const lastTouch = this.computeLastTouch(events);
+        if (lastTouch) {
+            const ltMetrics = this.aggregatedMetrics.get(lastTouch);
+            if (ltMetrics) {
+                this.aggregatedMetrics.set(lastTouch, {
+                    ...ltMetrics,
+                    lastTouchCount: ltMetrics.lastTouchCount + 1,
+                });
+            }
+        }
+
+        // Track avgConfidenceDelta from SCORE_CHANGED events
+        const confidenceDeltas: number[] = [];
+        for (const [, techEvents] of techniqueEvents) {
+            for (const e of techEvents) {
+                if (e.eventType === 'SCORE_CHANGED') {
+                    const p = e.payload as { delta?: number; dimension?: string };
+                    if (typeof p.delta === 'number') confidenceDeltas.push(p.delta);
+                }
+            }
+        }
+        if (confidenceDeltas.length > 0) {
+            const avgConf = confidenceDeltas.reduce((s, d) => s + d, 0) / confidenceDeltas.length;
+            for (const metrics of this.aggregatedMetrics.values()) {
+                metrics.avgConfidenceDelta =
+                    (metrics.avgConfidenceDelta * metrics.totalSessions + avgConf) /
+                    (metrics.totalSessions + 1);
+            }
+        }
+
         await this.persistAllMetrics();
+
+        // Layer 2: Frequency attribution — recompute across top-25% sessions
+        this.recomputeFrequencyAttribution();
+
         this.printReport(sessionId, techniqueEvents);
+        // Emit impact computed for real-time UI
+        try {
+            const totalDelta = Array.from(this.aggregatedMetrics.values()).reduce(
+                (s, m) => s + m.avgJudgeScoreDelta,
+                0,
+            );
+            eventBus.emit(EVENTS.DEBATE_QUALITY_IMPACT_COMPUTED, {
+                sessionId,
+                techniqueCount: techniqueEvents.size,
+                techniqueDelta: totalDelta,
+                timestamp: Date.now(),
+            });
+        } catch {
+            /* event bus may not be ready */
+        }
         this.sessionBuffers.delete(sessionId);
     }
 
@@ -364,8 +433,60 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
             sampleSizeOn: 0,
             sampleSizeOff: 0,
             confidence: 'none',
+            lastTouchCount: 0,
+            frequencyInBestRounds: 0,
             lastUpdated: Date.now(),
         };
+    }
+
+    private computeLastTouch(events: QualityImpactEvent[]): string | null {
+        for (let i = events.length - 1; i >= 0; i--) {
+            const e = events[i];
+            if (e.eventType === 'SCORE_CHANGED' || e.eventType === 'FINAL_IMPACT') {
+                return e.techniqueId;
+            }
+        }
+        return null;
+    }
+
+    private recomputeFrequencyAttribution(): void {
+        const topFraction = 0.25;
+        const sorted = [...this.scoreSnapshots]
+            .filter((s) => s.enabledTechniques.length > 0)
+            .sort((a, b) => b.judgeScore - a.judgeScore);
+        if (sorted.length === 0) return;
+
+        const topCount = Math.max(1, Math.round(sorted.length * topFraction));
+        const topSessions = sorted.slice(0, topCount);
+
+        const techniqueFrequency = new Map<string, number>();
+        for (const s of topSessions) {
+            for (const techId of s.enabledTechniques) {
+                techniqueFrequency.set(techId, (techniqueFrequency.get(techId) ?? 0) + 1);
+            }
+        }
+
+        for (const [techId, metrics] of this.aggregatedMetrics) {
+            const freq = (techniqueFrequency.get(techId) ?? 0) / topCount;
+            this.aggregatedMetrics.set(techId, {
+                ...metrics,
+                frequencyInBestRounds: freq,
+            });
+        }
+    }
+
+    getAttribution(): AttributionEntry[] {
+        return this.getAllMetrics().map((m) => ({
+            techniqueId: m.techniqueId,
+            lastTouchCount: m.lastTouchCount ?? 0,
+            frequencyInBestRounds: m.frequencyInBestRounds ?? 0,
+            compositeScore: (m.lastTouchCount ?? 0) * 2 + (m.frequencyInBestRounds ?? 0) * 100,
+        }));
+    }
+
+    getAttributionLeaderboard(limit?: number): AttributionEntry[] {
+        const all = this.getAttribution().sort((a, b) => b.compositeScore - a.compositeScore);
+        return limit ? all.slice(0, limit) : all;
     }
 
     private printReport(
@@ -396,6 +517,14 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
     private async persistSessionRecord(record: QualitySessionRecord): Promise<void> {
         try {
             await BucketStorageAdapter.UI.set(`${SESSION_PREFIX}${record.sessionId}`, record);
+            // Update session index
+            const index =
+                (await BucketStorageAdapter.UI.get<string[]>(STORAGE_KEY_SESSION_INDEX)) ?? [];
+            if (!index.includes(record.sessionId)) {
+                index.push(record.sessionId);
+                if (index.length > 500) index.splice(0, index.length - 500);
+                await BucketStorageAdapter.UI.set(STORAGE_KEY_SESSION_INDEX, index);
+            }
         } catch (e) {
             LOGGER.warn('QualityImpactCollector', 'persistSessionRecord failed', {
                 sessionId: record.sessionId,
@@ -407,6 +536,13 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
     private async persistBaselineRecord(record: QualityBaselineRecord): Promise<void> {
         try {
             await BucketStorageAdapter.UI.set(`${BASELINE_PREFIX}${record.sessionId}`, record);
+            const index =
+                (await BucketStorageAdapter.UI.get<string[]>(STORAGE_KEY_BASELINE_INDEX)) ?? [];
+            if (!index.includes(record.sessionId)) {
+                index.push(record.sessionId);
+                if (index.length > 200) index.splice(0, index.length - 200);
+                await BucketStorageAdapter.UI.set(STORAGE_KEY_BASELINE_INDEX, index);
+            }
         } catch (e) {
             LOGGER.warn('QualityImpactCollector', 'persistBaselineRecord failed', {
                 sessionId: record.sessionId,
@@ -440,14 +576,80 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
 
     private async loadPersistedMetrics(): Promise<void> {
         this.aggregatedMetrics.clear();
+        try {
+            const techniques = getTechniques();
+            let loaded = 0;
+            for (const t of techniques) {
+                const stored = await BucketStorageAdapter.UI.get<TechniqueImpactMetrics>(
+                    `${STORAGE_PREFIX}${t.id}`,
+                );
+                if (stored) {
+                    this.aggregatedMetrics.set(t.id, {
+                        ...stored,
+                        lastTouchCount: stored.lastTouchCount ?? 0,
+                        frequencyInBestRounds: stored.frequencyInBestRounds ?? 0,
+                    });
+                    loaded++;
+                }
+            }
+            LOGGER.debug('QualityImpactCollector', 'loadPersistedMetrics', { loaded });
+        } catch (e) {
+            LOGGER.warn('QualityImpactCollector', 'loadPersistedMetrics failed', {
+                error: String(e),
+            });
+        }
     }
 
     private async loadSessionHistory(): Promise<void> {
         this.sessionHistory = [];
+        try {
+            const index = await BucketStorageAdapter.UI.get<string[]>(STORAGE_KEY_SESSION_INDEX);
+            if (!index || index.length === 0) return;
+            let loaded = 0;
+            for (const sid of index) {
+                const stored = await BucketStorageAdapter.UI.get<QualitySessionRecord>(
+                    `${SESSION_PREFIX}${sid}`,
+                );
+                if (stored) {
+                    this.sessionHistory.push(stored);
+                    loaded++;
+                }
+            }
+            LOGGER.debug('QualityImpactCollector', 'loadSessionHistory', {
+                loaded,
+                total: index.length,
+            });
+        } catch (e) {
+            LOGGER.warn('QualityImpactCollector', 'loadSessionHistory failed', {
+                error: String(e),
+            });
+        }
     }
 
     private async loadBaselineSessions(): Promise<void> {
         this.baselineSessions = [];
+        try {
+            const index = await BucketStorageAdapter.UI.get<string[]>(STORAGE_KEY_BASELINE_INDEX);
+            if (!index || index.length === 0) return;
+            let loaded = 0;
+            for (const sid of index) {
+                const stored = await BucketStorageAdapter.UI.get<QualityBaselineRecord>(
+                    `${BASELINE_PREFIX}${sid}`,
+                );
+                if (stored) {
+                    this.baselineSessions.push(stored);
+                    loaded++;
+                }
+            }
+            LOGGER.debug('QualityImpactCollector', 'loadBaselineSessions', {
+                loaded,
+                total: index.length,
+            });
+        } catch (e) {
+            LOGGER.warn('QualityImpactCollector', 'loadBaselineSessions failed', {
+                error: String(e),
+            });
+        }
     }
 
     private async loadScoreSnapshots(): Promise<void> {

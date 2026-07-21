@@ -56,6 +56,10 @@ import type { IScratchpadService } from '../../contracts/debate-scratchpad';
 import type { IBlindEvaluationService } from '../../contracts/debate-blind-eval';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
 import type { IQualityImpactCollector } from '../../contracts/quality-impact';
+import type { IIncentiveDetector } from '../../contracts/debate-incentives';
+import type { IGoTDeliberation } from '../../contracts/debate-got';
+import type { IConceptBlender } from '../../contracts/debate-blending';
+import type { IOutcomeForecaster } from '../../contracts/debate-forecaster';
 import { createPhaseChangeHandler } from './debate-phase-handler';
 
 import { DebateSessionContext } from './debate-session-context';
@@ -166,6 +170,10 @@ interface DebateEngineDeps {
             | undefined;
     };
     qualityCollector?: IQualityImpactCollector;
+    incentiveDetector?: IIncentiveDetector;
+    gotDeliberation?: IGoTDeliberation;
+    conceptBlender?: IConceptBlender;
+    outcomeForecaster?: IOutcomeForecaster;
 }
 
 // P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
@@ -794,6 +802,10 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             scratchpadService: this.deps.scratchpadService,
             factCheckService: this.deps.factCheckService,
             qualityCollector: this.deps.qualityCollector,
+            incentiveDetector: this.deps.incentiveDetector,
+            gotDeliberation: this.deps.gotDeliberation,
+            conceptBlender: this.deps.conceptBlender,
+            outcomeForecaster: this.deps.outcomeForecaster,
         };
 
         // P2.4: Best-of-N — generate N responses and pick the best.

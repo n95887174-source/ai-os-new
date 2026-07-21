@@ -44,6 +44,13 @@ export interface DebateLiveState {
     >;
     judgeWeights: { pro: number; con: number; neutral: number };
     agentTimeoutSeconds: number;
+    // Quality impact real-time indicators
+    agentQualityActivations: Map<string, number>;
+    recentQualityEvents: Array<{
+        techniqueId: string;
+        eventType: string;
+        timestamp: number;
+    }>;
     setAgentTimeout: (seconds: number) => void;
     addAgentEvent: (event: DebateAgentEvent) => void;
     addRoundEvent: (event: DebateRoundEvent) => void;
@@ -350,6 +357,46 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 },
             });
         }),
+        // Quality impact live events
+        eventBus.onSafe<{
+            sessionId: string;
+            techniqueId: string;
+            eventType: string;
+            round: number;
+            agentId?: string;
+            timestamp: number;
+        }>(EVENTS.DEBATE_QUALITY_TECHNIQUE_APPLIED, (d) => {
+            set((s) => {
+                const aqa = new Map(s.agentQualityActivations);
+                if (d.agentId) {
+                    const ak = `${d.sessionId}:${d.agentId}`;
+                    aqa.set(ak, (aqa.get(ak) ?? 0) + 1);
+                }
+                const rqe = [
+                    { techniqueId: d.techniqueId, eventType: d.eventType, timestamp: d.timestamp },
+                    ...s.recentQualityEvents,
+                ].slice(0, 20);
+                return { agentQualityActivations: aqa, recentQualityEvents: rqe };
+            });
+        }),
+        eventBus.onSafe<{
+            sessionId: string;
+            techniqueCount: number;
+            techniqueDelta?: number;
+            timestamp: number;
+        }>(EVENTS.DEBATE_QUALITY_IMPACT_COMPUTED, (d) => {
+            set((s) => {
+                const rqe = [
+                    {
+                        techniqueId: 'impact-computed',
+                        eventType: 'FINAL_IMPACT',
+                        timestamp: d.timestamp,
+                    },
+                    ...s.recentQualityEvents,
+                ].slice(0, 20);
+                return { recentQualityEvents: rqe };
+            });
+        }),
     ];
 
     // D-H-12: Transient UI state — no persist needed (zustand middleware not used; data is live-only)
@@ -406,6 +453,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         agentAddressing: new Map(),
         memoryBubbles: new Map(),
         judgeWeights: { pro: 0, con: 0, neutral: 0 },
+        agentQualityActivations: new Map(),
+        recentQualityEvents: [],
         agentTimeoutSeconds: 30,
         setAgentTimeout: (seconds) => set({ agentTimeoutSeconds: seconds }),
         addAgentEvent: (event) => {
@@ -428,12 +477,14 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 const aa = new Map(s.agentAddressing);
                 const mb = new Map(s.memoryBubbles);
                 const ct = new Map(s.currentThinking);
+                const aqa = new Map(s.agentQualityActivations);
                 filterByPrefix(sc);
                 filterByPrefix(em);
                 filterByPrefix(cd);
                 filterByPrefix(aa);
                 filterByPrefix(mb);
                 filterByPrefix(ct);
+                filterByPrefix(aqa);
                 return {
                     agentEvents: s.agentEvents.filter((e) => e.sessionId !== sessionId),
                     roundEvents: s.roundEvents.filter((e) => e.sessionId !== sessionId),
@@ -443,6 +494,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     agentAddressing: aa,
                     memoryBubbles: mb,
                     currentThinking: ct,
+                    agentQualityActivations: aqa,
                 };
             });
         },
@@ -457,6 +509,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 agentAddressing: new Map(),
                 memoryBubbles: new Map(),
                 judgeWeights: { pro: 0, con: 0, neutral: 0 },
+                agentQualityActivations: new Map(),
+                recentQualityEvents: [],
             });
         },
         setAgentAddressing: (key, targetId) => {

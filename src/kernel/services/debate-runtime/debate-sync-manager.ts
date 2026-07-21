@@ -61,7 +61,6 @@ export class DebateSyncManager {
     private _durationTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly _interpreter = new DebateInterpreter();
     private _engineOnly = false;
-    private _governorState: GovernorState | null = null;
     private readonly _verdictCache = new Map<string, DebateVerdict>();
     private static readonly MAX_VERDICT_CACHE = 50;
     private static readonly RESTART_COOLDOWN_MS = 10_000;
@@ -92,12 +91,16 @@ export class DebateSyncManager {
 
     /** Get governor state. */
     getDebateGovernorState(): GovernorState | null {
-        return this._governorState;
+        // Source of truth lives in useActiveDebateStore (Zustand) — set by initSession
+        // via setGovernorState() in this file. Previously returned a stale `this._governorState`
+        // field that was never written, which made ArgumentGraphPanel always show empty state.
+        return useActiveDebateStore.getState().governorState;
     }
 
     /** Set governor state. */
     setDebateGovernorState(state: GovernorState | null): void {
-        this._governorState = state;
+        // Kept for API compatibility; delegate to Zustand store.
+        useActiveDebateStore.getState().setGovernorState(state);
     }
 
     /** Get cached verdict for a session. */
@@ -673,6 +676,13 @@ export class DebateSyncManager {
             // always produce draws (all scores = 0).
             const shouldStop = this.governor && this.checkGovernorStopConditions();
             useActiveDebateStore.getState().setSession(this.activeSession);
+            // Governor state is mutated in-place by processGovernorFeeding() inside
+            // mergeAndProcessSession(). Push the fresh state to Zustand so panels
+            // (Argument Graph) see the new claims each sync cycle, not just the
+            // empty initial state from resetDebateState().
+            if (this.governor) {
+                useActiveDebateStore.getState().setGovernorState(this.governor.getState());
+            }
             for (const arg of newArgs) {
                 this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
                     sessionId: this.runtimeSessionId,
@@ -783,6 +793,10 @@ export class DebateSyncManager {
         const storeSession = structuredClone(session);
         useDebateLiveStore.getState().clearSession(session.id);
         useActiveDebateStore.getState().setSession(storeSession);
+        // Final governor state at completion — same fix as in _syncSessionImpl().
+        if (this.governor) {
+            useActiveDebateStore.getState().setGovernorState(this.governor.getState());
+        }
         // Strip argument content BEFORE saveToDebateHistory. saveToDebateHistory
         // does structuredClone(session) — stripping content first prevents cloning
         // large LLM response strings, reducing old-gen promotion pressure between
@@ -814,6 +828,24 @@ export class DebateSyncManager {
                 })
                 .catch((e: unknown) =>
                     LOGGER.warn('DebateSyncManager', 'qualityCollector.finalizeSession failed', {
+                        sessionId: session.id,
+                        error: String(e),
+                    }),
+                );
+        }
+        // Record experiment completion for this session
+        if (this.deps?.experimentEngine) {
+            const techniqueResults: Record<string, number> = {};
+            const qualityCollector = this.deps.qualityCollector;
+            if (qualityCollector) {
+                for (const m of qualityCollector.getAllMetrics()) {
+                    techniqueResults[m.techniqueId] = m.avgJudgeScoreDelta;
+                }
+            }
+            this.deps.experimentEngine
+                .recordSessionCompletion(session.id, techniqueResults)
+                .catch((e: unknown) =>
+                    LOGGER.warn('DebateSyncManager', 'recordSessionCompletion failed', {
                         sessionId: session.id,
                         error: String(e),
                     }),

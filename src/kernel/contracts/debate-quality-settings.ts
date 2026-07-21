@@ -645,6 +645,81 @@ export const QUALITY_TECHNIQUES: QualityTechnique[] = [
         category: 'P2',
         defaultEnabled: true,
     },
+    // ═══ P0.15 ═══
+    {
+        id: 'executable-evidence',
+        name: 'Executable Evidence',
+        nameRu: 'Исполняемые доказательства',
+        description: 'Write executable code (Python/JS) to numerically verify factual claims',
+        descriptionRu: 'Напиши исполняемый код для численной проверки утверждений',
+        category: 'P0',
+        defaultEnabled: true,
+    },
+    // ═══ P0.17 ═══
+    {
+        id: 'hidden-incentives',
+        name: 'Hidden Incentives Mining',
+        nameRu: 'Скрытые выгоды',
+        description:
+            'Analyze who benefits from stated positions, force disclosure of conflicts of interest',
+        descriptionRu: 'Анализируй, кому выгодна позиция, требуй раскрытия конфликтов интересов',
+        category: 'P0',
+        defaultEnabled: true,
+    },
+    // ═══ P1.28 ═══
+    {
+        id: 'graph-of-thoughts',
+        name: 'Graph-of-Thoughts Deliberation',
+        nameRu: 'Граф мыслей',
+        description: 'Generate 3 reasoning branches, synthesize strongest into public argument',
+        descriptionRu: 'Сгенерируй 3 ветки рассуждений, синтезируй сильнейшую',
+        category: 'P1',
+        defaultEnabled: true,
+    },
+    // ═══ P1.29 ═══
+    {
+        id: 'semantic-blending',
+        name: 'Semantic Concept Blending',
+        nameRu: 'Семантическое смешение',
+        description: 'When deadlocked, invent new frameworks combining opposing concepts',
+        descriptionRu: 'В тупике создавай новые фреймворки, объединяющие противоположные концепции',
+        category: 'P1',
+        defaultEnabled: true,
+    },
+    // ═══ P1.30 ═══
+    {
+        id: 'outcome-forecaster',
+        name: 'Outcome Forecaster',
+        nameRu: 'Прогнозирование исхода',
+        description:
+            'Predict judge score impact before each move, select highest-expected-value argument',
+        descriptionRu: 'Спрогнозируй влияние хода на оценку, выбери вариант с макс. ожиданием',
+        category: 'P1',
+        defaultEnabled: true,
+    },
+    // ═══ P2.2 ═══
+    {
+        id: 'judge-deliberation',
+        name: 'Judge Deliberation',
+        nameRu: 'Совещание судей',
+        description:
+            'After independent scoring, judges deliberate disagreements and produce consensus verdict',
+        descriptionRu:
+            'После независимой оценки судьи обсуждают разногласия и приходят к консенсусу',
+        category: 'P2',
+        defaultEnabled: true,
+    },
+    // ═══ P2.4 ═══
+    {
+        id: 'best-of-n',
+        name: 'Best-of-N Selection',
+        nameRu: 'Лучший из N',
+        description:
+            'Generate 3-5 argument variants, select best one by novelty and rebuttal strength',
+        descriptionRu: 'Сгенерируй 3-5 вариантов, выбери лучший по новизне и силе опровержения',
+        category: 'P2',
+        defaultEnabled: true,
+    },
 ];
 
 export const QUALITY_SETTINGS_STORAGE_KEY = 'debate-quality-settings';
