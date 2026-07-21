@@ -1,21 +1,17 @@
 # SuperAgents OS — Agent Guide
 
-> **Note:** Some "Current Session" entries below reference files in `audit/new/` — these audit files exist locally but are not committed to the repository. They are historical source documents for completed work.
-
 ## Project Overview
 
-Autonomous, event-driven multi-agent runtime. Decision-centric architecture with programmable cognitive topologies (DSL DAGs).
+Autonomous, event-driven multi-agent runtime. v4.5.0 — 162 contracts, 346 services, 12 LLM adapters, 75+ UI panels.
 
 ## Workflow Convention
 
 Когда пользователь пишет **«продолжать»** (continue):
 
-1. Открыть `docs/UNIFIED_ROADMAP.md` — найти следующий незавершённый таск
-2. Выполнить таск, отмечая статус в roadmap (`🟢 Done` / `🟡 In Progress` / `🔴 Blocked`)
-3. Записать что сделано в `AGENTS.md` → Current Session
-4. Перейти к следующему таску, пока пользователь не скажет стоп
-
-Статусы в roadmap: `🟢` = готово, `🟡` = в работе, `🔴` = заблокировано, `⚪` = не начато.
+1. Открыть `AGENTS.md` → найти следующую задачу в **Current Session**
+2. Выполнить задачу
+3. Записать что сделано в `AGENTS.md` → Changes
+4. Перейти к следующей задаче, пока пользователь не скажет стоп
 
 ## Key Principles
 
@@ -23,139 +19,61 @@ Autonomous, event-driven multi-agent runtime. Decision-centric architecture with
 2. **No Globals in Kernel** — only DI constructor injection (`src/kernel/container.ts`)
 3. **Dependency Rule** — UI → Application → Kernel → Infrastructure (kernel never imports UI)
 4. **Contracts at Boundaries** — interfaces in `src/kernel/contracts/`, implementations in `src/kernel/services/`
-5. **Legacy Wrappers** — fully migrated to `src/kernel/services/`; `src/kernel/workers/` now holds only workers
+5. **No circular deps** — services depend on contracts, not other services
 
 ## Architecture Layers
 
-- `src/kernel/contracts/` — interfaces, types, events
+- `src/kernel/contracts/` — 162 interfaces + types
+- `src/kernel/services/` — 346 implementations
 - `src/kernel/events/` — event names + payloads
-- `src/kernel/state/` — state shapes
-- `src/kernel/services/` — implementations (key-management/, provider-runtime/, event-sourcing/, advisor/)
-- `src/kernel/services/provider-runtime/` — instances, sessions, state, budget
-- `src/kernel/services/event-sourcing/` — recorder, checkpoints, replay engine
-- `src/llm/` — provider adapters + decorators (infrastructure)
-- `src/kernel/workers/` — workers (`memory.worker.ts`, `sandbox.worker.ts`) (all legacy wrappers migrated to kernel/services/)
+- `src/kernel/state/` — state shapes (19 files)
+- `src/llm/` — provider adapters + decorators (12 adapters)
+- `src/components/` — React UI (75+ panels)
+- `src/stores/` — Zustand stores
+- `docs/` — architecture docs (38 files, RU/EN)
 
 ## Code Rules
 
 - **TypeScript** strict mode
 - **No React/DOM** imports in kernel
 - **No `any`** unless unavoidable (type with `as any` + comment)
-- **No circular deps** — services depend on contracts, not other services
 - **Tests** next to source: `*.test.ts`
 - Use `Result<T,E>` from `contracts/results.ts` for fallible operations
-
-## Consistency Layer (v4.1.0)
-
-- **Transaction boundary** — `kernel.transaction(fn)` wraps mutations atomically: deferred persistence → deferred event emission → commit hooks. Rollback drops all queues. Contract: `ITransaction` / `ITransactional` in `contracts/transaction.ts`
-- **Event-vs-State rule** — all mutation methods accept optional `tx?: ITransaction`. With tx: emit/persist deferred. Without tx: immediate emit. `applyMutation()` separated from `markDirtyAndEmit()` — mutation never mixed with I/O.
-- **Usage**: `await kernel.transaction(async (tx) => { kernel.setSLAMode('ECONOMY', tx); kernel.setBaseWeights({...}, tx); })` — single commit/rollback for multiple changes.
-- **TransactionContext** (`services/transaction.ts`): `deferEmit`, `deferPersist`, `onCommit`, `onRollback`. Commits: persist all → emit all → run hooks.
-
-## Lifecycle Standard (v4.1.0)
-
-- **ILifecycle contract** — `init() → start() → destroy()` for every kernel service. `contracts/lifecycle.ts`
-- **LifecycleManager** — `register(name, service)` → `initAll()` → `startAll()` → `shutdown()` (LIFO). Dedup by name.
-- **Bootstrap** uses `LifecycleManager.shutdown()` instead of manual destroy list.
-- **Constructor rule**: never async, no side effects, no `this.load()` / `this.setupListeners()`. All async work → `init()`.
-- **destroy() rule**: every service with event subscriptions or timers must implement `destroy()` that cleans up.
-
-## Observability (v4.2.0)
-
-- **ILogger contract** — `debug/info/warn/error` with structured `LogEntry` (service, timestamp, traceId, correlationId, action, latency). `contracts/logger.ts`
-- **LoggerService** — formats `[TIMESTAMP] LEVEL [SERVICE] [traceId] action message`. Buffers last 500 entries, queryable by service/level/traceId. Supports `child(service)` for sub-loggers.
-- **TraceContext** — `enter()`/`exit()` stack for span propagation. `run(fn, ctx?)` for synchronous tracking. `generateTraceId()` creates `timestamp-random` IDs.
-- **EventBus** — now accepts optional `ILogger` in constructor. Emit count, trace context, and structured error logging built-in.
-- **Usage**: `logger.info('KeyService', 'Key added', { keyId, provider, action: 'create' })`
-
-## Kernel Hardening (v4.0.3)
-
-- **Ring buffer event log** — O(1) insert/eviction via `Array[head]`, max 10K entries, no Map for-of cleanup
-- **Deep immutable state** — `getState()` returns `deepFreeze(structuredClone(state))` — nested mutation impossible
-- **Composite event keys** — `${Date.now()}-${seq}` prevents timestamp collision under burst
-- **Init validation** — `validateState()` with per-field fallback, version check, DB timeout `Promise.race(5s)`
-- **Whitelist SLA** — `setSLAMode()` validates against `VALID_SLA_MODES`, `setBaseWeights()` clamps [0,1] + NaN guard + sum>0 guard
+- All mutation methods accept optional `tx?: ITransaction`
 
 ## Commands
 
 ```bash
-npm run dev          # dev server
-npx tsc -b --noEmit   # typecheck (project references)
-npx vite build       # production build
-npx vitest run       # tests
-npx vitest run --reporter=verbose  # verbose tests
-npx eslint src/      # lint
+npm run dev                # dev server
+npm run typecheck:fast     # fast typecheck (src/ only)
+npm run typecheck          # full typecheck (project references, ~2min)
+npm run build              # production build
+npm run test               # vitest
+npm run lint               # eslint
+npm run check:circular-kernel  # circular deps check
 ```
 
-## Patterns
+## Current Session — Стабилизация и освоение (v4.5.0 → v4.6.0)
 
-- **New service**: contract → state → service → bootstrap registration → legacy wrapper
-- **New contract**: add to `src/kernel/contracts/`, re-export from `index.ts`
-- **New event**: add to `src/kernel/events/`, register in `event-names.ts`
-- **New state**: add to `src/kernel/state/`, re-export from `index.ts`
+### Цель
 
-## Project Structure
+Всё починить, настроить, протестировать, научиться использовать.
 
-- `src/kernel/` — kernel (DI, contracts, services, events, state)
-- `src/kernel/contracts/` — 64 contract interfaces (`IKeyVault`, `IKeyHealth`, `IPoolSelector`, `IKeyConfigStore`, `IProviderAdapter`, `IBudgetService`, etc.)
-- `src/kernel/services/` — 100+ kernel service files (key-management/, provider-runtime/, event-sourcing/, advisor/, rotation/, cognitive-intelligence/, debate-runtime/)
-- `src/kernel/types/` — Zod schemas (`schema-types.ts`), domain types (`domain-types.ts`)
-- `src/kernel/utils/` — kernel utilities (`tokenEstimate.ts`)
-- `src/kernel/DEPENDENCY_MAP.md` — full DI injection graph
-- `src/core/` — DELETED (all legacy modules migrated to `src/kernel/`)
-- `src/kernel/workers/` — web workers (`memory.worker.ts`, `sandbox.worker.ts`)
-- `src/llm/` — LLM adapters + decorators (OpenRouter, Gemini, Groq, NVIDIA, OpenAI)
-- `src/components/` — React UI (75+ panels)
-- `src/stores/` — Zustand stores
-- `src/types/` — re-exports from kernel (`chat.ts`, `domain.ts`, `memory.ts`, `metrics.ts`, `role.ts`, `routing.ts`, `schemas.ts`)
-- `docs/` — architecture docs, specs, manifest
-- `docs/STRUCTURE.md` — detailed project structure
-- `.superagents/` — system rules
-- `CHANGELOG.md` — full version history
+### План
 
-## Naming
-
-- `I*` for interfaces (e.g. `IProviderAdapter`)
-- PascalCase for classes, camelCase for instances
-- kebab-case for files, dot-separated for modules (`key-vault.ts`)
-
-## Roadmap
-
-| Priority | Task | Why    |
-| -------- | ---- | ------ |
-| Priority | Task | Status |
-| ---      | ---  | ---    |
-
----
-
-## Current Session (2026-07-07) — Medium Audit Batch: M-7, M3, M5, M6
-
-### Goal
-
-Fix 4 Medium findings from `audit/newww/STATUS_HML.md` — infrastructure and security improvements.
+| #   | Задача                                                     | Статус         |
+| --- | ---------------------------------------------------------- | -------------- |
+| 1   | **Typecheck** — диагностировать и ускорить сборку          | 🟢 Done        |
+| 2   | **AGENTS.md** — обновить под новый этап                    | 🟡 In Progress |
+| 3   | **Тесты** — поднять покрытие (EventBus, Container, Debate) | ⚪             |
+| 4   | **Интеграционные тесты** — e2e: дебаты, LLM, memory        | ⚪             |
+| 5   | **Аудит конфигурации** — DI регистрация, dead-code         | ⚪             |
+| 6   | **DEV_QUICKSTART.md** — документация для быстрого старта   | ⚪             |
 
 ### Changes
 
-| #   | Audit | ID  | Description | Fix |
-| --- | ----- | --- | ----------- | --- |
-
-### Status
-
-## Current Session (2026-07-02) — Debate Live Integration (Phases 3-8)
-
-### Goal
-
-Integrate 6 new components (CountdownRing, JudgeScales, SocratesMascot, ThoughtBubble, EyeLine, MemoryBubble) into the existing debate live panel.
-
-### Changes
-
-| #   | File | Change |
-| :-- | :--- | :----- |
-
-### Status
-
-## Current Session (Bugfix Sprint — audit report)
-
-### Goal
-
-### Constraints
+| #   | Что сделано                                                          | Когда      |
+| --- | -------------------------------------------------------------------- | ---------- |
+| 1   | Диагностика typecheck: 1420 файлов, ~112s, 0 circular deps, 0 ошибок | 2026-07-21 |
+| 2   | Добавлен `typecheck:fast` для быстрой проверки                       | 2026-07-21 |
+| 3   | AGENTS.md очищен и переписан под новый этап                          | 2026-07-21 |

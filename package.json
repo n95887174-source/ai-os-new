@@ -18,6 +18,7 @@
     "lint": "eslint .",
     "lint:staged": "lint-staged",
     "typecheck": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -b --noEmit",
+    "typecheck:fast": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit --project tsconfig.app.json",
     "typecheck:watch": "tsc -b --noEmit --watch",
     "fix:unused": "tsx scripts/fix-unused.ts",
     "test": "vitest run",
