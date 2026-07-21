@@ -783,6 +783,32 @@ export class DebateSyncManager {
             }
         }
         this.deps!.sessionManager.saveToDebateHistory(session);
+        // Finalize quality impact tracking for this session
+        if (this.deps?.qualityCollector) {
+            const qs = (session.config as { qualitySettings?: Record<string, boolean> } | undefined)
+                ?.qualitySettings;
+            const enabledTechniques = qs
+                ? Object.entries(qs)
+                      .filter(([, v]) => v !== false)
+                      .map(([k]) => k)
+                : [];
+            this.deps.qualityCollector
+                .finalizeSession(session.id, {
+                    enabledTechniques,
+                    topic: session.topic || '(no topic)',
+                    strategy: session.strategy || 'round-robin',
+                    participantCount: session.participants?.length ?? 0,
+                    roundCount: session.currentRound ?? 0,
+                    totalTokens: (session as { totalTokens?: number }).totalTokens ?? 0,
+                    durationMs: session.createdAt ? Date.now() - session.createdAt : 0,
+                })
+                .catch((e: unknown) =>
+                    LOGGER.warn('DebateSyncManager', 'qualityCollector.finalizeSession failed', {
+                        sessionId: session.id,
+                        error: String(e),
+                    }),
+                );
+        }
         // Save engine snapshot BEFORE cleanupMaps destroys the session.
         // Phase handler skips saveSnapshot for completed (see createPhaseChangeHandler),
         // so we must persist it here. Fire-and-forget is safe here because this runs

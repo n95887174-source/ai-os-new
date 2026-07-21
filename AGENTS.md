@@ -4433,3 +4433,46 @@ Complete the last 2 remaining P2 debate quality improvement items: wire P2.5 RTo
 - **ALL P2 debate quality techniques now implemented** (17/17): P2.1 through P2.23 (excluding P2.6/P2.8/P2.11/P2.12 which were existing or not part of the spec)
 - **All P0 (14/14), P1 (25/25), P2 (17/17) techniques complete** — 56 total from `docs/DEBATE_QUALITY_IMPROVEMENTS.md`
 - Remaining: P2.6 Rhetorical Device, P2.8 Replay Selector, P2.11 Scratchpad, P2.12 Frame Tracker — these were already implemented in earlier sessions as part of P1 or were existing before the quality plan
+
+---
+
+## Current Session (2026-07-21) — Quality Impact Tracker P0 MVP (Implementation + Verification)
+
+### Goal
+
+Build and verify the Quality Impact Tracker — instrument the debate engine to collect events when quality techniques activate, aggregate metrics, and print a console report at session end.
+
+### Changes
+
+| #   | Task                                                                                                                                                                                                 | Files                                                              |
+| :-- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------- |
+| 1   | **Contract** — `IQualityImpactCollector` interface, 6 event types (`PROMPT_BLOCK_USED`, `SERVICE_EXECUTED`, `SIGNAL_CREATED`, `SCORE_CHANGED`, `ARGUMENT_FEATURE`, `FINAL_IMPACT`), typed payloads   | `src/kernel/contracts/quality-impact.ts` (NEW)                     |
+| 2   | **Collector** — `QualityImpactCollector` with per-session `Map<string, QualityImpactEvent[]>` buffers, aggregation, console report, persistence via `BucketStorageAdapter.UI`                        | `src/kernel/services/quality-impact-collector.ts` (NEW, 217 lines) |
+| 3   | **DI Registration** — created eagerly in `phase3-debate-runtime.ts`, registered as `'qualityImpactCollector'`, passed to `DebateEngine` + `DebateSyncManager`                                        | `phase3-debate-runtime.ts`                                         |
+| 4   | **8 technique gates in debate-llm-caller.ts** — entanglement, vulnerability-targeting, consistency-check, steelman, fact-checking, ARGUMENT_FEATURE (responseLength), shadow-opponent                | `debate-llm-caller.ts`                                             |
+| 5   | **2 SCORE_CHANGED gates in debate-phase-handler.ts** — blind eval + standard eval score paths                                                                                                        | `debate-phase-handler.ts`                                          |
+| 6   | **finalizeSession() hook** — called in `finalizeInternal()` with session metadata (topic, strategy, participants, rounds, tokens, duration), guarded by cancelled/failed early return                | `debate-sync-manager.ts`                                           |
+| 7   | **Event registry** — 2 quality events: `DEBATE_QUALITY_TECHNIQUE_APPLIED`, `DEBATE_QUALITY_IMPACT_COMPUTED`                                                                                          | `event-registry.ts`                                                |
+| 8   | **Contract barrel** — all types (`IQualityImpactCollector`, `QualityImpactEvent`, `QualityEventType`, `TechniqueImpactMetrics`, `QualitySessionRecord`, payloads) exported from `contracts/index.ts` | `contracts/index.ts`                                               |
+
+### Verification
+
+| Check                                                                                                       |       Status        |
+| :---------------------------------------------------------------------------------------------------------- | :-----------------: |
+| Build (vite build)                                                                                          | ✅ 22.37s, 0 errors |
+| DI wiring: QualityImpactCollector → DebateEngine → callLLM/phaseHandler                                     |         ✅          |
+| DI wiring: QualityImpactCollector → DebateSyncManager → finalizeInternal                                    |         ✅          |
+| qualitySettings flow: DebateConfig → initEngineSession → createSession → session.setQualitySettings → isQ() |         ✅          |
+| Empty buffers guard (early return in finalizeSession)                                                       |         ✅          |
+| Cancelled/failed sessions skip finalizeSession (line 747 guard)                                             |         ✅          |
+| Concurrent session isolation (per-session `Map`)                                                            |         ✅          |
+| No extra LLM calls (pure in-memory + persistence)                                                           |         ✅          |
+| Memory cleanup (sessionBuffers.delete + destroy())                                                          |         ✅          |
+| finalizeSession called at most once per session (runtimeSessionId=null guard)                               |         ✅          |
+
+### Status
+
+- `npx vite build` ✅ 22.37s
+- Quality Impact Tracker P0 MVP: **complete** — contract + collector + 10 instrumentation points + DI + persistence + console report
+- Roadmap: 100% 🟢 Complete (all phases Alpha–Delta, all P0–P3 modules, all Quick Wins, all debts)
+- Only 🔴 Future items: Veo (Phase 7) + Lyria (Phase 8) — blocked by Google API

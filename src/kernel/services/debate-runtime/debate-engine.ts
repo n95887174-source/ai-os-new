@@ -55,6 +55,7 @@ import type { IRhetoricalDeviceSelector } from '../../contracts/debate-rhetorica
 import type { IScratchpadService } from '../../contracts/debate-scratchpad';
 import type { IBlindEvaluationService } from '../../contracts/debate-blind-eval';
 import type { IDebateEvaluator } from '../../contracts/debate-runtime';
+import type { IQualityImpactCollector } from '../../contracts/quality-impact';
 import { createPhaseChangeHandler } from './debate-phase-handler';
 
 import { DebateSessionContext } from './debate-session-context';
@@ -164,6 +165,7 @@ interface DebateEngineDeps {
               }
             | undefined;
     };
+    qualityCollector?: IQualityImpactCollector;
 }
 
 // P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
@@ -592,6 +594,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     bayesianJudge: this.deps.bayesianJudge,
                     stanceDriftTracker: this.deps.stanceDriftTracker,
                     blindEval: this.deps.blindEval,
+                    qualityCollector: this.deps.qualityCollector,
                 },
                 {
                     getContext: (sid) => this.getContext(sid),
@@ -790,6 +793,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             rhetoricalDeviceSelector: this.deps.rhetoricalDeviceSelector,
             scratchpadService: this.deps.scratchpadService,
             factCheckService: this.deps.factCheckService,
+            qualityCollector: this.deps.qualityCollector,
         };
 
         // P2.4: Best-of-N — generate N responses and pick the best.

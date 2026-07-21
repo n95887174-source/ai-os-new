@@ -731,3 +731,18 @@ export type { IInterruptQueue, InterruptRequest } from './debate-interrupt';
 
 // ── Blind Evaluation (P2.12) ──────────────────────────────────────
 export type { IBlindEvaluationService } from './debate-blind-eval';
+
+// ── Quality Impact Tracker (P0 MVP) ──────────────────────────────
+export type {
+    IQualityImpactCollector,
+    QualityImpactEvent,
+    QualityEventType,
+    QualityEventPayload,
+    TechniqueImpactMetrics,
+    QualitySessionRecord,
+    PromptBlockUsedPayload,
+    ServiceExecutedPayload,
+    SignalCreatedPayload,
+    ScoreChangedPayload,
+    ArgumentFeaturePayload,
+} from './quality-impact';

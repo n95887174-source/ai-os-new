@@ -44,6 +44,7 @@ import type { IExpertWitnessService } from '../../contracts/debate-expert-witnes
 import type { IStanceDriftTracker } from '../../contracts/debate-stance-drift';
 import type { IRhetoricalDeviceSelector } from '../../contracts/debate-rhetorical-device';
 import type { IScratchpadService } from '../../contracts/debate-scratchpad';
+import type { IQualityImpactCollector } from '../../contracts/quality-impact';
 
 /** Minimal fact-check accessor for prompt-time claim verification (P1.2). */
 interface FactCheckAccessor {
@@ -221,6 +222,7 @@ export interface LlmCallerDeps {
     stanceDriftTracker?: IStanceDriftTracker;
     rhetoricalDeviceSelector?: IRhetoricalDeviceSelector;
     scratchpadService?: IScratchpadService;
+    qualityCollector?: IQualityImpactCollector;
 }
 
 export async function debateCallLlm(
@@ -448,6 +450,23 @@ export async function debateCallLlm(
                             sessionId,
                         });
                     }
+                    deps.qualityCollector?.record({
+                        id: `${sessionId}-entanglement-${participant.agentId}-${Date.now()}`,
+                        sessionId,
+                        techniqueId: 'entanglement',
+                        timestamp: Date.now(),
+                        eventType: 'SERVICE_EXECUTED',
+                        round: session.round,
+                        agentId: participant.agentId,
+                        payload: {
+                            serviceName: 'entanglementEngine.getConstraint',
+                            calls: 1,
+                            totalLatencyMs: 0,
+                            outputSummary: entanglementConstraint
+                                ? `target=${entanglementConstraint.opponentId},type=${entanglementConstraint.responseType}`
+                                : undefined,
+                        },
+                    });
                 } catch {
                     LOGGER.warn('DebateLlmCaller', 'Entanglement engine error', { sessionId });
                 }
@@ -493,6 +512,20 @@ export async function debateCallLlm(
                             sessionId,
                         });
                     }
+                    deps.qualityCollector?.record({
+                        id: `${sessionId}-vuln-${participant.agentId}-${Date.now()}`,
+                        sessionId,
+                        techniqueId: 'vulnerability-targeting',
+                        timestamp: Date.now(),
+                        eventType: 'SERVICE_EXECUTED',
+                        round: session.round,
+                        agentId: participant.agentId,
+                        payload: {
+                            serviceName: 'vulnerabilityTargeting.findVulnerabilities',
+                            calls: vulnerabilityTargets?.length ?? 0,
+                            totalLatencyMs: 0,
+                        },
+                    });
                 } catch {
                     LOGGER.warn('DebateLlmCaller', 'Vulnerability targeting error', { sessionId });
                 }
@@ -693,6 +726,19 @@ export async function debateCallLlm(
                             });
                         }
                     }
+                    deps.qualityCollector?.record({
+                        id: `${sessionId}-consistency-${participant.agentId}-${Date.now()}`,
+                        sessionId,
+                        techniqueId: 'consistency-check',
+                        timestamp: Date.now(),
+                        eventType: 'SIGNAL_CREATED',
+                        round: session.round,
+                        agentId: participant.agentId,
+                        payload: {
+                            signalName: 'consistencyContradictions',
+                            value: consistencyContradictions?.length ?? 0,
+                        },
+                    });
                 } catch {
                     LOGGER.warn('DebateLlmCaller', 'Consistency check error', { sessionId });
                 }
@@ -720,6 +766,21 @@ export async function debateCallLlm(
                             sessionId,
                         });
                     }
+                    deps.qualityCollector?.record({
+                        id: `${sessionId}-steelman-${participant.agentId}-${Date.now()}`,
+                        sessionId,
+                        techniqueId: 'steelman',
+                        timestamp: Date.now(),
+                        eventType: 'PROMPT_BLOCK_USED',
+                        round: session.round,
+                        agentId: participant.agentId,
+                        payload: {
+                            blockName: 'steelmanBlock',
+                            charLength: steelmanTarget?.claimText?.length ?? 0,
+                            runtimeServiceCalled: true,
+                            serviceLatencyMs: 0,
+                        },
+                    });
                 } catch {
                     LOGGER.warn('DebateLlmCaller', 'Steelman selection error', { sessionId });
                 }
@@ -925,6 +986,19 @@ export async function debateCallLlm(
                             warnings.map((w) => `- ${w}`).join('\n') +
                             '\nYou may challenge these claims in your response.';
                     }
+                    deps.qualityCollector?.record({
+                        id: `${sessionId}-factcheck-${participant.agentId}-${Date.now()}`,
+                        sessionId,
+                        techniqueId: 'fact-checking',
+                        timestamp: Date.now(),
+                        eventType: 'SIGNAL_CREATED',
+                        round: session.round,
+                        agentId: participant.agentId,
+                        payload: {
+                            signalName: 'factCheckWarnings',
+                            value: warnings.length,
+                        },
+                    });
                 } catch {
                     LOGGER.warn('DebateLlmCaller', 'FactCheck error', { sessionId });
                 }
@@ -1680,6 +1754,21 @@ export async function debateCallLlm(
                 chunk: content,
             });
 
+            deps.qualityCollector?.record({
+                id: `${sessionId}-arg-${participant.agentId}-${Date.now()}`,
+                sessionId,
+                techniqueId: 'response-features',
+                timestamp: Date.now(),
+                eventType: 'ARGUMENT_FEATURE',
+                round: session.round,
+                agentId: participant.agentId,
+                payload: {
+                    feature: 'responseLength',
+                    detected: true,
+                    strength: Math.min(content.length / 1000, 1),
+                },
+            });
+
             deps.providerResolver.deleteLlmFailureCount(failKey);
 
             LOGGER.debug('DebateEngine', 'ENGINE_MODEL', {
@@ -1729,6 +1818,20 @@ export async function debateCallLlm(
                         agentId: participant.agentId,
                     });
                 }
+                deps.qualityCollector?.record({
+                    id: `${sessionId}-shadow-${participant.agentId}-${Date.now()}`,
+                    sessionId,
+                    techniqueId: 'shadow-opponent',
+                    timestamp: Date.now(),
+                    eventType: 'SERVICE_EXECUTED',
+                    round: session.round,
+                    agentId: participant.agentId,
+                    payload: {
+                        serviceName: 'shadowOpponent.strengthenArgument',
+                        calls: 1,
+                        totalLatencyMs: 0,
+                    },
+                });
             }
 
             // P1.26: Record this argument for future redundancy checks

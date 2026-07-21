@@ -18,6 +18,7 @@ import {
     sessionManager,
     hypothesisService,
     debateWorkspace,
+    getAllSettings,
 } from '../../kernel/instances';
 import type {
     DebateSession,
@@ -456,7 +457,7 @@ const DebatePanel: React.FC = () => {
                 allParticipants,
                 strategy,
                 maxRounds,
-                { debateTemperature: debateTemperature / 10 },
+                { debateTemperature: debateTemperature / 10, qualitySettings: getAllSettings() },
                 activeChatId || undefined,
             );
             if (pendingHypothesisId.current && started?.id) {

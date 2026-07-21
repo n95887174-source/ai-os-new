@@ -1,5 +1,6 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { DebateStore, ConclusionType, StanceResult } from './storage/debate-store';
+import type { IQualityImpactCollector } from './quality-impact';
 
 export type { ConclusionType, StanceResult };
 
@@ -372,6 +373,7 @@ export interface DebateServiceDeps {
     };
     queryEngine: IDebateQueryEngine;
     debateStore: DebateStore;
+    qualityCollector?: IQualityImpactCollector;
 }
 
 export function jaccardSimilarity(a: string, b: string): number {

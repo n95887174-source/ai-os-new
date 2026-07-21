@@ -12,6 +12,7 @@ import type { IDebateEvaluator } from '../../contracts/debate-runtime';
 import type { IBlindEvaluationService } from '../../contracts/debate-blind-eval';
 import type { IBayesianJudge } from '../../contracts/debate-bayesian';
 import type { IStanceDriftTracker } from '../../contracts/debate-stance-drift';
+import type { IQualityImpactCollector } from '../../contracts/quality-impact';
 
 const LOGGER = rootLogger.child('DebatePhaseHandler');
 
@@ -23,6 +24,7 @@ interface PhaseHandlerDeps {
     bayesianJudge?: IBayesianJudge;
     stanceDriftTracker?: IStanceDriftTracker;
     blindEval?: IBlindEvaluationService;
+    qualityCollector?: IQualityImpactCollector;
 }
 
 interface PhaseHandlerGetters {
@@ -195,6 +197,21 @@ export function createPhaseChangeHandler(
                                             persuasiveness: score.persuasiveness,
                                             factuality: score.factuality,
                                         });
+                                        deps.qualityCollector?.record({
+                                            id: `${sessionId}-score-blind-${p.agentId}-${Date.now()}`,
+                                            sessionId,
+                                            techniqueId: 'scoring',
+                                            timestamp: Date.now(),
+                                            eventType: 'SCORE_CHANGED',
+                                            round: session.round,
+                                            agentId: p.agentId,
+                                            payload: {
+                                                prior: 0,
+                                                posterior: adjustedOverall,
+                                                delta: adjustedOverall,
+                                                dimension: 'overall',
+                                            },
+                                        });
                                     }
                                 } catch (e) {
                                     LOGGER.warn(
@@ -242,6 +259,21 @@ export function createPhaseChangeHandler(
                                         coherence: score.coherence,
                                         persuasiveness: score.persuasiveness,
                                         factuality: score.factuality,
+                                    });
+                                    deps.qualityCollector?.record({
+                                        id: `${sessionId}-score-std-${p.agentId}-${Date.now()}`,
+                                        sessionId,
+                                        techniqueId: 'scoring',
+                                        timestamp: Date.now(),
+                                        eventType: 'SCORE_CHANGED',
+                                        round: session.round,
+                                        agentId: p.agentId,
+                                        payload: {
+                                            prior: 0,
+                                            posterior: adjustedOverall,
+                                            delta: adjustedOverall,
+                                            dimension: 'overall',
+                                        },
                                     });
                                 }
                             }

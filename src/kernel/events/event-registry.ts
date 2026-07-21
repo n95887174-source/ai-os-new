@@ -1202,6 +1202,26 @@ export const EVENT_REGISTRY = {
 
     // ── Debate (extras) ──────────────────────────────────────────────────
     DEBATE_HUMAN_VOTE: event('debate:human:vote', z.unknown()),
+
+    // ── Quality Impact ──────────────────────────────────────────────────
+    DEBATE_QUALITY_TECHNIQUE_APPLIED: event(
+        'debate:quality:technique:applied',
+        z.object({
+            sessionId: z.string(),
+            techniqueId: z.string(),
+            eventType: z.string(),
+            round: z.number(),
+            timestamp: z.number(),
+        }),
+    ),
+    DEBATE_QUALITY_IMPACT_COMPUTED: event(
+        'debate:quality:impact:computed',
+        z.object({
+            sessionId: z.string(),
+            techniqueCount: z.number(),
+            timestamp: z.number(),
+        }),
+    ),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

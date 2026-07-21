@@ -109,6 +109,7 @@ import { CognitiveIntelligenceService } from '../services/cognitive-intelligence
 import { WhatIfService } from '../services/runtime-intelligence/whatif-service';
 import { PressureMapService } from '../services/runtime-intelligence/pressure-map-service';
 import { DiagnosticService } from '../services/runtime-intelligence/diagnostic-service';
+import { QualityImpactCollector } from '../services/quality-impact-collector';
 
 /** Simple hash-based embedding for keyword overlap without an external embedding API. */
 function simpleEmbedText(text: string): Promise<Float32Array> {
@@ -165,6 +166,11 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     const debateEvaluator = new DebateEvaluator(new DpoStrategySampler());
     const debateMemoryExtractor = new DebateMemoryExtractor();
     const debateRAGRetriever = new DebateRAGRetriever({ embeddingPipeline: embedPipeline });
+
+    // QualityImpactCollector — created eagerly, registered in DI, passed to
+    // DebateEngine and DebateSyncManager for P0 MVP instrumentation.
+    const _qualityCollector = new QualityImpactCollector();
+    _container.register('qualityImpactCollector', _qualityCollector);
 
     // FactCheckService, DebatePostProcessor, DebateSyncManager — created eagerly
     // as singletons (same pattern as embedPipeline) and wired to DI.
@@ -224,6 +230,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                     import('../services/session-manager-service').SessionManagerService
                 >('sessionManagerService');
             },
+            qualityCollector: _qualityCollector,
         }),
     );
     const _humanService = new DebateHumanService(
@@ -497,6 +504,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             rhetoricalDeviceSelector: c.get<IRhetoricalDeviceSelector>('rhetoricalDeviceSelector'),
             scratchpadService: c.get<IScratchpadService>('scratchpadService'),
             blindEval: c.get<IBlindEvaluationService>('blindEval'),
+            qualityCollector: _qualityCollector,
         });
     });
 
