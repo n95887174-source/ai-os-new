@@ -53,7 +53,7 @@ export class BatchProcessorService implements ILifecycle {
     }
 
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
-        const { database } = await import('../instances');
+        const { database } = await import('../instances/core-references');
         return database;
     }
 
@@ -103,7 +103,7 @@ export class BatchProcessorService implements ILifecycle {
         const job = this.jobs.find((j) => j.id === jobId);
         if (!job) throw new Error(`Job ${jobId} not found`);
 
-        const { adapterRegistry, keyService } = await import('../instances');
+        const { adapterRegistry, keyService } = await import('../instances/core-references');
         const abortController = new AbortController();
         this.currentAbort = abortController;
 

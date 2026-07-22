@@ -3,7 +3,7 @@
  * Cron-like scheduling for agent tasks
  */
 
-import { EventBus } from '../instances';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import type { IDatabaseService } from '../types/interfaces';
@@ -44,7 +44,7 @@ export interface CronParts {
 
 export type ScheduleFrequency = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
 
-class SchedulerService {
+export class SchedulerService {
     private schedules: Map<string, Schedule> = new Map();
     private intervalId: ReturnType<typeof setInterval> | null = null;
     private checkIntervalMs = 60000; // Check every minute

@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { LayoutMode } from '../components/Layout/LayoutContext';
 import type { UserLevel } from '../types/routing';
+
+export type LayoutMode =
+    'default' | 'wide' | 'focus' | 'presentation' | 'debug' | 'mobile' | 'cinema';
 
 export interface UiPreferencesState {
     onboardingCompleted: boolean;

@@ -11,9 +11,9 @@ import { rootLogger } from '../../logger-service';
 import { logMemoryStats } from '../../../utils/memory-tracker';
 import type { DebateRole } from '../../../contracts/debate-types';
 import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
-import { useActiveDebateStore } from '../../../../stores/activeDebateStore';
+
 import { eventBus } from '../../../events/event-bus';
-import { getAllSettings } from '../../../instances';
+import { getAllSettings } from '../quality-settings-store';
 
 const LOGGER = rootLogger.child('AutoDebateService');
 import type {
@@ -152,7 +152,11 @@ export interface AutoDebateServiceDeps {
                 qualitySettings: Record<string, boolean>;
             }>,
         ) => Promise<DebateSession>;
+        clearVerdictCache?: () => void;
     };
+    activeDebateStore: import('../../../contracts/debate-store').IDebateSessionStore;
+    debateLiveStore: import('../../../contracts/debate-store').IDebateLiveStore;
+    onSessionChange: import('../../../contracts/debate-store').SessionStoreSubscriber;
 }
 
 const MAX_AUTO_DEBATE_RESULTS = 100;
@@ -246,7 +250,7 @@ export class AutoDebateService implements IAutoDebateService {
         if (signal?.aborted) return Promise.resolve(session);
         // M-4: use Zustand subscribe instead of polling to avoid race with concurrent runAutoDebate
         return new Promise((resolve) => {
-            const unsub = useActiveDebateStore.subscribe((state) => {
+            const unsub = this.deps.onSessionChange((state) => {
                 if (signal?.aborted) {
                     unsub();
                     clearTimeout(timer);
@@ -268,7 +272,7 @@ export class AutoDebateService implements IAutoDebateService {
                     resolve(structuredClone(session));
                     return;
                 }
-                const final = useActiveDebateStore.getState().session;
+                const final = this.deps.activeDebateStore.session;
                 if (final && final.id === session.id && TERMINAL_SESSION_STATUSES.has(final.status))
                     resolve(structuredClone(final));
                 else resolve(session);
@@ -400,10 +404,8 @@ export class AutoDebateService implements IAutoDebateService {
 
     async runTournament(topic: string, participantCount = 6): Promise<TournamentResult> {
         // Clear all Zustand debate store state from any previous runs
-        const { useDebateLiveStore } = await import('../../../../stores/debateLiveStore');
-        useDebateLiveStore.getState().clearAll();
-        const { useActiveDebateStore } = await import('../../../../stores/activeDebateStore');
-        useActiveDebateStore.getState().clearAll();
+        this.deps.debateLiveStore.clearAll();
+        this.deps.activeDebateStore.clearAll();
 
         const start = Date.now();
         const allParticipants = this.createParticipants(participantCount);
@@ -469,14 +471,9 @@ export class AutoDebateService implements IAutoDebateService {
                 );
 
                 // Clean up store data + verdict cache to prevent memory leak
-                (
-                    this.deps.debateService as { clearVerdictCache?: () => void }
-                ).clearVerdictCache?.();
-                const { useDebateLiveStore } = await import('../../../../stores/debateLiveStore');
-                useDebateLiveStore.getState().clearSession(session.id);
-                const { useActiveDebateStore } =
-                    await import('../../../../stores/activeDebateStore');
-                useActiveDebateStore.getState().clearAll();
+                this.deps.debateService.clearVerdictCache?.();
+                this.deps.debateLiveStore.clearSession(session.id);
+                this.deps.activeDebateStore.clearAll();
 
                 const proArgs = session.arguments.filter(
                     (a) =>
@@ -547,7 +544,7 @@ export class AutoDebateService implements IAutoDebateService {
                     durationMs: Date.now() - pairStart,
                 });
             }
-            const liveState = useDebateLiveStore.getState();
+            const liveState = this.deps.debateLiveStore;
             const streamingMapsSize =
                 liveState.streamingContent.size +
                 liveState.emotions.size +
@@ -567,7 +564,7 @@ export class AutoDebateService implements IAutoDebateService {
                 liveStoreAgentEvents: liveState.agentEvents.length,
                 liveStoreRoundEvents: liveState.roundEvents.length,
                 liveStoreStreamingMaps: streamingMapsSize,
-                activeDebateSession: useActiveDebateStore.getState().session ? 1 : 0,
+                activeDebateSession: this.deps.activeDebateStore.session ? 1 : 0,
             });
         }
 

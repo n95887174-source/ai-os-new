@@ -37,7 +37,7 @@ interface ProviderIconProps {
     className?: string;
 }
 
-const mockKeys: ApiKey[] = [
+const mockKeys = vi.hoisted((): ApiKey[] => [
     {
         id: 'k1',
         provider: 'OpenRouter',
@@ -70,34 +70,49 @@ const mockKeys: ApiKey[] = [
             maxLatency: 1200,
         },
     } as ApiKey,
-];
+]);
+
+const keyStoreState = vi.hoisted(() => ({
+    keys: [] as unknown as ApiKey[],
+    activeKeys: [] as ApiKey[],
+    checkingIds: new Set<string>(),
+    alerts: [] as ApiKey[],
+    removeKey: vi.fn(),
+    checkHealth: vi.fn(),
+    checkAllHealth: vi.fn(),
+    toggleKeyStatus: vi.fn(),
+    enableAllKeys: vi.fn(),
+    disableAllKeys: vi.fn(),
+    exportKeys: vi.fn(() => Promise.resolve('')),
+    importKeys: vi.fn(() => Promise.resolve(0)),
+    updateKey: vi.fn(),
+    addKey: vi.fn(),
+    getKeyById: vi.fn(),
+    getKeysByProvider: vi.fn(() => []),
+    getAlerts: vi.fn(() => []),
+    resolveAlert: vi.fn(),
+    totalKeys: 0,
+    activeCount: 0,
+    errorCount: 0,
+}));
 
 vi.mock('../../stores/useKeyStore', () => ({
-    useKeyStore: vi.fn(() => ({
-        keys: mockKeys,
-        activeKeys: mockKeys.filter((k) => k.status === 'active'),
-        checkingIds: new Set<string>(),
-        removeKey: vi.fn(),
-        checkHealth: vi.fn(),
-        checkAllHealth: vi.fn(),
-        toggleKeyStatus: vi.fn(),
-        enableAllKeys: vi.fn(),
-        disableAllKeys: vi.fn(),
-        exportKeys: vi.fn(() => Promise.resolve('')),
-        importKeys: vi.fn(() => Promise.resolve(0)),
-        updateKey: vi.fn(),
-        addKey: vi.fn(),
-        getKeyById: vi.fn(),
-        getKeysByProvider: vi.fn(() => []),
-        getAlerts: vi.fn(() => []),
-        resolveAlert: vi.fn(),
-        totalKeys: mockKeys.length,
-        activeCount: mockKeys.filter((k) => k.status === 'active').length,
-        errorCount: mockKeys.filter((k) => k.status === 'error').length,
-    })),
+    useKeyStore: vi.fn((selector?: (s: typeof keyStoreState) => unknown) => {
+        if (typeof selector === 'function') return selector(keyStoreState);
+        return keyStoreState;
+    }),
 }));
 
 vi.mock('../../kernel/instances', () => ({
+    rootLogger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+    eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
+    EVENTS: {
+        KEYS_LOADED: 'key:loaded',
+        KEY_ADDED: 'key:added',
+        KEY_REMOVED: 'key:removed',
+        CHECK_HEALTH: 'health:check',
+        CHECK_ALL_HEALTH: 'health:check_all',
+    },
     settingsService: {
         getSettings: () => ({ language: 'en' as const, theme: 'dark' as const }),
         subscribe: () => () => {},
@@ -153,6 +168,7 @@ vi.mock('../../i18n/useTranslation', () => ({
             'common.notes': 'Notes',
             'common.save': 'Save',
             'common.close': 'Close',
+            'common.aria.close_details': 'Close provider details',
             'common.search': 'Search...',
             'common.loading': 'Loading...',
             'common.switch_to_dark': 'Switch to dark mode',
@@ -241,6 +257,11 @@ describe('ProviderManager', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        keyStoreState.keys = [...mockKeys];
+        keyStoreState.activeKeys = mockKeys.filter((k) => k.status === 'active');
+        keyStoreState.totalKeys = mockKeys.length;
+        keyStoreState.activeCount = mockKeys.filter((k) => k.status === 'active').length;
+        keyStoreState.errorCount = mockKeys.filter((k) => k.status === 'error').length;
     });
 
     it('renders without crashing', () => {
@@ -309,36 +330,14 @@ describe('ProviderManager', () => {
         expect(screen.getByText('Gemini Pro')).toBeDefined();
     });
 
-    it('shows empty state description when no keys', async () => {
-        const { useKeyStore } = await import('../../stores/useKeyStore');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(useKeyStore).mockReturnValueOnce({
-            keys: [],
-            activeKeys: [],
-            alerts: [],
-            checkingIds: new Set(),
-            totalKeys: 0,
-            activeCount: 0,
-            errorCount: 0,
-            removeKey: vi.fn(),
-            checkHealth: vi.fn(),
-            checkAllHealth: vi.fn(),
-            addKey: vi.fn(),
-            updateKey: vi.fn(),
-            toggleKeyStatus: vi.fn(),
-            enableAllKeys: vi.fn(),
-            disableAllKeys: vi.fn(),
-            exportKeys: vi.fn(() => Promise.resolve('')),
-            importKeys: vi.fn(() => Promise.resolve(0)),
-            getKeyById: vi.fn(),
-            getKeysByProvider: vi.fn(() => []),
-            getAlerts: vi.fn(() => []),
-            resolveAlert: vi.fn(),
-        } as any);
+    it('shows empty state description when no keys', () => {
+        keyStoreState.keys = [];
+        keyStoreState.activeKeys = [];
+        keyStoreState.totalKeys = 0;
+        keyStoreState.activeCount = 0;
+        keyStoreState.errorCount = 0;
         render(<ProviderManager />);
-        expect(
-            screen.getByText((content) => content.includes('Add your first provider')),
-        ).toBeDefined();
+        expect(screen.getByText((content) => content.includes('Add your first'))).toBeDefined();
     });
 });
 

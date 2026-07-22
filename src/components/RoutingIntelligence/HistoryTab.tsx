@@ -1,5 +1,5 @@
 import { ArrowRight, Info, TrendingUp, Zap, DollarSign, Shield } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { DonutChart } from '../shared/charts/DonutChart';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { RouterDecision } from '../../kernel/instances';
 import { STRATEGY_LABELS, providerColor, scoreBreakdown, getExplanation } from './routing-utils';
@@ -70,44 +70,17 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                 >
                                     Provider Distribution
                                 </div>
-                                <ResponsiveContainer width="100%" height={160}>
-                                    <PieChart>
-                                        <Pie
-                                            data={chartData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={40}
-                                            outerRadius={65}
-                                            dataKey="value"
-                                            paddingAngle={3}
-                                        >
-                                            {chartData.map((entry, idx) => (
-                                                <Cell
-                                                    key={idx}
-                                                    fill={entry.color}
-                                                    stroke="rgba(0,0,0,0.3)"
-                                                    strokeWidth={1}
-                                                />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{
-                                                background: '#1e293b',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                borderRadius: 8,
-                                                fontSize: '0.75rem',
-                                            }}
-                                            labelStyle={{ color: '#94a3b8' }}
-                                            formatter={(value, name) => {
-                                                const v = typeof value === 'number' ? value : 0;
-                                                return [
-                                                    `${v} (${Math.round((v / decisions.length) * 100)}%)`,
-                                                    name,
-                                                ];
-                                            }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                <DonutChart
+                                    data={chartData}
+                                    width={200}
+                                    height={160}
+                                    innerRadius={40}
+                                    outerRadius={65}
+                                    formatter={(value, name) => [
+                                        `${value} (${Math.round((value / decisions.length) * 100)}%)`,
+                                        name,
+                                    ]}
+                                />
                                 <div
                                     style={{
                                         display: 'flex',

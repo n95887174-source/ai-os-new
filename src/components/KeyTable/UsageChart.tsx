@@ -1,16 +1,5 @@
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    RadarChart,
-    PolarGrid,
-    PolarAngleAxis,
-    PolarRadiusAxis,
-    Radar,
-} from 'recharts';
+import { BarChart } from '../shared/charts/BarChart';
+import { RadarChart } from '../shared/charts/RadarChart';
 import { motion } from 'framer-motion';
 import { formatCost } from '../../shared/utils/format-cost';
 
@@ -64,28 +53,14 @@ const UsageChart: React.FC<UsageChartProps> = ({
                     >
                         Hourly Requests (today)
                     </h4>
-                    <ResponsiveContainer width="100%" height={180}>
-                        <BarChart data={hourlyData}>
-                            <XAxis
-                                dataKey="hour"
-                                tick={{ fill: '#64748b', fontSize: 10 }}
-                                axisLine={false}
-                                tickLine={false}
-                                interval={2}
-                            />
-                            <YAxis hide />
-                            <Tooltip
-                                contentStyle={{
-                                    background: '#1e293b',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: 8,
-                                    fontSize: '0.8rem',
-                                }}
-                                labelStyle={{ color: '#94a3b8' }}
-                            />
-                            <Bar dataKey="requests" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <BarChart
+                        data={hourlyData}
+                        dataKey="requests"
+                        xKey="hour"
+                        color="#3b82f6"
+                        height={180}
+                        barRadius={3}
+                    />
                 </div>
             )}
 
@@ -207,18 +182,15 @@ const UsageChart: React.FC<UsageChartProps> = ({
                 >
                     Four Signals
                 </h4>
-                <ResponsiveContainer width="100%" height={200}>
-                    <RadarChart data={signalData}>
-                        <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                        <PolarAngleAxis dataKey="signal" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                        <PolarRadiusAxis
-                            angle={30}
-                            domain={[0, 1]}
-                            tick={{ fill: '#64748b', fontSize: 10 }}
-                        />
-                        <Radar dataKey="value" stroke="#a855f7" fill="#a855f7" fillOpacity={0.2} />
-                    </RadarChart>
-                </ResponsiveContainer>
+                <RadarChart
+                    data={signalData}
+                    height={200}
+                    stroke="#a855f7"
+                    fill="#a855f7"
+                    fillOpacity={0.2}
+                    gridColor="rgba(255,255,255,0.1)"
+                    tickColor="#94a3b8"
+                />
             </div>
         </motion.div>
     );

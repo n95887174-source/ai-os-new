@@ -182,8 +182,9 @@ export type {
     DebateInterpretation,
     ParentResolution,
     HumanVote,
-    DebateServiceDeps,
 } from './debate-types';
+
+export type { DebateServiceDeps } from './debate-service-deps';
 
 export type {
     CognitiveMetricsSnapshot,

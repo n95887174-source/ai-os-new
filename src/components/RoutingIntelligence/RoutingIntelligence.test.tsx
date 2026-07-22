@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-vi.mock('../../kernel/events/event-bus', () => ({
+vi.mock('../../kernel/instances', () => ({
     eventBus: {
         emit: vi.fn(),
         on: vi.fn(() => vi.fn()),
@@ -14,9 +14,6 @@ vi.mock('../../kernel/events/event-bus', () => ({
         SETTINGS_UPDATED: 'settings:updated',
         ROUTER_SIGNAL: 'router:signal',
     },
-}));
-
-vi.mock('../../kernel/instances', () => ({
     routerService: {
         getDecisionHistory: vi.fn(() => []),
         getRawConfig: vi.fn(() => ({

@@ -19,7 +19,7 @@ let _overrideCache: Partial<Record<PromptRole, string>> | null = null;
 async function db(): Promise<import('../types/interfaces').IDatabaseService> {
     if (!_db)
         _db = (async () => {
-            const { database } = await import('../instances');
+            const { database } = await import('../instances/core-references');
             return database;
         })();
     return _db;

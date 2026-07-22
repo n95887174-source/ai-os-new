@@ -42,7 +42,7 @@ export type ConfigOverlays = {
     services?: Partial<ServicesConfigSection>;
 };
 
-function deepMerge<T>(target: T, source?: Partial<T>, depth = 0): T {
+export function deepMerge<T>(target: T, source?: Partial<T>, depth = 0): T {
     if (!source) return target;
     if (depth > 10) return { ...target, ...source } as T;
     const result = { ...target } as Record<string, unknown>;

@@ -89,9 +89,6 @@ vi.mock('../../kernel/instances', () => ({
         getSettings: vi.fn(() => ({ language: 'en' })),
         subscribe: vi.fn(() => () => {}),
     },
-}));
-
-vi.mock('../../kernel/events/event-bus', () => ({
     eventBus: {
         emit: vi.fn(),
         on: vi.fn(() => vi.fn()),

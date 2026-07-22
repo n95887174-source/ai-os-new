@@ -15,9 +15,36 @@ const mockSettings = {
     slaMode: 'BALANCED' as const,
 };
 
+const mockCONFIG = {
+    buildId: 'dev',
+    featureFlags: {
+        memory: { enabled: true, semantic: true, ragOnChat: true, autoStore: true },
+        debate: { runtimeEngine: true, engineOnly: false },
+        ui: { experimentalVisuals: false },
+    },
+    monitoring: {
+        latencyPenalty: { divisor: 2, cap: 5000, thresholdMs: 1000 },
+        errorRatePenalty: { multiplier: 2, cap: 0.5, threshold: 0.1 },
+        successRatePenalty: { multiplier: 2, floor: 0.5 },
+        alertPenalty: { perAlert: 5, cap: 50 },
+        healthCheckStaleIntervalMs: 30000,
+        healthThresholds: { healthy: 0.9, degraded: 0.5 },
+    },
+    webhooks: {
+        maxRetries: 3,
+        retryDelayMs: 1000,
+        timeoutMs: 5000,
+        discordContentMaxLength: 2000,
+        discordEmbedDescMaxLength: 4096,
+        providers: ['slack', 'telegram', 'discord'],
+        eventOptions: ['key:added', 'key:removed', 'key:health:check:failed'],
+    },
+};
+
 vi.mock('../../kernel/instances', () => ({
     eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
     EVENTS: { NOTIFICATION: 'notification' },
+    CONFIG: mockCONFIG,
     settingsService: {
         getSettings: vi.fn(() => ({
             ...mockSettings,

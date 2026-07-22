@@ -10,5 +10,3 @@ export const NAV_SECTIONS: NavSection[] = [
     ...SYSTEM_SECTIONS,
     ...CONTENT_SECTIONS,
 ];
-
-export { AppRoutes } from './routes';

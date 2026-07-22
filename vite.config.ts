@@ -57,9 +57,6 @@ export default defineConfig({
                         ) {
                             return 'vendor-react';
                         }
-                        if (id.includes('recharts')) {
-                            return 'vendor-charts';
-                        }
                         if (id.includes('@xyflow')) {
                             return 'vendor-xyflow';
                         }
@@ -95,6 +92,14 @@ export default defineConfig({
                         if (id.includes('dompurify')) {
                             return 'vendor-dompurify';
                         }
+                        return; // keep other node_modules in the entry chunk
+                    }
+                    // ── Source code splitting ──
+                    if (id.includes('src/kernel/services/debate-runtime/')) {
+                        return 'kernel-debate';
+                    }
+                    if (id.includes('src/llm/')) {
+                        return 'kernel-llm';
                     }
                 },
             },

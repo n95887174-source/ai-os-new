@@ -5,7 +5,7 @@ const mockOn = vi.fn(() => vi.fn()) as unknown as (...args: unknown[]) => Return
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockGetAlerts = vi.fn(() => [] as any[]);
 
-vi.mock('../../kernel/events/event-bus', () => ({
+vi.mock('../../kernel/instances', () => ({
     eventBus: {
         emit: vi.fn(),
         on: (...args: unknown[]) => mockOn(...args),
@@ -23,9 +23,6 @@ vi.mock('../../kernel/events/event-bus', () => ({
         KEY_UPDATED: 'key:updated',
         METRICS_ALERT: 'observability:metrics:alert',
     },
-}));
-
-vi.mock('../../kernel/instances', () => ({
     keyService: {
         getAlerts: () => mockGetAlerts(),
     },

@@ -63,7 +63,7 @@ export class WorkflowService implements ILifecycle {
     }
 
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
-        const { database } = await import('../instances');
+        const { database } = await import('../instances/core-references');
         return database;
     }
 
@@ -162,7 +162,7 @@ export class WorkflowService implements ILifecycle {
             BUILT_IN_WORKFLOWS.find((w) => w.id === workflowId);
         if (!wf) throw new Error(`Workflow ${workflowId} not found`);
 
-        const { adapterRegistry, keyService } = await import('../instances');
+        const { adapterRegistry, keyService } = await import('../instances/core-references');
         const abortController = new AbortController();
 
         const run: WorkflowRun = {

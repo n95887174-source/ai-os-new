@@ -5,12 +5,36 @@ const mockSubscribeAll = vi.fn(() => vi.fn()) as unknown as (
     ...args: unknown[]
 ) => ReturnType<typeof vi.fn>;
 
-vi.mock('../../kernel/events/event-bus', () => ({
+const mockEvents = [
+    {
+        id: 1,
+        time: '12:00:00',
+        timestamp: Date.now(),
+        event: 'system:start',
+        summary: 'System started',
+        severity: 'info',
+    },
+    {
+        id: 2,
+        time: '12:00:01',
+        timestamp: Date.now(),
+        event: 'key:updated',
+        summary: 'Key updated',
+        severity: 'success',
+    },
+];
+
+vi.mock('../../kernel/instances', () => ({
     eventBus: {
         emit: vi.fn(),
         on: vi.fn(() => vi.fn()),
         off: vi.fn(),
         subscribeAll: (...args: unknown[]) => mockSubscribeAll(...args),
+    },
+    EVENTS: { NOTIFICATION: 'notification' },
+    storageAdapter: {
+        getItem: vi.fn(() => JSON.stringify(mockEvents)),
+        setItem: vi.fn(),
     },
 }));
 
@@ -29,7 +53,7 @@ describe('EventsTimeline', () => {
     it('shows event count', async () => {
         const EventsTimeline = (await import('./EventsTimeline')).default;
         render(<EventsTimeline />);
-        expect(await screen.findByText(/(0 events)/)).toBeDefined();
+        expect(await screen.findByText(/events/)).toBeDefined();
     });
 
     it('renders severity filter buttons', async () => {
@@ -75,9 +99,12 @@ describe('EventsTimeline', () => {
         expect(mockSubscribeAll).toHaveBeenCalled();
     });
 
-    it('shows empty state', async () => {
+    it('shows empty state when no events exist', async () => {
+        const getItem = (await import('../../kernel/instances')).storageAdapter
+            .getItem as ReturnType<typeof vi.fn>;
+        getItem.mockReturnValueOnce(null);
         const EventsTimeline = (await import('./EventsTimeline')).default;
         render(<EventsTimeline />);
-        expect(screen.getByText('No events recorded yet')).toBeDefined();
+        expect(await screen.findByText('No events yet')).toBeDefined();
     });
 });

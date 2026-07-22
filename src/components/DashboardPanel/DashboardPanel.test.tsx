@@ -1,27 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
+const mockKeyStoreState = {
+    keys: [
+        {
+            id: '1',
+            provider: 'OpenRouter',
+            label: 'Main',
+            status: 'active',
+            latency: 120,
+            stats: { successCount: 50 },
+        },
+        {
+            id: '2',
+            provider: 'Groq',
+            label: 'Cloud',
+            status: 'inactive',
+            stats: { successCount: 0 },
+        },
+    ],
+    checkAllHealth: vi.fn(),
+};
+
 vi.mock('../../stores/useKeyStore', () => ({
-    useKeyStore: () => ({
-        keys: [
-            {
-                id: '1',
-                provider: 'OpenRouter',
-                label: 'Main',
-                status: 'active',
-                latency: 120,
-                stats: { successCount: 50 },
-            },
-            {
-                id: '2',
-                provider: 'Groq',
-                label: 'Cloud',
-                status: 'inactive',
-                stats: { successCount: 0 },
-            },
-        ],
-        checkAllHealth: vi.fn(),
-    }),
+    useKeyStore: (selector?: (s: typeof mockKeyStoreState) => unknown) =>
+        selector ? selector(mockKeyStoreState) : mockKeyStoreState,
 }));
 
 vi.mock('../../core/Kernel', () => ({
@@ -126,6 +129,39 @@ vi.mock('../../i18n/useTranslation', () => ({
 }));
 
 vi.mock('../../kernel/instances', () => ({
+    eventBus: {
+        emit: vi.fn(),
+        on: vi.fn(() => vi.fn()),
+        onSafe: vi.fn(() => vi.fn()),
+        off: vi.fn(),
+        subscribeAll: vi.fn(() => vi.fn()),
+    },
+    EVENTS: {
+        NOTIFICATION: 'system:notification',
+        KERNEL_UPDATED: 'kernel:updated',
+        COGNITIVE_TRACE_UPDATED: 'cognitive:trace:updated',
+        SYSTEM_HEALTH_CHANGED: 'system:health:changed',
+    },
+    kernel: {
+        getState: vi.fn(() => ({
+            providers: {
+                openrouter: { id: 'OpenRouter', avgTTFT: 120, avgTPS: 30, reliability: 0.95 },
+            },
+            weights: {
+                base: { ttft: 0.4, tps: 0.2, reliability: 0.4 },
+                adaptiveDelta: { ttft: 0, tps: 0, reliability: 0 },
+                effective: { ttft: 0.4, tps: 0.2, reliability: 0.4 },
+            },
+            decisions: [],
+            totalRequests: 100,
+            totalTokens: 5000,
+            estimatedCost: 0.05,
+            explorationFactor: 0.1,
+            history: [],
+            violations: [],
+            activeSLA: 'BALANCED',
+        })),
+    },
     pricingService: {
         getBudgetInfo: vi.fn(() => ({ spentThisMonth: 0.05 })),
     },
@@ -162,7 +198,7 @@ vi.mock('../../kernel/instances', () => ({
             { id: 't2', startTime: Date.now() - 2000, totalTokens: 200 },
         ]),
     },
-    debateWorkspace: {
+    debateEngine: {
         init: vi.fn(() => Promise.resolve()),
         createRoom: vi.fn(() => Promise.resolve('room-1')),
         closeRoom: vi.fn(() => Promise.resolve()),

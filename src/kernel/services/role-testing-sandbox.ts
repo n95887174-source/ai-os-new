@@ -7,7 +7,7 @@ import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
 import { sanitizePromptVar } from '../../shared/utils/sanitize';
-import { EventBus } from '../instances';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 const MAX_RESULTS = 500; // B10-143: Cap results to prevent unbounded growth
 
@@ -53,7 +53,7 @@ export class RoleTestingSandboxService {
     private llmClient: ILLMClientService;
     private _initialized = false;
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
-        const { database } = await import('../instances');
+        const { database } = await import('../instances/core-references');
         return database;
     }
 

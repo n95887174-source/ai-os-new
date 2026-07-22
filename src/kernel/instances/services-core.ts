@@ -1,6 +1,5 @@
 import { lazyService } from '../service-helper';
 import type { SettingsService } from '../services/settings-service';
-import type { KeyService } from '../services/key-management/key-service';
 import type { IMemoryEngine } from '../contracts/memory';
 import type { MCPService } from '../services/mcp-service';
 import type { RouterService } from '../services/provider-router';
@@ -32,9 +31,7 @@ import type { WorkspaceService } from '../services/workspace-service';
 import type { KeyStateStore } from '../services/key-state-store';
 import type { ProbeService } from '../services/probe-service';
 import type { SessionAffinityStore } from '../services/session-affinity-store';
-import type { IAdapterRegistry } from '../contracts/provider-adapter';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
-import type { IDatabaseService } from '../types/interfaces';
 import type { MemoryOrchestrator } from '../services/memory-orchestrator';
 import type { IEvalDatasetService } from '../contracts/eval-dataset';
 import type { ICustomMetricsService } from '../contracts/custom-metrics';
@@ -44,6 +41,8 @@ import type { IRoleTeamService } from '../contracts/role-team';
 import type { ChatService } from '../services/chat-service';
 import type { AutoDebateService as AutoDebateServiceType } from '../services/debate-runtime/auto-debate/auto-debate-service';
 
+export { database, keyService, adapterRegistry } from './core-references';
+
 export const settingsService = lazyService<SettingsService>('settingsService', {
     getSettings: () => ({
         theme: 'dark',
@@ -52,18 +51,6 @@ export const settingsService = lazyService<SettingsService>('settingsService', {
         themeConfig: { mode: 'dark', primaryColor: '#3b82f6' },
     }),
     subscribe: () => () => {},
-});
-
-export const keyService = lazyService<KeyService>('keyService', {
-    getKeys: () => [],
-    getAlerts: () => [],
-    getPools: () => [],
-    getFreeTierLimits: () => ({}),
-    getPoolStrategy: () => 'round-robin' as const,
-    getPoolKeyDistribution: () => [],
-    verifyKey: async () => false,
-    detectProvider: () => null,
-    getRoutingPolicy: () => ({ globalSLAMode: 'BALANCED' as const, latencyThreshold: 1500 }),
 });
 
 export const memoryService = lazyService<IMemoryEngine>('memoryService');
@@ -82,13 +69,11 @@ export const advisorService = lazyService<AdvisorService>('advisorService');
 export const pressureMapService = lazyService<PressureMapService>('pressureMapService');
 export const debateService = lazyService<DebateService>('debateService');
 export const chatService = lazyService<ChatService>('chatService');
-export const adapterRegistry = lazyService<IAdapterRegistry>('providerAdapterRegistry');
 export const autoDebateService = lazyService<AutoDebateServiceType>('autoDebateService');
 export const workspaceService = lazyService<WorkspaceService>('workspaceService');
 export const keyStateStore = lazyService<KeyStateStore>('keyStateStore');
 export const probeService = lazyService<ProbeService>('probeService');
 export const executionGovernor = lazyService<IExecutionGovernor>('executionGovernor');
-export const database = lazyService<IDatabaseService>('database');
 export const memoryOrchestrator = lazyService<MemoryOrchestrator>('memoryOrchestrator');
 export const evalDatasetService = lazyService<IEvalDatasetService>('evalDatasetService');
 export const customMetricsService = lazyService<ICustomMetricsService>('customMetricsService');

@@ -40,6 +40,9 @@ import { ChatService } from '../services/chat-service';
 import { WorkspaceService } from '../services/workspace-service';
 import { ProbeService } from '../services/probe-service';
 import { AutoDebateService } from '../services/debate-runtime/auto-debate/auto-debate-service';
+import { createDebateSessionStoreAdapter } from '../../stores/activeDebateStore';
+import { createDebateLiveStoreAdapter } from '../../stores/debateLiveStore';
+import { useActiveDebateStore } from '../../stores/activeDebateStore';
 import { EventRecorder } from '../services/event-sourcing/event-recorder';
 import { NotificationWebhookService } from '../services/notification-webhook-service';
 import { CompromiseWebhookService } from '../services/compromise-webhook-service';
@@ -173,7 +176,12 @@ export const registerPhase6: Phase = (helpers, ctx) => {
                                 maxRounds,
                                 config as Parameters<DebateService['startDebate']>[4],
                             ),
+                    clearVerdictCache: () =>
+                        c.get<DebateService>('debateService').clearVerdictCache(),
                 },
+                activeDebateStore: createDebateSessionStoreAdapter(),
+                debateLiveStore: createDebateLiveStoreAdapter(),
+                onSessionChange: (listener) => useActiveDebateStore.subscribe(listener),
             }),
     );
 

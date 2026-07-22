@@ -1,4 +1,5 @@
-import type { DebateParticipant, DebateServiceDeps } from '../../contracts/debate-types';
+import type { DebateParticipant } from '../../contracts/debate-types';
+import type { DebateServiceDeps } from '../../contracts/debate-service-deps';
 
 export function checkDebatePreflight(
     deps: DebateServiceDeps,

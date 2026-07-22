@@ -41,7 +41,7 @@ vi.mock('../../i18n/useTranslation', () => ({
     }),
 }));
 
-vi.mock('../../kernel/kernel', () => ({
+vi.mock('../../kernel/instances', () => ({
     kernel: {
         getState: vi.fn(() => ({
             providers: {
@@ -95,6 +95,10 @@ vi.mock('../../kernel/kernel', () => ({
             activeSLA: 'BALANCED',
         })),
     },
+    cacheService: { getStats: vi.fn(() => ({ hits: 0, misses: 0, ratio: 0 })) },
+    providerTracker: { getHealthEvents: vi.fn(() => []) },
+    eventBus: { on: vi.fn(() => vi.fn()), emit: vi.fn(), off: vi.fn() },
+    EVENTS: { KERNEL_UPDATED: 'kernel:updated', NOTIFICATION: 'notification' },
 }));
 
 describe('AnalyticsPanel', () => {

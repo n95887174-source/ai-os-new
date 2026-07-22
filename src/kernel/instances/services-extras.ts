@@ -55,7 +55,6 @@ import type { ISmartRoutingService } from '../contracts/smart-routing';
 import type { INvidiaEnterpriseService } from '../contracts/nvidia-enterprise';
 import type { IGeminiCacheService } from '../contracts/gemini-cache';
 import type { IProviderAchievementService } from '../contracts/provider-achievements';
-import type { IPromptSecurityService } from '../contracts/prompt-security-types';
 import type { GoogleGenAIService as GoogleGenAIServiceType } from '../services/google-genai-service';
 import type { WorkflowService as WorkflowServiceType } from '../services/workflow-service';
 import type { SourceAdapterRegistry as SourceAdapterRegistryType } from '../services/research-adapters/source-adapter-registry';
@@ -159,7 +158,7 @@ export const geminiCacheService = lazyService<IGeminiCacheService>('geminiCacheS
 export const providerAchievementService = lazyService<IProviderAchievementService>(
     'providerAchievementService',
 );
-export const promptSecurityService = lazyService<IPromptSecurityService>('promptSecurityService');
+export { promptSecurityService } from './extra-references';
 export const googleGenAIService = lazyService<GoogleGenAIServiceType>('googleGenAIService');
 export const workflowService = lazyService<WorkflowServiceType>('workflowService');
 export const sourceAdapterRegistry =

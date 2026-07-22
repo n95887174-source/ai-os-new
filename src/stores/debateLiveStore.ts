@@ -7,6 +7,41 @@ const MAX_AGENT_EVENTS = 500;
 const MAX_ROUND_EVENTS = 200;
 const MAX_EMOTIONS = 200;
 const METRICS_INTERVAL_MS = 30_000;
+import type { IDebateLiveStore } from '../kernel/contracts/debate-store';
+
+export type { IDebateLiveStore };
+
+export function createDebateLiveStoreAdapter(): IDebateLiveStore {
+    return {
+        get streamingContent() {
+            return useDebateLiveStore.getState().streamingContent;
+        },
+        get emotions() {
+            return useDebateLiveStore.getState().emotions;
+        },
+        get agentCountdowns() {
+            return useDebateLiveStore.getState().agentCountdowns;
+        },
+        get agentAddressing() {
+            return useDebateLiveStore.getState().agentAddressing;
+        },
+        get memoryBubbles() {
+            return useDebateLiveStore.getState().memoryBubbles;
+        },
+        get currentThinking() {
+            return useDebateLiveStore.getState().currentThinking;
+        },
+        get agentEvents() {
+            return useDebateLiveStore.getState().agentEvents;
+        },
+        get roundEvents() {
+            return useDebateLiveStore.getState().roundEvents;
+        },
+        clearSession: (sessionId) => useDebateLiveStore.getState().clearSession(sessionId),
+        clearAll: () => useDebateLiveStore.getState().clearAll(),
+    };
+}
+
 export interface DebateAgentEvent {
     sessionId: string;
     agentId: string;

@@ -1,4 +1,4 @@
-import type { TournamentBracket, TournamentMatch } from './TournamentBracketView';
+import type { TournamentBracket, TournamentMatch } from './tournament-types';
 
 export function generateBracket(topics: string[], participantPool: string[]): TournamentBracket {
     const count = topics.length;

@@ -51,18 +51,17 @@ vi.mock('../../kernel/instances', () => ({
         getSettings: vi.fn(() => ({ language: 'en' })),
         subscribe: vi.fn(() => vi.fn()),
     },
-}));
-
-vi.mock('./CognitiveMicroscope', () => ({ default: () => <div>Microscope</div> }));
-vi.mock('./DecisionGraph', () => ({ default: () => <div>Graph</div> }));
-vi.mock('../../kernel/events/event-bus', () => ({
     eventBus: {
         emit: vi.fn(),
         on: vi.fn(() => vi.fn()),
         off: vi.fn(),
         onSafe: vi.fn(() => vi.fn()),
     },
+    EVENTS: { NOTIFICATION: 'notification' },
 }));
+
+vi.mock('./CognitiveMicroscope', () => ({ default: () => <div>Microscope</div> }));
+vi.mock('./DecisionGraph', () => ({ default: () => <div>Graph</div> }));
 
 vi.mock('../../i18n/useTranslation', () => {
     const translations: Record<string, string> = {

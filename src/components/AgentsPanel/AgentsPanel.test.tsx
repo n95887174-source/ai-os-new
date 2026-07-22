@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AgentsPanel from './AgentsPanel';
 
-const mockTools = [
+const mockTools = vi.hoisted(() => [
     { id: 'web_search', name: 'Web Search', description: 'Search the web' },
     { id: 'summarize', name: 'Summarize', description: 'Summarize content' },
     { id: 'code_review', name: 'Code Review', description: 'Review code' },
-];
+]);
 
-const mockRoles = [
+const mockRoles = vi.hoisted(() => [
     {
         id: 'role-1',
         name: 'Researcher',
@@ -16,9 +16,9 @@ const mockRoles = [
         capabilities: ['web_search'],
         baseTemperature: 0.3,
     },
-];
+]);
 
-const TOPO = {
+const TOPO = vi.hoisted(() => ({
     id: 'topo-1',
     version: '1.0',
     name: 'Test Topo',
@@ -52,7 +52,7 @@ const TOPO = {
     ],
     edges: [],
     policies: [],
-};
+}));
 
 vi.mock('../../i18n/useTranslation', () => ({
     useTranslation: () => ({
@@ -89,6 +89,8 @@ vi.mock('../../i18n/useTranslation', () => ({
                 'agents.tab_permissions': 'Permissions',
                 'agents.tab_handoffs': 'Handoffs',
                 'agents.tab_history': 'History',
+                'common.aria.grid_view': 'Grid view',
+                'common.aria.list_view': 'List view',
             };
             return labels[key] || key;
         },
@@ -121,11 +123,17 @@ vi.mock('../../kernel/events/event-bus', () => ({
     },
 }));
 
-vi.mock('../../stores/useKeyStore', () => ({
-    useKeyStore: () => ({
+vi.mock('../../stores/useKeyStore', () => {
+    const state = {
         keys: [{ id: 'key-1', status: 'active', provider: 'openai', availableModels: ['gpt-4'] }],
-    }),
-}));
+    };
+    return {
+        useKeyStore: vi.fn((selector?: (s: typeof state) => unknown) => {
+            if (typeof selector === 'function') return selector(state);
+            return state;
+        }),
+    };
+});
 
 vi.mock('../../kernel/instances', () => ({
     toolService: { getTools: vi.fn(() => mockTools) },
@@ -223,11 +231,21 @@ vi.mock('../../kernel/instances', () => ({
     },
     eventBus: {
         emit: vi.fn(),
-        on: vi.fn(() => vi.fn()),
+        on: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
+            if (event === 'system:topology:mounted') {
+                setTimeout(() => cb(TOPO), 0);
+            }
+            return vi.fn();
+        }),
         onSafe: vi.fn(() => vi.fn()),
         off: vi.fn(),
     },
-    EVENTS: { NOTIFICATION: 'notification' },
+    EVENTS: {
+        COGNITIVE_STEP_COMPLETED: 'cognitive:step:completed',
+        SYSTEM_TOPOLOGY_MOUNTED: 'system:topology:mounted',
+        NAVIGATE: 'system:navigate',
+        NOTIFICATION: 'notification',
+    },
 }));
 
 async function waitForAgentCards() {

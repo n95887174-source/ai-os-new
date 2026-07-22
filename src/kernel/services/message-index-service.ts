@@ -1,4 +1,5 @@
-import { eventBus, EVENTS } from '../instances';
+import { eventBus } from '../events/event-bus';
+import { EVENTS } from '../events/event-names';
 import type { ILogger } from '../contracts/logger';
 
 export interface IndexedMessage {
@@ -49,7 +50,7 @@ export class MessageIndexService {
     private _initialized = false;
 
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
-        const { database } = await import('../instances');
+        const { database } = await import('../instances/services-core');
         return database;
     }
 

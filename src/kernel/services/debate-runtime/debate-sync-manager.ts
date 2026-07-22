@@ -7,13 +7,13 @@ import type {
     DebateParticipant,
     DebateConfig,
     DebateSession,
-    DebateServiceDeps,
     DebateStrategy,
     DebateVerdict,
     VerdictKeyArgument,
     ConclusionType,
     StanceResult,
 } from '../../contracts/debate-types';
+import type { DebateServiceDeps } from '../../contracts/debate-service-deps';
 import type { IDebateEngine, DebateTopology } from '../../contracts/debate-runtime';
 import { rootLogger } from '../logger-service';
 import { DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
@@ -28,8 +28,7 @@ import { loadActiveSession } from './debate-session-persistence';
 import { checkDebatePreflight } from './debate-preflight';
 import { getAllSettings } from './quality-settings-store';
 import type { GovernorState } from './debate-governor/types';
-import { useActiveDebateStore } from '../../../stores/activeDebateStore';
-import { useDebateLiveStore } from '../../../stores/debateLiveStore';
+
 import { eventBus } from '../../events/event-bus';
 import { logMemoryStats, estimateSessionBytes } from '../../utils/memory-tracker';
 
@@ -94,13 +93,15 @@ export class DebateSyncManager {
         // Source of truth lives in useActiveDebateStore (Zustand) — set by initSession
         // via setGovernorState() in this file. Previously returned a stale `this._governorState`
         // field that was never written, which made ArgumentGraphPanel always show empty state.
-        return useActiveDebateStore.getState().governorState;
+        return (
+            (this.deps?.activeDebateStore.governorState as unknown as GovernorState | null) ?? null
+        );
     }
 
     /** Set governor state. */
     setDebateGovernorState(state: GovernorState | null): void {
         // Kept for API compatibility; delegate to Zustand store.
-        useActiveDebateStore.getState().setGovernorState(state);
+        this.deps?.activeDebateStore.setGovernorState(state);
     }
 
     /** Get cached verdict for a session. */
@@ -165,8 +166,7 @@ export class DebateSyncManager {
         const loaded = await loadActiveSession(this.deps.debateStore);
         this.activeSession = loaded;
         if (loaded) {
-            const { useActiveDebateStore } = await import('../../../stores/activeDebateStore');
-            useActiveDebateStore.getState().setSession(loaded);
+            this.deps.activeDebateStore.setSession(loaded);
         }
         this._initUnsubs.push(
             this.deps.eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
@@ -321,11 +321,11 @@ export class DebateSyncManager {
         this.clearListeners();
         // Clear Zustand stores to release stale session objects and events:
         // prevents stale agents/rounds/emotions from accumulating across debates.
-        useDebateLiveStore.getState().clearAll();
-        useActiveDebateStore.getState().clearAll();
+        this.deps!.debateLiveStore.clearAll();
+        this.deps!.activeDebateStore.clearAll();
         if (DEFAULT_CONFIG.useGovernor !== false) {
             this.governor = new DebateGovernor();
-            useActiveDebateStore.getState().setGovernorState(this.governor.getState());
+            this.deps!.activeDebateStore.setGovernorState(this.governor.getState());
         }
         this.postProcessor.clearProcessedIds();
         return { ...DEFAULT_CONFIG };
@@ -626,7 +626,7 @@ export class DebateSyncManager {
                 this.activeSession.arguments = [];
             }
         }
-        useActiveDebateStore.getState().clearAll();
+        this.deps?.activeDebateStore.clearAll();
         this.activeSession = null;
         this.engine = null;
         this.runtimeSessionId = null;
@@ -664,7 +664,7 @@ export class DebateSyncManager {
             // This also protects against a concurrent syncSession overwriting consensus
             // that was set by an earlier governor stop check.
             if (!this.activeSession.consensus) {
-                const prev = useActiveDebateStore.getState().session;
+                const prev = this.deps!.activeDebateStore.session;
                 if (prev?.consensus) {
                     this.activeSession.consensus = prev.consensus;
                 }
@@ -675,13 +675,13 @@ export class DebateSyncManager {
             // resolves with a consensus-less session, making tournament scoring
             // always produce draws (all scores = 0).
             const shouldStop = this.governor && this.checkGovernorStopConditions();
-            useActiveDebateStore.getState().setSession(this.activeSession);
+            this.deps!.activeDebateStore.setSession(this.activeSession);
             // Governor state is mutated in-place by processGovernorFeeding() inside
             // mergeAndProcessSession(). Push the fresh state to Zustand so panels
             // (Argument Graph) see the new claims each sync cycle, not just the
             // empty initial state from resetDebateState().
             if (this.governor) {
-                useActiveDebateStore.getState().setGovernorState(this.governor.getState());
+                this.deps!.activeDebateStore.setGovernorState(this.governor.getState());
             }
             for (const arg of newArgs) {
                 this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
@@ -791,11 +791,11 @@ export class DebateSyncManager {
         // structuredClone ensures the store copy is independent — mutating the
         // original session later won't empty the store's argument content.
         const storeSession = structuredClone(session);
-        useDebateLiveStore.getState().clearSession(session.id);
-        useActiveDebateStore.getState().setSession(storeSession);
+        this.deps!.debateLiveStore.clearSession(session.id);
+        this.deps!.activeDebateStore.setSession(storeSession);
         // Final governor state at completion — same fix as in _syncSessionImpl().
         if (this.governor) {
-            useActiveDebateStore.getState().setGovernorState(this.governor.getState());
+            this.deps!.activeDebateStore.setGovernorState(this.governor.getState());
         }
         // Strip argument content BEFORE saveToDebateHistory. saveToDebateHistory
         // does structuredClone(session) — stripping content first prevents cloning
@@ -875,7 +875,7 @@ export class DebateSyncManager {
         // MEMORY TRACKER: log engine + sync manager + aggregate state after finalize
         if (this.engine) {
             const engineSizes = this.engine.dumpSizes();
-            const liveState = useDebateLiveStore.getState();
+            const liveState = this.deps!.debateLiveStore;
             const streamingMapsSize =
                 liveState.streamingContent.size +
                 liveState.emotions.size +
@@ -907,7 +907,7 @@ export class DebateSyncManager {
                     liveStoreAgentEvents: liveState.agentEvents.length,
                     liveStoreRoundEvents: liveState.roundEvents.length,
                     liveStoreStreamingMaps: streamingMapsSize,
-                    activeDebateSession: useActiveDebateStore.getState().session ? 1 : 0,
+                    activeDebateSession: this.deps?.activeDebateStore.session ? 1 : 0,
                 },
             );
         }

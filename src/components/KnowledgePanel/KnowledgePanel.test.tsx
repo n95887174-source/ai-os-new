@@ -31,9 +31,6 @@ vi.mock('../../kernel/instances', () => ({
         deleteMemory: vi.fn(() => Promise.resolve()),
         updateMemory: vi.fn(() => Promise.resolve()),
     },
-}));
-
-vi.mock('../../kernel/events/event-bus', () => ({
     eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
     EVENTS: { MEMORY_UPDATED: 'memory:updated' },
 }));

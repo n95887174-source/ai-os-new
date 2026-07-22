@@ -20,6 +20,14 @@ const mockMemories = [
 ];
 
 vi.mock('../../kernel/instances', () => ({
+    CONFIG: {
+        services: {
+            memory: {
+                semanticEnabled: false,
+                autoEmbedOnStore: false,
+            },
+        },
+    },
     memoryService: {
         getMemories: vi.fn(() => mockMemories),
         search: vi.fn(() => Promise.resolve(mockMemories.slice(0, 2))),

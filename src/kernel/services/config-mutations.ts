@@ -1,6 +1,6 @@
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
-import { eventBus } from '../instances';
+import { eventBus } from '../events/event-bus';
 import { rawConfig } from './config-registry';
 
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */

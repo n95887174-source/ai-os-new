@@ -106,7 +106,7 @@ export class GoogleGenAIService {
 
     async ensureConfigured(): Promise<void> {
         if (this.#client && Date.now() - this.#lastKeyFetch < this.#KEY_CACHE_TTL) return;
-        const { keyService } = await import('../instances');
+        const { keyService } = await import('../instances/core-references');
         const key = keyService.selectFromPool('gemini');
         if (!key?.key) {
             this.clearApiKey();

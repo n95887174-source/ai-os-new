@@ -6,7 +6,7 @@
 import { genId } from '../../utils/gen-id';
 import type { IDatabaseService } from '../types/interfaces';
 import { BucketStorageAdapter } from './storage-adapter';
-import { EventBus } from '../instances';
+import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 // Note: rootLogger is re-exported from ../instances for DI consumers

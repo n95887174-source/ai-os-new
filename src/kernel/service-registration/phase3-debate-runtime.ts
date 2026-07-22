@@ -20,7 +20,7 @@ import type { RoleService } from '../services/role-service';
 import type { OrchestrationService } from '../services/orchestration-service';
 import type { MemoryService } from '../services/memory-engine';
 import type { ChatMessage } from '../types/llm-types';
-import type { DebateServiceDeps } from '../contracts/debate-types';
+import type { DebateServiceDeps } from '../contracts/debate-service-deps';
 import type { IEntanglementEngine, IAnchoringService } from '../contracts/debate-entanglement';
 import type { IArgumentGraphService } from '../contracts/debate-argument-graph';
 import type { IVulnerabilityTargetingService } from '../contracts/debate-vulnerability';
@@ -90,6 +90,8 @@ import { BeliefMiningService } from '../services/debate-runtime/debate-belief-mi
 import { FactCheckService } from '../services/fact-check-service';
 import { DebatePostProcessor } from '../services/debate-runtime/debate-post-processor';
 import { DebateSyncManager } from '../services/debate-runtime/debate-sync-manager';
+import { createDebateSessionStoreAdapter } from '../../stores/activeDebateStore';
+import { createDebateLiveStoreAdapter } from '../../stores/debateLiveStore';
 import { DebateHumanService } from '../services/debate-runtime/debate-human-service';
 import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
 import {
@@ -241,6 +243,8 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             },
             queryEngine: new DebateQueryEngine(),
             debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
+            activeDebateStore: createDebateSessionStoreAdapter(),
+            debateLiveStore: createDebateLiveStoreAdapter(),
             get sessionManager() {
                 return _container.get<
                     import('../services/session-manager-service').SessionManagerService

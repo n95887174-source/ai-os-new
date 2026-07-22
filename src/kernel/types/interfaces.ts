@@ -29,7 +29,7 @@ export interface IDatabaseService {
 
 /** Data Access Layer — single entry point for all persistent data access */
 export interface IDal {
-    memory: import('../dal/types').MemoryRepository;
+    memory: import('../dal/repository-types').MemoryRepository;
     getKv<T>(id: string): Promise<T | null>;
     setKv<T>(id: string, value: T): Promise<void>;
 }
