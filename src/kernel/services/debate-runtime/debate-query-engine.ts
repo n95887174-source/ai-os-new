@@ -425,7 +425,7 @@ export class DebateProviderResolver {
                 const allModels = new Set([...priority, ...availModels]);
                 if (allModels.size === 0) return true; // no model info — let auto fallback try
                 for (const m of allModels) {
-                    if (!isModelRejectedAnyKey(k.provider, m)) return true;
+                    if (!triedModels.has(m) && !isModelRejectedAnyKey(k.provider, m)) return true;
                 }
                 return false;
             });

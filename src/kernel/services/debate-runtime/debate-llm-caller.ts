@@ -3,6 +3,7 @@ import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
 import {
     DebateProviderResolver,
+    DEBATE_MODEL_PRIORITY,
     getAllModelsForProvider,
     isLargeModel,
 } from './debate-query-engine';
@@ -314,11 +315,32 @@ export async function debateCallLlm(
             if (!resolved) {
                 // Fast-fail: if ALL providers are already dead, skip retry loop
                 const allKeys = keyService.getKeys();
+                const isModelRejected = (provider: string, model: string): boolean => {
+                    for (const c of rejectedCombos) {
+                        const [p, m] = c.split('|');
+                        if (p === provider && m === model) return true;
+                    }
+                    return false;
+                };
+                const hasUntriedModel = (k: {
+                    provider: string;
+                    availableModels?: string[];
+                }): boolean => {
+                    const priority = DEBATE_MODEL_PRIORITY[k.provider.toLowerCase()] ?? [];
+                    const avail = k.availableModels ?? [];
+                    const allM = new Set([...priority, ...avail]);
+                    if (allM.size === 0) return true;
+                    for (const m of allM) {
+                        if (!triedModels.has(m) && !isModelRejected(k.provider, m)) return true;
+                    }
+                    return false;
+                };
                 const anyWorking = allKeys.some(
                     (k) =>
                         k.status === 'active' &&
                         !session.hasProviderFailed(k.provider) &&
-                        !deps.providerResolver.isKeyAuthFailed(k.id),
+                        !deps.providerResolver.isKeyAuthFailed(k.id) &&
+                        hasUntriedModel(k),
                 );
                 const fp = Array.from(
                     (session as { _failedProviders?: Set<string> })._failedProviders ?? [],
@@ -2236,6 +2258,17 @@ export async function debateCallLlm(
                     continue;
                 }
 
+                // When resolveProvider returned null ("No available API keys"), the
+                // previous resolvedKey is stale — the provider itself isn't the problem,
+                // all its models are just exhausted. Don't mark it as failed; just retry.
+                if (error.includes('No available API keys')) {
+                    deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                    continue;
+                }
+                if (!resolvedKey) {
+                    deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                    continue;
+                }
                 session.markProviderFailed(resolvedKey.provider);
                 LOGGER.warn('DebateLlmCaller', `Provider failed: ${resolvedKey.provider}`, {
                     agentId: participant.agentId,

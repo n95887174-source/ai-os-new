@@ -322,3 +322,44 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 | Runtime chunk             | 1512 KB       | **1058 KB** |
 | Layer violations          | 4             | **0**       |
 | Hub cycles (instances.ts) | 26            | **0**       |
+
+---
+
+## Session 4 — Fix debate crash before verdict (v4.5.0 → v4.6.0)
+
+### Цель
+
+Починить краш дебатов перед вынесением вердикта, когда раунды прошли успешно, аргументы накопились, но на финальной стадии (`completed`) происходит сбой.
+
+### План
+
+| #   | Задача                                                                                                               | Статус  |
+| --- | -------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | **Provider whitelist** — убрать жёстко закодированный список провайдеров (оставить groq, gemini, openrouter, nvidia) | 🟢 Done |
+| 2   | **Phase handler** — обернуть весь блок `to === 'completed'` в try/catch + null check для conclusionEngine            | 🟢 Done |
+| 3   | **Conclusion LLM** — синхронизировать preferredProviders с preflight                                                 | 🟢 Done |
+| 4   | **Sync manager** — синхронизировать circuit breaker reset с preflight                                                | 🟢 Done |
+
+### Диагностика корневой причины
+
+**Симптом**: дебаты проходят все раунды, аргументы накапливаются в live mode, но крашатся перед вердиктом.
+
+**Трассировка**:
+
+1. `consensusAndFinalize` (pipeline-builder.ts:369) вызывает `session.transition('completed')`
+2. `transition()` синхронно вызывает все `_phaseListeners`, включая `createPhaseChangeHandler`
+3. Фазовый хендлер запускает scoring блок (memoryExtractor, evaluator, blindEval, bayesianJudge, stanceDriftTracker) синхронно
+4. Любой неотловленный `throw` в этом блоке пробивает через `transition()` → `consensusAndFinalize` catch → pipeline catch
+5. Catch в `consensusAndFinalize` не может перевести `completed` → `failed` (невалидный переход), сессия зависает в `completed` без вердикта
+6. `DEBATE_SESSION_FAILED` эмитится дважды (из pipeline catch + из startSession), сессия никогда не финализируется
+
+**Исправление**: весь `to === 'completed'` блок обёрнут в единый try/catch, добавлен null check для `conclusionEngine` перед `generateVerdictWithLLM`.
+
+### Changes
+
+| #   | Что сделано                                                                                                            | Когда      |
+| --- | ---------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | `debate-preflight.ts` — список провайдеров сокращён с 12 до 4 (groq, gemini, openrouter, nvidia)                       | 2026-07-22 |
+| 2   | `debate-phase-handler.ts` — весь `to === 'completed'` блок обёрнут в try/catch, добавлен `conclusionEngine` null check | 2026-07-22 |
+| 3   | `debate-conclusion-engine.ts` — `preferredProviders` в `buildConclusionLlmCall` синхронизирован (4 провайдера)         | 2026-07-22 |
+| 4   | `debate-sync-manager.ts` — circuit breaker reset list синхронизирован (4 провайдера)                                   | 2026-07-22 |

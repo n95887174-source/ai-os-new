@@ -480,14 +480,7 @@ export function buildConclusionLlmCall(
         const adapterRegistry = deps.getAdapterRegistry();
         const keyService = deps.getKeyService();
         const keys = keyService.getKeys();
-        const preferredProviders = [
-            'groq',
-            'gemini',
-            'openrouter',
-            'nvidia',
-            'cerebras',
-            'cloudflare',
-        ];
+        const preferredProviders = ['groq', 'gemini', 'openrouter', 'nvidia'];
         const messages = [{ role: 'user' as const, content: prompt }];
         const stateStore = deps.getKeyStateStore?.();
         const candidateKeys = [

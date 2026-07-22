@@ -70,6 +70,11 @@ export class DebateSyncManager {
      *  Without this guard, stopDebateInternal() calling syncSession() while inside syncSession()
      *  creates an unbounded call stack that never reaches finalizeInternal(). */
     private _syncing = false;
+    /** Debounce timer for syncSession: coalesces rapid event-driven syncs at the end of a debate
+     *  (DEBATE_PHASE_CHANGED → consensus/summarizing/completed) into a single _syncSessionImpl call.
+     *  This reduces cascading microtasks → Zustand store updates → React re-renders that can
+     *  cause Chrome renderer OOM ("Aw, Snap!") before verdict generation. */
+    private _syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     private _setCachedVerdict(sessionId: string, verdict: DebateVerdict): void {
         if (this._verdictCache.size >= DebateSyncManager.MAX_VERDICT_CACHE) {
@@ -240,7 +245,7 @@ export class DebateSyncManager {
         const sessionConfig = this.resetDebateState();
         if (config) Object.assign(sessionConfig, config);
         this.setupDurationTimer(sessionConfig);
-        for (const p of ['groq', 'gemini', 'openrouter', 'nvidia', 'cerebras', 'cloudflare']) {
+        for (const p of ['groq', 'gemini', 'openrouter', 'nvidia']) {
             try {
                 this.deps.adapterRegistry.resetCircuitBreaker(p);
             } catch {
@@ -370,7 +375,7 @@ export class DebateSyncManager {
         this.governor?.setMaxRounds(bridgeCtx.maxRounds);
         this.setupListeners(runtimeId);
         this.startHeartbeat();
-        this.syncSession();
+        this.syncSession(true);
         const session = this.activeSession;
         if (!session) throw new Error('No active session after sync');
         return session;
@@ -635,10 +640,20 @@ export class DebateSyncManager {
         this.governor = null;
     }
 
-    syncSession(): void {
+    syncSession(immediate = false): void {
         if (this._syncing || !this.engine || !this.runtimeSessionId || !this.bridgeCtx) return;
-        // Async fire-and-forget for the governor-stop saveSnapshot path.
-        // The _syncing flag prevents re-entrancy while awaiting saveSnapshot.
+        // Debounce rapid event-driven syncs by coalescing into a single microtask.
+        // The initial syncSession(true) call from initEngineSession bypasses debounce.
+        if (!immediate) {
+            if (this._syncDebounceTimer) clearTimeout(this._syncDebounceTimer);
+            this._syncDebounceTimer = setTimeout(() => {
+                this._syncDebounceTimer = null;
+                void this._syncSessionImpl().catch((e) =>
+                    LOGGER.warn('DebateSyncManager', '_syncSessionImpl failed', { error: e }),
+                );
+            }, 16);
+            return;
+        }
         void this._syncSessionImpl().catch((e) =>
             LOGGER.warn('DebateSyncManager', '_syncSessionImpl failed', { error: e }),
         );
@@ -675,6 +690,17 @@ export class DebateSyncManager {
             // resolves with a consensus-less session, making tournament scoring
             // always produce draws (all scores = 0).
             const shouldStop = this.governor && this.checkGovernorStopConditions();
+            // MEMORY PRESSURE: if total argument content exceeds 256KB, truncate old
+            // rounds to reduce the payload sent to Zustand → React re-render → Chrome
+            // renderer. This prevents OOM ("Aw, Snap!") before verdict generation.
+            const totalBytes =
+                this.activeSession.arguments?.reduce(
+                    (sum, a) => sum + (a.content?.length ?? 0),
+                    0,
+                ) ?? 0;
+            if (totalBytes > 256_000) {
+                this.truncateArguments(2);
+            }
             this.deps!.activeDebateStore.setSession(this.activeSession);
             // Governor state is mutated in-place by processGovernorFeeding() inside
             // mergeAndProcessSession(). Push the fresh state to Zustand so panels
@@ -737,7 +763,11 @@ export class DebateSyncManager {
             EVENTS.DEBATE_PHASE_CHANGED,
             EVENTS.DEBATE_ROUND_STARTED,
             EVENTS.DEBATE_ROUND_ENDED,
-            EVENTS.DEBATE_SESSION_COMPLETED,
+            // DEBATE_SESSION_COMPLETED intentionally excluded — DEBATE_PHASE_CHANGED
+            // with to='completed' fires first and already triggers syncSession().
+            // Including it would schedule a SECOND microtask sync that races with
+            // the scoring block and finalizeInternal(), causing cascading Zustand
+            // store updates that can OOM the Chrome renderer ("Aw, Snap!").
             EVENTS.DEBATE_SESSION_FAILED,
             EVENTS.DEBATE_SESSION_CANCELLED,
         ];
@@ -956,6 +986,10 @@ export class DebateSyncManager {
         if (this._durationTimer !== null) {
             clearTimeout(this._durationTimer);
             this._durationTimer = null;
+        }
+        if (this._syncDebounceTimer !== null) {
+            clearTimeout(this._syncDebounceTimer);
+            this._syncDebounceTimer = null;
         }
     }
 
