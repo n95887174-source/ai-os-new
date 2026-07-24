@@ -11,7 +11,7 @@ import {
     Loader2,
     Check,
 } from 'lucide-react';
-import { agentService } from '../../kernel/instances';
+import { agentService, debateService, debateHumanService } from '../../kernel/instances';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
 
 interface AgentControlPanelProps {
@@ -107,11 +107,19 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
             if (!text) return;
             setInjecting((prev) => ({ ...prev, [agentId]: true }));
             try {
-                console.info('[AgentControlPanel] Inject message', {
-                    sessionId: session.id,
-                    agentId,
-                    message: text,
-                });
+                const activeSession = debateService.getActiveDebateSession();
+                if (!activeSession) {
+                    console.warn('[AgentControlPanel] no active debate session');
+                    return;
+                }
+                const agent = agents.find((a) => a.id === agentId);
+                await debateHumanService.addArgument(
+                    activeSession,
+                    `User → ${agent?.name || agentId}`,
+                    text,
+                    1.0,
+                    { position: 'neutral' },
+                );
                 setInjectText((prev) => ({ ...prev, [agentId]: '' }));
             } catch (e) {
                 console.warn('[AgentControlPanel] inject failed:', e);
@@ -119,7 +127,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                 setInjecting((prev) => ({ ...prev, [agentId]: false }));
             }
         },
-        [injectText, session.id],
+        [injectText, agents],
     );
 
     const handlePreset = useCallback(

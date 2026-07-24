@@ -8,6 +8,8 @@ export interface TimeSnapshot {
     size: number;
     changes: string[];
     snapshotRefId?: string;
+    keysData?: { id: string; provider: string; model: string; status: string }[];
+    memoryData?: { id: string; content: string; timestamp: number }[];
 }
 
 export interface ITimeMachineService {

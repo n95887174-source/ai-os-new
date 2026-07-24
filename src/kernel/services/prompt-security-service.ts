@@ -170,6 +170,7 @@ export class PromptSecurityService implements IPromptSecurityService {
     private config: SecurityScanConfig = DEFAULT_CONFIG;
     private history: SecurityScanEvent[] = [];
     private loaded = false;
+    private loadingPromise: Promise<void> | null = null;
 
     private async db(): Promise<IDatabaseService> {
         const { database } = await import('../instances');
@@ -178,6 +179,16 @@ export class PromptSecurityService implements IPromptSecurityService {
 
     private async ensureLoaded(): Promise<void> {
         if (this.loaded) return;
+        if (this.loadingPromise) return this.loadingPromise;
+        this.loadingPromise = this._doLoad();
+        try {
+            await this.loadingPromise;
+        } finally {
+            this.loadingPromise = null;
+        }
+    }
+
+    private async _doLoad(): Promise<void> {
         const d = await this.db();
         const [savedConfig, savedHistory] = await Promise.all([
             d.getKv<SecurityScanConfig>(STORAGE_KEY_CONFIG),

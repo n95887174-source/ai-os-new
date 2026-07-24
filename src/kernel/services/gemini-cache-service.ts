@@ -135,7 +135,8 @@ export class GeminiCacheService implements IGeminiCacheService {
         const apiKey = await this.#getApiKey();
         if (!apiKey) return [];
         try {
-            const res = await fetch(`${GEMINI_API_BASE}/v1beta/models?key=${apiKey}&pageSize=50`, {
+            const res = await fetch(`${GEMINI_API_BASE}/v1beta/models?pageSize=50`, {
+                headers: { 'X-Goog-Api-Key': apiKey },
                 signal: AbortSignal.timeout(10000),
             });
             if (!res.ok) {
@@ -187,7 +188,7 @@ export class GeminiCacheService implements IGeminiCacheService {
 
     async #getApiKey(): Promise<string | null> {
         try {
-            const { keyService } = await import('../instances');
+            const { keyService } = await import('../instances/core-references');
             const key = keyService.selectFromPool('gemini');
             return key?.key ?? null;
         } catch (e) {

@@ -148,9 +148,11 @@ export function useChatStoreHydration(): void {
 
                 const merged = [...sessions];
                 for (const [id, cur] of currentMap) {
-                    if (!merged.find((s) => s.id === id)) {
-                        merged.push(cur);
+                    const existing = merged.find((s) => s.id === id);
+                    if (existing) {
+                        if (cur.updatedAt < existing.updatedAt) continue;
                     }
+                    merged.push(cur);
                 }
                 merged.sort((a, b) => b.updatedAt - a.updatedAt);
                 db.sessions.count().then((total) => {
@@ -187,10 +189,20 @@ export function useChatStoreHydration(): void {
         const handleBeforeUnload = () => {
             const state = useChatStore.getState();
             if (state.sessions.length > 0) {
-                BucketStorageAdapter.setItem(
-                    'super_agents_chat_sessions_backup',
-                    JSON.stringify(state.sessions),
-                );
+                try {
+                    const json = JSON.stringify(state.sessions);
+                    if (json.length < 4_500_000) {
+                        BucketStorageAdapter.setItem('super_agents_chat_sessions_backup', json);
+                    } else {
+                        const trimmed = state.sessions.slice(-5);
+                        BucketStorageAdapter.setItem(
+                            'super_agents_chat_sessions_backup',
+                            JSON.stringify(trimmed),
+                        );
+                    }
+                } catch {
+                    // localStorage quota exceeded — backup silently skipped
+                }
             }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);

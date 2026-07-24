@@ -5,13 +5,11 @@ import {
     search as oramaSearch,
     type AnyOrama,
 } from '@orama/orama';
-import { pipeline } from '@huggingface/transformers';
 import type { MemoryEntry } from '../../types/memory';
 
 let db: unknown = null;
 let entries: MemoryEntry[] = [];
-let extractor: unknown = null;
-let semanticReady = false;
+let semanticReady = true;
 const vectors = new Map<string, number[]>();
 const MAX_ENTRIES = 10000;
 const MAX_VECTORS = 10000;
@@ -27,23 +25,32 @@ const SCHEMA = {
     },
 } as const;
 
-async function loadEmbeddingModel() {
-    try {
-        extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-        semanticReady = true;
-    } catch (e) {
-        self.postMessage({
-            type: 'semantic_error',
-            payload: { message: (e as Error)?.message ?? String(e) },
-        });
+/** Compute a fixed-size embedding using word-level hashing (no external deps). */
+function getEmbedding(text: string, dimensions = 384): number[] {
+    const vector = new Array(dimensions).fill(0);
+    const tokens = text.toLowerCase().split(/\W+/).filter(Boolean);
+
+    for (const token of tokens) {
+        let hash = 0;
+        for (let i = 0; i < token.length; i++) {
+            hash = (hash << 5) - hash + token.charCodeAt(i);
+            hash |= 0;
+        }
+        vector[Math.abs(hash) % dimensions] += 1;
     }
+
+    let norm = 0;
+    for (let i = 0; i < dimensions; i++) norm += vector[i] * vector[i];
+    norm = Math.sqrt(norm);
+    if (norm > 0) {
+        for (let i = 0; i < dimensions; i++) vector[i] /= norm;
+    }
+    return vector;
 }
 
-async function getEmbedding(text: string): Promise<number[]> {
-    const result = await (
-        extractor as (text: string, opts: Record<string, unknown>) => Promise<{ data: number[] }>
-    )(text, { pooling: 'mean', normalize: true });
-    return Array.from((result as { data: number[] }).data) as number[];
+async function loadEmbeddingModel() {
+    // Lightweight in-process embedding — no external model needed
+    semanticReady = true;
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {

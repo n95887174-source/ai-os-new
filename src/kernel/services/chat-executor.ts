@@ -15,6 +15,7 @@ export class ChatExecutor {
     private activeRequests = new Map<string, { controller: AbortController; timestamp: number }>();
     private executingMessages = new Set<string>();
     private cacheInflight = new Map<string, Promise<void>>();
+    private readonly MAX_CACHE_INFLIGHT = 100;
     private readonly MAX_429_RETRIES = 3;
     private readonly ACTIVE_REQUEST_TTL = 10 * 60 * 1000;
     private _staleTimer: ReturnType<typeof setInterval> | null = null;
@@ -345,6 +346,10 @@ export class ChatExecutor {
                                 onChunk,
                             });
                             const inflightEntry = inflightPromise.then(() => {}).catch(() => {});
+                            if (this.cacheInflight.size >= this.MAX_CACHE_INFLIGHT) {
+                                const firstKey = this.cacheInflight.keys().next().value;
+                                if (firstKey) this.cacheInflight.delete(firstKey);
+                            }
                             this.cacheInflight.set(inflightKey, inflightEntry);
                             try {
                                 result = await inflightPromise;
@@ -432,7 +437,6 @@ export class ChatExecutor {
                                 effectiveModel,
                                 { requestId },
                             );
-                            this.deps.keyService.handleProviderError(keyId || currentProvider, '');
 
                             if (cacheKey && this.deps.cacheService) {
                                 try {
@@ -645,7 +649,7 @@ export class ChatExecutor {
                 });
                 if (allowedCandidates.length === 0) {
                     this.emitError(req, 'All race candidates blocked by policy');
-                    return true;
+                    return false;
                 }
             }
 

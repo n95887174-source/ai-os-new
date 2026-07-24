@@ -51,6 +51,9 @@ export class CostManagerDecorator extends BaseDecorator {
     private records: CostRecord[] = [];
     private config: CostManagerConfig;
     private budgetExceeded = false;
+    private _runningDay = 0;
+    private _runningWeek = 0;
+    private _runningMonth = 0;
 
     constructor(
         inner: import('../core/types').LLMProviderAdapter,
@@ -81,22 +84,26 @@ export class CostManagerDecorator extends BaseDecorator {
         const now = Date.now();
         const day = 86400000;
         const week = 7 * day;
-
         const month = 30 * day;
-        let costDay = 0,
-            costWeek = 0,
-            costMonth = 0;
+
+        // Incremental running totals — O(1) instead of O(n) per call
+        this._runningMonth = 0;
+        this._runningWeek = 0;
+        this._runningDay = 0;
         for (const r of this.records) {
             const age = now - r.timestamp;
-            if (age < month) costMonth += r.cost;
-            if (age < week) costWeek += r.cost;
-            if (age < day) costDay += r.cost;
+            if (age < month) this._runningMonth += r.cost;
+            if (age < week) this._runningWeek += r.cost;
+            if (age < day) this._runningDay += r.cost;
         }
 
         const exceeded =
-            (this.config.dailyBudget !== undefined && costDay >= this.config.dailyBudget) ||
-            (this.config.weeklyBudget !== undefined && costWeek >= this.config.weeklyBudget) ||
-            (this.config.monthlyBudget !== undefined && costMonth >= this.config.monthlyBudget);
+            (this.config.dailyBudget !== undefined &&
+                this._runningDay >= this.config.dailyBudget) ||
+            (this.config.weeklyBudget !== undefined &&
+                this._runningWeek >= this.config.weeklyBudget) ||
+            (this.config.monthlyBudget !== undefined &&
+                this._runningMonth >= this.config.monthlyBudget);
 
         if (exceeded && !this.budgetExceeded) {
             this.budgetExceeded = true;

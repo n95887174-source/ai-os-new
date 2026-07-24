@@ -172,11 +172,6 @@ export class ProviderRuntimeService {
             this.pendingDeletions.delete(sessionId);
         }, ProviderRuntimeService.SESSION_RETENTION_MS);
 
-        // Allow the timer to not keep the process alive
-        if (typeof timer === 'object' && 'unref' in timer) {
-            (timer as NodeJS.Timeout).unref();
-        }
-
         this.pendingDeletions.set(sessionId, timer);
     }
 

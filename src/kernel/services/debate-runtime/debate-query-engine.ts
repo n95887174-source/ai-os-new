@@ -393,13 +393,7 @@ export class DebateProviderResolver {
             const fProviders = Array.from(
                 (session as { _failedProviders?: Set<string> })._failedProviders ?? [],
             );
-            console.log('[DEBATE_FALLBACK] Step 6: brute-force ANY active key', {
-                totalKeys: allKeys.length,
-                failedProviders: fProviders,
-                triedKeys: triedKeys.size,
-                rejectedCombos: rejectedCombos.size,
-            });
-            rootLogger.warn('DebateProviderResolver', 'Step 6: brute-force ANY active key', {
+            rootLogger.debug('DebateProviderResolver', 'Step 6: brute-force ANY active key', {
                 totalKeys: allKeys.length,
                 failedProviders: fProviders,
                 triedKeys: triedKeys.size,
@@ -430,11 +424,7 @@ export class DebateProviderResolver {
                 return false;
             });
             if (anyAvailable) {
-                console.log('[DEBATE_FALLBACK] Step 6: brute-force resolved', {
-                    provider: anyAvailable.provider,
-                    keyId: anyAvailable.id.slice(0, 8),
-                });
-                rootLogger.info('DebateProviderResolver', 'Step 6: brute-force resolved', {
+                rootLogger.debug('DebateProviderResolver', 'Step 6: brute-force resolved', {
                     provider: anyAvailable.provider,
                     keyId: anyAvailable.id.slice(0, 8),
                 });
@@ -444,11 +434,7 @@ export class DebateProviderResolver {
                     (k) =>
                         `${k.provider}:${k.id.slice(0, 8)} status=${k.status} canUse=${this.providerCanBeUsed(k.provider, session)} authOk=${!this.isKeyAuthFailed(k.id)} triedAlready=${triedKeys.has(k.id)}`,
                 );
-                console.log('[DEBATE_FALLBACK] Step 6: ALL keys unavailable!', {
-                    keySummary: ks,
-                    rejectedCombos: Array.from(rejectedCombos),
-                });
-                rootLogger.error('DebateProviderResolver', 'Step 6: ALL keys unavailable!', {
+                rootLogger.warn('DebateProviderResolver', 'Step 6: ALL keys unavailable!', {
                     keySummary: ks,
                     rejectedCombos: Array.from(rejectedCombos),
                 });

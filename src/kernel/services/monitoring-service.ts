@@ -44,6 +44,7 @@ export interface MonitoringServiceDeps {
             criticalAlerts: number;
         }) => { score: number; issues: string[] };
     };
+    getActiveDebatesCount?: () => number;
 }
 
 export class MonitoringService {
@@ -115,14 +116,16 @@ export class MonitoringService {
     }
 
     getSystemHealthIndicators(): SystemHealthIndicators {
+        this.recalculateHealth();
         const metrics = this.deps.metricsService.getAllMetrics().aggregated;
         const traceStats = this.deps.traceService.getTraceStats();
+        const h = CONFIG.monitoring.healthThresholds;
 
         return {
             status:
-                this.healthScore >= 0.8
+                this.healthScore >= h.healthy
                     ? 'healthy'
-                    : this.healthScore >= 0.5
+                    : this.healthScore >= h.degraded
                       ? 'degraded'
                       : 'critical',
             score: this.healthScore,
@@ -136,7 +139,7 @@ export class MonitoringService {
                     : 100,
             errorRate: metrics.errorRate,
             avgLatency: metrics.avgLatency,
-            activeDebates: 0,
+            activeDebates: this.deps.getActiveDebatesCount?.() ?? 0,
             pendingRequests: traceStats.running,
             issues: [...this.issues],
         };

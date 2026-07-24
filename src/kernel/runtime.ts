@@ -42,6 +42,13 @@ export class RuntimeManager {
     constructor(container: IContainer, bootstrapper: SystemBootstrap) {
         this.container = container;
         this.bootstrapper = bootstrapper;
+        if (typeof window !== 'undefined') {
+            window.addEventListener('unhandledrejection', (event) => {
+                getLogger()?.error('Runtime', 'Unhandled promise rejection', {
+                    reason: event.reason,
+                });
+            });
+        }
     }
 
     private startPromise: Promise<boolean> | null = null;

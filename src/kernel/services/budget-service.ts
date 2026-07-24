@@ -149,12 +149,22 @@ export class BudgetService implements IBudgetService {
         }
     }
 
+    private _saveDirty = false;
+    private _saveTimer: ReturnType<typeof setTimeout> | null = null;
+
     private async saveHistory() {
-        try {
-            await this.deps.database.setKv(COST_HISTORY_KEY, this.costHistory);
-        } catch (e) {
-            LOGGER.warn('BudgetService', 'Failed to save cost history', { error: e });
-        }
+        this._saveDirty = true;
+        if (this._saveTimer) return;
+        this._saveTimer = setTimeout(async () => {
+            this._saveTimer = null;
+            if (!this._saveDirty) return;
+            this._saveDirty = false;
+            try {
+                await this.deps.database.setKv(COST_HISTORY_KEY, this.costHistory);
+            } catch (e) {
+                LOGGER.warn('BudgetService', 'Failed to save cost history', { error: e });
+            }
+        }, 5000);
     }
 
     private setupListeners() {
@@ -194,7 +204,11 @@ export class BudgetService implements IBudgetService {
                     agentId: d.agentId,
                 });
                 this._invalidateMonthFiltered();
-                if (this.costHistory.length > 10000) {
+                // Prune dedupSet when it exceeds costHistory or grows past 15000
+                if (
+                    this.costHistory.length > 10000 ||
+                    (this._costDedupSet && this._costDedupSet.size > 15000)
+                ) {
                     this.costHistory = this.costHistory.slice(-10000);
                     this._invalidateMonthFiltered();
                     this._costDedupSet = new Set(
@@ -205,21 +219,27 @@ export class BudgetService implements IBudgetService {
                 }
                 this.saveHistory();
                 this.budgetInfoCache = null;
-                // C-91: compute current spend ONCE per STREAM_END — avoids 3x scan of 10K costHistory
-                const monthlySpend = this.computeCurrentSpend();
+                // C-91: Single pass through monthly entries for all spends
+                const monthlyEntries = this._getMonthFiltered();
+                const monthlySpend = monthlyEntries.reduce((s, c) => s + c.totalCost, 0);
                 this.checkThresholds('global', 'global', monthlySpend, this.monthlyBudget);
+                const providerSpendMap: Record<string, number> = {};
+                for (const entry of monthlyEntries) {
+                    const p = entry.provider.toLowerCase();
+                    providerSpendMap[p] = (providerSpendMap[p] || 0) + entry.totalCost;
+                }
                 if (provider) {
                     const pBudget = this.providerBudgets[provider.toLowerCase()] || 0;
                     if (pBudget > 0) {
-                        const pSpent = this.computeProviderSpend(provider);
+                        const pSpent = providerSpendMap[provider.toLowerCase()] || 0;
                         this.checkThresholds('provider', provider, pSpent, pBudget);
                     }
                 }
-                // C-91: Pre-compute provider spends once to avoid 3× scan per provider in emit
-                const providerSpends = Object.entries(this.providerBudgets).map(([p, budget]) => {
-                    const spent = this.computeProviderSpend(p);
-                    return { provider: p, budget, spent };
-                });
+                const providerSpends = Object.entries(this.providerBudgets).map(([p, budget]) => ({
+                    provider: p,
+                    budget,
+                    spent: providerSpendMap[p.toLowerCase()] || 0,
+                }));
                 this.deps.eventBus.emit(EVENTS.BUDGET_ALERT, {
                     type: 'spend_updated',
                     summary: {

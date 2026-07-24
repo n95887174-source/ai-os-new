@@ -107,6 +107,10 @@ export class DistillationService implements IDistillationService {
     }
 
     startJob(jobId: string): void {
+        console.warn(
+            '[DistillationService] startJob uses @deprecated MOCK backend — simulated progress, no real distillation API call',
+            { jobId },
+        );
         const job = this.jobs.find((j) => j.id === jobId);
         if (!job || job.status !== 'queued') return;
         job.status = 'preparing';

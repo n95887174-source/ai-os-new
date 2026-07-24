@@ -10,7 +10,11 @@ const genAttachId = () => crypto.randomUUID();
 
 const MAX_SESSIONS = 50;
 
+const LOGGER = console;
+
 export class VoiceInputService implements IVoiceInputService {
+    private _mockWarned = false;
+
     destroy(): void {
         /* no-op — all resources are method-scoped */
     }
@@ -62,6 +66,12 @@ export class VoiceInputService implements IVoiceInputService {
         await new Promise((r) => setTimeout(r, 1000));
         session.status = 'ready';
         session.duration = Math.floor((Date.now() - session.startedAt) / 1000);
+        if (!this._mockWarned) {
+            LOGGER.warn(
+                'VoiceInputService: Mock backend — stopRecording() returns simulated transcript',
+            );
+            this._mockWarned = true;
+        }
         session.transcript =
             'This is a simulated voice transcription. In production, this would be processed by a speech-to-text engine.';
         return { ...session };

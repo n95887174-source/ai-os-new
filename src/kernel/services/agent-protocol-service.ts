@@ -49,6 +49,19 @@ const DEFAULT_CAPABILITIES: AgentCapability[] = [
 ];
 
 export class AgentProtocolService implements IAgentProtocolService {
+    private _initialized = false;
+
+    async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
+    }
+
+    destroy(): void {
+        this.agents = [];
+        this.messages = [];
+        this._initialized = false;
+    }
+
     private agents: AgentRegistration[] = [
         {
             agentId: 'analyst-1',
@@ -149,6 +162,20 @@ export class AgentProtocolService implements IAgentProtocolService {
     }
 
     sendMessage(message: Omit<AgentProtocolMessage, 'id' | 'timestamp'>): AgentProtocolMessage {
+        const src = this.agents.find((a) => a.agentId === message.sourceAgentId);
+        if (!src) throw new Error(`Source agent ${message.sourceAgentId} not registered`);
+        if (message.type !== 'broadcast' && message.targetAgentId) {
+            const tgt = this.agents.find((a) => a.agentId === message.targetAgentId);
+            if (!tgt) throw new Error(`Target agent ${message.targetAgentId} not registered`);
+            if (
+                message.capability &&
+                !tgt.capabilities.find((c) => c.name === message.capability && c.enabled)
+            ) {
+                throw new Error(
+                    `Target agent ${message.targetAgentId} does not support capability "${message.capability}"`,
+                );
+            }
+        }
         const msg: AgentProtocolMessage = { ...message, id: genId(), timestamp: Date.now() };
         if (this.messages.length >= MAX_MESSAGES) {
             this.messages.shift();

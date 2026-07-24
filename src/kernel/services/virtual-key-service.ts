@@ -2,6 +2,7 @@ import type { IVirtualKeyService, VirtualKey } from '../contracts/virtual-key';
 import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { rootLogger } from './logger-service';
+import { constantTimeEqual } from '../utils/constant-time';
 
 const LOGGER = rootLogger.child('VirtualKeyService');
 
@@ -126,7 +127,7 @@ export class VirtualKeyService implements IVirtualKeyService {
         const expected = CONFIG.security?.adminToken;
         if (!expected) return false;
         if (!token) return false;
-        return token === expected;
+        return constantTimeEqual(token, expected);
     }
 
     async create(

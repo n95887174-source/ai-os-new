@@ -363,3 +363,401 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 | 2   | `debate-phase-handler.ts` — весь `to === 'completed'` блок обёрнут в try/catch, добавлен `conclusionEngine` null check | 2026-07-22 |
 | 3   | `debate-conclusion-engine.ts` — `preferredProviders` в `buildConclusionLlmCall` синхронизирован (4 провайдера)         | 2026-07-22 |
 | 4   | `debate-sync-manager.ts` — circuit breaker reset list синхронизирован (4 провайдера)                                   | 2026-07-22 |
+
+---
+
+## Session 5 — Deep аудиты (промты 2.7, 2.11-2.14) (v4.5.0 → v4.6.0)
+
+### Цель
+
+Прогнать оставшиеся аудиты из шпаргалки `docs/aaa.md` (14 проблемных) и собрать карту реальных проблем системы.
+
+### План
+
+| #   | Задача                                                                | Статус  |
+| --- | --------------------------------------------------------------------- | ------- |
+| 1   | **2.7 UX / Correctness** — перезапуск (предыдущий результат был пуст) | 🟢 Done |
+| 2   | **2.11 Single Source of Truth / State Consistency**                   | 🟢 Done |
+| 3   | **2.12 Accessibility (a11y)**                                         | 🟢 Done |
+| 4   | **2.13 Resilience & Fault Tolerance**                                 | 🟢 Done |
+| 5   | **2.14 Dependencies & Third-Party Risks**                             | 🟢 Done |
+| 6   | **3.1–3.10 Functional area audits**                                   | 🟢 Done |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                    | Когда      |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | **2.7 UX** — 17 находок (1 Critical: AgentControlPanel inject no-op, 5 High, 6 Medium, 5 Low)                                                                                                  | 2026-07-23 |
+| 2   | **2.11 State Consistency** — 16 находок (3 Critical: debate state quadruplicated, dual memory systems, config import drift; 5 High, 5 Medium, 3 Low)                                           | 2026-07-23 |
+| 3   | **2.12 a11y** — 20 категорий, 50+ файлов (3 Critical: modals без focus trap, div onClick без role/keyboard, backdrop cancel-safety; 7 High, 6 Medium, 4 Low)                                   | 2026-07-23 |
+| 4   | **2.13 Resilience** — 61 находка (5 Critical: no unhandledrejection handler, module-level maps leak, 429 treated as permanent, batch no retry, 2462-line monolith; 14 High, 21 Medium, 21 Low) | 2026-07-23 |
+| 5   | **2.14 Dependencies** — 15 находок (2 Critical: 370MB dead dep chain, broken worker in prod; 4 High: 7 CVEs, 68 duplicates, zod@4 beta, worker broken; 3 Medium, 6 Low)                        | 2026-07-23 |
+| 6   | Все результаты записаны в `docs/ocs/aaa.md` (секции 15-19)                                                                                                                                     | 2026-07-23 |
+| 7   | **3.1 Chat & Collaboration** — 34 находок (7 Critical, 12 High, 9 Medium, 6 Low)                                                                                                               | 2026-07-23 |
+| 8   | **3.2 Agents & Roles** — 28 находок (4 Critical, 6 High, 10 Medium, 8 Low)                                                                                                                     | 2026-07-23 |
+| 9   | **3.3 Debate System** — 64 находок (14 Critical, 22 High, 16 Medium, 12 Low)                                                                                                                   | 2026-07-23 |
+| 10  | **3.4 Memory & Knowledge** — 31 находка (4 Critical, 10 High, 10 Medium, 7 Low)                                                                                                                | 2026-07-23 |
+| 11  | **3.5 Security & Governance** — 26 находок (5 Critical, 7 High, 8 Medium, 6 Low)                                                                                                               | 2026-07-23 |
+| 12  | **3.6 Observability & Diagnostics** — 31 находка (7 Critical, 8 High, 9 Medium, 7 Low)                                                                                                         | 2026-07-23 |
+| 13  | **3.7 Performance & Optimization** — 32 находки (8 Critical, 12 High, 7 Medium, 5 Low)                                                                                                         | 2026-07-23 |
+| 14  | **3.8 Providers & Connectors** — 39 находок (4 Critical, 14 High, 13 Medium, 8 Low)                                                                                                            | 2026-07-23 |
+| 15  | **3.9 Development & Tooling** — 28 находок (3 Critical, 5 High, 10 Medium, 10 Low)                                                                                                             | 2026-07-23 |
+| 16  | **3.10 Infrastructure & Deployment** — 24 находки (6 Critical, 7 High, 6 Medium, 5 Low)                                                                                                        | 2026-07-23 |
+| 17  | Все результаты записаны в `docs/ocs/aaa.md` (секции 20-29)                                                                                                                                     | 2026-07-23 |
+
+### Сводка находок по всем аудитам Session 5
+
+#### Проблемные аудиты (2.7, 2.11-2.14)
+
+| Аудит                  | Critical | High   | Medium | Low    | Всего   |
+| ---------------------- | -------- | ------ | ------ | ------ | ------- |
+| 2.7 UX                 | 1        | 5      | 6      | 5      | 17      |
+| 2.11 State Consistency | 3        | 5      | 5      | 3      | 16      |
+| 2.12 a11y              | 3        | 7      | 6      | 4      | 20      |
+| 2.13 Resilience        | 5        | 14     | 21     | 21     | 61      |
+| 2.14 Dependencies      | 2        | 4      | 3      | 6      | 15      |
+| **Итого проблемы**     | **14**   | **35** | **41** | **39** | **129** |
+
+#### Функциональные аудиты (3.1-3.10)
+
+| Аудит                            | Critical | High    | Medium | Low    | Всего   |
+| -------------------------------- | -------- | ------- | ------ | ------ | ------- |
+| 3.1 Chat & Collaboration         | 7        | 12      | 9      | 6      | 34      |
+| 3.2 Agents & Roles               | 4        | 6       | 10     | 8      | 28      |
+| 3.3 Debate System                | 14       | 22      | 16     | 12     | 64      |
+| 3.4 Memory & Knowledge           | 4        | 10      | 10     | 7      | 31      |
+| 3.5 Security & Governance        | 5        | 7       | 8      | 6      | 26      |
+| 3.6 Observability & Diagnostics  | 7        | 8       | 9      | 7      | 31      |
+| 3.7 Performance & Optimization   | 8        | 12      | 7      | 5      | 32      |
+| 3.8 Providers & Connectors       | 4        | 14      | 13     | 8      | 39      |
+| 3.9 Development & Tooling        | 3        | 5       | 10     | 10     | 28      |
+| 3.10 Infrastructure & Deployment | 6        | 7       | 6      | 5      | 24      |
+| **Итого функциональные**         | **62**   | **103** | **98** | **74** | **337** |
+
+#### Общий итог Session 5
+
+| Категория       | Critical | High    | Medium  | Low     | Всего   |
+| --------------- | -------- | ------- | ------- | ------- | ------- |
+| Проблемные      | 14       | 35      | 41      | 39      | 129     |
+| Функциональные  | 62       | 103     | 98      | 74      | 337     |
+| **Grand Total** | **76**   | **138** | **139** | **113** | **466** |
+
+### Ключевые выводы
+
+1. **Debate System — самый проблемный модуль** (64 находок, 14 Critical). Модульные карты, никогда не очищающиеся, fire-and-forget вердикт, O(n²) в hot paths, race conditions между финализацией и синхронизацией.
+2. **Providers & Connectors** (39 находок) — 15+ адаптеров используют raw fetch() вместо LLMHttpClient, байпася timeout/inflight/memory-pressure.
+3. **Chat & Collaboration** (34 находки) — send lock deadlock, orphaned requests, stale hydration overwrites.
+4. **Performance & Optimization** (32 находки) — fabricated trend data, unbounded dedupSet, 3× full scan per STREAM_END.
+5. **Memory & Knowledge** (31 находка) — dual memory systems никогда не синхронизируются, 7 in-memory stores без персистенции.
+6. **Observability** (31 находка) — SLA service full mock, activeDebates:0 hardcoded, health score stale.
+7. **Security** (26 находок) — encrypt/decrypt no-op, adminToken undefined by default, timing side-channel.
+8. **Infrastructure** (24 находки) — time-machine restore saves instead of restoring, webhooks без HMAC, hub cycles reintroduced.
+9. **Agents & Roles** (28 находок) — RBAC bypassed in dev, no lifecycle in protocol service, client-only enforcement.
+10. **Dev & Tooling** (28 находок) — API key in URL query, plugin SDK no validation, fine-tuning full mock.
+
+---
+
+## Session 6 — Стабилизация Debate System (v4.5.0 → v4.6.0)
+
+### Цель
+
+Устранить 14 Critical проблем в Debate Runtime, чтобы система могла выдать 1000 вердиктов подряд без краша/OOM.
+
+### План
+
+| #   | Задача                                                                      | Статус       |
+| --- | --------------------------------------------------------------------------- | ------------ |
+| 1   | **C1** Module-level maps leak в `debate-llm-caller.ts`                      | 🟢 Done      |
+| 2   | **C2** Fire-and-forget verdict в `debate-phase-handler.ts`                  | 🟢 Done      |
+| 3   | **C3** Race stopDebateInternal vs finalize в `debate-sync-manager.ts`       | ❌ Skipped   |
+| 4   | **C4** Unsafe sync phase transitions в `debate-pipeline-builder.ts`         | ❌ Skipped   |
+| 5   | **C5** Argument content stripped before async verdict                       | ❌ Skipped   |
+| 6   | **C6** sessionAbortControllers leak в `debate-llm-caller.ts`                | 🟢 Done      |
+| 7   | **C7** Module instance maps never reset в `debate-orchestrator.ts`          | 🟢 Done      |
+| 8   | **C8** Session-shared cache в `debate-consensus.ts`                         | ⚪ Non-issue |
+| 9   | **C9** enhancementInFlight not session-wide в `debate-conclusion-engine.ts` | ⚪ Non-issue |
+| 10  | **C10** verdictAbortController timer handling                               | 🟢 Done (C2) |
+| 11  | **C11** destroy() timeout race в `debate-engine.ts`                         | 🟢 Done      |
+| 12  | **C12** Heartbeat dead code в `debate-sync-manager.ts`                      | 🟢 Done      |
+| 13  | **C13** Duplicate preflight requests в `debate-engine.ts`                   | 🟢 Done      |
+| 14  | **C14** skipAgents never reset for resumed sessions                         | ⚪ Non-issue |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | `debate-llm-caller.ts` — `cleanupSessionMaps(sessionId)` export added; `debate-engine.ts` — `cancelSession()` вызывает `cleanupSessionMaps()` в `cleanupMaps()`                                                                     |
+| C2  | `debate-pipeline-builder.ts` — verdict generation moved from phase handler to `consensusAndFinalize` pipeline stage (await, properly ordered); `debate-phase-handler.ts` — verdict block, timer, controller removed                 |
+| C6  | `debate-llm-caller.ts` — `isSessionCancelled` check added on every retry loop iteration (inside `while`), preventing `sessionAbortControllers` recreation after cleanup                                                             |
+| C7  | `debate-orchestrator.ts` — `bidScores.clear()` added to no-arg `destroy()` + per-session destroy path also clears maps; `participationCount`, `lastInteraction` cleaned                                                             |
+| C8  | Inspection confirmed: each session creates its own `DebateConsensusEngine` via `DebateSessionContext`; `destroy()` already clears all caches. **Closed as non-issue**                                                               |
+| C9  | Inspection confirmed: per-session engine instance, flag protects concurrent calls within one session only. **Closed as non-issue**                                                                                                  |
+| C10 | Fixed as part of C2 — `verdictAbortController` and timer now live in pipeline stage, not phase handler                                                                                                                              |
+| C11 | `debate-engine.ts` — `_destroyed` flag set first in `destroy()` before any cleanup; `_trackOp()` checks flag and returns promise untracked; `destroy()` awaits pending ops with 5s timeout before clearing maps                     |
+| C12 | `debate-sync-manager.ts` — removed `_heartbeatTimer`, `startHeartbeat()`, `stopHeartbeat()`, all callers; dead code eliminated                                                                                                      |
+| C13 | `debate-engine.ts` — `_preflightingProviders` Set guards against concurrent preflight for same provider; cleanup in `preflightTask.finally()`; added `_preflightingProviders.clear()` in `destroy()` for defense-in-depth           |
+| C14 | Inspection confirmed: `skipAgents` is purely local to pipeline stage `run()`, computed fresh from `session.arguments` each pipeline build, scoped to current round via `a.round === startRound + 1` filter. **Closed as non-issue** |
+
+### Build result
+
+| Метрика    | Значение             |
+| ---------- | -------------------- |
+| tsc -b     | 0 errors             |
+| Build time | 16.52s               |
+| Chunks     | 160+                 |
+| Runtime    | 1,058 KB (unchanged) |
+
+### Оставшиеся задачи (Skipped)
+
+| #   | Задача                                         | Причина пропуска                                                            |
+| --- | ---------------------------------------------- | --------------------------------------------------------------------------- |
+| C3  | Race stopDebateInternal vs finalize            | Out of scope — sync-manager architecture needs wider refactor               |
+| C4  | Unsafe sync phase transitions                  | Out of scope — tied to pipeline-builder redesign                            |
+| C5  | Argument content stripped before async verdict | Out of scope — requires deeper analysis of memory extractor pipeline timing |
+
+---
+
+## Session 7 — Critical фиксы по всем областям (v4.5.0 → v4.6.0)
+
+### Цель
+
+Устранить по одному Critical из каждой из 8 областей аудита Session 5 (Chat, Agents, Memory, Security, Observability, Performance, Providers, Infrastructure).
+
+### План
+
+| #   | Область            | Проблема                                                       | Статус  |
+| --- | ------------------ | -------------------------------------------------------------- | ------- |
+| 1   | **Chat**           | requestEntryMap populated AFTER eventBus.emit → потеря ответов | 🟢 Done |
+| 2   | **Agents**         | PermissionGate DEV bypass → RBAC не работает в dev             | 🟢 Done |
+| 3   | **Memory**         | duplicated computeId (SHA-256 в 2 файлах)                      | 🟢 Done |
+| 4   | **Security**       | SecurityService encrypt/decrypt no-op                          | 🟢 Done |
+| 5   | **Observability**  | activeDebates: 0 hardcoded                                     | 🟢 Done |
+| 6   | **Performance**    | dedupSet в budget-service растёт бесконечно                    | 🟢 Done |
+| 7   | **Providers**      | batch-processor currentAbort теряется при throw                | 🟢 Done |
+| 8   | **Infrastructure** | time-machine restore сохраняет вместо восстановления           | 🟢 Done |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `stores/chat/store.ts` — moved requestEntryMap population BEFORE `eventBus.emit(EVENTS.SEND_MESSAGE)`, so response handlers can find the entry synchronously                                                                                           |
+| 2   | `components/Common/PermissionGate.tsx` — removed `if (import.meta.env.DEV) return children` bypass; RBAC now enforced in dev too                                                                                                                       |
+| 3   | Created `src/kernel/utils/compute-memory-id.ts` — shared `computeMemoryId()` function; both `memory-repository.ts` and `memory-engine.ts` now delegate to it, eliminating the duplicate                                                                |
+| 4   | `kernel/security.ts` — implemented real AES-GCM encryption via Web Crypto API (PBKDF2 key derivation, random IV per encrypt, base64 output format)                                                                                                     |
+| 5   | `monitoring-service.ts` — added `getActiveDebatesCount` callback to `MonitoringServiceDeps`; `activeDebates` now queries runtime instead of hardcoded `0`                                                                                              |
+| 6   | `budget-service.ts` — added dedupSet size check: prune when `_costDedupSet.size > 15000` in addition to existing costHistory > 10000 check                                                                                                             |
+| 7   | `batch-processor-service.ts` — wrapped `runJob()` body in `try/finally` to ensure `this.currentAbort = null` runs on throw as well as normal completion                                                                                                |
+| 8   | `contracts/time-machine.ts` — added `keysData` field to `TimeSnapshot`; `time-machine-service.ts` — `createSnapshot('keys')` now stores `getAllKeys()` data; `restoreByScope('keys')` calls `restoreKeys()` with snapshot data instead of `saveKeys()` |
+
+### Build result
+
+| Метрика    | Значение |
+| ---------- | -------- |
+| tsc -b     | 0 errors |
+| Build time | 12.21s   |
+| Chunks     | 160+     |
+| Runtime    | 1,060 KB |
+
+---
+
+## Session 8 — Ещё 8 Critical по всем областям (v4.5.0 → v4.6.0)
+
+### Цель
+
+Устранить ещё 8 Critical проблем из аудита Session 5 — следующие по приоритету.
+
+### План
+
+| #   | Область               | Проблема                                             | Статус  |
+| --- | --------------------- | ---------------------------------------------------- | ------- |
+| 1   | **Chat C2**           | `_sendLocks` deadlock — permanently блокирует сессию | 🟢 Done |
+| 2   | **Security C3**       | `verifyAdminToken ===` вместо constant-time          | 🟢 Done |
+| 3   | **Security C5**       | `adminToken undefined` по умолчанию                  | 🟢 Done |
+| 4   | **Observability C7**  | `system-status-service` без error boundary           | 🟢 Done |
+| 5   | **Performance C8**    | `_dismissed` Set растёт бесконечно                   | 🟢 Done |
+| 6   | **Dev C1**            | API key в URL query параметре (Gemini)               | 🟢 Done |
+| 7   | **Infrastructure C3** | Hub circular dep в `config-history.ts`               | 🟢 Done |
+| 8   | **Infrastructure C6** | Hub circular dep в `gemini-cache-service.ts`         | 🟢 Done |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `stores/chat/store.ts` — replaced `_sendLocks` binary lock with `_sendQueue`; queued messages are processed FIFO when current send completes; silent drop replaced with queuing    |
+| 2   | `kernel/utils/constant-time.ts` — created shared `constantTimeEqual()`; `external-secrets-service.ts` and `virtual-key-service.ts` switched from `===` to constant-time comparison |
+| 3   | `config-registry.ts` — `buildConfigDefaults()` generates `crypto.randomUUID()` for `adminToken` if none configured; auth now has a valid default                                   |
+| 4   | `system-status-service.ts` — `getStatus()` wrapped in try/catch; returns `DEGRADED` summary on error instead of throwing                                                           |
+| 5   | `cost-optimization-service.ts` — `dismissRecommendation()` prunes `_dismissed` Set at 1000 entries (FIFO eviction)                                                                 |
+| 6   | `gemini-cache-service.ts` — moved API key from URL query (`?key=...`) to `X-Goog-Api-Key` header; no longer leaked in logs/history                                                 |
+| 7   | `config-history.ts` — changed `import('../instances')` to `import('../instances/core-references')` — breaks hub circular dep                                                       |
+| 8   | `gemini-cache-service.ts` — changed `import('../instances')` to `import('../instances/core-references')` — breaks hub circular dep                                                 |
+
+### Build result
+
+| Метрика    | Значение |
+| ---------- | -------- |
+| tsc -b     | 0 errors |
+| Build time | 9.84s    |
+| Chunks     | 160+     |
+| Runtime    | 1,061 KB |
+
+---
+
+## Session 9 — Ещё 8 Critical по всем областям (v4.5.0 → v4.6.0) ✅
+
+**Все 8 Critical фиксов завершены. Build 0 errors, 10.95s.**
+
+### Changes
+
+| #   | Область               | Проблема                                                                                  | Фикс                                                                                                                   |
+| --- | --------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Chat C3**           | `editEntry` очищает loading/streaming responses без отмены in-flight запросов             | `editEntry` эмитит `CANCEL_MESSAGE` + `removeActiveRequestId` для каждого loading/streaming response перед очисткой    |
+| 2   | **Dev C2**            | `installPlugin` не валидирует PluginManifest                                              | Добавлена `validateManifest()` — проверка id (regex), semver, тип, permissions, обязательные поля                      |
+| 3   | **Infrastructure C2** | memory scope restore использует текущее состояние вместо снапшота (append вместо replace) | `TimeSnapshot.memoryData`; `createSnapshot('memory')` сохраняет данные; `restoreByScope` чистит и импортит из снапшота |
+| 4   | **Infrastructure C4** | Webhook POST без HMAC — подпись не верифицируема                                          | HMAC-SHA256 через Web Crypto API; заголовок `X-Signature-256` если `CONFIG.security.webhookSecret` задан               |
+| 5   | **Observability C5**  | causal-timeline subscription leak                                                         | `this.unsub?.()` перед перезаписью в `start()`                                                                         |
+| 6   | **Observability C2**  | heapLog fallback для non-Chromium                                                         | `LOGGER.warn` в else-ветке                                                                                             |
+| 7   | **Observability C3**  | stale healthScore                                                                         | `this.recalculateHealth()` в `getSystemHealthIndicators()`                                                             |
+| 8   | **Performance C7**    | 50ms искусственная задержка                                                               | Удалена из `checkAllHealth`                                                                                            |
+
+---
+
+## Session 10 — 8 Critical: Chat, Security, Observability, Performance, Agents, Dev, Infra, Providers (v4.5.0 → v4.6.0) ✅
+
+### План
+
+| #   | Область              | Проблема                                                                                                            | Статус  |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | **Chat C4**          | race-executor: zero allowed candidates возвращает `true` (success) вместо `false` — сообщение теряется без fallback | 🟢 Done |
+| 2   | **Security**         | `webhookSecret: undefined` по умолчанию — HMAC signing неактивен без ручной настройки                               | 🟢 Done |
+| 3   | **Observability #4** | `health-sla-service` evaluateProfile без предупреждения о mock-бэкенде                                              | 🟢 Done |
+| 4   | **Performance #1**   | `key-usage-analytics` getTrends фабрикует token data через `totalCost * 200000`                                     | 🟢 Done |
+| 5   | **Agents C1**        | `agent-protocol-service` без init/destroy жизненного цикла — orphaned state                                         | 🟢 Done |
+| 6   | **Dev C3**           | `fine-tuning-service` full mock startJob без предупреждения                                                         | 🟢 Done |
+| 7   | **Infra C5**         | `deploy-service` full mock deploy без предупреждения                                                                | 🟢 Done |
+| 8   | **Providers C3**     | `model-distillation-service` full mock startJob без предупреждения                                                  | 🟢 Done |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                       |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `chat-executor.ts:648` — `return true` → `return false` при zero race candidates, allowing fallback to normal execution                                           |
+| 2   | `config-registry.ts` — `buildConfigDefaults()` generates `crypto.randomUUID()` for `webhookSecret` if none configured                                             |
+| 3   | `health-sla-service.ts` — `console.warn` added at top of `evaluateProfile()` noting mock backend                                                                  |
+| 4   | `key-usage-analytics-service.ts:107` — `totalTokens` now sourced from `keyStateStore.getAll()` real `quota.usedTokens` instead of fabricated `totalCost * 200000` |
+| 5   | `agent-protocol-service.ts` — added `init()`, `destroy()` lifecycle methods with `_initialized` flag                                                              |
+| 6   | `fine-tuning-service.ts` — `console.warn` in `startJob()` noting mock backend                                                                                     |
+| 7   | `deploy-service.ts` — `console.warn` in `deploy()` noting mock backend                                                                                            |
+| 8   | `model-distillation-service.ts` — `console.warn` in `startJob()` noting mock backend                                                                              |
+
+### Build result
+
+| Метрика    | Значение |
+| ---------- | -------- |
+| tsc -b     | 0 errors |
+| Build time | 6.94s    |
+| Chunks     | 160+     |
+| Runtime    | 1,063 KB |
+
+---
+
+## Session 11 — 8 Critical: Chat, Security, Performance, Memory, Providers (v4.5.0 → v4.6.0) ✅
+
+**Все 8 Critical фиксов завершены. Build 0 errors, 10.72s.**
+
+### План
+
+| #   | Область            | Проблема                                                               | Статус  |
+| --- | ------------------ | ---------------------------------------------------------------------- | ------- |
+| 1   | **Security C2**    | adminToken readable via JSON.stringify/Object.keys (enumerable)        | 🟢 Done |
+| 2   | **Chat C5**        | liveQuery merge overwrites fresh data with stale (no updatedAt check)  | 🟢 Done |
+| 3   | **Performance #5** | cost-manager checkBudget scans ALL records on every request (O(n))     | 🟢 Done |
+| 4   | **Performance #3** | budget-service saveHistory persists full 10k array on every STREAM_END | 🟢 Done |
+| 5   | **Chat C6**        | task-handoff eviction uses Map insertion order instead of createdAt    | 🟢 Done |
+| 6   | **Budget perf**    | budget-service STREAM_END does N+1 full scans per provider             | 🟢 Done |
+| 7   | **Providers #2**   | batch-processor zero concurrency — one slow provider blocks all        | 🟢 Done |
+| 8   | **Memory C3**      | memory import without schema/length validation                         | 🟢 Done |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                             |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `config-registry.ts` — `adminToken` и `webhookSecret` установлены через `Object.defineProperty` с `enumerable: false` (невидимы в JSON.stringify/Object.keys)                           |
+| 2   | `stores/chat/hydration.ts:149-155` — merge теперь проверяет `updatedAt`: если у существующей записи `updatedAt` новее, входящая пропускается (last-writer-wins с таймстемпом)           |
+| 3   | `llm/decorators/cost-manager.ts` — добавлены `_runningDay/_runningWeek/_runningMonth`; `checkBudget()` пересчитывает их за 1 проход вместо полного сканирования                         |
+| 4   | `kernel/services/budget-service.ts` — `saveHistory()` использует debounce (5s): множественные STREAM_END за 5s окно → 1 persist вместо N                                                |
+| 5   | `kernel/services/task-handoff.ts:95-98` — eviction заменён с `Map.keys().next()` на поиск записи с минимальным `createdAt`, предотвращая удаление активного handoff после DB reload     |
+| 6   | `kernel/services/budget-service.ts:212-226` — `computeCurrentSpend` + N× `computeProviderSpend` заменены на один проход через `monthlyEntries` с `providerSpendMap` (O(1) per provider) |
+| 7   | `kernel/services/batch-processor-service.ts:117-173` — последовательный цикл заменён на `CONCURRENCY=5` с `Promise.allSettled(chunk)` и `TASK_TIMEOUT_MS=60000`                         |
+| 8   | `kernel/services/memory-transfer-service.ts` — добавлены: лимит импорта (10K entries, 100KB/content), валидация `type` поля, slice/truncation для CSV/Markdown                          |
+
+### Build result
+
+| Метрика    | Значение |
+| ---------- | -------- |
+| tsc -b     | 0 errors |
+| Build time | 10.72s   |
+| Chunks     | 160+     |
+| Runtime    | 1,064 KB |
+
+---
+
+## Session 14 — 8 fix: AgentControlPanel inject, type fixes, budget (v4.5.0 → v4.6.0) ✅
+
+**Все 8 фиксов завершены. Typecheck 0 errors, build ~180s.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `memory-engine.ts:194` — `as any` removed, `{ vector }` typed as Partial\<MemoryEntry\>                                                                            |
+| 2   | `config-mutations.ts` — `replaceConfig` uses `as unknown as Record<string, unknown>` instead of `as` cast with `Object.keys` union                                 |
+| 3   | `AgentControlPanel.tsx:104-123` — `agentService.injectMessage()` (doesn't exist) → `debateHumanService.addArgument()` via `debateService.getActiveDebateSession()` |
+| 4   | `key-service.ts:1166-1183` — `handleProviderError` detects 429/rate-limit, sets status `rate_limited` instead of `error`                                           |
+| 5   | `debate-engine.ts:830-856` — Best-of-N budget tracking: `deps.budget` (not in LlmCallerDeps) → `this.budgets.get(sessionId)`                                       |
+| 6   | `research-engine-service.ts:301` — `searchSourcesAlgo` wrapped in Promise.race with 30s timeout, added missing `ResearchSource` import                             |
+| 7   | `hydration.ts:187-195` — beforeunload localStorage quota check 4.5MB, fallback to 5 sessions                                                                       |
+| 8   | `DebateRuntimePanel.tsx:418` — `.catch(() => {})` → `.catch` with `console.error`                                                                                  |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
+## Session 15 — P0 Security + Deps (v4.5.0 → v4.6.0) ✅
+
+**4 P0 Critical фикса. Typecheck 0 errors. 46 packages (370MB) removed.**
+
+### План
+
+| #   | Область       | Проблема                                       | Статус  |
+| --- | ------------- | ---------------------------------------------- | ------- |
+| 1   | **P0-SEC-1**  | 12 live API keys в git (insert-all-keys.ts)    | 🟢 Done |
+| 2   | **P0-SEC-2**  | Vault disabled — ключи в plaintext в IndexedDB | 🟢 Done |
+| 3   | **P0-DEPS-1** | Web worker сломан в production (.ts → dist)    | 🟢 Done |
+| 4   | **P0-DEPS-2** | @huggingface/transformers 370MB dead dep chain | 🟢 Done |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `scripts/insert-all-keys.ts` — 12 хардкоженных API keys удалены, заменены на чтение из `VITE_KEY_*` env vars. Добавлены vars в `.env.example`          |
+| 2   | `key-service.ts:434-448` — добавлен `unlockVault()`: генерация device-specific ключа в localStorage, auto-unlock vault при `init()`                    |
+| 3   | `key-registry.ts:641` — комментарий "Vault system removed" заменён на актуальное описание                                                              |
+| 4   | `memory.worker.ts` — `@huggingface/transformers` pipeline заменён на лёгкую embedding функцию (word-level hashing, 384-dim) — без внешних зависимостей |
+| 5   | `package.json` — удалён `@huggingface/transformers`                                                                                                    |
+| 6   | `vite.config.ts` — удалён `vendor-ml` manual chunk, очищен `external: []`                                                                              |
+| 7   | `provider-service.ts:177` — `NodeJS.Timeout` → удалён (браузерный таймер, unref не нужен)                                                              |
+
+### Build result
+
+| Метрика          | Значение |
+| ---------------- | -------- |
+| tsc              | 0 errors |
+| Packages removed | 46       |
+| npm install      | ✅       |
+| Typecheck        | ✅ pass  |

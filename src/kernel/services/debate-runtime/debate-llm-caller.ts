@@ -78,6 +78,17 @@ const sessionCausalGraphMap = new Map<
     import('../../contracts/debate-causal-graph').ICausalGraphBuilder
 >();
 
+/**
+ * C1: Clean up all module-level maps for a given sessionId.
+ * Must be called when a debate session ends (completed/failed/cancelled)
+ * to prevent unbounded memory growth (~50-200KB per debate).
+ */
+export function cleanupSessionMaps(sessionId: string): void {
+    sessionRToMMap.delete(sessionId);
+    sessionFingerprintMap.delete(sessionId);
+    sessionCausalGraphMap.delete(sessionId);
+}
+
 // ── Response validation ─────────────────────────────────────────────
 // Detect instruction-leakage responses where the LLM returns
 // meta-commentary ("Извините, но вы не выполнили инструкции") instead
@@ -275,6 +286,14 @@ export async function debateCallLlm(
         return 'cancelled';
     }
     while (retries < MAX_RETRIES) {
+        // C6: Check cancellation on each retry iteration — the session can be
+        // cancelled mid-retry-loop (e.g. another agent errored out, or user hit stop).
+        // Without this guard, a cancelled session's abort controller entries get
+        // recreated after cleanupMaps() deletes them, causing tiny leaks.
+        if (deps.isSessionCancelled?.(sessionId)) {
+            return 'cancelled';
+        }
+
         // Merge session-level failed models so cross-agent cache is effective
         // (e.g., Agent A got 413 on llama-3.1-8b-instant → session.markModelFailed →
         //  Agent B skips it without re-trying)

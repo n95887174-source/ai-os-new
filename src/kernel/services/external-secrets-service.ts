@@ -2,6 +2,7 @@ import { EVENTS } from '../events/event-names';
 import type { SecretStore, SecretRef, SecretStoreConfig } from '../contracts/secret-store';
 import { rootLogger } from './logger-service';
 import { CONFIG } from './config-registry';
+import { constantTimeEqual } from '../utils/constant-time';
 
 const LOGGER = rootLogger.child('ExternalSecretsService');
 
@@ -75,7 +76,7 @@ export class ExternalSecretsService {
         const expected = CONFIG.security?.adminToken;
         if (!expected) return false;
         if (!token) return false;
-        return token === expected;
+        return constantTimeEqual(token, expected);
     }
 
     async activateBackend(

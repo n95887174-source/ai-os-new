@@ -137,7 +137,7 @@ export class LLMHttpClient {
         const start = Date.now();
         const bodyStr = JSON.stringify(body);
         if (import.meta.env.DEV) {
-            console.debug(`[${this.#provider}] POST ${path} body:`, bodyStr.slice(0, 2000));
+            console.debug(`[${this.#provider}] POST ${path} size:${bodyStr.length}`);
         }
         const { signal: mergedSignal, controller } = this.#withTimeout(signal);
         const done = this.#trackInFlight(controller, path);

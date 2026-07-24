@@ -56,7 +56,6 @@ export class DebateSyncManager {
 
     private _unsubs: Array<() => void> = [];
     private _initUnsubs: Array<() => void> = [];
-    private _heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private _durationTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly _interpreter = new DebateInterpreter();
     private _engineOnly = false;
@@ -374,7 +373,6 @@ export class DebateSyncManager {
         this.bridgeCtx = bridgeCtx;
         this.governor?.setMaxRounds(bridgeCtx.maxRounds);
         this.setupListeners(runtimeId);
-        this.startHeartbeat();
         this.syncSession(true);
         const session = this.activeSession;
         if (!session) throw new Error('No active session after sync');
@@ -606,7 +604,6 @@ export class DebateSyncManager {
     }
 
     destroy(): void {
-        this.stopHeartbeat();
         this.clearTimers();
         if (this.engine && this.runtimeSessionId) {
             const snap = this.engine.getSession(this.runtimeSessionId);
@@ -796,7 +793,6 @@ export class DebateSyncManager {
         const session = this.activeSession;
         if (session && (session.status === 'cancelled' || session.status === 'failed')) {
             this._finalized = true;
-            this.stopHeartbeat();
             this.clearTimers();
             this.clearListeners();
             this.runtimeSessionId = null;
@@ -808,7 +804,6 @@ export class DebateSyncManager {
             return;
         }
         this._finalized = true;
-        this.stopHeartbeat();
         this.clearTimers();
         if (!session) return;
         finalizeDebate(session, {
@@ -962,24 +957,6 @@ export class DebateSyncManager {
             });
         }
         return true;
-    }
-
-    private startHeartbeat(): void {
-        this.stopHeartbeat();
-        // Heartbeat intentionally does NOT persist — the engine's saveSnapshot
-        // path (via auto-checkpoints + syncSession) tracks Dexie version numbers
-        // through attemptSave → incrementVersion. Calling persistActiveSession here
-        // (which saves without a version field) would bump the DB version without
-        // the engine session knowing, causing "version conflict" errors on the
-        // next engine save — including the awaited governor-stop save, which loses
-        // all arguments and prevents verdict generation.
-    }
-
-    private stopHeartbeat(): void {
-        if (this._heartbeatTimer !== null) {
-            clearInterval(this._heartbeatTimer);
-            this._heartbeatTimer = null;
-        }
     }
 
     private clearTimers(): void {

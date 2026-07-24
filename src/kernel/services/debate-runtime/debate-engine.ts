@@ -6,7 +6,12 @@ import { DebateTopologyService } from './debate-topology';
 import { DebateOrchestrator } from './debate-orchestrator';
 import { buildPipeline } from './debate-pipeline-builder';
 import type { PipelineEngine, PipelineEngineDeps } from './debate-pipeline-builder';
-import { debateCallLlm, debateGetDefaultPrompt, type LlmCallerDeps } from './debate-llm-caller';
+import {
+    debateCallLlm,
+    debateGetDefaultPrompt,
+    cleanupSessionMaps,
+    type LlmCallerDeps,
+} from './debate-llm-caller';
 import type {
     DebateTopology,
     ParticipantConfig,
@@ -200,6 +205,8 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private static readonly WARM_CACHE_TTL = 5 * 60 * 1000;
 
     private preflightDone = new Set<string>();
+    /** C13: Guards against duplicate concurrent preflight for the same provider across sessions */
+    private _preflightingProviders = new Set<string>();
     /** Tracks cancelled session IDs so getContext() never recreates contexts for them. */
     private _cancelledSessionIds = new Set<string>();
     private persistence: DebatePersistenceManager;
@@ -207,7 +214,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     // Track fire-and-forget async ops so destroy() can await them with timeout
     private _pendingOps = new Map<string, Promise<unknown>>();
     private _nextOpId = 0;
+    private _destroyed = false;
     private _trackOp<T>(name: string, promise: Promise<T>): Promise<T> {
+        if (this._destroyed) return promise;
         const id = `${name}-${++this._nextOpId}`;
         this._pendingOps.set(id, promise);
         promise.finally(() => this._pendingOps.delete(id)).catch(() => {});
@@ -299,6 +308,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const tasks: Promise<void>[] = [];
         for (const provider of providers) {
             if (session.hasProviderFailed(provider)) continue;
+            // C13: Skip provider if another session is already preflighting it
+            if (this._preflightingProviders.has(provider)) continue;
+            this._preflightingProviders.add(provider);
             const keys = allKeys.filter((k) => k.provider === provider && k.status === 'active');
             if (keys.length === 0) {
                 session.markProviderFailed(provider);
@@ -313,93 +325,93 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             const models = DEBATE_MODEL_PRIORITY[provider.toLowerCase()] ?? [];
             if (models.length === 0) continue;
 
-            tasks.push(
-                (async () => {
-                    for (const model of models) {
-                        // Skip preflight for known-warm models
-                        if (this.isProviderWarm(provider, model)) {
-                            LOGGER.debug(
-                                'DebateEngine',
-                                `preflight: ${provider}/${model} WARM (skipping)`,
-                            );
-                            return;
-                        }
-
-                        const ctrl = new AbortController();
-                        const preflightTimeout = this.getPreflightTimeout(provider, model);
-                        const timer = setTimeout(
-                            () => ctrl.abort(new Error('PreflightTimedOut')),
-                            preflightTimeout,
+            const preflightTask = (async () => {
+                for (const model of models) {
+                    // Skip preflight for known-warm models
+                    if (this.isProviderWarm(provider, model)) {
+                        LOGGER.debug(
+                            'DebateEngine',
+                            `preflight: ${provider}/${model} WARM (skipping)`,
                         );
-                        let timedOut: boolean;
-                        try {
-                            await adapter.sendMessage(
-                                [{ role: 'user', content: 'Reply only: OK' }],
-                                model,
-                                key.key,
-                                ctrl.signal,
-                            );
-                            this.markProviderWarm(provider, model);
-                            LOGGER.debug(
-                                'DebateEngine',
-                                `preflight: ${provider}/${model} OK (${preflightTimeout}ms budget)`,
-                            );
-                            return; // First working model is enough for this provider
-                        } catch (e) {
-                            const errMsg = String(e);
-                            timedOut = errMsg.includes('PreflightTimedOut');
-                            const sc = (e as { statusCode?: number }).statusCode;
-                            const isAuth =
-                                sc === 401 ||
-                                sc === 402 ||
-                                sc === 403 ||
-                                errMsg.includes('401') ||
-                                errMsg.includes('403') ||
-                                errMsg.includes('Authentication failed') ||
-                                errMsg.includes('Invalid API Key') ||
-                                errMsg.includes('Unauthorized') ||
-                                errMsg.includes('Forbidden');
-                            if (isAuth) {
-                                LOGGER.warn(
-                                    'DebateEngine',
-                                    `preflight: ${provider}/${model} auth error — marking provider failed`,
-                                );
-                                session.markProviderFailed(provider);
-                                const kss = this.deps.getKeyStateStore?.();
-                                if (kss) {
-                                    try {
-                                        kss.update(key.id, { flags: { authFailed: true } });
-                                    } catch {
-                                        /* best-effort */
-                                    }
-                                }
-                                return; // Auth errors are provider-wide, don't try other models
-                            }
-                            if (timedOut) {
-                                LOGGER.warn(
-                                    'DebateEngine',
-                                    `preflight: ${provider}/${model} timed out (${preflightTimeout}ms) — skipping remaining models, same endpoint`,
-                                );
-                                // Don't try other models — same endpoint, same cold-start delay
-                                break;
-                            }
-                            // Other transient error — try next model
+                        return;
+                    }
+
+                    const ctrl = new AbortController();
+                    const preflightTimeout = this.getPreflightTimeout(provider, model);
+                    const timer = setTimeout(
+                        () => ctrl.abort(new Error('PreflightTimedOut')),
+                        preflightTimeout,
+                    );
+                    let timedOut: boolean;
+                    try {
+                        await adapter.sendMessage(
+                            [{ role: 'user', content: 'Reply only: OK' }],
+                            model,
+                            key.key,
+                            ctrl.signal,
+                        );
+                        this.markProviderWarm(provider, model);
+                        LOGGER.debug(
+                            'DebateEngine',
+                            `preflight: ${provider}/${model} OK (${preflightTimeout}ms budget)`,
+                        );
+                        return; // First working model is enough for this provider
+                    } catch (e) {
+                        const errMsg = String(e);
+                        timedOut = errMsg.includes('PreflightTimedOut');
+                        const sc = (e as { statusCode?: number }).statusCode;
+                        const isAuth =
+                            sc === 401 ||
+                            sc === 402 ||
+                            sc === 403 ||
+                            errMsg.includes('401') ||
+                            errMsg.includes('403') ||
+                            errMsg.includes('Authentication failed') ||
+                            errMsg.includes('Invalid API Key') ||
+                            errMsg.includes('Unauthorized') ||
+                            errMsg.includes('Forbidden');
+                        if (isAuth) {
                             LOGGER.warn(
                                 'DebateEngine',
-                                `preflight: ${provider}/${model} failed (${errMsg.slice(0, 60)}), trying next model`,
+                                `preflight: ${provider}/${model} auth error — marking provider failed`,
                             );
-                        } finally {
-                            clearTimeout(timer);
+                            session.markProviderFailed(provider);
+                            const kss = this.deps.getKeyStateStore?.();
+                            if (kss) {
+                                try {
+                                    kss.update(key.id, { flags: { authFailed: true } });
+                                } catch {
+                                    /* best-effort */
+                                }
+                            }
+                            return; // Auth errors are provider-wide, don't try other models
                         }
+                        if (timedOut) {
+                            LOGGER.warn(
+                                'DebateEngine',
+                                `preflight: ${provider}/${model} timed out (${preflightTimeout}ms) — skipping remaining models, same endpoint`,
+                            );
+                            // Don't try other models — same endpoint, same cold-start delay
+                            break;
+                        }
+                        // Other transient error — try next model
+                        LOGGER.warn(
+                            'DebateEngine',
+                            `preflight: ${provider}/${model} failed (${errMsg.slice(0, 60)}), trying next model`,
+                        );
+                    } finally {
+                        clearTimeout(timer);
                     }
-                    // All models failed for this provider
-                    session.markProviderFailed(provider);
-                    LOGGER.warn(
-                        'DebateEngine',
-                        `preflight: ${provider} — all models failed, marking provider unavailable`,
-                    );
-                })(),
-            );
+                }
+                // All models failed for this provider
+                session.markProviderFailed(provider);
+                LOGGER.warn(
+                    'DebateEngine',
+                    `preflight: ${provider} — all models failed, marking provider unavailable`,
+                );
+            })();
+            preflightTask.finally(() => this._preflightingProviders.delete(provider));
+            tasks.push(preflightTask);
         }
         await Promise.allSettled(tasks);
     }
@@ -449,9 +461,12 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             };
             document.addEventListener('visibilitychange', this._visibilityHandler);
             this._beforeUnloadHandler = () => {
-                // Async saveSnapshot fires and forgets — may not complete before tab closes
+                // Tracked ops for graceful shutdown; sync backup below for crash recovery
                 for (const sessionId of this.sessions.keys()) {
-                    this.saveSnapshot(sessionId);
+                    this._trackOp(
+                        `beforeunload-save:${sessionId}`,
+                        this.saveSnapshot(sessionId),
+                    ).catch(() => {});
                 }
                 // audit1#2: Sync localStorage fallback for crash recovery
                 try {
@@ -815,7 +830,11 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (bestOfN && bestOfN > 1 && session.round >= 2) {
             const candidates: Array<{ content: string; score: number }> = [];
             for (let i = 0; i < Math.min(bestOfN, 3); i++) {
+                const candidateBudget = this.budgets.get(sessionId);
                 try {
+                    if (candidateBudget) {
+                        await candidateBudget.reserveAndRecord(sessionId, 250, 250 * 0.000002);
+                    }
                     const content = await debateCallLlm(
                         sessionId,
                         session,
@@ -977,6 +996,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 abortCtls.clear();
             }
             this.sessionAbortControllers.delete(sessionId);
+            cleanupSessionMaps(sessionId);
             // The orphan cleanup loop has been removed because getContext() now
             // checks _cancelledSessionIds and returns a throwaway context instead
             // of recreating one in the sessionContexts map. Async pipeline events
@@ -1121,6 +1141,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     async destroy(): Promise<void> {
+        // C11: Set destroyed flag BEFORE cleanup — prevents _trackOp from
+        // registering new pending ops while we're tearing down.
+        this._destroyed = true;
         // Cancel all active sessions — cascades to budget/memory/context cleanup
         for (const sessionId of this.sessions.keys()) {
             this.cancelSession(sessionId);
@@ -1153,6 +1176,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         this.sessionPhaseControllers.clear();
         this.runningSessions.clear();
         this.preflightDone.clear();
+        this._preflightingProviders.clear();
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
             this.cleanupInterval = null;

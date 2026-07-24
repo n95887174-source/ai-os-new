@@ -31,6 +31,7 @@ export interface TimeMachineServiceDeps {
     memoryService?: {
         getAllMemories(): { id: string; content: string; timestamp: number }[];
         importMemories(memories: { id: string; content: string; timestamp: number }[]): void;
+        clearAllMemories?(): void | Promise<void>;
     };
 }
 
@@ -74,6 +75,8 @@ export class TimeMachineService implements ITimeMachineService {
     createSnapshot(label: string, scope: SnapshotScope): TimeSnapshot {
         const changes: string[] = [];
         let snapshotRefId: string | undefined;
+        let keysData: { id: string; provider: string; model: string; status: string }[] | undefined;
+        let memoryData: { id: string; content: string; timestamp: number }[] | undefined;
         switch (scope) {
             case 'full': {
                 changes.push('Full system state captured');
@@ -90,12 +93,25 @@ export class TimeMachineService implements ITimeMachineService {
             case 'config':
                 changes.push('Configuration state captured');
                 break;
-            case 'memory':
+            case 'memory': {
                 changes.push('Memory state captured');
+                const ms = this.deps.memoryService;
+                if (ms) {
+                    const all = ms.getAllMemories();
+                    memoryData = all;
+                    changes.push(`${all.length} memories stored`);
+                }
                 break;
-            case 'keys':
+            }
+            case 'keys': {
                 changes.push('Key management state captured');
+                const ks = this.deps.keyService;
+                if (ks) {
+                    keysData = ks.getAllKeys();
+                    changes.push(`${keysData.length} keys stored`);
+                }
                 break;
+            }
             case 'debates':
                 changes.push('Debate sessions state captured');
                 break;
@@ -108,6 +124,8 @@ export class TimeMachineService implements ITimeMachineService {
             size: changes.join('').length + 64,
             changes,
             snapshotRefId,
+            keysData,
+            memoryData,
         };
         this.snapshots.push(snap);
         if (this.snapshots.length > MAX_SNAPSHOTS) {
@@ -146,16 +164,16 @@ export class TimeMachineService implements ITimeMachineService {
                 }
                 break;
             case 'keys':
-                if (deps.keyService) {
-                    deps.keyService.saveKeys();
+                if (deps.keyService && snap.keysData && snap.keysData.length > 0) {
+                    deps.keyService.restoreKeys(snap.keysData);
                 }
                 break;
             case 'memory':
-                if (deps.memoryService) {
-                    const allMemories = deps.memoryService.getAllMemories();
-                    if (allMemories.length > 0) {
-                        deps.memoryService.importMemories(allMemories);
+                if (deps.memoryService && snap.memoryData && snap.memoryData.length > 0) {
+                    if (deps.memoryService.clearAllMemories) {
+                        await deps.memoryService.clearAllMemories();
                     }
+                    deps.memoryService.importMemories(snap.memoryData);
                 }
                 break;
             case 'debates':

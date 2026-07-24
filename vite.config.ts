@@ -46,7 +46,7 @@ export default defineConfig({
         minify: 'esbuild',
         chunkSizeWarningLimit: 700,
         rollupOptions: {
-            external: ['onnxruntime-node', 'sharp'],
+            external: [],
             output: {
                 manualChunks(id) {
                     if (id.includes('node_modules')) {
@@ -68,12 +68,7 @@ export default defineConfig({
                         ) {
                             return 'vendor-utils';
                         }
-                        if (
-                            id.includes('@huggingface/transformers') ||
-                            id.includes('onnxruntime')
-                        ) {
-                            return 'vendor-ml';
-                        }
+
                         if (id.includes('framer-motion')) {
                             return 'vendor-motion';
                         }

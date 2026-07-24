@@ -9,6 +9,17 @@ import type { MemoryEntry } from '../types/memory-types';
 import type { IDatabaseService } from '../types/interfaces';
 import { rootLogger } from './logger-service';
 
+const MAX_IMPORT_ENTRIES = 10_000;
+const MAX_ENTRY_CONTENT_LENGTH = 100_000;
+const VALID_IMPORT_TYPES = new Set([
+    'fact',
+    'claim',
+    'observation',
+    'summary',
+    'imported',
+    undefined,
+]);
+
 const LOGGER = rootLogger.child('MemoryTransferService');
 const genId = () => crypto.randomUUID();
 const EXPORT_HISTORY_KEY = 'memory_transfer_exports';
@@ -135,6 +146,17 @@ export class MemoryTransferService implements IMemoryTransferService {
 
     async import(data: string, format: ExportFormat): Promise<MemoryImport> {
         const id = genId();
+        if (data.length > MAX_IMPORT_ENTRIES * MAX_ENTRY_CONTENT_LENGTH) {
+            return {
+                id,
+                source: 'import',
+                format,
+                entriesCount: 0,
+                status: 'failed',
+                createdAt: Date.now(),
+                error: 'Import data exceeds maximum size',
+            };
+        }
         try {
             let entries: Omit<MemoryEntry, 'id'>[] = [];
 
@@ -142,32 +164,55 @@ export class MemoryTransferService implements IMemoryTransferService {
                 case 'json': {
                     const parsed = JSON.parse(data);
                     const rawList = Array.isArray(parsed) ? parsed : [parsed];
+                    if (rawList.length > MAX_IMPORT_ENTRIES) {
+                        return {
+                            id,
+                            source: 'import',
+                            format,
+                            entriesCount: 0,
+                            status: 'failed',
+                            createdAt: Date.now(),
+                            error: `Import exceeds max ${MAX_IMPORT_ENTRIES} entries`,
+                        };
+                    }
                     entries = rawList
                         .filter((r: Record<string, unknown>) => typeof r.content === 'string')
-                        .map((r: Record<string, unknown>) => ({
-                            content: r.content as string,
-                            metadata: {
-                                source:
-                                    ((r.metadata as Record<string, unknown>)?.source as string) ??
-                                    'import',
-                                type:
-                                    ((r.metadata as Record<string, unknown>)?.type as string) ??
-                                    'imported',
-                                timestamp:
-                                    ((r.metadata as Record<string, unknown>)
-                                        ?.timestamp as number) ?? Date.now(),
-                                importance:
-                                    ((r.metadata as Record<string, unknown>)
-                                        ?.importance as number) ?? 0.5,
-                            },
-                            vector: Array.isArray(r.vector) ? (r.vector as number[]) : undefined,
-                        }));
+                        .map((r: Record<string, unknown>) => {
+                            const content = (r.content as string).slice(
+                                0,
+                                MAX_ENTRY_CONTENT_LENGTH,
+                            );
+                            const type = (r.metadata as Record<string, unknown>)?.type as
+                                string | undefined;
+                            if (type !== undefined && !VALID_IMPORT_TYPES.has(type)) {
+                                throw new Error(`Invalid memory type: "${type}"`);
+                            }
+                            return {
+                                content,
+                                metadata: {
+                                    source:
+                                        ((r.metadata as Record<string, unknown>)
+                                            ?.source as string) ?? 'import',
+                                    type: type ?? 'imported',
+                                    timestamp:
+                                        ((r.metadata as Record<string, unknown>)
+                                            ?.timestamp as number) ?? Date.now(),
+                                    importance:
+                                        ((r.metadata as Record<string, unknown>)
+                                            ?.importance as number) ?? 0.5,
+                                },
+                                vector: Array.isArray(r.vector)
+                                    ? (r.vector as number[])
+                                    : undefined,
+                            };
+                        });
                     break;
                 }
                 case 'csv': {
                     const lines = data
                         .split('\n')
-                        .filter((l) => l.trim() && !l.startsWith('"content",'));
+                        .filter((l) => l.trim() && !l.startsWith('"content",'))
+                        .slice(0, MAX_IMPORT_ENTRIES);
                     for (const line of lines) {
                         const parts = line.match(/"(?:[^"]|"")*"/g);
                         if (!parts || parts.length < 3) continue;
@@ -190,12 +235,15 @@ export class MemoryTransferService implements IMemoryTransferService {
                 }
                 case 'markdown':
                 default: {
-                    const sections = data.split('## ').filter(Boolean);
+                    const sections = data.split('## ').filter(Boolean).slice(0, MAX_IMPORT_ENTRIES);
                     for (const section of sections) {
                         const lines = section.split('\n').filter(Boolean);
                         const sectionName = lines[0]?.trim() ?? 'General';
                         const contentLines = lines.slice(2).filter((l) => !l.startsWith('>'));
-                        const content = contentLines.join('\n').trim();
+                        const content = contentLines
+                            .join('\n')
+                            .trim()
+                            .slice(0, MAX_ENTRY_CONTENT_LENGTH);
                         if (content) {
                             entries.push({
                                 content,

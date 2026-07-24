@@ -102,6 +102,7 @@ export class CounterfactualEngine implements ICounterfactualEngine {
     constructor(private routerService: RouterService) {}
 
     run(input: CounterfactualInput): CounterfactualResult {
+        this.routerService.clearSimulation();
         const start = performance.now();
 
         const original = toDecisionPayload({
@@ -139,6 +140,7 @@ export class CounterfactualEngine implements ICounterfactualEngine {
         );
 
         const simDecision = this.routerService.getSimulationDecision();
+        this.routerService.clearSimulation();
         if (!simDecision) {
             return {
                 requestId: original.requestId,

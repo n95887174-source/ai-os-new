@@ -25,6 +25,7 @@ import type { KeyStore } from '../../contracts/storage/key-store';
 import { initStats, initExtendedStats } from './key-registry-utils';
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
+import { ssrSafeStorage } from '../../utils/ssr-storage';
 
 import type { FreeTierLimit } from './key-types';
 
@@ -242,6 +243,7 @@ export class KeyService implements IKeyRotationManager {
         if (this._initialized) return;
         this._initialized = true;
         await this.loadConfig();
+        await this.unlockVault();
         await this.registry.loadKeys();
         const keysAfterLoad = this.registry.getKeys();
         if (import.meta.env.DEV)
@@ -425,6 +427,24 @@ export class KeyService implements IKeyRotationManager {
             this.deps.eventBus.emit(EVENTS.KEYS_LOADED, this.registry.getKeys());
         }
         return restored;
+    }
+
+    // -- Vault ----------------------------------------------------------
+
+    private async unlockVault(): Promise<void> {
+        if (!this.vault.isLocked()) return;
+        const STORAGE_KEY = 'key-vault:device-key';
+        try {
+            let deviceKey = ssrSafeStorage.getItem(STORAGE_KEY);
+            if (!deviceKey) {
+                const bytes = crypto.getRandomValues(new Uint8Array(32));
+                deviceKey = btoa(String.fromCharCode(...bytes));
+                ssrSafeStorage.setItem(STORAGE_KEY, deviceKey);
+            }
+            await this.vault.unlock(deviceKey);
+        } catch {
+            // Vault unlock failure is non-fatal — keys will be stored as plaintext
+        }
     }
 
     // -- Config Persistence ---------------------------------------------
@@ -1164,9 +1184,12 @@ export class KeyService implements IKeyRotationManager {
     }
 
     handleProviderError(keyId: string, error: string) {
+        const isRateLimit = /\b429\b/.test(error) || /\brate.limit\b/i.test(error);
         this.registry.modifyKey(keyId, (key) => {
             const previousState = key.status;
-            key.status = 'error';
+            if (!isRateLimit) {
+                key.status = 'error';
+            }
             if (!key.stats) {
                 key.stats = initStats();
             }
@@ -1174,12 +1197,14 @@ export class KeyService implements IKeyRotationManager {
             this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
                 id: keyId,
                 provider: key.provider,
-                state: 'error',
+                state: isRateLimit ? 'rate_limited' : 'error',
                 previousState,
             });
         });
         void this.registry.saveKeys();
-        this.lifecycle.onError(keyId);
+        if (!isRateLimit) {
+            this.lifecycle.onError(keyId);
+        }
     }
 
     // -- Diagnostics -----------------------------------------------------

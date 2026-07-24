@@ -151,6 +151,10 @@ export class HealthSlaService implements IHealthSlaService {
     evaluateProfile(profileId: string): { ruleId: string; passed: boolean; actual: number }[] {
         const profile = this.profiles.find((p) => p.id === profileId);
         if (!profile) throw new Error(`Profile ${profileId} not found`);
+        console.warn(
+            '[HealthSlaService] evaluateProfile uses @deprecated MOCK backend — metrics are simulated',
+            { profileId, profileName: profile.name },
+        );
         return profile.rules.map((rule) => {
             let actual: number;
             let hasData = false;

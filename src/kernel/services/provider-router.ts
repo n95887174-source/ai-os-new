@@ -462,6 +462,10 @@ export class RouterService {
         return this.simulationHistory[0];
     }
 
+    clearSimulation(): void {
+        this.simulationHistory = [];
+    }
+
     getStateSnapshotForSimulation(): SystemState {
         return structuredClone(this.deps.kernel.getState());
     }

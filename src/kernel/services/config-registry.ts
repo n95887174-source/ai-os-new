@@ -298,6 +298,22 @@ let _configDefaults: Readonly<ConfigRegistry> | undefined;
 
 function buildConfigDefaults(): Readonly<ConfigRegistry> {
     const clone = structuredClone(rawConfig);
+    if (!clone.security) clone.security = {};
+    // adminToken as non-enumerable — not visible in JSON.stringify/Object.keys
+    const adminToken = clone.security.adminToken || crypto.randomUUID();
+    const webhookSecret = clone.security.webhookSecret || crypto.randomUUID();
+    Object.defineProperty(clone.security, 'adminToken', {
+        value: adminToken,
+        enumerable: false,
+        writable: false,
+        configurable: false,
+    });
+    Object.defineProperty(clone.security, 'webhookSecret', {
+        value: webhookSecret,
+        enumerable: false,
+        writable: false,
+        configurable: false,
+    });
     deepFreeze(clone);
     return clone;
 }

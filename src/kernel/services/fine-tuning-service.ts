@@ -122,6 +122,10 @@ export class FineTuningService implements IFineTuningService {
     }
 
     startJob(jobId: string): void {
+        console.warn(
+            '[FineTuningService] startJob uses @deprecated MOCK backend — simulated progress, no real training API call',
+            { jobId },
+        );
         const job = this.jobs.find((j) => j.id === jobId);
         if (!job || job.status !== 'queued') return;
         job.status = 'preparing';

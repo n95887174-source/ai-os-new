@@ -86,6 +86,19 @@ async function migrateFromLocalStorage(): Promise<ChatBookmark[] | null> {
     return null;
 }
 
+const MAX_BOOKMARK_CACHE = 500;
+
+function pruneBookmarkCache(cache: Map<string, ChatBookmark>): void {
+    if (cache.size > MAX_BOOKMARK_CACHE) {
+        const entries = Array.from(cache.entries()).sort(
+            ([, a], [, b]) => a.createdAt - b.createdAt,
+        );
+        for (const [key] of entries.slice(0, entries.length - MAX_BOOKMARK_CACHE)) {
+            cache.delete(key);
+        }
+    }
+}
+
 export class ChatBookmarksService {
     private deps: ChatBookmarksServiceDeps;
     private storage: NonNullable<ChatBookmarksServiceDeps['storage']>;
@@ -104,31 +117,10 @@ export class ChatBookmarksService {
             const all = await this.storage.list();
             this.cache.clear();
             for (const b of all) this.cache.set(b.id, b);
+            pruneBookmarkCache(this.cache);
         } catch (err) {
             this.deps.logger?.error('ChatBookmarks', 'init failed', { error: String(err) });
         }
-        this.unsubs.push(
-            this.deps.eventBus.on(EVENTS.CHAT_REWOUND, (...args: unknown[]) => {
-                const data = args[0] as { sessionId?: string } | undefined;
-                if (data?.sessionId) {
-                    const sessionId = data.sessionId;
-                    const toRemove: string[] = [];
-                    for (const [id, b] of this.cache) {
-                        if (b.sessionId === sessionId) toRemove.push(id);
-                    }
-                    for (const id of toRemove) {
-                        this.storage
-                            .delete(id)
-                            .then(() => this.cache.delete(id))
-                            .catch((err) =>
-                                this.deps.logger?.warn('ChatBookmarks', 'rewind delete failed', {
-                                    error: String(err),
-                                }),
-                            );
-                    }
-                }
-            }),
-        );
         this.initialized = true;
     }
 

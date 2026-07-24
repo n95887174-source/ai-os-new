@@ -75,7 +75,14 @@ const updateActiveSession =
         }));
     };
 
-const _sendLocks = new Map<string, boolean>();
+interface QueuedMessage {
+    targets: Array<{ provider: string; model: string; keyId?: string }>;
+    text: string;
+    systemPromptArg?: string;
+    temperature?: number;
+    maxTokens?: number;
+}
+const _sendQueue = new Map<string, QueuedMessage[]>();
 
 export const useChatStore = create<ChatStoreShape>((set, get) => {
     const uas = updateActiveSession(set, get);
@@ -259,17 +266,18 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
 
         sendMessage: async (targets, text, systemPromptArg, temperature, maxTokens) => {
             const sessionId = get().activeSessionId;
-            if (_sendLocks.get(sessionId)) {
-                console.warn('[ChatStore] sendMessage ignored — lock held for session', sessionId);
+            const existing = _sendQueue.get(sessionId);
+            if (existing) {
+                existing.push({ targets, text, systemPromptArg, temperature, maxTokens });
                 return;
             }
+            _sendQueue.set(sessionId, []);
             const requestId = `chat-${crypto.randomUUID()}`;
             const entryId = crypto.randomUUID();
             let requestIdsToTrack: string[] = [];
             let govOp;
             let currentHistory: ChatEntry[];
             try {
-                _sendLocks.set(sessionId, true);
                 currentHistory = (
                     get().sessions.find((s) => s.id === sessionId)?.history ?? []
                 ).slice(-MAX_HISTORY);
@@ -441,6 +449,12 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     }),
                 }));
 
+                // Register requestIds BEFORE emitting SEND_MESSAGE so response handlers
+                // can find the entry synchronously via requestEntryMap
+                for (const resp of loadingResponses) {
+                    requestEntryMap.set(resp.requestId, { sessionId, entryId });
+                }
+
                 targets.forEach((t, idx) => {
                     eventBus.emit(EVENTS.SEND_MESSAGE, {
                         requestId: loadingResponses[idx].requestId,
@@ -452,11 +466,6 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     });
                 });
 
-                // Track requestIds so response event subscriptions can find the entry
-                for (const resp of loadingResponses) {
-                    requestEntryMap.set(resp.requestId, { sessionId, entryId });
-                }
-
                 govOp.complete();
             } catch (e) {
                 requestIdsToTrack?.forEach((rid) => get().removeActiveRequestId(rid));
@@ -467,7 +476,19 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 govOp?.fail(e instanceof Error ? e : new Error(String(e)));
                 throw e;
             } finally {
-                _sendLocks.delete(sessionId);
+                const q = _sendQueue.get(sessionId);
+                if (q && q.length > 0) {
+                    const next = q.shift()!;
+                    get().sendMessage(
+                        next.targets,
+                        next.text,
+                        next.systemPromptArg,
+                        next.temperature,
+                        next.maxTokens,
+                    );
+                } else {
+                    _sendQueue.delete(sessionId);
+                }
             }
         },
 
@@ -525,20 +546,21 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 });
                 return;
             }
+            // Save old entry for rollback
+            const session = get().sessions.find((s) => s.id === get().activeSessionId);
+            const oldEntry = session?.history.find((e) => e.id === entryId);
+            const oldSnapshot = oldEntry ? { ...oldEntry } : null;
+            // Cancel any in-flight requests for this entry before clearing
+            if (oldEntry) {
+                for (const r of oldEntry.responses) {
+                    if (r.status === 'loading' || r.status === 'streaming') {
+                        eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: r.requestId });
+                        get().removeActiveRequestId(r.requestId);
+                    }
+                }
+            }
             uas((prev) =>
-                prev.map((e) =>
-                    e.id === entryId
-                        ? {
-                              ...e,
-                              text: newText,
-                              responses: e.responses.some(
-                                  (r) => r.status === 'loading' || r.status === 'streaming',
-                              )
-                                  ? []
-                                  : e.responses,
-                          }
-                        : e,
-                ),
+                prev.map((e) => (e.id === entryId ? { ...e, text: newText, responses: [] } : e)),
             );
             const sStore = resolveSessionStore();
             if (sStore) {
@@ -547,6 +569,19 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 if (session)
                     sStore.put(session).catch((e) => {
                         console.error('[ChatStore] Failed to persist editEntry', e);
+                        if (oldSnapshot) {
+                            uas((prev) =>
+                                prev.map((e) =>
+                                    e.id === entryId
+                                        ? {
+                                              ...e,
+                                              text: oldSnapshot.text,
+                                              responses: oldSnapshot.responses,
+                                          }
+                                        : e,
+                                ),
+                            );
+                        }
                     });
             }
         },

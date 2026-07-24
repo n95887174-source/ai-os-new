@@ -415,7 +415,9 @@ const DebateRuntimePanel: React.FC = () => {
                             refreshSessions();
                         }}
                         onStart={() => {
-                            debateEngine.startSession(selected.id).catch(() => {});
+                            debateEngine.startSession(selected.id).catch((e) => {
+                                console.error('[DebateRuntimePanel] startSession failed', e);
+                            });
                             refreshSessions();
                         }}
                         onCancel={() => {

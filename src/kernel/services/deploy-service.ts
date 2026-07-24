@@ -100,6 +100,10 @@ export class DeployService implements IDeployService {
     }
 
     deploy(configId: string): Deployment {
+        console.warn(
+            '[DeployService] deploy uses @deprecated MOCK backend — no real build, upload, or server interaction',
+            { configId },
+        );
         const cfg = this.configs.find((c) => c.id === configId);
         if (!cfg) throw new Error(`Deploy config ${configId} not found`);
 

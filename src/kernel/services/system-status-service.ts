@@ -28,6 +28,26 @@ export class SystemStatusService implements ISystemStatusService {
     }
 
     getStatus(): SystemStatusReport {
+        try {
+            return this._computeStatus();
+        } catch (e) {
+            LOGGER.error('SystemStatusService', 'getStatus failed', { error: String(e) });
+            return {
+                status: 'DEGRADED',
+                summary: `Status computation failed: ${String(e).slice(0, 120)}`,
+                areas: {
+                    groupManager: 'loading',
+                    keys: 'empty',
+                    passports: 'missing',
+                    projections: 'unavailable',
+                },
+                warnings: [`Status computation error: ${String(e).slice(0, 200)}`],
+                timestamp: Date.now(),
+            };
+        }
+    }
+
+    private _computeStatus(): SystemStatusReport {
         const { groupManager, keyService, keyStateStore } = this.deps;
         const warnings: string[] = [];
 

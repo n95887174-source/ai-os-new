@@ -638,7 +638,7 @@ export class KeyRegistry {
             return null;
         }
 
-        // Vault system removed — keys stored as plaintext
+        // Stored in-memory as plaintext; encrypted at rest by vault.encryptAllKeys() on save.
         const storedKey = trimmedKey;
 
         // KD9-02: Second duplicate check after async gap prevents race condition

@@ -65,6 +65,42 @@ const AVAILABLE_PLUGINS: PluginManifest[] = [
     },
 ];
 
+const VALID_TYPES: readonly PluginManifest['type'][] = [
+    'tool',
+    'provider',
+    'decorator',
+    'adapter',
+    'theme',
+    'panel',
+];
+const VALID_PERMISSIONS: readonly PluginManifest['permissions'][number][] = [
+    'network',
+    'filesystem',
+    'eventbus',
+    'storage',
+    'llm',
+    'ui',
+];
+const SEMVER_RE = /^\d+\.\d+\.\d+$/;
+
+function validateManifest(m: PluginManifest): void {
+    if (!m.id || !/^[a-z0-9_-]+$/.test(m.id)) throw new Error(`Invalid plugin id: "${m.id}"`);
+    if (!m.name) throw new Error('Plugin name is required');
+    if (!m.version || !SEMVER_RE.test(m.version))
+        throw new Error(`Invalid semver version: "${m.version}"`);
+    if (!m.description) throw new Error('Plugin description is required');
+    if (!m.author) throw new Error('Plugin author is required');
+    if (!m.type || !VALID_TYPES.includes(m.type))
+        throw new Error(`Invalid plugin type: "${m.type}"`);
+    if (!m.entryPoint) throw new Error('Plugin entryPoint is required');
+    if (!Array.isArray(m.permissions)) throw new Error('Plugin permissions must be an array');
+    for (const p of m.permissions) {
+        if (!VALID_PERMISSIONS.includes(p)) throw new Error(`Invalid permission: "${String(p)}"`);
+    }
+    if (!m.minAppVersion || !SEMVER_RE.test(m.minAppVersion))
+        throw new Error(`Invalid minAppVersion: "${m.minAppVersion}"`);
+}
+
 const MAX_INSTALLED_PLUGINS = 200;
 
 export class PluginSdkService implements IPluginSdkService {
@@ -96,6 +132,7 @@ export class PluginSdkService implements IPluginSdkService {
     }
 
     installPlugin(manifest: PluginManifest): PluginInstance {
+        validateManifest(manifest);
         const existing = this.installed.find((i) => i.manifest.id === manifest.id);
         if (existing) throw new Error(`Plugin ${manifest.id} already installed`);
         const instance: PluginInstance = {

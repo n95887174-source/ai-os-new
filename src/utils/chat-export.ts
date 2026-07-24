@@ -188,7 +188,7 @@ export function downloadFile(content: string, filename: string, mime: string): v
         setTimeout(() => {
             URL.revokeObjectURL(url);
             a.remove();
-        }, 100);
+        }, 2000);
     } catch (err) {
         console.error('[exportChat] download failed', err);
     }

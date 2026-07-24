@@ -1,7 +1,6 @@
 import type { IEventBus } from '../../types/interfaces';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
-import { validateAndSaveVerdict } from './debate-conclusion-engine';
 import type { DebateSession as DebateSessionClass } from './debate-session';
 import type { DebateSessionContext } from './debate-session-context';
 import type { DebateMemory } from './debate-memory';
@@ -34,8 +33,6 @@ interface PhaseHandlerGetters {
     saveSnapshot: (id: string) => Promise<void>;
 }
 
-const VERDICT_TIMEOUT_MS = 30_000;
-
 export function createPhaseChangeHandler(
     sessionId: string,
     session: DebateSessionClass,
@@ -44,12 +41,6 @@ export function createPhaseChangeHandler(
     abortSignal?: AbortSignal,
     logSuffix?: string,
 ): (from: string, to: string) => void {
-    const verdictAbortController = new AbortController();
-    const verdictSignal = verdictAbortController.signal;
-    const verdictTimer = setTimeout(
-        () => verdictAbortController.abort(new Error('VerdictTimedOut')),
-        VERDICT_TIMEOUT_MS,
-    );
     return (from: string, to: string) => {
         try {
             const ctx = getters.getContext(sessionId);
@@ -81,53 +72,7 @@ export function createPhaseChangeHandler(
                     },
                 );
                 if (to === 'completed') {
-                    const snap =
-                        session.snapshot() as import('../../contracts/debate-runtime').DebateSessionSnapshot;
                     const tl = getters.getTimeline(sessionId);
-                    const conclusionEngine = getters.getContext(sessionId).conclusionEngine;
-                    if (conclusionEngine) {
-                        conclusionEngine
-                            .generateVerdictWithLLM(snap, tl, verdictSignal)
-                            .then((verdict) => {
-                                clearTimeout(verdictTimer);
-                                const store = deps.debateStore;
-                                if (store) {
-                                    validateAndSaveVerdict(store, {
-                                        sessionId: verdict.sessionId,
-                                        topic: verdict.topic,
-                                        summary: verdict.summary,
-                                        conclusionType: verdict.conclusionType,
-                                        stanceResult: verdict.stanceResult,
-                                        keyArguments: JSON.stringify(verdict.keyArguments),
-                                        reasoning: verdict.reasoning,
-                                        confidence: verdict.confidence,
-                                        generatedAt: verdict.generatedAt,
-                                        roundsTotal: verdict.roundsTotal,
-                                        totalTokens: verdict.totalTokens,
-                                    }).catch((e) =>
-                                        LOGGER.warn(
-                                            'DebatePhaseHandler',
-                                            'verdict persist failed',
-                                            {
-                                                error: e,
-                                            },
-                                        ),
-                                    );
-                                }
-                                deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, {
-                                    sessionId,
-                                    verdict,
-                                });
-                            })
-                            .catch((e) => {
-                                clearTimeout(verdictTimer);
-                                LOGGER.warn(
-                                    'DebatePhaseHandler',
-                                    'LLM-enhanced verdict failed, using heuristic',
-                                    { error: e },
-                                );
-                            });
-                    }
 
                     if (deps.memoryExtractor) {
                         const extracted = deps.memoryExtractor.extractFromTimeline(sessionId, tl);
@@ -281,7 +226,6 @@ export function createPhaseChangeHandler(
                     }
                 }
                 if (abortSignal?.aborted) {
-                    clearTimeout(verdictTimer);
                     return;
                 }
                 // DEFENSE: skip saveSnapshot for cancelled/failed — the session's
@@ -306,7 +250,7 @@ export function createPhaseChangeHandler(
                     });
                 }
                 if (to === 'failed' || to === 'cancelled') {
-                    clearTimeout(verdictTimer);
+                    /* terminal — no scoring needed */
                 }
             }
         } catch (e) {

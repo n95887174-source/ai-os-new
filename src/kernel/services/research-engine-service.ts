@@ -1,6 +1,7 @@
 import type {
     IResearchEngine,
     ResearchSession,
+    ResearchSource,
     EpistemicLoopResult,
     SystematicReview,
     SystematicReviewConfig,
@@ -298,7 +299,12 @@ export class ResearchEngineService implements IResearchEngine {
         try {
             if (effectiveSignal.aborted) throw new DOMException('Aborted', 'AbortError');
             result.status = 'searching';
-            const sources = await searchSourcesAlgo(questionText, sourceAdapterRegistry);
+            const sources = await Promise.race([
+                searchSourcesAlgo(questionText, sourceAdapterRegistry),
+                new Promise<ResearchSource[]>((_, reject) =>
+                    setTimeout(() => reject(new Error('searchSources timed out')), 30000),
+                ),
+            ]);
             result.sources = sources;
 
             if (effectiveSignal.aborted) throw new DOMException('Aborted', 'AbortError');

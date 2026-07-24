@@ -17,6 +17,8 @@ export class ConnectorService {
         this.deps = deps;
     }
 
+    destroy(): void {}
+
     async getAll(): Promise<Connector[]> {
         try {
             return (await this.deps.database.getAllConnectors()) as Connector[];

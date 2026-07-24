@@ -5,6 +5,21 @@ import { rootLogger } from './logger-service';
 import type { WebhookConfig, WebhookProvider, WebhookEventType } from '../contracts/webhook';
 import { isPrivateIP } from '../utils/network';
 
+async function hmacSha256(payload: string, secret: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign'],
+    );
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+    return Array.from(new Uint8Array(sig))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
 const LOGGER = rootLogger.child('NotificationWebhookService');
 
 async function isValidWebhookUrl(url: string): Promise<boolean> {
@@ -204,10 +219,16 @@ export class NotificationWebhookService {
             const payload = formatPayload(webhook.provider, event, data);
             if (!payload) return false;
 
+            const body = JSON.stringify(payload);
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            const signingSecret = CONFIG.security.webhookSecret;
+            if (signingSecret) {
+                headers['X-Signature-256'] = await hmacSha256(body, signingSecret);
+            }
             const res = await fetch(webhook.webhookUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                headers,
+                body,
                 signal: AbortSignal.timeout(CONFIG.webhooks.timeoutMs),
             });
 
@@ -309,10 +330,16 @@ export class NotificationWebhookService {
             });
             if (!payload) return { ok: false };
 
+            const testBody = JSON.stringify(payload);
+            const testHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+            const testSecret = CONFIG.security.webhookSecret;
+            if (testSecret) {
+                testHeaders['X-Signature-256'] = await hmacSha256(testBody, testSecret);
+            }
             const res = await fetch(webhook.webhookUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                headers: testHeaders,
+                body: testBody,
                 signal: AbortSignal.timeout(CONFIG.webhooks.timeoutMs),
             });
 

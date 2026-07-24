@@ -104,7 +104,8 @@ export class KeyUsageAnalyticsService implements IKeyUsageAnalyticsService {
         const rankings = this.deps.providerTracker.getProviderRankings();
         const totalRequests = rankings.reduce((s, r) => s + r.requests, 0);
         const totalCost = rankings.reduce((s, r) => s + r.requests * r.costPerRequest, 0);
-        const totalTokens = Math.round(totalCost * 200000);
+        const allKeys = this.deps.keyStateStore.getAll();
+        const totalTokens = allKeys.reduce((s, k) => s + (k.quota.usedTokens || 0), 0);
 
         const trends: UsageTrend[] = [];
         const now = Date.now();

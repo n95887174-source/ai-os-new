@@ -36,7 +36,7 @@ export class ConfigHistoryService {
     private currentVersionSeq = 1;
     private _initialized = false;
     private async db(): Promise<import('../types/interfaces').IDatabaseService> {
-        const { database } = await import('../instances');
+        const { database } = await import('../instances/core-references');
         return database;
     }
 

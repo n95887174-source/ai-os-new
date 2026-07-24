@@ -20,6 +20,8 @@ import type { IDebateEvaluator } from '../../contracts/debate-runtime';
 import type { DebateMemory } from './debate-memory';
 import type { DebateSessionContext } from './debate-session-context';
 import { DebateProviderResolver } from './debate-query-engine';
+import { validateAndSaveVerdict } from './debate-conclusion-engine';
+import type { DebateSessionSnapshot } from '../../contracts/debate-runtime';
 const LOGGER = rootLogger.child('DebatePipelineBuilder');
 
 interface KeyServiceLike {
@@ -385,6 +387,60 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                     conflicts: result.conflicts.length,
                 });
                 session.transition('summarizing');
+
+                // C2: Generate verdict with LLM BEFORE transitioning to completed.
+                // Previously this was fire-and-forget in the phase handler — the
+                // pipeline could complete and session data get cleaned up before
+                // the async verdict resolved, causing silent data loss.
+                const ctx = engine.getContext(sessionId);
+                const conclusionEngine = ctx?.conclusionEngine;
+                if (conclusionEngine) {
+                    const verdictController = new AbortController();
+                    const verdictTimer = setTimeout(
+                        () => verdictController.abort(new Error('VerdictTimedOut')),
+                        30_000,
+                    );
+                    try {
+                        const snap = session.snapshot() as DebateSessionSnapshot;
+                        const tl = ctx.timeline.getEntries(sessionId);
+                        const verdict = await conclusionEngine.generateVerdictWithLLM(
+                            snap,
+                            tl,
+                            verdictController.signal,
+                        );
+                        clearTimeout(verdictTimer);
+                        const debateStore = (engine as unknown as Record<string, unknown>)
+                            .debateStore as
+                            import('../../contracts/storage/debate-store').DebateStore | undefined;
+                        if (debateStore && verdict) {
+                            await validateAndSaveVerdict(debateStore, {
+                                sessionId: verdict.sessionId,
+                                topic: verdict.topic,
+                                summary: verdict.summary,
+                                conclusionType: verdict.conclusionType,
+                                stanceResult: verdict.stanceResult,
+                                keyArguments: JSON.stringify(verdict.keyArguments),
+                                reasoning: verdict.reasoning,
+                                confidence: verdict.confidence,
+                                generatedAt: verdict.generatedAt,
+                                roundsTotal: verdict.roundsTotal,
+                                totalTokens: verdict.totalTokens,
+                            });
+                        }
+                        engine.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, {
+                            sessionId,
+                            verdict,
+                        });
+                    } catch (ve) {
+                        clearTimeout(verdictTimer);
+                        LOGGER.warn(
+                            'DebatePipeline',
+                            'LLM-enhanced verdict failed, using heuristic',
+                            { error: ve, sessionId },
+                        );
+                    }
+                }
+
                 session.transition('completed');
                 return { ok: true };
             } catch (e) {

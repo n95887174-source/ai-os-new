@@ -83,6 +83,8 @@ async function migrateFromLocalStorage(): Promise<JournalEntry[] | null> {
     return null;
 }
 
+const MAX_CACHE_SIZE = 500;
+
 export class AgentJournalService {
     private deps: AgentJournalServiceDeps;
     private storage: NonNullable<AgentJournalServiceDeps['storage']>;
@@ -106,6 +108,14 @@ export class AgentJournalService {
         }
         this.initialized = true;
         this.subscribe();
+        if (this.cache.size > MAX_CACHE_SIZE) {
+            const entries = Array.from(this.cache.entries()).sort(
+                ([, a], [, b]) => a.timestamp - b.timestamp,
+            );
+            for (const [key] of entries.slice(0, entries.length - MAX_CACHE_SIZE)) {
+                this.cache.delete(key);
+            }
+        }
     }
 
     private subscribe(): void {

@@ -152,6 +152,12 @@ export async function getRecommendations(): Promise<CostRecommendation[]> {
     return recs;
 }
 
+const DISMISSED_MAX = 1000;
+
 export async function dismissRecommendation(id: string): Promise<void> {
+    if (_dismissed.size >= DISMISSED_MAX) {
+        const first = _dismissed.values().next();
+        if (first.value) _dismissed.delete(first.value);
+    }
     _dismissed.add(id);
 }

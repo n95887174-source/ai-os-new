@@ -270,10 +270,14 @@ export class DebateOrchestrator implements IDebateOrchestrator {
     destroy(sessionId?: string): void {
         if (sessionId) {
             this.aborted.delete(sessionId);
+            this.participationCount.delete(sessionId);
+            this.lastInteraction.delete(sessionId);
+            this.bidScores.delete(sessionId);
         } else {
             this.aborted.clear();
             this.participationCount.clear();
             this.lastInteraction.clear();
+            this.bidScores.clear();
         }
     }
 }

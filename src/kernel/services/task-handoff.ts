@@ -93,7 +93,14 @@ export class TaskHandoffService {
         };
         this.handoffs.set(req.id, req);
         if (this.handoffs.size > MAX_HANDOFFS) {
-            const oldestKey = this.handoffs.keys().next().value;
+            let oldestKey: string | null = null;
+            let oldestTime = Infinity;
+            for (const [key, h] of this.handoffs) {
+                if (h.createdAt < oldestTime) {
+                    oldestTime = h.createdAt;
+                    oldestKey = key;
+                }
+            }
             if (oldestKey) this.handoffs.delete(oldestKey);
         }
         this.persist();

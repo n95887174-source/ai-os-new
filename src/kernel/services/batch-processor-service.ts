@@ -113,15 +113,11 @@ export class BatchProcessorService implements ILifecycle {
         const allKeys = keyService.getKeys();
         const keyRotationIndex: Record<string, number> = {};
 
-        for (let i = 0; i < job.tasks.length; i++) {
-            if (abortController.signal.aborted) {
-                job.status = 'cancelled';
-                break;
-            }
+        const CONCURRENCY = 5;
+        const TASK_TIMEOUT_MS = 60_000;
 
-            const task = job.tasks[i];
+        async function processTask(task: BatchTask, signal: AbortSignal): Promise<BatchResult> {
             const startTime = Date.now();
-
             try {
                 const adapter = adapterRegistry.getAdapter(task.provider);
                 if (!adapter) throw new Error(`Adapter not found for provider: ${task.provider}`);
@@ -137,44 +133,82 @@ export class BatchProcessorService implements ILifecycle {
                     [{ role: 'user', content: task.prompt }],
                     task.model,
                     key.key,
-                    abortController.signal,
+                    signal,
                     { temperature: 0.7, maxOutputTokens: 1024 },
                 );
 
-                const latency = Date.now() - startTime;
-                job.results.push({
+                return {
                     prompt: task.prompt,
                     provider: task.provider,
                     model: task.model,
                     response: response.content ?? '',
-                    latency,
+                    latency: Date.now() - startTime,
                     tokens: response.tokens ?? 0,
                     status: 'success',
-                });
-                job.completed++;
+                };
             } catch (err) {
-                const latency = Date.now() - startTime;
-                job.results.push({
+                return {
                     prompt: task.prompt,
                     provider: task.provider,
                     model: task.model,
                     response: '',
-                    latency,
+                    latency: Date.now() - startTime,
                     tokens: 0,
                     error: String(err),
                     status: 'error',
+                };
+            }
+        }
+
+        try {
+            const tasks = job.tasks.slice();
+            for (let i = 0; i < tasks.length && !abortController.signal.aborted; i += CONCURRENCY) {
+                const chunk = tasks.slice(i, i + CONCURRENCY);
+                const timeout = new Promise<BatchResult>((_, reject) => {
+                    const t = setTimeout(() => reject(new Error('Task timeout')), TASK_TIMEOUT_MS);
+                    abortController.signal.addEventListener(
+                        'abort',
+                        () => {
+                            clearTimeout(t);
+                            reject(new Error('Cancelled'));
+                        },
+                        { once: true },
+                    );
                 });
-                job.failed++;
+                const chunkResults = await Promise.allSettled(
+                    chunk.map((task) =>
+                        Promise.race([processTask(task, abortController.signal), timeout]),
+                    ),
+                );
+                for (const r of chunkResults) {
+                    if (r.status === 'fulfilled') {
+                        job.results.push(r.value);
+                        if (r.value.status === 'success') job.completed++;
+                        else job.failed++;
+                    } else {
+                        job.results.push({
+                            prompt: '',
+                            provider: '',
+                            model: '',
+                            response: '',
+                            latency: 0,
+                            tokens: 0,
+                            error: r.reason instanceof Error ? r.reason.message : String(r.reason),
+                            status: 'error',
+                        });
+                        job.failed++;
+                    }
+                }
+                onProgress?.(job);
             }
 
-            onProgress?.(job);
+            if (job.status === 'running') {
+                job.status = 'completed';
+            }
+            job.completedAt = Date.now();
+        } finally {
+            this.currentAbort = null;
         }
-
-        if (job.status === 'running') {
-            job.status = 'completed';
-        }
-        job.completedAt = Date.now();
-        this.currentAbort = null;
         await this.persist();
         return job;
     }

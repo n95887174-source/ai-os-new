@@ -2,6 +2,7 @@ import { EVENTS } from '../events/event-names';
 import { CONFIG } from './config-registry';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
 import { MemoryRepository } from '../dal/memory-repository';
+import { computeMemoryId } from '../utils/compute-memory-id';
 import type {
     MemoryEntry,
     MemoryStats,
@@ -190,8 +191,7 @@ export class MemoryService implements IMemoryEngine {
 
     private async backfillVector(id: string, vector: number[]) {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await this.memoryRepo.update(id, { vector } as any);
+            await this.memoryRepo.update(id, { vector });
             await this.withMemoriesLock(async () => {
                 const mem = this.memories.find((m) => m.id === id);
                 if (mem) {
@@ -410,15 +410,7 @@ export class MemoryService implements IMemoryEngine {
     }
 
     private async computeId(content: string, source: string, type: string): Promise<string> {
-        const raw = `${source}:${type}:${content}`;
-        const encoder = new TextEncoder();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(raw));
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray
-            .map((b) => b.toString(16).padStart(2, '0'))
-            .join('')
-            .slice(0, 12);
-        return `mem-${hashHex}`;
+        return computeMemoryId(content, source, type);
     }
 
     async storeBatch(entries: Omit<MemoryEntry, 'id'>[]) {
