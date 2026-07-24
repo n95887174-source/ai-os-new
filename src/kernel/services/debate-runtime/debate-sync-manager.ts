@@ -776,7 +776,14 @@ export class DebateSyncManager {
     private _finalized = false;
 
     private finalizeInternal(): void {
+        // ATOMIC GUARD: set _finalized FIRST to prevent concurrent calls from
+        // stopDebateInternal (sync path) and startEngineWithFinalize's .then()/
+        // .catch() handler (async path) from both executing finalize logic.
+        // Previously _finalized was set after the runtimeSessionId/terminal
+        // checks, leaving a window where both paths could enter simultaneously.
         if (this._finalized) return;
+        this._finalized = true;
+
         // DEFENSE: if runtimeSessionId is already null, another finalize (or a new
         // debate start) already cleaned up — don't touch listeners.
         if (!this.runtimeSessionId) {
@@ -792,7 +799,6 @@ export class DebateSyncManager {
         // cancelSession path handle persistence (governor stop already saved snapshot).
         const session = this.activeSession;
         if (session && (session.status === 'cancelled' || session.status === 'failed')) {
-            this._finalized = true;
             this.clearTimers();
             this.clearListeners();
             this.runtimeSessionId = null;
@@ -803,7 +809,6 @@ export class DebateSyncManager {
             });
             return;
         }
-        this._finalized = true;
         this.clearTimers();
         if (!session) return;
         finalizeDebate(session, {

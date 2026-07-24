@@ -761,3 +761,38 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 | Packages removed | 46       |
 | npm install      | ✅       |
 | Typecheck        | ✅ pass  |
+
+---
+
+## Session 16 — P1 Resilience + Data (v4.5.0 → v4.6.0) ✅
+
+### Цель
+
+Устранить P1-критические проблемы из аудита Session 5, оставшиеся после Sessions 6-15.
+
+### План
+
+| #   | Задача                                                                | Статус  |
+| --- | --------------------------------------------------------------------- | ------- |
+| 1   | **P1-Data** — dexie-storage: валидация полей в importAll()            | 🟢 Done |
+| 2   | **P1-Resilience** — batch-processor: retry loop с exponential backoff | 🟢 Done |
+| 3   | **P1-Resilience** — debate-llm-caller: catch-all error boundary       | 🟢 Done |
+| 4   | **P1-Debate Race** — stopDebateInternal vs finalizeInternal           | 🟢 Done |
+| 5   | **P1-Debate Data Loss** — arg.content stripped before async verdict   | 🟢 Done |
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `dexie-storage.ts` — все 7 `importAll()` методов теперь используют `validateArrayItems()` с field-level валидацией (id, provider, key, etc.) вместо raw `JSON.parse`                                                                                                              |
+| 2   | `batch-processor-service.ts` — `processTask()` обёрнут в retry loop (max 3 попытки, exponential backoff 1s*attempt)                                                                                                                                                               |
+| 3   | `debate-llm-caller.ts` — вся функция `debateCallLlm` обёрнута в outer try/catch; cleanup abort controllers + нормализация ошибок на любом unhandled path; cleanup добавлен перед final throw после retries                                                                        |
+| 4   | `debate-sync-manager.ts` — `finalizeInternal()`: `_finalized = true` перенесён на самый верх (атомарный guard) вместо установки после runtimeSessionId- и terminal-проверок; устранено окно race condition между stopDebateInternal и .then()/.catch() handler                    |
+| 5   | **C5 confirmed non-issue** — `generateVerdictWithLLM` uses `session.snapshot()` (independent copy via `[...this._arguments]`), while content stripping operates on sync manager's `activeSession` (separate copy via `mergeAndProcessSession`). Already fixed by C2 in Session 6. |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |

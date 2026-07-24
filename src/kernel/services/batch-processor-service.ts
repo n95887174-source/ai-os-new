@@ -115,49 +115,60 @@ export class BatchProcessorService implements ILifecycle {
 
         const CONCURRENCY = 5;
         const TASK_TIMEOUT_MS = 60_000;
+        const MAX_RETRIES = 3;
+        const RETRY_DELAY_MS = 1_000;
 
         async function processTask(task: BatchTask, signal: AbortSignal): Promise<BatchResult> {
             const startTime = Date.now();
-            try {
-                const adapter = adapterRegistry.getAdapter(task.provider);
-                if (!adapter) throw new Error(`Adapter not found for provider: ${task.provider}`);
+            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    const adapter = adapterRegistry.getAdapter(task.provider);
+                    if (!adapter)
+                        throw new Error(`Adapter not found for provider: ${task.provider}`);
 
-                const providerKeys = allKeys.filter((k) => k.provider === task.provider);
-                if (providerKeys.length === 0)
-                    throw new Error(`No key found for provider: ${task.provider}`);
-                const idx = (keyRotationIndex[task.provider] ?? 0) % providerKeys.length;
-                keyRotationIndex[task.provider] = idx + 1;
-                const key = providerKeys[idx];
+                    const providerKeys = allKeys.filter((k) => k.provider === task.provider);
+                    if (providerKeys.length === 0)
+                        throw new Error(`No key found for provider: ${task.provider}`);
+                    const idx = (keyRotationIndex[task.provider] ?? 0) % providerKeys.length;
+                    keyRotationIndex[task.provider] = idx + 1;
+                    const key = providerKeys[idx];
 
-                const response = await adapter.sendMessage(
-                    [{ role: 'user', content: task.prompt }],
-                    task.model,
-                    key.key,
-                    signal,
-                    { temperature: 0.7, maxOutputTokens: 1024 },
-                );
+                    const response = await adapter.sendMessage(
+                        [{ role: 'user', content: task.prompt }],
+                        task.model,
+                        key.key,
+                        signal,
+                        { temperature: 0.7, maxOutputTokens: 1024 },
+                    );
 
-                return {
-                    prompt: task.prompt,
-                    provider: task.provider,
-                    model: task.model,
-                    response: response.content ?? '',
-                    latency: Date.now() - startTime,
-                    tokens: response.tokens ?? 0,
-                    status: 'success',
-                };
-            } catch (err) {
-                return {
-                    prompt: task.prompt,
-                    provider: task.provider,
-                    model: task.model,
-                    response: '',
-                    latency: Date.now() - startTime,
-                    tokens: 0,
-                    error: String(err),
-                    status: 'error',
-                };
+                    return {
+                        prompt: task.prompt,
+                        provider: task.provider,
+                        model: task.model,
+                        response: response.content ?? '',
+                        latency: Date.now() - startTime,
+                        tokens: response.tokens ?? 0,
+                        status: 'success',
+                    };
+                } catch (err) {
+                    if (attempt < MAX_RETRIES && !signal.aborted) {
+                        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+                        continue;
+                    }
+                    return {
+                        prompt: task.prompt,
+                        provider: task.provider,
+                        model: task.model,
+                        response: '',
+                        latency: Date.now() - startTime,
+                        tokens: 0,
+                        error: String(err),
+                        status: 'error',
+                    };
+                }
             }
+            // Unreachable — either returned success, or returned error after exhausting retries
+            throw new Error('unreachable');
         }
 
         try {
