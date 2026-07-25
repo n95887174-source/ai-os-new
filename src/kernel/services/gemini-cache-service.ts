@@ -1,4 +1,7 @@
+import { rootLogger } from './logger-service';
 import type { CachedContent, FreeTierUsage, IGeminiCacheService } from '../contracts/gemini-cache';
+
+const LOGGER = rootLogger.child('GeminiCache');
 
 const GEMINI_API_BASE =
     typeof window !== 'undefined'
@@ -55,7 +58,7 @@ export class GeminiCacheService implements IGeminiCacheService {
                     res.body?.cancel()?.catch(() => {});
                 }
             } catch (e) {
-                console.warn('[GeminiCache] create failed:', e);
+                LOGGER.warn('GeminiCache', 'create failed', { error: String(e) });
             }
         }
         return cached;
@@ -103,7 +106,7 @@ export class GeminiCacheService implements IGeminiCacheService {
                 this.caches = [...remote, ...this.caches.filter((c) => !remoteIds.has(c.id))];
             }
         } catch (e) {
-            console.warn('[GeminiCache] syncFromApi failed:', e);
+            LOGGER.warn('GeminiCache', 'syncFromApi failed', { error: String(e) });
         }
     }
 
@@ -125,7 +128,7 @@ export class GeminiCacheService implements IGeminiCacheService {
                         signal: AbortSignal.timeout(10000),
                     });
                 } catch (e) {
-                    console.warn('[GeminiCache] delete remote failed:', e);
+                    LOGGER.warn('GeminiCache', 'delete remote failed', { error: String(e) });
                 }
             }
         }
@@ -192,7 +195,7 @@ export class GeminiCacheService implements IGeminiCacheService {
             const key = keyService.selectFromPool('gemini');
             return key?.key ?? null;
         } catch (e) {
-            console.warn('[GeminiCache] getApiKey failed:', e);
+            LOGGER.warn('GeminiCache', 'getApiKey failed', { error: String(e) });
             return null;
         }
     }

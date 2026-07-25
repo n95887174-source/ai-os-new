@@ -1,3 +1,4 @@
+import { rootLogger } from './logger-service';
 import type {
     IDeployService,
     DeployConfig,
@@ -6,6 +7,8 @@ import type {
     DeployStatus,
 } from '../contracts/deploy';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+
+const LOGGER = rootLogger.child('DeployService');
 
 const STORAGE_KEY = 'deploy_data';
 
@@ -27,6 +30,11 @@ export class DeployService implements IDeployService {
     private deployments: Deployment[] = [];
     private timers = new Map<string, ReturnType<typeof setInterval>>();
     private _initialized = false;
+    private readonly apiEndpoint: string | null;
+
+    constructor(endpoint?: string) {
+        this.apiEndpoint = endpoint ?? null;
+    }
 
     async init(): Promise<void> {
         if (this._initialized) return;
@@ -62,7 +70,7 @@ export class DeployService implements IDeployService {
                 JSON.stringify({ configs: this.configs, deployments: this.deployments }),
             );
         } catch (e) {
-            console.warn('[DeployService] persist failed', e);
+            LOGGER.warn('DeployService', 'persist failed', { error: String(e) });
         }
     }
 
@@ -99,13 +107,59 @@ export class DeployService implements IDeployService {
         return this.deployments;
     }
 
-    deploy(configId: string): Deployment {
-        console.warn(
-            '[DeployService] deploy uses @deprecated MOCK backend — no real build, upload, or server interaction',
-            { configId },
-        );
+    async deploy(configId: string): Promise<Deployment> {
         const cfg = this.configs.find((c) => c.id === configId);
         if (!cfg) throw new Error(`Deploy config ${configId} not found`);
+
+        if (this.apiEndpoint) {
+            const dep: Deployment = {
+                id: id(),
+                configId,
+                environment: cfg.environment,
+                version: `${cfg.environment === 'production' ? '1' : '0'}.0.0-${id()}`,
+                status: 'pending',
+                progress: 0,
+                logs: [{ timestamp: Date.now(), level: 'info', message: 'Deployment queued...' }],
+                url: null,
+                commitHash: id().slice(0, 12),
+                startedAt: Date.now(),
+                completedAt: null,
+                rollbackTarget: null,
+            };
+            this.deployments.push(dep);
+            try {
+                const res = await fetch(`${this.apiEndpoint}/deploy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        configId,
+                        environment: cfg.environment,
+                        domain: cfg.domain,
+                    }),
+                });
+                if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
+                const result = await res.json();
+                Object.assign(dep, result, {
+                    status: result.status ?? 'building',
+                    error: undefined,
+                });
+            } catch (err: unknown) {
+                dep.status = 'failed';
+                dep.logs.push({
+                    timestamp: Date.now(),
+                    level: 'error',
+                    message: `API call failed: ${err instanceof Error ? err.message : String(err)}`,
+                });
+            }
+            this.persist();
+            return dep;
+        }
+
+        LOGGER.warn(
+            'DeployService',
+            'deploy uses @deprecated MOCK backend — no real build, upload, or server interaction',
+            { configId },
+        );
 
         const dep: Deployment = {
             id: id(),

@@ -576,6 +576,40 @@ export const DebateVerdictRecordSchema = z.object({
     totalTokens: z.number().min(0),
 });
 
+export const DebateTimelineEntrySchema = z.object({
+    id: z.string().min(1),
+    sessionId: z.string().min(1),
+    timestamp: z.number().positive(),
+    type: z.string().min(1),
+    payload: z.string(),
+});
+
+export const DebateOverrideSchema = z.object({
+    id: z.string().min(1),
+    sessionId: z.string().min(1),
+    type: z.string().min(1),
+    payload: z.string(),
+    appliedAt: z.number().positive(),
+});
+
+export const SessionLinkSchema = z.object({
+    id: z.string().min(1),
+    fromId: z.string().min(1),
+    toId: z.string().min(1),
+    linkType: z.enum(['chat_to_debate', 'debate_to_chat', 'continuation', 'derivative']),
+    context: z.string(),
+    createdAt: z.number().positive(),
+});
+
+export const EventLogEntrySchema = z.object({
+    id: z.number().int().positive().optional(),
+    sequence: z.number().int().min(0),
+    event: z.string().min(1),
+    data: z.unknown(),
+    timestamp: z.number().positive(),
+    checksum: z.string().min(1),
+});
+
 export const RuntimeStateSchema = z.object({
     kernel: z.record(z.string(), z.unknown()),
     topology: z.unknown(),

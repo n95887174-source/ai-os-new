@@ -494,13 +494,6 @@ export class DebateProviderResolver {
                 }
             }
             if (!hasUntriedAndUnrejected && allModelsForKey.size > 0) {
-                console.log('[DEBATE_FALLBACK] resolveProvider: no fresh model for key', {
-                    provider: resolvedKey.provider,
-                    keyId: resolvedKey.id.slice(0, 8),
-                    allModels: Array.from(allModelsForKey),
-                    tried: Array.from(effectiveTriedModels),
-                    rejected: Array.from(rejectedCombos),
-                });
                 rootLogger.warn('DebateProviderResolver', 'No fresh model for resolved key', {
                     provider: resolvedKey.provider,
                     keyId: resolvedKey.id.slice(0, 8),

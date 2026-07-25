@@ -254,11 +254,28 @@ export class PersonaMarketplaceService implements IPersonaMarketplaceService {
         return { ...entry };
     }
 
+    private static readonly ALLOWED_UPDATE_FIELDS = new Set([
+        'name',
+        'description',
+        'category',
+        'author',
+        'version',
+        'price',
+        'tags',
+        'promptPreview',
+    ]);
+
     updateListing(id: string, updates: Partial<PersonaListing>): void {
         this.#load();
         const idx = this.listings.findIndex((l) => l.id === id);
         if (idx === -1) throw new Error(`Persona ${id} not found`);
-        Object.assign(this.listings[idx], updates);
+        const filtered: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(updates)) {
+            if (PersonaMarketplaceService.ALLOWED_UPDATE_FIELDS.has(key)) {
+                filtered[key] = value;
+            }
+        }
+        Object.assign(this.listings[idx], filtered);
         this.#persist();
     }
 

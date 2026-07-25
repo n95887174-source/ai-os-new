@@ -56,6 +56,11 @@ export class AgentHealthMonitor implements ILifecycle {
 
         await this.loadPersisted();
 
+        // Mark restored agents as 'unknown' until fresh health data arrives
+        for (const [id, snap] of this.healthCache) {
+            this.healthCache.set(id, { ...snap, health: 'unknown' as AgentHealth });
+        }
+
         this.unsubs.push(
             this.deps.eventBus.onSafe<{ nodeId: string; duration: number; status: string }>(
                 EVENTS.COGNITIVE_STEP_COMPLETED,

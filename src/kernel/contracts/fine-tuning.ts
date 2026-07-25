@@ -59,7 +59,7 @@ export interface IFineTuningService extends ILifecycle {
         datasetId: string,
         hyperparams: FineTuningHyperparams,
     ): FineTuningJob;
-    startJob(jobId: string): void;
+    startJob(jobId: string): Promise<void>;
     cancelJob(jobId: string): void;
     removeJob(jobId: string): void;
 

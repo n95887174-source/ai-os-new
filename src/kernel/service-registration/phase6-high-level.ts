@@ -261,7 +261,11 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     );
     register(
         'agentWizardService',
-        (c) => new AgentWizardService(c.get<LLMClientService>('llmClientService')),
+        (c) =>
+            new AgentWizardService(
+                c.get<LLMClientService>('llmClientService'),
+                c.get<IEventBus>('eventBus'),
+            ),
     );
     register(
         'roleTestingSandboxService',

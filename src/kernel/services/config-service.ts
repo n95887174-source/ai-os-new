@@ -14,6 +14,7 @@ import type {
 } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
+import { requireLevel } from '../utils/permission-guard';
 
 const LOGGER = rootLogger.child('ConfigService');
 
@@ -174,6 +175,7 @@ export class ConfigService {
     }
 
     async updateMonitoring(partial: Partial<MonitoringConfigSection>) {
+        requireLevel('L2');
         this.overlays.monitoring = deepMerge(this.overlays.monitoring || {}, partial);
         setConfig('monitoring', deepMerge(CONFIG_DEFAULTS.monitoring, this.overlays.monitoring));
         await this.persist();
@@ -181,6 +183,7 @@ export class ConfigService {
     }
 
     async updateMetrics(partial: Partial<MetricsConfigSection>) {
+        requireLevel('L2');
         this.overlays.metrics = deepMerge(this.overlays.metrics || {}, partial);
         setConfig('metrics', deepMerge(CONFIG_DEFAULTS.metrics, this.overlays.metrics));
         await this.persist();
@@ -188,6 +191,7 @@ export class ConfigService {
     }
 
     async updateTraces(partial: Partial<TracesConfigSection>) {
+        requireLevel('L2');
         this.overlays.traces = deepMerge(this.overlays.traces || {}, partial);
         setConfig('traces', deepMerge(CONFIG_DEFAULTS.traces, this.overlays.traces));
         await this.persist();
@@ -195,6 +199,7 @@ export class ConfigService {
     }
 
     async updateWebhooks(partial: Partial<WebhooksConfigSection>) {
+        requireLevel('L2');
         this.overlays.webhooks = deepMerge(this.overlays.webhooks || {}, partial);
         setConfig('webhooks', deepMerge(CONFIG_DEFAULTS.webhooks, this.overlays.webhooks));
         await this.persist();
@@ -202,6 +207,7 @@ export class ConfigService {
     }
 
     async updateKeys(partial: Partial<KeysConfigSection>) {
+        requireLevel('L2');
         this.overlays.keys = deepMerge(this.overlays.keys || {}, partial);
         setConfig('keys', deepMerge(CONFIG_DEFAULTS.keys, this.overlays.keys));
         await this.persist();
@@ -209,6 +215,7 @@ export class ConfigService {
     }
 
     async updateLlm(partial: Partial<LlmConfigSection>) {
+        requireLevel('L2');
         this.overlays.llm = deepMerge(this.overlays.llm || {}, partial);
         setConfig('llm', deepMerge(CONFIG_DEFAULTS.llm, this.overlays.llm));
         await this.persist();
@@ -216,6 +223,7 @@ export class ConfigService {
     }
 
     async updatePressure(partial: Partial<PressureConfigSection>) {
+        requireLevel('L2');
         this.overlays.pressure = deepMerge(this.overlays.pressure || {}, partial);
         setConfig('pressure', deepMerge(CONFIG_DEFAULTS.pressure, this.overlays.pressure));
         await this.persist();
@@ -223,6 +231,7 @@ export class ConfigService {
     }
 
     async updatePricing(partial: Partial<PricingConfigSection>) {
+        requireLevel('L2');
         this.overlays.pricing = deepMerge(this.overlays.pricing || {}, partial);
         setConfig('pricing', deepMerge(CONFIG_DEFAULTS.pricing, this.overlays.pricing));
         await this.persist();
@@ -230,6 +239,7 @@ export class ConfigService {
     }
 
     async updateServices(partial: Partial<ServicesConfigSection>) {
+        requireLevel('L2');
         this.overlays.services = deepMerge(this.overlays.services || {}, partial);
         setConfig('services', deepMerge(CONFIG_DEFAULTS.services, this.overlays.services));
         await this.persist();

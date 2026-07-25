@@ -3,12 +3,17 @@ import type { RequestClassification, RequestIntent, RequestLanguage } from './ro
 
 // B10-152: Cache compiled RegExp to avoid re-compiling on every call
 const regexCache = new Map<string, RegExp>();
+const MAX_REGEX_CACHE = 100;
 
 function getRegex(pattern: string, flags = 'i'): RegExp {
     const key = `${flags}:${pattern}`;
     let r = regexCache.get(key);
     if (!r) {
         r = new RegExp(pattern, flags);
+        if (regexCache.size >= MAX_REGEX_CACHE) {
+            const oldest = regexCache.keys().next().value;
+            if (oldest !== undefined) regexCache.delete(oldest);
+        }
         regexCache.set(key, r);
     }
     return r;

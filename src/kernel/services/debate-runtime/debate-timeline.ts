@@ -1,11 +1,16 @@
 import { CONFIG } from '../config-registry';
+import { rootLogger } from '../logger-service';
 import type {
     TimelineEntry,
     IDebateTimeline,
     ReasoningTrace,
 } from '../../contracts/debate-runtime';
 
-const MAX_ENTRIES = CONFIG?.services?.debate?.timelineMaxEntries ?? 5000;
+const LOGGER = rootLogger.child('DebateTimeline');
+
+function getMaxEntries(): number {
+    return CONFIG?.services?.debate?.timelineMaxEntries ?? 5000;
+}
 
 function storageKey(sessionId: string): string {
     return `debate_timeline_${sessionId}`;
@@ -29,7 +34,7 @@ export class DebateTimeline implements IDebateTimeline {
                 this.entries.push(...saved);
             }
         } catch (e) {
-            console.warn('[DebateTimeline] Failed to load persisted entries', e);
+            LOGGER.warn('DebateTimeline', 'Failed to load persisted entries', { error: String(e) });
         }
     }
 
@@ -51,8 +56,9 @@ export class DebateTimeline implements IDebateTimeline {
                         .slice(-100);
                     const { BucketStorageAdapter } = await import('../storage-adapter');
                     await BucketStorageAdapter.RESEARCH.set(storageKey(sessionId), sessionEntries);
-                    console.warn(
-                        `[DebateTimeline] localStorage full — persisted last 100 entries only`,
+                    LOGGER.warn(
+                        'DebateTimeline',
+                        `localStorage full — persisted last 100 entries only`,
                     );
                 } catch {
                     // still failed — skip persistence entirely
@@ -68,16 +74,17 @@ export class DebateTimeline implements IDebateTimeline {
             timestamp: Date.now(),
         };
 
-        if (this.entries.length < MAX_ENTRIES) {
+        if (this.entries.length < getMaxEntries()) {
             this.entries.push(full);
         } else {
             if (!this.warned) {
-                console.warn(
-                    `[DebateTimeline] Circular buffer full at ${MAX_ENTRIES} — overwriting oldest entries`,
+                LOGGER.warn(
+                    'DebateTimeline',
+                    `Circular buffer full at ${getMaxEntries()} — overwriting oldest entries`,
                 );
                 this.warned = true;
             }
-            this.entries[this.cursor % MAX_ENTRIES] = full;
+            this.entries[this.cursor % getMaxEntries()] = full;
         }
         this.cursor++;
     }

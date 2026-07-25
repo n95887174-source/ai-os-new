@@ -126,7 +126,6 @@ const tableHeaderStyle: React.CSSProperties = {
     color: '#64748b',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    cursor: 'pointer',
     userSelect: 'none',
 };
 
@@ -251,33 +250,71 @@ const ImpactTab: React.FC = () => {
                 </div>
             </div>
             <div style={tableContainerStyle}>
-                <div style={tableHeaderStyle} onClick={() => toggleSort('techniqueId')}>
+                <div
+                    style={tableHeaderStyle}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleSort('techniqueId')}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleSort('techniqueId');
+                        }
+                    }}
+                >
                     <span>
                         {t('quality_impact.technique') ?? 'Technique'}
                         {sortArrow('techniqueId')}
                     </span>
                     <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation();
                             toggleSort('avgJudgeScoreDelta');
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                toggleSort('avgJudgeScoreDelta');
+                            }
                         }}
                     >
                         {t('quality_impact.delta') ?? 'ΔScore'}
                         {sortArrow('avgJudgeScoreDelta')}
                     </span>
                     <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation();
                             toggleSort('totalActivations');
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                toggleSort('totalActivations');
+                            }
                         }}
                     >
                         {t('quality_impact.uses') ?? 'Uses'}
                         {sortArrow('totalActivations')}
                     </span>
                     <span
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation();
                             toggleSort('confidence');
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                toggleSort('confidence');
+                            }
                         }}
                     >
                         {t('quality_impact.confidence') ?? 'Confidence'}
@@ -293,9 +330,19 @@ const ImpactTab: React.FC = () => {
                     <React.Fragment key={m.techniqueId}>
                         <div
                             style={rowStyle}
+                            role="button"
+                            tabIndex={0}
                             onClick={() =>
                                 setExpandedId(expandedId === m.techniqueId ? null : m.techniqueId)
                             }
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setExpandedId(
+                                        expandedId === m.techniqueId ? null : m.techniqueId,
+                                    );
+                                }
+                            }}
                             onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLElement).style.background =
                                     'rgba(148, 163, 184, 0.05)';
@@ -707,9 +754,17 @@ const ExperimentsTab: React.FC = () => {
                             <React.Fragment key={exp.id}>
                                 <div
                                     style={expRowStyle}
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() =>
                                         setExpandedExp(expandedExp === exp.id ? null : exp.id)
                                     }
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            setExpandedExp(expandedExp === exp.id ? null : exp.id);
+                                        }
+                                    }}
                                     onMouseEnter={(e) => {
                                         (e.currentTarget as HTMLElement).style.background =
                                             'rgba(148, 163, 184, 0.05)';

@@ -80,7 +80,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
         agentFilter === 'all'
             ? (h.arguments ?? [])
             : (h.arguments ?? []).filter((arg) => arg.agentId === agentFilter);
-    const visibleArguments = filteredArguments.slice(-argDisplayCount);
+    const visibleArguments = filteredArguments.slice(0, argDisplayCount);
 
     const handleArchive = (e: React.MouseEvent) => {
         e.stopPropagation();

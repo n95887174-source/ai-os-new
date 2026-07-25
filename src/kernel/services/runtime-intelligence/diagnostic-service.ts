@@ -98,10 +98,17 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
 
         const diagnostic: ProviderDiagnostic = {
             provider,
-            health: 'healthy',
-            score: 1.0,
-            issues: [],
-            metrics: { avgLatency: 0, errorRate: 0, successRate: 1, totalRequests: 0 },
+            health: 'unknown',
+            score: 0,
+            issues: [
+                {
+                    type: 'agent_failure',
+                    severity: 'low',
+                    message: 'Provider never diagnosed',
+                    timestamp: Date.now(),
+                },
+            ],
+            metrics: { avgLatency: 0, errorRate: 0, successRate: 0, totalRequests: 0 },
             updatedAt: Date.now(),
         };
         this.providerDiagnostics.set(provider, diagnostic);

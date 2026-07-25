@@ -17,6 +17,14 @@ import {
     KeyValueSchema,
     ApiKeySchema,
 } from '../../types/schemas';
+import {
+    DebateSessionRecordSchema,
+    DebateVerdictRecordSchema,
+    DebateTimelineEntrySchema,
+    DebateOverrideSchema,
+    SessionLinkSchema,
+    EventLogEntrySchema,
+} from '../types/schema-types';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 import type {
     DebateTimelineEntry,
@@ -493,6 +501,91 @@ export class SuperAgentsDB extends Dexie {
                 return undefined;
             } catch {
                 LOGGER.error('DatabaseService', 'KeyValue update validation FAILED');
+                return false;
+            }
+        });
+
+        this.debateSessions.hook(
+            'creating',
+            rejectHook(DebateSessionRecordSchema, 'DebateSession'),
+        );
+        this.debateSessions.hook('updating', (mods, _primKey, obj) => {
+            try {
+                DebateSessionRecordSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'DebateSession update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.debateVerdicts.hook(
+            'creating',
+            rejectHook(DebateVerdictRecordSchema, 'DebateVerdict'),
+        );
+        this.debateVerdicts.hook('updating', (mods, _primKey, obj) => {
+            try {
+                DebateVerdictRecordSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'DebateVerdict update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.debateTimeline.hook(
+            'creating',
+            rejectHook(DebateTimelineEntrySchema, 'DebateTimeline'),
+        );
+        this.debateTimeline.hook('updating', (mods, _primKey, obj) => {
+            try {
+                DebateTimelineEntrySchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'DebateTimeline update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.debateOverrides.hook('creating', rejectHook(DebateOverrideSchema, 'DebateOverride'));
+        this.debateOverrides.hook('updating', (mods, _primKey, obj) => {
+            try {
+                DebateOverrideSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'DebateOverride update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.sessionLinks.hook('creating', rejectHook(SessionLinkSchema, 'SessionLink'));
+        this.sessionLinks.hook('updating', (mods, _primKey, obj) => {
+            try {
+                SessionLinkSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'SessionLink update validation FAILED', {
+                    error: e,
+                });
+                return false;
+            }
+        });
+
+        this.eventLog.hook('creating', rejectHook(EventLogEntrySchema, 'EventLog'));
+        this.eventLog.hook('updating', (mods, _primKey, obj) => {
+            try {
+                EventLogEntrySchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'EventLog update validation FAILED', { error: e });
                 return false;
             }
         });

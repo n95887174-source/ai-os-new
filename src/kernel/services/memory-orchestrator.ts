@@ -5,13 +5,8 @@ import type {
     ConsolidationReport,
 } from '../contracts/memory-store';
 import { MemoryStoreType } from '../contracts/memory-store';
-import { WorkingMemoryStore } from './memory/working-memory';
-import { EpisodicMemoryStore } from './memory/episodic-memory';
-import { SemanticMemoryStore } from './memory/semantic-memory';
-import { ProceduralMemoryStore } from './memory/procedural-memory';
-import { EmotionalMemoryStore } from './memory/emotional-memory';
-import { SocialMemoryStore } from './memory/social-memory';
-import { SpatialMemoryStore } from './memory/spatial-memory';
+import type { MemoryService } from './memory-engine';
+import { ServiceBackedMemoryStore } from './memory/service-backed-memory';
 import { SleepEngine } from './memory/sleep-engine';
 import { MemoryPalace } from './memory/memory-palace';
 import type { PalaceState } from './memory/memory-palace';
@@ -21,21 +16,47 @@ export class MemoryOrchestrator {
     readonly sleepEngine: SleepEngine;
     readonly palace: MemoryPalace;
 
-    constructor() {
+    constructor(private memoryService?: () => MemoryService | undefined) {
         this.stores = new Map();
         this.registerDefaultStores();
         this.sleepEngine = new SleepEngine(this.stores);
         this.palace = new MemoryPalace(this.stores);
     }
 
+    private getService(): MemoryService | undefined {
+        return this.memoryService?.();
+    }
+
     private registerDefaultStores(): void {
-        this.stores.set(MemoryStoreType.WORKING, new WorkingMemoryStore());
-        this.stores.set(MemoryStoreType.EPISODIC, new EpisodicMemoryStore());
-        this.stores.set(MemoryStoreType.SEMANTIC, new SemanticMemoryStore());
-        this.stores.set(MemoryStoreType.PROCEDURAL, new ProceduralMemoryStore());
-        this.stores.set(MemoryStoreType.EMOTIONAL, new EmotionalMemoryStore());
-        this.stores.set(MemoryStoreType.SOCIAL, new SocialMemoryStore());
-        this.stores.set(MemoryStoreType.SPATIAL, new SpatialMemoryStore());
+        const ms = () => this.getService();
+        this.stores.set(
+            MemoryStoreType.WORKING,
+            new ServiceBackedMemoryStore(MemoryStoreType.WORKING, ms),
+        );
+        this.stores.set(
+            MemoryStoreType.EPISODIC,
+            new ServiceBackedMemoryStore(MemoryStoreType.EPISODIC, ms),
+        );
+        this.stores.set(
+            MemoryStoreType.SEMANTIC,
+            new ServiceBackedMemoryStore(MemoryStoreType.SEMANTIC, ms),
+        );
+        this.stores.set(
+            MemoryStoreType.PROCEDURAL,
+            new ServiceBackedMemoryStore(MemoryStoreType.PROCEDURAL, ms),
+        );
+        this.stores.set(
+            MemoryStoreType.EMOTIONAL,
+            new ServiceBackedMemoryStore(MemoryStoreType.EMOTIONAL, ms),
+        );
+        this.stores.set(
+            MemoryStoreType.SOCIAL,
+            new ServiceBackedMemoryStore(MemoryStoreType.SOCIAL, ms),
+        );
+        this.stores.set(
+            MemoryStoreType.SPATIAL,
+            new ServiceBackedMemoryStore(MemoryStoreType.SPATIAL, ms),
+        );
     }
 
     async init(): Promise<void> {

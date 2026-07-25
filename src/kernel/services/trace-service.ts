@@ -329,10 +329,10 @@ export class TraceService {
     sweepStaleTraces(maxAgeMs = 5 * 60 * 1000): void {
         const now = Date.now();
         for (const [id, trace] of this.activeTraces) {
-            if (now - (trace.startTime || 0) > maxAgeMs) {
+            if (now - (trace.startTime ?? 0) > maxAgeMs) {
                 LOGGER.warn('TraceService', 'Sweeping orphaned active trace', {
                     traceId: id,
-                    ageMs: now - (trace.startTime || 0),
+                    ageMs: now - (trace.startTime ?? 0),
                 });
                 // C-110: mark as failed and persist before removing from active
                 if (trace.status === 'running') {
@@ -429,13 +429,13 @@ export class TraceService {
             avgDuration:
                 completed.length > 0
                     ? completed.reduce(
-                          (sum, t) => sum + ((t.endTime || t.startTime) - t.startTime),
+                          (sum, t) => sum + ((t.endTime ?? t.startTime) - t.startTime),
                           0,
                       ) / completed.length
                     : 0,
             avgTokens:
                 completed.length > 0
-                    ? completed.reduce((sum, t) => sum + (t.totalTokens || 0), 0) / completed.length
+                    ? completed.reduce((sum, t) => sum + (t.totalTokens ?? 0), 0) / completed.length
                     : 0,
         };
     }

@@ -271,8 +271,10 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
                 return 0.7;
             case 'normal':
                 return 0.45;
-            default:
+            case 'low':
                 return 0.15;
+            default:
+                return 0;
         }
     }
 

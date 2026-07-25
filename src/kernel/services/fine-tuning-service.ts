@@ -31,6 +31,11 @@ export class FineTuningService implements IFineTuningService {
     private jobs: FineTuningJob[] = [];
     private timers = new Map<string, ReturnType<typeof setInterval>>();
     private _initialized = false;
+    private readonly apiEndpoint: string | null;
+
+    constructor(endpoint?: string) {
+        this.apiEndpoint = endpoint ?? null;
+    }
 
     async init(): Promise<void> {
         if (this._initialized) return;
@@ -121,13 +126,41 @@ export class FineTuningService implements IFineTuningService {
         return job;
     }
 
-    startJob(jobId: string): void {
+    async startJob(jobId: string): Promise<void> {
+        const job = this.jobs.find((j) => j.id === jobId);
+        if (!job || job.status !== 'queued') return;
+
+        if (this.apiEndpoint) {
+            job.status = 'preparing';
+            this.persist();
+            try {
+                const res = await fetch(`${this.apiEndpoint}/jobs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jobId,
+                        name: job.name,
+                        baseModel: job.baseModel,
+                        method: job.method,
+                        datasetId: job.datasetId,
+                        hyperparams: job.hyperparams,
+                    }),
+                });
+                if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
+                const result = await res.json();
+                Object.assign(job, result, { status: result.status ?? 'training', error: null });
+            } catch (err: unknown) {
+                job.status = 'failed';
+                job.error = err instanceof Error ? err.message : String(err);
+            }
+            this.persist();
+            return;
+        }
+
         console.warn(
             '[FineTuningService] startJob uses @deprecated MOCK backend — simulated progress, no real training API call',
             { jobId },
         );
-        const job = this.jobs.find((j) => j.id === jobId);
-        if (!job || job.status !== 'queued') return;
         job.status = 'preparing';
         job.startedAt = Date.now();
         this.persist();

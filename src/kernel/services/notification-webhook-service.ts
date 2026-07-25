@@ -60,6 +60,15 @@ export interface NotificationWebhookServiceDeps {
         getKv: <T>(id: string) => Promise<T | null>;
         setKv: <T>(id: string, value: T) => Promise<void>;
     };
+    deadLetterQueue?: {
+        push: (entry: {
+            event: string;
+            payload: unknown;
+            error: string;
+            context?: Record<string, unknown>;
+            retryCount: number;
+        }) => Promise<void>;
+    };
 }
 
 const WEBHOOKS_KEY = 'super_agents_webhooks';
@@ -261,6 +270,15 @@ export class NotificationWebhookService {
                     statusCode: res.status,
                     error: `HTTP ${res.status}`,
                 });
+                this.deps.deadLetterQueue
+                    ?.push({
+                        event,
+                        payload: data,
+                        error: `HTTP ${res.status}`,
+                        context: { webhookId: webhook.id, webhookName: webhook.name },
+                        retryCount: attempt,
+                    })
+                    .catch(() => {});
             }
             return false;
         } catch (e) {
@@ -284,6 +302,15 @@ export class NotificationWebhookService {
                 statusCode: 0,
                 error: String(e),
             });
+            this.deps.deadLetterQueue
+                ?.push({
+                    event,
+                    payload: data,
+                    error: String(e),
+                    context: { webhookId: webhook.id, webhookName: webhook.name },
+                    retryCount: attempt,
+                })
+                .catch(() => {});
             return false;
         }
     }

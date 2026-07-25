@@ -18,6 +18,7 @@ const ChatExportOverlay: React.FC<Props> = ({ onClose, t }) => {
 
     return (
         <div
+            onClick={onClose}
             style={{
                 position: 'fixed',
                 inset: 0,
@@ -32,6 +33,7 @@ const ChatExportOverlay: React.FC<Props> = ({ onClose, t }) => {
             aria-modal="true"
         >
             <div
+                onClick={(e) => e.stopPropagation()}
                 style={{
                     width: '90vw',
                     height: '85vh',

@@ -5,7 +5,7 @@ import { estimateConfidence } from './debate-llm-caller';
 import { executePolicyActions } from './debate-policy-engine';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
-import { ROUND_DELAY_MS } from './debate-round-constants';
+import { getRoundDelayMs } from './debate-round-constants';
 import type {
     IDebateSession,
     IDebateBudget,
@@ -292,9 +292,9 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                                 }
                             }
 
-                            if (!earlyExit && ROUND_DELAY_MS > 0) {
+                            if (!earlyExit && getRoundDelayMs() > 0) {
                                 await new Promise<void>((resolve) =>
-                                    setTimeout(resolve, ROUND_DELAY_MS),
+                                    setTimeout(resolve, getRoundDelayMs()),
                                 );
                                 if (session.phase === 'cancelled' || session.phase === 'failed') {
                                     earlyExit = true;
@@ -427,7 +427,7 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                                 totalTokens: verdict.totalTokens,
                             });
                         }
-                        engine.deps.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, {
+                        engine.deps.eventBus.emitOnce(EVENTS.DEBATE_VERDICT_GENERATED, sessionId, {
                             sessionId,
                             verdict,
                         });

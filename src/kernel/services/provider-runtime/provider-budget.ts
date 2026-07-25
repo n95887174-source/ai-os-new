@@ -48,6 +48,7 @@ export class ProviderBudget {
     private totalCost = 0;
     private totalTokens = 0;
     private listeners: Array<(snapshot: BudgetStateSnapshot) => void> = [];
+    private static readonly MAX_LISTENERS = 100;
 
     constructor(limits?: Partial<BudgetLimit>) {
         this.limits = { ...DEFAULT_LIMITS, ...limits };
@@ -191,6 +192,9 @@ export class ProviderBudget {
     }
 
     onUpdate(cb: (snapshot: BudgetStateSnapshot) => void): () => void {
+        if (this.listeners.length >= ProviderBudget.MAX_LISTENERS) {
+            this.listeners.shift();
+        }
         this.listeners.push(cb);
         return () => {
             this.listeners = this.listeners.filter((l) => l !== cb);

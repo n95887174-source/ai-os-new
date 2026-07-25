@@ -535,6 +535,8 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             gotDeliberation: c.get<IGoTDeliberation>('gotDeliberation'),
             conceptBlender: c.get<IConceptBlender>('conceptBlender'),
             outcomeForecaster: c.get<IOutcomeForecaster>('outcomeForecaster'),
+            deadLetterQueue:
+                c.get<import('../contracts/dead-letter-queue').IDeadLetterQueue>('deadLetterQueue'),
         });
     });
 

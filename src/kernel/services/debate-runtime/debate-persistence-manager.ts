@@ -51,6 +51,14 @@ export class DebatePersistenceManager {
         private deps: PersistenceDeps,
     ) {}
 
+    destroy(): void {
+        this.state.sessions.clear();
+        this.state.budgets.clear();
+        this.state.memories.clear();
+        this.state.contexts.clear();
+        this.state.preflightDone.clear();
+    }
+
     private getMemory(sessionId: string): DebateMemory {
         let mem = this.state.memories.get(sessionId);
         if (!mem) {
@@ -176,6 +184,11 @@ export class DebatePersistenceManager {
                         const dbVersion = (current as { version?: number })?.version ?? 0;
                         parsed.data.version = dbVersion;
                     }
+                    const backoffMs = Math.min(
+                        100 * Math.pow(2, attempt) * (0.5 + Math.random()),
+                        2000,
+                    );
+                    await new Promise((r) => setTimeout(r, backoffMs));
                     continue;
                 }
                 throw err;

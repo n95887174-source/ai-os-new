@@ -123,7 +123,9 @@ import { CONFIG } from './config-registry';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 const TOOLS_KEY = 'super_agents_tools';
-const MAX_EXECUTION_HISTORY = CONFIG?.services?.toolExecutor?.maxHistory ?? 200;
+function getMaxExecutionHistory(): number {
+    return CONFIG?.services?.toolExecutor?.maxHistory ?? 200;
+}
 
 export interface ToolServiceDeps {
     eventBus: {
@@ -294,13 +296,15 @@ export class ToolService {
         }
     }
 
-    private persist() {
-        this.deps.database
+    private persist(): Promise<void> {
+        return this.deps.database
             .setKv(TOOLS_KEY, {
                 tools: this.tools,
-                history: this.executionHistory.slice(-MAX_EXECUTION_HISTORY),
+                history: this.executionHistory.slice(-getMaxExecutionHistory()),
             })
-            .catch((e) => LOGGER.error('ToolService', 'Failed to persist tools', { error: e }));
+            .catch((e) => {
+                LOGGER.error('ToolService', 'Failed to persist tools', { error: e });
+            });
     }
 
     getTools() {
@@ -327,7 +331,7 @@ export class ToolService {
             }
         }
         this.tools = [...this.tools, { ...tool, enabled: true }];
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
@@ -343,19 +347,19 @@ export class ToolService {
             }
         }
         this.tools = this.tools.map((t) => (t.id === id ? { ...t, ...updates } : t));
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
-    removeTool(id: string) {
+    async removeTool(id: string) {
         this.tools = this.tools.filter((t) => t.id !== id);
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
-    toggleTool(id: string) {
+    async toggleTool(id: string) {
         this.tools = this.tools.map((t) => (t.id === id ? { ...t, enabled: !t.enabled } : t));
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
@@ -467,8 +471,9 @@ export class ToolService {
                 duration,
                 timestamp: Date.now(),
             });
-            if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
-            this.persist();
+            if (this.executionHistory.length > getMaxExecutionHistory())
+                this.executionHistory.pop();
+            await this.persist();
             this.deps.eventBus.emit(EVENTS.TOOL_EXECUTION_SUCCESS, { toolId, output: result });
             return result;
         } catch (e: unknown) {
@@ -489,8 +494,9 @@ export class ToolService {
                 duration,
                 timestamp: Date.now(),
             });
-            if (this.executionHistory.length > MAX_EXECUTION_HISTORY) this.executionHistory.pop();
-            this.persist();
+            if (this.executionHistory.length > getMaxExecutionHistory())
+                this.executionHistory.pop();
+            await this.persist();
             this.deps.eventBus.emit(EVENTS.TOOL_EXECUTION_ERROR, { toolId, error: errorMessage });
             return result;
         }
@@ -689,7 +695,7 @@ export class ToolService {
                     count++;
                 }
             }
-            this.persist();
+            await this.persist();
             this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
             return count;
         } catch (e) {

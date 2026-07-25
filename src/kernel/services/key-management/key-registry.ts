@@ -795,13 +795,14 @@ export class KeyRegistry {
         this.setKeysInternal('updateKey', next);
     }
 
-    modifyKey(id: string, fn: (key: ApiKey) => void): void {
+    modifyKey(id: string, fn: (key: ApiKey) => void): ApiKey | undefined {
         const idx = this.#keyMap.get(id);
-        if (idx === undefined) return;
+        if (idx === undefined) return undefined;
         const clone = structuredClone(this.keys[idx]);
         fn(clone);
         this.keys[idx] = clone;
         this.setKeysInternal('modifyKey', [...this.keys]);
+        return clone;
     }
 
     async importKeys(jsonData: string): Promise<number> {
@@ -809,8 +810,19 @@ export class KeyRegistry {
         try {
             result = JSON.parse(jsonData);
             if (!Array.isArray(result)) throw new Error('Not an array');
-        } catch {
-            throw new Error('Invalid JSON data');
+            for (const entry of result) {
+                if (
+                    typeof entry !== 'object' ||
+                    entry === null ||
+                    typeof (entry as Record<string, unknown>).key !== 'string' ||
+                    typeof (entry as Record<string, unknown>).provider !== 'string'
+                ) {
+                    throw new Error('Each entry must have string `key` and `provider` fields');
+                }
+            }
+        } catch (e) {
+            if (e instanceof Error) throw e;
+            throw new Error('Invalid JSON data', { cause: e });
         }
         const { newKeys, count } = buildImportKeys(result, this.keys);
         if (count > 0) {

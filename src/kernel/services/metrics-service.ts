@@ -29,33 +29,41 @@ export interface MetricsReport {
 }
 
 const METRICS_KEY = 'super_agents_metrics_history';
-const MAX_HISTORY_POINTS = CONFIG.metrics.maxHistoryPoints;
-const DEFAULT_THRESHOLDS: MetricsThreshold[] = [
-    {
-        metric: 'avgLatency',
-        warning: CONFIG.metrics.defaultThresholds.avgLatency.warning,
-        critical: CONFIG.metrics.defaultThresholds.avgLatency.critical,
-        operator: 'gt',
-    },
-    {
-        metric: 'errorRate',
-        warning: CONFIG.metrics.defaultThresholds.errorRate.warning,
-        critical: CONFIG.metrics.defaultThresholds.errorRate.critical,
-        operator: 'gt',
-    },
-    {
-        metric: 'successRate',
-        warning: CONFIG.metrics.defaultThresholds.successRate.warning,
-        critical: CONFIG.metrics.defaultThresholds.successRate.critical,
-        operator: 'lt',
-    },
-    {
-        metric: 'totalTokens',
-        warning: CONFIG.metrics.defaultThresholds.totalTokens.warning,
-        critical: CONFIG.metrics.defaultThresholds.totalTokens.critical,
-        operator: 'gt',
-    },
-];
+
+/** Re-read CONFIG on each call to reflect runtime overlay changes (config import drift fix). */
+function getMaxHistoryPoints(): number {
+    return CONFIG.metrics.maxHistoryPoints;
+}
+
+/** Re-read CONFIG on each call to reflect runtime overlay changes (config import drift fix). */
+function getDefaultThresholds(): MetricsThreshold[] {
+    return [
+        {
+            metric: 'avgLatency',
+            warning: CONFIG.metrics.defaultThresholds.avgLatency.warning,
+            critical: CONFIG.metrics.defaultThresholds.avgLatency.critical,
+            operator: 'gt',
+        },
+        {
+            metric: 'errorRate',
+            warning: CONFIG.metrics.defaultThresholds.errorRate.warning,
+            critical: CONFIG.metrics.defaultThresholds.errorRate.critical,
+            operator: 'gt',
+        },
+        {
+            metric: 'successRate',
+            warning: CONFIG.metrics.defaultThresholds.successRate.warning,
+            critical: CONFIG.metrics.defaultThresholds.successRate.critical,
+            operator: 'lt',
+        },
+        {
+            metric: 'totalTokens',
+            warning: CONFIG.metrics.defaultThresholds.totalTokens.warning,
+            critical: CONFIG.metrics.defaultThresholds.totalTokens.critical,
+            operator: 'gt',
+        },
+    ];
+}
 
 export interface MetricsServiceDeps {
     eventBus: {
@@ -71,7 +79,7 @@ export interface MetricsServiceDeps {
 
 export class MetricsService {
     private history: TimeSeriesPoint[] = [];
-    private thresholds: MetricsThreshold[] = [...DEFAULT_THRESHOLDS];
+    private thresholds: MetricsThreshold[] = [...getDefaultThresholds()];
     private alerts: MetricAlert[] = [];
     private unsubs: Array<() => void> = [];
     private captureInterval: ReturnType<typeof setInterval> | null = null;
@@ -125,7 +133,9 @@ export class MetricsService {
                     this.throughput.delete(agentId);
                 }
             }
-            this.persist();
+            this.persist().catch((e) =>
+                LOGGER.warn('MetricsService', 'Cleanup persist failed', { error: e }),
+            );
         }, this.AGENT_CLEANUP_INTERVAL_MS);
     }
 
@@ -138,7 +148,7 @@ export class MetricsService {
             }>(METRICS_KEY);
             if (saved) {
                 this.history = saved.history || [];
-                this.thresholds = saved.thresholds || DEFAULT_THRESHOLDS;
+                this.thresholds = saved.thresholds || getDefaultThresholds();
                 this.alerts = saved.alerts || [];
             }
         } catch (e) {
@@ -149,7 +159,7 @@ export class MetricsService {
     private async persist() {
         try {
             await this.deps.database.setKv(METRICS_KEY, {
-                history: this.history.slice(-MAX_HISTORY_POINTS),
+                history: this.history.slice(-getMaxHistoryPoints()),
                 thresholds: this.thresholds,
                 alerts: this.alerts,
             });
@@ -202,12 +212,12 @@ export class MetricsService {
         }
 
         this.history.push(...points);
-        if (this.history.length > MAX_HISTORY_POINTS) {
-            this.history = this.history.slice(-MAX_HISTORY_POINTS);
+        if (this.history.length > getMaxHistoryPoints()) {
+            this.history = this.history.slice(-getMaxHistoryPoints());
         }
 
         this.checkThresholds();
-        this.persist();
+        await this.persist();
     }
 
     private checkThresholds() {
@@ -350,7 +360,7 @@ export class MetricsService {
     getAlerts(includeResolved = false): MetricAlert[] {
         return includeResolved ? this.alerts : this.alerts.filter((a) => !a.resolved);
     }
-    resolveAlert(id: string) {
+    async resolveAlert(id: string) {
         const alert = this.alerts.find((a) => a.id === id);
         if (alert) {
             alert.resolved = true;
@@ -358,20 +368,20 @@ export class MetricsService {
                 id: alert.id,
                 timestamp: Date.now(),
             });
-            this.persist();
+            await this.persist();
         }
     }
     getThresholds(): MetricsThreshold[] {
         return [...this.thresholds];
     }
-    setThresholds(thresholds: MetricsThreshold[]) {
+    async setThresholds(thresholds: MetricsThreshold[]) {
         this.thresholds = thresholds;
-        this.persist();
+        await this.persist();
     }
-    resetHistory() {
+    async resetHistory() {
         this.history = [];
         this.alerts = [];
-        this.persist();
+        await this.persist();
     }
     getTimeRange(from: number, to: number): TimeSeriesPoint[] {
         return this.history.filter((p) => p.timestamp >= from && p.timestamp <= to);

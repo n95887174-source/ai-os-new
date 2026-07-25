@@ -152,7 +152,8 @@ export class BatchProcessorService implements ILifecycle {
                     };
                 } catch (err) {
                     if (attempt < MAX_RETRIES && !signal.aborted) {
-                        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+                        const jitter = 0.5 + Math.random() * 0.5;
+                        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt * jitter));
                         continue;
                     }
                     return {

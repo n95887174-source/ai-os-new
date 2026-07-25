@@ -191,6 +191,10 @@ export class GeminiLiveService implements IGeminiLiveService {
                 const u = new SpeechSynthesisUtterance(fullText);
                 if (this.voice) u.voice = this.voice;
                 u.rate = 1.1;
+                u.onerror = (e) => {
+                    LOGGER.error('GeminiLive', 'Speech synthesis failed', { error: String(e) });
+                    if (!this.aborted) this.session = { ...this.session, status: 'listening' };
+                };
                 u.onend = () => {
                     if (!this.aborted) this.session = { ...this.session, status: 'listening' };
                 };

@@ -153,10 +153,13 @@ export class PricingService implements ICostCalculator {
         const result =
             prefix.length > 0 ? this.pricingData[prefix[0]] : { input: 0.15, output: 0.6 };
         if (prefix.length === 0) {
-            console.warn(`[PricingService] Unknown model "${model}" — using fallback pricing`);
+            LOGGER.warn('PricingService', `Unknown model "${model}" — using fallback pricing`);
         }
-        if (this.prefixCache.size < CONFIG.pricing.prefixCacheMaxSize)
-            this.prefixCache.set(key, result);
+        if (this.prefixCache.size >= CONFIG.pricing.prefixCacheMaxSize) {
+            const oldest = this.prefixCache.keys().next().value;
+            if (oldest !== undefined) this.prefixCache.delete(oldest);
+        }
+        this.prefixCache.set(key, result);
         return result;
     }
 

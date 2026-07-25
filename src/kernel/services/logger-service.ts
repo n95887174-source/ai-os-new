@@ -80,7 +80,7 @@ export class LoggerService implements ILogger {
     }
 
     child(service: string): ILogger {
-        return new LoggerService(service, this.minLevelName, this.state);
+        return new LoggerService(service, this.minLevelName, { buffer: [], seq: 0 });
     }
 
     debug(service: string, message: string, meta?: Record<string, unknown>): void {

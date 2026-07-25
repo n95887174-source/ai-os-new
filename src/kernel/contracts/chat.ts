@@ -7,6 +7,7 @@ export interface ChatServiceDeps {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     keyService: {
         selectFromPool: (

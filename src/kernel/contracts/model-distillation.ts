@@ -43,7 +43,7 @@ export interface IDistillationService extends ILifecycle {
         method: DistillationMethod,
         config: DistillationConfig,
     ): DistillationJob;
-    startJob(jobId: string): void;
+    startJob(jobId: string): Promise<void>;
     cancelJob(jobId: string): void;
     removeJob(jobId: string): void;
     getTeacherModels(): { id: string; name: string; params: string }[];

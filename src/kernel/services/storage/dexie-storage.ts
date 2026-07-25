@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { getDexieDb } from '../database-service';
 import { eventBus } from '../../instances';
 import { EVENTS } from '../../events/event-names';
@@ -23,11 +24,18 @@ import type { CognitiveTrace } from '../../types/domain-types';
 import type { ChatSession } from '../../contracts/storage/session-store';
 import type { Role } from '../../contracts/storage/roles-store';
 import type { Skill } from '../../contracts/storage/skills-store';
+import {
+    ApiKeySchema,
+    MemoryEntrySchema,
+    CognitiveTraceSchema,
+    ChatSessionSchema,
+    RoleSchema,
+    CognitiveSkillSchema,
+} from '../../../types/schemas';
+import { KeyValueSchema } from '../../types/schema-types';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
 
-type FieldRule = [string, 'string' | 'number' | 'boolean' | 'object'];
-
-function validateArrayItems<T>(payload: string, rules: FieldRule[]): T[] {
+function validateJsonArray(payload: string, schema: z.ZodType<unknown>): unknown[] {
     let parsed: unknown;
     try {
         parsed = safeJsonParse(payload);
@@ -35,20 +43,13 @@ function validateArrayItems<T>(payload: string, rules: FieldRule[]): T[] {
         throw new Error('Import failed: invalid JSON');
     }
     if (!Array.isArray(parsed)) throw new Error('Import failed: expected array');
-    for (const item of parsed) {
-        if (!item || typeof item !== 'object')
-            throw new Error('Import failed: each item must be an object');
-        for (const [field, type] of rules) {
-            const val = (item as Record<string, unknown>)[field];
-            if (val === undefined || val === null)
-                throw new Error(`Import failed: missing required field "${field}"`);
-            if (type === 'string' && typeof val !== 'string')
-                throw new Error(`Import failed: field "${field}" must be a string`);
-            if (type === 'number' && typeof val !== 'number')
-                throw new Error(`Import failed: field "${field}" must be a number`);
-        }
+    const result = z.array(schema).safeParse(parsed);
+    if (!result.success) {
+        const msg = result.error.issues[0]?.message ?? 'validation error';
+        const path = result.error.issues[0]?.path?.join('.') ?? '';
+        throw new Error(`Import failed: ${path ? path + ': ' : ''}${msg}`);
     }
-    return parsed as T[];
+    return result.data;
 }
 
 class DexieKeyStore implements KeyStore {
@@ -85,13 +86,7 @@ class DexieKeyStore implements KeyStore {
     }
 
     async importAll(payload: string): Promise<void> {
-        const data = validateArrayItems<ApiKey>(payload, [
-            ['id', 'string'],
-            ['provider', 'string'],
-            ['key', 'string'],
-            ['label', 'string'],
-            ['status', 'string'],
-        ]);
+        const data = validateJsonArray(payload, ApiKeySchema) as ApiKey[];
         await getDexieDb().transaction('rw', getDexieDb().apiKeys, async () => {
             await getDexieDb().apiKeys.clear();
             if (data.length > 0) await getDexieDb().apiKeys.bulkPut(data);
@@ -182,10 +177,7 @@ class DexieMemoryStoreImpl implements DexieMemoryStore {
     }
 
     async importAll(payload: string): Promise<void> {
-        const data = validateArrayItems<MemoryEntry>(payload, [
-            ['id', 'string'],
-            ['content', 'string'],
-        ]);
+        const data = validateJsonArray(payload, MemoryEntrySchema) as MemoryEntry[];
         await getDexieDb().transaction('rw', getDexieDb().memories, async () => {
             await getDexieDb().memories.clear();
             if (data.length > 0) await getDexieDb().memories.bulkPut(data);
@@ -247,12 +239,7 @@ class DexieTraceStore implements TraceStore {
     }
 
     async importAll(payload: string): Promise<void> {
-        const data = validateArrayItems<CognitiveTrace>(payload, [
-            ['id', 'string'],
-            ['type', 'string'],
-            ['status', 'string'],
-            ['startTime', 'number'],
-        ]);
+        const data = validateJsonArray(payload, CognitiveTraceSchema) as CognitiveTrace[];
         await getDexieDb().transaction('rw', getDexieDb().cognitiveTraces, async () => {
             await getDexieDb().cognitiveTraces.clear();
             if (data.length > 0) await getDexieDb().cognitiveTraces.bulkPut(data);
@@ -318,7 +305,7 @@ class DexieSessionStore implements SessionStore {
     }
 
     async importAll(payload: string): Promise<void> {
-        const data = validateArrayItems<ChatSession>(payload, [['id', 'string']]);
+        const data = validateJsonArray(payload, ChatSessionSchema) as ChatSession[];
         await getDexieDb().transaction('rw', getDexieDb().sessions, async () => {
             await getDexieDb().sessions.clear();
             if (data.length > 0) await getDexieDb().sessions.bulkPut(data);
@@ -367,10 +354,7 @@ class DexieRolesStore implements RolesStore {
     }
 
     async importAll(payload: string): Promise<void> {
-        const data = validateArrayItems<Role>(payload, [
-            ['id', 'string'],
-            ['name', 'string'],
-        ]);
+        const data = validateJsonArray(payload, RoleSchema) as Role[];
         await getDexieDb().transaction('rw', getDexieDb().roles, async () => {
             await getDexieDb().roles.clear();
             if (data.length > 0) await getDexieDb().roles.bulkPut(data);
@@ -415,10 +399,7 @@ class DexieSkillsStore implements SkillsStore {
     }
 
     async importAll(payload: string): Promise<void> {
-        const data = validateArrayItems<Skill>(payload, [
-            ['id', 'string'],
-            ['name', 'string'],
-        ]);
+        const data = validateJsonArray(payload, CognitiveSkillSchema) as Skill[];
         await getDexieDb().transaction('rw', getDexieDb().skills, async () => {
             await getDexieDb().skills.clear();
             if (data.length > 0) await getDexieDb().skills.bulkPut(data);
@@ -456,10 +437,11 @@ class DexieConfigStore implements ConfigStore {
     }
 
     async importAll(payload: string): Promise<void> {
-        const data = validateArrayItems<{ id: string; value: unknown; createdAt?: number }>(
-            payload,
-            [['id', 'string']],
-        );
+        const data = validateJsonArray(payload, KeyValueSchema) as {
+            id: string;
+            value: unknown;
+            createdAt?: number;
+        }[];
         await getDexieDb().transaction('rw', getDexieDb().keyValue, async () => {
             await getDexieDb().keyValue.clear();
             if (data.length > 0) await getDexieDb().keyValue.bulkPut(data);

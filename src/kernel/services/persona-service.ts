@@ -455,6 +455,12 @@ export class PersonaService {
             await this.db.setKv('customPersonas', custom);
         }
     }
+
+    destroy() {
+        this.personas.clear();
+        this.activePersonaId = null;
+        this.isInitialized = false;
+    }
 }
 
 // Export tone presets for UI

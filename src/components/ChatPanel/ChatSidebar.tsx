@@ -73,10 +73,14 @@ const ChatSidebar: React.FC<Props> = ({
             }
             if (id === activeSessionId) {
                 const nextSession = sessions.find((s) => s.id !== id);
-                onSessionClick(nextSession?.id || '');
+                if (nextSession) {
+                    onSessionClick(nextSession.id);
+                } else {
+                    onNewChat();
+                }
             }
         },
-        [confirmDelete, deleteSession, activeSessionId, sessions, onSessionClick, t],
+        [confirmDelete, deleteSession, activeSessionId, sessions, onSessionClick, onNewChat, t],
     );
 
     const handleClear = useCallback(async () => {

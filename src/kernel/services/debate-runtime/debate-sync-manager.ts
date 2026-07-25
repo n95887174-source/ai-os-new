@@ -23,7 +23,7 @@ import {
     buildRoundtableTopology,
 } from './debate-session-bridge';
 import type { SnapshotBridgeContext } from './debate-session-bridge';
-import { finalizeDebate } from './debate-finalizer';
+import { finalizeDebateState, emitFinalizeEvents } from './debate-finalizer';
 import { loadActiveSession } from './debate-session-persistence';
 import { checkDebatePreflight } from './debate-preflight';
 import { getAllSettings } from './quality-settings-store';
@@ -597,7 +597,7 @@ export class DebateSyncManager {
         };
 
         this._setCachedVerdict(session.id, verdict);
-        this.deps!.eventBus.emit(EVENTS.DEBATE_VERDICT_GENERATED, {
+        this.deps!.eventBus.emitOnce(EVENTS.DEBATE_VERDICT_GENERATED, session.id, {
             sessionId: session.id,
             verdict,
         });
@@ -706,20 +706,11 @@ export class DebateSyncManager {
             if (this.governor) {
                 this.deps!.activeDebateStore.setGovernorState(this.governor.getState());
             }
-            for (const arg of newArgs) {
-                this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
-                    sessionId: this.runtimeSessionId,
-                    argument: arg,
-                });
-            }
-            this.deps!.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
             if (shouldStop) {
                 if (this.engine && this.runtimeSessionId) {
-                    // AWAIT saveSnapshot — the async save builds the record with the
-                    // current in-memory session state. DO NOT call cancelSession here:
-                    // stopDebateInternal handles it naturally, which allows finalizeInternal
-                    // to save the snapshot and persist arguments to debate history
-                    // BEFORE cleanupMaps destroys the engine session.
+                    // AWAIT saveSnapshot BEFORE emitting events — prevents dual-write
+                    // where listeners react to DEBATE_ARGUMENT/DEBATE_UPDATED before
+                    // data is persisted to the database.
                     try {
                         await this.engine.saveSnapshot(this.runtimeSessionId);
                     } catch (e) {
@@ -727,15 +718,17 @@ export class DebateSyncManager {
                             '[DebateSyncManager] saveSnapshot in syncSession (governor stop) failed',
                             e,
                         );
-                        LOGGER.error(
-                            'DebateSyncManager',
-                            'saveSnapshot in syncSession (governor stop) failed',
-                            { error: e, sessionId: this.runtimeSessionId },
-                        );
                     }
                 }
                 this.stopDebateInternal();
             }
+            for (const arg of newArgs) {
+                this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
+                    sessionId: this.runtimeSessionId,
+                    argument: arg,
+                });
+            }
+            this.deps!.eventBus.emitOnce(EVENTS.DEBATE_UPDATED, session.id, session);
         } finally {
             this._syncing = false;
         }
@@ -811,7 +804,8 @@ export class DebateSyncManager {
         }
         this.clearTimers();
         if (!session) return;
-        finalizeDebate(session, {
+        // Apply final state mutations (status, metrics, interpretation) without emitting
+        finalizeDebateState(session, {
             interpreter: this._interpreter,
             eventBus: this.deps!.eventBus,
         });
@@ -836,7 +830,13 @@ export class DebateSyncManager {
                 (arg as { content?: string }).content = '';
             }
         }
+        // Persist BEFORE emitting events — prevents dual-write where listeners
+        // react to DEBATE_ENDED before data is saved to the database
         this.deps!.sessionManager.saveToDebateHistory(session);
+        emitFinalizeEvents(session, {
+            interpreter: this._interpreter,
+            eventBus: this.deps!.eventBus,
+        });
         // Finalize quality impact tracking for this session
         if (this.deps?.qualityCollector) {
             const qs = (session.config as { qualitySettings?: Record<string, boolean> } | undefined)

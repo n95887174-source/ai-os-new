@@ -86,7 +86,9 @@ const LOGGER = rootLogger.child('PolicyService');
 const POLICIES_KEY = 'super_agents_policies';
 const PATTERNS_KEY = 'super_agents_policy_patterns';
 const AGENT_POLICIES_KEY = 'super_agents_agent_policies';
-const MAX_VIOLATIONS = CONFIG?.services?.policy?.maxViolations ?? 200;
+function getMaxViolations(): number {
+    return CONFIG?.services?.policy?.maxViolations ?? 200;
+}
 
 export interface PolicyServiceDeps {
     eventBus: {
@@ -302,23 +304,27 @@ export class PolicyService {
                         LOGGER.warn(
                             'PolicyService',
                             `Privacy enforcement blocked output for node ${d.nodeId}`,
-                            { nodeId: d.nodeId },
+                            {
+                                nodeId: d.nodeId,
+                                sanitized: (privacyResult.sanitized ?? '').slice(0, 100),
+                            },
                         );
+                        (d as Record<string, unknown>).output = privacyResult.sanitized;
                     }
                 },
             ),
         );
     }
 
-    protected recordViolation(data: Omit<PolicyViolation, 'id' | 'timestamp'>) {
+    protected async recordViolation(data: Omit<PolicyViolation, 'id' | 'timestamp'>) {
         const violation: PolicyViolation = {
             ...data,
             id: genId('violation'),
             timestamp: Date.now(),
         };
         this.violations.push(violation);
-        if (this.violations.length > MAX_VIOLATIONS) this.violations.shift();
-        this.persist();
+        if (this.violations.length > getMaxViolations()) this.violations.shift();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.POLICY_VIOLATION, violation);
     }
 
@@ -472,23 +478,23 @@ export class PolicyService {
         return list;
     }
 
-    addPolicy(policy: ISPolicy | Omit<ISPolicy, 'id'>, adminToken?: string) {
+    async addPolicy(policy: ISPolicy | Omit<ISPolicy, 'id'>, adminToken?: string) {
         this.auditMutation('addPolicy', JSON.stringify(policy).slice(0, 200), adminToken);
         const newPolicy = {
             ...policy,
             id: (policy as ISPolicy).id || genId('policy'),
         } as ISPolicy;
         this.activePolicies.push(newPolicy);
-        this.persist();
+        await this.persist();
     }
 
-    removePolicy(id: string, adminToken?: string) {
+    async removePolicy(id: string, adminToken?: string) {
         this.auditMutation('removePolicy', id, adminToken);
         this.activePolicies = this.activePolicies.filter((p) => p.id !== id);
-        this.persist();
+        await this.persist();
     }
 
-    updatePolicy(id: string, updates: Partial<ISPolicy>, adminToken?: string) {
+    async updatePolicy(id: string, updates: Partial<ISPolicy>, adminToken?: string) {
         this.auditMutation(
             'updatePolicy',
             `${id}: ${JSON.stringify(updates).slice(0, 200)}`,
@@ -497,7 +503,7 @@ export class PolicyService {
         this.activePolicies = this.activePolicies.map((p) =>
             p.id === id ? { ...p, ...updates } : p,
         );
-        this.persist();
+        await this.persist();
     }
 
     checkAgentPolicy(agentId: string, provider: string, model?: string): AgentPolicyCheck {
@@ -557,10 +563,10 @@ export class PolicyService {
         return { allowed: true };
     }
 
-    setAgentPolicy(agentId: string, policy: AgentPolicy, adminToken?: string) {
+    async setAgentPolicy(agentId: string, policy: AgentPolicy, adminToken?: string) {
         this.auditMutation('setAgentPolicy', `${agentId}: freeOnly=${policy.freeOnly}`, adminToken);
         this.agentPolicies[agentId] = policy;
-        this.persist();
+        await this.persist();
     }
 
     getAgentPolicy(agentId: string): AgentPolicy {
@@ -575,10 +581,10 @@ export class PolicyService {
         );
     }
 
-    removeAgentPolicy(agentId: string, adminToken?: string) {
+    async removeAgentPolicy(agentId: string, adminToken?: string) {
         this.auditMutation('removeAgentPolicy', agentId, adminToken);
         delete this.agentPolicies[agentId];
-        this.persist();
+        await this.persist();
     }
 
     getAllAgentPolicies(): Record<string, AgentPolicy> {
@@ -592,19 +598,19 @@ export class PolicyService {
         return this.getSecurityPatterns();
     }
 
-    addSecurityPattern(pattern: SecurityPattern, adminToken?: string) {
+    async addSecurityPattern(pattern: SecurityPattern, adminToken?: string) {
         this.auditMutation('addSecurityPattern', `${pattern.type}: ${pattern.label}`, adminToken);
         this.securityPatterns.push(pattern);
-        this.persist();
+        await this.persist();
     }
     addPattern(pattern: SecurityPattern, adminToken?: string) {
         return this.addSecurityPattern(pattern, adminToken);
     }
 
-    removeSecurityPattern(id: string, adminToken?: string) {
+    async removeSecurityPattern(id: string, adminToken?: string) {
         this.auditMutation('removeSecurityPattern', id, adminToken);
         this.securityPatterns = this.securityPatterns.filter((p) => p.id !== id);
-        this.persist();
+        await this.persist();
     }
 
     getBlockedModels(): string[] {
@@ -628,14 +634,14 @@ export class PolicyService {
             );
     }
 
-    removeBlockedModel(model: string, adminToken?: string) {
+    async removeBlockedModel(model: string, adminToken?: string) {
         this.auditMutation('removeBlockedModel', model, adminToken);
         const idx = this.securityPatterns.findIndex(
             (p) => p.type === 'blocklist' && p.pattern === model,
         );
         if (idx >= 0) {
             this.securityPatterns.splice(idx, 1);
-            this.persist();
+            await this.persist();
         }
     }
 
@@ -655,29 +661,29 @@ export class PolicyService {
         };
     }
 
-    resolveViolation(id: string, adminToken?: string) {
+    async resolveViolation(id: string, adminToken?: string) {
         this.auditMutation('resolveViolation', id, adminToken);
         const v = this.violations.find((v) => v.id === id);
         if (v) {
             v.resolved = true;
-            this.persist();
+            await this.persist();
         }
     }
 
-    clearViolations(adminToken?: string) {
+    async clearViolations(adminToken?: string) {
         this.auditMutation(
             'clearViolations',
             `${this.violations.length} entries cleared`,
             adminToken,
         );
         this.violations = [];
-        this.persist();
+        await this.persist();
     }
 
-    setPatterns(patterns: SecurityPattern[], adminToken?: string) {
+    async setPatterns(patterns: SecurityPattern[], adminToken?: string) {
         this.auditMutation('setPatterns', `${patterns.length} patterns`, adminToken);
         this.securityPatterns.length = 0;
         this.securityPatterns.push(...patterns);
-        this.persist();
+        await this.persist();
     }
 }

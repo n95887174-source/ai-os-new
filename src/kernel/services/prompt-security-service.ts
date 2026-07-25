@@ -284,7 +284,7 @@ export class PromptSecurityService implements IPromptSecurityService {
         return { ...this.config, rules: [...this.config.rules] };
     }
 
-    updateConfig(partial: Partial<SecurityScanConfig>): void {
+    async updateConfig(partial: Partial<SecurityScanConfig>): Promise<void> {
         if (partial.enabled !== undefined) this.config.enabled = partial.enabled;
         if (partial.blockOnScore !== undefined) this.config.blockOnScore = partial.blockOnScore;
         if (partial.rules) {
@@ -301,7 +301,7 @@ export class PromptSecurityService implements IPromptSecurityService {
             }
             this.config.rules = partial.rules;
         }
-        this.persist();
+        await this.persist();
     }
 
     async getHistory(): Promise<SecurityScanEvent[]> {

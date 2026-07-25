@@ -4,6 +4,7 @@ import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Search, Plus, X, Copy, MessageSquare, Trash2, Star, FileText } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { PromptTemplate } from '../../kernel/contracts/prompt-library';
 
 const CATEGORIES = ['all', 'engineering', 'security', 'strategy', 'research', 'general'] as const;
@@ -36,6 +37,7 @@ const PromptLibraryPanel: React.FC = () => {
     const [formCategory, setFormCategory] = useState('general');
     const [formTags, setFormTags] = useState('');
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const focusTrapRef = useFocusTrap(showModal);
 
     const loadPrompts = useCallback(async () => {
         const all = await promptLibraryService.getAll();
@@ -384,6 +386,15 @@ const PromptLibraryPanel: React.FC = () => {
                         </div>
                         <div
                             onClick={() => !prompt.isBuiltIn && openEditModal(prompt)}
+                            onKeyDown={(e) => {
+                                if (!prompt.isBuiltIn && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    openEditModal(prompt);
+                                }
+                            }}
+                            role="button"
+                            tabIndex={prompt.isBuiltIn ? -1 : 0}
+                            aria-disabled={prompt.isBuiltIn}
                             style={{ cursor: prompt.isBuiltIn ? 'default' : 'pointer' }}
                         >
                             <h3
@@ -448,6 +459,7 @@ const PromptLibraryPanel: React.FC = () => {
 
             {showModal && (
                 <div
+                    onClick={() => setShowModal(false)}
                     style={{
                         position: 'fixed',
                         inset: 0,
@@ -460,6 +472,8 @@ const PromptLibraryPanel: React.FC = () => {
                     }}
                 >
                     <div
+                        ref={focusTrapRef}
+                        onClick={(e) => e.stopPropagation()}
                         style={{
                             width: 560,
                             maxWidth: '90vw',

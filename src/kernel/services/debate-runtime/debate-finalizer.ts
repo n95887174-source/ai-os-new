@@ -15,7 +15,7 @@ export interface FinalizerDeps {
 
 const ACTIVE_STATUSES = new Set(['active', 'deliberating', 'consensus', 'summarizing']);
 
-export function finalizeDebate(session: DebateSession, deps: FinalizerDeps): void {
+export function finalizeDebateState(session: DebateSession, deps: FinalizerDeps): void {
     if (ACTIVE_STATUSES.has(session.status)) {
         session.status = 'completed';
     }
@@ -26,9 +26,10 @@ export function finalizeDebate(session: DebateSession, deps: FinalizerDeps): voi
     const quality = computeQualityMetrics(session.arguments, session.topic);
     if (quality) session.qualityMetrics = quality;
     session.interpretation = deps.interpreter.interpret(session);
-    // History save is deferred to finalizeInternal() after argument content is stripped,
-    // preventing structuredClone from duplicating large LLM response strings.
-    deps.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+}
+
+export function emitFinalizeEvents(session: DebateSession, deps: FinalizerDeps): void {
+    deps.eventBus.emitOnce(EVENTS.DEBATE_UPDATED, session.id, session);
     deps.eventBus.emit(EVENTS.DEBATE_ENDED, {
         sessionId: session.id,
         topic: session.topic,
@@ -36,4 +37,10 @@ export function finalizeDebate(session: DebateSession, deps: FinalizerDeps): voi
         durationMs: Date.now() - session.createdAt,
         consensus: session.consensus,
     });
+}
+
+/** @deprecated Use finalizeDebateState + emitFinalizeEvents separately for dual-write-safe ordering */
+export function finalizeDebate(session: DebateSession, deps: FinalizerDeps): void {
+    finalizeDebateState(session, deps);
+    emitFinalizeEvents(session, deps);
 }

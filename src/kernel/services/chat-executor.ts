@@ -457,7 +457,7 @@ export class ChatExecutor {
                             // ProviderRuntime.createSession() is for long-lived connections,
                             // not per-request tracking. Cost tracking via STREAM_END → BudgetService.
 
-                            this.deps.eventBus.emit(EVENTS.STREAM_END, {
+                            this.deps.eventBus.emitOnce(EVENTS.STREAM_END, requestId, {
                                 requestId,
                                 fullContent: result.content,
                                 provider: currentProvider,

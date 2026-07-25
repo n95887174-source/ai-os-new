@@ -64,7 +64,7 @@ export class TaskHandoffService {
         }
     }
 
-    handoff(opts: {
+    async handoff(opts: {
         fromAgent: string;
         toAgent: string;
         description: string;
@@ -72,7 +72,7 @@ export class TaskHandoffService {
         expectedOutput?: string;
         deadline?: number;
         priority?: 'critical' | 'high' | 'normal' | 'low';
-    }): HandoffRequest {
+    }): Promise<HandoffRequest> {
         if (this.deps.getLifecycleState) {
             const exists = this.deps.getLifecycleState(opts.toAgent);
             if (!exists) {
@@ -103,7 +103,7 @@ export class TaskHandoffService {
             }
             if (oldestKey) this.handoffs.delete(oldestKey);
         }
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.AGENT_HANDOFF_INITIATED, {
             id: req.id,
             fromAgent: req.fromAgent,
@@ -114,39 +114,39 @@ export class TaskHandoffService {
         return req;
     }
 
-    accept(id: string) {
+    async accept(id: string) {
         const req = this.handoffs.get(id);
         if (req && req.status === 'pending') {
             req.status = 'accepted';
-            this.persist();
+            await this.persist();
         }
     }
 
-    complete(id: string, result: string) {
+    async complete(id: string, result: string) {
         const req = this.handoffs.get(id);
         if (req) {
             req.status = 'completed';
             req.result = result;
             req.completedAt = Date.now();
-            this.persist();
+            await this.persist();
         }
     }
 
-    fail(id: string, error: string) {
+    async fail(id: string, error: string) {
         const req = this.handoffs.get(id);
         if (req) {
             req.status = 'failed';
             req.result = error;
             req.completedAt = Date.now();
-            this.persist();
+            await this.persist();
         }
     }
 
-    cancel(id: string) {
+    async cancel(id: string) {
         const req = this.handoffs.get(id);
         if (req && (req.status === 'pending' || req.status === 'accepted')) {
             req.status = 'cancelled';
-            this.persist();
+            await this.persist();
         }
     }
 

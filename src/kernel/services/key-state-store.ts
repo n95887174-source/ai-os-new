@@ -155,6 +155,15 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         })();
     }
 
+    private async persistNow(): Promise<void> {
+        if (!this.database) return;
+        const data = Array.from(this.states.entries()).map(([id, state]) => ({
+            id,
+            state,
+        }));
+        await this.database!.setKv('keystate_store_states', data);
+    }
+
     /**
      * Seed the store with all existing keys before the first probe runs.
      * Call this from bootstrap / after keyService is ready.
@@ -542,7 +551,7 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
         return availableModels.filter((m) => state.modelHealth![m] !== 'failed');
     }
 
-    update(id: string, patch: Partial<KeyState>): void {
+    async update(id: string, patch: Partial<KeyState>): Promise<void> {
         const prev = this.states.get(id);
         const next: KeyState = prev
             ? { ...prev, ...patch, updatedAt: Date.now() }
@@ -572,14 +581,14 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
             next.routing = prev?.routing ?? { weight: 0, blocked: false };
         }
         this.states.set(id, next);
+        await this.persistNow();
         this.emit(EVENTS.KEYSTATE_UPDATED, id, next);
-        this.persist();
     }
 
-    remove(id: string): void {
+    async remove(id: string): Promise<void> {
         this.states.delete(id);
+        await this.persistNow();
         this.emit(EVENTS.KEYSTATE_REMOVED, id);
-        this.persist();
     }
 
     on(cb: (event: { type: KeyStateEvent; id: string; state?: KeyState }) => void): () => void {

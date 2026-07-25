@@ -1,8 +1,29 @@
+import { z } from 'zod';
 import type { Table } from 'dexie';
 import type { Connector } from '../types/domain-types';
 import type { IDatabaseService } from '../types/interfaces';
 import { REDACTED_MARKER, SuperAgentsDB } from './dexie-schema';
 import { rootLogger } from './logger-service';
+import {
+    MemoryEntrySchema,
+    ApiKeySchema,
+    ChatSessionSchema,
+    KeyNoteSchema,
+    RoleSchema,
+    CognitiveTraceSchema,
+    ExecutionTraceSchema,
+    CognitiveSkillSchema,
+    ConnectorSchema,
+    KeyValueSchema,
+} from '../../types/schemas';
+import {
+    DebateSessionRecordSchema,
+    DebateVerdictRecordSchema,
+    DebateTimelineEntrySchema,
+    DebateOverrideSchema,
+    SessionLinkSchema,
+    EventLogEntrySchema,
+} from '../types/schema-types';
 
 const LOGGER = rootLogger.child('DatabaseService');
 
@@ -30,6 +51,25 @@ export function getDexieDb(): SuperAgentsDB {
     }
     return _dexieDb;
 }
+
+const TABLE_SCHEMA_MAP: Record<string, z.ZodType<unknown>> = {
+    notes: KeyNoteSchema,
+    memories: MemoryEntrySchema,
+    apiKeys: ApiKeySchema,
+    sessions: ChatSessionSchema,
+    roles: RoleSchema,
+    cognitiveTraces: CognitiveTraceSchema,
+    traces: ExecutionTraceSchema,
+    skills: CognitiveSkillSchema,
+    connectors: ConnectorSchema,
+    keyValue: KeyValueSchema,
+    debateSessions: DebateSessionRecordSchema,
+    debateVerdicts: DebateVerdictRecordSchema,
+    debateTimeline: DebateTimelineEntrySchema,
+    debateOverrides: DebateOverrideSchema,
+    sessionLinks: SessionLinkSchema,
+    eventLog: EventLogEntrySchema,
+};
 
 export class DatabaseService implements IDatabaseService {
     get apiKeys() {
@@ -229,6 +269,29 @@ export class DatabaseService implements IDatabaseService {
                             `importFromJson: filtered ${before - valid.length} masked apiKeys to protect existing real keys`,
                         );
                     }
+                }
+
+                const schema = TABLE_SCHEMA_MAP[tableName];
+                if (schema && valid.length > 0) {
+                    const validated: unknown[] = [];
+                    const errors: string[] = [];
+                    for (const item of valid) {
+                        const r = schema.safeParse(item);
+                        if (r.success) {
+                            validated.push(r.data);
+                        } else {
+                            const msg = r.error.issues[0]?.message ?? 'validation error';
+                            if (errors.length < 5) errors.push(msg);
+                        }
+                    }
+                    if (errors.length > 0) {
+                        LOGGER.warn(
+                            'DatabaseService',
+                            `importFromJson: filtered ${errors.length}/${valid.length} rows from ${tableName} (Zod validation)`,
+                            { firstErrors: errors },
+                        );
+                    }
+                    valid = validated as object[];
                 }
 
                 if (valid.length !== rows.length) {

@@ -8,6 +8,8 @@ import {
     type PromptRole,
 } from '../../kernel/services/prompt-store';
 import { useConfirm } from '../../hooks/useConfirm';
+import { eventBus } from '../../kernel/instances';
+import { EVENTS } from '../../kernel/events/event-names';
 
 const PROMPT_LABELS: Record<PromptRole, string> = {
     attacker: 'Attacker',
@@ -34,7 +36,13 @@ const PromptsTab: React.FC = () => {
     useEffect(() => {
         getAllPrompts()
             .then(setPrompts)
-            .catch(() => {});
+            .catch((e) => {
+                console.error('[PromptsTab] Failed to load prompts:', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to load prompt templates',
+                    type: 'error' as const,
+                });
+            });
     }, []);
 
     useEffect(() => {

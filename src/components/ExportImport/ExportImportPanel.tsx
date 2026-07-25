@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import PanelLoader from '../PanelLoader';
 
 interface ExportSection {
@@ -33,152 +33,155 @@ const ExportImportPanel: React.FC = () => {
     const [importJson, setImportJson] = useState<Record<string, unknown> | null>(null);
     const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-    const sections: ExportSection[] = [
-        makeSection(
-            'keys',
-            'API Keys',
-            '\uD83D\uDD11',
-            async () => {
-                const m = await loadServices();
-                const raw = await m.keyService.exportKeys();
-                return { keys: JSON.parse(raw) };
-            },
-            async (data) => {
-                const m = await loadServices();
-                const count = await m.keyService.importKeys(JSON.stringify(data.keys || []));
-                return `Imported ${count} API keys`;
-            },
-        ),
-        makeSection(
-            'memory',
-            'Memory',
-            '\uD83E\uDDE0',
-            async () => {
-                const m = await loadServices();
-                const result = m.memoryTransferService.export('json', [
-                    'episodic',
-                    'semantic',
-                    'working',
-                ]);
-                return { memory: result.data };
-            },
-            async (data) => {
-                const m = await loadServices();
-                const result = await m.memoryTransferService.import(
-                    typeof data.memory === 'string' ? data.memory : JSON.stringify(data.memory),
-                    'json',
-                );
-                return `Imported memory: ${result.entriesCount} entries`;
-            },
-        ),
-        makeSection(
-            'agents',
-            'Agents',
-            '\uD83E\uDD16',
-            async () => {
-                const m = await loadServices();
-                const raw = m.agentService.exportAgents();
-                return { agents: JSON.parse(raw) };
-            },
-            async (data) => {
-                const m = await loadServices();
-                const count = m.agentService.importAgents(JSON.stringify(data.agents || []));
-                return `Imported ${count} agents`;
-            },
-        ),
-        makeSection(
-            'config',
-            'Configuration',
-            '\u2699\uFE0F',
-            async () => {
-                const m = await loadServices();
-                const state = m.kernel.getStateSnapshot?.() || {};
-                return { config: state };
-            },
-            async () => {
-                return 'Config import requires manual reconciliation. Use Settings panel.';
-            },
-        ),
-        makeSection(
-            'settings',
-            'Settings & Themes',
-            '\uD83C\uDFA8',
-            async () => {
-                const m = await loadServices();
-                const s = m.settingsService.getSettings();
-                return { settings: JSON.parse(JSON.stringify(s)) };
-            },
-            async (data) => {
-                const m = await loadServices();
-                const s = data.settings as Record<string, unknown>;
-                if (s && typeof s === 'object') {
-                    m.settingsService.updateSettings(
-                        s as Parameters<typeof m.settingsService.updateSettings>[0],
+    const sections: ExportSection[] = useMemo(
+        () => [
+            makeSection(
+                'keys',
+                'API Keys',
+                '\uD83D\uDD11',
+                async () => {
+                    const m = await loadServices();
+                    const raw = await m.keyService.exportKeys();
+                    return { keys: JSON.parse(raw) };
+                },
+                async (data) => {
+                    const m = await loadServices();
+                    const count = await m.keyService.importKeys(JSON.stringify(data.keys || []));
+                    return `Imported ${count} API keys`;
+                },
+            ),
+            makeSection(
+                'memory',
+                'Memory',
+                '\uD83E\uDDE0',
+                async () => {
+                    const m = await loadServices();
+                    const result = m.memoryTransferService.export('json', [
+                        'episodic',
+                        'semantic',
+                        'working',
+                    ]);
+                    return { memory: result.data };
+                },
+                async (data) => {
+                    const m = await loadServices();
+                    const result = await m.memoryTransferService.import(
+                        typeof data.memory === 'string' ? data.memory : JSON.stringify(data.memory),
+                        'json',
                     );
-                }
-                return 'Settings restored';
-            },
-        ),
-        makeSection(
-            'debates',
-            'Debate History',
-            '\uD83C\uDF96\uFE0F',
-            async () => {
-                const m = await loadServices();
-                const sessions = m.debateEngine?.getAllSessions?.() || [];
-                return {
-                    debates: sessions.map((s) => ({
-                        id: (s as { id: unknown }).id,
-                        topic: (s as { topic: unknown }).topic,
-                        phase: (s as { phase: unknown }).phase,
-                        round: (s as { round: unknown }).round,
-                        startedAt: (s as { startedAt: unknown }).startedAt,
-                        updatedAt: (s as { updatedAt: unknown }).updatedAt,
-                    })),
-                };
-            },
-            async () => 'Debate import not supported yet',
-        ),
-        makeSection(
-            'prompts',
-            'Prompt Library',
-            '\uD83D\uDCDD',
-            async () => {
-                const m = await loadServices();
-                if (m.promptLibraryService?.getAll) {
-                    const prompts = m.promptLibraryService.getAll();
-                    return { prompts: JSON.parse(JSON.stringify(prompts)) };
-                }
-                return { prompts: [] };
-            },
-            async () => 'Prompt import not supported yet',
-        ),
-        makeSection(
-            'workflows',
-            'Workflows',
-            '\uD83D\uDD17',
-            async () => {
-                const m = await loadServices();
-                if (m.workflowService?.getAll) {
-                    const list = await m.workflowService.getAll();
-                    return { workflows: JSON.parse(JSON.stringify(list)) };
-                }
-                return { workflows: [] };
-            },
-            async () => 'Workflow import not supported yet',
-        ),
-        makeSection(
-            'topologies',
-            'Topologies',
-            '\uD83D\uDCCA',
-            async () => {
-                const m = await loadServices();
-                const active = m.orchestrator?.getActiveTopology?.();
-                return { topologies: active ? [JSON.parse(JSON.stringify(active))] : [] };
-            },
-            async () => 'Topology import not supported yet',
-        ),
-    ];
+                    return `Imported memory: ${result.entriesCount} entries`;
+                },
+            ),
+            makeSection(
+                'agents',
+                'Agents',
+                '\uD83E\uDD16',
+                async () => {
+                    const m = await loadServices();
+                    const raw = m.agentService.exportAgents();
+                    return { agents: JSON.parse(raw) };
+                },
+                async (data) => {
+                    const m = await loadServices();
+                    const count = m.agentService.importAgents(JSON.stringify(data.agents || []));
+                    return `Imported ${count} agents`;
+                },
+            ),
+            makeSection(
+                'config',
+                'Configuration',
+                '\u2699\uFE0F',
+                async () => {
+                    const m = await loadServices();
+                    const state = m.kernel.getStateSnapshot?.() || {};
+                    return { config: state };
+                },
+                async () => {
+                    return 'Config import requires manual reconciliation. Use Settings panel.';
+                },
+            ),
+            makeSection(
+                'settings',
+                'Settings & Themes',
+                '\uD83C\uDFA8',
+                async () => {
+                    const m = await loadServices();
+                    const s = m.settingsService.getSettings();
+                    return { settings: JSON.parse(JSON.stringify(s)) };
+                },
+                async (data) => {
+                    const m = await loadServices();
+                    const s = data.settings as Record<string, unknown>;
+                    if (s && typeof s === 'object') {
+                        m.settingsService.updateSettings(
+                            s as Parameters<typeof m.settingsService.updateSettings>[0],
+                        );
+                    }
+                    return 'Settings restored';
+                },
+            ),
+            makeSection(
+                'debates',
+                'Debate History',
+                '\uD83C\uDF96\uFE0F',
+                async () => {
+                    const m = await loadServices();
+                    const sessions = m.debateEngine?.getAllSessions?.() || [];
+                    return {
+                        debates: sessions.map((s) => ({
+                            id: (s as { id: unknown }).id,
+                            topic: (s as { topic: unknown }).topic,
+                            phase: (s as { phase: unknown }).phase,
+                            round: (s as { round: unknown }).round,
+                            startedAt: (s as { startedAt: unknown }).startedAt,
+                            updatedAt: (s as { updatedAt: unknown }).updatedAt,
+                        })),
+                    };
+                },
+                async () => 'Debate import not supported yet',
+            ),
+            makeSection(
+                'prompts',
+                'Prompt Library',
+                '\uD83D\uDCDD',
+                async () => {
+                    const m = await loadServices();
+                    if (m.promptLibraryService?.getAll) {
+                        const prompts = m.promptLibraryService.getAll();
+                        return { prompts: JSON.parse(JSON.stringify(prompts)) };
+                    }
+                    return { prompts: [] };
+                },
+                async () => 'Prompt import not supported yet',
+            ),
+            makeSection(
+                'workflows',
+                'Workflows',
+                '\uD83D\uDD17',
+                async () => {
+                    const m = await loadServices();
+                    if (m.workflowService?.getAll) {
+                        const list = await m.workflowService.getAll();
+                        return { workflows: JSON.parse(JSON.stringify(list)) };
+                    }
+                    return { workflows: [] };
+                },
+                async () => 'Workflow import not supported yet',
+            ),
+            makeSection(
+                'topologies',
+                'Topologies',
+                '\uD83D\uDCCA',
+                async () => {
+                    const m = await loadServices();
+                    const active = m.orchestrator?.getActiveTopology?.();
+                    return { topologies: active ? [JSON.parse(JSON.stringify(active))] : [] };
+                },
+                async () => 'Topology import not supported yet',
+            ),
+        ],
+        [],
+    );
 
     const toggle = (id: string) => {
         setSelected((p) => {
@@ -242,9 +245,16 @@ const ExportImportPanel: React.FC = () => {
         const reader = new FileReader();
         reader.onload = () => {
             try {
-                setImportJson(JSON.parse(reader.result as string));
-            } catch {
-                setResult({ ok: false, msg: 'Invalid JSON file' });
+                const parsed = JSON.parse(reader.result as string);
+                if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+                    throw new Error('Expected a JSON object');
+                }
+                setImportJson(parsed as Record<string, unknown>);
+            } catch (e) {
+                setResult({
+                    ok: false,
+                    msg: e instanceof Error ? e.message : 'Invalid JSON file',
+                });
                 setImportJson(null);
             }
         };

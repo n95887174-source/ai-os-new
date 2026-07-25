@@ -39,6 +39,11 @@ export class DistillationService implements IDistillationService {
     private jobs: DistillationJob[] = [];
     private timers = new Map<string, ReturnType<typeof setInterval>>();
     private _initialized = false;
+    private readonly apiEndpoint: string | null;
+
+    constructor(endpoint?: string) {
+        this.apiEndpoint = endpoint ?? null;
+    }
 
     async init(): Promise<void> {
         if (this._initialized) return;
@@ -106,13 +111,41 @@ export class DistillationService implements IDistillationService {
         return job;
     }
 
-    startJob(jobId: string): void {
+    async startJob(jobId: string): Promise<void> {
+        const job = this.jobs.find((j) => j.id === jobId);
+        if (!job || job.status !== 'queued') return;
+
+        if (this.apiEndpoint) {
+            job.status = 'preparing';
+            this.persist();
+            try {
+                const res = await fetch(`${this.apiEndpoint}/jobs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jobId,
+                        name: job.name,
+                        teacherModel: job.teacherModel,
+                        studentModel: job.studentModel,
+                        method: job.method,
+                        config: job.config,
+                    }),
+                });
+                if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
+                const result = await res.json();
+                Object.assign(job, result, { status: result.status ?? 'distilling', error: null });
+            } catch (err: unknown) {
+                job.status = 'failed';
+                job.error = err instanceof Error ? err.message : String(err);
+            }
+            this.persist();
+            return;
+        }
+
         console.warn(
             '[DistillationService] startJob uses @deprecated MOCK backend — simulated progress, no real distillation API call',
             { jobId },
         );
-        const job = this.jobs.find((j) => j.id === jobId);
-        if (!job || job.status !== 'queued') return;
         job.status = 'preparing';
         this.persist();
 

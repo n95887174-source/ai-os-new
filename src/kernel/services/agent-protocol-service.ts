@@ -9,6 +9,8 @@ const genId = () => crypto.randomUUID();
 
 const MAX_AGENTS = 1000;
 const MAX_MESSAGES = 10000;
+const MAX_PAYLOAD_SIZE = 256 * 1024; // 256KB
+const MAX_PAYLOAD_DEPTH = 8;
 
 const DEFAULT_CAPABILITIES: AgentCapability[] = [
     {
@@ -161,10 +163,35 @@ export class AgentProtocolService implements IAgentProtocolService {
         this.agents = this.agents.filter((a) => a.agentId !== agentId);
     }
 
+    private validatePayload(payload: unknown): void {
+        const raw = JSON.stringify(payload);
+        if (raw.length > MAX_PAYLOAD_SIZE) {
+            throw new Error(`Payload exceeds max size (${raw.length} > ${MAX_PAYLOAD_SIZE} bytes)`);
+        }
+        let depth = 0;
+        const checkDepth = (val: unknown, d: number): void => {
+            if (d > MAX_PAYLOAD_DEPTH)
+                throw new Error(`Payload nesting exceeds max depth ${MAX_PAYLOAD_DEPTH}`);
+            if (val && typeof val === 'object') {
+                depth = Math.max(depth, d);
+                for (const v of Object.values(val as Record<string, unknown>)) {
+                    if (v && typeof v === 'object') checkDepth(v, d + 1);
+                }
+            }
+        };
+        checkDepth(payload, 0);
+    }
+
     sendMessage(message: Omit<AgentProtocolMessage, 'id' | 'timestamp'>): AgentProtocolMessage {
+        if (!message.sourceAgentId || typeof message.sourceAgentId !== 'string') {
+            throw new Error('sourceAgentId is required and must be a string');
+        }
         const src = this.agents.find((a) => a.agentId === message.sourceAgentId);
         if (!src) throw new Error(`Source agent ${message.sourceAgentId} not registered`);
         if (message.type !== 'broadcast' && message.targetAgentId) {
+            if (typeof message.targetAgentId !== 'string') {
+                throw new Error('targetAgentId must be a string');
+            }
             const tgt = this.agents.find((a) => a.agentId === message.targetAgentId);
             if (!tgt) throw new Error(`Target agent ${message.targetAgentId} not registered`);
             if (
@@ -175,6 +202,9 @@ export class AgentProtocolService implements IAgentProtocolService {
                     `Target agent ${message.targetAgentId} does not support capability "${message.capability}"`,
                 );
             }
+        }
+        if (message.payload !== undefined) {
+            this.validatePayload(message.payload);
         }
         const msg: AgentProtocolMessage = { ...message, id: genId(), timestamp: Date.now() };
         if (this.messages.length >= MAX_MESSAGES) {

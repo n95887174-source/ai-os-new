@@ -51,7 +51,7 @@ export interface IDeployService extends ILifecycle {
     removeConfig(id: string): void;
 
     getDeployments(configId?: string): Deployment[];
-    deploy(configId: string): Deployment;
+    deploy(configId: string): Promise<Deployment>;
     rollback(deploymentId: string): Deployment;
     cancelDeploy(deploymentId: string): void;
 

@@ -5,7 +5,7 @@
 
 import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
-import { EventBus } from '../events/event-bus';
+import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { sanitizePromptVar } from '../utils/sanitize';
@@ -51,9 +51,15 @@ export interface RolePreset {
 export class AgentWizardService {
     private config: WizardConfig;
     private llmClient: ILLMClientService;
+    private eventBus: IEventBus;
 
-    constructor(llmClient: ILLMClientService, config: Partial<WizardConfig> = {}) {
+    constructor(
+        llmClient: ILLMClientService,
+        eventBus: IEventBus,
+        config: Partial<WizardConfig> = {},
+    ) {
         this.llmClient = llmClient;
+        this.eventBus = eventBus;
         this.config = { ...DEFAULT_CONFIG, ...config };
     }
 
@@ -82,7 +88,7 @@ export class AgentWizardService {
             const config = this.parseConfigResponse(response.content || '');
 
             LOGGER.info('AgentWizard', 'Config generated', { name: config.name });
-            EventBus.emit(EVENTS.AGENT_WIZARD_CONFIG_GENERATED, config);
+            this.eventBus.emit(EVENTS.AGENT_WIZARD_CONFIG_GENERATED, config);
 
             return config;
         } catch (error) {

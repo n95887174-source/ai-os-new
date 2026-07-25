@@ -14,6 +14,8 @@ export interface IEventBus {
     emit(event: string, data?: unknown): void;
     onSafe<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): () => void;
     onSafe<T>(event: string, callback: (data: T) => void): () => void;
+    emitOnce<K extends keyof EventMap>(event: K, key: string, data?: EventMap[K]): boolean;
+    emitOnce(event: string, key: string, data?: unknown): boolean;
     subscribeAll(callback: (payload: { event: string; data: unknown }) => void): () => void;
 }
 

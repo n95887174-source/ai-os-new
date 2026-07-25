@@ -170,56 +170,69 @@ export function createPhaseChangeHandler(
                                 }
                             } else {
                                 for (const p of session.participants) {
-                                    const chain = getters.getMemory(sessionId).getChain(p.agentId);
-                                    const score = deps.evaluator.scoreArguments(
-                                        p.agentId,
-                                        claims,
-                                        chain,
-                                    );
+                                    try {
+                                        const chain = getters
+                                            .getMemory(sessionId)
+                                            .getChain(p.agentId);
+                                        const score = deps.evaluator.scoreArguments(
+                                            p.agentId,
+                                            claims,
+                                            chain,
+                                        );
 
-                                    if (bayesianEnabled && deps.bayesianJudge) {
-                                        deps.bayesianJudge.update(p.agentId, score.overall * 2 - 1);
+                                        if (bayesianEnabled && deps.bayesianJudge) {
+                                            deps.bayesianJudge.update(
+                                                p.agentId,
+                                                score.overall * 2 - 1,
+                                            );
+                                        }
+
+                                        const driftPenalty = deps.stanceDriftTracker
+                                            ? deps.stanceDriftTracker.getDriftPenalty(p.agentId)
+                                            : 1.0;
+
+                                        const bayesianAdjusted =
+                                            bayesianEnabled && deps.bayesianJudge
+                                                ? deps.bayesianJudge.getAdjustedScore(
+                                                      p.agentId,
+                                                      score.overall,
+                                                  )
+                                                : score.overall;
+
+                                        const adjustedOverall = bayesianAdjusted * driftPenalty;
+
+                                        deps.eventBus.emit(EVENTS.DEBATE_AGENT_SCORED, {
+                                            sessionId,
+                                            agentId: p.agentId,
+                                            overall: adjustedOverall,
+                                            argumentQuality: score.argumentQuality,
+                                            rebuttalStrength: score.rebuttalStrength,
+                                            coherence: score.coherence,
+                                            persuasiveness: score.persuasiveness,
+                                            factuality: score.factuality,
+                                        });
+                                        deps.qualityCollector?.record({
+                                            id: `${sessionId}-score-std-${p.agentId}-${Date.now()}`,
+                                            sessionId,
+                                            techniqueId: 'scoring',
+                                            timestamp: Date.now(),
+                                            eventType: 'SCORE_CHANGED',
+                                            round: session.round,
+                                            agentId: p.agentId,
+                                            payload: {
+                                                prior: 0,
+                                                posterior: adjustedOverall,
+                                                delta: adjustedOverall,
+                                                dimension: 'overall',
+                                            },
+                                        });
+                                    } catch (scoreErr) {
+                                        LOGGER.warn(
+                                            'DebatePhaseHandler',
+                                            'Standard evaluation failed for agent, skipping',
+                                            { error: scoreErr, sessionId, agentId: p.agentId },
+                                        );
                                     }
-
-                                    const driftPenalty = deps.stanceDriftTracker
-                                        ? deps.stanceDriftTracker.getDriftPenalty(p.agentId)
-                                        : 1.0;
-
-                                    const bayesianAdjusted =
-                                        bayesianEnabled && deps.bayesianJudge
-                                            ? deps.bayesianJudge.getAdjustedScore(
-                                                  p.agentId,
-                                                  score.overall,
-                                              )
-                                            : score.overall;
-
-                                    const adjustedOverall = bayesianAdjusted * driftPenalty;
-
-                                    deps.eventBus.emit(EVENTS.DEBATE_AGENT_SCORED, {
-                                        sessionId,
-                                        agentId: p.agentId,
-                                        overall: adjustedOverall,
-                                        argumentQuality: score.argumentQuality,
-                                        rebuttalStrength: score.rebuttalStrength,
-                                        coherence: score.coherence,
-                                        persuasiveness: score.persuasiveness,
-                                        factuality: score.factuality,
-                                    });
-                                    deps.qualityCollector?.record({
-                                        id: `${sessionId}-score-std-${p.agentId}-${Date.now()}`,
-                                        sessionId,
-                                        techniqueId: 'scoring',
-                                        timestamp: Date.now(),
-                                        eventType: 'SCORE_CHANGED',
-                                        round: session.round,
-                                        agentId: p.agentId,
-                                        payload: {
-                                            prior: 0,
-                                            posterior: adjustedOverall,
-                                            delta: adjustedOverall,
-                                            dimension: 'overall',
-                                        },
-                                    });
                                 }
                             }
                         }
@@ -259,6 +272,10 @@ export function createPhaseChangeHandler(
                 `Unhandled error in phase handler for ${from}→${to}${logSuffix ?? ''}`,
                 { error: e, sessionId },
             );
+            deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                sessionId,
+                error: `ScoringError: ${e instanceof Error ? e.message : String(e)}`,
+            });
         }
     };
 }

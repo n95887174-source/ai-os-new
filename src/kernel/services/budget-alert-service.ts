@@ -1,3 +1,4 @@
+import { rootLogger } from './logger-service';
 import type {
     IBudgetAlertService,
     BudgetAlertRule,
@@ -5,6 +6,8 @@ import type {
 } from '../contracts/budget-alert';
 import type { IBudgetService } from '../contracts/budget';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+
+const LOGGER = rootLogger.child('BudgetAlertService');
 
 const STORAGE_KEY = 'budget_alert_rules';
 const HISTORY_KEY = 'budget_alert_history';
@@ -62,7 +65,7 @@ export class BudgetAlertService implements IBudgetAlertService {
             const histRaw = ssrSafeStorage.getItem(HISTORY_KEY);
             if (histRaw) this.history = JSON.parse(histRaw);
         } catch (err) {
-            console.warn('[BudgetAlertService] init failed', err);
+            LOGGER.warn('BudgetAlertService', 'init failed', { error: String(err) });
         }
     }
 

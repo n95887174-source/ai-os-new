@@ -44,6 +44,7 @@ export class RuntimeManager {
         this.bootstrapper = bootstrapper;
         if (typeof window !== 'undefined') {
             window.addEventListener('unhandledrejection', (event) => {
+                event.preventDefault();
                 getLogger()?.error('Runtime', 'Unhandled promise rejection', {
                     reason: event.reason,
                 });

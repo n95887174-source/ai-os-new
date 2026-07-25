@@ -28,6 +28,7 @@ import { rootLogger } from '../logger-service';
 import { ssrSafeStorage } from '../../utils/ssr-storage';
 
 import type { FreeTierLimit } from './key-types';
+import { requireLevel } from '../../utils/permission-guard';
 
 const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
     ...CONFIG.keys.freeTierLimits,
@@ -533,6 +534,7 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async addKey(data: Omit<ApiKey, 'id' | 'stats'>) {
+        requireLevel('L2');
         const newKey = await this.registry.addKey(data);
         if (!newKey) return undefined;
         this.quotas.applyFreeTierQuota(newKey);
@@ -551,6 +553,7 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async removeKey(id: string) {
+        requireLevel('L2');
         try {
             await this.registry.removeKey(id);
         } finally {
@@ -577,6 +580,7 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async updateKey(id: string, data: Partial<ApiKey>): Promise<void> {
+        requireLevel('L2');
         this.registry.updateKey(id, data);
         await this.registry.saveKeys();
         this.notify();
@@ -1183,10 +1187,12 @@ export class KeyService implements IKeyRotationManager {
         this.deps.eventBus.emit(EVENTS.CLEAR_DATA, undefined);
     }
 
-    handleProviderError(keyId: string, error: string) {
+    async handleProviderError(keyId: string, error: string) {
         const isRateLimit = /\b429\b/.test(error) || /\brate.limit\b/i.test(error);
+        const prev = this.registry.getKey(keyId);
+        const previousState = prev?.status;
+        const provider = prev?.provider ?? 'unknown';
         this.registry.modifyKey(keyId, (key) => {
-            const previousState = key.status;
             if (!isRateLimit) {
                 key.status = 'error';
             }
@@ -1194,14 +1200,14 @@ export class KeyService implements IKeyRotationManager {
                 key.stats = initStats();
             }
             key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
-            this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
-                id: keyId,
-                provider: key.provider,
-                state: isRateLimit ? 'rate_limited' : 'error',
-                previousState,
-            });
         });
-        void this.registry.saveKeys();
+        await this.registry.saveKeys();
+        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+            id: keyId,
+            provider,
+            state: isRateLimit ? 'rate_limited' : 'error',
+            previousState,
+        });
         if (!isRateLimit) {
             this.lifecycle.onError(keyId);
         }

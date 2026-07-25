@@ -57,7 +57,18 @@ export class BudgetService implements IBudgetService {
 
     destroy() {
         this.unsubs.forEach((u) => u());
+        if (this._saveTimer) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+        }
         this.costHistory = [];
+        this.sentAlerts.clear();
+        this.agentBudgets = {};
+        this.agentSpend = {};
+        this._costDedupSet?.clear();
+        this.alertsHistory = [];
+        this.budgetInfoCache = null;
+        this._monthFiltered = null;
     }
 
     private async loadAgentConfig() {

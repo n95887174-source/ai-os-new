@@ -452,6 +452,14 @@ export class SystemBootstrap implements IBootstrap {
             let interruptedCount = 0;
             for (const s of allSessions) {
                 if (RUNNING_DEBATE_PHASES.has(s.phase)) {
+                    if (!s.id || !s.topic) {
+                        this.logger.warn(
+                            'Bootstrap',
+                            'Skipping invalid debate session during auto-resume',
+                            { id: s.id },
+                        );
+                        continue;
+                    }
                     await getDexieDb().debateSessions.put({
                         ...s,
                         phase: 'failed',

@@ -27,8 +27,12 @@ export interface UsageTrackerDeps {
 }
 
 const STORAGE_KEY = 'super_agents_usage_records';
-const MAX_RECORDS = CONFIG?.services?.usageTracker?.maxRecords ?? 10000;
-const DEBOUNCE_MS = CONFIG?.services?.usageTracker?.debounceMs ?? 2000;
+function getMaxRecords(): number {
+    return CONFIG?.services?.usageTracker?.maxRecords ?? 10000;
+}
+function getDebounceMs(): number {
+    return CONFIG?.services?.usageTracker?.debounceMs ?? 2000;
+}
 
 export class UsageTracker implements IUsageTracker {
     private records: UsageRecord[] = [];
@@ -72,13 +76,13 @@ export class UsageTracker implements IUsageTracker {
             if (this.dirty) {
                 this.persistPromise = this.persist();
             }
-        }, DEBOUNCE_MS);
+        }, getDebounceMs());
     }
 
     trackUsage(provider: string, model: string, tokens: number, cost: number): void {
         this.records.push({ provider, model, tokens, cost, timestamp: Date.now() });
-        if (this.records.length > MAX_RECORDS) {
-            this.records = this.records.slice(-MAX_RECORDS);
+        if (this.records.length > getMaxRecords()) {
+            this.records = this.records.slice(-getMaxRecords());
         }
         this.scheduleFlush();
     }

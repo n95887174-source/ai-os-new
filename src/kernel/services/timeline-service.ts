@@ -11,7 +11,9 @@ export interface TimelineServiceDeps {
     };
 }
 
-const MAX_EVENTS = CONFIG?.services?.timeline?.maxEvents ?? 5000;
+function getMaxEvents(): number {
+    return CONFIG?.services?.timeline?.maxEvents ?? 5000;
+}
 
 export class TimelineService implements ITimelineContract {
     private events: TimelineEvent[] = [];
@@ -188,8 +190,8 @@ export class TimelineService implements ITimelineContract {
     addEvent(event: Omit<TimelineEvent, 'id'>): TimelineEvent {
         const entry: TimelineEvent = { id: this.nextId(), ...event };
         this.events.push(entry);
-        if (this.events.length > MAX_EVENTS) {
-            this.events = this.events.slice(-MAX_EVENTS);
+        if (this.events.length > getMaxEvents()) {
+            this.events = this.events.slice(-getMaxEvents());
         }
         this.deps.eventBus.emit(EVENTS.TIMELINE_EVENT_ADDED, {
             eventId: entry.id,

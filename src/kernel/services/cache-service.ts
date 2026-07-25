@@ -31,6 +31,9 @@ export class CacheService implements ICacheService {
     private evictionTimer: ReturnType<typeof setInterval> | null = null;
     private dirty = false;
     private inFlight = new Map<string, Promise<CacheEntry | null>>();
+    /** Tracks keys that were explicitly set/cleared while an in-flight fetch was running.
+     *  Prevents stale getOrFetch results from overwriting explicit writes. */
+    private pendingSet = new Set<string>();
     private unsub?: () => void;
     private _initialized = false;
 
@@ -82,8 +85,10 @@ export class CacheService implements ICacheService {
         const promise = fetchFn()
             .then((entry) => {
                 clearTimeout(timer);
+                const wasExplicitlySet = this.pendingSet.has(key);
+                this.pendingSet.delete(key);
                 this.inFlight.delete(key);
-                if (entry)
+                if (entry && !wasExplicitlySet)
                     this.set(
                         key,
                         entry.response,
@@ -128,6 +133,7 @@ export class CacheService implements ICacheService {
         await this.flush();
         this.cache.clear();
         this.inFlight.clear();
+        this.pendingSet.clear();
         this.unsub?.();
         if (this.persistTimer) clearTimeout(this.persistTimer);
         if (this.evictionTimer) clearInterval(this.evictionTimer);
@@ -201,9 +207,16 @@ export class CacheService implements ICacheService {
         completionTokens: number,
         ttl?: number,
     ) {
+        this.pendingSet.add(key);
         if (this.cache.size >= this.maxEntries) {
             const oldest = this.cache.entries().next().value;
-            if (oldest) this.cache.delete(oldest[0]);
+            if (oldest) {
+                this.cache.delete(oldest[0]);
+                this.deps.eventBus?.emit(EVENTS.CACHE_INVALIDATED, {
+                    reason: 'eviction',
+                    section: oldest[0],
+                });
+            }
         }
         this.cache.set(key, {
             key,
@@ -220,6 +233,10 @@ export class CacheService implements ICacheService {
     }
 
     clear(): void {
+        for (const key of this.inFlight.keys()) {
+            this.pendingSet.add(key);
+        }
+        this.inFlight.clear();
         this.cache.clear();
         this.hits = 0;
         this.misses = 0;
@@ -230,9 +247,16 @@ export class CacheService implements ICacheService {
     invalidate(model?: string) {
         if (model) {
             for (const [key, entry] of this.cache) {
-                if (entry.model === model) this.cache.delete(key);
+                if (entry.model === model) {
+                    this.pendingSet.add(key);
+                    this.cache.delete(key);
+                }
             }
         } else {
+            for (const key of this.inFlight.keys()) {
+                this.pendingSet.add(key);
+            }
+            this.inFlight.clear();
             this.cache.clear();
         }
         this.persist();

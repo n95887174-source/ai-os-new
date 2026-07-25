@@ -493,42 +493,53 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         },
 
         cancelSending: () => {
-            const sessionId = get().activeSessionId;
-            const session = get().sessions.find((s) => s.id === sessionId);
-            if (!session) {
+            const sessions = get().sessions;
+            const allLoadingReqs: Array<{ entryId: string; requestId: string; sessionId: string }> =
+                [];
+            for (const session of sessions) {
+                for (const entry of session.history) {
+                    for (const r of entry.responses || []) {
+                        if (r.status === 'loading' || r.status === 'streaming') {
+                            allLoadingReqs.push({
+                                entryId: entry.id,
+                                requestId: r.requestId,
+                                sessionId: session.id,
+                            });
+                        }
+                    }
+                }
+            }
+            if (allLoadingReqs.length === 0) {
                 set({ activeRequestIds: new Set() });
                 return;
             }
-            const loadingReqs = session.history
-                .flatMap((e) =>
-                    (e.responses || []).map((r) => ({
-                        entryId: e.id,
-                        requestId: r.requestId,
-                        status: r.status,
-                    })),
-                )
-                .filter((r) => r.status === 'loading' || r.status === 'streaming');
-            for (const req of loadingReqs) {
+            for (const req of allLoadingReqs) {
                 if (req.requestId)
                     eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
             }
+            const sessionIdsToUpdate = new Set(allLoadingReqs.map((r) => r.sessionId));
             set((s) => {
                 const newActiveIds = new Set(s.activeRequestIds);
-                for (const req of loadingReqs) {
+                for (const req of allLoadingReqs) {
                     if (req.requestId) newActiveIds.delete(req.requestId);
                 }
                 return {
                     activeRequestIds: newActiveIds,
-                    sessions: updateSessionInList(s.sessions, sessionId, {
-                        history: session.history.map((e) => ({
-                            ...e,
-                            responses: e.responses.map((r) =>
-                                r.status === 'loading' || r.status === 'streaming'
-                                    ? { ...r, status: 'cancelled' as const }
-                                    : r,
-                            ),
-                        })),
-                    }),
+                    sessions: s.sessions.map((session) =>
+                        sessionIdsToUpdate.has(session.id)
+                            ? {
+                                  ...session,
+                                  history: session.history.map((e) => ({
+                                      ...e,
+                                      responses: e.responses.map((r) =>
+                                          r.status === 'loading' || r.status === 'streaming'
+                                              ? { ...r, status: 'cancelled' as const }
+                                              : r,
+                                      ),
+                                  })),
+                              }
+                            : session,
+                    ),
                 };
             });
         },
@@ -559,11 +570,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     }
                 }
             }
-            uas((prev) =>
-                prev.map((e) => (e.id === entryId ? { ...e, text: newText, responses: [] } : e)),
-            );
             const sStore = resolveSessionStore();
             if (sStore) {
+                uas((prev) =>
+                    prev.map((e) =>
+                        e.id === entryId ? { ...e, text: newText, responses: [] } : e,
+                    ),
+                );
                 const sessionId = get().activeSessionId;
                 const session = get().sessions.find((s) => s.id === sessionId);
                 if (session)
@@ -583,19 +596,35 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                             );
                         }
                     });
+            } else {
+                console.warn('[ChatStore] No session store available, editEntry not persisted');
             }
         },
 
         clearHistory: () => {
+            const sessionId = get().activeSessionId;
+            const session = get().sessions.find((s) => s.id === sessionId);
+            if (session) {
+                const loadingReqs = session.history
+                    .flatMap((e) =>
+                        (e.responses || []).map((r) => ({
+                            requestId: r.requestId,
+                            status: r.status,
+                        })),
+                    )
+                    .filter((r) => r.status === 'loading' || r.status === 'streaming');
+                for (const req of loadingReqs) {
+                    if (req.requestId)
+                        eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
+                }
+            }
             uas(() => []);
+            set({ activeRequestIds: new Set() });
             const sStore = resolveSessionStore();
-            if (sStore) {
-                const sessionId = get().activeSessionId;
-                const session = get().sessions.find((s) => s.id === sessionId);
-                if (session)
-                    sStore.put(session).catch((e) => {
-                        console.error('[ChatStore] Failed to persist clearHistory', e);
-                    });
+            if (sStore && session) {
+                sStore.put({ ...session, history: [] }).catch((e) => {
+                    console.error('[ChatStore] Failed to persist clearHistory', e);
+                });
             }
         },
 

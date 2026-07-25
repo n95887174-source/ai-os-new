@@ -91,11 +91,7 @@ export class TruthConsistencyMonitor implements ITruthConsistencyMonitor, ILifec
         getProjectionKeyStates: () => Record<string, unknown>;
     };
 
-    setDeps(
-        deps: typeof TruthConsistencyMonitor.prototype.deps extends undefined
-            ? never
-            : Required<typeof TruthConsistencyMonitor.prototype.deps>,
-    ): void {
+    setDeps(deps: Exclude<typeof TruthConsistencyMonitor.prototype.deps, undefined>): void {
         this.deps = deps;
     }
 

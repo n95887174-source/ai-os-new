@@ -298,11 +298,20 @@ const ConnectorsPanel: React.FC = () => {
                                     const url = connectorService.generateWebhookUrl(
                                         window.location.origin,
                                     );
-                                    navigator.clipboard.writeText(url).catch(() => {});
-                                    eventBus.emit(EVENTS.NOTIFICATION, {
-                                        message: `Webhook URL generated and copied: ${url}`,
-                                        type: 'success',
-                                    });
+                                    navigator.clipboard
+                                        .writeText(url)
+                                        .then(() => {
+                                            eventBus.emit(EVENTS.NOTIFICATION, {
+                                                message: `Webhook URL generated and copied: ${url}`,
+                                                type: 'success',
+                                            });
+                                        })
+                                        .catch(() => {
+                                            eventBus.emit(EVENTS.NOTIFICATION, {
+                                                message: `Webhook URL generated: ${url}`,
+                                                type: 'info',
+                                            });
+                                        });
                                 }}
                             />
                         </motion.div>

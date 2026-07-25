@@ -12,6 +12,8 @@ import {
     Check,
 } from 'lucide-react';
 import { agentService, debateService, debateHumanService } from '../../kernel/instances';
+import { eventBus } from '../../kernel/instances';
+import { EVENTS } from '../../kernel/events/event-names';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
 
 interface AgentControlPanelProps {
@@ -86,6 +88,10 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
             await agentService.restartAgent(agentId);
         } catch (e) {
             console.warn('[AgentControlPanel] restart failed:', e);
+            eventBus.emit(EVENTS.NOTIFICATION, {
+                message: `Agent restart failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
+                type: 'error',
+            });
         } finally {
             setRestarting(null);
         }
@@ -110,6 +116,10 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                 const activeSession = debateService.getActiveDebateSession();
                 if (!activeSession) {
                     console.warn('[AgentControlPanel] no active debate session');
+                    eventBus.emit(EVENTS.NOTIFICATION, {
+                        message: 'Cannot inject message — no active debate session',
+                        type: 'error',
+                    });
                     return;
                 }
                 const agent = agents.find((a) => a.id === agentId);
@@ -123,6 +133,10 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                 setInjectText((prev) => ({ ...prev, [agentId]: '' }));
             } catch (e) {
                 console.warn('[AgentControlPanel] inject failed:', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: `Inject failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
+                    type: 'error',
+                });
             } finally {
                 setInjecting((prev) => ({ ...prev, [agentId]: false }));
             }

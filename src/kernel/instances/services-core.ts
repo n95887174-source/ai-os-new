@@ -167,10 +167,12 @@ export const truthConsistencyMonitor =
 // ── Group & Status ──
 import type { IGroupManager } from '../contracts/group-manager';
 import type { ISystemStatusService } from '../contracts/system-status';
+import type { IAuthorizationService } from '../contracts/authorization';
 import type { SystemState } from '../types/metrics-types';
 import type { HealthEvent, ProviderTracker } from '../services/provider-tracker';
 export type { HealthEvent } from '../services/provider-tracker';
 import type { ProviderRanking } from '../types/interfaces';
+export const authorizationService = lazyService<IAuthorizationService>('authorizationService');
 export const groupManager = lazyService<IGroupManager>('groupManagerService', {
     getAllKeys: () => [],
 });

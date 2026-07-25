@@ -179,10 +179,13 @@ interface DebateEngineDeps {
     gotDeliberation?: IGoTDeliberation;
     conceptBlender?: IConceptBlender;
     outcomeForecaster?: IOutcomeForecaster;
+    deadLetterQueue?: import('../../contracts/dead-letter-queue').IDeadLetterQueue;
 }
 
 // P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
-const DEBATE_MAX_DURATION_MS = CONFIG?.services?.debate?.maxDurationMs ?? 1_800_000;
+function getDebateMaxDurationMs(): number {
+    return CONFIG?.services?.debate?.maxDurationMs ?? 1_800_000;
+}
 
 export class DebateEngine implements IDebateEngine, ILifecycle {
     private sessionContexts = new Map<string, DebateSessionContext>();
@@ -710,7 +713,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 setTimeout(() => {
                     LOGGER.warn(
                         'DebateEngine',
-                        `Session ${sessionId} exceeded max duration (${DEBATE_MAX_DURATION_MS}ms) — cancelling`,
+                        `Session ${sessionId} exceeded max duration (${getDebateMaxDurationMs()}ms) — cancelling`,
                     );
                     this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
                         sessionId,
@@ -718,7 +721,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     });
                     this.cancelSession(sessionId);
                     this.sessionTimeoutTimers.delete(sessionId);
-                }, DEBATE_MAX_DURATION_MS),
+                }, getDebateMaxDurationMs()),
             );
         }
 
@@ -777,6 +780,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     ): Promise<string> {
         const deps: LlmCallerDeps = {
             eventBus: this.deps.eventBus,
+            deadLetterQueue: this.deps.deadLetterQueue,
             getKeyService: () => this.deps.getKeyService(),
             getAdapterRegistry: () => this.deps.getAdapterRegistry(),
             getKeyStateStore: this.deps.getKeyStateStore,

@@ -37,6 +37,14 @@ export const PrimitiveCard: React.FC<PrimitiveCardProps> = ({
             key={p.id}
             style={s.primitiveCard(meta.color, isSelected)}
             onClick={() => onSelect(index)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect(index);
+                }
+            }}
+            role="button"
+            tabIndex={0}
         >
             <div style={s.primitiveHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

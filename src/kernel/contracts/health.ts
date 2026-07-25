@@ -2,7 +2,7 @@
  * Canonical system-level health status. Single source of truth.
  * Used across all observability contracts, state, events, and services.
  */
-export type CanonicalHealthStatus = 'healthy' | 'degraded' | 'critical';
+export type CanonicalHealthStatus = 'healthy' | 'degraded' | 'critical' | 'unknown';
 
 /**
  * Map binary check results (active/error) to CanonicalHealthStatus.
@@ -16,6 +16,7 @@ export function normalizeHealthStatus(
 ): CanonicalHealthStatus {
     if (typeof status === 'boolean') return checkToHealth(status);
     const value = String(status ?? '').toLowerCase();
+    if (value === 'unknown') return 'unknown';
     if (
         value === 'healthy' ||
         value === 'active' ||

@@ -421,7 +421,7 @@ export class RoleService {
         return this.roles.filter((r) => !r.isBuiltin);
     }
 
-    addRole(input: RoleCreateInput): Role {
+    async addRole(input: RoleCreateInput): Promise<Role> {
         const newRole: Role = {
             ...input,
             id: `r-${crypto.randomUUID()}`,
@@ -436,13 +436,13 @@ export class RoleService {
             },
         };
         this.roles.push(newRole);
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
         this.deps.eventBus.emit(EVENTS.ROLE_CREATED, newRole);
         return newRole;
     }
 
-    updateRole(id: string, updates: RoleUpdateInput) {
+    async updateRole(id: string, updates: RoleUpdateInput) {
         const oldRole = this.roles.find((r) => r.id === id);
         this.roles = this.roles.map((r) =>
             r.id === id
@@ -454,7 +454,7 @@ export class RoleService {
                 : r,
         );
         const updated = this.roles.find((r) => r.id === id);
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
         if (updated) {
             this.deps.eventBus.emit(EVENTS.ROLE_UPDATED, updated);
@@ -468,7 +468,7 @@ export class RoleService {
         }
     }
 
-    deleteRole(id: string) {
+    async deleteRole(id: string): Promise<void> {
         const role = this.roles.find((r) => r.id === id);
         if (role?.isBuiltin) return;
         this.roles = this.roles.filter((r) => r.id !== id);
@@ -491,13 +491,12 @@ export class RoleService {
                 this.deps.orchestrator.mount({ ...topology, nodes: updatedNodes });
             }
         }
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.ROLE_DELETED, { id, name: role?.name });
-
-        this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
     }
 
-    duplicateRole(id: string): Role | null {
+    async duplicateRole(id: string): Promise<Role | null> {
         const source = this.getRole(id);
         if (!source) return null;
         const clone: Role = {
@@ -508,7 +507,7 @@ export class RoleService {
             metadata: { ...source.metadata, created: Date.now(), updated: Date.now() },
         };
         this.roles.push(clone);
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
         return clone;
     }
@@ -619,6 +618,13 @@ export class RoleService {
         day.totalLatency += latency;
         stats.dailyStats[dayKey] = day;
 
+        const dailyKeys = Object.keys(stats.dailyStats);
+        if (dailyKeys.length > 90) {
+            dailyKeys.sort();
+            const toRemove = dailyKeys.slice(0, dailyKeys.length - 90);
+            for (const k of toRemove) delete stats.dailyStats[k];
+        }
+
         if (tool) {
             stats.toolUsage[tool] = (stats.toolUsage[tool] || 0) + 1;
         }
@@ -661,12 +667,12 @@ export class RoleService {
             .filter((c) => c.daysInactive >= daysThreshold);
     }
 
-    promoteToBuiltin(roleId: string): boolean {
+    async promoteToBuiltin(roleId: string): Promise<boolean> {
         const role = this.getRole(roleId);
         if (!role || role.isBuiltin) return false;
         role.isBuiltin = true;
         role.metadata = { ...role.metadata, updated: Date.now() };
-        this.persist();
+        await this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
         return true;
     }

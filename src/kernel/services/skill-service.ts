@@ -130,37 +130,37 @@ export class SkillService {
         return this.skills.filter((s) => s.status === 'not_installed');
     }
 
-    toggleActive(id: string) {
+    async toggleActive(id: string) {
         this.skills = this.skills.map((s) => {
             if (s.id === id && s.status !== 'not_installed') {
                 return { ...s, status: s.status === 'active' ? 'installed' : ('active' as const) };
             }
             return s;
         });
-        this.persist();
+        await this.persist();
         this.emit();
     }
 
-    installSkill(id: string) {
+    async installSkill(id: string) {
         this.skills = this.skills.map((s) =>
             s.id === id ? { ...s, status: 'installed' as const } : s,
         );
-        this.persist();
+        await this.persist();
         this.emit();
     }
 
-    incrementExecution(id: string) {
+    async incrementExecution(id: string) {
         this.skills = this.skills.map((s) =>
             s.id === id ? { ...s, executionCount: s.executionCount + 1 } : s,
         );
-        this.persist();
+        await this.persist();
     }
 
     exportSkills(): string {
         return JSON.stringify(this.skills, null, 2);
     }
 
-    importSkills(jsonData: string): number {
+    async importSkills(jsonData: string): Promise<number> {
         try {
             const imported = safeJsonParse(jsonData);
             if (!Array.isArray(imported)) throw new Error('Invalid format');
@@ -175,7 +175,7 @@ export class SkillService {
                 }
             }
 
-            this.persist();
+            await this.persist();
             this.emit();
             return count;
         } catch (e) {

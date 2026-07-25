@@ -5,13 +5,24 @@
  */
 import type { Phase } from './helpers';
 import { MemoryOrchestrator } from '../services/memory-orchestrator';
+import type { MemoryService } from '../services/memory-engine';
 import { EvalDatasetService } from '../services/eval-dataset-service';
 import { CustomMetricsService } from '../services/custom-metrics-service';
 import type { IProviderAdapter } from '../contracts/provider-adapter';
 import type { IProviderTracker } from '../services/provider-tracker';
 
 export const registerPhase7: Phase = ({ register }) => {
-    register('memoryOrchestrator', (_c) => new MemoryOrchestrator());
+    register(
+        'memoryOrchestrator',
+        (c) =>
+            new MemoryOrchestrator(() => {
+                try {
+                    return c.get<MemoryService>('memoryService');
+                } catch {
+                    return undefined;
+                }
+            }),
+    );
 
     register('evalDatasetService', (c) => {
         const adapterRegistry = c.get<{

@@ -115,6 +115,22 @@ export class EventBus implements IEventBus {
         }
     }
 
+    emitOnce<K extends keyof EventMap>(event: K, key: string, data: EventMap[K]): boolean {
+        const cacheKey = `${String(event)}:${key}`;
+        const now = Date.now();
+        const existing = this.idempotencyCache.get(cacheKey);
+        if (existing && now - existing < EventBus.IDEMPOTENCY_TTL_MS) {
+            return false;
+        }
+        if (this.idempotencyCache.size >= EventBus.IDEMPOTENCY_MAX) {
+            const oldest = this.idempotencyCache.keys().next().value;
+            if (oldest !== undefined) this.idempotencyCache.delete(oldest);
+        }
+        this.idempotencyCache.set(cacheKey, now);
+        this.emit(event, data);
+        return true;
+    }
+
     /** D-07: Public API to clear all subscriptions — calls per-subscriber destroy callbacks, then cleans up. */
     clearAllSubscriptions(): void {
         for (const unsub of this.unsubCallbacks) {
@@ -130,6 +146,7 @@ export class EventBus implements IEventBus {
             if (!this.staticValidators.has(key)) this.validatorMap.delete(key);
         }
         this.deferCounts.clear();
+        this.idempotencyCache.clear();
         this.emitCount = 0;
         this.emitDepth = 0;
         this._unsubWarned = false;
@@ -279,6 +296,10 @@ export class EventBus implements IEventBus {
         }
         return this.on(event as keyof EventMap, (raw: unknown) => callback(raw));
     }
+
+    private idempotencyCache = new Map<string, number>();
+    private static readonly IDEMPOTENCY_MAX = 1000;
+    private static readonly IDEMPOTENCY_TTL_MS = 30000;
 
     private deferCounts = new Map<string, number>();
     private static readonly MAX_DEFER_CHAIN = 1000;

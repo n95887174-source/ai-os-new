@@ -193,10 +193,12 @@ export class LLMHttpClient {
                     res.body?.cancel()?.catch(() => {});
                     return '';
                 });
-                console.warn(
-                    `[${this.#provider}] POST ${res.status} body:`,
-                    errorBody.slice(0, 500),
-                );
+                if (import.meta.env.DEV) {
+                    console.warn(
+                        `[${this.#provider}] POST ${res.status} body:`,
+                        errorBody.slice(0, 500),
+                    );
+                }
                 throw new LLMError(
                     `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
                     this.#provider,
@@ -266,10 +268,12 @@ export class LLMHttpClient {
                     res.body?.cancel()?.catch(() => {});
                     return '';
                 });
-                console.warn(
-                    `[${this.#provider}] GET ${res.status} body:`,
-                    errorBody.slice(0, 500),
-                );
+                if (import.meta.env.DEV) {
+                    console.warn(
+                        `[${this.#provider}] GET ${res.status} body:`,
+                        errorBody.slice(0, 500),
+                    );
+                }
                 throw new LLMError(
                     `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
                     this.#provider,
@@ -345,10 +349,12 @@ export class LLMHttpClient {
                     res.body?.cancel()?.catch(() => {});
                     return '';
                 });
-                console.warn(
-                    `[${this.#provider}] STREAM ${res.status} body:`,
-                    errorBody.slice(0, 500),
-                );
+                if (import.meta.env.DEV) {
+                    console.warn(
+                        `[${this.#provider}] STREAM ${res.status} body:`,
+                        errorBody.slice(0, 500),
+                    );
+                }
                 throw new LLMError(
                     `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
                     this.#provider,

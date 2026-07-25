@@ -9,6 +9,7 @@ export interface ReconnectionConfig {
     maxRetries: number;
     baseDelayMs: number;
     maxDelayMs: number;
+    maxTotalRetryMs?: number;
     lastIndex: number;
     lastMessages: string[];
     onReconnect: (streamId: string, provider: string) => Promise<boolean>;
@@ -20,6 +21,7 @@ interface ReconnectionState {
     attempt: number;
     timer: ReturnType<typeof setTimeout> | null;
     destroyed: boolean;
+    startedAt: number;
 }
 
 export class ReconnectionService {
@@ -37,6 +39,7 @@ export class ReconnectionService {
             attempt: 0,
             timer: null,
             destroyed: false,
+            startedAt: Date.now(),
         };
         this.streams.set(config.streamId, state);
         this.scheduleRetry(state);
@@ -74,6 +77,17 @@ export class ReconnectionService {
 
     private scheduleRetry(state: ReconnectionState): void {
         if (state.destroyed) return;
+        const elapsed = Date.now() - state.startedAt;
+        const maxTotal = state.config.maxTotalRetryMs ?? 300000;
+        if (elapsed > maxTotal) {
+            LOGGER.warn(
+                'ReconnectionService',
+                `Total retry time (${elapsed}ms) exceeded max (${maxTotal}ms) for stream ${state.config.streamId}`,
+            );
+            state.config.onGiveUp(state.config.streamId, state.config.provider);
+            this.streams.delete(state.config.streamId);
+            return;
+        }
         if (state.attempt >= state.config.maxRetries) {
             LOGGER.warn(
                 'ReconnectionService',

@@ -102,80 +102,87 @@ export class CounterfactualEngine implements ICounterfactualEngine {
     constructor(private routerService: RouterService) {}
 
     run(input: CounterfactualInput): CounterfactualResult {
-        this.routerService.clearSimulation();
         const start = performance.now();
+        try {
+            this.routerService.clearSimulation();
 
-        const original = toDecisionPayload({
-            requestId: input.baseTrace.decision.requestId ?? 'simulated',
-            strategy: input.baseTrace.decision.strategy as RoutingStrategy,
-            classification: input.baseTrace.decision
-                .classification as unknown as RouterDecision['classification'],
-            weights: input.baseTrace.decision.weights as RouterDecision['weights'],
-            selected: input.baseTrace.decision.selected ?? '',
-            secondBest: input.baseTrace.decision.secondBest ?? null,
-            scores: input.baseTrace.decision.scores as unknown as RouterDecision['scores'],
-            skipped: input.baseTrace.decision.skipped as unknown as RouterDecision['skipped'],
-            timestamp: input.baseTrace.decision.timestamp ?? Date.now(),
-            promptLength: input.baseTrace.decision.promptLength ?? 0,
-            estimatedCost: input.baseTrace.decision.estimatedCost ?? 0,
-            steps: [],
-            origin: 'simulation',
-        });
+            const original = toDecisionPayload({
+                requestId: input.baseTrace.decision.requestId ?? 'simulated',
+                strategy: input.baseTrace.decision.strategy as RoutingStrategy,
+                classification: input.baseTrace.decision
+                    .classification as unknown as RouterDecision['classification'],
+                weights: input.baseTrace.decision.weights as RouterDecision['weights'],
+                selected: input.baseTrace.decision.selected ?? '',
+                secondBest: input.baseTrace.decision.secondBest ?? null,
+                scores: input.baseTrace.decision.scores as unknown as RouterDecision['scores'],
+                skipped: input.baseTrace.decision.skipped as unknown as RouterDecision['skipped'],
+                timestamp: input.baseTrace.decision.timestamp ?? Date.now(),
+                promptLength: input.baseTrace.decision.promptLength ?? 0,
+                estimatedCost: input.baseTrace.decision.estimatedCost ?? 0,
+                steps: [],
+                origin: 'simulation',
+            });
 
-        // Build simulated state via kernel's explicit snapshot ABI
-        const simState = this.routerService.getStateSnapshotForSimulation();
-        applyOverrides(simState, input.overrides);
+            const simState = this.routerService.getStateSnapshotForSimulation();
+            applyOverrides(simState, input.overrides);
 
-        this.routerService.getRankedProviders(
-            (input.overrides.global?.strategy ?? original.strategy) as Parameters<
-                RouterService['getRankedProviders']
-            >[0],
-            input.prompt ?? '',
-            'normal',
-            undefined,
-            undefined,
-            simState,
-            true,
-            'simulation',
-        );
+            this.routerService.getRankedProviders(
+                (input.overrides.global?.strategy ?? original.strategy) as Parameters<
+                    RouterService['getRankedProviders']
+                >[0],
+                input.prompt ?? '',
+                'normal',
+                undefined,
+                undefined,
+                simState,
+                true,
+                'simulation',
+            );
 
-        const simDecision = this.routerService.getSimulationDecision();
-        this.routerService.clearSimulation();
-        if (!simDecision) {
+            const simDecision = this.routerService.getSimulationDecision();
+            if (!simDecision) {
+                return {
+                    requestId: original.requestId,
+                    original,
+                    simulated: original,
+                    scoreDiffs: [],
+                    switchProvider: false,
+                    meta: {
+                        durationMs: performance.now() - start,
+                        overridesApplied: input.overrides,
+                    },
+                };
+            }
+
+            const simulated = toDecisionPayload(simDecision);
+            const scoreDiffs = computeScoreDiffs(original, simulated);
+            const switchProvider = original.selected !== simulated.selected;
+            let switchReason: string | undefined;
+            if (switchProvider) {
+                const changed = scoreDiffs.find(
+                    (s) => s.provider === simulated.selected && s.delta > 0,
+                );
+                const dropped = scoreDiffs.find(
+                    (s) => s.provider === original.selected && s.delta < 0,
+                );
+                switchReason = `${original.selected} → ${simulated.selected}`;
+                if (dropped)
+                    switchReason += ` (${original.selected} Δ${dropped.delta > 0 ? '+' : ''}${dropped.delta.toFixed(3)})`;
+                if (changed)
+                    switchReason += ` (${simulated.selected} Δ${changed.delta > 0 ? '+' : ''}${changed.delta.toFixed(3)})`;
+            }
+
             return {
                 requestId: original.requestId,
                 original,
-                simulated: original,
-                scoreDiffs: [],
-                switchProvider: false,
+                simulated,
+                scoreDiffs,
+                switchProvider,
+                switchReason,
                 meta: { durationMs: performance.now() - start, overridesApplied: input.overrides },
             };
+        } finally {
+            this.routerService.clearSimulation();
         }
-
-        const simulated = toDecisionPayload(simDecision);
-        const scoreDiffs = computeScoreDiffs(original, simulated);
-        const switchProvider = original.selected !== simulated.selected;
-        let switchReason: string | undefined;
-        if (switchProvider) {
-            const changed = scoreDiffs.find(
-                (s) => s.provider === simulated.selected && s.delta > 0,
-            );
-            const dropped = scoreDiffs.find((s) => s.provider === original.selected && s.delta < 0);
-            switchReason = `${original.selected} → ${simulated.selected}`;
-            if (dropped)
-                switchReason += ` (${original.selected} Δ${dropped.delta > 0 ? '+' : ''}${dropped.delta.toFixed(3)})`;
-            if (changed)
-                switchReason += ` (${simulated.selected} Δ${changed.delta > 0 ? '+' : ''}${changed.delta.toFixed(3)})`;
-        }
-
-        return {
-            requestId: original.requestId,
-            original,
-            simulated,
-            scoreDiffs,
-            switchProvider,
-            switchReason,
-            meta: { durationMs: performance.now() - start, overridesApplied: input.overrides },
-        };
     }
 }

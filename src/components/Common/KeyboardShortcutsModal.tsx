@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Zap } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface ShortcutEntry {
     keys: string;
@@ -168,6 +169,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
     onClose,
 }) => {
     const { t } = useTranslation();
+    const focusTrapRef = useFocusTrap(isOpen);
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -206,6 +208,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                     onClick={onClose}
                 >
                     <motion.div
+                        ref={focusTrapRef}
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}

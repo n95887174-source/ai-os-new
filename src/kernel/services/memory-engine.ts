@@ -17,9 +17,13 @@ const LOGGER = rootLogger.child('MemoryEngine');
 
 const WORKER_URL = new URL('../workers/memory.worker.ts', import.meta.url).href;
 
-const MEMORY_TTL_MS = CONFIG?.services?.cache?.defaultTTLMs ?? 30 * 24 * 60 * 60 * 1000;
-const PRUNE_INTERVAL_MS = MEMORY_TTL_MS * 0.5;
 const MAX_MEMORY_ENTRIES = 1000;
+function getMemoryTtlMs(): number {
+    return CONFIG?.services?.cache?.defaultTTLMs ?? 30 * 24 * 60 * 60 * 1000;
+}
+function getPruneIntervalMs(): number {
+    return getMemoryTtlMs() * 0.5;
+}
 
 interface PendingRequest {
     resolve: (value: { type: string; payload: unknown }) => void;
@@ -111,12 +115,12 @@ export class MemoryService implements IMemoryEngine {
     }
 
     private startPruneTimer() {
-        this.pruneInterval = setInterval(() => this.pruneOldEntries(), PRUNE_INTERVAL_MS);
+        this.pruneInterval = setInterval(() => this.pruneOldEntries(), getPruneIntervalMs());
     }
 
     private async pruneOldEntries() {
         try {
-            const cutoff = Date.now() - MEMORY_TTL_MS;
+            const cutoff = Date.now() - getMemoryTtlMs();
             const removed = this.memories.filter((m) => (m.metadata.timestamp ?? 0) < cutoff);
             await this.memoryRepo.prune(cutoff);
             await this.withMemoriesLock(async () => {
@@ -759,7 +763,7 @@ export class MemoryService implements IMemoryEngine {
             supportedSearchModes: ['auto', 'semantic', 'fulltext'],
             supportsBatchOperations: true,
             supportsPruning: true,
-            ttlSeconds: MEMORY_TTL_MS / 1000,
+            ttlSeconds: getMemoryTtlMs() / 1000,
         };
     }
 

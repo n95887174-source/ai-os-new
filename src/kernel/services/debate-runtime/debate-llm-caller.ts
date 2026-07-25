@@ -156,11 +156,23 @@ function logMemory(label: string, beforeMB: number): void {
     }
 }
 
-const DEBATE_TIMEOUT_MS = CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
-const LARGE_MODEL_TIMEOUT_MS = CONFIG?.services?.debate?.largeModelTimeoutMs ?? 90000;
-const BASE_BACKOFF_MS = CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
-const MAX_BACKOFF_MS = CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
-const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
+// Re-read CONFIG on each call to reflect runtime overlay changes (config import drift fix).
+function getDebateTimeoutMs(): number {
+    return CONFIG?.services?.debate?.debateTimeoutMs ?? 30000;
+}
+function getLargeModelTimeoutMs(): number {
+    return CONFIG?.services?.debate?.largeModelTimeoutMs ?? 90000;
+}
+function getBaseBackoffMs(): number {
+    return CONFIG?.services?.debate?.baseBackoffMs ?? 5000;
+}
+function getMaxBackoffMs(): number {
+    return CONFIG?.services?.debate?.maxBackoffMs ?? 30000;
+}
+function getMaxRetries(): number {
+    return CONFIG?.services?.debate?.maxRetries ?? 3;
+}
+
 // Cap on consecutive cross-agent-duplicate rejections within a single callLLM.
 // Beyond this we assume the LLM cluster is producing pathological content
 // (same response regardless of model/key) and we abort the call rather than
@@ -168,11 +180,20 @@ const MAX_RETRIES = CONFIG?.services?.debate?.maxRetries ?? 3;
 const MAX_DUPLICATE_REJECTIONS = 3;
 
 function getModelTimeout(modelId: string): number {
-    return isLargeModel(modelId) ? LARGE_MODEL_TIMEOUT_MS : DEBATE_TIMEOUT_MS;
+    return isLargeModel(modelId) ? getLargeModelTimeoutMs() : getDebateTimeoutMs();
 }
 
 export interface LlmCallerDeps {
     eventBus: IEventBus;
+    deadLetterQueue?: {
+        push(entry: {
+            event: string;
+            payload: unknown;
+            error: string;
+            context?: Record<string, unknown>;
+            retryCount: number;
+        }): Promise<void>;
+    };
     getKeyService: () => {
         getKeys(): Array<{
             id: string;
@@ -292,7 +313,7 @@ export async function debateCallLlm(
     // is re-thrown. Without this, a leaked AbortController entry or raw throw
     // (non-Error) would corrupt subsequent debate rounds.
     try {
-        while (retries < MAX_RETRIES) {
+        while (retries < getMaxRetries()) {
             // C6: Check cancellation on each retry iteration — the session can be
             // cancelled mid-retry-loop (e.g. another agent errored out, or user hit stop).
             // Without this guard, a cancelled session's abort controller entries get
@@ -2333,8 +2354,8 @@ export async function debateCallLlm(
                     // skip it while the circuit is open and allow retry when it closes.
                     if (isRateLimit) {
                         const rateBackoff = Math.min(
-                            BASE_BACKOFF_MS * Math.pow(2, retries),
-                            MAX_BACKOFF_MS,
+                            getBaseBackoffMs() * Math.pow(2, retries),
+                            getMaxBackoffMs(),
                         );
                         // Add ±25% jitter to prevent thundering herd
                         const jitter = rateBackoff * (0.75 + Math.random() * 0.5);
@@ -2400,6 +2421,24 @@ export async function debateCallLlm(
                                     [],
                             ),
                         });
+                        deps.deadLetterQueue
+                            ?.push({
+                                event: 'debate:all_providers_dead',
+                                payload: {
+                                    sessionId,
+                                    agentId: participant.agentId,
+                                    provider: resolvedKey?.provider,
+                                },
+                                error: String(e).slice(0, 500),
+                                context: {
+                                    failedProviders: Array.from(
+                                        (session as { _failedProviders?: Set<string> })
+                                            ._failedProviders ?? [],
+                                    ),
+                                },
+                                retryCount: retries,
+                            })
+                            .catch(() => {});
                         throw new Error('All LLM providers unavailable — debate cannot proceed', {
                             cause: e,
                         });
@@ -2410,10 +2449,10 @@ export async function debateCallLlm(
                     deps.eventBus.emit(EVENTS.DEBATE_AGENT_TIMEOUT, {
                         sessionId,
                         agentId: participant.agentId,
-                        timeoutMs: DEBATE_TIMEOUT_MS,
+                        timeoutMs: getDebateTimeoutMs(),
                     });
                     retries++;
-                    if (retries >= MAX_RETRIES) {
+                    if (retries >= getMaxRetries()) {
                         deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                         if (resolvedKey)
                             keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
@@ -2422,50 +2461,30 @@ export async function debateCallLlm(
                                 task: 'debate',
                                 round: session.round,
                             });
+                        deps.deadLetterQueue
+                            ?.push({
+                                event: 'debate:llm_timeout',
+                                payload: {
+                                    sessionId,
+                                    agentId: participant.agentId,
+                                    model: modelId,
+                                    provider: resolvedKey?.provider,
+                                },
+                                error: 'LLM call timed out',
+                                context: { retries },
+                                retryCount: retries,
+                            })
+                            .catch(() => {});
                         throw new Error('LLM call timed out', { cause: e });
                     }
-                    if (externalSignal?.aborted)
-                        throw new Error('Debate cancelled during backoff', { cause: e });
-                    const backoff = Math.min(
-                        BASE_BACKOFF_MS * Math.pow(2, retries - 1),
-                        MAX_BACKOFF_MS,
-                    );
-                    let _onAbort: (() => void) | undefined;
-                    await new Promise<void>((resolve, reject) => {
-                        const timer = setTimeout(resolve, backoff);
-                        _onAbort = () => {
-                            clearTimeout(timer);
-                            reject(new Error('Debate cancelled during backoff'));
-                        };
-                        if (externalSignal)
-                            externalSignal.addEventListener('abort', _onAbort, { once: true });
-                    });
-                    if (externalSignal && _onAbort)
-                        externalSignal.removeEventListener('abort', _onAbort);
+                    await backoffWait(retries, externalSignal);
                     continue;
                 }
 
                 const count = deps.providerResolver.incrementLlmFailureCount(failKey);
 
-                if (count <= MAX_RETRIES) {
-                    if (externalSignal?.aborted)
-                        throw new Error('Debate cancelled during backoff', { cause: e });
-                    const backoff = Math.min(
-                        BASE_BACKOFF_MS * Math.pow(2, count - 1),
-                        MAX_BACKOFF_MS,
-                    );
-                    let _onAbort: (() => void) | undefined;
-                    await new Promise<void>((resolve, reject) => {
-                        const timer = setTimeout(resolve, backoff);
-                        _onAbort = () => {
-                            clearTimeout(timer);
-                            reject(new Error('Debate cancelled during backoff'));
-                        };
-                        if (externalSignal)
-                            externalSignal.addEventListener('abort', _onAbort, { once: true });
-                    });
-                    if (externalSignal && _onAbort)
-                        externalSignal.removeEventListener('abort', _onAbort);
+                if (count <= getMaxRetries()) {
+                    await backoffWait(count, externalSignal);
                     continue;
                 }
 
@@ -2477,11 +2496,34 @@ export async function debateCallLlm(
                         task: 'debate',
                         round: session.round,
                     });
+                deps.deadLetterQueue
+                    ?.push({
+                        event: 'debate:llm_failure',
+                        payload: {
+                            sessionId,
+                            agentId: participant.agentId,
+                            provider: resolvedKey?.provider,
+                            model: modelId,
+                        },
+                        error: String(error).slice(0, 500),
+                        context: { retries, round: session.round },
+                        retryCount: count,
+                    })
+                    .catch(() => {});
                 throw new Error(error, { cause: e });
             }
         }
 
         deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+        deps.deadLetterQueue
+            ?.push({
+                event: 'debate:llm_max_retries',
+                payload: { sessionId, agentId: participant.agentId },
+                error: 'LLM call failed after max retries',
+                context: { retries },
+                retryCount: retries,
+            })
+            .catch(() => {});
         throw new Error('LLM call failed after max retries');
     } catch (outerErr) {
         // Catch-all error boundary: clean up abort controllers and normalize.
@@ -2575,6 +2617,29 @@ function isCrossAgentDuplicate(
         if (jaccardText(opening, step.content.slice(0, 200)) > 0.3) return true;
     }
     return false;
+}
+
+/**
+ * Wait for exponential backoff with support for external abort signal.
+ * Used in two retry paths (timeout and failure count) to avoid duplicated
+ * Promise/setTimeout/abort wiring.
+ */
+async function backoffWait(attempt: number, externalSignal?: AbortSignal): Promise<void> {
+    if (externalSignal?.aborted) throw new Error('Debate cancelled during backoff');
+    const jitter = 0.5 + Math.random() * 0.5;
+    const delay = Math.round(
+        Math.min(getBaseBackoffMs() * Math.pow(2, attempt - 1), getMaxBackoffMs()) * jitter,
+    );
+    let _onAbort: (() => void) | undefined;
+    await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, delay);
+        _onAbort = () => {
+            clearTimeout(timer);
+            reject(new Error('Debate cancelled during backoff'));
+        };
+        if (externalSignal) externalSignal.addEventListener('abort', _onAbort, { once: true });
+    });
+    if (externalSignal && _onAbort) externalSignal.removeEventListener('abort', _onAbort);
 }
 
 export function estimateConfidence(content: string): number {
