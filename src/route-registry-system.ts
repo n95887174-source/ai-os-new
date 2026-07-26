@@ -412,6 +412,14 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 lazy: true,
                 level: 'L2',
             },
+            {
+                id: 'scheduler',
+                labelKey: 'nav.scheduler',
+                icon: Icons.clock,
+                color: '#3b82f6',
+                lazy: true,
+                level: 'L2',
+            },
         ],
     },
 ];
