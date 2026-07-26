@@ -14,6 +14,7 @@ import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
 
 import { eventBus } from '../../../events/event-bus';
 import { getAllSettings } from '../quality-settings-store';
+import { SeededRng } from '../../../utils/seedable-rng';
 
 const LOGGER = rootLogger.child('AutoDebateService');
 import type {
@@ -84,9 +85,14 @@ const TOPICS: Record<string, string[]> = {
 };
 
 const ALL_TOPICS = Object.values(TOPICS).flat();
+let _rng = new SeededRng();
 
 function pickRandom<T>(arr: T[]): T {
-    return arr[Math.floor(Math.random() * arr.length)];
+    return _rng.pick(arr);
+}
+
+export function resetAutoDebateRng(seed?: number): void {
+    _rng = new SeededRng(seed);
 }
 
 import { genId } from '../../../../utils/gen-id';

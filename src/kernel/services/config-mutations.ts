@@ -2,18 +2,48 @@ import type { ConfigRegistry } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
 import { eventBus } from '../events/event-bus';
 import { rawConfig } from './config-registry';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('ConfigMutations');
+
+const CONFIG_TOP_LEVEL_KEYS = new Set<string>([
+    'version',
+    'buildId',
+    'router',
+    'monitoring',
+    'metrics',
+    'traces',
+    'webhooks',
+    'keys',
+    'llm',
+    'pressure',
+    'pricing',
+    'services',
+    'storage',
+    'security',
+    'featureFlags',
+]);
 
 /** Replace entire rawConfig with a new snapshot (used by config-history rollback). */
 export function replaceConfig(next: ConfigRegistry): void {
     const target = rawConfig as unknown as Record<string, unknown>;
-    for (const key of Object.keys(next)) {
-        target[key] = (next as unknown as Record<string, unknown>)[key];
+    const entries = Object.entries(next as unknown as Record<string, unknown>);
+    for (const [key, value] of entries) {
+        if (!CONFIG_TOP_LEVEL_KEYS.has(key)) {
+            LOGGER.warn('replaceConfig', `Ignoring unknown config key "${key}"`);
+            continue;
+        }
+        target[key] = value;
     }
     eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
 }
 
 /** Update a single top-level section in rawConfig (used by config-service). */
 export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigRegistry[K]): void {
+    if (!CONFIG_TOP_LEVEL_KEYS.has(key as string)) {
+        LOGGER.warn('setConfig', `Ignoring unknown config key "${String(key)}"`);
+        return;
+    }
     rawConfig[key] = value;
     eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
 }

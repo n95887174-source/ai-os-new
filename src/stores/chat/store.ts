@@ -548,7 +548,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId });
         },
 
-        editEntry: (entryId, newText) => {
+        editEntry: async (entryId, newText) => {
             if (get().isAnySending()) {
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message:
@@ -557,10 +557,8 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 });
                 return;
             }
-            // Save old entry for rollback
             const session = get().sessions.find((s) => s.id === get().activeSessionId);
             const oldEntry = session?.history.find((e) => e.id === entryId);
-            const oldSnapshot = oldEntry ? { ...oldEntry } : null;
             // Cancel any in-flight requests for this entry before clearing
             if (oldEntry) {
                 for (const r of oldEntry.responses) {
@@ -571,37 +569,36 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 }
             }
             const sStore = resolveSessionStore();
-            if (sStore) {
-                uas((prev) =>
-                    prev.map((e) =>
+            if (!sStore) {
+                console.warn('[ChatStore] No session store available, editEntry not persisted');
+                return;
+            }
+            const sessionId = get().activeSessionId;
+            const fullSession = get().sessions.find((s) => s.id === sessionId);
+            if (!fullSession) return;
+            // Persist-then-emit: write to Dexie first, update Zustand only on success
+            try {
+                await sStore.put({
+                    ...fullSession,
+                    history: fullSession.history.map((e) =>
                         e.id === entryId ? { ...e, text: newText, responses: [] } : e,
                     ),
-                );
-                const sessionId = get().activeSessionId;
-                const session = get().sessions.find((s) => s.id === sessionId);
-                if (session)
-                    sStore.put(session).catch((e) => {
-                        console.error('[ChatStore] Failed to persist editEntry', e);
-                        if (oldSnapshot) {
-                            uas((prev) =>
-                                prev.map((e) =>
-                                    e.id === entryId
-                                        ? {
-                                              ...e,
-                                              text: oldSnapshot.text,
-                                              responses: oldSnapshot.responses,
-                                          }
-                                        : e,
-                                ),
-                            );
-                        }
-                    });
-            } else {
-                console.warn('[ChatStore] No session store available, editEntry not persisted');
+                    updatedAt: Date.now(),
+                });
+            } catch (e) {
+                console.error('[ChatStore] Failed to persist editEntry', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to save edited message',
+                    type: 'error',
+                });
+                return;
             }
+            uas((prev) =>
+                prev.map((e) => (e.id === entryId ? { ...e, text: newText, responses: [] } : e)),
+            );
         },
 
-        clearHistory: () => {
+        clearHistory: async () => {
             const sessionId = get().activeSessionId;
             const session = get().sessions.find((s) => s.id === sessionId);
             if (session) {
@@ -618,14 +615,17 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                         eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
                 }
             }
-            uas(() => []);
-            set({ activeRequestIds: new Set() });
             const sStore = resolveSessionStore();
             if (sStore && session) {
-                sStore.put({ ...session, history: [] }).catch((e) => {
+                try {
+                    await sStore.put({ ...session, history: [], updatedAt: Date.now() });
+                } catch (e) {
                     console.error('[ChatStore] Failed to persist clearHistory', e);
-                });
+                    return;
+                }
             }
+            uas(() => []);
+            set({ activeRequestIds: new Set() });
         },
 
         createSession: async (title = 'New Chat') => {
@@ -643,18 +643,21 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             return id;
         },
 
-        deleteSession: (id) => {
+        deleteSession: async (id) => {
             // Prune requestEntryMap entries for this session
             for (const [reqId, ref] of requestEntryMap) {
                 if (ref.sessionId === id) requestEntryMap.delete(reqId);
             }
-            sessionManager.delete(id).catch((e) => {
+            try {
+                await sessionManager.delete(id);
+            } catch (e) {
                 console.error('[ChatStore] Failed to persist session deletion', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to delete session in database',
                     type: 'error',
                 });
-            });
+                return;
+            }
             set((s) => {
                 const now = Date.now();
                 const timestamps = new Map(s.deletedAtTimestamps);
@@ -700,7 +703,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             });
         },
 
-        forkSession: (entryId, newTitle) => {
+        forkSession: async (entryId, newTitle) => {
             const sessionId = get().activeSessionId;
             const session = get().sessions.find((s) => s.id === sessionId);
             if (!session) return;
@@ -723,119 +726,143 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
             };
-            set((s) => ({ sessions: [newSession, ...s.sessions], activeSessionId: id }));
-            rebuildRequestEntryMap(get().sessions);
             const sStore = resolveSessionStore();
-            if (sStore)
-                sStore.put(newSession).catch((e) => {
+            if (sStore) {
+                try {
+                    await sStore.put(newSession);
+                } catch (e) {
                     console.error('[ChatStore] Failed to persist forked session', e);
                     eventBus.emit(EVENTS.NOTIFICATION, {
                         message: 'Failed to save forked session in database',
                         type: 'error',
                     });
-                });
+                    return;
+                }
+            }
+            set((s) => ({ sessions: [newSession, ...s.sessions], activeSessionId: id }));
+            rebuildRequestEntryMap(get().sessions);
         },
 
-        renameSession: (id, title) => {
-            set((s) => ({
-                sessions: updateSessionInList(s.sessions, id, { title }),
-            }));
-            sessionManager.updateMeta(id, { title }).catch((e) => {
+        renameSession: async (id, title) => {
+            try {
+                await sessionManager.updateMeta(id, { title });
+            } catch (e) {
                 console.error('[ChatStore] Failed to persist session rename', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to rename session in database',
                     type: 'error',
                 });
-            });
+                return;
+            }
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { title }),
+            }));
         },
 
-        archiveSession: (id) => {
-            set((s) => ({
-                sessions: updateSessionInList(s.sessions, id, { isArchived: true }),
-            }));
-            sessionManager.updateMeta(id, { isArchived: true }).catch((e) => {
+        archiveSession: async (id) => {
+            try {
+                await sessionManager.updateMeta(id, { isArchived: true });
+            } catch (e) {
                 console.error('[ChatStore] Failed to persist archive state', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to archive session',
                     type: 'error',
                 });
-            });
+                return;
+            }
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { isArchived: true }),
+            }));
         },
 
-        unarchiveSession: (id) => {
-            set((s) => ({
-                sessions: updateSessionInList(s.sessions, id, { isArchived: false }),
-            }));
-            sessionManager.updateMeta(id, { isArchived: false }).catch((e) => {
+        unarchiveSession: async (id) => {
+            try {
+                await sessionManager.updateMeta(id, { isArchived: false });
+            } catch (e) {
                 console.error('[ChatStore] Failed to persist unarchive state', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to unarchive session',
                     type: 'error',
                 });
-            });
+                return;
+            }
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { isArchived: false }),
+            }));
         },
 
-        tagSession: (id, tags) => {
-            set((s) => ({
-                sessions: updateSessionInList(s.sessions, id, { tags }),
-            }));
-            sessionManager.updateMeta(id, { tags }).catch((e) => {
+        tagSession: async (id, tags) => {
+            try {
+                await sessionManager.updateMeta(id, { tags });
+            } catch (e) {
                 console.error('[ChatStore] Failed to persist tags', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to save tags',
                     type: 'error',
                 });
-            });
+                return;
+            }
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { tags }),
+            }));
         },
 
-        moveToFolder: (id, folder) => {
-            set((s) => ({
-                sessions: updateSessionInList(s.sessions, id, { folder }),
-            }));
-            sessionManager.updateMeta(id, { folder }).catch((e) => {
+        moveToFolder: async (id, folder) => {
+            try {
+                await sessionManager.updateMeta(id, { folder });
+            } catch (e) {
                 console.error('[ChatStore] Failed to persist folder', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to save folder',
                     type: 'error',
                 });
-            });
+                return;
+            }
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { folder }),
+            }));
         },
 
-        pinSession: (id) => {
-            set((s) => {
-                const current = s.sessions.find((x) => x.id === id);
-                const next = !current?.isPinned;
-                sessionManager.updateMeta(id, { isPinned: next }).catch((e) => {
-                    console.error('[ChatStore] Failed to persist pin state', e);
-                    eventBus.emit(EVENTS.NOTIFICATION, {
-                        message: 'Failed to pin session in database',
-                        type: 'error',
-                    });
+        pinSession: async (id) => {
+            const current = get().sessions.find((x) => x.id === id);
+            const next = !current?.isPinned;
+            try {
+                await sessionManager.updateMeta(id, { isPinned: next });
+            } catch (e) {
+                console.error('[ChatStore] Failed to persist pin state', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to pin session in database',
+                    type: 'error',
                 });
-                return {
-                    sessions: updateSessionInList(s.sessions, id, { isPinned: next }),
-                };
-            });
+                return;
+            }
+            set((s) => ({
+                sessions: updateSessionInList(s.sessions, id, { isPinned: next }),
+            }));
         },
 
-        importSessions: (imported) => {
-            set((s) => {
-                const existingIds = new Set(s.sessions.map((x) => x.id));
-                const newSessions = imported.filter((x) => !existingIds.has(x.id));
+        importSessions: async (imported) => {
+            const existingIds = new Set(get().sessions.map((x) => x.id));
+            const newSessions = imported.filter((x) => !existingIds.has(x.id));
+            if (newSessions.length > 0) {
                 const sStore = resolveSessionStore();
-                if (sStore && newSessions.length > 0)
-                    sStore.bulkPut(newSessions).catch((e) => {
+                if (sStore) {
+                    try {
+                        await sStore.bulkPut(newSessions);
+                    } catch (e) {
                         console.error('[ChatStore] Failed to persist imported sessions', e);
                         eventBus.emit(EVENTS.NOTIFICATION, {
                             message: 'Failed to save imported sessions in database',
                             type: 'error',
                         });
-                    });
-                return { sessions: [...newSessions, ...s.sessions] };
-            });
+                        return;
+                    }
+                }
+            }
+            set((s) => ({ sessions: [...newSessions, ...s.sessions] }));
         },
 
-        switchModel: (provider, model) => {
+        switchModel: async (provider, model) => {
             if (get().isAnySending()) {
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message:
@@ -858,35 +885,41 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     type: 'warning',
                 });
             }
+            const systemEntry: ChatEntry = {
+                id: crypto.randomUUID(),
+                role: 'system' as const,
+                text: `\u{1F504} Switched to ${provider}/${model}`,
+                responses: [],
+                timestamp: Date.now(),
+            };
+            const sStore = resolveSessionStore();
+            if (sStore) {
+                const fullSession = get().sessions.find((s) => s.id === sessionId);
+                if (fullSession) {
+                    try {
+                        await sStore.put({
+                            ...fullSession,
+                            currentProvider: provider,
+                            currentModel: model,
+                            history: [...fullSession.history, systemEntry],
+                            updatedAt: Date.now(),
+                        });
+                    } catch (e) {
+                        console.error('[ChatStore] Failed to persist switchModel', e);
+                        return;
+                    }
+                }
+            }
             set((s) => ({
                 sessions: updateSessionInList(s.sessions, sessionId, {
                     currentProvider: provider,
                     currentModel: model,
                 }),
             }));
-            const sStore = resolveSessionStore();
-            if (sStore) {
-                const session = get().sessions.find((s) => s.id === sessionId);
-                if (session)
-                    sStore
-                        .put({ ...session, currentProvider: provider, currentModel: model })
-                        .catch((e) => {
-                            console.error('[ChatStore] Failed to persist switchModel', e);
-                        });
-            }
-            uas((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    role: 'system' as const,
-                    text: `\u{1F504} Switched to ${provider}/${model}`,
-                    responses: [],
-                    timestamp: Date.now(),
-                },
-            ]);
+            uas((prev) => [...prev, systemEntry]);
         },
 
-        switchKey: (keyId) => {
+        switchKey: async (keyId) => {
             if (get().isAnySending()) {
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message:
@@ -896,28 +929,35 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 return;
             }
             const sessionId = get().activeSessionId;
+            const keyLabel = keyId?.slice(0, 8) ?? '';
+            const systemEntry: ChatEntry = {
+                id: crypto.randomUUID(),
+                role: 'system' as const,
+                text: `\u{1F504} Switched to key ${keyLabel}...`,
+                responses: [],
+                timestamp: Date.now(),
+            };
+            const sStore = resolveSessionStore();
+            if (sStore) {
+                const fullSession = get().sessions.find((s) => s.id === sessionId);
+                if (fullSession) {
+                    try {
+                        await sStore.put({
+                            ...fullSession,
+                            currentKeyId: keyId,
+                            history: [...fullSession.history, systemEntry],
+                            updatedAt: Date.now(),
+                        });
+                    } catch (e) {
+                        console.error('[ChatStore] Failed to persist switchKey', e);
+                        return;
+                    }
+                }
+            }
             set((s) => ({
                 sessions: updateSessionInList(s.sessions, sessionId, { currentKeyId: keyId }),
             }));
-            const sStore2 = resolveSessionStore();
-            if (sStore2) {
-                const session = get().sessions.find((s) => s.id === sessionId);
-                if (session)
-                    sStore2.put({ ...session, currentKeyId: keyId }).catch((e) => {
-                        console.error('[ChatStore] Failed to persist switchKey', e);
-                    });
-            }
-            const keyLabel = keyId?.slice(0, 8) ?? '';
-            uas((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    role: 'system' as const,
-                    text: `\u{1F504} Switched to key ${keyLabel}...`,
-                    responses: [],
-                    timestamp: Date.now(),
-                },
-            ]);
+            uas((prev) => [...prev, systemEntry]);
         },
 
         getSessionConfig: () => {

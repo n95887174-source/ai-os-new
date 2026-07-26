@@ -99,7 +99,9 @@ export class AgentHealthMonitor implements ILifecycle {
             clearInterval(this.heartbeatTimer);
             this.heartbeatTimer = null;
         }
-        this.persist().catch(() => {});
+        this.persist().catch((e: unknown) => {
+            LOGGER.warn('AgentHealthMonitor', 'Persist during destroy failed', { error: e });
+        });
         this.records = [];
         this.healthCache.clear();
         this.unhealthyCounters.clear();
@@ -165,7 +167,9 @@ export class AgentHealthMonitor implements ILifecycle {
                 healthy: allHealth.length - unhealthy.length - degraded.length,
             });
         }
-        this.persist().catch(() => {});
+        this.persist().catch((e: unknown) => {
+            LOGGER.warn('AgentHealthMonitor', 'Persist during heartbeat failed', { error: e });
+        });
 
         for (const h of unhealthy) {
             const count = (this.unhealthyCounters.get(h.agentId) || 0) + 1;

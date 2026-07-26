@@ -20,6 +20,7 @@ export interface PressureMapDeps {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     cognitiveIntelligenceService: {
         getPressure: () => { level: PressureLevel; score: number };
@@ -281,10 +282,14 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
     private emit() {
         const snapshot = this.getSnapshot();
         // OBS-105: emit to eventBus too, not just local listeners
-        this.deps.eventBus.emit(EVENTS.PRESSURE_MAP_UPDATED, snapshot);
+        this.deps.eventBus.emitOnce(EVENTS.PRESSURE_MAP_UPDATED, 'global', snapshot);
         const activeAlerts = this.getAlerts().filter((a) => !a.acknowledged);
         for (const alert of activeAlerts) {
-            this.deps.eventBus.emit(EVENTS.PRESSURE_ALERT_RAISED, alert);
+            this.deps.eventBus.emitOnce(
+                EVENTS.PRESSURE_ALERT_RAISED,
+                `${alert.scope}:${alert.id}:${alert.level}`,
+                alert,
+            );
         }
         for (const cb of this.listeners) cb(snapshot);
     }

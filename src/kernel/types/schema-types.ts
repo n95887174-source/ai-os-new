@@ -143,21 +143,53 @@ export const ApiKeySchema = z.object({
 
 export const SystemStateSchema = z.record(z.string(), z.unknown());
 
+export const ChatResponseSchema = z.object({
+    id: z.string(),
+    requestId: z.string(),
+    provider: z.string(),
+    model: z.string(),
+    keyId: z.string().optional(),
+    content: z.string(),
+    latency: z.number(),
+    status: z.enum([
+        'loading',
+        'done',
+        'error',
+        'cancelled',
+        'streaming',
+        'queued',
+        'timeout',
+        'cached',
+    ]),
+    error: z.string().optional(),
+    tokens: z.number().optional(),
+    ttft: z.number().optional(),
+    tps: z.number().optional(),
+    cost: z.number().optional(),
+    strategy: z
+        .enum(['auto', 'broadcast', 'race', 'performance', 'cost', 'latency', 'manual'])
+        .optional(),
+    finishReason: z.string().optional(),
+    timestamp: z.number().optional(),
+});
+
 const ChatHistoryEntrySchema = z.object({
     id: z.string(),
-    sessionId: z.string().optional(),
     role: z.enum(['user', 'assistant', 'system', 'tool']),
-    content: z.string().optional(),
-    text: z.string().optional(),
+    text: z
+        .string()
+        .optional()
+        .default(() => ''),
+    responses: z.array(ChatResponseSchema).optional().default([]),
     timestamp: z
         .number()
         .optional()
         .default(() => Date.now()),
     requestId: z.string().optional(),
-    provider: z.string().optional(),
-    model: z.string().optional(),
-    tokens: z.number().optional(),
-    latency: z.number().optional(),
+    parentId: z.string().optional(),
+    recalledMemories: z
+        .array(z.object({ content: z.string(), score: z.number().optional() }))
+        .optional(),
 });
 
 export const ChatSessionSchema = z.object({
@@ -166,11 +198,16 @@ export const ChatSessionSchema = z.object({
     history: z.array(ChatHistoryEntrySchema),
     createdAt: z.number(),
     updatedAt: z.number(),
+    version: z.number().int().min(0).optional().default(0),
     tags: z.array(z.string()).optional(),
+    folder: z.string().optional(),
+    isArchived: z.boolean().optional(),
+    isPinned: z.boolean().optional(),
+    summary: z.string().optional(),
+    linkedDebateId: z.string().optional(),
     currentProvider: z.string().optional(),
     currentModel: z.string().optional(),
     currentKeyId: z.string().optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ToolCallSchema = z.object({
@@ -451,36 +488,6 @@ export const PolicyViolationSchema = z.object({
     threshold: z.number().optional(),
     timestamp: z.number(),
     resolved: z.boolean(),
-});
-
-export const ChatResponseSchema = z.object({
-    id: z.string(),
-    requestId: z.string(),
-    provider: z.string(),
-    model: z.string(),
-    keyId: z.string().optional(),
-    content: z.string(),
-    latency: z.number(),
-    status: z.enum([
-        'loading',
-        'done',
-        'error',
-        'cancelled',
-        'streaming',
-        'queued',
-        'timeout',
-        'cached',
-    ]),
-    error: z.string().optional(),
-    tokens: z.number().optional(),
-    ttft: z.number().optional(),
-    tps: z.number().optional(),
-    cost: z.number().optional(),
-    strategy: z
-        .enum(['auto', 'broadcast', 'race', 'performance', 'cost', 'latency', 'manual'])
-        .optional(),
-    finishReason: z.string().optional(),
-    timestamp: z.number().optional(),
 });
 
 export const CognitiveDecisionSchema = z.object({

@@ -245,6 +245,11 @@ export class TemporalReplayService implements ITemporalReplayService {
     ) {}
 
     replay(trace: CausalTraceEntry): TemporalTrace {
+        // R-33: replay is read-only — save and restore simulation state
+        // to prevent cross-contamination with counterfactual engine results
+        const savedSim = this.routerService.getSimulationDecision();
+        this.routerService.clearSimulation();
+
         const requestId = trace.requestIds[0] ?? '';
         const causalId = trace.causalId;
         const scope = this.scopeManager.getScope(causalId);
@@ -346,7 +351,7 @@ export class TemporalReplayService implements ITemporalReplayService {
             }
         }
 
-        return {
+        const result: TemporalTrace = {
             requestId,
             causalId,
             frames,
@@ -354,5 +359,13 @@ export class TemporalReplayService implements ITemporalReplayService {
             winner: decisionWinner,
             initialLeader,
         };
+
+        // R-33: restore simulation state — replay must not leave side effects
+        this.routerService.clearSimulation();
+        if (savedSim) {
+            this.routerService.pushSimulationDecision(savedSim);
+        }
+
+        return result;
     }
 }

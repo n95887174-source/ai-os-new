@@ -40,6 +40,7 @@ export interface RoleServiceDeps {
     eventBus: {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     rolesStore: RolesStore;
     keyValue: {
@@ -438,7 +439,7 @@ export class RoleService {
         this.roles.push(newRole);
         await this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
-        this.deps.eventBus.emit(EVENTS.ROLE_CREATED, newRole);
+        this.deps.eventBus.emitOnce(EVENTS.ROLE_CREATED, newRole.id, newRole);
         return newRole;
     }
 
@@ -457,7 +458,7 @@ export class RoleService {
         await this.persist();
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
         if (updated) {
-            this.deps.eventBus.emit(EVENTS.ROLE_UPDATED, updated);
+            this.deps.eventBus.emitOnce(EVENTS.ROLE_UPDATED, updated.id, updated);
             this.deps.roleVersionService?.recordChange(updated, 'Updated via editor');
             if (oldRole && oldRole.parentRoleId !== updated.parentRoleId) {
                 this.deps.roleVersionService?.recordChange(
@@ -492,7 +493,7 @@ export class RoleService {
             }
         }
         await this.persist();
-        this.deps.eventBus.emit(EVENTS.ROLE_DELETED, { id, name: role?.name });
+        this.deps.eventBus.emitOnce(EVENTS.ROLE_DELETED, id, { id, name: role?.name });
         this.deps.eventBus.emit(EVENTS.ROLES_UPDATED, this.roles);
     }
 
@@ -543,7 +544,10 @@ export class RoleService {
         if (!existing.includes(nodeId)) {
             existing.push(nodeId);
             this.assignments.set(roleId, existing);
-            this.deps.eventBus.emit(EVENTS.ROLE_ASSIGNED, { roleId, nodeId });
+            this.deps.eventBus.emitOnce(EVENTS.ROLE_ASSIGNED, `${roleId}:${nodeId}`, {
+                roleId,
+                nodeId,
+            });
         }
     }
 
@@ -552,7 +556,10 @@ export class RoleService {
         const filtered = existing.filter((n) => n !== nodeId);
         if (filtered.length !== existing.length) {
             this.assignments.set(roleId, filtered);
-            this.deps.eventBus.emit(EVENTS.ROLE_UNASSIGNED, { roleId, nodeId });
+            this.deps.eventBus.emitOnce(EVENTS.ROLE_UNASSIGNED, `${roleId}:${nodeId}`, {
+                roleId,
+                nodeId,
+            });
         }
     }
 

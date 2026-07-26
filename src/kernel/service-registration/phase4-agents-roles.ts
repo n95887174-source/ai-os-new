@@ -138,7 +138,7 @@ export const registerPhase4: Phase = (helpers, ctx) => {
                 eventBus: c.get<IEventBus>('eventBus'),
                 database: c.get<IDatabaseService>('database'),
                 getLifecycleState: (agentId) =>
-                    c.get<any>('agentService')?.getLifecycleState?.(agentId),
+                    c.get<AgentService>('agentService')?.getLifecycleState?.(agentId),
             }),
     );
 
@@ -161,6 +161,10 @@ export const registerPhase4: Phase = (helpers, ctx) => {
                 toolService: c.get<ToolService>('toolService'),
                 cognitiveService: c.get<CognitiveService>('cognitiveService'),
                 policyService: c.get<PolicyService>('policyService'),
+                deadLetterQueue:
+                    c.get<import('../contracts/dead-letter-queue').IDeadLetterQueue>(
+                        'deadLetterQueue',
+                    ),
             }),
     );
 

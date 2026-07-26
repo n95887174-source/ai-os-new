@@ -466,6 +466,12 @@ export class RouterService {
         this.simulationHistory = [];
     }
 
+    pushSimulationDecision(decision: RouterDecision): void {
+        this.simulationHistory.unshift(decision);
+        if (this.simulationHistory.length > (this.config.history?.maxDecisions ?? 100))
+            this.simulationHistory.pop();
+    }
+
     getStateSnapshotForSimulation(): SystemState {
         return structuredClone(this.deps.kernel.getState());
     }

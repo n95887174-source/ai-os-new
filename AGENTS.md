@@ -1501,4 +1501,202 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 | ------------- | -------- |
 | tsc -b        | 0 errors |
 | Typecheck     | PASS     |
+| Files changed | 4        |
+
+---
+
+## Session 49 — Silent errors fix + batch-processor QUEUE_TASK_FAILED (v4.5.0 → v4.6.0) ✅
+
+**7+ silent `.catch(() => {})` patterns fixed. Batch-processor now emits QUEUE_TASK_FAILED. Typecheck 0 errors.**
+
+### Changes
+
+| #   | What was done                                                                                                                                                                                                                                  |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **memory-engine.ts** — pruneOldEntries: `sendToWorker('remove').catch(() => {})` → `LOGGER.warn` with error context (line 151).                                                                                                                |
+| 2   | **agent-health-monitor.ts** — 2 `.catch(() => {})` on `persist()` calls (destroy + heartbeat) → `LOGGER.warn` with error context (lines 102, 168).                                                                                             |
+| 3   | **role-team-service.ts** — 2 `.catch(() => {})` on `database.setKv()` (persistTeams + persistExecutions) → `console.warn` with error context (lines 92, 98).                                                                                   |
+| 4   | **contribution-service.ts** — 2 `.catch(() => {})` on `BucketStorageAdapter.UI.set()` (destroy + timer persist) → `LOGGER.warn` with error context (lines 69, 82).                                                                             |
+| 5   | **core-references.ts** — added `eventBus` lazy export for use by batch-processor and other services.                                                                                                                                           |
+| 6   | **batch-processor-service.ts** — added `EVENTS` import; wired `eventBus.emit(EVENTS.QUEUE_TASK_FAILED)` on retry exhaustion (line 161). Previously failed batch tasks were completely silent — only the BatchResult object captured the error. |
+| 7   | **reliability-matrix.md** — Row 13 (Fire-and-forget): ~55%→~60%. Row 35 (Lost observability): ~50%→~55%. Row 36 (Silent errors): ~45%→~55%. Coverage Summary rebucketed.                                                                       |
+
+### Coverage delta
+
+| Failure Class      | Before | After | Delta |
+| ------------------ | ------ | ----- | ----- |
+| Fire-and-forget    | ~55%   | ~60%  | +5%   |
+| Lost observability | ~50%   | ~55%  | +5%   |
+| Silent errors      | ~45%   | ~55%  | +10%  |
+
+### Build result
+
+| Metric        | Value    |
+| ------------- | -------- |
+| tsc -b        | 0 errors |
+| Typecheck     | PASS     |
+| Files changed | 6        |
+
+---
+
+## Session 45 — Non-determinism: SeededRng utility + 2 services converted (v4.5.0 → v4.6.0) ✅
+
+**Non-determinism (Row 34): 5% → 25%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | What was done                                                                                                                                                                                                                                                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Created `src/kernel/utils/seedable-rng.ts` — `SeededRng` class with Mulberry32 PRNG (`next()`, `nextInt()`, `pick()`, `chance()`, `fork()`) — fast, deterministic, good distribution                                                                                                                                 |
+| 2   | `auto-debate-service.ts` — `pickRandom()` now uses `SeededRng` instead of `Math.random()`; exported `resetAutoDebateRng(seed?)` for test determinism                                                                                                                                                                 |
+| 3   | `audience-service.ts` — 20+ `Math.random()` calls replaced with `_rng` in `populate()` (shuffle, member generation, engagement/sentiment variance), `triggerReaction()` (reaction probability, intensity), `processArgument()` (trigger weights, chatter selection), `getReactionProbability()` (base weight jitter) |
+
+### Design
+
+```
+SeededRng (mulberry32)
+  ├─ auto-debate service  →  pickRandom() + resetAutoDebateRng()
+  ├─ audience service     →  populate(), reactions, argument triggering
+  └─ (future)             →  quantum-inspiration, key-pool-selector, fact-check
+```
+
+Jitter in retry/backoff (`debate-llm-caller`, `batch-processor`, `notification-webhook`) intentionally left as `Math.random()` — jitter should remain non-deterministic for security.
+
+### Coverage delta
+
+| Failure Class   | Before | After | Delta |
+| --------------- | ------ | ----- | ----- |
+| Non-determinism | ~5%    | ~25%  | +20%  |
+
+### Build result
+
+| Metric        | Value    |
+| ------------- | -------- |
+| tsc -b        | 0 errors |
+| Typecheck     | PASS     |
 | Files changed | 3        |
+
+---
+
+## Session 46 — DLQ: Wire ExecutionQueue + OrchestrationService (v4.5.0 → v4.6.0) ✅
+
+**Infinite retries/DLQ (Row 12): 30% → 45%. Event loss (Row 4): 50% → 55%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | What was done                                                                                                                                                                           |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `execution-queue.ts` — added optional `deadLetterQueue` constructor parameter; catch handler now pushes to DLQ on every task failure (in addition to existing `QUEUE_TASK_FAILED` emit) |
+| 2   | `orchestration-service.ts` — added `deadLetterQueue` to `OrchestrationServiceDeps`; passes it through to `ExecutionQueue` constructor                                                   |
+| 3   | `phase4-agents-roles.ts` — DI wiring passes `deadLetterQueue` to OrchestrationService (was missing — DLQ was registered but never reachable from the main task execution path)          |
+
+### Coverage delta
+
+| Failure Class          | Before | After | Delta |
+| ---------------------- | ------ | ----- | ----- |
+| Infinite retries / DLQ | ~30%   | ~45%  | +15%  |
+| Event loss             | ~50%   | ~55%  | +5%   |
+
+### Build result
+
+| Metric        | Value    |
+| ------------- | -------- |
+| tsc -b        | 0 errors |
+| Typecheck     | PASS     |
+| Files changed | 3        |
+
+---
+
+## Session 47 — Chat store dual-write fix: persist-then-emit + CAS + schema drift (v4.5.0 → v4.6.0) ✅
+
+**Chat store 13 methods converted to persist-then-emit. Schema drift fixed (AI responses no longer lost on import). Version tracking on ChatSession. Typecheck 0 errors.**
+
+### Changes
+
+| #   | What was done                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **schema-types.ts** — Fixed `ChatHistoryEntrySchema`: added `responses: ChatResponse[]` (CRITICAL — was missing, export→import cycle silently stripped ALL AI responses), `parentId`, `recalledMemories`. Removed stale Zod-only fields (`sessionId`, `content`, `provider`, `model`, `tokens`, `latency`). Fixed `ChatSessionSchema`: added `version`, `folder`, `isArchived`, `isPinned`, `summary`, `linkedDebateId`. Fields made backward-compatible (optional + default) |
+| 2   | **ChatSession TS interface** — added `version?: number` to both `session-store.ts` and `chat/types.ts`                                                                                                                                                                                                                                                                                                                                                                        |
+| 3   | **dexie-storage.ts (DexieSessionStore)** — added non-blocking CAS (version-aware read→increment→write) to `put()`, `bulkPut()`, `syncSessions()`, `updateSession()`. Conflicts logged as warnings, last-writer-wins                                                                                                                                                                                                                                                           |
+| 4   | **chat/store.ts** — 13 methods converted from Zustand-first→Dexie-first persistence: `editEntry`, `clearHistory`, `deleteSession`, `forkSession`, `renameSession`, `archiveSession`, `unarchiveSession`, `tagSession`, `moveToFolder`, `pinSession`, `importSessions`, `switchModel`, `switchKey`. All now `await` Dexie persist before Zustand `set()`. Failed persists prevent Zustand mutation (no more silent rollback)                                                   |
+| 5   | **hydration.ts** — unchanged (merge logic remains `updatedAt`-based, which is correct with persist-then-emit since Zustand is updated last)                                                                                                                                                                                                                                                                                                                                   |
+
+### Coverage delta
+
+| Failure Class       | Before | After | Delta |
+| ------------------- | ------ | ----- | ----- |
+| Dual-write          | ~40%   | ~55%  | +15%  |
+| Lost updates        | ~25%   | ~40%  | +15%  |
+| Ordering bugs       | ~20%   | ~30%  | +10%  |
+| Stale state/version | ~20%   | ~25%  | +5%   |
+| Schema drift        | ~80%   | ~82%  | +2%   |
+| Corrupt persistence | ~65%   | ~70%  | +5%   |
+
+### Build result
+
+| Metric    | Value    |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | PASS     |
+
+---
+
+## Session 48 — Race condition analysis + auto-scheduled integrity scan (v4.5.0 → v4.6.0) ✅
+
+**5 race condition claims closed as false positives. Auto-scheduled integrity scan added. Typecheck 0 errors.**
+
+### Changes
+
+| #   | What was done                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Race condition analysis (Discoveries 1-6)** — All 5 previously flagged race condition claims in reliability-matrix Row 1 confirmed **false positives**: 1) `LLMHttpClient._inflight` static Map — operations synchronous, `delete` on missing key is no-op. 2) `CircuitBreaker.states` — uses captured state snapshots with stale-state guards, all transitions synchronous. 3) `RateLimitDecorator` tokens race — `checkRate()` has zero `await` points, JS single-threaded guarantees atomicity. 4) `CacheService` set/clear/invalidate — `pendingSet` pattern already fixed in Session 34. 5) `PriorityQueueDecorator` queues — all state modified in synchronous blocks with proper `finally` cleanup. Row 1 coverage: ~72% → ~97%. |
+| 2   | **reliability-matrix.md** — Row 1 updated to ~97% with evidence; items 7, 8 closed as false positives; Row 39 updated to ~60% with auto-scheduled scan; items 9, 10, 12 marked Done; Coverage Summary rebucketed (80-100%: 5→6 classes); Per-Service Heatmap updated for RateLimitDecorator/LLMHttpClient/CircuitBreaker risk levels and DatabaseService added.                                                                                                                                                                                                                                                                                                                                                                           |
+| 3   | **IDatabaseService interface** (`interfaces.ts`) — added `init(config?)` and `destroy()` methods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 4   | **DatabaseService** (`database-service.ts`) — added `_integrityTimer` field, `init()` starts `setInterval` (default 30 min) running `verifyIntegrity()`, logs warning on corruption detection; `destroy()` clears interval.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 5   | **RuntimeManager** (`runtime.ts`) — `coreDatabase.init()` called from `registerCoreServices()`, `coreDatabase.destroy()` called from `shutdown()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+### Coverage delta
+
+| Failure Class   | Before | After | Delta |
+| --------------- | ------ | ----- | ----- |
+| Race conditions | ~72%   | ~97%  | +25%  |
+| Data corruption | ~45%   | ~60%  | +15%  |
+
+### Build result
+
+| Metric        | Value    |
+| ------------- | -------- |
+| tsc -b        | 0 errors |
+| Typecheck     | PASS     |
+| Files changed | 4        |
+
+---
+
+## Session 50 � Non-determinism extended: 3 more services + key-pool-selector type fix (v4.5.0 > v4.6.0) ?
+
+**Non-determinism (Row 34): 25% > 40%. Typecheck 0 errors.**
+
+### Changes
+
+| #                                                                                                                           | What was done                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1                                                                                                                           | quantum-inspiration-service.ts � 7+5 Math.random() sites replaced with SeededRng (simulated annealing, temperature decay, selection, mutation, crossover, prune, inspiration pool)                                                                            |
+| 2                                                                                                                           | key-pool-selector.ts � selectFromPool 'random' strategy uses his._rng.pick() instead of Math.random()                                                                                                                                                         |
+| 3                                                                                                                           | act-check-service.ts � pickClaim() uses his._rng.pick() instead of Math.random()                                                                                                                                                                              |
+| 4                                                                                                                           | key-pool-selector.ts � restored missing getGroupKeys and getKeyGroupId optional properties in KeyPoolSelectorDeps interface (6 type errors fixed). These were accidentally removed during a prior edit. key-service.ts 3 cascading type errors also resolved. |
+| 5                                                                                                                           |
+| eliability-matrix.md � Row 34 updated (25%>40%, gap text reflects new conversions). Coverage Summary 20-49% bucket updated. |
+
+### Coverage delta
+
+| Failure Class   | Before | After | Delta |
+| --------------- | ------ | ----- | ----- |
+| Non-determinism | ~25%   | ~40%  | +15%  |
+
+### Build result
+
+| Metric        | Value    |
+| ------------- | -------- |
+| tsc -b        | 0 errors |
+| Typecheck     | PASS     |
+| Files changed | 4        |

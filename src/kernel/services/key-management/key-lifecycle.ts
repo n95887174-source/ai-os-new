@@ -54,6 +54,7 @@ export interface KeyLifecycleDeps {
     keyHealth?: { cleanupKey(id: string): void };
     eventBus?: {
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     database?: {
         getKv: <T>(id: string) => Promise<T | null>;
@@ -308,7 +309,7 @@ export class KeyLifecycle {
         if (this.transitions.length > 100) this.transitions.shift();
         const key = this.deps.getKey(id);
         if (key) {
-            this.deps.eventBus?.emit(EVENTS.KEY_STATE_CHANGED, {
+            this.deps.eventBus?.emitOnce(EVENTS.KEY_STATE_CHANGED, `${id}:${key.provider}:${to}`, {
                 id,
                 provider: key.provider,
                 state: to,

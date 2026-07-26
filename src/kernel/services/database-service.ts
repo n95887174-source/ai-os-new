@@ -52,6 +52,14 @@ export function getDexieDb(): SuperAgentsDB {
     return _dexieDb;
 }
 
+export interface IntegrityReport {
+    table: string;
+    total: number;
+    valid: number;
+    invalid: number;
+    sampleErrors: string[];
+}
+
 const TABLE_SCHEMA_MAP: Record<string, z.ZodType<unknown>> = {
     notes: KeyNoteSchema,
     memories: MemoryEntrySchema,
@@ -71,7 +79,48 @@ const TABLE_SCHEMA_MAP: Record<string, z.ZodType<unknown>> = {
     eventLog: EventLogEntrySchema,
 };
 
+const DEFAULT_INTEGRITY_SCAN_MS = 30 * 60 * 1000;
+
 export class DatabaseService implements IDatabaseService {
+    private _integrityTimer: ReturnType<typeof setInterval> | null = null;
+
+    init(config?: { integrityScanIntervalMs?: number }): void {
+        if (this._integrityTimer) return;
+        const intervalMs = config?.integrityScanIntervalMs ?? DEFAULT_INTEGRITY_SCAN_MS;
+        this._integrityTimer = setInterval(() => {
+            this.verifyIntegrity()
+                .then((reports) => {
+                    const corrupt = reports.filter((r) => r.invalid > 0);
+                    if (corrupt.length > 0) {
+                        LOGGER.warn(
+                            'DatabaseService',
+                            `Integrity scan detected corruption in ${corrupt.length} table(s)`,
+                            {
+                                details: corrupt.map((r) => ({
+                                    table: r.table,
+                                    invalid: r.invalid,
+                                    total: r.total,
+                                    sampleErrors: r.sampleErrors,
+                                })),
+                            },
+                        );
+                    }
+                })
+                .catch((e) => {
+                    LOGGER.error('DatabaseService', 'Integrity scan failed', { error: String(e) });
+                });
+        }, intervalMs);
+        LOGGER.info('DatabaseService', 'Integrity auto-scan started', {
+            intervalMs,
+        });
+    }
+
+    destroy(): void {
+        if (this._integrityTimer) {
+            clearInterval(this._integrityTimer);
+            this._integrityTimer = null;
+        }
+    }
     get apiKeys() {
         return getDexieDb().apiKeys;
     }
@@ -218,6 +267,37 @@ export class DatabaseService implements IDatabaseService {
             sessionLinks,
             eventLog,
         };
+    }
+
+    async verifyIntegrity(): Promise<IntegrityReport[]> {
+        const reports: IntegrityReport[] = [];
+        const dexie = getDexieDb();
+        for (const [tableName, schema] of Object.entries(TABLE_SCHEMA_MAP)) {
+            const rows = await (
+                dexie as unknown as Record<string, { toArray(): Promise<unknown[]> }>
+            )[tableName].toArray();
+            const errors: string[] = [];
+            let valid = 0;
+            for (const row of rows) {
+                const r = schema.safeParse(row);
+                if (r.success) {
+                    valid++;
+                } else {
+                    if (errors.length < 5) {
+                        const id = (row as Record<string, unknown>)?.id ?? '(no id)';
+                        errors.push(`[${id}] ${r.error.issues[0]?.message ?? 'unknown'}`);
+                    }
+                }
+            }
+            reports.push({
+                table: tableName,
+                total: rows.length,
+                valid,
+                invalid: rows.length - valid,
+                sampleErrors: errors,
+            });
+        }
+        return reports;
     }
 
     async importFromJson(data: Record<string, unknown[]>): Promise<void> {

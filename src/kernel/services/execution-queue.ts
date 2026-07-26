@@ -1,5 +1,6 @@
 import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
+import type { IDeadLetterQueue } from '../contracts/dead-letter-queue';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ExecutionQueue');
@@ -29,10 +30,16 @@ export class ExecutionQueue {
     private totalEnqueued = 0;
     private totalProcessed = 0;
     private totalErrors = 0;
+    private deadLetterQueue?: IDeadLetterQueue;
 
-    constructor(processor: (task: QueueTask) => Promise<void>, maxConcurrency = 3) {
+    constructor(
+        processor: (task: QueueTask) => Promise<void>,
+        maxConcurrency = 3,
+        deadLetterQueue?: IDeadLetterQueue,
+    ) {
         this.processor = processor;
         this.maxConcurrency = maxConcurrency;
+        this.deadLetterQueue = deadLetterQueue;
     }
 
     enqueue(priority: QueuePriority, payload: unknown): string {
@@ -77,6 +84,23 @@ export class ExecutionQueue {
                             error: String(err),
                             timestamp: Date.now(),
                         });
+                        this.deadLetterQueue
+                            ?.push({
+                                event: EVENTS.QUEUE_TASK_FAILED,
+                                payload: {
+                                    taskId: task.id,
+                                    priority: task.priority,
+                                    payload: task.payload,
+                                },
+                                error: String(err),
+                                context: { age: Date.now() - task.enqueuedAt },
+                                retryCount: 0,
+                            })
+                            .catch((dlqErr) =>
+                                LOGGER.error('ExecutionQueue', 'DLQ push failed', {
+                                    error: dlqErr,
+                                }),
+                            );
                     })
                     .finally(() => {
                         this.inFlight--;

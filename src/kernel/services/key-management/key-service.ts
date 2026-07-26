@@ -44,6 +44,7 @@ export interface KeyServiceDeps {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     securityService: {
         initialize: (password: string, userId?: string) => Promise<boolean>;
@@ -127,7 +128,11 @@ export class KeyService implements IKeyRotationManager {
             {
                 eventBus: deps.eventBus,
                 onQuotaExceeded: (id, provider, quotaType) => {
-                    deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, { id, provider, quotaType });
+                    deps.eventBus.emitOnce(
+                        EVENTS.KEY_QUOTA_EXCEEDED,
+                        `${id}:${provider}:${quotaType}`,
+                        { id, provider, quotaType },
+                    );
                     this.registry.pushHistory(id, 'quota_exceeded', `${quotaType} quota exceeded`);
                 },
                 onStateTransition: (id, newState) => {
@@ -145,7 +150,7 @@ export class KeyService implements IKeyRotationManager {
         this.health = new KeyHealth({
             eventBus: deps.eventBus,
             onStateChanged: (id, provider, newState, previousState) => {
-                deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+                deps.eventBus.emitOnce(EVENTS.KEY_STATE_CHANGED, `${id}:${provider}:${newState}`, {
                     id,
                     provider,
                     state: newState,
@@ -171,7 +176,7 @@ export class KeyService implements IKeyRotationManager {
                 deps.eventBus.emit(EVENTS.KEY_LATENCY_BURST, { id, provider, latency });
             },
             onStateChanged: (id, provider, newState, previousState) => {
-                deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+                deps.eventBus.emitOnce(EVENTS.KEY_STATE_CHANGED, `${id}:${provider}:${newState}`, {
                     id,
                     provider,
                     state: newState,
@@ -317,11 +322,15 @@ export class KeyService implements IKeyRotationManager {
                             }
                             key.status = 'inactive';
                         });
-                        this.deps.eventBus.emit(EVENTS.KEY_QUOTA_EXCEEDED, {
-                            id: keyId,
-                            provider: keyEntry.provider,
-                            quotaType: 'requests',
-                        });
+                        this.deps.eventBus.emitOnce(
+                            EVENTS.KEY_QUOTA_EXCEEDED,
+                            `${keyId}:${keyEntry.provider}:requests`,
+                            {
+                                id: keyId,
+                                provider: keyEntry.provider,
+                                quotaType: 'requests',
+                            },
+                        );
                         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                             message: `${keyEntry.provider} hit 429 — retrying in ${Math.round(backoffMs / 1000)}s (exponential backoff)`,
                             type: 'warning',
@@ -341,12 +350,16 @@ export class KeyService implements IKeyRotationManager {
                             message: r.error || 'Unknown error',
                             timestamp: new Date().toISOString(),
                         };
-                        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
-                            id: keyId,
-                            provider: key.provider,
-                            state: 'error',
-                            previousState,
-                        });
+                        this.deps.eventBus.emitOnce(
+                            EVENTS.KEY_STATE_CHANGED,
+                            `${keyId}:${key.provider}:error`,
+                            {
+                                id: keyId,
+                                provider: key.provider,
+                                state: 'error',
+                                previousState,
+                            },
+                        );
                     });
                 }
 
@@ -540,7 +553,7 @@ export class KeyService implements IKeyRotationManager {
         this.quotas.applyFreeTierQuota(newKey);
         await this.registry.saveKeys();
         this.notify();
-        this.deps.eventBus.emit(EVENTS.KEY_ADDED, newKey);
+        this.deps.eventBus.emitOnce(EVENTS.KEY_ADDED, newKey.id, newKey);
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
             message: `Key for ${data.provider} added`,
             type: 'success',
@@ -571,7 +584,7 @@ export class KeyService implements IKeyRotationManager {
             }
         }
         this.notify();
-        this.deps.eventBus.emit(EVENTS.KEY_REMOVED, { id });
+        this.deps.eventBus.emitOnce(EVENTS.KEY_REMOVED, id, { id });
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Key removed', type: 'info' });
     }
 
@@ -595,6 +608,40 @@ export class KeyService implements IKeyRotationManager {
 
     async exportKeys(): Promise<string> {
         return this.registry.exportKeys((plaintext) => this.vault.encryptKey(plaintext));
+    }
+
+    getAllKeys(): ApiKey[] {
+        return this.registry.getKeys();
+    }
+
+    async restoreKeys(
+        keysData: Array<{
+            id: string;
+            provider: string;
+            key?: string;
+            model?: string;
+            status?: string;
+            label?: string;
+        }>,
+    ): Promise<void> {
+        const entries: ApiKey[] = keysData.map((k) => ({
+            id: k.id,
+            provider: k.provider,
+            key: k.key || '',
+            model: k.model || '',
+            status: (k.status as ApiKey['status']) || 'active',
+            label: k.label || k.id,
+            stats: {
+                successCount: 0,
+                errorCount: 0,
+                totalTokens: 0,
+                avgLatency: 0,
+                minLatency: 0,
+                maxLatency: 0,
+            },
+        }));
+        await this.registry.replaceAllKeys(entries);
+        this.notify();
     }
 
     async addNote(keyId: string, text: string, type: KeyNote['type'] = 'admin', author?: string) {
@@ -699,7 +746,7 @@ export class KeyService implements IKeyRotationManager {
         if (prev === undefined) return;
         this.registry.saveKeys();
         this.notify();
-        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+        this.deps.eventBus.emitOnce(EVENTS.KEY_STATE_CHANGED, `${id}:${provider}:${status}`, {
             id,
             provider,
             state: status,
@@ -797,7 +844,7 @@ export class KeyService implements IKeyRotationManager {
         this.registry.saveKeys();
         this.notify();
 
-        this.deps.eventBus.emit(EVENTS.KEY_COMPROMISED, {
+        this.deps.eventBus.emitOnce(EVENTS.KEY_COMPROMISED, `${id}:${provider}`, {
             id,
             provider,
             source,
@@ -1202,12 +1249,16 @@ export class KeyService implements IKeyRotationManager {
             key.stats.lastError = { message: error, timestamp: new Date().toISOString() };
         });
         await this.registry.saveKeys();
-        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
-            id: keyId,
-            provider,
-            state: isRateLimit ? 'rate_limited' : 'error',
-            previousState,
-        });
+        this.deps.eventBus.emitOnce(
+            EVENTS.KEY_STATE_CHANGED,
+            `${keyId}:${provider}:${isRateLimit ? 'rate_limited' : 'error'}`,
+            {
+                id: keyId,
+                provider,
+                state: isRateLimit ? 'rate_limited' : 'error',
+                previousState,
+            },
+        );
         if (!isRateLimit) {
             this.lifecycle.onError(keyId);
         }

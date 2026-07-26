@@ -10,6 +10,7 @@ const LOGGER = rootLogger.child('SkillService');
 export interface SkillServiceDeps {
     eventBus: {
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     skillsStore: SkillsStore;
 }
@@ -115,7 +116,7 @@ export class SkillService {
     }
 
     private emit() {
-        this.deps.eventBus.emit(EVENTS.SKILLS_UPDATED, this.skills);
+        this.deps.eventBus.emitOnce(EVENTS.SKILLS_UPDATED, 'all', this.skills);
     }
 
     getSkills(): CognitiveSkill[] {

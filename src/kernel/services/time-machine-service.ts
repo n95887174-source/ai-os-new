@@ -2,6 +2,8 @@ import { EVENTS } from '../events/event-names';
 import type { ITimeMachineService, TimeSnapshot, SnapshotScope } from '../contracts/time-machine';
 import type { IDatabaseService } from '../types/interfaces';
 import type { ConfigVersion } from './config-history';
+import type { ApiKey } from '../types/metrics-types';
+import type { MemoryEntry } from '../types/memory-types';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('TimeMachineService');
@@ -24,14 +26,22 @@ export interface TimeMachineServiceDeps {
         restoreById(snapshotId: string): boolean;
     };
     keyService?: {
-        getAllKeys(): { id: string; provider: string; model: string; status: string }[];
+        getAllKeys(): ApiKey[];
         saveKeys(): Promise<void>;
-        restoreKeys(keys: { id: string; provider: string; model: string; status: string }[]): void;
+        restoreKeys(
+            keys: Array<{
+                id: string;
+                provider: string;
+                key?: string;
+                model?: string;
+                status?: string;
+            }>,
+        ): Promise<void>;
     };
     memoryService?: {
-        getAllMemories(): { id: string; content: string; timestamp: number }[];
-        importMemories(memories: { id: string; content: string; timestamp: number }[]): void;
-        clearAllMemories?(): void | Promise<void>;
+        getMemories(): MemoryEntry[];
+        clear(): Promise<void>;
+        store(entry: Omit<MemoryEntry, 'id'>): Promise<void>;
     };
 }
 
@@ -97,9 +107,13 @@ export class TimeMachineService implements ITimeMachineService {
                 changes.push('Memory state captured');
                 const ms = this.deps.memoryService;
                 if (ms) {
-                    const all = ms.getAllMemories();
-                    memoryData = all;
-                    changes.push(`${all.length} memories stored`);
+                    const all = ms.getMemories();
+                    memoryData = all.map((m) => ({
+                        id: m.id,
+                        content: m.content,
+                        timestamp: m.metadata.timestamp || Date.now(),
+                    }));
+                    changes.push(`${memoryData.length} memories stored`);
                 }
                 break;
             }
@@ -107,7 +121,13 @@ export class TimeMachineService implements ITimeMachineService {
                 changes.push('Key management state captured');
                 const ks = this.deps.keyService;
                 if (ks) {
-                    keysData = ks.getAllKeys();
+                    const keys = ks.getAllKeys();
+                    keysData = keys.map((k) => ({
+                        id: k.id,
+                        provider: k.provider,
+                        model: k.model || '',
+                        status: k.status || 'active',
+                    }));
                     changes.push(`${keysData.length} keys stored`);
                 }
                 break;
@@ -165,15 +185,23 @@ export class TimeMachineService implements ITimeMachineService {
                 break;
             case 'keys':
                 if (deps.keyService && snap.keysData && snap.keysData.length > 0) {
-                    deps.keyService.restoreKeys(snap.keysData);
+                    await deps.keyService.restoreKeys(snap.keysData);
                 }
                 break;
             case 'memory':
                 if (deps.memoryService && snap.memoryData && snap.memoryData.length > 0) {
-                    if (deps.memoryService.clearAllMemories) {
-                        await deps.memoryService.clearAllMemories();
+                    await deps.memoryService.clear();
+                    for (const m of snap.memoryData) {
+                        await deps.memoryService.store({
+                            content: m.content,
+                            metadata: {
+                                source: 'system',
+                                type: 'restored',
+                                timestamp: m.timestamp,
+                                importance: 0.5,
+                            },
+                        });
                     }
-                    deps.memoryService.importMemories(snap.memoryData);
                 }
                 break;
             case 'debates':

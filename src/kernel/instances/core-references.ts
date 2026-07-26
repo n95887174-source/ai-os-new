@@ -21,3 +21,5 @@ export const adapterRegistry =
     lazyService<import('../contracts/provider-adapter').IAdapterRegistry>(
         'providerAdapterRegistry',
     );
+
+export const eventBus = lazyService<import('../types/interfaces').IEventBus>('eventBus');

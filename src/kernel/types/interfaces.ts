@@ -27,6 +27,8 @@ export interface IDatabaseService {
     saveWorkflow(topology: unknown): Promise<void>;
     bulkPutConnectors(connectors: unknown[]): Promise<void>;
     getAllConnectors(): Promise<unknown[]>;
+    init(config?: { integrityScanIntervalMs?: number }): void;
+    destroy(): void;
 }
 
 /** Data Access Layer — single entry point for all persistent data access */

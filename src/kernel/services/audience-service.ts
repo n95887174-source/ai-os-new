@@ -9,9 +9,11 @@ import type {
     IAudienceService,
 } from '../contracts/audience';
 import { AUDIENCE_ARCHETYPES } from './audience-archetypes';
+import { SeededRng } from '../utils/seedable-rng';
 
 let _counter = 0;
-const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const _rng = new SeededRng();
+const pick = <T>(arr: T[]): T => _rng.pick(arr);
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 const ARGUMENT_TRIGGERS: Record<string, { reaction: AudienceReaction; weight: number }[]> = {
@@ -162,20 +164,19 @@ export class AudienceService implements IAudienceService {
         this.totalSentiment = 0;
         this.totalEngagement = 0;
 
-        const shuffled = [...AUDIENCE_ARCHETYPES].sort(() => Math.random() - 0.5);
+        const shuffled = [...AUDIENCE_ARCHETYPES].sort(() => _rng.next() - 0.5);
         const actualSize = Math.min(size, this.MAX_MEMBERS);
         for (let i = 0; i < actualSize; i++) {
             const arch = shuffled[i % shuffled.length];
             const id = `audience-${++_counter}`;
-            const nameSuffix =
-                Math.random() > 0.5 ? Math.floor(Math.random() * 9999).toString() : '';
+            const nameSuffix = _rng.chance(0.5) ? _rng.nextInt(0, 9998).toString() : '';
             this.members.push({
                 id,
                 archetypeId: arch.id,
                 name: `${arch.name}${nameSuffix ? `_${nameSuffix}` : ''}`,
                 emoji: arch.emoji,
-                engagement: arch.engagement + (Math.random() - 0.5) * 0.2,
-                sentiment: arch.sentimentBias + (Math.random() - 0.5) * 0.3,
+                engagement: arch.engagement + (_rng.next() - 0.5) * 0.2,
+                sentiment: arch.sentimentBias + (_rng.next() - 0.5) * 0.3,
                 currentReaction: null,
                 message: null,
                 hasVoted: false,
@@ -281,13 +282,13 @@ export class AudienceService implements IAudienceService {
         const now = Date.now();
         if (now - this._lastReactionTime < this.RATE_LIMIT_MS) return;
         this._lastReactionTime = now;
-        const reactingMembers = this.members.filter(
-            (m) => Math.random() < this.getReactionProbability(m, reaction),
+        const reactingMembers = this.members.filter((m) =>
+            _rng.chance(this.getReactionProbability(m, reaction)),
         );
         for (const m of reactingMembers) {
             const event: AudienceReactionEvent = {
                 reaction,
-                intensity: clamp(intensity * (0.5 + Math.random() * 0.5), 0, 1),
+                intensity: clamp(intensity * (0.5 + _rng.next() * 0.5), 0, 1),
                 sourceId: m.id,
                 sourceName: m.name,
                 targetAgentId,
@@ -314,7 +315,7 @@ export class AudienceService implements IAudienceService {
         const member = this.members.find((m) => m.id === memberId);
         if (!member) return;
         const msg: AudienceSideChatMessage = {
-            id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            id: `chat-${Date.now()}-${_rng.nextInt(100000, 999999).toString(36)}`,
             memberId,
             memberName: member.name,
             emoji: member.emoji,
@@ -345,15 +346,15 @@ export class AudienceService implements IAudienceService {
             const triggers = ARGUMENT_TRIGGERS[cls];
             if (!triggers) continue;
             for (const t of triggers) {
-                if (Math.random() < t.weight * 0.3) {
-                    this.triggerReaction(t.reaction, 0.3 + Math.random() * 0.4);
+                if (_rng.chance(t.weight * 0.3)) {
+                    this.triggerReaction(t.reaction, 0.3 + _rng.next() * 0.4);
                 }
             }
         }
 
         const chatters = this.members.filter((m) => {
             const archetype = AUDIENCE_ARCHETYPES.find((a) => a.id === m.archetypeId);
-            return archetype && Math.random() < archetype.engagement * 0.12;
+            return archetype && _rng.chance(archetype.engagement * 0.12);
         });
 
         for (const member of chatters.slice(0, 3)) {
@@ -376,6 +377,6 @@ export class AudienceService implements IAudienceService {
         if (!archetype) return 0.1;
         const baseWeight = archetype.reactionWeights[reaction] || 0.1;
         const engagementMod = member.engagement;
-        return clamp(baseWeight * engagementMod * (0.5 + Math.random() * 0.5), 0, 0.95);
+        return clamp(baseWeight * engagementMod * (0.5 + _rng.next() * 0.5), 0, 0.95);
     }
 }

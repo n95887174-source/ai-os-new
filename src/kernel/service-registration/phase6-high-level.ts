@@ -365,6 +365,8 @@ export const registerPhase6: Phase = (helpers, ctx) => {
                 eventBus: c.get('eventBus'),
                 database: c.get<IDatabaseService>('database'),
                 snapshotService: c.get('snapshotService'),
+                keyService: c.get('keyService'),
+                memoryService: c.get('memoryService'),
             }),
     );
     // ── Contribution Service ──────────────────────────

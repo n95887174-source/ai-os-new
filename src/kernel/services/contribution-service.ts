@@ -66,7 +66,9 @@ export class ContributionService implements IContributionService, ILifecycle {
             clearTimeout(this.persistTimer);
             this.persistTimer = null;
         }
-        BucketStorageAdapter.UI.set(STORAGE_KEY, { days: this.days }).catch(() => {});
+        BucketStorageAdapter.UI.set(STORAGE_KEY, { days: this.days }).catch((e: unknown) => {
+            LOGGER.warn('ContributionService', 'Persist during destroy failed', { error: e });
+        });
     }
 
     private recordContribution(): void {
@@ -79,7 +81,13 @@ export class ContributionService implements IContributionService, ILifecycle {
         if (this.persistTimer) clearTimeout(this.persistTimer);
         this.persistTimer = setTimeout(() => {
             if (!this.destroyed) {
-                BucketStorageAdapter.UI.set(STORAGE_KEY, { days: this.days }).catch(() => {});
+                BucketStorageAdapter.UI.set(STORAGE_KEY, { days: this.days }).catch(
+                    (e: unknown) => {
+                        LOGGER.warn('ContributionService', 'Persist during timer failed', {
+                            error: e,
+                        });
+                    },
+                );
             }
         }, 2000);
     }

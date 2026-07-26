@@ -95,6 +95,7 @@ export interface PolicyServiceDeps {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     database: {
         getKv: <T>(id: string) => Promise<T | null>;
@@ -325,7 +326,7 @@ export class PolicyService {
         this.violations.push(violation);
         if (this.violations.length > getMaxViolations()) this.violations.shift();
         await this.persist();
-        this.deps.eventBus.emit(EVENTS.POLICY_VIOLATION, violation);
+        this.deps.eventBus.emitOnce(EVENTS.POLICY_VIOLATION, violation.id, violation);
     }
 
     private checkLatency(data: { nodeId: string; duration?: number }) {

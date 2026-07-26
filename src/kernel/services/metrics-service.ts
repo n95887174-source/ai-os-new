@@ -69,6 +69,7 @@ export interface MetricsServiceDeps {
     eventBus: {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     database: {
         getKv: <T>(id: string) => Promise<T | null>;
@@ -262,7 +263,7 @@ export class MetricsService {
                     resolved: false,
                 };
                 this.alerts.push(alert);
-                this.deps.eventBus.emit(EVENTS.METRICS_ALERT, {
+                this.deps.eventBus.emitOnce(EVENTS.METRICS_ALERT, alert.id, {
                     id: alert.id,
                     metric: alert.metric,
                     value: alert.value,
@@ -364,7 +365,7 @@ export class MetricsService {
         const alert = this.alerts.find((a) => a.id === id);
         if (alert) {
             alert.resolved = true;
-            this.deps.eventBus.emit(EVENTS.METRICS_ALERT_RESOLVED, {
+            this.deps.eventBus.emitOnce(EVENTS.METRICS_ALERT_RESOLVED, alert.id, {
                 id: alert.id,
                 timestamp: Date.now(),
             });

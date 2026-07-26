@@ -46,6 +46,7 @@ export interface PricingServiceDeps {
     eventBus: {
         on?: (event: string, cb: (...args: unknown[]) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     database: {
         getKv: <T>(id: string) => Promise<T | null>;
@@ -288,7 +289,7 @@ export class PricingService implements ICostCalculator {
                 this.lastFetch = Date.now();
                 this.prefixCache.clear();
                 await this.saveCache();
-                this.deps.eventBus.emit(EVENTS.PRICING_UPDATED, this.pricingData);
+                this.deps.eventBus.emitOnce(EVENTS.PRICING_UPDATED, 'global', this.pricingData);
             } catch {
                 LOGGER.warn('PricingService', 'OpenRouter sync failed, using fallback prices');
             } finally {

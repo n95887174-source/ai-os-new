@@ -150,6 +150,7 @@ export class RuntimeManager {
             this.healthCheckInterval = null;
         }
         await this.bootstrapper.shutdown();
+        coreDatabase.destroy();
         crossTabStateSync.destroy();
         await this.container.clear();
         clearResolvedServices();
@@ -225,6 +226,7 @@ export class RuntimeManager {
         if (this.container.has('runtime')) return;
         this.container.register('runtime', this);
         this.container.register('database', coreDatabase);
+        coreDatabase.init();
         this.container.register('dal', new DataAccessLayerImpl(coreDatabase));
         this.container.register('eventBus', coreEventBus);
         coreEventBus.setLogger(rootLogger);

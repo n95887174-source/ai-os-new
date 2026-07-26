@@ -11,6 +11,8 @@ import type {
     MemoryPruneResult,
 } from '../types/memory-types';
 import type { IMemoryEngine, MemoryCapability } from '../contracts/memory';
+import type { ITransaction } from '../contracts/transaction';
+import { TransactionContext } from './transaction';
 import type { DatabaseService } from './database-service';
 import { rootLogger } from './logger-service';
 const LOGGER = rootLogger.child('MemoryEngine');
@@ -38,6 +40,7 @@ export interface MemoryServiceDeps {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
         onSafe: <T>(event: string, cb: (data: T) => void) => () => void;
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     database: DatabaseService;
     executionGovernor?: {
@@ -74,6 +77,25 @@ export class MemoryService implements IMemoryEngine {
             return await fn();
         } finally {
             release!();
+        }
+    }
+
+    private async _withTransaction<T>(
+        source: string,
+        fn: (tx: TransactionContext) => Promise<T>,
+    ): Promise<T> {
+        const tx = new TransactionContext(`MemoryEngine:${source}`);
+        try {
+            const result = await fn(tx);
+            await tx.commit({
+                emit: (event, data) => this.deps.eventBus.emit(event, data),
+            });
+            return result;
+        } catch (e) {
+            await tx.rollback({
+                emit: (event, data) => this.deps.eventBus.emit(event, data),
+            });
+            throw e;
         }
     }
 
@@ -126,9 +148,13 @@ export class MemoryService implements IMemoryEngine {
             await this.withMemoriesLock(async () => {
                 this.memories = this.memories.filter((m) => (m.metadata.timestamp ?? 0) >= cutoff);
                 for (const m of removed) {
-                    this.sendToWorker('remove', { id: m.id }).catch(() => {});
+                    this.sendToWorker('remove', { id: m.id }).catch((e: unknown) => {
+                        LOGGER.warn('MemoryEngine', 'Worker remove during prune failed', {
+                            error: e,
+                        });
+                    });
                 }
-                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
             });
         } catch (e) {
             LOGGER.error('MemoryEngine', 'Prune cycle failed', { error: e });
@@ -206,7 +232,7 @@ export class MemoryService implements IMemoryEngine {
                             { ...mem, vector },
                             ...this.memories.slice(idx + 1),
                         ];
-                        this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+                        this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
                     }
                 }
             });
@@ -263,14 +289,21 @@ export class MemoryService implements IMemoryEngine {
                 provider?: string;
             }>(EVENTS.COGNITIVE_STEP_COMPLETED, (d) => {
                 if (d.output || d.fullContent) {
-                    this.store({
-                        content: d.output || d.fullContent || '',
-                        metadata: {
-                            source: d.nodeId || d.provider || 'unknown',
-                            type: 'decision',
-                            timestamp: Date.now(),
-                            importance: 0.4,
-                        },
+                    this._withTransaction('cognitiveStep', async (tx) => {
+                        await this.store(
+                            {
+                                content: d.output || d.fullContent || '',
+                                metadata: {
+                                    source: d.nodeId || d.provider || 'unknown',
+                                    type: 'decision',
+                                    timestamp: Date.now(),
+                                    importance: 0.4,
+                                },
+                            },
+                            tx,
+                        );
+                    }).catch((e) => {
+                        LOGGER.warn('MemoryEngine', 'Cognitive step store failed', { error: e });
                     });
                 }
             }),
@@ -328,7 +361,7 @@ export class MemoryService implements IMemoryEngine {
         return true;
     }
 
-    async store(entry: Omit<MemoryEntry, 'id'>) {
+    async store(entry: Omit<MemoryEntry, 'id'>, tx?: ITransaction) {
         if (!CONFIG.featureFlags.memory.enabled) return;
         if (!this._passesQualityGate(entry)) return;
         const source = entry.metadata.source ?? 'unknown';
@@ -338,38 +371,54 @@ export class MemoryService implements IMemoryEngine {
             id: await this.computeId(entry.content, source, type),
         } as MemoryEntry;
         await this.withMemoriesLock(async () => {
-            try {
+            const doPersist = async () => {
                 await this.memoryRepo.save(newEntry);
                 this.memories.unshift(newEntry);
                 if (this.memories.length > MAX_MEMORY_ENTRIES)
                     this.memories.length = MAX_MEMORY_ENTRIES;
-                this.ensureWorker()
-                    .then(() => {
-                        if (this.worker) {
-                            this.sendToWorker('upsert', {
-                                entry: newEntry,
-                                generateEmbedding: this.semanticReady,
-                            }).catch((e) => {
-                                LOGGER.warn('MemoryEngine', 'Worker insert failed', { error: e });
-                                this.semanticReady = false;
-                            });
-                        }
-                    })
-                    .catch((e) => {
-                        LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', {
-                            error: e,
-                        });
-                        this.semanticReady = false;
+            };
+            const onCommit = () => {
+                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
+            };
+            if (tx) {
+                const snapshot = tx.capture(this.memories);
+                tx.deferPersist(doPersist, async () => {
+                    this.memories = snapshot as MemoryEntry[];
+                    await this.memoryRepo.delete(newEntry.id).catch(() => {});
+                });
+                tx.onCommit(onCommit);
+            } else {
+                await this._withTransaction('store', async (itx) => {
+                    const snapshot = structuredClone(this.memories);
+                    itx.deferPersist(doPersist, async () => {
+                        this.memories = snapshot;
+                        await this.memoryRepo.delete(newEntry.id).catch(() => {});
                     });
-                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-            } catch (e) {
-                LOGGER.error('MemoryEngine', 'Failed to persist to Dexie', { error: e });
-                throw e;
+                    itx.onCommit(onCommit);
+                });
             }
+            this.ensureWorker()
+                .then(() => {
+                    if (this.worker) {
+                        this.sendToWorker('upsert', {
+                            entry: newEntry,
+                            generateEmbedding: this.semanticReady,
+                        }).catch((e) => {
+                            LOGGER.warn('MemoryEngine', 'Worker insert failed', { error: e });
+                            this.semanticReady = false;
+                        });
+                    }
+                })
+                .catch((e) => {
+                    LOGGER.warn('MemoryEngine', 'init worker failed', {
+                        error: e,
+                    });
+                    this.semanticReady = false;
+                });
         });
     }
 
-    async upsert(entry: Omit<MemoryEntry, 'id'>) {
+    async upsert(entry: Omit<MemoryEntry, 'id'>, tx?: ITransaction) {
         if (!CONFIG.featureFlags.memory.enabled) return;
         if (!this._passesQualityGate(entry)) return;
         const source = entry.metadata.source ?? 'unknown';
@@ -377,7 +426,7 @@ export class MemoryService implements IMemoryEngine {
         const deterministicId = await this.computeId(entry.content, source, type);
         const newEntry: MemoryEntry = { ...entry, id: deterministicId } as MemoryEntry;
         await this.withMemoriesLock(async () => {
-            try {
+            const doPersist = async () => {
                 await this.memoryRepo.save(newEntry);
                 const existing = this.memories.findIndex((m) => m.id === deterministicId);
                 if (existing >= 0) {
@@ -387,29 +436,45 @@ export class MemoryService implements IMemoryEngine {
                     if (this.memories.length > MAX_MEMORY_ENTRIES)
                         this.memories.length = MAX_MEMORY_ENTRIES;
                 }
-                this.ensureWorker()
-                    .then(() => {
-                        if (this.worker) {
-                            this.sendToWorker('upsert', {
-                                entry: newEntry,
-                                generateEmbedding: this.semanticReady,
-                            }).catch((e) => {
-                                LOGGER.warn('MemoryEngine', 'Worker upsert failed', { error: e });
-                                this.semanticReady = false;
-                            });
-                        }
-                    })
-                    .catch((e) => {
-                        LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', {
-                            error: e,
-                        });
-                        this.semanticReady = false;
+            };
+            const onCommit = () => {
+                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
+            };
+            if (tx) {
+                const snapshot = tx.capture(this.memories);
+                tx.deferPersist(doPersist, async () => {
+                    this.memories = snapshot as MemoryEntry[];
+                    await this.memoryRepo.delete(deterministicId).catch(() => {});
+                });
+                tx.onCommit(onCommit);
+            } else {
+                await this._withTransaction('upsert', async (itx) => {
+                    const snapshot = structuredClone(this.memories);
+                    itx.deferPersist(doPersist, async () => {
+                        this.memories = snapshot;
+                        await this.memoryRepo.delete(deterministicId).catch(() => {});
                     });
-                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-            } catch (e) {
-                LOGGER.error('MemoryEngine', 'Upsert failed', { error: e });
-                throw e;
+                    itx.onCommit(onCommit);
+                });
             }
+            this.ensureWorker()
+                .then(() => {
+                    if (this.worker) {
+                        this.sendToWorker('upsert', {
+                            entry: newEntry,
+                            generateEmbedding: this.semanticReady,
+                        }).catch((e) => {
+                            LOGGER.warn('MemoryEngine', 'Worker upsert failed', { error: e });
+                            this.semanticReady = false;
+                        });
+                    }
+                })
+                .catch((e) => {
+                    LOGGER.warn('MemoryEngine', 'init worker failed', {
+                        error: e,
+                    });
+                    this.semanticReady = false;
+                });
         });
     }
 
@@ -417,7 +482,7 @@ export class MemoryService implements IMemoryEngine {
         return computeMemoryId(content, source, type);
     }
 
-    async storeBatch(entries: Omit<MemoryEntry, 'id'>[]) {
+    async storeBatch(entries: Omit<MemoryEntry, 'id'>[], tx?: ITransaction) {
         if (!CONFIG.featureFlags.memory.enabled) return;
         const filtered = entries.filter((e) => this._passesQualityGate(e));
         if (filtered.length === 0) return;
@@ -433,8 +498,9 @@ export class MemoryService implements IMemoryEngine {
             timeoutMs: 30_000,
             metadata: { operation: 'storeBatch', count: newEntries.length },
         });
+        const idsToDelete = newEntries.map((e) => e.id);
         await this.withMemoriesLock(async () => {
-            try {
+            const doPersist = async () => {
                 const persisted = await this.memoryRepo.storeBatch(
                     newEntries.map((e) => ({
                         content: e.content,
@@ -445,36 +511,53 @@ export class MemoryService implements IMemoryEngine {
                 if (this.memories.length > MAX_MEMORY_ENTRIES) {
                     this.memories = this.memories.slice(0, MAX_MEMORY_ENTRIES);
                 }
-                this.ensureWorker()
-                    .then(() => {
-                        if (this.worker) {
-                            Promise.all(
-                                newEntries.map((e) =>
-                                    this.sendToWorker('upsert', {
-                                        entry: e,
-                                        generateEmbedding: false,
-                                    }),
-                                ),
-                            ).catch((err) =>
-                                LOGGER.warn('MemoryEngine', 'Batch insert to worker failed', {
-                                    error: err,
-                                }),
-                            );
-                        }
-                    })
-                    .catch((e) => {
-                        LOGGER.warn('MemoryEngine', 'insertMemory dexie fallback failed', {
-                            error: e,
-                        });
-                        this.semanticReady = false;
-                    });
-                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+            };
+            const onCommit = () => {
+                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
                 govOp?.complete();
-            } catch (e) {
-                govOp?.fail(e instanceof Error ? e : new Error(String(e)));
-                LOGGER.error('MemoryEngine', 'Batch store failed', { error: e });
-                throw e;
+            };
+            if (tx) {
+                const snapshot = tx.capture(this.memories);
+                tx.deferPersist(doPersist, async () => {
+                    this.memories = snapshot as MemoryEntry[];
+                    await Promise.allSettled(idsToDelete.map((id) => this.memoryRepo.delete(id)));
+                });
+                tx.onCommit(onCommit);
+            } else {
+                await this._withTransaction('storeBatch', async (itx) => {
+                    const snapshot = structuredClone(this.memories);
+                    itx.deferPersist(doPersist, async () => {
+                        this.memories = snapshot;
+                        await Promise.allSettled(
+                            idsToDelete.map((id) => this.memoryRepo.delete(id)),
+                        );
+                    });
+                    itx.onCommit(onCommit);
+                });
             }
+            this.ensureWorker()
+                .then(() => {
+                    if (this.worker) {
+                        Promise.all(
+                            newEntries.map((e) =>
+                                this.sendToWorker('upsert', {
+                                    entry: e,
+                                    generateEmbedding: false,
+                                }),
+                            ),
+                        ).catch((err) =>
+                            LOGGER.warn('MemoryEngine', 'Batch insert to worker failed', {
+                                error: err,
+                            }),
+                        );
+                    }
+                })
+                .catch((e) => {
+                    LOGGER.warn('MemoryEngine', 'init worker failed', {
+                        error: e,
+                    });
+                    this.semanticReady = false;
+                });
         });
     }
 
@@ -486,35 +569,56 @@ export class MemoryService implements IMemoryEngine {
         return this.memories.find((m) => m.id === id);
     }
 
-    async deleteMemory(id: string) {
+    async deleteMemory(id: string, tx?: ITransaction) {
         const idx = this.memories.findIndex((m) => m.id === id);
         if (idx === -1) return;
-        try {
-            await this.memoryRepo.delete(id);
-        } catch (e) {
-            LOGGER.error('MemoryEngine', 'Dexie delete failed — in-memory state preserved', {
-                error: e,
+        if (tx) {
+            const snapshot = tx.capture(this.memories);
+            tx.deferPersist(
+                async () => {
+                    await this.memoryRepo.delete(id);
+                    const newIdx = this.memories.findIndex((m) => m.id === id);
+                    if (newIdx !== -1) this.memories.splice(newIdx, 1);
+                },
+                async () => {
+                    this.memories = snapshot as MemoryEntry[];
+                },
+            );
+            tx.onCommit(() => {
+                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
             });
-            return;
-        }
-        await this.withMemoriesLock(async () => {
-            const newIdx = this.memories.findIndex((m) => m.id === id);
-            if (newIdx === -1) return;
-            this.memories.splice(newIdx, 1);
-            if (!this.worker) {
-                await this.ensureWorker().catch((e) =>
-                    LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
-                );
+        } else {
+            try {
+                await this.memoryRepo.delete(id);
+            } catch (e) {
+                LOGGER.error('MemoryEngine', 'Dexie delete failed — in-memory preserved', {
+                    error: e,
+                });
+                return;
             }
-            if (this.worker)
-                this.sendToWorker('remove', { id }).catch((e) =>
-                    LOGGER.warn('MemoryEngine', 'Worker remove failed', { error: e }),
-                );
-            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
-        });
+            await this.withMemoriesLock(async () => {
+                const newIdx = this.memories.findIndex((m) => m.id === id);
+                if (newIdx === -1) return;
+                this.memories.splice(newIdx, 1);
+                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
+            });
+        }
+        if (this.worker) {
+            this.sendToWorker('remove', { id }).catch((e) =>
+                LOGGER.warn('MemoryEngine', 'Worker remove failed', { error: e }),
+            );
+        } else {
+            this.ensureWorker().catch((e) =>
+                LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
+            );
+        }
     }
 
-    async updateMemory(id: string, content: string): Promise<string | undefined> {
+    async updateMemory(
+        id: string,
+        content: string,
+        tx?: ITransaction,
+    ): Promise<string | undefined> {
         const entry = this.memories.find((m) => m.id === id);
         if (!entry) return undefined;
         const source = entry.metadata.source ?? 'unknown';
@@ -524,16 +628,29 @@ export class MemoryService implements IMemoryEngine {
         await this.withMemoriesLock(async () => {
             if (newId === id) {
                 const updated = { ...entry, content };
-                try {
+                const doPersist = async () => {
                     await this.memoryRepo.save(updated);
+                    Object.assign(entry, updated);
+                };
+                const onCommit = () => {
                     resultId = id;
-                } catch (e) {
-                    LOGGER.error('MemoryEngine', 'Dexie put failed — in-memory state preserved', {
-                        error: e,
+                    this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
+                };
+                if (tx) {
+                    const snapshot = tx.capture(this.memories);
+                    tx.deferPersist(doPersist, async () => {
+                        this.memories = snapshot as MemoryEntry[];
                     });
-                    return;
+                    tx.onCommit(onCommit);
+                } else {
+                    await this._withTransaction('updateMemory', async (itx) => {
+                        const snapshot = structuredClone(this.memories);
+                        itx.deferPersist(doPersist, async () => {
+                            this.memories = snapshot;
+                        });
+                        itx.onCommit(onCommit);
+                    });
                 }
-                Object.assign(entry, updated);
             } else {
                 const newEntry: MemoryEntry = {
                     ...entry,
@@ -541,25 +658,35 @@ export class MemoryService implements IMemoryEngine {
                     content,
                     metadata: { ...entry.metadata, originalId: id },
                 } as MemoryEntry;
-                try {
+                const doPersist = async () => {
                     await this.memoryRepo.delete(id);
                     await this.memoryRepo.save(newEntry);
+                    const idx = this.memories.findIndex((m) => m.id === id);
+                    if (idx !== -1) this.memories[idx] = newEntry;
+                };
+                const onCommit = () => {
                     resultId = newId;
-                } catch (e) {
-                    LOGGER.error('MemoryEngine', 'Dexie update failed — in-memory unchanged', {
-                        error: e,
+                    this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
+                };
+                if (tx) {
+                    const snapshot = tx.capture(this.memories);
+                    tx.deferPersist(doPersist, async () => {
+                        this.memories = snapshot as MemoryEntry[];
+                        await this.memoryRepo.delete(newId).catch(() => {});
                     });
-                    return;
+                    tx.onCommit(onCommit);
+                } else {
+                    await this._withTransaction('updateMemory', async (itx) => {
+                        const snapshot = structuredClone(this.memories);
+                        itx.deferPersist(doPersist, async () => {
+                            this.memories = snapshot;
+                            await this.memoryRepo.delete(newId).catch(() => {});
+                        });
+                        itx.onCommit(onCommit);
+                    });
                 }
-                const idx = this.memories.findIndex((m) => m.id === id);
-                if (idx !== -1) this.memories[idx] = newEntry;
             }
-            if (!this.worker) {
-                await this.ensureWorker().catch((e) =>
-                    LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
-                );
-            }
-            if (this.worker)
+            if (this.worker) {
                 this.sendToWorker('remove', { id })
                     .then(() => {
                         const workerEntry: MemoryEntry =
@@ -574,7 +701,11 @@ export class MemoryService implements IMemoryEngine {
                     .catch((e) =>
                         LOGGER.warn('MemoryEngine', 'Worker update failed', { error: e }),
                     );
-            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
+            } else {
+                this.ensureWorker().catch((e) =>
+                    LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
+                );
+            }
         });
         return resultId;
     }
@@ -739,16 +870,35 @@ export class MemoryService implements IMemoryEngine {
         };
     }
 
-    async clear() {
+    async clear(tx?: ITransaction) {
         await this.withMemoriesLock(async () => {
-            this.memories = [];
-            this.semanticReady = false;
-            await this.memoryRepo.clear();
+            const doPersist = async () => {
+                this.semanticReady = false;
+                await this.memoryRepo.clear();
+                this.memories = [];
+            };
+            const onCommit = () => {
+                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
+            };
+            if (tx) {
+                const snapshot = tx.capture(this.memories);
+                tx.deferPersist(doPersist, async () => {
+                    this.memories = snapshot as MemoryEntry[];
+                });
+                tx.onCommit(onCommit);
+            } else {
+                await this._withTransaction('clear', async (itx) => {
+                    const snapshot = structuredClone(this.memories);
+                    itx.deferPersist(doPersist, async () => {
+                        this.memories = snapshot;
+                    });
+                    itx.onCommit(onCommit);
+                });
+            }
             if (this.worker)
                 this.sendToWorker('init', { memories: [] }).catch((e) =>
                     LOGGER.warn('MemoryEngine', 'Worker re-init after clear failed', { error: e }),
                 );
-            this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
         });
     }
 

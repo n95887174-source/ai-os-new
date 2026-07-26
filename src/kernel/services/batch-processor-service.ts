@@ -36,6 +36,7 @@ export interface BatchJob {
 }
 
 import type { ILifecycle } from '../contracts/lifecycle';
+import { EVENTS } from '../events/event-names';
 
 const MAX_JOBS = 20;
 
@@ -103,7 +104,8 @@ export class BatchProcessorService implements ILifecycle {
         const job = this.jobs.find((j) => j.id === jobId);
         if (!job) throw new Error(`Job ${jobId} not found`);
 
-        const { adapterRegistry, keyService } = await import('../instances/core-references');
+        const { adapterRegistry, keyService, eventBus } =
+            await import('../instances/core-references');
         const abortController = new AbortController();
         this.currentAbort = abortController;
 
@@ -156,6 +158,12 @@ export class BatchProcessorService implements ILifecycle {
                         await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt * jitter));
                         continue;
                     }
+                    eventBus?.emit(EVENTS.QUEUE_TASK_FAILED, {
+                        taskId: `${task.provider}:${task.model}`,
+                        priority: 'batch',
+                        error: String(err),
+                        timestamp: Date.now(),
+                    });
                     return {
                         prompt: task.prompt,
                         provider: task.provider,

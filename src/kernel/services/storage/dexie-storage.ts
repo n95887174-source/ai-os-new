@@ -249,11 +249,23 @@ class DexieTraceStore implements TraceStore {
 
 class DexieSessionStore implements SessionStore {
     async saveSession(session: ChatSession): Promise<void> {
-        await getDexieDb().sessions.put(session);
+        await this.put(session);
     }
 
     async put(session: ChatSession): Promise<void> {
-        await this.saveSession(session);
+        const db = getDexieDb();
+        await db.transaction('rw', db.sessions, async () => {
+            const current = await db.sessions.get(session.id);
+            const currentVersion = (current as { version?: number })?.version ?? 0;
+            const incomingVersion = (session as { version?: number })?.version ?? 0;
+            if (incomingVersion > 0 && incomingVersion < currentVersion) {
+                console.warn(
+                    `[DexieSessionStore] version conflict: id=${session.id} db=${currentVersion} incoming=${incomingVersion} — using latest`,
+                );
+            }
+            const newVersion = Math.max(currentVersion, incomingVersion) + 1;
+            await db.sessions.put({ ...session, version: newVersion });
+        });
     }
 
     async getSession(id: string): Promise<ChatSession | null> {
@@ -278,11 +290,31 @@ class DexieSessionStore implements SessionStore {
     }
 
     async updateSession(id: string, changes: Partial<ChatSession>): Promise<void> {
-        await getDexieDb().sessions.update(id, changes);
+        const db = getDexieDb();
+        await db.transaction('rw', db.sessions, async () => {
+            const current = await db.sessions.get(id);
+            const currentVersion = (current as { version?: number })?.version ?? 0;
+            const newVersion = currentVersion + 1;
+            await db.sessions.update(id, { ...changes, version: newVersion });
+        });
     }
 
     async bulkPut(sessions: ChatSession[]): Promise<void> {
-        await getDexieDb().sessions.bulkPut(sessions);
+        const db = getDexieDb();
+        await db.transaction('rw', db.sessions, async () => {
+            for (const session of sessions) {
+                const current = await db.sessions.get(session.id);
+                const currentVersion = (current as { version?: number })?.version ?? 0;
+                const incomingVersion = (session as { version?: number })?.version ?? 0;
+                if (incomingVersion > 0 && incomingVersion < currentVersion) {
+                    console.warn(
+                        `[DexieSessionStore] bulkPut version conflict: id=${session.id} db=${currentVersion} incoming=${incomingVersion} — using latest`,
+                    );
+                }
+                const newVersion = Math.max(currentVersion, incomingVersion) + 1;
+                await db.sessions.put({ ...session, version: newVersion });
+            }
+        });
     }
 
     async bulkDelete(ids: string[]): Promise<void> {
@@ -290,9 +322,21 @@ class DexieSessionStore implements SessionStore {
     }
 
     async syncSessions(sessions: ChatSession[], deletedIds: string[]): Promise<void> {
-        await getDexieDb().transaction('rw', getDexieDb().sessions, async () => {
-            if (sessions.length > 0) await getDexieDb().sessions.bulkPut(sessions);
-            if (deletedIds.length > 0) await getDexieDb().sessions.bulkDelete(deletedIds);
+        const db = getDexieDb();
+        await db.transaction('rw', db.sessions, async () => {
+            for (const session of sessions) {
+                const current = await db.sessions.get(session.id);
+                const currentVersion = (current as { version?: number })?.version ?? 0;
+                const incomingVersion = (session as { version?: number })?.version ?? 0;
+                if (incomingVersion > 0 && incomingVersion < currentVersion) {
+                    console.warn(
+                        `[DexieSessionStore] syncSessions version conflict: id=${session.id} db=${currentVersion} incoming=${incomingVersion} — using latest`,
+                    );
+                }
+                const newVersion = Math.max(currentVersion, incomingVersion) + 1;
+                await db.sessions.put({ ...session, version: newVersion });
+            }
+            if (deletedIds.length > 0) await db.sessions.bulkDelete(deletedIds);
         });
     }
 

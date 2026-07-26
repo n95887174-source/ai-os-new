@@ -3,6 +3,7 @@ import { EVENTS } from '../events/event-names';
 import type { DebateArgument } from '../contracts/debate-types';
 import { sanitizePromptVar } from '../utils/sanitize';
 import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
+import { SeededRng } from '../utils/seedable-rng';
 
 export type FactVerdict = 'verified' | 'disputed' | 'false' | 'no_evidence' | 'pending' | 'error';
 
@@ -66,6 +67,7 @@ export class FactCheckService {
     private checkInterval = 0.2;
     private deps: FactCheckServiceDeps;
     private _abortController = new AbortController();
+    private _rng = new SeededRng();
 
     constructor(deps: FactCheckServiceDeps) {
         this.deps = deps;
@@ -82,7 +84,7 @@ export class FactCheckService {
     shouldCheck(): boolean {
         if (this.level === 'off') return false;
         if (this.level === 'all') return true;
-        return Math.random() < this.checkInterval;
+        return this._rng.chance(this.checkInterval);
     }
 
     extractClaims(text: string): string[] {

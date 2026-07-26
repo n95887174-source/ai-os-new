@@ -6,6 +6,7 @@ export interface ChatSession {
     history: ChatEntry[];
     createdAt: number;
     updatedAt: number;
+    version?: number;
     tags?: string[];
     folder?: string;
     isArchived?: boolean;

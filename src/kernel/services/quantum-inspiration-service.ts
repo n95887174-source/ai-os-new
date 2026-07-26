@@ -5,24 +5,26 @@ import type {
     QuantumSolverType,
 } from '../contracts/quantum-inspiration';
 import { rootLogger } from './logger-service';
+import { SeededRng } from '../utils/seedable-rng';
 
 const LOGGER = rootLogger.child('QuantumInspiration');
-
-function randomInRange(min: number, max: number): number {
-    return min + Math.random() * (max - min);
-}
-
-function gaussianRandom(): number {
-    let u = 0,
-        v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-}
 
 export class QuantumInspirationService implements IQuantumInspirationService {
     private totalSolutions = 0;
     private convergences: number[] = [];
+    private _rng = new SeededRng();
+
+    private randomInRange(min: number, max: number): number {
+        return min + this._rng.next() * (max - min);
+    }
+
+    private gaussianRandom(): number {
+        let u = 0,
+            v = 0;
+        while (u === 0) u = this._rng.next();
+        while (v === 0) v = this._rng.next();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
 
     getStatus() {
         return {
@@ -68,7 +70,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
         for (const name of varNames) {
             const constraint = problem.constraints.find((c) => c.variable === name);
             current[name] = constraint
-                ? randomInRange(constraint.min, constraint.max)
+                ? this.randomInRange(constraint.min, constraint.max)
                 : problem.variables[name][0];
         }
 
@@ -81,11 +83,11 @@ export class QuantumInspirationService implements IQuantumInspirationService {
 
         for (let iter = 0; iter < 1000; iter++) {
             const neighbor = { ...current };
-            const varName = varNames[Math.floor(Math.random() * varNames.length)];
+            const varName = this._rng.pick(varNames);
             const constraint = problem.constraints.find((c) => c.variable === varName);
             const step = constraint
-                ? (constraint.max - constraint.min) * 0.1 * gaussianRandom()
-                : gaussianRandom();
+                ? (constraint.max - constraint.min) * 0.1 * this.gaussianRandom()
+                : this.gaussianRandom();
             neighbor[varName] = (neighbor[varName] || 0) + step;
             if (constraint) {
                 neighbor[varName] = Math.max(
@@ -97,7 +99,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
             const neighborCost = getCost(neighbor);
             const delta = neighborCost - currentCost;
 
-            if (delta < 0 || Math.exp(-delta / temperature) > Math.random()) {
+            if (delta < 0 || this._rng.chance(Math.exp(-delta / temperature))) {
                 current = neighbor;
                 currentCost = neighborCost;
                 if (currentCost < bestCost) {
@@ -106,7 +108,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
                 }
             }
 
-            if (delta > 0 && Math.random() < 0.01) tunnelingEvents++;
+            if (delta > 0 && this._rng.chance(0.01)) tunnelingEvents++;
             temperature *= coolingRate;
         }
 
@@ -150,7 +152,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
             for (const name of varNames) {
                 const constraint = problem.constraints.find((c) => c.variable === name);
                 p[name] = constraint
-                    ? randomInRange(constraint.min, constraint.max)
+                    ? this.randomInRange(constraint.min, constraint.max)
                     : problem.variables[name][0];
             }
             particles.push(p);
@@ -163,21 +165,21 @@ export class QuantumInspirationService implements IQuantumInspirationService {
         for (let iter = 0; iter < 500; iter++) {
             for (let i = 0; i < numParticles; i++) {
                 const candidate = { ...particles[i] };
-                const varName = varNames[Math.floor(Math.random() * varNames.length)];
+                const varName = this._rng.pick(varNames);
                 const constraint = problem.constraints.find((c) => c.variable === varName);
 
                 // Quantum tunneling: occasional large jump
-                if (Math.random() < 0.05) {
+                if (this._rng.chance(0.05)) {
                     // Tunnel to a random far-away state
                     for (const vn of varNames) {
                         const c = problem.constraints.find((con) => con.variable === vn);
-                        if (c) candidate[vn] = randomInRange(c.min, c.max);
+                        if (c) candidate[vn] = this.randomInRange(c.min, c.max);
                     }
                     tunnelingEvents++;
                 } else {
                     const step = constraint
-                        ? (constraint.max - constraint.min) * 0.05 * gaussianRandom()
-                        : gaussianRandom();
+                        ? (constraint.max - constraint.min) * 0.05 * this.gaussianRandom()
+                        : this.gaussianRandom();
                     candidate[varName] = (candidate[varName] || 0) + step;
                 }
 
@@ -237,7 +239,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
             for (const name of varNames) {
                 const constraint = problem.constraints.find((c) => c.variable === name);
                 vars[name] = constraint
-                    ? randomInRange(constraint.min, constraint.max)
+                    ? this.randomInRange(constraint.min, constraint.max)
                     : problem.variables[name][0];
             }
             const cost = getCost(vars);
@@ -259,7 +261,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
                     for (const name of varNames) {
                         const constraint = problem.constraints.find((c) => c.variable === name);
                         const perturbation =
-                            gaussianRandom() *
+                            this.gaussianRandom() *
                             0.1 *
                             (constraint ? constraint.max - constraint.min : 1);
                         vars[name] = (base[name] || 0) + perturbation;

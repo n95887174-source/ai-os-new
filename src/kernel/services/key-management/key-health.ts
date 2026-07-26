@@ -8,6 +8,7 @@ import type { IAdapterRegistry } from '../../contracts/provider-adapter';
 export interface KeyHealthDeps {
     eventBus: {
         emit: (event: string, data?: unknown) => void;
+        emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
     onStateChanged: (id: string, provider: string, newState: string, previousState: string) => void;
     addAlert: (keyId: string, alert: { type: string; severity: string; message: string }) => void;
@@ -367,11 +368,15 @@ export class KeyHealth implements IHealthCheckService {
             type: 'error',
         });
 
-        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
-            id: key.id,
-            provider: key.provider,
-            state: 'compromised',
-            previousState: prevStatus,
-        });
+        this.deps.eventBus.emitOnce(
+            EVENTS.KEY_STATE_CHANGED,
+            `${key.id}:${key.provider}:compromised`,
+            {
+                id: key.id,
+                provider: key.provider,
+                state: 'compromised',
+                previousState: prevStatus,
+            },
+        );
     }
 }

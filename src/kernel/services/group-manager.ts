@@ -276,7 +276,7 @@ export class GroupManagerService implements IGroupManager {
         this.allKeysCache = null;
         await this.persist();
         this.deps.keyService.updateKeyStatus(keyId, status as ApiKey['status'], opts?.latency);
-        this.deps.eventBus.emit(EVENTS.KEY_STATE_CHANGED, {
+        this.deps.eventBus.emitOnce(EVENTS.KEY_STATE_CHANGED, `${keyId}:${p.provider}:${status}`, {
             id: keyId,
             provider: p.provider,
             state: status,

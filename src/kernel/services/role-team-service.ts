@@ -89,13 +89,17 @@ export class RoleTeamService implements IRoleTeamService {
     private persistTeams(): void {
         this.deps.database
             .setKv(TEAMS_STORAGE_KEY, Array.from(this.teams.values()))
-            .catch(() => {});
+            .catch((e: unknown) => {
+                console.warn('[RoleTeamService] persistTeams failed', e);
+            });
     }
 
     private persistExecutions(): void {
         this.deps.database
             .setKv(EXECUTIONS_STORAGE_KEY, Array.from(this.executions.values()))
-            .catch(() => {});
+            .catch((e: unknown) => {
+                console.warn('[RoleTeamService] persistExecutions failed', e);
+            });
     }
 
     private tryEmit(name: string, payload: Record<string, unknown>): void {

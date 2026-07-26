@@ -3,6 +3,7 @@ import type { PoolStrategy, IPoolSelectorService } from '../../contracts/pool-se
 import type { FreeTierLimit } from './key-types';
 import { EVENTS } from '../../events/event-names';
 import { rootLogger } from '../logger-service';
+import { SeededRng } from '../../utils/seedable-rng';
 
 const LOGGER = rootLogger.child('KeyPoolSelector');
 
@@ -18,7 +19,7 @@ export interface KeyPoolSelectorDeps {
     isKeyQuotaExhausted: (key: ApiKey) => boolean;
     saveConfig: () => Promise<void>;
     freeTierLimits: Record<string, FreeTierLimit>;
-    getGroupKeys?: (groupId?: string) => ApiKey[] | undefined;
+    getGroupKeys?: (groupId: string) => ApiKey[] | undefined;
     getKeyGroupId?: (keyId: string) => string | undefined;
 }
 
@@ -26,6 +27,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
     private strategies: Record<string, PoolStrategy> = {};
     private index: Record<string, number> = {};
     private unsubs: Array<() => void> = [];
+    private _rng = new SeededRng();
 
     constructor(private deps: KeyPoolSelectorDeps) {}
 
@@ -84,7 +86,7 @@ export class KeyPoolSelector implements IPoolSelectorService {
                     pool[0],
                 );
             case 'random':
-                return pool[Math.floor(Math.random() * pool.length)];
+                return this._rng.pick(pool);
         }
     }
 

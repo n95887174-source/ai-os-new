@@ -59,6 +59,15 @@ export interface OrchestrationServiceDeps {
     };
     executionQueueMaxConcurrency?: number;
     executionQueueDefaultPriority?: QueuePriority;
+    deadLetterQueue?: {
+        push(entry: {
+            event: string;
+            payload: unknown;
+            error: string;
+            context?: Record<string, unknown>;
+            retryCount: number;
+        }): Promise<void>;
+    };
 }
 
 export class OrchestrationService {
@@ -98,6 +107,8 @@ export class OrchestrationService {
             (task) =>
                 this.execute(task.payload as { requestId?: string; messages?: ChatMessage[] }),
             deps.executionQueueMaxConcurrency || 3,
+            deps.deadLetterQueue as
+                import('../contracts/dead-letter-queue').IDeadLetterQueue | undefined,
         );
     }
 
