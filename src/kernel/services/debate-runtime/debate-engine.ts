@@ -25,6 +25,7 @@ import type { DebateSession as DebateSessionInterface } from '../../contracts/de
 import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
 import type { IAdapterRegistry } from '../../contracts/provider-adapter';
+import type { IDistributedLock } from '../../contracts/cross-tab-lock';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
 import type { DebatePolicyEngine } from './debate-policy-engine';
@@ -180,6 +181,7 @@ interface DebateEngineDeps {
     conceptBlender?: IConceptBlender;
     outcomeForecaster?: IOutcomeForecaster;
     deadLetterQueue?: import('../../contracts/dead-letter-queue').IDeadLetterQueue;
+    distributedLock?: IDistributedLock;
 }
 
 // P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
@@ -702,6 +704,17 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (this.runningSessions.has(sessionId)) return;
         this.runningSessions.add(sessionId);
 
+        const lockSvc = this.deps.distributedLock;
+        let lock: import('../../contracts/cross-tab-lock').LockAcquisition | null = null;
+        if (lockSvc) {
+            const result = await lockSvc.acquire(`debate:${sessionId}`, { ttl: 60_000 });
+            if (!result.lock) {
+                this.runningSessions.delete(sessionId);
+                throw new Error(`Cannot acquire debate lock: ${result.error}`);
+            }
+            lock = result.lock;
+        }
+
         session.transition('queued');
         session.transition('initializing');
         session.transition('active');
@@ -754,6 +767,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 this.sessionTimeoutTimers.delete(sessionId);
             }
             this.sessionStartTimes.delete(sessionId);
+            if (lock) {
+                lockSvc!.release(lock).catch((e) =>
+                    LOGGER.warn('DebateEngine', 'Failed to release debate lock', {
+                        sessionId,
+                        error: e,
+                    }),
+                );
+            }
         }
     }
 
@@ -960,6 +981,18 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 sessionsKeys: [...this.sessions.keys()],
             });
             return;
+        }
+
+        const lockSvc = this.deps.distributedLock;
+        if (lockSvc) {
+            lockSvc
+                .acquire(`debate:${sessionId}`, { ttl: 10_000 })
+                .then((result) => {
+                    if (result.lock) {
+                        lockSvc.release(result.lock).catch(() => {});
+                    }
+                })
+                .catch(() => {});
         }
         console.log(
             '[cancelSession] phase=%s, runningSessions=%d',

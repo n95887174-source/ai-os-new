@@ -12,3 +12,4 @@ export { executionGovernor } from '../../kernel/instances';
 export { memoryService } from '../../kernel/instances';
 export { workspaceService } from '../../kernel/instances';
 export { sessionManager } from '../../kernel/instances';
+export { getDistributedLock } from '../../kernel/services/cross-tab-lock-service';

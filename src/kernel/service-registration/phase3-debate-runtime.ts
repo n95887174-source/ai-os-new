@@ -537,6 +537,8 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             outcomeForecaster: c.get<IOutcomeForecaster>('outcomeForecaster'),
             deadLetterQueue:
                 c.get<import('../contracts/dead-letter-queue').IDeadLetterQueue>('deadLetterQueue'),
+            distributedLock:
+                c.get<import('../contracts/cross-tab-lock').IDistributedLock>('distributedLock'),
         });
     });
 

@@ -1809,3 +1809,39 @@ Transitions:
 | --------- | -------- |
 | tsc -b    | 0 errors |
 | Typecheck | ✅ pass  |
+
+---
+
+## Session 55 — Cross-tab Distributed Lock for debate/chat session protection (v4.5.0 → v4.6.0) ✅
+
+**6 files changed. Typecheck 0 errors. Cross-tab races: 60% → 85%.**
+
+### Что сделано
+
+| #   | Файл                                                   | Изменение                                                                                                                                                                                                 |
+| --- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `contracts/cross-tab-lock.ts` **NEW**                  | `IDistributedLock` интерфейс + `LockResource`, `LockAcquisition`, `LockOptions`, `ILockAcquireResult`, `ILockEvent`, `LockListener` типы                                                                  |
+| 2   | `services/cross-tab-lock-service.ts` **NEW**           | `DistributedLockService` — Dexie `keyValue` table CAS distributed lock: `acquire()`, `release()`, `heartbeat()`, `isLocked()`, `getOwner()`. Lock record: `{ownerId, acquiredAt, ttl, heartbeatAt}` JSON. |
+| 3   | `services/debate-runtime/debate-engine.ts`             | `distributedLock` добавлен в `DebateEngineDeps`. `startSession()`: acquire lock (60s TTL) before transitions, release в `finally`. `cancelSession()`: fire-and-forget lock-and-release                    |
+| 4   | `service-registration/phase1-foundation.ts`            | `DistributedLockService` зарегистрирован как `'distributedLock'` в DI контейнере                                                                                                                          |
+| 5   | `service-registration/phase3-debate-runtime.ts`        | `distributedLock` проброшен в конструктор `DebateEngine`                                                                                                                                                  |
+| 6   | `stores/chat/service-deps.ts` + `stores/chat/store.ts` | `getDistributedLock` экспортирован. `sendMessage()` (120s TTL), `editEntry()` (30s TTL), `clearHistory()` (30s TTL): acquire lock before Dexie write, release в finally                                   |
+| 7   | `docs/ocs/reliability-matrix.md`                       | Row 25 (Cross-tab races): ~60% → ~85%. Coverage Summary: 80-100% bucket 7→8 classes, 50-79% bucket 21→20 classes                                                                                          |
+
+### Design
+
+```
+DistributedLockService (Dexie keyValue, distlock:{prefix})
+  ├─ debate:${sessionId}  →  startSession() acquire 60s TTL, release in finally
+  ├─ debate:${sessionId}  →  cancelSession() fire-and-forget
+  ├─ chat:${sessionId}     →  sendMessage() acquire 120s TTL, release in finally
+  ├─ chat:${sessionId}     →  editEntry() acquire 30s TTL, release in finally
+  └─ chat:${sessionId}     →  clearHistory() acquire 30s TTL, release in finally
+```
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |

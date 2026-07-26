@@ -36,6 +36,8 @@ import { AuthorizationService } from '../services/authorization-service';
 import type { IAuthorizationService } from '../contracts/authorization';
 import { DeadLetterQueueService } from '../services/dead-letter-queue-service';
 import type { IDeadLetterQueue } from '../contracts/dead-letter-queue';
+import { DistributedLockService } from '../services/cross-tab-lock-service';
+import type { IDistributedLock } from '../contracts/cross-tab-lock';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from '../services/logger-service';
 
@@ -288,6 +290,12 @@ export const registerPhase1: Phase = (helpers, ctx) => {
             LOGGER.warn('DeadLetterQueue', 'init failed', { error: String(e) }),
         );
         return dlq as IDeadLetterQueue;
+    });
+
+    // Distributed Lock — Dexie-backed cross-tab lock for debate/chat session protection.
+    register('distributedLock', () => {
+        const svc = new DistributedLockService();
+        return svc as IDistributedLock;
     });
 
     // A-04: initCostOptimization() called after all its deps are registered.

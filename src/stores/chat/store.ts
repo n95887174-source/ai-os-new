@@ -11,6 +11,7 @@ import {
     memoryService,
     workspaceService,
     sessionManager,
+    getDistributedLock,
 } from './service-deps';
 import type { ChatStoreShape, ChatEntry, ChatSession, ZustandSet, ZustandGet } from './types';
 import {
@@ -277,6 +278,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             let requestIdsToTrack: string[] = [];
             let govOp;
             let currentHistory: ChatEntry[];
+            const distLock = getDistributedLock();
+            const lockResult = await distLock.acquire(`chat:${sessionId}`, { ttl: 120_000 });
+            if (!lockResult.lock) {
+                console.warn('[ChatStore] Failed to acquire chat lock, proceeding without lock', {
+                    error: lockResult.error,
+                });
+            }
             try {
                 currentHistory = (
                     get().sessions.find((s) => s.id === sessionId)?.history ?? []
@@ -476,6 +484,11 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 govOp?.fail(e instanceof Error ? e : new Error(String(e)));
                 throw e;
             } finally {
+                if (lockResult.lock) {
+                    distLock
+                        .release(lockResult.lock)
+                        .catch((e) => console.warn('[ChatStore] Failed to release chat lock', e));
+                }
                 const q = _sendQueue.get(sessionId);
                 if (q && q.length > 0) {
                     const next = q.shift()!;
@@ -557,75 +570,107 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 });
                 return;
             }
-            const session = get().sessions.find((s) => s.id === get().activeSessionId);
-            const oldEntry = session?.history.find((e) => e.id === entryId);
-            // Cancel any in-flight requests for this entry before clearing
-            if (oldEntry) {
-                for (const r of oldEntry.responses) {
-                    if (r.status === 'loading' || r.status === 'streaming') {
-                        eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: r.requestId });
-                        get().removeActiveRequestId(r.requestId);
+            const sessionId = get().activeSessionId;
+            const distLock = getDistributedLock();
+            const lockResult = await distLock.acquire(`chat:${sessionId}`, { ttl: 30_000 });
+            if (!lockResult.lock) {
+                console.warn('[ChatStore] editEntry failed to acquire lock', {
+                    error: lockResult.error,
+                });
+                return;
+            }
+            try {
+                const session = get().sessions.find((s) => s.id === sessionId);
+                const oldEntry = session?.history.find((e) => e.id === entryId);
+                // Cancel any in-flight requests for this entry before clearing
+                if (oldEntry) {
+                    for (const r of oldEntry.responses) {
+                        if (r.status === 'loading' || r.status === 'streaming') {
+                            eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: r.requestId });
+                            get().removeActiveRequestId(r.requestId);
+                        }
                     }
                 }
-            }
-            const sStore = resolveSessionStore();
-            if (!sStore) {
-                console.warn('[ChatStore] No session store available, editEntry not persisted');
-                return;
-            }
-            const sessionId = get().activeSessionId;
-            const fullSession = get().sessions.find((s) => s.id === sessionId);
-            if (!fullSession) return;
-            // Persist-then-emit: write to Dexie first, update Zustand only on success
-            try {
-                await sStore.put({
-                    ...fullSession,
-                    history: fullSession.history.map((e) =>
+                const sStore = resolveSessionStore();
+                if (!sStore) {
+                    console.warn('[ChatStore] No session store available, editEntry not persisted');
+                    return;
+                }
+                const fullSession = get().sessions.find((s) => s.id === sessionId);
+                if (!fullSession) return;
+                // Persist-then-emit: write to Dexie first, update Zustand only on success
+                try {
+                    await sStore.put({
+                        ...fullSession,
+                        history: fullSession.history.map((e) =>
+                            e.id === entryId ? { ...e, text: newText, responses: [] } : e,
+                        ),
+                        updatedAt: Date.now(),
+                    });
+                } catch (e) {
+                    console.error('[ChatStore] Failed to persist editEntry', e);
+                    eventBus.emit(EVENTS.NOTIFICATION, {
+                        message: 'Failed to save edited message',
+                        type: 'error',
+                    });
+                    return;
+                }
+                uas((prev) =>
+                    prev.map((e) =>
                         e.id === entryId ? { ...e, text: newText, responses: [] } : e,
                     ),
-                    updatedAt: Date.now(),
-                });
-            } catch (e) {
-                console.error('[ChatStore] Failed to persist editEntry', e);
-                eventBus.emit(EVENTS.NOTIFICATION, {
-                    message: 'Failed to save edited message',
-                    type: 'error',
-                });
-                return;
+                );
+            } finally {
+                distLock
+                    .release(lockResult.lock)
+                    .catch((e) => console.warn('[ChatStore] Failed to release editEntry lock', e));
             }
-            uas((prev) =>
-                prev.map((e) => (e.id === entryId ? { ...e, text: newText, responses: [] } : e)),
-            );
         },
 
         clearHistory: async () => {
             const sessionId = get().activeSessionId;
-            const session = get().sessions.find((s) => s.id === sessionId);
-            if (session) {
-                const loadingReqs = session.history
-                    .flatMap((e) =>
-                        (e.responses || []).map((r) => ({
-                            requestId: r.requestId,
-                            status: r.status,
-                        })),
-                    )
-                    .filter((r) => r.status === 'loading' || r.status === 'streaming');
-                for (const req of loadingReqs) {
-                    if (req.requestId)
-                        eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
-                }
+            const distLock = getDistributedLock();
+            const lockResult = await distLock.acquire(`chat:${sessionId}`, { ttl: 30_000 });
+            if (!lockResult.lock) {
+                console.warn('[ChatStore] clearHistory failed to acquire lock', {
+                    error: lockResult.error,
+                });
+                return;
             }
-            const sStore = resolveSessionStore();
-            if (sStore && session) {
-                try {
-                    await sStore.put({ ...session, history: [], updatedAt: Date.now() });
-                } catch (e) {
-                    console.error('[ChatStore] Failed to persist clearHistory', e);
-                    return;
+            try {
+                const session = get().sessions.find((s) => s.id === sessionId);
+                if (session) {
+                    const loadingReqs = session.history
+                        .flatMap((e) =>
+                            (e.responses || []).map((r) => ({
+                                requestId: r.requestId,
+                                status: r.status,
+                            })),
+                        )
+                        .filter((r) => r.status === 'loading' || r.status === 'streaming');
+                    for (const req of loadingReqs) {
+                        if (req.requestId)
+                            eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
+                    }
                 }
+                const sStore = resolveSessionStore();
+                if (sStore && session) {
+                    try {
+                        await sStore.put({ ...session, history: [], updatedAt: Date.now() });
+                    } catch (e) {
+                        console.error('[ChatStore] Failed to persist clearHistory', e);
+                        return;
+                    }
+                }
+                uas(() => []);
+                set({ activeRequestIds: new Set() });
+            } finally {
+                distLock
+                    .release(lockResult.lock)
+                    .catch((e) =>
+                        console.warn('[ChatStore] Failed to release clearHistory lock', e),
+                    );
             }
-            uas(() => []);
-            set({ activeRequestIds: new Set() });
         },
 
         createSession: async (title = 'New Chat') => {
