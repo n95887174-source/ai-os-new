@@ -612,7 +612,7 @@ export const EventLogEntrySchema = z.object({
     id: z.number().int().positive().optional(),
     sequence: z.number().int().min(0),
     event: z.string().min(1),
-    data: z.unknown(),
+    dataJson: z.string(),
     timestamp: z.number().positive(),
     checksum: z.string().min(1),
 });

@@ -1700,3 +1700,62 @@ Jitter in retry/backoff (`debate-llm-caller`, `batch-processor`, `notification-w
 | tsc -b        | 0 errors |
 | Typecheck     | PASS     |
 | Files changed | 4        |
+
+---
+
+## Session 52 — Fix EventLog validation error + rejectHook return value (v4.5.0 → v4.6.0) ✅
+
+**2 files changed. Typecheck 0 errors. Runtime errors fixed.**
+
+### Проблема #1: Zod schema mismatch
+
+`EventLogEntrySchema` (Zod) has `data: z.unknown()` but Dexie row format (`RecordedEventRow`) stores `dataJson: string`. Zod v4 rejects missing keys in `z.object({})` with `"expected nonoptional, received undefined"` — every `eventLog` write fails validation, causing `DexieError`.
+
+### Проблема #2: rejectHook returns `true` instead of `undefined`
+
+All 14 `creating` hooks (`rejectHook`) returned `true` on success. In Dexie, `creating` hook returning any value other than `undefined` is treated as a **generated primary key**. For auto-increment tables (`++id`), Dexie sets `obj.id = true`, then IndexedDB rejects with "Evaluating the object store's key path yielded a value that is not a valid key." This also caused the `true` value to be written as `id` which is not a valid numeric key for auto-increment stores.
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `schema-types.ts:615` — `EventLogEntrySchema.data: z.unknown()` → `dataJson: z.string()` to match `RecordedEventRow` interface (Dexie storage format)                                                                             |
+| 2   | `dexie-schema.ts:381` — `rejectHook`: `return true` → `return undefined`. Dexie's `creating` hook treats any non-undefined return as primary key value. `true` caused `obj.id = true`, breaking auto-increment for ALL 14 tables. |
+
+---
+
+## Session 53 — Fix DexieSessionStore version conflict spam (v4.5.0 → v4.6.0) ✅
+
+**5 files changed. Typecheck 0 errors. Runtime warnings eliminated.**
+
+### Проблема
+
+После фикса rejectHook (Session 52) появился новый поток предупреждений:
+
+```
+[DexieSessionStore] syncSessions version conflict: id=default db=2816 incoming=2764
+```
+
+Версия в Dexie росла с каждым циклом гидратации (2816, 2817, ...), а `incoming` застревала на 2764.
+
+### Root cause
+
+**Двойной write per user action:** `flush()` → `syncSessions()` → `setState({ deletedIds })` в `finally` блоке триггерил Zustand subscriber, который не видел изменения `_lqEpoch` и планировал второй `flush()`. Второй `syncSessions` находил `incoming version < db version` и писал с инкрементом, провоцируя эскалацию версий.
+
+**Stale writes:** `put()`, `bulkPut()`, `syncSessions()` всегда писали `Math.max(current, incoming) + 1` даже при stale incoming, что гарантированно инкрементировало версию при каждом конфликте.
+
+### Changes
+
+| #   | Что сделано                                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `hydration.ts` — `flush()`: `lastFlushEpoch = _lqEpoch` перед `syncSessions`, чтобы `finally`-`setState` не триггерил повторный flush |
+| 2   | `dexie-storage.ts` — `put()`: `console.warn` + write → `return` (skip) при stale incoming                                             |
+| 3   | `dexie-storage.ts` — `bulkPut()`: `console.warn` + write → `continue` (skip) при stale incoming                                       |
+| 4   | `dexie-storage.ts` — `syncSessions()`: `console.warn` + write → `continue` (skip) при stale incoming                                  |
+
+### Итог
+
+- **0 console.warn** о version conflict при нормальной работе
+- **0 лишних writes** при stale incoming — CAS корректно отклоняет устаревшие данные
+- **0 re-trigger** из `finally`-блока — двойной flush устранён
+- **Версия** больше не растёт без необходимости (только при реальных мутациях)

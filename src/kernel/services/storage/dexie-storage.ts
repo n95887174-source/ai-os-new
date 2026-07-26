@@ -258,11 +258,7 @@ class DexieSessionStore implements SessionStore {
             const current = await db.sessions.get(session.id);
             const currentVersion = (current as { version?: number })?.version ?? 0;
             const incomingVersion = (session as { version?: number })?.version ?? 0;
-            if (incomingVersion > 0 && incomingVersion < currentVersion) {
-                console.warn(
-                    `[DexieSessionStore] version conflict: id=${session.id} db=${currentVersion} incoming=${incomingVersion} — using latest`,
-                );
-            }
+            if (incomingVersion > 0 && incomingVersion < currentVersion) return;
             const newVersion = Math.max(currentVersion, incomingVersion) + 1;
             await db.sessions.put({ ...session, version: newVersion });
         });
@@ -306,11 +302,7 @@ class DexieSessionStore implements SessionStore {
                 const current = await db.sessions.get(session.id);
                 const currentVersion = (current as { version?: number })?.version ?? 0;
                 const incomingVersion = (session as { version?: number })?.version ?? 0;
-                if (incomingVersion > 0 && incomingVersion < currentVersion) {
-                    console.warn(
-                        `[DexieSessionStore] bulkPut version conflict: id=${session.id} db=${currentVersion} incoming=${incomingVersion} — using latest`,
-                    );
-                }
+                if (incomingVersion > 0 && incomingVersion < currentVersion) continue;
                 const newVersion = Math.max(currentVersion, incomingVersion) + 1;
                 await db.sessions.put({ ...session, version: newVersion });
             }
@@ -328,11 +320,7 @@ class DexieSessionStore implements SessionStore {
                 const current = await db.sessions.get(session.id);
                 const currentVersion = (current as { version?: number })?.version ?? 0;
                 const incomingVersion = (session as { version?: number })?.version ?? 0;
-                if (incomingVersion > 0 && incomingVersion < currentVersion) {
-                    console.warn(
-                        `[DexieSessionStore] syncSessions version conflict: id=${session.id} db=${currentVersion} incoming=${incomingVersion} — using latest`,
-                    );
-                }
+                if (incomingVersion > 0 && incomingVersion < currentVersion) continue;
                 const newVersion = Math.max(currentVersion, incomingVersion) + 1;
                 await db.sessions.put({ ...session, version: newVersion });
             }

@@ -48,6 +48,8 @@ export function useChatStoreHydration(): void {
                 clearTimeout(syncTimer);
                 syncTimer = null;
             }
+            // prevent the finally setState from re-triggering flush
+            lastFlushEpoch = _lqEpoch;
             const sStore = resolveSessionStore();
             if (!sStore) return;
             const state = useChatStore.getState();

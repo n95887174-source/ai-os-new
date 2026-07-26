@@ -375,10 +375,10 @@ export class SuperAgentsDB extends Dexie {
 
         const rejectHook =
             (schema: { parse: (data: unknown) => unknown }, label: string) =>
-            (_primKey: unknown, obj: unknown): boolean => {
+            (_primKey: unknown, obj: unknown): boolean | undefined => {
                 try {
                     schema.parse(obj);
-                    return true;
+                    return undefined;
                 } catch (e) {
                     const msg = e instanceof Error ? e.message : String(e);
                     LOGGER.error(
