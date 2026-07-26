@@ -8,25 +8,13 @@ import type {
     IDebateSession,
 } from '../../contracts/debate-runtime';
 import type { ITransaction } from '../../contracts/transaction';
+import type { TransitionEvent, TransitionOutcome } from '../../contracts/debate-state-machine';
 import { DEFAULT_DEBATE_LANGUAGE } from '../config-registry';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-registry';
+import { StateMachine, phaseToEvent } from './debate-state-machine';
 
 const LOGGER = rootLogger.child('DebateSession');
-
-const VALID_TRANSITIONS: Record<DebatePhase, DebatePhase[]> = {
-    created: ['queued', 'failed', 'cancelled'],
-    queued: ['initializing', 'cancelled'],
-    initializing: ['active', 'failed', 'cancelled'],
-    active: ['deliberating', 'paused', 'failed', 'cancelled'],
-    deliberating: ['deliberating', 'consensus', 'paused', 'failed', 'cancelled'],
-    paused: ['queued', 'deliberating', 'failed', 'cancelled'],
-    consensus: ['summarizing', 'deliberating', 'failed', 'cancelled'],
-    summarizing: ['completed', 'failed', 'cancelled'],
-    completed: [],
-    failed: ['created'],
-    cancelled: ['created'],
-};
 
 export class DebateSession implements IDebateSession {
     readonly id: string;
@@ -35,7 +23,7 @@ export class DebateSession implements IDebateSession {
     readonly createdAt: number;
     readonly participants: ParticipantConfig[];
 
-    private _phase: DebatePhase = 'created';
+    private _sm: StateMachine;
     private _round = 0;
     private _version = 1;
     private _agentStates = new Map<string, AgentStateEntry>();
@@ -92,6 +80,7 @@ export class DebateSession implements IDebateSession {
         this.participants = participants;
         this._language = language;
         this.createdAt = Date.now();
+        this._sm = new StateMachine('created');
 
         for (const p of participants) {
             this._agentStates.set(p.agentId, {
@@ -107,7 +96,7 @@ export class DebateSession implements IDebateSession {
     }
 
     get phase(): DebatePhase {
-        return this._phase;
+        return this._sm.current;
     }
     get round(): number {
         return this._round;
@@ -138,34 +127,55 @@ export class DebateSession implements IDebateSession {
     transition(to: DebatePhase, tx?: ITransaction): boolean {
         if (this._transitioning) {
             LOGGER.warn('DebateSession', 'Re-entrant transition blocked', {
-                from: this._phase,
+                from: this._sm.current,
                 to,
                 sessionId: this.id,
             });
             return false;
         }
-        const allowed = VALID_TRANSITIONS[this._phase];
-        if (!allowed.includes(to)) {
-            const msg = `Invalid transition: ${this._phase} -> ${to}`;
-            LOGGER.warn('DebateSession', msg);
-            if (tx && 'deferEmit' in tx) {
-                (tx as unknown as { deferEmit: (e: string, d: unknown) => void }).deferEmit(
-                    EVENTS.DEBATE_TRANSITION_INVALID,
-                    { from: this._phase, to, sessionId: this.id },
-                );
-            }
-            return false;
-        }
         this._transitioning = true;
         try {
-            const from = this._phase;
-            this._phase = to;
+            const from = this._sm.current;
+            const event = phaseToEvent(to);
+            if (!event) {
+                LOGGER.warn('DebateSession', `No event mapped for phase ${to}`, {
+                    sessionId: this.id,
+                });
+                if (tx && 'deferEmit' in tx) {
+                    (tx as unknown as { deferEmit: (e: string, d: unknown) => void }).deferEmit(
+                        EVENTS.DEBATE_TRANSITION_INVALID,
+                        { from, to, sessionId: this.id },
+                    );
+                }
+                return false;
+            }
+            const outcome = this._sm.can(event);
+            if (!outcome) {
+                LOGGER.warn('DebateSession', `Invalid transition: ${from} -> ${to}`, {
+                    sessionId: this.id,
+                });
+                if (tx && 'deferEmit' in tx) {
+                    (tx as unknown as { deferEmit: (e: string, d: unknown) => void }).deferEmit(
+                        EVENTS.DEBATE_TRANSITION_INVALID,
+                        { from, to, sessionId: this.id },
+                    );
+                }
+                return false;
+            }
             if (to === 'active' && !this._startedAt) this._startedAt = Date.now();
             for (const cb of this._phaseListeners) cb(from, to);
             return true;
         } finally {
             this._transitioning = false;
         }
+    }
+
+    async send(event: TransitionEvent): Promise<TransitionOutcome> {
+        const outcome = await this._sm.send(event);
+        if (outcome.success) {
+            for (const cb of this._phaseListeners) cb(outcome.from, outcome.to!);
+        }
+        return outcome;
     }
 
     incrementRound(): void {
@@ -211,7 +221,7 @@ export class DebateSession implements IDebateSession {
             id: this.id,
             topic: this.topic,
             topology: structuredClone(this.topology),
-            phase: this._phase,
+            phase: this._sm.current,
             round: this._round,
             version: this._version,
             agentStates: Array.from(this._agentStates.values()),
@@ -236,6 +246,7 @@ export class DebateSession implements IDebateSession {
     }
 
     destroy(): void {
+        this._sm.destroy();
         this._agentStates.clear();
         this._phaseListeners = [];
         this._failedProviders.clear();
@@ -243,7 +254,7 @@ export class DebateSession implements IDebateSession {
     }
 
     restoreInternalState(snapshot: DebateSessionSnapshot): void {
-        this._phase = snapshot.phase;
+        this._sm.reset(snapshot.phase);
         this._round = snapshot.round;
         this._version = snapshot.version;
         this._totalTokens = snapshot.totalTokens;

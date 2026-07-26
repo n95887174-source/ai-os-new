@@ -1759,3 +1759,53 @@ All 14 `creating` hooks (`rejectHook`) returned `true` on success. In Dexie, `cr
 - **0 лишних writes** при stale incoming — CAS корректно отклоняет устаревшие данные
 - **0 re-trigger** из `finally`-блока — двойной flush устранён
 - **Версия** больше не растёт без необходимости (только при реальных мутациях)
+
+---
+
+## Session 54 — Formal Debate State Machine (v4.5.0 → v4.6.0) ✅
+
+**3 files changed. Typecheck 0 errors. State-machine violations: 65% → 90%.**
+
+### Что сделано
+
+| #   | Файл                                                      | Изменение                                                                                                                                                                        |
+| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `contracts/debate-state-machine.ts` **NEW**               | Определены `TransitionEvent` (14 событий), `TransitionOutcome`, `TransitionGuard`, `TransitionHook`, `IStateMachine`                                                             |
+| 2   | `services/debate-runtime/debate-state-machine.ts` **NEW** | `StateMachine` — формальная реализация: `TRANSITION_TABLE` (11 states, ~30 правил), `send()`, `can()`, guards, lifecycle hooks, re-entrancy lock, `phaseToEvent()` mapper        |
+| 3   | `services/debate-runtime/debate-session.ts`               | `_phase` → `_sm: StateMachine`; `transition()` делегирует через `phaseToEvent()`; добавлен `send()`; `restoreInternalState()` использует `_sm.reset()`; `destroy()` чистит `_sm` |
+
+### State machine design
+
+```
+Events: QUEUE, INITIALIZE, ACTIVATE, BEGIN_ROUND, CONCLUDE, SUMMARIZE,
+        FINISH, PAUSE, RESUME, FAIL, CANCEL, ABORT, TIMEOUT, RESET
+
+Transitions:
+  created      → {QUEUE→queued, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
+  queued       → {INITIALIZE→initializing, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
+  initializing → {ACTIVATE→active, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
+  active       → {BEGIN_ROUND→deliberating, PAUSE→paused, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
+  deliberating → {BEGIN_ROUND→deliberating, CONCLUDE→consensus, PAUSE→paused, FAIL→failed, CANCEL→cancelled, ABORT→cancelled, TIMEOUT→failed}
+  paused       → {RESUME→queued, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
+  consensus    → {SUMMARIZE→summarizing, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
+  summarizing  → {FINISH→completed, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
+  completed    → {RESET→created, CANCEL→cancelled}
+  failed       → {RESET→created, CANCEL→cancelled}
+  cancelled    → {RESET→created}
+```
+
+### Ключевые гарантии
+
+- **Idempotent**: `send()` на already-applied state возвращает `{success: false, reason: 'Invalid transition'}`
+- **Async-safe**: re-entrancy lock (`_sending` flag) предотвращает параллельные `send()`
+- **Guards**: `addGuard()` поддерживает sync/async пре-условия
+- **Lifecycle**: `onBeforeTransition`, `onAfterTransition`, `onInvalidTransition`, `onError` — все hooks могут быть sync или async
+- **Backward compat**: `transition(to)` всё ещё работает через `phaseToEvent()` маппинг
+- **Monitoring**: `TransitionOutcome` содержит `success`, `from`, `to`, `event`, `reason`
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
