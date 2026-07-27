@@ -28,7 +28,7 @@ import { rootLogger } from '../logger-service';
 import { ssrSafeStorage } from '../../utils/ssr-storage';
 
 import type { FreeTierLimit } from './key-types';
-import { requireLevel } from '../../utils/permission-guard';
+
 import { withTransaction } from '../../utils/with-transaction';
 
 const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
@@ -568,7 +568,6 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async addKey(data: Omit<ApiKey, 'id' | 'stats'>) {
-        requireLevel('L2');
         const newKey = await this.registry.addKey(data);
         if (!newKey) return undefined;
         this.quotas.applyFreeTierQuota(newKey);
@@ -587,7 +586,6 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async removeKey(id: string) {
-        requireLevel('L2');
         try {
             await this.registry.removeKey(id);
         } finally {
@@ -614,7 +612,6 @@ export class KeyService implements IKeyRotationManager {
     }
 
     async updateKey(id: string, data: Partial<ApiKey>): Promise<void> {
-        requireLevel('L2');
         this.registry.updateKey(id, data);
         await this.registry.saveKeys();
         this.notify();

@@ -136,6 +136,7 @@ export class DebateSession implements IDebateSession {
         this._transitioning = true;
         try {
             const from = this._sm.current;
+            if (from === to) return true;
             const event = phaseToEvent(to);
             if (!event) {
                 LOGGER.warn('DebateSession', `No event mapped for phase ${to}`, {
@@ -149,8 +150,7 @@ export class DebateSession implements IDebateSession {
                 }
                 return false;
             }
-            const outcome = this._sm.can(event);
-            if (!outcome) {
+            if (!this._sm.can(event)) {
                 LOGGER.warn('DebateSession', `Invalid transition: ${from} -> ${to}`, {
                     sessionId: this.id,
                 });
@@ -162,6 +162,7 @@ export class DebateSession implements IDebateSession {
                 }
                 return false;
             }
+            this._sm.reset(to);
             if (to === 'active' && !this._startedAt) this._startedAt = Date.now();
             for (const cb of this._phaseListeners) cb(from, to);
             return true;

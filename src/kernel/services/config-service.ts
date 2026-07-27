@@ -13,7 +13,7 @@ import type {
     ServicesConfigSection,
 } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
-import { requireLevel } from '../utils/permission-guard';
+
 import { withTransaction } from '../utils/with-transaction';
 
 export interface ConfigServiceDeps {
@@ -167,7 +167,6 @@ export class ConfigService {
         section: K,
         partial: Partial<NonNullable<ConfigOverlays[K]>>,
     ): Promise<void> {
-        requireLevel('L2');
         const snapshot = structuredClone(this.overlays);
         await withTransaction(
             `config:${String(section)}`,

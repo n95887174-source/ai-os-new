@@ -1,13 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { UserLevel } from '../types/routing';
 
 export type LayoutMode =
     'default' | 'wide' | 'focus' | 'presentation' | 'debug' | 'mobile' | 'cinema';
 
 export interface UiPreferencesState {
     onboardingCompleted: boolean;
-    userLevel: UserLevel;
     theme: string;
     defaultLayout: LayoutMode;
     perRouteLayout: Record<string, LayoutMode>;
@@ -19,7 +17,6 @@ export interface UiPreferencesState {
 
 export interface UiPreferencesActions {
     setOnboardingCompleted: (v: boolean) => void;
-    setUserLevel: (level: UserLevel) => void;
     setTheme: (theme: string) => void;
     setLayout: (route: string, mode: LayoutMode, global?: boolean) => void;
     getLayout: (route: string) => LayoutMode | null;
@@ -37,7 +34,6 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
     persist(
         (set, get) => ({
             onboardingCompleted: false,
-            userLevel: 'L2',
             theme: 'dark',
             defaultLayout: 'default' as LayoutMode,
             perRouteLayout: {},
@@ -47,8 +43,6 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
             designTokenOverrides: {},
 
             setOnboardingCompleted: (v) => set({ onboardingCompleted: v }),
-
-            setUserLevel: (userLevel) => set({ userLevel }),
 
             setTheme: (theme) => set({ theme }),
 
@@ -100,7 +94,6 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
                     const v0 = persisted as Partial<UiPreferencesState>;
                     return {
                         onboardingCompleted: v0.onboardingCompleted ?? false,
-                        userLevel: v0.userLevel ?? ('L2' as UserLevel),
                         theme: v0.theme ?? 'dark',
                         defaultLayout: v0.defaultLayout ?? ('default' as LayoutMode),
                         perRouteLayout: v0.perRouteLayout ?? {},
@@ -110,23 +103,10 @@ export const useUiPreferences = create<UiPreferencesState & UiPreferencesActions
                         designTokenOverrides: v0.designTokenOverrides ?? {},
                     } as UiPreferencesState;
                 }
-                // v1 → v2: existing users were defaulted to L0, which locks
-                // all L1/L2 panels behind "Access Restricted". Auto-promote
-                // everyone to L2 on next load (the owner/dev sees everything
-                // by default; they can still drop to L0/L1 in Settings if they
-                // want progressive disclosure back).
-                if (version === 1) {
-                    const v1 = persisted as Partial<UiPreferencesState>;
-                    return {
-                        ...v1,
-                        userLevel: 'L2' as UserLevel,
-                    } as UiPreferencesState;
-                }
                 return persisted as UiPreferencesState;
             },
             partialize: (state) => ({
                 onboardingCompleted: state.onboardingCompleted,
-                userLevel: state.userLevel,
                 theme: state.theme,
                 defaultLayout: state.defaultLayout,
                 perRouteLayout: state.perRouteLayout,

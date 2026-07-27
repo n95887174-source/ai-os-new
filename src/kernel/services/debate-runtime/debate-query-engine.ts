@@ -281,7 +281,8 @@ export class DebateProviderResolver {
                 (k) =>
                     k.provider === participant.provider &&
                     k.status === 'active' &&
-                    !this.isKeyAuthFailed(k.id),
+                    !this.isKeyAuthFailed(k.id) &&
+                    !triedKeys.has(k.id),
             );
         }
 
@@ -293,7 +294,8 @@ export class DebateProviderResolver {
                     (k) =>
                         k.provider === cachedProvider &&
                         k.status === 'active' &&
-                        !this.isKeyAuthFailed(k.id),
+                        !this.isKeyAuthFailed(k.id) &&
+                        !triedKeys.has(k.id),
                 );
             }
         }

@@ -26,8 +26,6 @@ export const SERVICE_PHASE: Record<string, string> = {
     sessionManagerService: 'phase1',
     executionGovernor: 'phase1',
     fingerprints: 'phase1',
-    keyIntelligencePipeline: 'phase1',
-    authorizationService: 'phase1',
     deadLetterQueue: 'phase1',
 
     sessionAffinityStore: 'phase2',
@@ -572,7 +570,6 @@ export const SERVICE_ROUTE_MAP: Record<string, string> = {
     metricsService: 'analytics',
     sessionManagerService: 'chat-sessions',
     groupManagerService: 'groups',
-    authorizationService: 'security',
     fingerprints: 'security',
     executionGovernor: 'state-inspector',
     deadLetterQueue: 'logs',

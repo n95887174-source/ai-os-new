@@ -662,9 +662,6 @@ const en = {
     'common.aria.keyboard_shortcuts': 'Keyboard shortcuts',
     'common.aria.close_details': 'Close details',
     'common.aria.select_model': 'Select model',
-    'permission.forbidden': 'Access Restricted',
-    'permission.required_level': 'This page requires level {level} or higher.',
-    'permission.change_in_settings': 'You can change your user level in Settings → General.',
 
     'debate.title': 'Debate Panel',
     'debate.subtitle': 'Multi-agent structured argumentation with live visualization',

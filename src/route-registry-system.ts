@@ -1,4 +1,4 @@
-import { Icons } from './route-registry-icons';
+﻿import { Icons } from './route-registry-icons';
 import type { NavSection } from './types/routing';
 
 export const SYSTEM_SECTIONS: NavSection[] = [
@@ -11,14 +11,12 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 labelKey: 'nav.agents',
                 icon: Icons.bot,
                 color: '#8b5cf6',
-                level: 'L1',
             },
             {
                 id: 'roles',
                 labelKey: 'nav.roles',
                 icon: Icons.users,
                 color: '#3b82f6',
-                level: 'L1',
             },
             {
                 id: 'roles-consortia',
@@ -26,7 +24,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.users,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'sre',
@@ -34,7 +31,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.zap,
                 color: '#ef4444',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'agent-journal',
@@ -42,7 +38,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.bookOpen,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'mission',
@@ -50,7 +45,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.zap,
                 color: '#f59e0b',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'live',
@@ -58,7 +52,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.radio,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'agent-marketplace',
@@ -66,7 +59,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.star,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'agent-comparison',
@@ -74,7 +66,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.gitCompare,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'agent-protocol',
@@ -82,7 +73,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.network,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'persona-marketplace',
@@ -90,7 +80,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.store,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'persona-picker',
@@ -98,7 +87,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.sparkles,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
         ],
     },
@@ -111,14 +99,12 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 labelKey: 'nav.providers',
                 icon: Icons.key,
                 color: '#3b82f6',
-                level: 'L0',
             },
             {
                 id: 'pools',
                 labelKey: 'nav.key_pools',
                 icon: Icons.layers,
                 color: '#3b82f6',
-                level: 'L2',
             },
             {
                 id: 'groups',
@@ -126,7 +112,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.folderTree,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'key-notes',
@@ -134,7 +119,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.stickyNote,
                 color: '#f59e0b',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'provider-dashboard',
@@ -142,7 +126,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.gauge,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'groq-speed',
@@ -150,7 +133,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.zap,
                 color: '#22c55e',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'smart-routing',
@@ -158,7 +140,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.route,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'provider-marketplace',
@@ -166,21 +147,18 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.star,
                 color: '#10b981',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'connectors',
                 labelKey: 'nav.connectors',
                 icon: Icons.share2,
                 color: '#3b82f6',
-                level: 'L1',
             },
             {
                 id: 'mcp',
                 labelKey: 'nav.mcp_servers',
                 icon: Icons.server,
                 color: '#a855f7',
-                level: 'L1',
             },
             {
                 id: 'session-bindings',
@@ -188,7 +166,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.share2,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'guardians',
@@ -196,7 +173,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.shield,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'nvidia-enterprise',
@@ -204,7 +180,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.hardDrive,
                 color: '#76b900',
                 lazy: true,
-                level: 'L2',
             },
         ],
     },
@@ -218,7 +193,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.terminal,
                 color: '#94a3b8',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'debugger',
@@ -226,7 +200,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.gitBranch,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'router-trace',
@@ -234,7 +207,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.network,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'memory',
@@ -242,7 +214,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.database,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'memory-palace',
@@ -250,7 +221,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.database,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'health',
@@ -258,7 +228,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.heart,
                 color: '#ef4444',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'system-health',
@@ -266,7 +235,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.activity,
                 color: '#22c55e',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'docs-health',
@@ -274,7 +242,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.fileCode,
                 color: '#22c55e',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'pressure',
@@ -282,7 +249,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.thermometer,
                 color: '#f97316',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'runtime-pressure',
@@ -290,7 +256,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.activity,
                 color: '#f97316',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'what-if',
@@ -298,7 +263,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.shuffle,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'dependency-map',
@@ -306,7 +270,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.gitCompare,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'diagnostics',
@@ -314,7 +277,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.crosshair,
                 color: '#10b981',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'state-inspector',
@@ -322,7 +284,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.eye,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'performance-profiler',
@@ -330,7 +291,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.trendingUp,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'shadow',
@@ -338,7 +298,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.gitBranch,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'causal-debugger',
@@ -346,7 +305,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.shuffle,
                 color: '#a78bfa',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'counterfactual',
@@ -354,7 +312,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.messageCircle,
                 color: '#f59e0b',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'aquarium',
@@ -362,7 +319,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.eye,
                 color: '#06b6d4',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'ecosystem',
@@ -370,7 +326,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.fish,
                 color: '#22c55e',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'health-sla',
@@ -378,7 +333,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.slidersHorizontal,
                 color: '#10b981',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'leaderboard',
@@ -386,7 +340,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.trophy,
                 color: '#f59e0b',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'federated-memory',
@@ -394,7 +347,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.server,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'memory-export-import',
@@ -402,7 +354,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.upload,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'aquarium-trading',
@@ -410,7 +361,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.fish,
                 color: '#06b6d4',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'scheduler',
@@ -418,7 +368,6 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.clock,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
         ],
     },

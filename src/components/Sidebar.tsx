@@ -3,7 +3,6 @@ import { Search, X, PanelRightOpen, PanelRightClose, ChevronDown } from 'lucide-
 import { motion } from 'framer-motion';
 import type { TranslationKey } from '../i18n/translations';
 import { NAV_SECTIONS } from '../route-registry';
-import type { UserLevel } from '../types/routing';
 import {
     getPinned,
     savePinned,
@@ -24,8 +23,6 @@ interface SidebarProps {
     runtimeStatus: 'online' | 'degraded' | 'offline';
     isDesktop: boolean;
     featureFlags: Record<string, boolean>;
-    userLevel: UserLevel;
-    onUserLevelChange: (level: UserLevel) => void;
     t: (key: TranslationKey) => string;
     navLabelKey: Record<string, TranslationKey>;
 }
@@ -40,8 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     runtimeStatus,
     isDesktop,
     featureFlags,
-    userLevel,
-    onUserLevelChange,
     t,
     navLabelKey,
 }) => {
@@ -174,13 +169,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <nav className="sidebar-nav">
                     {NAV_SECTIONS.map((section) => {
                         const sectionCollapsed = collapsedSections.has(section.id);
-                        const levelRank = { L0: 0, L1: 1, L2: 2 } as const;
-                        const minRank = levelRank[userLevel];
                         const q = sidebarSearchQuery.toLowerCase();
                         const hasSearch = q.length > 0;
                         const showItems = hasSearch || !sectionCollapsed;
                         const visibleItems = section.items.filter((item) => {
-                            if (levelRank[item.level || 'L2'] > minRank) return false;
                             if (
                                 q &&
                                 !t(navLabelKey[item.id] ?? '')
@@ -286,49 +278,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </nav>
 
                 <div className="sidebar-footer">
-                    {!isCollapsed && (
-                        <div
-                            style={{
-                                padding: '0.25rem 1rem',
-                                display: 'flex',
-                                gap: 2,
-                                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                                marginBottom: 2,
-                            }}
-                        >
-                            {(['L0', 'L1', 'L2'] as UserLevel[]).map((lvl) => (
-                                <button
-                                    key={lvl}
-                                    onClick={() => onUserLevelChange(lvl)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.25rem 0',
-                                        borderRadius: 4,
-                                        border: 'none',
-                                        background:
-                                            userLevel === lvl
-                                                ? 'rgba(168,85,247,0.2)'
-                                                : 'transparent',
-                                        color: userLevel === lvl ? '#a855f7' : '#64748b',
-                                        fontSize: '0.6rem',
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
-                                    }}
-                                    title={
-                                        lvl === 'L0'
-                                            ? 'Chat mode'
-                                            : lvl === 'L1'
-                                              ? 'Creator mode'
-                                              : 'Admin mode'
-                                    }
-                                >
-                                    {lvl === 'L0' ? '💬' : lvl === 'L1' ? '⚡' : '⚙️'} {lvl}
-                                </button>
-                            ))}
-                        </div>
-                    )}
                     <div className="system-status">
                         <div className={`status-indicator ${runtimeStatus}`} />
                         {!isCollapsed && (

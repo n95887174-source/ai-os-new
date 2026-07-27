@@ -32,8 +32,7 @@ import { SessionLinkRepository } from '../dal/session-link-repository';
 import { DebateTimelineRepository } from '../dal/debate-timeline-repository';
 import { DebateOverrideRepository } from '../dal/debate-override-repository';
 import type { AdvisorService } from '../services/advisor-service';
-import { AuthorizationService } from '../services/authorization-service';
-import type { IAuthorizationService } from '../contracts/authorization';
+
 import { DeadLetterQueueService } from '../services/dead-letter-queue-service';
 import type { IDeadLetterQueue } from '../contracts/dead-letter-queue';
 import { DistributedLockService } from '../services/cross-tab-lock-service';
@@ -269,14 +268,6 @@ export const registerPhase1: Phase = (helpers, ctx) => {
                 }
             },
         });
-    });
-
-    // Authorization service — kernel-level permission enforcement.
-    // UI layer calls authService.setLevel() on auth change to sync the level.
-    // Defaults to L0 (lowest privilege); sensitive services check via requireLevel().
-    register('authorizationService', () => {
-        const svc = new AuthorizationService();
-        return svc as IAuthorizationService;
     });
 
     // Dead Letter Queue — persistent storage for failed events that exceeded retries.

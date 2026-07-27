@@ -2089,3 +2089,44 @@ DistributedLockService (Dexie keyValue, distlock:{prefix})
 | --------- | -------- |
 | tsc -b    | 0 errors |
 | Typecheck | ✅ pass  |
+
+---
+
+## Session 70 — Fix debate state machine stuck in created + provider exhaustion cascade + resolveProvider Step 1 missing triedKeys (v4.5.0 → v4.6.0) ✅
+
+**8 critical bugs fixed across eroor.md → erorrrrr4.md. Typecheck 0 errors.**
+
+### Problem chain
+
+| Log          | Symptom                                                                                                                | Root cause                                                                                                                                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| eroor.md     | WARN Invalid transition: created→*                                                                                     | transition() called _sm.can(event) read-only, never _sm.send()                                                                                                                                                                 |
+| eroor.md     | 402 cycling all providers                                                                                              | markProviderFailed() on content errors kills whole provider                                                                                                                                                                    |
+| erorrrrr.md  | CPU spin infinite retry                                                                                                | resolveProvider returns null → catch does `continue` without incrementing retries or backoff                                                                                                                                   |
+| erorrrrr2.md | anyWorking true but resolveProvider null                                                                               | anyWorking uses hasProviderFailed() only; resolveProvider also checks circuit breaker                                                                                                                                          |
+| erorrrrr3.md | anyWorking still true after triedKeys fix                                                                              | gemini circuit breaker OPEN from health check 400 → providerCanBeUsed() returns false, but anyWorking doesn't check it                                                                                                         |
+| erorrrrr4.md | resolveProvider keeps returning groq with no fresh models, anyWorking still true                                       | resolveProvider Step 1 (participant.provider match) doesn't check triedKeys — keeps returning the same exhausted key, never falls through to Step 4 which can pick gemini                                                      |
+| erorrrrr5.md | Same symptom but groq has 3+ keys — different fresh key found each retry, all models globally rejected via * wildcards | Step 1 finds unused groq keys (not in triedKeys), but all groq models are in rejectedCombos with `*` — model selection fails → null → spin. Fix: when "No available API keys", add ALL keys of exhausted provider to triedKeys |
+
+### Changes
+
+| #   | File                           | Change                                                                                                                                                                   |
+| --- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | debate-session.ts:152          | transition(): _sm.reset(to) after can() check — actual state mutation                                                                                                    |
+| 2   | debate-llm-caller.ts:1998-2003 | Response validation: markProviderFailed() → rejectedCombos.add()                                                                                                         |
+| 3   | debate-llm-caller.ts:2024-2027 | Entanglement validation: same — markProviderFailed() → rejectedCombos.add()                                                                                              |
+| 4   | debate-llm-caller.ts:2396-2412 | Infinite retry guard: noProviderSpinCount (max 5) + backoffWait() before continue                                                                                        |
+| 5   | debate-llm-caller.ts:2407-2413 | Content-level errors skip markProviderFailed() entirely                                                                                                                  |
+| 6   | debate-llm-caller.ts:386-392   | anyWorking: added !triedKeys.has(k.id) check                                                                                                                             |
+| 7   | debate-llm-caller.ts:389       | anyWorking: replaced `!session.hasProviderFailed(k.provider)` with `deps.providerResolver.providerCanBeUsed(k.provider, session)` — now checks circuit breaker state too |
+| 8   | debate-query-engine.ts:284,296 | resolveProvider Steps 1-2: added `!triedKeys.has(k.id)` to `keys.find()` — exhausted keys no longer block fallthrough to Step 4                                          |
+| 9   | debate-llm-caller.ts:2400-2412 | "No available API keys" handler: add ALL keys of exhausted provider to `triedKeys` — prevents unused sibling keys from looping via Step 1                                |
+
+### Build result
+
+### Build result
+
+| Metric    | Value    |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ PASS  |

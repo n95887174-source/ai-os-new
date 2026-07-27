@@ -19,7 +19,6 @@ import { setLanguage, type TranslationKey } from '../i18n/translations';
 import { useTranslation } from '../i18n/useTranslation';
 import { useChatStoreHydration } from '../stores/useChatStore';
 import { NAV_SECTIONS } from '../route-registry';
-import type { UserLevel } from '../types/routing';
 import { LayoutProvider } from './Layout/LayoutContext';
 import { LayoutSelector } from './Layout/LayoutSelector';
 import { NextActionPredictions } from './Layout/NextActionPredictions';
@@ -42,7 +41,7 @@ export const AppLayout: React.FC = () => {
     const [runtimeStatus, setRuntimeStatus] = useState<'online' | 'degraded' | 'offline'>('online');
     const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
     const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
-    const { userLevel, setUserLevel, theme: storedTheme, setTheme } = useUiPreferences();
+    const { theme: storedTheme, setTheme } = useUiPreferences();
     const [currentTheme, setCurrentTheme] = useState(
         () => document.documentElement.getAttribute('data-theme') || storedTheme || 'dark',
     );
@@ -63,13 +62,6 @@ export const AppLayout: React.FC = () => {
     );
     const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>(
         () => safeClone(CONFIG.featureFlags) as unknown as Record<string, boolean>,
-    );
-
-    const handleUserLevelChange = useCallback(
-        (level: UserLevel) => {
-            setUserLevel(level);
-        },
-        [setUserLevel],
     );
 
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -203,8 +195,6 @@ export const AppLayout: React.FC = () => {
                         runtimeStatus={runtimeStatus}
                         isDesktop={isDesktop}
                         featureFlags={featureFlags}
-                        userLevel={userLevel}
-                        onUserLevelChange={handleUserLevelChange}
                         t={t}
                         navLabelKey={navLabelKey}
                     />

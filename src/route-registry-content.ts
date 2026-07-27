@@ -1,4 +1,4 @@
-import { Icons } from './route-registry-icons';
+﻿import { Icons } from './route-registry-icons';
 import type { NavSection } from './types/routing';
 
 export const CONTENT_SECTIONS: NavSection[] = [
@@ -11,21 +11,18 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 labelKey: 'nav.patterns',
                 icon: Icons.bookOpen,
                 color: '#10b981',
-                level: 'L1',
             },
             {
                 id: 'knowledge',
                 labelKey: 'nav.knowledge',
                 icon: Icons.brain,
                 color: '#a855f7',
-                level: 'L0',
             },
             {
                 id: 'docs',
                 labelKey: 'nav.docs',
                 icon: Icons.bookText,
                 color: '#8b5cf6',
-                level: 'L0',
             },
             {
                 id: 'decision-log',
@@ -33,7 +30,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.clipboardList,
                 color: '#10b981',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'eval-datasets',
@@ -41,7 +37,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.barChart3,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'project-os',
@@ -49,7 +44,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.search,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'hypothesis-gen',
@@ -57,7 +51,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.flaskConical,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'research-engine',
@@ -65,7 +58,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.layers,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'tutorials',
@@ -73,7 +65,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.sparkles,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L0',
             },
             {
                 id: 'arch-review',
@@ -81,7 +72,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.bookText,
                 color: '#10b981',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'prompt-audit',
@@ -89,7 +79,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.terminal,
                 color: '#f59e0b',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'routing-experiments',
@@ -97,7 +86,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.barChart3,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'gov-stress-test',
@@ -105,7 +93,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.shield,
                 color: '#ef4444',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'obs-gaps',
@@ -113,7 +100,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.crosshair,
                 color: '#f97316',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'debate-system-research',
@@ -121,7 +107,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.flaskConical,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'research-reports',
@@ -129,7 +114,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.bookOpen,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'research-advanced',
@@ -137,7 +121,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.layers,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'research-gemini',
@@ -145,7 +128,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.sparkles,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'template-sharing',
@@ -153,7 +135,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.share2,
                 color: '#10b981',
                 lazy: true,
-                level: 'L2',
             },
         ],
     },
@@ -166,14 +147,12 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 labelKey: 'nav.skills',
                 icon: Icons.gitMerge,
                 color: '#f59e0b',
-                level: 'L1',
             },
             {
                 id: 'tools',
                 labelKey: 'nav.tools',
                 icon: Icons.wrench,
                 color: '#f59e0b',
-                level: 'L1',
             },
             {
                 id: 'editors',
@@ -181,7 +160,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.fileCode,
                 color: '#06b6d4',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'cache',
@@ -189,7 +167,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.hardDrive,
                 color: '#10b981',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'webhooks',
@@ -197,7 +174,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.webhook,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'rotations',
@@ -205,7 +181,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.refreshCw,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'service-registry',
@@ -213,7 +188,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.box,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'topology-templates',
@@ -221,7 +195,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.grid3X3,
                 color: '#06b6d4',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'playground',
@@ -229,7 +202,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.flaskConical,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'prompts',
@@ -237,7 +209,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.fileText,
                 color: '#06b6d4',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'prompt-versions',
@@ -245,7 +216,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.history,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'batch',
@@ -253,7 +223,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.listOrdered,
                 color: '#10b981',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'workflows',
@@ -261,7 +230,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.gitPullRequest,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'security',
@@ -269,7 +237,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.shield,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'ab-testing',
@@ -277,7 +244,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.gitCompare,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'fine-tuning',
@@ -285,7 +251,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.brain,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'team-collaboration',
@@ -293,7 +258,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.users,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'community-hub',
@@ -301,7 +265,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.share2,
                 color: '#f59e0b',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'google-studio',
@@ -309,7 +272,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.shield,
                 color: '#4285F4',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'google-cache',
@@ -317,7 +279,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.container,
                 color: '#4285F4',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'gemini-live',
@@ -325,7 +286,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.mic,
                 color: '#4285F4',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'meta-learning',
@@ -333,7 +293,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.brain,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'quantum-inspiration',
@@ -341,7 +300,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.atom,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'model-distillation',
@@ -349,7 +307,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.brain,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'deploy',
@@ -357,7 +314,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.rocket,
                 color: '#22c55e',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'voice-input',
@@ -365,7 +321,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.mic,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'plugin-sdk',
@@ -373,7 +328,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.puzzle,
                 color: '#a855f7',
                 lazy: true,
-                level: 'L2',
             },
         ],
     },
@@ -386,14 +340,12 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 labelKey: 'nav.settings',
                 icon: Icons.settings,
                 color: '#64748b',
-                level: 'L0',
             },
             {
                 id: 'policies',
                 labelKey: 'nav.policies',
                 icon: Icons.shield,
                 color: '#10b981',
-                level: 'L1',
             },
             {
                 id: 'policy-editor',
@@ -401,21 +353,18 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.zap,
                 color: '#06b6d4',
                 lazy: true,
-                level: 'L2',
             },
             {
                 id: 'audit',
                 labelKey: 'nav.audit_log',
                 icon: Icons.search,
                 color: '#94a3b8',
-                level: 'L1',
             },
             {
                 id: 'history',
                 labelKey: 'nav.config_history',
                 icon: Icons.history,
                 color: '#f59e0b',
-                level: 'L1',
             },
             {
                 id: 'export-import',
@@ -423,7 +372,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.database,
                 color: '#3b82f6',
                 lazy: true,
-                level: 'L1',
             },
             {
                 id: 'time-machine',
@@ -431,7 +379,6 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.clock,
                 color: '#8b5cf6',
                 lazy: true,
-                level: 'L2',
             },
         ],
     },

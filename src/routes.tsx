@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { Search, MessageSquare, Home } from 'lucide-react';
 import { t as translate } from './i18n/translations';
 import ErrorBoundary from './components/Common/ErrorBoundary';
-import { PermissionGate } from './components/Common/PermissionGate';
 import { NAV_SECTIONS } from './route-registry';
 import { PANEL_COMPONENTS, PanelLoader } from './route-imports';
 const DashboardPanel = React.lazy(() => import('./components/DashboardPanel/DashboardPanel'));
@@ -226,17 +225,15 @@ export const AppRoutes: React.FC = () => {
                                 key={`${s.id}-${item.id}`}
                                 path={routePath}
                                 element={
-                                    <PermissionGate requiredLevel={item.level}>
-                                        {item.lazy ? (
-                                            <PanelLoader name={item.id}>
-                                                <Component />
-                                            </PanelLoader>
-                                        ) : (
-                                            <ErrorBoundary name={item.id} variant="panel">
-                                                <Component />
-                                            </ErrorBoundary>
-                                        )}
-                                    </PermissionGate>
+                                    item.lazy ? (
+                                        <PanelLoader name={item.id}>
+                                            <Component />
+                                        </PanelLoader>
+                                    ) : (
+                                        <ErrorBoundary name={item.id} variant="panel">
+                                            <Component />
+                                        </ErrorBoundary>
+                                    )
                                 }
                             />
                         );
@@ -289,77 +286,61 @@ export const AppRoutes: React.FC = () => {
                 key="/debates/live"
                 path="/debates/live"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="DebateLive">
-                            {React.createElement(Panel('debate-live'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="DebateLive">
+                        {React.createElement(Panel('debate-live'))}
+                    </PanelLoader>
                 }
             />
             <Route
                 key="/debates/replay"
                 path="/debates/replay"
                 element={
-                    <PermissionGate requiredLevel="L2">
-                        <PanelLoader name="DebateReplay">
-                            {React.createElement(Panel('debate-replay'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="DebateReplay">
+                        {React.createElement(Panel('debate-replay'))}
+                    </PanelLoader>
                 }
             />
             <Route
                 key="/debates/tournament"
                 path="/debates/tournament"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="Tournament">
-                            {React.createElement(Panel('debate-tournament'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="Tournament">
+                        {React.createElement(Panel('debate-tournament'))}
+                    </PanelLoader>
                 }
             />
             <Route
                 key="/debates/history"
                 path="/debates/history"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="DebateHistory">
-                            {React.createElement(Panel('debate-history'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="DebateHistory">
+                        {React.createElement(Panel('debate-history'))}
+                    </PanelLoader>
                 }
             />
             <Route
                 key="/debates/analysis"
                 path="/debates/analysis"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="DebateAnalysis">
-                            {React.createElement(Panel('debate-analysis'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="DebateAnalysis">
+                        {React.createElement(Panel('debate-analysis'))}
+                    </PanelLoader>
                 }
             />
             <Route
                 key="/debates/graph"
                 path="/debates/graph"
                 element={
-                    <PermissionGate requiredLevel="L2">
-                        <PanelLoader name="ArgumentGraph">
-                            {React.createElement(Panel('argument-graph'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="ArgumentGraph">
+                        {React.createElement(Panel('argument-graph'))}
+                    </PanelLoader>
                 }
             />
             <Route
                 key="/debates/topics"
                 path="/debates/topics"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="Topics">
-                            {React.createElement(Panel('topics'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="Topics">{React.createElement(Panel('topics'))}</PanelLoader>
                 }
             />
 
@@ -368,31 +349,23 @@ export const AppRoutes: React.FC = () => {
                 key="/diagnostics/logs"
                 path="/diagnostics/logs"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="Logs">{React.createElement(Panel('logs'))}</PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="Logs">{React.createElement(Panel('logs'))}</PanelLoader>
                 }
             />
             <Route
                 key="/diagnostics/health"
                 path="/diagnostics/health"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="Health">
-                            {React.createElement(Panel('health'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="Health">{React.createElement(Panel('health'))}</PanelLoader>
                 }
             />
             <Route
                 key="/diagnostics/system"
                 path="/diagnostics/system"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="SystemHealth">
-                            {React.createElement(Panel('system-health'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="SystemHealth">
+                        {React.createElement(Panel('system-health'))}
+                    </PanelLoader>
                 }
             />
             <Route
@@ -408,22 +381,16 @@ export const AppRoutes: React.FC = () => {
                 key="/diagnostics/memory"
                 path="/diagnostics/memory"
                 element={
-                    <PermissionGate requiredLevel="L1">
-                        <PanelLoader name="Memory">
-                            {React.createElement(Panel('memory'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="Memory">{React.createElement(Panel('memory'))}</PanelLoader>
                 }
             />
             <Route
                 key="/diagnostics/aquarium"
                 path="/diagnostics/aquarium"
                 element={
-                    <PermissionGate requiredLevel="L2">
-                        <PanelLoader name="Aquarium">
-                            {React.createElement(Panel('aquarium'))}
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="Aquarium">
+                        {React.createElement(Panel('aquarium'))}
+                    </PanelLoader>
                 }
             />
 
@@ -470,11 +437,9 @@ export const AppRoutes: React.FC = () => {
                 key="/chat-admin"
                 path="/chat-admin"
                 element={
-                    <PermissionGate requiredLevel="L2">
-                        <PanelLoader name="ChatAdmin">
-                            <ChatAdminPanel />
-                        </PanelLoader>
-                    </PermissionGate>
+                    <PanelLoader name="ChatAdmin">
+                        <ChatAdminPanel />
+                    </PanelLoader>
                 }
             />
 

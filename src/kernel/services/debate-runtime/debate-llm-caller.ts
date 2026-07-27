@@ -295,6 +295,7 @@ export async function debateCallLlm(
     // duplicate. Without this guard, brute-force fallback loops forever.
     const rejectedCombos = new Set<string>();
     let duplicateRejectCount = 0;
+    let noProviderSpinCount = 0;
 
     // Quality settings: check if a specific technique is enabled
     // (default: enabled if not explicitly disabled)
@@ -385,8 +386,9 @@ export async function debateCallLlm(
                     const anyWorking = allKeys.some(
                         (k) =>
                             k.status === 'active' &&
-                            !session.hasProviderFailed(k.provider) &&
+                            deps.providerResolver.providerCanBeUsed(k.provider, session) &&
                             !deps.providerResolver.isKeyAuthFailed(k.id) &&
+                            !triedKeys.has(k.id) &&
                             hasUntriedModel(k),
                     );
                     const fp = Array.from(
@@ -1997,9 +1999,9 @@ export async function debateCallLlm(
                     // Throw so the catch block retries via fallback logic
                     if (resolvedKey) {
                         triedModels.add(modelId);
-                        // Same as duplicate: force provider switch so retry doesn't just
-                        // try the same provider with a different model/key.
-                        session.markProviderFailed(resolvedKey.provider);
+                        triedKeys.add(resolvedKey.id);
+                        rejectedCombos.add(`${resolvedKey.provider}|${modelId}|${resolvedKey.id}`);
+                        rejectedCombos.add(`${resolvedKey.provider}|${modelId}|*`);
                     }
                     throw new Error(`Response validation failed: ${validation.reason}`);
                 }
@@ -2023,7 +2025,11 @@ export async function debateCallLlm(
                             );
                             if (resolvedKey) {
                                 triedModels.add(modelId);
-                                session.markProviderFailed(resolvedKey.provider);
+                                triedKeys.add(resolvedKey.id);
+                                rejectedCombos.add(
+                                    `${resolvedKey.provider}|${modelId}|${resolvedKey.id}`,
+                                );
+                                rejectedCombos.add(`${resolvedKey.provider}|${modelId}|*`);
                             }
                             throw new Error(`Entanglement validation failed: ${entResult.reason}`);
                         }
@@ -2389,11 +2395,43 @@ export async function debateCallLlm(
                     // When resolveProvider returned null ("No available API keys"), the
                     // previous resolvedKey is stale — the provider itself isn't the problem,
                     // all its models are just exhausted. Don't mark it as failed; just retry.
+                    // But guard against infinite spin: if all providers are truly exhausted
+                    // for this agent, break out after MAX_NO_PROVIDER_SPIN attempts.
                     if (error.includes('No available API keys')) {
+                        noProviderSpinCount++;
+                        // Mark ALL keys of this provider as tried so unused keys don't
+                        // keep getting resolved by Step 1 only to fail at model selection
+                        // (e.g. 3rd groq key with all models globally rejected via * wildcards).
+                        if (resolvedKey) {
+                            const allKeys = keyService.getKeys();
+                            for (const k of allKeys) {
+                                if (k.provider === resolvedKey.provider) triedKeys.add(k.id);
+                            }
+                        }
+                        if (noProviderSpinCount >= 5) {
+                            deps.sessionAbortControllers
+                                .get(sessionId)
+                                ?.delete(participant.agentId);
+                            throw new Error(
+                                'No available API keys after retries — debate cannot proceed for this agent',
+                                { cause: e },
+                            );
+                        }
+                        await backoffWait(noProviderSpinCount, externalSignal);
                         deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                         continue;
                     }
                     if (!resolvedKey) {
+                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                        continue;
+                    }
+                    // Content-level failures (validation, entanglement) reflect model
+                    // output quality — not provider availability. Don't mark the entire
+                    // provider as failed; retry with a different model/provider instead.
+                    if (
+                        error.includes('Response validation failed') ||
+                        error.includes('Entanglement validation failed')
+                    ) {
                         deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                         continue;
                     }
