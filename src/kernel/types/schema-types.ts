@@ -414,6 +414,7 @@ export const KeyValueSchema = z.object({
     id: z.string(),
     value: z.unknown(),
     createdAt: z.number().optional(),
+    version: z.number().optional(),
 });
 
 export const EventPayloadSchema = z.object({

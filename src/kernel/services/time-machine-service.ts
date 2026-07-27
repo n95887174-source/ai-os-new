@@ -223,13 +223,13 @@ export class TimeMachineService implements ITimeMachineService {
                 ...snap.changes,
                 `Restored to ${snap.label} (${new Date().toLocaleString()})`,
             ];
-            void this.persist();
+            await this.persist();
         } catch (e) {
             snap.changes = [
                 ...snap.changes,
                 `Restore failed for ${snap.label}: ${e instanceof Error ? e.message : String(e)}`,
             ];
-            void this.persist();
+            await this.persist();
             throw e;
         }
         this.deps.eventBus?.emit(EVENTS.SNAPSHOT_RESTORED, {

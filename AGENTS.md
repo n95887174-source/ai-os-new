@@ -764,6 +764,29 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 
 ---
 
+## Session 64 — Lost updates: trace-service + memory-engine + 8 missed awaits (v4.5.0 → v4.6.0) ✅
+
+**Lost updates (Row 9): 40% → 55%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                                                                        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `trace-service.ts` — `removeTrace()`/`clearAll()` made async with `await repo operation` and state revert on failure. `persist()` now adds failed traces to retry queue with 3 attempts. Periodic 30s `_retryFailedPersists()` sweep. `destroy()` flushes retry queue on shutdown. |
+| 2   | `memory-engine.ts` — `pruneOldEntries()` worker calls converted to `Promise.allSettled`. `deleteMemory()` worker `sendToWorker('remove')` now awaited. `clear()` worker `sendToWorker('init')` now awaited.                                                                        |
+| 3   | `time-machine-service.ts` — 2 `void this.persist()` → `await this.persist()` in `restoreSnapshot()`.                                                                                                                                                                               |
+| 4   | `notification-webhook-service.ts` — 2 `this.save()` → `await this.save()` in `addWebhook()`, `updateWebhook()`.                                                                                                                                                                    |
+| 5   | `mcp-service.ts` — 4 `this.save()` → `await this.save()` in `load()`, `connect()`, `disconnect()`.                                                                                                                                                                                 |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 21 — Eliminate dual memory systems: MemoryOrchestrator → MemoryService delegate (v4.5.0 → v4.6.0) ✅
 
 **Dual memory systems eliminated. Typecheck 0 errors. 7 individual in-memory stores replaced with ServiceBackedMemoryStore delegating to MemoryService (Dexie).**

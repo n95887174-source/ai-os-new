@@ -22,6 +22,10 @@ export interface IEventBus {
 export interface IDatabaseService {
     getKv<T>(id: string): Promise<T | null>;
     setKv<T>(id: string, value: T): Promise<void>;
+    /** Read a key-value pair including its version number for CAS. */
+    getKvCas<T>(id: string): Promise<{ value: T | null; version: number }>;
+    /** Write a key-value pair only if the version matches. Returns false on conflict. */
+    setKvCas<T>(id: string, value: T, expectedVersion: number): Promise<boolean>;
     exportToJson(includeSecrets?: boolean): Promise<Record<string, unknown[]>>;
     importFromJson(data: Record<string, unknown[]>): Promise<void>;
     saveWorkflow(topology: unknown): Promise<void>;

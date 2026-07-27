@@ -93,7 +93,7 @@ export class MCPService {
                         status: 'disconnected',
                     },
                 ];
-                this.save();
+                await this.save();
             }
         } catch (e) {
             LOGGER.warn('MCPService', 'Failed to load servers, using defaults', { error: e });
@@ -218,7 +218,7 @@ export class MCPService {
             server.capabilities = result.capabilities ? Object.keys(result.capabilities) : [];
             server.status = 'connected';
             this.connectionRetries.delete(serverId);
-            this.save();
+            await this.save();
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                 message: `Connected to MCP Server: ${server.name}`,
                 type: 'success',
@@ -227,7 +227,7 @@ export class MCPService {
             server.status = 'error';
             server.error = err instanceof Error ? err.message : String(err);
             this.connectionRetries.set(serverId, retries + 1);
-            this.save();
+            await this.save();
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                 message: `MCP ${server.name} connection failed: ${server.error}`,
                 type: 'error',
@@ -241,7 +241,7 @@ export class MCPService {
         if (!server) return;
         server.status = 'disconnected';
         server.error = undefined;
-        this.save();
+        await this.save();
     }
 
     async reconnectAll(): Promise<number> {

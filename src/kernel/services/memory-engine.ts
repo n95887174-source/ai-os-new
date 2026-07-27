@@ -147,13 +147,15 @@ export class MemoryService implements IMemoryEngine {
             await this.memoryRepo.prune(cutoff);
             await this.withMemoriesLock(async () => {
                 this.memories = this.memories.filter((m) => (m.metadata.timestamp ?? 0) >= cutoff);
-                for (const m of removed) {
-                    this.sendToWorker('remove', { id: m.id }).catch((e: unknown) => {
-                        LOGGER.warn('MemoryEngine', 'Worker remove during prune failed', {
-                            error: e,
-                        });
-                    });
-                }
+                await Promise.allSettled(
+                    removed.map((m) =>
+                        this.sendToWorker('remove', { id: m.id }).catch((e: unknown) => {
+                            LOGGER.warn('MemoryEngine', 'Worker remove during prune failed', {
+                                error: e,
+                            });
+                        }),
+                    ),
+                );
                 this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.memories);
             });
         } catch (e) {
@@ -604,11 +606,11 @@ export class MemoryService implements IMemoryEngine {
             });
         }
         if (this.worker) {
-            this.sendToWorker('remove', { id }).catch((e) =>
+            await this.sendToWorker('remove', { id }).catch((e) =>
                 LOGGER.warn('MemoryEngine', 'Worker remove failed', { error: e }),
             );
         } else {
-            this.ensureWorker().catch((e) =>
+            await this.ensureWorker().catch((e) =>
                 LOGGER.warn('MemoryEngine', 'ensureWorker failed', { error: e }),
             );
         }
@@ -896,7 +898,7 @@ export class MemoryService implements IMemoryEngine {
                 });
             }
             if (this.worker)
-                this.sendToWorker('init', { memories: [] }).catch((e) =>
+                await this.sendToWorker('init', { memories: [] }).catch((e) =>
                     LOGGER.warn('MemoryEngine', 'Worker re-init after clear failed', { error: e }),
                 );
         });

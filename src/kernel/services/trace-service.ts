@@ -45,6 +45,11 @@ export class TraceService {
     private lastEmitTime = 0;
     private static EMIT_INTERVAL_MS = 500;
 
+    private _persistQueue = new Map<string, { trace: ExecutionTrace; attempts: number }>();
+    private static MAX_RETRY_ATTEMPTS = 3;
+    private static RETRY_INTERVAL_MS = 30_000;
+    private _persistTimer: ReturnType<typeof setInterval> | null = null;
+
     constructor(deps: TraceServiceDeps) {
         this.deps = deps;
         this.traceRepo = new TraceRepository(deps.database);
@@ -82,6 +87,10 @@ export class TraceService {
         await this.load();
         this.setupListeners();
         this.sweepTimer = setInterval(() => this.sweepStaleTraces(), 5 * 60 * 1000);
+        this._persistTimer = setInterval(
+            () => this._retryFailedPersists(),
+            TraceService.RETRY_INTERVAL_MS,
+        );
     }
 
     private async load() {
@@ -97,8 +106,25 @@ export class TraceService {
     private async persist(trace: ExecutionTrace) {
         try {
             await this.traceRepo.save(trace);
+            this._persistQueue.delete(trace.id);
         } catch (e) {
             LOGGER.error('TraceService', 'Failed to persist trace', { error: String(e) });
+            this._persistQueue.set(trace.id, {
+                trace,
+                attempts: (this._persistQueue.get(trace.id)?.attempts ?? 0) + 1,
+            });
+        }
+    }
+
+    private _retryFailedPersists(): void {
+        if (this._persistQueue.size === 0) return;
+        for (const [id, entry] of this._persistQueue) {
+            if (entry.attempts > TraceService.MAX_RETRY_ATTEMPTS) {
+                LOGGER.error('TraceService', 'Dropping trace after max retries', { traceId: id });
+                this._persistQueue.delete(id);
+                continue;
+            }
+            this.persist(entry.trace);
         }
     }
 
@@ -316,9 +342,21 @@ export class TraceService {
         }
     }
 
-    destroy() {
+    async destroy() {
         this._initialized = false;
         this.unsubs.forEach((u) => u());
+        if (this._persistTimer) {
+            clearInterval(this._persistTimer);
+            this._persistTimer = null;
+        }
+        if (this._persistQueue.size > 0) {
+            await Promise.allSettled(
+                Array.from(this._persistQueue.values()).map((entry) =>
+                    this.traceRepo.save(entry.trace),
+                ),
+            );
+            this._persistQueue.clear();
+        }
         this.activeTraces.clear();
         if (this.sweepTimer) {
             clearInterval(this.sweepTimer);
@@ -396,24 +434,34 @@ export class TraceService {
         this.throttledEmit();
     }
 
-    removeTrace(id: string) {
+    async removeTrace(id: string) {
+        const snapshot = [...this.traces];
         this.traces = this.traces.filter((t) => t.id !== id);
-        this.traceRepo
-            .delete(id)
-            .catch((e) =>
-                LOGGER.error('TraceService', 'Failed to delete trace', { error: String(e) }),
-            );
+        try {
+            await this.traceRepo.delete(id);
+        } catch (e) {
+            LOGGER.error('TraceService', 'Failed to delete trace — reverting state', {
+                error: String(e),
+            });
+            this.traces = snapshot;
+        }
         this.emitTraces();
     }
 
-    clearAll() {
+    async clearAll() {
+        const snapshot = [...this.traces];
+        const activeSnapshot = new Map(this.activeTraces);
         this.traces = [];
         this.activeTraces.clear();
-        this.traceRepo
-            .clear()
-            .catch((e) =>
-                LOGGER.error('TraceService', 'Failed to clear traces', { error: String(e) }),
-            );
+        try {
+            await this.traceRepo.clear();
+        } catch (e) {
+            LOGGER.error('TraceService', 'Failed to clear traces — reverting state', {
+                error: String(e),
+            });
+            this.traces = snapshot;
+            this.activeTraces = activeSnapshot;
+        }
         this.emitTraces();
     }
 

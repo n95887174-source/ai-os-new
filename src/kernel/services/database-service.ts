@@ -220,6 +220,12 @@ export class DatabaseService implements IDatabaseService {
         return record.value as T;
     }
 
+    async getKvCas<T>(id: string): Promise<{ value: T | null; version: number }> {
+        const record = await getDexieDb().keyValue.get(id);
+        if (!record) return { value: null, version: 0 };
+        return { value: record.value as T, version: record.version ?? 0 };
+    }
+
     async setKv<T>(id: string, value: T): Promise<void> {
         const dexie = getDexieDb();
         await dexie.transaction('rw', dexie.keyValue, async () => {
@@ -228,8 +234,31 @@ export class DatabaseService implements IDatabaseService {
                 id,
                 value,
                 createdAt: existing?.createdAt ?? Date.now(),
+                version: (existing?.version ?? 0) + 1,
             });
         });
+    }
+
+    async setKvCas<T>(id: string, value: T, expectedVersion: number): Promise<boolean> {
+        const dexie = getDexieDb();
+        try {
+            await dexie.transaction('rw', dexie.keyValue, async () => {
+                const existing = await dexie.keyValue.get(id);
+                const currentVersion = existing?.version ?? 0;
+                if (currentVersion !== expectedVersion) {
+                    throw new Error('Version conflict');
+                }
+                await dexie.keyValue.put({
+                    id,
+                    value,
+                    createdAt: existing?.createdAt ?? Date.now(),
+                    version: currentVersion + 1,
+                });
+            });
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     async bulkPutConnectors(connectors: Connector[]): Promise<void> {

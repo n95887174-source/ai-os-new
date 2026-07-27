@@ -329,7 +329,7 @@ export class NotificationWebhookService {
         };
         this.webhooks.push(webhook);
         if (this.webhooks.length > MAX_WEBHOOKS) this.webhooks = this.webhooks.slice(-MAX_WEBHOOKS);
-        this.save();
+        await this.save();
         return webhook;
     }
 
@@ -342,7 +342,7 @@ export class NotificationWebhookService {
         if (updates.webhookUrl && !(await isValidWebhookUrl(updates.webhookUrl)))
             throw new Error(`Invalid webhook URL (blocked SSRF): ${updates.webhookUrl}`);
         this.webhooks = this.webhooks.map((w) => (w.id === id ? { ...w, ...updates } : w));
-        this.save();
+        await this.save();
     }
 
     async testWebhook(id: string): Promise<{ ok: boolean; status?: number }> {
