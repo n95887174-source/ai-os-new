@@ -29,7 +29,10 @@ const DEFAULT_CONFIG: CircuitConfig = {
 };
 
 // 402 = Payment Required (no credits). Fail fast — don't retry, don't accumulate circuit failures.
-const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 402, 403, 405, 422]);
+// 429 = Rate Limited (transient). The debate-llm-caller handles 429 with per-agent rate-backoff
+// independently. Opening the circuit on 429 would block ALL keys for the provider (via hasAnyOpenCircuit),
+// killing multi-agent debates when a single key hits a rate limit.
+const NON_CIRCUIT_HTTP_STATUSES = new Set([400, 401, 402, 403, 405, 422, 429]);
 // P1-6: server errors (5xx) open circuit after 2 failures instead of waiting for default threshold (5)
 const SERVER_ERROR_STATUSES = new Set([500, 502, 503, 504]);
 
