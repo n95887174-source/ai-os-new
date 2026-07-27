@@ -19,7 +19,7 @@ const STRENGTHENED_SEPARATOR = '=== STRENGTHENED ===';
 export class ShadowOpponentService implements IShadowOpponentService {
     async strengthenArgument(
         draftContent: string,
-        _systemPrompt: string,
+        systemPrompt: string,
         _agentId: string,
         agentName: string,
         adapter: {
@@ -38,20 +38,31 @@ export class ShadowOpponentService implements IShadowOpponentService {
         if (draftContent.trim().length < 50) return null;
         if (signal.aborted) return null;
 
+        // Extract the agent's role context from the system prompt (first ~300 chars
+        // contain the "Your Role" + "Your Character" + "Your Unique Lens" blocks).
+        // This ensures the critique/strengthen maintains role-specific perspective.
+        const roleContext = systemPrompt
+            ? systemPrompt
+                  .replace(/<[^>]*>/g, '')
+                  .replace(/## Topic:.*?(?=## Your Role|$)/s, '')
+                  .slice(0, 300)
+                  .trim()
+            : '';
+
         const langInstruction =
             language === 'Russian'
-                ? `Ты — ${agentName}. Но сейчас ты — самый сильный оппонент самого себя.`
-                : `You are ${agentName}. But right now you are your own strongest opponent.`;
+                ? `Ты — ${agentName}. Твоя роль: ${roleContext || 'участник дебатов'}. Но сейчас ты — самый сильный оппонент самого себя. Сохраняй свою экспертизу и уникальный угол зрения.`
+                : `You are ${agentName}. Your role: ${roleContext || 'debate participant'}. But right now you are your own strongest opponent. Maintain your expertise and unique lens.`;
 
         const critiquePrompt = `${langInstruction}
 
 Прочитай свой предыдущий аргумент. Найди в нём ровно ОДНУ слабость — самое уязвимое место.
 
 === КРИТИКА ===
-Напиши короткую критику (2-3 предложения) от лица оппонента. Будь беспощаден, но краток.
+Напиши короткую критику (2-3 предложения) от лица оппонента. Будь беспощаден, но краток. Критикуй с точки зрения своей экспертизы.
 
 === УСИЛЕНИЕ ===
-Теперь перепиши свой исходный аргумент, закрыв эту слабость. Добавь контр-аргумент или уточнение. Сохрани общую позицию, но сделай её неуязвимее.
+Теперь перепиши свой исходный аргумент, закрыв эту слабость. Добавь контр-аргумент или уточнение. Сохрани общую позицию, но сделай её неуязвимее. Усиление должно отражать твою уникальную экспертизу и угол зрения.
 
 ОТВЕЧАЙ ТОЛЬКО В ЭТОМ ФОРМАТЕ:
 

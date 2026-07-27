@@ -1427,702 +1427,36 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 | Metric    | Value    |
 | --------- | -------- |
 | tsc -b    | 0 errors |
-| Typecheck | PASS     |
-
-### Coverage delta
-
-| Failure Class           | Before | After | Delta |
-| ----------------------- | ------ | ----- | ----- |
-| Dual-write (row 3)      | ~18%   | ~40%  | +22%  |
-| Partial failure (row 6) | ~5%    | ~10%  | +5%   |
-| Ordering bugs (row 10)  | ~15%   | ~20%  | +5%   |
+| Typecheck | ✅ PASS  |
 
 ---
 
-## Session 36 - Wire Dead Letter Queue to debate-llm-caller + DI registration (v4.5.0 → v4.6.0) ✅
+## Session 72 — Fix Bug 6: cross-agent duplicate blocks retry of working model in single-provider setup (v4.5.0 → v4.6.0) ✅
 
-**5 files changed. Typecheck 0 errors.**
+**1 bug fixed. Typecheck 0 errors.**
 
-### Plan
+### План
 
-| #   | Task                                                              | Status |
-| --- | ----------------------------------------------------------------- | ------ |
-| 1   | **Verify** BudgetService destroy() cleanup intact                 | DONE   |
-| 2   | **Register** DeadLetterQueueService in DI container               | DONE   |
-| 3   | **Add** deadLetterQueue to LlmCallerDeps + DebateEngineDeps       | DONE   |
-| 4   | **Wire** DLQ pushes at 4 retry exhaustion points in debateCallLlm | DONE   |
-
-### Changes
-
-| #   | What was done                                                                                                                                                                         |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Verified BudgetService.destroy() — Session 32 fix intact: _saveTimer, sentAlerts, agentBudgets, agentSpend, _costDedupSet, alertsHistory, budgetInfoCache, _monthFiltered all cleaned |
-| 2   | Registered DeadLetterQueueService as 'deadLetterQueue' in phase1-foundation.ts DI container                                                                                           |
-| 3   | Added deadLetterQueue to LlmCallerDeps interface in debate-llm-caller.ts                                                                                                              |
-| 4   | Added DLQ push at 4 retry exhaustion paths in debateCallLlm(): debate:all_providers_dead, debate:llm_timeout, debate:llm_failure, debate:llm_max_retries                              |
-| 5   | Added deadLetterQueue to DebateEngineDeps + passed through in callLLM()                                                                                                               |
-| 6   | Wired deadLetterQueue from container in phase3-debate-runtime.ts                                                                                                                      |
-
-### Build result
-
-| Metric    | Value    |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | PASS     |
-
-### Coverage delta (reliability matrix)
-
-| Failure Class                   | Before | After | Delta |
-| ------------------------------- | ------ | ----- | ----- |
-| Event loss (row 4)              | ~35%   | ~50%  | +15%  |
-| Infinite retries / DLQ (row 12) | ~5%    | ~30%  | +25%  |
-| Resource leaks (row 14)         | ~87%   | ~97%  | +10%  |
-
----
-
-## Session 37 — Fix 30+ fire-and-forget persist calls across 8 services (v4.5.0 → v4.6.0) ✅
-
-**8 files changed, 30+ persist calls fixed. Typecheck 0 errors.**
-
-### Plan
-
-| #   | File                       | Fixed | Task                                                                                       |
-| --- | -------------------------- | ----- | ------------------------------------------------------------------------------------------ |
-| 1   | role-service.ts            | 4     | addRole, updateRole, duplicateRole, promoteToBuiltin                                       |
-| 2   | task-handoff.ts            | 5     | handoff, accept, complete, fail, cancel                                                    |
-| 3   | tool-executor.ts           | 4     | importTools, addTool, removeTool, toggleTool                                               |
-| 4   | skill-service.ts           | 4     | toggleActive, installSkill, incrementExecution, importSkills                               |
-| 5   | metrics-service.ts         | 4     | captureSnapshot, resolveAlert, setThresholds, resetHistory + cleanup interval .catch()     |
-| 6   | policy-service.ts          | 12    | All mutating methods (addPolicy, removePolicy, updatePolicy, setAgentPolicy, etc.)         |
-| 7   | prompt-security-service.ts | 1     | updateConfig                                                                               |
-| 8   | trace-service.ts           | 0     | Skipped — EventBus onSafe doesn't support async callbacks (6 sites remain fire-and-forget) |
-
-### Changes
-
-| #   | What was done                                                                                                                                                                                                                                                                             |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **role-service.ts**: 4 methods converted to async — addRole, updateRole, duplicateRole, promoteToBuiltin now await persist() before emit                                                                                                                                                  |
-| 2   | **task-handoff.ts**: 5 methods converted to async — handoff, accept, complete, fail, cancel now await persist() before emit/return                                                                                                                                                        |
-| 3   | **tool-executor.ts**: importTools awaits persist(); addTool/removeTool/toggleTool converted from .then() pattern to await (no more unhandled rejections)                                                                                                                                  |
-| 4   | **skill-service.ts**: 4 methods converted to async — toggleActive, installSkill, incrementExecution, importSkills await persist()                                                                                                                                                         |
-| 5   | **metrics-service.ts**: captureSnapshot (private, was already async) now awaits persist(); resolveAlert, setThresholds, resetHistory made async with await; cleanup interval persist gets .catch()                                                                                        |
-| 6   | **policy-service.ts**: All 12 mutating methods made async with await persist() — recordViolation, addPolicy, removePolicy, updatePolicy, setAgentPolicy, removeAgentPolicy, addSecurityPattern, removeSecurityPattern, removeBlockedModel, resolveViolation, clearViolations, setPatterns |
-| 7   | **prompt-security-service.ts**: updateConfig made async with await persist()                                                                                                                                                                                                              |
-| 8   | **trace-service.ts**: Skipped — EventBus onSafe fires callbacks synchronously, async wouldn't be awaited. Would need onSafe to support async handlers.                                                                                                                                    |
-
-### Build result
-
-| Metric    | Value    |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | PASS     |
-
-### Coverage delta (reliability matrix)
-
-| Failure Class            | Before | After | Delta |
-| ------------------------ | ------ | ----- | ----- |
-| Fire-and-forget (row 13) | ~30%   | ~55%  | +25%  |
-| Lost updates (row 9)     | ~10%   | ~25%  | +15%  |
-
----
-
-## Session 38 — Wire Zod hooks for remaining 4 Dexie tables (v4.5.0 → v4.6.0) ✅
-
-**2 files changed. Typecheck 0 errors. Schema drift: 60% → 80%.**
-
-### Plan
-
-| #   | Task                                                                               | Status |
-| --- | ---------------------------------------------------------------------------------- | ------ |
-| 1   | **Create** Zod schemas for debateTimeline, debateOverrides, sessionLinks, eventLog | DONE   |
-| 2   | **Wire** creating + updating hooks for all 4 tables in dexie-schema.ts             | DONE   |
-
-### Changes
-
-| #   | What was done                                                                                            |
-| --- | -------------------------------------------------------------------------------------------------------- |
-| 1   | Created DebateTimelineEntrySchema (id, sessionId, timestamp, type, payload) in schema-types.ts           |
-| 2   | Created DebateOverrideSchema (id, sessionId, type, payload, appliedAt) in schema-types.ts                |
-| 3   | Created SessionLinkSchema (id, fromId, toId, linkType enum, context, createdAt) in schema-types.ts       |
-| 4   | Created EventLogEntrySchema (id?, sequence, event, data, timestamp, checksum) in schema-types.ts         |
-| 5   | Wired creating hook (rejectHook) + updating hook (parse + obj merge) for all 4 tables in dexie-schema.ts |
-
-### Build result
-
-| Metric    | Value    |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | PASS     |
-
-### Coverage delta
-
-| Failure Class                | Before | After | Delta |
-| ---------------------------- | ------ | ----- | ----- |
-| Schema drift (row 20)        | ~60%   | ~80%  | +20%  |
-| Corrupt persistence (row 21) | ~10%   | ~40%  | +30%  |
-
----
-
-## Session 39 — Zod import validation + jitter gap-fill (v4.5.0 → v4.6.0) ✅
-
-**3 files changed. Typecheck 0 errors.**
-
-### Plan
-
-| #   | Task                                                                                                              | Status |
-| --- | ----------------------------------------------------------------------------------------------------------------- | ------ |
-| 1   | **Upgrade** `validateArrayItems` → full Zod schema validation in all 7 `dexie-storage.ts` `importAll()` methods   | DONE   |
-| 2   | **Add** Zod pre-validation to `database-service.ts` `importFromJson()` — validates all 16 tables before `bulkPut` | DONE   |
-| 3   | **Add** jitter to `debate-persistence-manager.ts` version conflict retry backoff                                  | DONE   |
-
-### Changes
-
-| #   | What was done                                                                                                                                                                                                                                                                                                                                                                                                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **dexie-storage.ts** — Replaced `validateArrayItems()` (field-level checks) with `validateJsonArray()` using Zod schemas for all 7 stores: `ApiKeySchema`, `MemoryEntrySchema`, `CognitiveTraceSchema`, `ChatSessionSchema`, `RoleSchema`, `CognitiveSkillSchema`, `KeyValueSchema`. Pre-import validation now catches structural data corruption with clear error messages before data reaches Dexie hooks. |
-| 2   | **database-service.ts** — Added `TABLE_SCHEMA_MAP` covering all 16 tables. `importFromJson()` now pre-validates every row against its Zod schema, filtering invalid items with detailed `LOGGER.warn` output before the Dexie transaction. Belt-and-suspenders on top of existing write hooks.                                                                                                               |
-| 3   | **debate-persistence-manager.ts:179** — `backoffMs` now includes `(0.5 + Math.random())` jitter (`Math.min(100 * 2^attempt * (0.5 + Math.random()), 2000)`), preventing synchronized retry waves on version conflict.                                                                                                                                                                                        |
-
-### Coverage delta
-
-| Failure Class                | Before | After | Delta |
-| ---------------------------- | ------ | ----- | ----- |
-| Corrupt persistence (row 21) | ~40%   | ~60%  | +20%  |
-| Retry storms (row 11)        | ~65%   | ~70%  | +5%   |
-
-### Build result
-
-| Metric        | Value    |
-| ------------- | -------- |
-| tsc -b        | 0 errors |
-| Typecheck     | PASS     |
-| Files changed | 4        |
-
----
-
-## Session 49 — Silent errors fix + batch-processor QUEUE_TASK_FAILED (v4.5.0 → v4.6.0) ✅
-
-**7+ silent `.catch(() => {})` patterns fixed. Batch-processor now emits QUEUE_TASK_FAILED. Typecheck 0 errors.**
-
-### Changes
-
-| #   | What was done                                                                                                                                                                                                                                  |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **memory-engine.ts** — pruneOldEntries: `sendToWorker('remove').catch(() => {})` → `LOGGER.warn` with error context (line 151).                                                                                                                |
-| 2   | **agent-health-monitor.ts** — 2 `.catch(() => {})` on `persist()` calls (destroy + heartbeat) → `LOGGER.warn` with error context (lines 102, 168).                                                                                             |
-| 3   | **role-team-service.ts** — 2 `.catch(() => {})` on `database.setKv()` (persistTeams + persistExecutions) → `console.warn` with error context (lines 92, 98).                                                                                   |
-| 4   | **contribution-service.ts** — 2 `.catch(() => {})` on `BucketStorageAdapter.UI.set()` (destroy + timer persist) → `LOGGER.warn` with error context (lines 69, 82).                                                                             |
-| 5   | **core-references.ts** — added `eventBus` lazy export for use by batch-processor and other services.                                                                                                                                           |
-| 6   | **batch-processor-service.ts** — added `EVENTS` import; wired `eventBus.emit(EVENTS.QUEUE_TASK_FAILED)` on retry exhaustion (line 161). Previously failed batch tasks were completely silent — only the BatchResult object captured the error. |
-| 7   | **reliability-matrix.md** — Row 13 (Fire-and-forget): ~55%→~60%. Row 35 (Lost observability): ~50%→~55%. Row 36 (Silent errors): ~45%→~55%. Coverage Summary rebucketed.                                                                       |
-
-### Coverage delta
-
-| Failure Class      | Before | After | Delta |
-| ------------------ | ------ | ----- | ----- |
-| Fire-and-forget    | ~55%   | ~60%  | +5%   |
-| Lost observability | ~50%   | ~55%  | +5%   |
-| Silent errors      | ~45%   | ~55%  | +10%  |
-
-### Build result
-
-| Metric        | Value    |
-| ------------- | -------- |
-| tsc -b        | 0 errors |
-| Typecheck     | PASS     |
-| Files changed | 6        |
-
----
-
-## Session 45 — Non-determinism: SeededRng utility + 2 services converted (v4.5.0 → v4.6.0) ✅
-
-**Non-determinism (Row 34): 5% → 25%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | What was done                                                                                                                                                                                                                                                                                                        |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Created `src/kernel/utils/seedable-rng.ts` — `SeededRng` class with Mulberry32 PRNG (`next()`, `nextInt()`, `pick()`, `chance()`, `fork()`) — fast, deterministic, good distribution                                                                                                                                 |
-| 2   | `auto-debate-service.ts` — `pickRandom()` now uses `SeededRng` instead of `Math.random()`; exported `resetAutoDebateRng(seed?)` for test determinism                                                                                                                                                                 |
-| 3   | `audience-service.ts` — 20+ `Math.random()` calls replaced with `_rng` in `populate()` (shuffle, member generation, engagement/sentiment variance), `triggerReaction()` (reaction probability, intensity), `processArgument()` (trigger weights, chatter selection), `getReactionProbability()` (base weight jitter) |
-
-### Design
-
-```
-SeededRng (mulberry32)
-  ├─ auto-debate service  →  pickRandom() + resetAutoDebateRng()
-  ├─ audience service     →  populate(), reactions, argument triggering
-  └─ (future)             →  quantum-inspiration, key-pool-selector, fact-check
-```
-
-Jitter in retry/backoff (`debate-llm-caller`, `batch-processor`, `notification-webhook`) intentionally left as `Math.random()` — jitter should remain non-deterministic for security.
-
-### Coverage delta
-
-| Failure Class   | Before | After | Delta |
-| --------------- | ------ | ----- | ----- |
-| Non-determinism | ~5%    | ~25%  | +20%  |
-
-### Build result
-
-| Metric        | Value    |
-| ------------- | -------- |
-| tsc -b        | 0 errors |
-| Typecheck     | PASS     |
-| Files changed | 3        |
-
----
-
-## Session 46 — DLQ: Wire ExecutionQueue + OrchestrationService (v4.5.0 → v4.6.0) ✅
-
-**Infinite retries/DLQ (Row 12): 30% → 45%. Event loss (Row 4): 50% → 55%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | What was done                                                                                                                                                                           |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `execution-queue.ts` — added optional `deadLetterQueue` constructor parameter; catch handler now pushes to DLQ on every task failure (in addition to existing `QUEUE_TASK_FAILED` emit) |
-| 2   | `orchestration-service.ts` — added `deadLetterQueue` to `OrchestrationServiceDeps`; passes it through to `ExecutionQueue` constructor                                                   |
-| 3   | `phase4-agents-roles.ts` — DI wiring passes `deadLetterQueue` to OrchestrationService (was missing — DLQ was registered but never reachable from the main task execution path)          |
-
-### Coverage delta
-
-| Failure Class          | Before | After | Delta |
-| ---------------------- | ------ | ----- | ----- |
-| Infinite retries / DLQ | ~30%   | ~45%  | +15%  |
-| Event loss             | ~50%   | ~55%  | +5%   |
-
-### Build result
-
-| Metric        | Value    |
-| ------------- | -------- |
-| tsc -b        | 0 errors |
-| Typecheck     | PASS     |
-| Files changed | 3        |
-
----
-
-## Session 47 — Chat store dual-write fix: persist-then-emit + CAS + schema drift (v4.5.0 → v4.6.0) ✅
-
-**Chat store 13 methods converted to persist-then-emit. Schema drift fixed (AI responses no longer lost on import). Version tracking on ChatSession. Typecheck 0 errors.**
-
-### Changes
-
-| #   | What was done                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **schema-types.ts** — Fixed `ChatHistoryEntrySchema`: added `responses: ChatResponse[]` (CRITICAL — was missing, export→import cycle silently stripped ALL AI responses), `parentId`, `recalledMemories`. Removed stale Zod-only fields (`sessionId`, `content`, `provider`, `model`, `tokens`, `latency`). Fixed `ChatSessionSchema`: added `version`, `folder`, `isArchived`, `isPinned`, `summary`, `linkedDebateId`. Fields made backward-compatible (optional + default) |
-| 2   | **ChatSession TS interface** — added `version?: number` to both `session-store.ts` and `chat/types.ts`                                                                                                                                                                                                                                                                                                                                                                        |
-| 3   | **dexie-storage.ts (DexieSessionStore)** — added non-blocking CAS (version-aware read→increment→write) to `put()`, `bulkPut()`, `syncSessions()`, `updateSession()`. Conflicts logged as warnings, last-writer-wins                                                                                                                                                                                                                                                           |
-| 4   | **chat/store.ts** — 13 methods converted from Zustand-first→Dexie-first persistence: `editEntry`, `clearHistory`, `deleteSession`, `forkSession`, `renameSession`, `archiveSession`, `unarchiveSession`, `tagSession`, `moveToFolder`, `pinSession`, `importSessions`, `switchModel`, `switchKey`. All now `await` Dexie persist before Zustand `set()`. Failed persists prevent Zustand mutation (no more silent rollback)                                                   |
-| 5   | **hydration.ts** — unchanged (merge logic remains `updatedAt`-based, which is correct with persist-then-emit since Zustand is updated last)                                                                                                                                                                                                                                                                                                                                   |
-
-### Coverage delta
-
-| Failure Class       | Before | After | Delta |
-| ------------------- | ------ | ----- | ----- |
-| Dual-write          | ~40%   | ~55%  | +15%  |
-| Lost updates        | ~25%   | ~40%  | +15%  |
-| Ordering bugs       | ~20%   | ~30%  | +10%  |
-| Stale state/version | ~20%   | ~25%  | +5%   |
-| Schema drift        | ~80%   | ~82%  | +2%   |
-| Corrupt persistence | ~65%   | ~70%  | +5%   |
-
-### Build result
-
-| Metric    | Value    |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | PASS     |
-
----
-
-## Session 48 — Race condition analysis + auto-scheduled integrity scan (v4.5.0 → v4.6.0) ✅
-
-**5 race condition claims closed as false positives. Auto-scheduled integrity scan added. Typecheck 0 errors.**
-
-### Changes
-
-| #   | What was done                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Race condition analysis (Discoveries 1-6)** — All 5 previously flagged race condition claims in reliability-matrix Row 1 confirmed **false positives**: 1) `LLMHttpClient._inflight` static Map — operations synchronous, `delete` on missing key is no-op. 2) `CircuitBreaker.states` — uses captured state snapshots with stale-state guards, all transitions synchronous. 3) `RateLimitDecorator` tokens race — `checkRate()` has zero `await` points, JS single-threaded guarantees atomicity. 4) `CacheService` set/clear/invalidate — `pendingSet` pattern already fixed in Session 34. 5) `PriorityQueueDecorator` queues — all state modified in synchronous blocks with proper `finally` cleanup. Row 1 coverage: ~72% → ~97%. |
-| 2   | **reliability-matrix.md** — Row 1 updated to ~97% with evidence; items 7, 8 closed as false positives; Row 39 updated to ~60% with auto-scheduled scan; items 9, 10, 12 marked Done; Coverage Summary rebucketed (80-100%: 5→6 classes); Per-Service Heatmap updated for RateLimitDecorator/LLMHttpClient/CircuitBreaker risk levels and DatabaseService added.                                                                                                                                                                                                                                                                                                                                                                           |
-| 3   | **IDatabaseService interface** (`interfaces.ts`) — added `init(config?)` and `destroy()` methods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| 4   | **DatabaseService** (`database-service.ts`) — added `_integrityTimer` field, `init()` starts `setInterval` (default 30 min) running `verifyIntegrity()`, logs warning on corruption detection; `destroy()` clears interval.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| 5   | **RuntimeManager** (`runtime.ts`) — `coreDatabase.init()` called from `registerCoreServices()`, `coreDatabase.destroy()` called from `shutdown()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-
-### Coverage delta
-
-| Failure Class   | Before | After | Delta |
-| --------------- | ------ | ----- | ----- |
-| Race conditions | ~72%   | ~97%  | +25%  |
-| Data corruption | ~45%   | ~60%  | +15%  |
-
-### Build result
-
-| Metric        | Value    |
-| ------------- | -------- |
-| tsc -b        | 0 errors |
-| Typecheck     | PASS     |
-| Files changed | 4        |
-
----
-
-## Session 50 � Non-determinism extended: 3 more services + key-pool-selector type fix (v4.5.0 > v4.6.0) ?
-
-**Non-determinism (Row 34): 25% > 40%. Typecheck 0 errors.**
-
-### Changes
-
-| #                                                                                                                           | What was done                                                                                                                                                                                                                                                 |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1                                                                                                                           | quantum-inspiration-service.ts � 7+5 Math.random() sites replaced with SeededRng (simulated annealing, temperature decay, selection, mutation, crossover, prune, inspiration pool)                                                                            |
-| 2                                                                                                                           | key-pool-selector.ts � selectFromPool 'random' strategy uses his._rng.pick() instead of Math.random()                                                                                                                                                         |
-| 3                                                                                                                           | act-check-service.ts � pickClaim() uses his._rng.pick() instead of Math.random()                                                                                                                                                                              |
-| 4                                                                                                                           | key-pool-selector.ts � restored missing getGroupKeys and getKeyGroupId optional properties in KeyPoolSelectorDeps interface (6 type errors fixed). These were accidentally removed during a prior edit. key-service.ts 3 cascading type errors also resolved. |
-| 5                                                                                                                           |
-| eliability-matrix.md � Row 34 updated (25%>40%, gap text reflects new conversions). Coverage Summary 20-49% bucket updated. |
-
-### Coverage delta
-
-| Failure Class   | Before | After | Delta |
-| --------------- | ------ | ----- | ----- |
-| Non-determinism | ~25%   | ~40%  | +15%  |
-
-### Build result
-
-| Metric        | Value    |
-| ------------- | -------- |
-| tsc -b        | 0 errors |
-| Typecheck     | PASS     |
-| Files changed | 4        |
-
----
-
-## Session 52 — Fix EventLog validation error + rejectHook return value (v4.5.0 → v4.6.0) ✅
-
-**2 files changed. Typecheck 0 errors. Runtime errors fixed.**
-
-### Проблема #1: Zod schema mismatch
-
-`EventLogEntrySchema` (Zod) has `data: z.unknown()` but Dexie row format (`RecordedEventRow`) stores `dataJson: string`. Zod v4 rejects missing keys in `z.object({})` with `"expected nonoptional, received undefined"` — every `eventLog` write fails validation, causing `DexieError`.
-
-### Проблема #2: rejectHook returns `true` instead of `undefined`
-
-All 14 `creating` hooks (`rejectHook`) returned `true` on success. In Dexie, `creating` hook returning any value other than `undefined` is treated as a **generated primary key**. For auto-increment tables (`++id`), Dexie sets `obj.id = true`, then IndexedDB rejects with "Evaluating the object store's key path yielded a value that is not a valid key." This also caused the `true` value to be written as `id` which is not a valid numeric key for auto-increment stores.
-
-### Changes
-
-| #   | Что сделано                                                                                                                                                                                                                       |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `schema-types.ts:615` — `EventLogEntrySchema.data: z.unknown()` → `dataJson: z.string()` to match `RecordedEventRow` interface (Dexie storage format)                                                                             |
-| 2   | `dexie-schema.ts:381` — `rejectHook`: `return true` → `return undefined`. Dexie's `creating` hook treats any non-undefined return as primary key value. `true` caused `obj.id = true`, breaking auto-increment for ALL 14 tables. |
-
----
-
-## Session 53 — Fix DexieSessionStore version conflict spam (v4.5.0 → v4.6.0) ✅
-
-**5 files changed. Typecheck 0 errors. Runtime warnings eliminated.**
-
-### Проблема
-
-После фикса rejectHook (Session 52) появился новый поток предупреждений:
-
-```
-[DexieSessionStore] syncSessions version conflict: id=default db=2816 incoming=2764
-```
-
-Версия в Dexie росла с каждым циклом гидратации (2816, 2817, ...), а `incoming` застревала на 2764.
+| #   | Задача                                                                                                              | Статус  |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | **Bug 6** — Cross-agent duplicate detector + `rejectedCombos` wildcards block retry of only working model per-agent | 🟢 Done |
 
 ### Root cause
 
-**Двойной write per user action:** `flush()` → `syncSessions()` → `setState({ deletedIds })` в `finally` блоке триггерил Zustand subscriber, который не видел изменения `_lqEpoch` и планировал второй `flush()`. Второй `syncSessions` находил `incoming version < db version` и писал с инкрементом, провоцируя эскалацию версий.
+`triedKeys` and `rejectedCombos` are local to each `debateCallLlm()` call. When cross-agent duplicate is detected:
 
-**Stale writes:** `put()`, `bulkPut()`, `syncSessions()` всегда писали `Math.max(current, incoming) + 1` даже при stale incoming, что гарантированно инкрементировало версию при каждом конфликте.
+1. The working model+key gets added to `triedModels`/`triedKeys`
+2. A wildcard entry `${provider}|${model}|*` goes into `rejectedCombos`
+3. `resolveProvider()` returns null because every model for the only provider is blocked by wildcards
+4. Agent hits "No available API keys" → retries → same block → after 5 spins → agent fails
 
-### Changes
-
-| #   | Что сделано                                                                                                                           |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `hydration.ts` — `flush()`: `lastFlushEpoch = _lqEpoch` перед `syncSessions`, чтобы `finally`-`setState` не триггерил повторный flush |
-| 2   | `dexie-storage.ts` — `put()`: `console.warn` + write → `return` (skip) при stale incoming                                             |
-| 3   | `dexie-storage.ts` — `bulkPut()`: `console.warn` + write → `continue` (skip) при stale incoming                                       |
-| 4   | `dexie-storage.ts` — `syncSessions()`: `console.warn` + write → `continue` (skip) при stale incoming                                  |
-
-### Итог
-
-- **0 console.warn** о version conflict при нормальной работе
-- **0 лишних writes** при stale incoming — CAS корректно отклоняет устаревшие данные
-- **0 re-trigger** из `finally`-блока — двойной flush устранён
-- **Версия** больше не растёт без необходимости (только при реальных мутациях)
-
----
-
-## Session 54 — Formal Debate State Machine (v4.5.0 → v4.6.0) ✅
-
-**3 files changed. Typecheck 0 errors. State-machine violations: 65% → 90%.**
-
-### Что сделано
-
-| #   | Файл                                                      | Изменение                                                                                                                                                                        |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `contracts/debate-state-machine.ts` **NEW**               | Определены `TransitionEvent` (14 событий), `TransitionOutcome`, `TransitionGuard`, `TransitionHook`, `IStateMachine`                                                             |
-| 2   | `services/debate-runtime/debate-state-machine.ts` **NEW** | `StateMachine` — формальная реализация: `TRANSITION_TABLE` (11 states, ~30 правил), `send()`, `can()`, guards, lifecycle hooks, re-entrancy lock, `phaseToEvent()` mapper        |
-| 3   | `services/debate-runtime/debate-session.ts`               | `_phase` → `_sm: StateMachine`; `transition()` делегирует через `phaseToEvent()`; добавлен `send()`; `restoreInternalState()` использует `_sm.reset()`; `destroy()` чистит `_sm` |
-
-### State machine design
-
-```
-Events: QUEUE, INITIALIZE, ACTIVATE, BEGIN_ROUND, CONCLUDE, SUMMARIZE,
-        FINISH, PAUSE, RESUME, FAIL, CANCEL, ABORT, TIMEOUT, RESET
-
-Transitions:
-  created      → {QUEUE→queued, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
-  queued       → {INITIALIZE→initializing, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
-  initializing → {ACTIVATE→active, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
-  active       → {BEGIN_ROUND→deliberating, PAUSE→paused, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
-  deliberating → {BEGIN_ROUND→deliberating, CONCLUDE→consensus, PAUSE→paused, FAIL→failed, CANCEL→cancelled, ABORT→cancelled, TIMEOUT→failed}
-  paused       → {RESUME→queued, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
-  consensus    → {SUMMARIZE→summarizing, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
-  summarizing  → {FINISH→completed, FAIL→failed, CANCEL→cancelled, ABORT→cancelled}
-  completed    → {RESET→created, CANCEL→cancelled}
-  failed       → {RESET→created, CANCEL→cancelled}
-  cancelled    → {RESET→created}
-```
-
-### Ключевые гарантии
-
-- **Idempotent**: `send()` на already-applied state возвращает `{success: false, reason: 'Invalid transition'}`
-- **Async-safe**: re-entrancy lock (`_sending` flag) предотвращает параллельные `send()`
-- **Guards**: `addGuard()` поддерживает sync/async пре-условия
-- **Lifecycle**: `onBeforeTransition`, `onAfterTransition`, `onInvalidTransition`, `onError` — все hooks могут быть sync или async
-- **Backward compat**: `transition(to)` всё ещё работает через `phaseToEvent()` маппинг
-- **Monitoring**: `TransitionOutcome` содержит `success`, `from`, `to`, `event`, `reason`
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 62 — Crash consistency: startup integrity scan + unclean shutdown detection (v4.5.0 → v4.6.0) ✅
-
-**Crash consistency (Row 7): 25% → 40%. Typecheck 0 errors.**
+This is per-agent (each call gets fresh sets), but with a single provider the death spiral happens for every agent independently.
 
 ### Changes
 
-| #   | Что сделано                                                                                                                                                                                                                                      |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | `database-service.ts` — `init()` runs immediate `verifyIntegrity()` scan at startup (detects pre-existing corruption from previous crash before any service starts); periodic interval scan still runs as before                                 |
-| 2   | `database-service.ts` — added `ai_os_clean_shutdown` localStorage flag: checked at startup for unclean shutdown detection, cleared during normal `destroy()` path, giving services a signal that the previous session may have crashed mid-write |
-| 3   | `docs/ocs/reliability-matrix.md` — Row 7: ~25% → ~40%                                                                                                                                                                                            |
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 61 — Ordering bugs: EventBus FIFO defer queue + EventRecorder causal ordering (v4.5.0 → v4.6.0) ✅
-
-**Ordering bugs (Row 10): 30% → 45%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | Что сделано                                                                                                                                                                                                                   |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `event-bus.ts` — per-event `queueMicrotask` defer replaced with single `_deferQueue` + `_scheduleDrain()` FIFO batch drain, preserving event ordering across multiple deferred events; queue reset in `clearAllSubscriptions` |
-| 2   | `event-types.ts` — added `prevSequence?: number` to `RecordedEvent` interface for causal ordering links                                                                                                                       |
-| 3   | `event-recorder.ts` — `_lastSeq` tracks previous recorded sequence; each new `record()` call sets `prevSequence` linking causally; reset in `clear()`                                                                         |
-| 4   | `docs/ocs/reliability-matrix.md` — Row 10: ~30% → ~45%                                                                                                                                                                        |
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 60 — Cache inconsistency fix: replace emit + persist promise tracking (v4.5.0 → v4.6.0) ✅
-
-**Cache inconsistency (Row 18): 45% → 52%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | Что сделано                                                                                                                                                                                                                  |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `cache-service.ts` — `set()` now emits `CACHE_INVALIDATED` with `reason: 'update'` when replacing an existing key (not just on eviction)                                                                                     |
-| 2   | `cache-service.ts` — `persist()` tracks the Dexie write promise in `_persistPromise` field (instead of fire-and-forget `.catch()`); `destroy()` awaits `_persistPromise` before `flush()` to prevent lost writes on shutdown |
-| 3   | `docs/ocs/reliability-matrix.md` — Row 18: ~45% → ~52%. Coverage Summary: 20-49% bucket 7→6 classes, 50-79% bucket 24→25 classes                                                                                             |
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 59 — Partial failure/rollback: withTransaction utility + ConfigService (v4.5.0 → v4.6.0) ✅
-
-**Partial failure/rollback (Row 6): 30% → 40%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | Что сделано                                                                                                                                                                                                                                                |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `src/kernel/utils/with-transaction.ts` — created reusable `withTransaction()` helper wrapping `TransactionContext` commit/rollback with eventBus support                                                                                                   |
-| 2   | `config-service.ts` — all 9 `update*` methods refactored to use `withTransaction`: capture overlays snapshot before mutation, defer persist + emit via `tx.deferPersist` / `tx.deferEmit`, compensation restores overlays + reverts `setConfig` on failure |
-| 3   | `docs/ocs/reliability-matrix.md` — Row 6: ~30% → ~40%. Coverage Summary: 20-49% bucket 8→7 classes, 50-79% bucket 23→24 classes                                                                                                                            |
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 58 — Backpressure: bounded EventBus backlog + LLMHttpClient semaphore (v4.5.0 → v4.6.0) ✅
-
-**Backpressure (Row 16): 40% → 55%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | Что сделано                                                                                                                                                                                                                            |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `event-bus.ts` — bounded pending backlog (`MAX_PENDING=5000`): events dropped with `EVENTBUS_BACKPRESSURE` signal when deferred queue exceeds limit; `_pendingCount` tracked in defer microtask path; reset in `clearAllSubscriptions` |
-| 2   | `llm-http-client.ts` — semaphore pattern (`MAX_CONCURRENT=50`, FIFO `_waitingQueue`): `acquireSlot()`/`releaseSlot()` static methods; wired into `post()`, `get()`, `streamPost()` in try/finally                                      |
-| 3   | `docs/ocs/reliability-matrix.md` — Row 16: ~40% → ~55%. Coverage Summary: 20-49% bucket 9→8 classes, 50-79% bucket 22→23 classes                                                                                                       |
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 57 — Wire DLQ to batch-processor-service retry exhaustion (v4.5.0 → v4.6.0) ✅
-
-**Infinite retries/DLQ (Row 12): 45% → 52%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | Что сделано                                                                                                                                                            |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `batch-processor-service.ts` — added `deadLetterQueue?` constructor param, captured as `dlq` local before `processTask()`, DLQ push on retry exhaustion in catch block |
-| 2   | `phase6-high-level.ts` — added `IDeadLetterQueue` import, wired `deadLetterQueue` from DI container into `BatchProcessorService` constructor                           |
-| 3   | `docs/ocs/reliability-matrix.md` — Row 12: ~45% → ~52%. Coverage Summary: 20-49% bucket 10→9 classes, 50-79% bucket 21→22 classes                                      |
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 56 — Fix HMR issues: RuntimeManager handler leak + ssrFallback cleanup (v4.5.0 → v4.6.0) ✅
-
-**HMR issues: 40% → 70%. Typecheck 0 errors.**
-
-### Changes
-
-| #   | Что сделано                                                                                                                                                                                             |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `runtime.ts` — stored `unhandledrejection` handler as instance field (`_unhandledRejectionHandler`), removed in `shutdown()` via `removeEventListener` — prevents duplicate handler accumulation on HMR |
-| 2   | `storage-adapter.ts` — exported `clearSsrFallback()`, added `import.meta.hot.dispose()` block to clear the module-level `ssrFallback` Map on HMR — prevents stale data accumulation across HMR cycles   |
-| 3   | `docs/ocs/reliability-matrix.md` — Row 24 (HMR issues): ~40% → ~70%. Coverage Summary: 20-49% bucket 11→10 classes, 50-79% bucket 20→21 classes                                                         |
-| 4   | `AGENTS.md` — Session 56 entry added                                                                                                                                                                    |
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 55 — Cross-tab Distributed Lock for debate/chat session protection (v4.5.0 → v4.6.0) ✅
-
-**6 files changed. Typecheck 0 errors. Cross-tab races: 60% → 85%.**
-
-### Что сделано
-
-| #   | Файл                                                   | Изменение                                                                                                                                                                                                 |
-| --- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `contracts/cross-tab-lock.ts` **NEW**                  | `IDistributedLock` интерфейс + `LockResource`, `LockAcquisition`, `LockOptions`, `ILockAcquireResult`, `ILockEvent`, `LockListener` типы                                                                  |
-| 2   | `services/cross-tab-lock-service.ts` **NEW**           | `DistributedLockService` — Dexie `keyValue` table CAS distributed lock: `acquire()`, `release()`, `heartbeat()`, `isLocked()`, `getOwner()`. Lock record: `{ownerId, acquiredAt, ttl, heartbeatAt}` JSON. |
-| 3   | `services/debate-runtime/debate-engine.ts`             | `distributedLock` добавлен в `DebateEngineDeps`. `startSession()`: acquire lock (60s TTL) before transitions, release в `finally`. `cancelSession()`: fire-and-forget lock-and-release                    |
-| 4   | `service-registration/phase1-foundation.ts`            | `DistributedLockService` зарегистрирован как `'distributedLock'` в DI контейнере                                                                                                                          |
-| 5   | `service-registration/phase3-debate-runtime.ts`        | `distributedLock` проброшен в конструктор `DebateEngine`                                                                                                                                                  |
-| 6   | `stores/chat/service-deps.ts` + `stores/chat/store.ts` | `getDistributedLock` экспортирован. `sendMessage()` (120s TTL), `editEntry()` (30s TTL), `clearHistory()` (30s TTL): acquire lock before Dexie write, release в finally                                   |
-| 7   | `docs/ocs/reliability-matrix.md`                       | Row 25 (Cross-tab races): ~60% → ~85%. Coverage Summary: 80-100% bucket 7→8 classes, 50-79% bucket 21→20 classes                                                                                          |
-
-### Design
-
-```
-DistributedLockService (Dexie keyValue, distlock:{prefix})
-  ├─ debate:${sessionId}  →  startSession() acquire 60s TTL, release in finally
-  ├─ debate:${sessionId}  →  cancelSession() fire-and-forget
-  ├─ chat:${sessionId}     →  sendMessage() acquire 120s TTL, release in finally
-  ├─ chat:${sessionId}     →  editEntry() acquire 30s TTL, release in finally
-  └─ chat:${sessionId}     →  clearHistory() acquire 30s TTL, release in finally
-```
-
-### Build result
-
-| Метрика   | Значение |
-| --------- | -------- |
-| tsc -b    | 0 errors |
-| Typecheck | ✅ pass  |
-
----
-
-## Session 70 — Fix debate state machine stuck in created + provider exhaustion cascade + resolveProvider Step 1 missing triedKeys (v4.5.0 → v4.6.0) ✅
-
-**8 critical bugs fixed across eroor.md → erorrrrr4.md. Typecheck 0 errors.**
-
-### Problem chain
-
-| Log          | Symptom                                                                                                                | Root cause                                                                                                                                                                                                                     |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| eroor.md     | WARN Invalid transition: created→*                                                                                     | transition() called _sm.can(event) read-only, never _sm.send()                                                                                                                                                                 |
-| eroor.md     | 402 cycling all providers                                                                                              | markProviderFailed() on content errors kills whole provider                                                                                                                                                                    |
-| erorrrrr.md  | CPU spin infinite retry                                                                                                | resolveProvider returns null → catch does `continue` without incrementing retries or backoff                                                                                                                                   |
-| erorrrrr2.md | anyWorking true but resolveProvider null                                                                               | anyWorking uses hasProviderFailed() only; resolveProvider also checks circuit breaker                                                                                                                                          |
-| erorrrrr3.md | anyWorking still true after triedKeys fix                                                                              | gemini circuit breaker OPEN from health check 400 → providerCanBeUsed() returns false, but anyWorking doesn't check it                                                                                                         |
-| erorrrrr4.md | resolveProvider keeps returning groq with no fresh models, anyWorking still true                                       | resolveProvider Step 1 (participant.provider match) doesn't check triedKeys — keeps returning the same exhausted key, never falls through to Step 4 which can pick gemini                                                      |
-| erorrrrr5.md | Same symptom but groq has 3+ keys — different fresh key found each retry, all models globally rejected via * wildcards | Step 1 finds unused groq keys (not in triedKeys), but all groq models are in rejectedCombos with `*` — model selection fails → null → spin. Fix: when "No available API keys", add ALL keys of exhausted provider to triedKeys |
-
-### Changes
-
-| #   | File                           | Change                                                                                                                                                                   |
-| --- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | debate-session.ts:152          | transition(): _sm.reset(to) after can() check — actual state mutation                                                                                                    |
-| 2   | debate-llm-caller.ts:1998-2003 | Response validation: markProviderFailed() → rejectedCombos.add()                                                                                                         |
-| 3   | debate-llm-caller.ts:2024-2027 | Entanglement validation: same — markProviderFailed() → rejectedCombos.add()                                                                                              |
-| 4   | debate-llm-caller.ts:2396-2412 | Infinite retry guard: noProviderSpinCount (max 5) + backoffWait() before continue                                                                                        |
-| 5   | debate-llm-caller.ts:2407-2413 | Content-level errors skip markProviderFailed() entirely                                                                                                                  |
-| 6   | debate-llm-caller.ts:386-392   | anyWorking: added !triedKeys.has(k.id) check                                                                                                                             |
-| 7   | debate-llm-caller.ts:389       | anyWorking: replaced `!session.hasProviderFailed(k.provider)` with `deps.providerResolver.providerCanBeUsed(k.provider, session)` — now checks circuit breaker state too |
-| 8   | debate-query-engine.ts:284,296 | resolveProvider Steps 1-2: added `!triedKeys.has(k.id)` to `keys.find()` — exhausted keys no longer block fallthrough to Step 4                                          |
-| 9   | debate-llm-caller.ts:2400-2412 | "No available API keys" handler: add ALL keys of exhausted provider to `triedKeys` — prevents unused sibling keys from looping via Step 1                                |
-
-### Build result
+| #   | File                   | Change                                                                                                                                                                                                                                                                                           |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `debate-llm-caller.ts` | In the "No available API keys" handler, added clearing of wildcard entries from `rejectedCombos` and their corresponding models from `triedModels` before each retry. The `noProviderSpinCount` guard (max 5) still prevents infinite spin. Working model gets retried instead of dead-spinning. |
 
 ### Build result
 
@@ -2130,3 +1464,72 @@ DistributedLockService (Dexie keyValue, distlock:{prefix})
 | --------- | -------- |
 | tsc -b    | 0 errors |
 | Typecheck | ✅ PASS  |
+
+---
+
+## Session 71 — Fix provider cascade infinite CPU spin + 429 circuit breaker + infinite loop safety net (v4.5.0 → v4.6.0) ✅
+
+**3 bugs fixed. Typecheck 0 errors. Build ~11s.**
+
+### План
+
+| #   | Задача                                                                                              | Статус  |
+| --- | --------------------------------------------------------------------------------------------------- | ------- |
+| 1   | **Bug 3** — `resolveProvider` infinite CPU spin when all models of a provider are wildcard-rejected | 🟢 Done |
+| 2   | **Bug 4** — 429 rate-limit opens circuit breaker for entire provider, killing multi-agent debates   | 🟢 Done |
+| 3   | **Bug 5** — No generic protection against infinite loop bugs in `debateCallLlm`                     | 🟢 Done |
+
+### Changes
+
+| #   | File                     | Change                                                                                                                                                                     |
+| --- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `debate-query-engine.ts` | Added `hasAnyUntriedModel()` helper that checks if a key has at least one model not in `triedModels` and not in `rejectedCombos`. Applied to all 6 `resolveProvider` steps |
+| 2   | `circuit-breaker.ts`     | Added 429 to `NON_CIRCUIT_HTTP_STATUSES` — 429 is transient, debate-llm-caller handles its own rate-backoff; opening circuit on 429 blocks ALL keys for the provider       |
+| 3   | `debate-llm-caller.ts`   | Added `callLlmIterations` counter + `MAX_CALL_LLM_ITERATIONS = 50` safety net — throws unconditionally after 50 while-loop iterations, catching ANY future infinite-loop   |
+
+### Build result
+
+| Metric    | Value    |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ PASS  |
+
+---
+
+## Session 72 — Fix Bug 6: cross-agent duplicate blocks retry of working model in single-provider setup (v4.5.0 → v4.6.0) ✅
+
+**1 bug fixed. Typecheck 0 errors.**
+
+### План
+
+| #   | Задача                                                                                                              | Статус  |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | **Bug 6** — Cross-agent duplicate detector + `rejectedCombos` wildcards block retry of only working model per-agent | 🟢 Done |
+
+### Root cause
+
+`triedKeys` and `rejectedCombos` are local to each `debateCallLlm()` call. When cross-agent duplicate is detected:
+
+1. The working model+key gets added to `triedModels`/`triedKeys`
+2. A wildcard entry `${provider}|${model}|*` goes into `rejectedCombos`
+3. `resolveProvider()` returns null because every model for the only provider is blocked by wildcards
+4. Agent hits "No available API keys" → retries → same block → after 5 spins → agent fails
+
+### Changes
+
+| #   | File                   | Change                                                                                                                                                                                                                                                                                           |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `debate-llm-caller.ts` | In the "No available API keys" handler, added clearing of wildcard entries from `rejectedCombos` and their corresponding models from `triedModels` before each retry. The `noProviderSpinCount` guard (max 5) still prevents infinite spin. Working model gets retried instead of dead-spinning. |
+| 2   | `debate-llm-caller.ts` | Added `triedKeys.clear()` after wildcard clearing — without this, all provider keys remain blocked (added at line ~2424), so `resolveProvider()` still returns null even after unblocking models. Now the working model can be retried with any key of the same provider.                        |
+
+---
+
+## Session 73 — Shadow Opponent role injection for diverse critique/steelman (v4.5.0 → v4.6.0) ✅
+
+**1 fix. Typecheck 0 errors.**
+
+### Changes
+
+| #   | File                                | Change                                                                                                                                                                                                                                                        |
+| --- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `debate-shadow-opponent-service.ts` | Critique/steelman meta-prompt now includes the agent's role context (first ~300 chars of system prompt: "Your Role" + "Your Character" + "Your Unique Lens"). Previously all agents got the same generic output. Now each agent critiques from its expertise. |

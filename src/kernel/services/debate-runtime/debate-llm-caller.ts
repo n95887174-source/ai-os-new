@@ -2413,7 +2413,10 @@ export async function debateCallLlm(
                     // all its models are just exhausted. Don't mark it as failed; just retry.
                     // But guard against infinite spin: if all providers are truly exhausted
                     // for this agent, break out after MAX_NO_PROVIDER_SPIN attempts.
-                    if (error.includes('No available API keys')) {
+                    if (
+                        error.includes('No available API keys') ||
+                        error.includes('All LLM providers unavailable')
+                    ) {
                         noProviderSpinCount++;
                         // Mark ALL keys of this provider as tried so unused keys don't
                         // keep getting resolved by Step 1 only to fail at model selection
@@ -2433,6 +2436,28 @@ export async function debateCallLlm(
                                 { cause: e },
                             );
                         }
+                        // When all models are exhausted via rejectedCombos wildcards
+                        // (e.g. cross-agent duplicate on the only working model),
+                        // clear the content-rejection state so the working model can
+                        // be retried. Without this, a single-provider setup with
+                        // cross-agent duplicates would never retry the only working
+                        // combo — every resolveProvider() would return null because
+                        // every model's wildcard entry blocks it.
+                        // The noProviderSpinCount guard (max 5) prevents infinite spin.
+                        const wildcards = Array.from(rejectedCombos).filter((c) =>
+                            c.endsWith('|*'),
+                        );
+                        for (const c of wildcards) {
+                            const model = c.split('|')[1];
+                            triedModels.delete(model);
+                            rejectedCombos.delete(c);
+                        }
+                        // Also clear triedKeys — all provider keys were added above
+                        // (line ~2424), so without this, resolveProvider still returns
+                        // null even after clearing wildcards, because every key is in
+                        // triedKeys. Clearing allows retrying the same keys with now-
+                        // unblocked models on the next iteration.
+                        triedKeys.clear();
                         await backoffWait(noProviderSpinCount, externalSignal);
                         deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                         continue;
@@ -2441,12 +2466,14 @@ export async function debateCallLlm(
                         deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                         continue;
                     }
-                    // Content-level failures (validation, entanglement) reflect model
-                    // output quality — not provider availability. Don't mark the entire
-                    // provider as failed; retry with a different model/provider instead.
+                    // Content-level failures (validation, entanglement, consecutive
+                    // duplicates) reflect model output quality — not provider availability.
+                    // Don't mark the entire provider as failed; retry with a different
+                    // model/provider instead.
                     if (
                         error.includes('Response validation failed') ||
-                        error.includes('Entanglement validation failed')
+                        error.includes('Entanglement validation failed') ||
+                        error.includes('Cross-agent duplicate produced')
                     ) {
                         deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
                         continue;
