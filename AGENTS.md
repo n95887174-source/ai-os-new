@@ -1812,6 +1812,27 @@ Transitions:
 
 ---
 
+## Session 60 — Cache inconsistency fix: replace emit + persist promise tracking (v4.5.0 → v4.6.0) ✅
+
+**Cache inconsistency (Row 18): 45% → 52%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                  |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `cache-service.ts` — `set()` now emits `CACHE_INVALIDATED` with `reason: 'update'` when replacing an existing key (not just on eviction)                                                                                     |
+| 2   | `cache-service.ts` — `persist()` tracks the Dexie write promise in `_persistPromise` field (instead of fire-and-forget `.catch()`); `destroy()` awaits `_persistPromise` before `flush()` to prevent lost writes on shutdown |
+| 3   | `docs/ocs/reliability-matrix.md` — Row 18: ~45% → ~52%. Coverage Summary: 20-49% bucket 7→6 classes, 50-79% bucket 24→25 classes                                                                                             |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 59 — Partial failure/rollback: withTransaction utility + ConfigService (v4.5.0 → v4.6.0) ✅
 
 **Partial failure/rollback (Row 6): 30% → 40%. Typecheck 0 errors.**

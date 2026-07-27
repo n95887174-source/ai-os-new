@@ -34,6 +34,7 @@ export class CacheService implements ICacheService {
     /** Tracks keys that were explicitly set/cleared while an in-flight fetch was running.
      *  Prevents stale getOrFetch results from overwriting explicit writes. */
     private pendingSet = new Set<string>();
+    private _persistPromise: Promise<void> | null = null;
     private unsub?: () => void;
     private _initialized = false;
 
@@ -130,6 +131,7 @@ export class CacheService implements ICacheService {
 
     async destroy(): Promise<void> {
         this._initialized = false;
+        if (this._persistPromise) await this._persistPromise;
         await this.flush();
         this.cache.clear();
         this.inFlight.clear();
@@ -149,12 +151,18 @@ export class CacheService implements ICacheService {
             const entries = Array.from(this.cache.values())
                 .slice(-500)
                 .map((e) => ({ ...e }));
-            this.deps.database.setKv('super_agents_llm_cache', entries).catch((e: unknown) => {
-                LOGGER.warn('CacheService', 'Persist failed', {
-                    error: e instanceof Error ? e.message : String(e),
+            this._persistPromise = this.deps.database
+                .setKv('super_agents_llm_cache', entries)
+                .then(() => {
+                    this._persistPromise = null;
+                })
+                .catch((e: unknown) => {
+                    LOGGER.warn('CacheService', 'Persist failed', {
+                        error: e instanceof Error ? e.message : String(e),
+                    });
+                    this.dirty = true;
+                    this._persistPromise = null;
                 });
-                this.dirty = true;
-            });
         }, 2000);
     }
 
@@ -208,7 +216,8 @@ export class CacheService implements ICacheService {
         ttl?: number,
     ) {
         this.pendingSet.add(key);
-        if (this.cache.size >= this.maxEntries) {
+        const isReplace = this.cache.has(key);
+        if (this.cache.size >= this.maxEntries && !isReplace) {
             const oldest = this.cache.entries().next().value;
             if (oldest) {
                 this.cache.delete(oldest[0]);
@@ -229,6 +238,12 @@ export class CacheService implements ICacheService {
             ttl: ttl || this.defaultTTL,
             hitCount: 0,
         });
+        if (isReplace) {
+            this.deps.eventBus?.emit(EVENTS.CACHE_INVALIDATED, {
+                reason: 'update',
+                section: key,
+            });
+        }
         this.persist();
     }
 
