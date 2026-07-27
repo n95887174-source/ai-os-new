@@ -4,6 +4,7 @@ import type { Connector } from '../types/domain-types';
 import type { IDatabaseService } from '../types/interfaces';
 import { REDACTED_MARKER, SuperAgentsDB } from './dexie-schema';
 import { rootLogger } from './logger-service';
+import { ssrSafeStorage } from '../utils/ssr-storage';
 import {
     MemoryEntrySchema,
     ApiKeySchema,
@@ -83,10 +84,50 @@ const DEFAULT_INTEGRITY_SCAN_MS = 30 * 60 * 1000;
 
 export class DatabaseService implements IDatabaseService {
     private _integrityTimer: ReturnType<typeof setInterval> | null = null;
+    /** C-02: localStorage flag set on clean shutdown, cleared on startup — if found missing, crash detected */
+    private static readonly CLEAN_SHUTDOWN_KEY = 'ai_os_clean_shutdown';
 
     init(config?: { integrityScanIntervalMs?: number }): void {
         if (this._integrityTimer) return;
         const intervalMs = config?.integrityScanIntervalMs ?? DEFAULT_INTEGRITY_SCAN_MS;
+        // C-02: detect unclean shutdown — clean_shutdown flag should NOT exist at startup (destroy sets it)
+        const cleanShutdown = ssrSafeStorage.getItem(DatabaseService.CLEAN_SHUTDOWN_KEY);
+        if (cleanShutdown === null) {
+            LOGGER.info(
+                'DatabaseService',
+                'No clean shutdown flag — possible crash, running integrity scan',
+            );
+        }
+        // C-02: clear the flag so next crash detection works
+        try {
+            ssrSafeStorage.removeItem(DatabaseService.CLEAN_SHUTDOWN_KEY);
+        } catch {}
+        // C-01: run initial integrity scan immediately to detect crash-induced corruption
+        this.verifyIntegrity()
+            .then((reports) => {
+                const corrupt = reports.filter((r) => r.invalid > 0);
+                if (corrupt.length > 0) {
+                    LOGGER.warn(
+                        'DatabaseService',
+                        `Startup integrity scan: ${corrupt.length} table(s) have corrupt data (${corrupt.reduce((s, r) => s + r.invalid, 0)} invalid rows total)`,
+                        {
+                            details: corrupt.map((r) => ({
+                                table: r.table,
+                                invalid: r.invalid,
+                                total: r.total,
+                                sampleErrors: r.sampleErrors,
+                            })),
+                        },
+                    );
+                } else {
+                    LOGGER.info('DatabaseService', 'Startup integrity scan: all tables clean');
+                }
+            })
+            .catch((e) => {
+                LOGGER.error('DatabaseService', 'Startup integrity scan failed', {
+                    error: String(e),
+                });
+            });
         this._integrityTimer = setInterval(() => {
             this.verifyIntegrity()
                 .then((reports) => {

@@ -1812,6 +1812,27 @@ Transitions:
 
 ---
 
+## Session 62 — Crash consistency: startup integrity scan + unclean shutdown detection (v4.5.0 → v4.6.0) ✅
+
+**Crash consistency (Row 7): 25% → 40%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `database-service.ts` — `init()` runs immediate `verifyIntegrity()` scan at startup (detects pre-existing corruption from previous crash before any service starts); periodic interval scan still runs as before                                 |
+| 2   | `database-service.ts` — added `ai_os_clean_shutdown` localStorage flag: checked at startup for unclean shutdown detection, cleared during normal `destroy()` path, giving services a signal that the previous session may have crashed mid-write |
+| 3   | `docs/ocs/reliability-matrix.md` — Row 7: ~25% → ~40%                                                                                                                                                                                            |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 61 — Ordering bugs: EventBus FIFO defer queue + EventRecorder causal ordering (v4.5.0 → v4.6.0) ✅
 
 **Ordering bugs (Row 10): 30% → 45%. Typecheck 0 errors.**
