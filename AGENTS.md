@@ -1533,3 +1533,19 @@ This is per-agent (each call gets fresh sets), but with a single provider the de
 | #   | File                                | Change                                                                                                                                                                                                                                                        |
 | --- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `debate-shadow-opponent-service.ts` | Critique/steelman meta-prompt now includes the agent's role context (first ~300 chars of system prompt: "Your Role" + "Your Character" + "Your Unique Lens"). Previously all agents got the same generic output. Now each agent critiques from its expertise. |
+
+---
+
+## Session 74 — Fix Google GenAI 400: tools/safetySettings in wrong nesting (v4.5.0 → v4.6.0) ✅
+
+**1 fix. Typecheck 0 errors.**
+
+### Problem
+
+`google-genai-service.ts` passed `tools` and `safetySettings` inside `generationConfig` to `getGenerativeModel()`. The Gemini API rejects these fields inside `generationConfig` with `400 Invalid JSON payload — Unknown name "tools"`. Expected: `tools` and `safetySettings` are top-level `ModelParams`.
+
+### Changes
+
+| #   | File                      | Change                                                                                                                                                                                                                         |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `google-genai-service.ts` | Split `config` into `generationConfig` (temperature, maxOutputTokens, stopSequences, responseMimeType, thinkingConfig) + `modelParams` (tools, safetySettings). `getGenerativeModel()` now receives fields at correct nesting. |

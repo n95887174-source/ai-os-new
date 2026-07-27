@@ -121,35 +121,42 @@ export class GoogleGenAIService {
 
     #model(modelName = 'gemini-2.0-flash', options?: SendMessageOptions): GenerativeModel {
         if (!this.#client) throw new Error('GoogleGenAI not configured — call setApiKey() first');
-        const config: Record<string, unknown> = {};
-        if (options?.temperature !== undefined) config.temperature = options.temperature;
+        const generationConfig: Record<string, unknown> = {};
+        if (options?.temperature !== undefined) generationConfig.temperature = options.temperature;
         if (options?.maxOutputTokens !== undefined)
-            config.maxOutputTokens = options.maxOutputTokens;
-        if (options?.stopSequences) config.stopSequences = options.stopSequences;
+            generationConfig.maxOutputTokens = options.maxOutputTokens;
+        if (options?.stopSequences) generationConfig.stopSequences = options.stopSequences;
         if (options?.responseFormat?.type === 'json_object') {
-            config.responseMimeType = 'application/json';
+            generationConfig.responseMimeType = 'application/json';
         }
+        // thinkingConfig is part of generationConfig in Gemini API
         if (options?.thinkingConfig) {
-            config.thinkingConfig = options.thinkingConfig;
+            generationConfig.thinkingConfig = options.thinkingConfig;
         }
+        // tools, safetySettings are top-level model params, NOT generationConfig.
+        // Passing them inside generationConfig causes "Unknown name 'tools'" 400.
+        const modelParams: Record<string, unknown> = {
+            model: modelName,
+            generationConfig,
+        };
         if (options?.googleSearchGrounding) {
-            config.tools = [{ googleSearch: {} }];
+            modelParams.tools = [{ googleSearch: {} }];
         }
         if (options?.vertexSearchGrounding) {
-            const existingTools = (config.tools as Array<Record<string, unknown>>) || [];
+            const tools = (modelParams.tools as Array<Record<string, unknown>>) || [];
             const vs: VertexSearchConfig =
                 typeof options.vertexSearchGrounding === 'object'
                     ? options.vertexSearchGrounding
                     : {};
             if (vs.datastore) {
-                existingTools.push({
+                tools.push({
                     retrieval: {
                         vertexAiSearch: { datastore: vs.datastore },
                         ...(vs.includeWebFallback ? { disableAttribution: false } : {}),
                     },
                 });
                 if (vs.includeWebFallback) {
-                    existingTools.push({ googleSearch: {} });
+                    tools.push({ googleSearch: {} });
                 }
             } else {
                 const retrievalTool: Record<string, unknown> = {
@@ -160,17 +167,14 @@ export class GoogleGenAIService {
                         dynamicRetrievalConfig: vs.dynamicRetrievalConfig,
                     };
                 }
-                existingTools.push(retrievalTool);
+                tools.push(retrievalTool);
             }
-            config.tools = existingTools as never;
+            modelParams.tools = tools as never;
         }
         if (options?.safetySettings) {
-            config.safetySettings = options.safetySettings;
+            modelParams.safetySettings = options.safetySettings;
         }
-        return this.#client.getGenerativeModel({
-            model: modelName,
-            generationConfig: config,
-        });
+        return this.#client.getGenerativeModel(modelParams as never);
     }
 
     async generateContent(
