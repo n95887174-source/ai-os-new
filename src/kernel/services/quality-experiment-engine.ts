@@ -4,11 +4,18 @@ import { setSetting } from './debate-runtime/quality-settings-store';
 import { rootLogger } from './logger-service';
 import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
+import { SeededRng } from '../utils/seedable-rng';
 
 const LOGGER = rootLogger.child('ExperimentEngine');
 
 const STORAGE_KEY = 'quality-experiments';
 const ASSIGNMENT_KEY_PREFIX = 'experiment-assignment-';
+
+let _rng = new SeededRng();
+
+export function resetExperimentRng(seed?: number): void {
+    _rng = new SeededRng(seed);
+}
 
 export class ExperimentEngine implements IExperimentEngine {
     private experiments: QualityExperiment[] = [];
@@ -166,7 +173,7 @@ export class ExperimentEngine implements IExperimentEngine {
             const relevant = exp.techniqueIds.filter((t) => enabledTechniques.includes(t));
             for (const techId of relevant) {
                 // Random ON/OFF with 50% probability
-                assignment[techId] = Math.random() < 0.5;
+                assignment[techId] = _rng.chance(0.5);
             }
         }
 

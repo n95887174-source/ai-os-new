@@ -14,9 +14,15 @@ import type { AdapterMessage } from '../contracts/provider-adapter';
 import { EVENTS } from '../events/event-registry';
 import { TEAM_TEMPLATES } from './team-template-definitions';
 import { BucketStorageAdapter } from './storage-adapter';
+import { SeededRng } from '../utils/seedable-rng';
 
 const genId = () => crypto.randomUUID();
 const genExecId = () => crypto.randomUUID();
+let _rng = new SeededRng();
+
+export function resetRoleTeamRng(seed?: number): void {
+    _rng = new SeededRng(seed);
+}
 
 const TEAMS_STORAGE_KEY = 'role_teams_v1';
 const EXECUTIONS_STORAGE_KEY = 'role_team_executions_v1';
@@ -452,7 +458,7 @@ export class RoleTeamService implements IRoleTeamService {
     private pickProviderAndKey(): { provider: string; key: string; model: string } | undefined {
         const keys = this.deps.keyService.getKeys().filter((k) => k.status === 'active');
         if (keys.length === 0) return undefined;
-        const key = keys[Math.floor(Math.random() * keys.length)];
+        const key = keys[_rng.nextInt(0, keys.length - 1)];
         const adapter = this.deps.adapterRegistry.getAdapter(key.provider);
         if (!adapter) return undefined;
         const providerDefaults: Record<string, string> = {

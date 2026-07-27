@@ -6,9 +6,16 @@ import type {
 } from '../types/routing-types';
 import type { RouterConfigSection } from '../contracts/config-registry';
 import { CONFIG } from './config-registry';
+import { SeededRng } from '../utils/seedable-rng';
 
 const CONFIG_KEY = 'router_config';
 const DEFAULT_PROFILE_NAME = 'default';
+
+let _rng = new SeededRng();
+
+export function resetRouterConfigRng(seed?: number): void {
+    _rng = new SeededRng(seed);
+}
 
 let _instance: RouterConfigManager | null = null;
 
@@ -260,7 +267,7 @@ export class RouterConfigManager {
     resolveProfileForRequest(): string {
         const ab = this.config.abTest;
         if (ab && ab.enabled && ab.splitPercent > 0) {
-            const roll = Math.random() * 100;
+            const roll = _rng.next() * 100;
             if (roll < ab.splitPercent) return ab.experimentProfile;
         }
         return this.config.activeProfile;

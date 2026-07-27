@@ -787,6 +787,27 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 
 ---
 
+## Session 65 — Non-determinism: router-config-manager, experiment-engine, role-team-service (v4.5.0 → v4.6.0) ✅
+
+**Non-determinism (Row 34): 40% → 50%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                   |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `router-config-manager.ts` — `Math.random()` → `_rng.next()` in `resolveProfileForRequest()` traffic split roll. Module-level `_rng` + `resetRouterConfigRng()` exported.                     |
+| 2   | `quality-experiment-engine.ts` — `Math.random() < 0.5` → `_rng.chance(0.5)` in A/B assignment. Module-level `_rng` + `resetExperimentRng()` exported.                                         |
+| 3   | `role-team-service.ts` — `Math.floor(Math.random() * keys.length)` → `keys[_rng.nextInt(0, keys.length - 1)]` in `pickProviderAndKey()`. Module-level `_rng` + `resetRoleTeamRng()` exported. |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 21 — Eliminate dual memory systems: MemoryOrchestrator → MemoryService delegate (v4.5.0 → v4.6.0) ✅
 
 **Dual memory systems eliminated. Typecheck 0 errors. 7 individual in-memory stores replaced with ServiceBackedMemoryStore delegating to MemoryService (Dexie).**
