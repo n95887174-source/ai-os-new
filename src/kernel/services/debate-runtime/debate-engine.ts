@@ -724,6 +724,16 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             this.sessionTimeoutTimers.set(
                 sessionId,
                 setTimeout(() => {
+                    const s = this.sessions.get(sessionId);
+                    if (
+                        !s ||
+                        s.phase === 'cancelled' ||
+                        s.phase === 'failed' ||
+                        s.phase === 'completed'
+                    ) {
+                        this.sessionTimeoutTimers.delete(sessionId);
+                        return;
+                    }
                     LOGGER.warn(
                         'DebateEngine',
                         `Session ${sessionId} exceeded max duration (${getDebateMaxDurationMs()}ms) — cancelling`,

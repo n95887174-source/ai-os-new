@@ -787,6 +787,26 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 
 ---
 
+## Session 66 — Ordering bugs: trace-service activeTraces race + debate-engine duplicate FAILED (v4.5.0 → v4.6.0) ✅
+
+**Ordering bugs (Row 10): 45% → 55%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `trace-service.ts` — `_finalizedTraceIds` Set prevents activeTraces race: STREAM_END/STREAM_ERROR mark traceId as finalized, REQUEST_COMPLETED handler skips if already finalized. Cleaned up in `destroy()`. |
+| 2   | `debate-engine.ts` — Timeout callback checks session phase before emitting duplicate DEBATE_SESSION_FAILED, preventing stale timer emissions.                                                                 |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 65 — Non-determinism: router-config-manager, experiment-engine, role-team-service (v4.5.0 → v4.6.0) ✅
 
 **Non-determinism (Row 34): 40% → 50%. Typecheck 0 errors.**

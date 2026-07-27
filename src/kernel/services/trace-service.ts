@@ -45,6 +45,10 @@ export class TraceService {
     private lastEmitTime = 0;
     private static EMIT_INTERVAL_MS = 500;
 
+    /** Tracks trace IDs that have been finalized by STREAM_END/STREAM_ERROR to prevent
+     *  duplicate processing when REQUEST_COMPLETED fires for the same trace. */
+    private _finalizedTraceIds = new Set<string>();
+
     private _persistQueue = new Map<string, { trace: ExecutionTrace; attempts: number }>();
     private static MAX_RETRY_ATTEMPTS = 3;
     private static RETRY_INTERVAL_MS = 30_000;
@@ -228,6 +232,10 @@ export class TraceService {
                     const { final_data } = d;
                     const traceId = final_data?.traceId;
                     if (!traceId) return;
+                    if (this._finalizedTraceIds.has(traceId)) {
+                        this._finalizedTraceIds.delete(traceId);
+                        return;
+                    }
                     const trace = this.activeTraces.get(traceId);
                     if (!trace) {
                         LOGGER.debug('TraceService', 'Request completed event for unknown trace', {
@@ -270,6 +278,7 @@ export class TraceService {
                         step.output = d.error;
                     }
                     this.activeTraces.delete(d.requestId);
+                    this._finalizedTraceIds.add(d.requestId);
                     this.persist(trace);
                     this.throttledEmit();
                 },
@@ -323,6 +332,7 @@ export class TraceService {
                     };
                 }
                 this.activeTraces.delete(d.requestId);
+                this._finalizedTraceIds.add(d.requestId);
                 // B10-43: Persist trace to database before removing from active traces
                 this.persist(trace);
                 this.throttledEmit();
@@ -358,6 +368,7 @@ export class TraceService {
             this._persistQueue.clear();
         }
         this.activeTraces.clear();
+        this._finalizedTraceIds.clear();
         if (this.sweepTimer) {
             clearInterval(this.sweepTimer);
             this.sweepTimer = null;
