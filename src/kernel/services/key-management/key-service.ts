@@ -29,6 +29,7 @@ import { ssrSafeStorage } from '../../utils/ssr-storage';
 
 import type { FreeTierLimit } from './key-types';
 import { requireLevel } from '../../utils/permission-guard';
+import { withTransaction } from '../../utils/with-transaction';
 
 const DEFAULT_FREE_TIER_LIMITS: Record<string, FreeTierLimit> = {
     ...CONFIG.keys.freeTierLimits,
@@ -489,10 +490,33 @@ export class KeyService implements IKeyRotationManager {
 
     private async saveConfig() {
         try {
-            await this.deps.database.setKv('global_free_tier_limits', this.freeTierLimits);
-            await this.deps.database.setKv('pool_strategies', this.poolSelector.getStrategies());
-            await this.deps.database.setKv('global_sla_mode', this._globalSLAMode);
-            await this.deps.database.setKv('latency_threshold', this._latencyThreshold);
+            const oldFreeTier = await this.deps.database.getKv('global_free_tier_limits');
+            const oldStrategies = await this.deps.database.getKv('pool_strategies');
+            const oldSlaMode = await this.deps.database.getKv('global_sla_mode');
+            const oldLatency = await this.deps.database.getKv('latency_threshold');
+
+            await withTransaction('KeyService.saveConfig', async (tx) => {
+                tx.deferPersist(
+                    () => this.deps.database.setKv('global_free_tier_limits', this.freeTierLimits),
+                    () => this.deps.database.setKv('global_free_tier_limits', oldFreeTier),
+                );
+                tx.deferPersist(
+                    () =>
+                        this.deps.database.setKv(
+                            'pool_strategies',
+                            this.poolSelector.getStrategies(),
+                        ),
+                    () => this.deps.database.setKv('pool_strategies', oldStrategies),
+                );
+                tx.deferPersist(
+                    () => this.deps.database.setKv('global_sla_mode', this._globalSLAMode),
+                    () => this.deps.database.setKv('global_sla_mode', oldSlaMode),
+                );
+                tx.deferPersist(
+                    () => this.deps.database.setKv('latency_threshold', this._latencyThreshold),
+                    () => this.deps.database.setKv('latency_threshold', oldLatency),
+                );
+            });
         } catch (e) {
             rootLogger.error('KeyService', '[KeyService] Failed to save global limits', {
                 error: e,

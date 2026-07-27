@@ -764,6 +764,27 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 
 ---
 
+## Session 68 — Partial failure/rollback: settings-service + key-service saveConfig (v4.5.0 → v4.6.0) ✅
+
+**Partial failure/rollback (Row 6): 40% → 50%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                            |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `settings-service.ts` — `updateSettings()`/`reset()` converted to async `withTransaction`: `deferPersist` with snapshot compensation + `deferEmit` (persists before emit). Removed dead `save()`/`savePromise` fields. |
+| 2   | `key-service.ts` — `saveConfig()`: 4 sequential `setKv` calls wrapped in `withTransaction` with old-value capture and individual compensation for each key (reverts on partial failure).                               |
+| 3   | `docs/ocs/reliability-matrix.md` — Row 6: ~40% → ~50%. Coverage Summary: 20-49% bucket 2→1 classes, 50-79% bucket 28→29 classes.                                                                                       |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 64 — Lost updates: trace-service + memory-engine + 8 missed awaits (v4.5.0 → v4.6.0) ✅
 
 **Lost updates (Row 9): 40% → 55%. Typecheck 0 errors.**

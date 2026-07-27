@@ -2,6 +2,7 @@ import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
+import { withTransaction } from '../utils/with-transaction';
 import type {
     ThemeConfig,
     NotificationPreferences,
@@ -280,15 +281,6 @@ export class SettingsService implements ISettingsService {
         }
     }
 
-    private savePromise: Promise<void> = Promise.resolve();
-    private save() {
-        this.savePromise = this.savePromise
-            .then(() => this.deps.database.setKv(SETTINGS_KEY, this.settings))
-            .catch((e: unknown) =>
-                LOGGER.error('SettingsService', 'Failed to persist settings', { error: e }),
-            );
-    }
-
     private saveProfiles() {
         this.deps.database
             .setKv(PROFILES_KEY, this.profiles)
@@ -318,32 +310,56 @@ export class SettingsService implements ISettingsService {
         return { ...this.settings };
     }
 
-    updateSettings(updates: Partial<SystemSettings>) {
+    async updateSettings(updates: Partial<SystemSettings>) {
         const validated = validateSettings(updates);
         LOGGER.info('SettingsService', 'Settings updated', { changedKeys: Object.keys(validated) });
+        const snapshot = { ...this.settings };
         this.settings = this.deepMergeSettings(this.settings, validated);
-        this.save();
         this.applySettings(validated);
-        this.deps.eventBus.emit(EVENTS.SETTINGS_UPDATED, {
-            settings: { ...this.settings },
-            changes: validated,
-        });
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, { message: 'Settings updated', type: 'info' });
+        await withTransaction(
+            'SettingsService',
+            async (tx) => {
+                tx.deferPersist(
+                    () => this.deps.database.setKv(SETTINGS_KEY, this.settings),
+                    async () => {
+                        this.settings = snapshot;
+                    },
+                );
+                tx.deferEmit(EVENTS.SETTINGS_UPDATED, {
+                    settings: { ...this.settings },
+                    changes: validated,
+                });
+                tx.deferEmit(EVENTS.NOTIFICATION, { message: 'Settings updated', type: 'info' });
+            },
+            this.deps.eventBus,
+        );
         this.listeners.forEach((cb) => cb({ ...this.settings }));
     }
 
-    reset() {
+    async reset() {
+        const snapshot = { ...this.settings };
         this.settings = { ...DEFAULTS };
-        this.save();
         this.applySettings(DEFAULTS);
-        this.deps.eventBus.emit(EVENTS.SETTINGS_UPDATED, {
-            settings: { ...this.settings },
-            changes: DEFAULTS,
-        });
-        this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-            message: 'Settings reset to defaults',
-            type: 'info',
-        });
+        await withTransaction(
+            'SettingsService',
+            async (tx) => {
+                tx.deferPersist(
+                    () => this.deps.database.setKv(SETTINGS_KEY, this.settings),
+                    async () => {
+                        this.settings = snapshot;
+                    },
+                );
+                tx.deferEmit(EVENTS.SETTINGS_UPDATED, {
+                    settings: { ...this.settings },
+                    changes: DEFAULTS,
+                });
+                tx.deferEmit(EVENTS.NOTIFICATION, {
+                    message: 'Settings reset to defaults',
+                    type: 'info',
+                });
+            },
+            this.deps.eventBus,
+        );
         this.listeners.forEach((cb) => cb({ ...this.settings }));
     }
 
@@ -353,7 +369,6 @@ export class SettingsService implements ISettingsService {
     }
 
     async destroy() {
-        await this.savePromise;
         this.listeners.clear();
     }
 
