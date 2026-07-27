@@ -87,6 +87,37 @@ export class DatabaseService implements IDatabaseService {
     /** C-02: localStorage flag set on clean shutdown, cleared on startup — if found missing, crash detected */
     private static readonly CLEAN_SHUTDOWN_KEY = 'ai_os_clean_shutdown';
 
+    private async cleanupStaleLocks(): Promise<void> {
+        try {
+            const dexie = getDexieDb();
+            const all = await dexie.keyValue.toArray();
+            const stale: string[] = [];
+            const now = Date.now();
+            for (const entry of all) {
+                if (typeof entry.id === 'string' && entry.id.startsWith('distlock:')) {
+                    const val = entry.value as Record<string, unknown> | null;
+                    const ttl = typeof val?.ttl === 'number' ? val.ttl : 30000;
+                    const heartbeatAt = typeof val?.heartbeatAt === 'number' ? val.heartbeatAt : 0;
+                    if (now - heartbeatAt > ttl * 2) {
+                        stale.push(entry.id);
+                    }
+                }
+            }
+            if (stale.length > 0) {
+                await dexie.keyValue.bulkDelete(stale);
+                LOGGER.info(
+                    'DatabaseService',
+                    `Cleaned ${stale.length} stale distributed lock(s) after crash`,
+                    {
+                        stale,
+                    },
+                );
+            }
+        } catch (e) {
+            LOGGER.warn('DatabaseService', 'Failed to clean stale distributed locks', { error: e });
+        }
+    }
+
     init(config?: { integrityScanIntervalMs?: number }): void {
         if (this._integrityTimer) return;
         const intervalMs = config?.integrityScanIntervalMs ?? DEFAULT_INTEGRITY_SCAN_MS;
@@ -102,6 +133,10 @@ export class DatabaseService implements IDatabaseService {
         try {
             ssrSafeStorage.removeItem(DatabaseService.CLEAN_SHUTDOWN_KEY);
         } catch {}
+        // C-01: clean stale distributed locks from crashed tabs
+        this.cleanupStaleLocks().catch((e) => {
+            LOGGER.warn('DatabaseService', 'Stale lock cleanup failed', { error: e });
+        });
         // C-01: run initial integrity scan immediately to detect crash-induced corruption
         this.verifyIntegrity()
             .then((reports) => {
@@ -254,6 +289,48 @@ export class DatabaseService implements IDatabaseService {
                     createdAt: existing?.createdAt ?? Date.now(),
                     version: currentVersion + 1,
                 });
+            });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async batchSetKv(entries: Record<string, unknown>): Promise<void> {
+        const dexie = getDexieDb();
+        await dexie.transaction('rw', dexie.keyValue, async () => {
+            const now = Date.now();
+            for (const [id, value] of Object.entries(entries)) {
+                const existing = await dexie.keyValue.get(id);
+                await dexie.keyValue.put({
+                    id,
+                    value,
+                    createdAt: existing?.createdAt ?? now,
+                    version: (existing?.version ?? 0) + 1,
+                });
+            }
+        });
+    }
+
+    async batchSetKvCas(
+        entries: Record<string, unknown>,
+        expectedVersions: Record<string, number>,
+    ): Promise<boolean> {
+        const dexie = getDexieDb();
+        try {
+            await dexie.transaction('rw', dexie.keyValue, async () => {
+                for (const [id, value] of Object.entries(entries)) {
+                    const existing = await dexie.keyValue.get(id);
+                    const currentVersion = existing?.version ?? 0;
+                    const expected = expectedVersions[id] ?? 0;
+                    if (currentVersion !== expected) throw new Error('Version conflict');
+                    await dexie.keyValue.put({
+                        id,
+                        value,
+                        createdAt: existing?.createdAt ?? Date.now(),
+                        version: currentVersion + 1,
+                    });
+                }
             });
             return true;
         } catch {

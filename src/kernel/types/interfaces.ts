@@ -26,6 +26,13 @@ export interface IDatabaseService {
     getKvCas<T>(id: string): Promise<{ value: T | null; version: number }>;
     /** Write a key-value pair only if the version matches. Returns false on conflict. */
     setKvCas<T>(id: string, value: T, expectedVersion: number): Promise<boolean>;
+    /** Write multiple key-value pairs in a single Dexie transaction (crash-atomic). */
+    batchSetKv(entries: Record<string, unknown>): Promise<void>;
+    /** Write multiple key-value pairs with CAS in a single Dexie transaction. Returns false on version conflict. */
+    batchSetKvCas(
+        entries: Record<string, unknown>,
+        expectedVersions: Record<string, number>,
+    ): Promise<boolean>;
     exportToJson(includeSecrets?: boolean): Promise<Record<string, unknown[]>>;
     importFromJson(data: Record<string, unknown[]>): Promise<void>;
     saveWorkflow(topology: unknown): Promise<void>;

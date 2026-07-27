@@ -728,39 +728,27 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 
 ---
 
-## Session 15 — P0 Security + Deps (v4.5.0 → v4.6.0) ✅
+## Session 69 — Crash consistency: batchSetKv + startup recovery (v4.5.0 → v4.6.0) ✅
 
-**4 P0 Critical фикса. Typecheck 0 errors. 46 packages (370MB) removed.**
-
-### План
-
-| #   | Область       | Проблема                                       | Статус  |
-| --- | ------------- | ---------------------------------------------- | ------- |
-| 1   | **P0-SEC-1**  | 12 live API keys в git (insert-all-keys.ts)    | 🟢 Done |
-| 2   | **P0-SEC-2**  | Vault disabled — ключи в plaintext в IndexedDB | 🟢 Done |
-| 3   | **P0-DEPS-1** | Web worker сломан в production (.ts → dist)    | 🟢 Done |
-| 4   | **P0-DEPS-2** | @huggingface/transformers 370MB dead dep chain | 🟢 Done |
+**Crash consistency (Row 7): 40% → 50%. Typecheck 0 errors.**
 
 ### Changes
 
-| #   | Что сделано                                                                                                                                            |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | `scripts/insert-all-keys.ts` — 12 хардкоженных API keys удалены, заменены на чтение из `VITE_KEY_*` env vars. Добавлены vars в `.env.example`          |
-| 2   | `key-service.ts:434-448` — добавлен `unlockVault()`: генерация device-specific ключа в localStorage, auto-unlock vault при `init()`                    |
-| 3   | `key-registry.ts:641` — комментарий "Vault system removed" заменён на актуальное описание                                                              |
-| 4   | `memory.worker.ts` — `@huggingface/transformers` pipeline заменён на лёгкую embedding функцию (word-level hashing, 384-dim) — без внешних зависимостей |
-| 5   | `package.json` — удалён `@huggingface/transformers`                                                                                                    |
-| 6   | `vite.config.ts` — удалён `vendor-ml` manual chunk, очищен `external: []`                                                                              |
-| 7   | `provider-service.ts:177` — `NodeJS.Timeout` → удалён (браузерный таймер, unref не нужен)                                                              |
+| #   | Что сделано                                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `interfaces.ts` — added `batchSetKv` + `batchSetKvCas` to `IDatabaseService` interface                                                                                                                 |
+| 2   | `database-service.ts` — implemented `batchSetKv()` + `batchSetKvCas()`: multiple key-value writes in a single Dexie transaction (IndexedDB-level atomicity)                                            |
+| 3   | `database-service.ts` — added `cleanupStaleLocks()` startup recovery: `init()` removes expired `distlock:` entries from crashed tabs (detected via `heartbeatAt > ttl*2`)                              |
+| 4   | `key-service.ts` — `saveConfig()`: 4 individual `setKv` calls replaced with single `batchSetKv()` in `withTransaction`, providing crash-atomic multi-key write + application-level rollback protection |
+| 5   | `key-service.ts` — `KeyServiceDeps.database` interface extended with `batchSetKv`                                                                                                                      |
+| 6   | `docs/ocs/reliability-matrix.md` — Row 7: ~40% → ~50%. Coverage Summary: 20-49% bucket 1→0 classes (empty), 50-79% bucket 29→30 classes.                                                               |
 
 ### Build result
 
-| Метрика          | Значение |
-| ---------------- | -------- |
-| tsc              | 0 errors |
-| Packages removed | 46       |
-| npm install      | ✅       |
-| Typecheck        | ✅ pass  |
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
 
 ---
 

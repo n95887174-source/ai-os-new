@@ -61,6 +61,7 @@ export interface KeyServiceDeps {
     database: {
         getKv: <T>(id: string) => Promise<T | null>;
         setKv: <T>(id: string, value: T) => Promise<void>;
+        batchSetKv: (entries: Record<string, unknown>) => Promise<void>;
         db: {
             keyValue: {
                 put: (obj: { id: string; value: unknown; createdAt: number }) => Promise<void>;
@@ -497,24 +498,20 @@ export class KeyService implements IKeyRotationManager {
 
             await withTransaction('KeyService.saveConfig', async (tx) => {
                 tx.deferPersist(
-                    () => this.deps.database.setKv('global_free_tier_limits', this.freeTierLimits),
-                    () => this.deps.database.setKv('global_free_tier_limits', oldFreeTier),
-                );
-                tx.deferPersist(
                     () =>
-                        this.deps.database.setKv(
-                            'pool_strategies',
-                            this.poolSelector.getStrategies(),
-                        ),
-                    () => this.deps.database.setKv('pool_strategies', oldStrategies),
-                );
-                tx.deferPersist(
-                    () => this.deps.database.setKv('global_sla_mode', this._globalSLAMode),
-                    () => this.deps.database.setKv('global_sla_mode', oldSlaMode),
-                );
-                tx.deferPersist(
-                    () => this.deps.database.setKv('latency_threshold', this._latencyThreshold),
-                    () => this.deps.database.setKv('latency_threshold', oldLatency),
+                        this.deps.database.batchSetKv({
+                            global_free_tier_limits: this.freeTierLimits,
+                            pool_strategies: this.poolSelector.getStrategies(),
+                            global_sla_mode: this._globalSLAMode,
+                            latency_threshold: this._latencyThreshold,
+                        }),
+                    () =>
+                        this.deps.database.batchSetKv({
+                            global_free_tier_limits: oldFreeTier,
+                            pool_strategies: oldStrategies,
+                            global_sla_mode: oldSlaMode,
+                            latency_threshold: oldLatency,
+                        }),
                 );
             });
         } catch (e) {
