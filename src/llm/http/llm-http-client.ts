@@ -14,6 +14,32 @@ export class LLMHttpClient {
     readonly #provider: string;
     readonly #timeoutMs: number;
 
+    /** Semaphore concurrency limit — max concurrent HTTP requests across all instances. */
+    private static readonly MAX_CONCURRENT = 50;
+    private static _activeCount = 0;
+    private static _waitingQueue: Array<() => void> = [];
+
+    /** Acquire a concurrency slot — waits if at MAX_CONCURRENT. */
+    private static acquireSlot(): Promise<void> {
+        if (LLMHttpClient._activeCount < LLMHttpClient.MAX_CONCURRENT) {
+            LLMHttpClient._activeCount++;
+            return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+            LLMHttpClient._waitingQueue.push(resolve);
+        });
+    }
+
+    /** Release a concurrency slot — wakes the next waiter if any. */
+    private static releaseSlot(): void {
+        const next = LLMHttpClient._waitingQueue.shift();
+        if (next) {
+            next();
+        } else {
+            LLMHttpClient._activeCount--;
+        }
+    }
+
     /** Global registry of in-flight HTTP requests for memory-pressure cancellation. */
     private static readonly _inflight = new Map<
         symbol,
@@ -134,6 +160,7 @@ export class LLMHttpClient {
         apiKey: string,
         signal?: AbortSignal,
     ): Promise<HttpResult> {
+        await LLMHttpClient.acquireSlot();
         const start = Date.now();
         const bodyStr = JSON.stringify(body);
         if (import.meta.env.DEV) {
@@ -222,10 +249,12 @@ export class LLMHttpClient {
             return { data, latency, response: res };
         } finally {
             done();
+            LLMHttpClient.releaseSlot();
         }
     }
 
     async get(path: string, apiKey: string, signal?: AbortSignal): Promise<HttpResult> {
+        await LLMHttpClient.acquireSlot();
         const start = Date.now();
         const { signal: mergedSignal, controller } = this.#withTimeout(signal);
         const done = this.#trackInFlight(controller, path);
@@ -297,6 +326,7 @@ export class LLMHttpClient {
             return { data, latency, response: res };
         } finally {
             done();
+            LLMHttpClient.releaseSlot();
         }
     }
 
@@ -306,6 +336,7 @@ export class LLMHttpClient {
         apiKey: string,
         signal?: AbortSignal,
     ): Promise<Response> {
+        await LLMHttpClient.acquireSlot();
         const { signal: mergedSignal, controller } = this.#withTimeout(signal);
         const done = this.#trackInFlight(controller, path);
         try {
@@ -365,6 +396,7 @@ export class LLMHttpClient {
             return res;
         } finally {
             done();
+            LLMHttpClient.releaseSlot();
         }
     }
 }

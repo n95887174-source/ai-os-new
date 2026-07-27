@@ -146,6 +146,7 @@ export class EventBus implements IEventBus {
             if (!this.staticValidators.has(key)) this.validatorMap.delete(key);
         }
         this.deferCounts.clear();
+        this._pendingCount = 0;
         this.idempotencyCache.clear();
         this.emitCount = 0;
         this.emitDepth = 0;
@@ -303,6 +304,8 @@ export class EventBus implements IEventBus {
 
     private deferCounts = new Map<string, number>();
     private static readonly MAX_DEFER_CHAIN = 1000;
+    private _pendingCount = 0;
+    private static readonly MAX_PENDING = 5000;
 
     private rawEmit(event: string, data?: unknown): void {
         // P0-3: hot events (stream chunks, cognitive traces) bypass emitDepth deferral
@@ -354,6 +357,19 @@ export class EventBus implements IEventBus {
         }
 
         // N-24: prevent infinite recursion when handler emits synchronously (HIGH-K4: 16→32)
+        // B-01: bounded pending backlog — drop events when queue exceeds MAX_PENDING
+        if (this._pendingCount > EventBus.MAX_PENDING) {
+            this.logger?.error(
+                'EventBus',
+                `Pending backlog limit (${EventBus.MAX_PENDING}) reached for ${event} — dropping`,
+            );
+            this.emit(EVENTS.EVENTBUS_BACKPRESSURE, {
+                event,
+                depth: this.emitDepth,
+                pending: this._pendingCount,
+            });
+            return;
+        }
         if (this.emitDepth > 32) {
             const count = (this.deferCounts.get(event) || 0) + 1;
             // P0-3: emit backpressure signal before dropping
@@ -385,7 +401,9 @@ export class EventBus implements IEventBus {
                 );
             }
             // HIGH-K4: queueMicrotask instead of setTimeout(0) — faster, fewer macrotasks
+            this._pendingCount++;
             queueMicrotask(() => {
+                this._pendingCount--;
                 const remaining = (this.deferCounts.get(event) || 1) - 1;
                 if (remaining <= 0) this.deferCounts.delete(event);
                 else this.deferCounts.set(event, remaining);

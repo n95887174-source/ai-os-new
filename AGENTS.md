@@ -1812,6 +1812,27 @@ Transitions:
 
 ---
 
+## Session 58 — Backpressure: bounded EventBus backlog + LLMHttpClient semaphore (v4.5.0 → v4.6.0) ✅
+
+**Backpressure (Row 16): 40% → 55%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                            |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `event-bus.ts` — bounded pending backlog (`MAX_PENDING=5000`): events dropped with `EVENTBUS_BACKPRESSURE` signal when deferred queue exceeds limit; `_pendingCount` tracked in defer microtask path; reset in `clearAllSubscriptions` |
+| 2   | `llm-http-client.ts` — semaphore pattern (`MAX_CONCURRENT=50`, FIFO `_waitingQueue`): `acquireSlot()`/`releaseSlot()` static methods; wired into `post()`, `get()`, `streamPost()` in try/finally                                      |
+| 3   | `docs/ocs/reliability-matrix.md` — Row 16: ~40% → ~55%. Coverage Summary: 20-49% bucket 9→8 classes, 50-79% bucket 22→23 classes                                                                                                       |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 57 — Wire DLQ to batch-processor-service retry exhaustion (v4.5.0 → v4.6.0) ✅
 
 **Infinite retries/DLQ (Row 12): 45% → 52%. Typecheck 0 errors.**
