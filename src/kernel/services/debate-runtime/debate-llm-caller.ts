@@ -296,6 +296,12 @@ export async function debateCallLlm(
     const rejectedCombos = new Set<string>();
     let duplicateRejectCount = 0;
     let noProviderSpinCount = 0;
+    // Global loop iteration guard: prevents infinite CPU spin when any catch
+    // path does `continue` without incrementing retries/noProviderSpinCount.
+    // Covers cross-agent duplicate, entanglement, validation, and any future
+    // error type that might bypass existing counters.
+    let callLlmIterations = 0;
+    const MAX_CALL_LLM_ITERATIONS = 50;
 
     // Quality settings: check if a specific technique is enabled
     // (default: enabled if not explicitly disabled)
@@ -315,6 +321,16 @@ export async function debateCallLlm(
     // (non-Error) would corrupt subsequent debate rounds.
     try {
         while (retries < getMaxRetries()) {
+            callLlmIterations++;
+            // Hard safety net: any `continue` path that forgets to increment retries
+            // (cross-agent duplicate, entanglement, model fallback, alt key, etc.)
+            // will hit this limit and throw instead of spinning forever. 50 iterations
+            // gives ample room: 3 retries × ~5 fallback models + alt keys + overhead.
+            if (callLlmIterations > MAX_CALL_LLM_ITERATIONS) {
+                throw new Error(
+                    `callLLM exceeded max iterations (${MAX_CALL_LLM_ITERATIONS}) — infinite loop prevented`,
+                );
+            }
             // C6: Check cancellation on each retry iteration — the session can be
             // cancelled mid-retry-loop (e.g. another agent errored out, or user hit stop).
             // Without this guard, a cancelled session's abort controller entries get

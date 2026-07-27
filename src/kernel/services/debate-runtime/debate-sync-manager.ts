@@ -721,7 +721,9 @@ export class DebateSyncManager {
                     }
                 }
                 this.stopDebateInternal();
+                return;
             }
+            if (!this.runtimeSessionId) return;
             for (const arg of newArgs) {
                 this.deps!.eventBus.emit(EVENTS.DEBATE_ARGUMENT, {
                     sessionId: this.runtimeSessionId,

@@ -269,6 +269,18 @@ export class DebateProviderResolver {
             }
             return false;
         };
+        const hasAnyUntriedModel = (
+            provider: string,
+            availModels: string[] | undefined,
+        ): boolean => {
+            const priority = DEBATE_MODEL_PRIORITY[provider.toLowerCase()] ?? [];
+            const allM = new Set([...priority, ...(availModels ?? [])]);
+            if (allM.size === 0) return true;
+            for (const m of allM) {
+                if (!triedModels.has(m) && !isModelRejectedAnyKey(provider, m)) return true;
+            }
+            return false;
+        };
 
         let resolvedKey:
             { id: string; key: string; provider: string; availableModels?: string[] } | undefined;
@@ -282,7 +294,8 @@ export class DebateProviderResolver {
                     k.provider === participant.provider &&
                     k.status === 'active' &&
                     !this.isKeyAuthFailed(k.id) &&
-                    !triedKeys.has(k.id),
+                    !triedKeys.has(k.id) &&
+                    hasAnyUntriedModel(k.provider, k.availableModels),
             );
         }
 
@@ -295,7 +308,8 @@ export class DebateProviderResolver {
                         k.provider === cachedProvider &&
                         k.status === 'active' &&
                         !this.isKeyAuthFailed(k.id) &&
-                        !triedKeys.has(k.id),
+                        !triedKeys.has(k.id) &&
+                        hasAnyUntriedModel(k.provider, k.availableModels),
                 );
             }
         }
@@ -310,6 +324,7 @@ export class DebateProviderResolver {
                     if (!this.providerCanBeUsed(k.provider, session)) return false;
                     if (k.status !== 'active') return false;
                     if (this.isKeyAuthFailed(k.id)) return false;
+                    if (!hasAnyUntriedModel(k.provider, k.availableModels)) return false;
                     // Check if this provider can handle the requested model
                     if (isModelCompatibleWithProvider(participant.modelId!, k.provider)) {
                         const avail = k.availableModels ?? [];
@@ -346,7 +361,8 @@ export class DebateProviderResolver {
                     this.providerCanBeUsed(pk.key.provider, session) &&
                     pk.key.status === 'active' &&
                     !this.isKeyAuthFailed(pk.key.id) &&
-                    !triedKeys.has(pk.key.id),
+                    !triedKeys.has(pk.key.id) &&
+                    hasAnyUntriedModel(pk.key.provider, pk.key.availableModels),
             );
             if (available) {
                 console.log('[DEBATE_FALLBACK] Step 4: found provider', {
@@ -384,6 +400,7 @@ export class DebateProviderResolver {
             const available = ranked.find((k) => {
                 if (!this.providerCanBeUsed(k.provider, session)) return false;
                 if (triedKeys.has(k.id)) return false;
+                if (!hasAnyUntriedModel(k.provider, k.availableModels)) return false;
                 const key = allKeys.find((key) => key.id === k.id);
                 return key?.status === 'active' && !this.isKeyAuthFailed(k.id);
             });
@@ -414,16 +431,7 @@ export class DebateProviderResolver {
                 if (this.isKeyAuthFailed(k.id)) return false;
                 if (this.isCircuitOpen(k.provider)) return false;
                 if (triedKeys.has(k.id)) return false;
-                // If every model on this (provider, key) has been rejected as
-                // duplicate somewhere, this key has no fresh models to offer.
-                const priority = DEBATE_MODEL_PRIORITY[k.provider.toLowerCase()] ?? [];
-                const availModels = k.availableModels ?? [];
-                const allModels = new Set([...priority, ...availModels]);
-                if (allModels.size === 0) return true; // no model info — let auto fallback try
-                for (const m of allModels) {
-                    if (!triedModels.has(m) && !isModelRejectedAnyKey(k.provider, m)) return true;
-                }
-                return false;
+                return hasAnyUntriedModel(k.provider, k.availableModels);
             });
             if (anyAvailable) {
                 rootLogger.debug('DebateProviderResolver', 'Step 6: brute-force resolved', {

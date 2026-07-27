@@ -1695,6 +1695,22 @@ const ru = {
     'quality_impact.export_sessions_desc': 'Все сессии дебатов с данными о качестве',
     'quality_impact.export_baselines': 'Базовые сессии',
     'quality_impact.export_baselines_desc': 'Базовые сессии без включенных техник',
+    'debate_analysis.title': 'Анализ дебатов',
+    'debate_analysis.no_sessions':
+        'Завершённые сессии дебатов не найдены. Начните дебаты, чтобы увидеть анализ.',
+    'debate_analysis.subtitle':
+        'Анализ паттернов логических ошибок, метрик убеждения и трендов тональности.',
+    'debate_analysis.total_fallacies': 'Всего ошибок',
+    'debate_analysis.overall_shift': 'Общий сдвиг',
+    'debate_analysis.volatility': 'Волатильность',
+    'debate_analysis.trend': 'Тренд',
+    'debate_analysis.trend_rising': 'Растущий',
+    'debate_analysis.trend_falling': 'Падающий',
+    'debate_analysis.trend_stable': 'Стабильный',
+    'debate_analysis.trend_oscillating': 'Колеблющийся',
+    'debate_analysis.fallacy_breakdown': 'Распределение ошибок',
+    'debate_analysis.persuasion': 'Метрики убеждения',
+    'debate_analysis.tone_timeline': 'Тональность по времени',
 };
 
 export { ru };

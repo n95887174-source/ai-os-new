@@ -2143,6 +2143,22 @@ const en = {
     'quality_impact.export_sessions_desc': 'All debate sessions with quality data',
     'quality_impact.export_baselines': 'Baselines',
     'quality_impact.export_baselines_desc': 'Baseline sessions without quality techniques enabled',
+    'debate_analysis.title': 'Debate Analysis',
+    'debate_analysis.no_sessions':
+        'No completed debate sessions found. Start a debate to see analysis here.',
+    'debate_analysis.subtitle':
+        'Analyze fallacy patterns, persuasion metrics, and tone trends from completed debates.',
+    'debate_analysis.total_fallacies': 'Total Fallacies',
+    'debate_analysis.overall_shift': 'Overall Shift',
+    'debate_analysis.volatility': 'Volatility',
+    'debate_analysis.trend': 'Trend',
+    'debate_analysis.trend_rising': 'Rising',
+    'debate_analysis.trend_falling': 'Falling',
+    'debate_analysis.trend_stable': 'Stable',
+    'debate_analysis.trend_oscillating': 'Oscillating',
+    'debate_analysis.fallacy_breakdown': 'Fallacy Breakdown',
+    'debate_analysis.persuasion': 'Persuasion Metrics',
+    'debate_analysis.tone_timeline': 'Tone Timeline',
 };
 
 export { en };
