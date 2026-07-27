@@ -1812,6 +1812,28 @@ Transitions:
 
 ---
 
+## Session 61 — Ordering bugs: EventBus FIFO defer queue + EventRecorder causal ordering (v4.5.0 → v4.6.0) ✅
+
+**Ordering bugs (Row 10): 30% → 45%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                   |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `event-bus.ts` — per-event `queueMicrotask` defer replaced with single `_deferQueue` + `_scheduleDrain()` FIFO batch drain, preserving event ordering across multiple deferred events; queue reset in `clearAllSubscriptions` |
+| 2   | `event-types.ts` — added `prevSequence?: number` to `RecordedEvent` interface for causal ordering links                                                                                                                       |
+| 3   | `event-recorder.ts` — `_lastSeq` tracks previous recorded sequence; each new `record()` call sets `prevSequence` linking causally; reset in `clear()`                                                                         |
+| 4   | `docs/ocs/reliability-matrix.md` — Row 10: ~30% → ~45%                                                                                                                                                                        |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 60 — Cache inconsistency fix: replace emit + persist promise tracking (v4.5.0 → v4.6.0) ✅
 
 **Cache inconsistency (Row 18): 45% → 52%. Typecheck 0 errors.**

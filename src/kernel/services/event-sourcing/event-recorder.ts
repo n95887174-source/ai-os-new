@@ -53,6 +53,8 @@ export class EventRecorder {
 
     /** P1-15.1: serializes async event recording to preserve ordering */
     private _recordLock: Promise<void> | null = null;
+    /** O-01: tracks the most recent recorded sequence for causal ordering */
+    private _lastSeq = -1;
 
     private async _serializedRecord(fn: () => Promise<void>): Promise<void> {
         while (this._recordLock) {
@@ -200,7 +202,9 @@ export class EventRecorder {
                     data: payload.data,
                     timestamp: ts,
                     checksum: await this.boundedChecksum(payload.event, payload.data, ts),
+                    prevSequence: this._lastSeq >= 0 ? this._lastSeq : undefined,
                 };
+                this._lastSeq = seq;
                 if (this.config.filter && !this.config.filter(recorded)) return;
                 this.events.push(recorded);
                 if (this.events.length > this.config.maxEvents) {
@@ -225,7 +229,9 @@ export class EventRecorder {
                 data,
                 timestamp: ts,
                 checksum: await this.boundedChecksum(event, data, ts),
+                prevSequence: this._lastSeq >= 0 ? this._lastSeq : undefined,
             };
+            this._lastSeq = recorded.sequence;
             if (this.config.filter && !this.config.filter(recorded)) return;
             this.events.push(recorded);
             if (this.events.length > this.config.maxEvents) {
@@ -344,6 +350,7 @@ export class EventRecorder {
     async clear(): Promise<void> {
         this.events = [];
         this.sequence = 0;
+        this._lastSeq = -1;
         this._persistGen++; // P1-15.3: invalidate any queued microtask
         this._pendingPersistData = null;
         this.persistQueued = false;

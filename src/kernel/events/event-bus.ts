@@ -147,6 +147,8 @@ export class EventBus implements IEventBus {
         }
         this.deferCounts.clear();
         this._pendingCount = 0;
+        this._deferQueue = [];
+        this._drainScheduled = false;
         this.idempotencyCache.clear();
         this.emitCount = 0;
         this.emitDepth = 0;
@@ -306,6 +308,24 @@ export class EventBus implements IEventBus {
     private static readonly MAX_DEFER_CHAIN = 1000;
     private _pendingCount = 0;
     private static readonly MAX_PENDING = 5000;
+    private _deferQueue: Array<{ event: string; data: unknown }> = [];
+    private _drainScheduled = false;
+
+    private _scheduleDrain(): void {
+        if (this._drainScheduled) return;
+        this._drainScheduled = true;
+        queueMicrotask(() => {
+            this._drainScheduled = false;
+            const batch = this._deferQueue.splice(0, this._deferQueue.length);
+            for (const { event, data } of batch) {
+                this._pendingCount--;
+                const count = (this.deferCounts.get(event) || 1) - 1;
+                if (count <= 0) this.deferCounts.delete(event);
+                else this.deferCounts.set(event, count);
+                this.emit(event as keyof EventMap, data);
+            }
+        });
+    }
 
     private rawEmit(event: string, data?: unknown): void {
         // P0-3: hot events (stream chunks, cognitive traces) bypass emitDepth deferral
@@ -400,15 +420,10 @@ export class EventBus implements IEventBus {
                     `Recursion limit reached at ${event} — deferring (#${count})`,
                 );
             }
-            // HIGH-K4: queueMicrotask instead of setTimeout(0) — faster, fewer macrotasks
+            // B-02: FIFO defer queue preserves ordering across multiple deferred events
             this._pendingCount++;
-            queueMicrotask(() => {
-                this._pendingCount--;
-                const remaining = (this.deferCounts.get(event) || 1) - 1;
-                if (remaining <= 0) this.deferCounts.delete(event);
-                else this.deferCounts.set(event, remaining);
-                this.emit(event as keyof EventMap, data);
-            });
+            this._deferQueue.push({ event, data });
+            this._scheduleDrain();
             return;
         }
         this.emitDepth++;
