@@ -13,10 +13,8 @@ import type {
     ServicesConfigSection,
 } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
-import { rootLogger } from './logger-service';
 import { requireLevel } from '../utils/permission-guard';
-
-const LOGGER = rootLogger.child('ConfigService');
+import { withTransaction } from '../utils/with-transaction';
 
 export interface ConfigServiceDeps {
     database: {
@@ -82,9 +80,7 @@ export class ConfigService {
                 this.applyOverlays(saved);
             }
         } catch (e) {
-            rootLogger.warn('ConfigService', 'Failed to load config overlays, using defaults', {
-                error: String(e),
-            });
+            console.warn('ConfigService: Failed to load config overlays, using defaults', e);
             this.overlays = {};
         }
 
@@ -142,13 +138,6 @@ export class ConfigService {
         return deepMerge(CONFIG_DEFAULTS.services, this.overlays.services);
     }
 
-    private notifySettingsUpdated(section: string, changes: unknown) {
-        this.deps.eventBus?.emit(EVENTS.SETTINGS_UPDATED, {
-            settings: this.getConfigForSection(section),
-            changes,
-        });
-    }
-
     private getConfigForSection(section: string) {
         switch (section) {
             case 'monitoring':
@@ -174,84 +163,88 @@ export class ConfigService {
         }
     }
 
-    async updateMonitoring(partial: Partial<MonitoringConfigSection>) {
+    private async _updateSection<K extends keyof ConfigOverlays>(
+        section: K,
+        partial: Partial<NonNullable<ConfigOverlays[K]>>,
+    ): Promise<void> {
         requireLevel('L2');
-        this.overlays.monitoring = deepMerge(this.overlays.monitoring || {}, partial);
-        setConfig('monitoring', deepMerge(CONFIG_DEFAULTS.monitoring, this.overlays.monitoring));
-        await this.persist();
-        this.notifySettingsUpdated('monitoring', partial);
+        const snapshot = structuredClone(this.overlays);
+        await withTransaction(
+            `config:${String(section)}`,
+            async (tx) => {
+                this.overlays[section] = deepMerge(
+                    (this.overlays[section] || {}) as Record<string, unknown>,
+                    partial as Record<string, unknown>,
+                ) as ConfigOverlays[K];
+                setConfig(
+                    section as keyof ConfigRegistry,
+                    deepMerge(
+                        CONFIG_DEFAULTS[section as keyof ConfigRegistry] as Record<string, unknown>,
+                        this.overlays[section] as Record<string, unknown>,
+                    ),
+                );
+                tx.deferPersist(
+                    () => this.deps.database.setKv(OVERLAYS_KEY, this.overlays),
+                    async () => {
+                        this.overlays = structuredClone(snapshot);
+                        const defaults = CONFIG_DEFAULTS as Record<string, unknown>;
+                        for (const k of Object.keys(defaults) as (keyof ConfigRegistry)[]) {
+                            const merged = this.overlays[k as keyof ConfigOverlays]
+                                ? deepMerge(
+                                      defaults[k] as Record<string, unknown>,
+                                      this.overlays[k as keyof ConfigOverlays] as Record<
+                                          string,
+                                          unknown
+                                      >,
+                                  )
+                                : defaults[k];
+                            setConfig(k, merged as never);
+                        }
+                    },
+                );
+                tx.deferEmit(EVENTS.SETTINGS_UPDATED, {
+                    settings: this.getConfigForSection(section as string),
+                    changes: partial,
+                });
+            },
+            this.deps.eventBus as { emit: (event: string, data?: unknown) => void },
+        );
+    }
+
+    async updateMonitoring(partial: Partial<MonitoringConfigSection>) {
+        await this._updateSection('monitoring', partial);
     }
 
     async updateMetrics(partial: Partial<MetricsConfigSection>) {
-        requireLevel('L2');
-        this.overlays.metrics = deepMerge(this.overlays.metrics || {}, partial);
-        setConfig('metrics', deepMerge(CONFIG_DEFAULTS.metrics, this.overlays.metrics));
-        await this.persist();
-        this.notifySettingsUpdated('metrics', partial);
+        await this._updateSection('metrics', partial);
     }
 
     async updateTraces(partial: Partial<TracesConfigSection>) {
-        requireLevel('L2');
-        this.overlays.traces = deepMerge(this.overlays.traces || {}, partial);
-        setConfig('traces', deepMerge(CONFIG_DEFAULTS.traces, this.overlays.traces));
-        await this.persist();
-        this.notifySettingsUpdated('traces', partial);
+        await this._updateSection('traces', partial);
     }
 
     async updateWebhooks(partial: Partial<WebhooksConfigSection>) {
-        requireLevel('L2');
-        this.overlays.webhooks = deepMerge(this.overlays.webhooks || {}, partial);
-        setConfig('webhooks', deepMerge(CONFIG_DEFAULTS.webhooks, this.overlays.webhooks));
-        await this.persist();
-        this.notifySettingsUpdated('webhooks', partial);
+        await this._updateSection('webhooks', partial);
     }
 
     async updateKeys(partial: Partial<KeysConfigSection>) {
-        requireLevel('L2');
-        this.overlays.keys = deepMerge(this.overlays.keys || {}, partial);
-        setConfig('keys', deepMerge(CONFIG_DEFAULTS.keys, this.overlays.keys));
-        await this.persist();
-        this.notifySettingsUpdated('keys', partial);
+        await this._updateSection('keys', partial);
     }
 
     async updateLlm(partial: Partial<LlmConfigSection>) {
-        requireLevel('L2');
-        this.overlays.llm = deepMerge(this.overlays.llm || {}, partial);
-        setConfig('llm', deepMerge(CONFIG_DEFAULTS.llm, this.overlays.llm));
-        await this.persist();
-        this.notifySettingsUpdated('llm', partial);
+        await this._updateSection('llm', partial);
     }
 
     async updatePressure(partial: Partial<PressureConfigSection>) {
-        requireLevel('L2');
-        this.overlays.pressure = deepMerge(this.overlays.pressure || {}, partial);
-        setConfig('pressure', deepMerge(CONFIG_DEFAULTS.pressure, this.overlays.pressure));
-        await this.persist();
-        this.notifySettingsUpdated('pressure', partial);
+        await this._updateSection('pressure', partial);
     }
 
     async updatePricing(partial: Partial<PricingConfigSection>) {
-        requireLevel('L2');
-        this.overlays.pricing = deepMerge(this.overlays.pricing || {}, partial);
-        setConfig('pricing', deepMerge(CONFIG_DEFAULTS.pricing, this.overlays.pricing));
-        await this.persist();
-        this.notifySettingsUpdated('pricing', partial);
+        await this._updateSection('pricing', partial);
     }
 
     async updateServices(partial: Partial<ServicesConfigSection>) {
-        requireLevel('L2');
-        this.overlays.services = deepMerge(this.overlays.services || {}, partial);
-        setConfig('services', deepMerge(CONFIG_DEFAULTS.services, this.overlays.services));
-        await this.persist();
-        this.notifySettingsUpdated('services', partial);
-    }
-
-    private async persist() {
-        try {
-            await this.deps.database.setKv(OVERLAYS_KEY, this.overlays);
-        } catch (e) {
-            LOGGER.warn('ConfigService', 'Persist failed', { error: e });
-        }
+        await this._updateSection('services', partial);
     }
 
     private applyOverlays(overlays: ConfigOverlays) {

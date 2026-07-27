@@ -1812,6 +1812,27 @@ Transitions:
 
 ---
 
+## Session 59 — Partial failure/rollback: withTransaction utility + ConfigService (v4.5.0 → v4.6.0) ✅
+
+**Partial failure/rollback (Row 6): 30% → 40%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                                                                                |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `src/kernel/utils/with-transaction.ts` — created reusable `withTransaction()` helper wrapping `TransactionContext` commit/rollback with eventBus support                                                                                                   |
+| 2   | `config-service.ts` — all 9 `update*` methods refactored to use `withTransaction`: capture overlays snapshot before mutation, defer persist + emit via `tx.deferPersist` / `tx.deferEmit`, compensation restores overlays + reverts `setConfig` on failure |
+| 3   | `docs/ocs/reliability-matrix.md` — Row 6: ~30% → ~40%. Coverage Summary: 20-49% bucket 8→7 classes, 50-79% bucket 23→24 classes                                                                                                                            |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 58 — Backpressure: bounded EventBus backlog + LLMHttpClient semaphore (v4.5.0 → v4.6.0) ✅
 
 **Backpressure (Row 16): 40% → 55%. Typecheck 0 errors.**
