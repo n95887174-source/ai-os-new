@@ -1812,6 +1812,28 @@ Transitions:
 
 ---
 
+## Session 56 — Fix HMR issues: RuntimeManager handler leak + ssrFallback cleanup (v4.5.0 → v4.6.0) ✅
+
+**HMR issues: 40% → 70%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `runtime.ts` — stored `unhandledrejection` handler as instance field (`_unhandledRejectionHandler`), removed in `shutdown()` via `removeEventListener` — prevents duplicate handler accumulation on HMR |
+| 2   | `storage-adapter.ts` — exported `clearSsrFallback()`, added `import.meta.hot.dispose()` block to clear the module-level `ssrFallback` Map on HMR — prevents stale data accumulation across HMR cycles   |
+| 3   | `docs/ocs/reliability-matrix.md` — Row 24 (HMR issues): ~40% → ~70%. Coverage Summary: 20-49% bucket 11→10 classes, 50-79% bucket 20→21 classes                                                         |
+| 4   | `AGENTS.md` — Session 56 entry added                                                                                                                                                                    |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 55 — Cross-tab Distributed Lock for debate/chat session protection (v4.5.0 → v4.6.0) ✅
 
 **6 files changed. Typecheck 0 errors. Cross-tab races: 60% → 85%.**

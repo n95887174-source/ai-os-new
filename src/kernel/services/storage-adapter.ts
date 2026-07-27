@@ -36,6 +36,10 @@ function legacyDeobfuscate(encoded: string): string | null {
 
 const ssrFallback = new Map<string, string>();
 
+export function clearSsrFallback(): void {
+    ssrFallback.clear();
+}
+
 function readRaw(key: string): string | null {
     try {
         const raw =
@@ -194,3 +198,10 @@ export class BucketStorageAdapter {
     }
 }
 export const StorageAdapter = BucketStorageAdapter;
+
+// H-36: Clear ssrFallback on HMR to prevent stale data accumulation
+if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+        clearSsrFallback();
+    });
+}
