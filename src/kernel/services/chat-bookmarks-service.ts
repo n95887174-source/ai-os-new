@@ -50,25 +50,33 @@ function createDbStorage(db: IDatabaseService): NonNullable<ChatBookmarksService
             return raw && raw.length > 0 ? raw : [];
         },
         async save(bookmark: ChatBookmark): Promise<void> {
-            const all = await db.getKv<ChatBookmark[]>(STORAGE_KEY);
-            const list = Array.isArray(all) ? all : [];
-            const filtered = list.filter((b) => b.id !== bookmark.id);
-            filtered.unshift(bookmark);
-            const truncated = filtered.slice(0, 500);
-            if (truncated.length < filtered.length) {
-                console.warn(
-                    `[ChatBookmarks] Truncated ${filtered.length - 500} bookmarks (max 500)`,
-                );
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const { value, version } = await db.getKvCas<ChatBookmark[]>(STORAGE_KEY);
+                const list = Array.isArray(value) ? value : [];
+                const filtered = list.filter((b) => b.id !== bookmark.id);
+                filtered.unshift(bookmark);
+                const truncated = filtered.slice(0, 500);
+                if (truncated.length < filtered.length) {
+                    console.warn(
+                        `[ChatBookmarks] Truncated ${filtered.length - 500} bookmarks (max 500)`,
+                    );
+                }
+                if (await db.setKvCas(STORAGE_KEY, truncated, version)) return;
             }
-            await db.setKv(STORAGE_KEY, truncated);
         },
         async delete(id: string): Promise<void> {
-            const all = await db.getKv<ChatBookmark[]>(STORAGE_KEY);
-            const list = Array.isArray(all) ? all : [];
-            await db.setKv(
-                STORAGE_KEY,
-                list.filter((b) => b.id !== id),
-            );
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const { value, version } = await db.getKvCas<ChatBookmark[]>(STORAGE_KEY);
+                const list = Array.isArray(value) ? value : [];
+                if (
+                    await db.setKvCas(
+                        STORAGE_KEY,
+                        list.filter((b) => b.id !== id),
+                        version,
+                    )
+                )
+                    return;
+            }
         },
         async clear(): Promise<void> {
             await db.setKv(STORAGE_KEY, []);

@@ -787,6 +787,28 @@ vendor-charts (Recharts 404KB) — **удалён**, заменён на кас�
 
 ---
 
+## Session 67 — Stale state: 4 services converted to getKvCas/setKvCas (v4.5.0 → v4.6.0) ✅
+
+**Stale state (Row 8): 40% → 50%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                             |
+| --- | ----------------------------------------------------------------------------------------------------------------------- |
+| 1   | `chat-bookmarks-service.ts` — save/delete use `getKvCas`/`setKvCas` with 3-retry loop instead of blind `getKv`/`setKv`. |
+| 2   | `agent-journal-service.ts` — save/delete same CAS pattern with retry.                                                   |
+| 3   | `prompt-library-service.ts` — create/update/remove/incrementUsage all use CAS with retry.                               |
+| 4   | `message-index-service.ts` — persistDebounced uses CAS with retry.                                                      |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 66 — Ordering bugs: trace-service activeTraces race + debate-engine duplicate FAILED (v4.5.0 → v4.6.0) ✅
 
 **Ordering bugs (Row 10): 45% → 55%. Typecheck 0 errors.**

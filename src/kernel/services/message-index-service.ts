@@ -204,7 +204,11 @@ export class MessageIndexService {
                     ? this.messages.slice(-MAX_MESSAGES)
                     : this.messages;
             try {
-                await (await this.db()).setKv(STORAGE_KEY, trimmed);
+                const db = await this.db();
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    const { version } = await db.getKvCas(STORAGE_KEY);
+                    if (await db.setKvCas(STORAGE_KEY, trimmed, version)) break;
+                }
             } catch {
                 /* noop */
             }

@@ -53,19 +53,27 @@ function createDbStorage(db: IDatabaseService): NonNullable<AgentJournalServiceD
             return raw && raw.length > 0 ? raw : [];
         },
         async save(entry: JournalEntry): Promise<void> {
-            const all = await db.getKv<JournalEntry[]>(STORAGE_KEY);
-            const list = Array.isArray(all) ? all : [];
-            const filtered = list.filter((e) => e.id !== entry.id);
-            filtered.unshift(entry);
-            await db.setKv(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES));
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const { value, version } = await db.getKvCas<JournalEntry[]>(STORAGE_KEY);
+                const list = Array.isArray(value) ? value : [];
+                const filtered = list.filter((e) => e.id !== entry.id);
+                filtered.unshift(entry);
+                if (await db.setKvCas(STORAGE_KEY, filtered.slice(0, MAX_ENTRIES), version)) return;
+            }
         },
         async delete(id: string): Promise<void> {
-            const all = await db.getKv<JournalEntry[]>(STORAGE_KEY);
-            const list = Array.isArray(all) ? all : [];
-            await db.setKv(
-                STORAGE_KEY,
-                list.filter((e) => e.id !== id),
-            );
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const { value, version } = await db.getKvCas<JournalEntry[]>(STORAGE_KEY);
+                const list = Array.isArray(value) ? value : [];
+                if (
+                    await db.setKvCas(
+                        STORAGE_KEY,
+                        list.filter((e) => e.id !== id),
+                        version,
+                    )
+                )
+                    return;
+            }
         },
         async clear(): Promise<void> {
             await db.setKv(STORAGE_KEY, []);

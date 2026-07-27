@@ -45,9 +45,12 @@ export class PromptLibraryService {
             isBuiltIn: false,
         };
         const d = await this.db();
-        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
-        saved.push(prompt);
-        await d.setKv(STORAGE_KEY, saved);
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const { value, version } = await d.getKvCas<PromptTemplate[]>(STORAGE_KEY);
+            const saved = value ?? [];
+            saved.push(prompt);
+            if (await d.setKvCas(STORAGE_KEY, saved, version)) break;
+        }
         this.cache = null;
         return prompt;
     }
@@ -57,32 +60,42 @@ export class PromptLibraryService {
         data: Partial<Omit<PromptTemplate, 'id' | 'createdAt' | 'isBuiltIn'>>,
     ): Promise<PromptTemplate | undefined> {
         const d = await this.db();
-        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
-        const idx = saved.findIndex((p) => p.id === id);
-        if (idx === -1) return undefined;
-        saved[idx] = { ...saved[idx], ...data, updatedAt: Date.now() };
-        await d.setKv(STORAGE_KEY, saved);
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const { value, version } = await d.getKvCas<PromptTemplate[]>(STORAGE_KEY);
+            const saved = value ?? [];
+            const idx = saved.findIndex((p) => p.id === id);
+            if (idx === -1) return undefined;
+            saved[idx] = { ...saved[idx], ...data, updatedAt: Date.now() };
+            if (await d.setKvCas(STORAGE_KEY, saved, version)) break;
+        }
         this.cache = null;
-        return saved[idx];
+        const d2 = await this.db();
+        const all = (await d2.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
+        return all.find((p) => p.id === id);
     }
 
     async remove(id: string): Promise<boolean> {
         const d = await this.db();
-        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
-        const filtered = saved.filter((p) => p.id !== id);
-        if (filtered.length === saved.length) return false;
-        await d.setKv(STORAGE_KEY, filtered);
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const { value, version } = await d.getKvCas<PromptTemplate[]>(STORAGE_KEY);
+            const saved = value ?? [];
+            const filtered = saved.filter((p) => p.id !== id);
+            if (filtered.length === saved.length) return false;
+            if (await d.setKvCas(STORAGE_KEY, filtered, version)) break;
+        }
         this.cache = null;
         return true;
     }
 
     async incrementUsage(id: string): Promise<void> {
         const d = await this.db();
-        const saved = (await d.getKv<PromptTemplate[]>(STORAGE_KEY)) ?? [];
-        const idx = saved.findIndex((p) => p.id === id);
-        if (idx !== -1) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const { value, version } = await d.getKvCas<PromptTemplate[]>(STORAGE_KEY);
+            const saved = value ?? [];
+            const idx = saved.findIndex((p) => p.id === id);
+            if (idx === -1) return;
             saved[idx].usageCount++;
-            await d.setKv(STORAGE_KEY, saved);
+            if (await d.setKvCas(STORAGE_KEY, saved, version)) break;
         }
         this.cache = null;
     }
