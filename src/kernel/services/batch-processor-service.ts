@@ -36,6 +36,7 @@ export interface BatchJob {
 }
 
 import type { ILifecycle } from '../contracts/lifecycle';
+import type { IDeadLetterQueue } from '../contracts/dead-letter-queue';
 import { EVENTS } from '../events/event-names';
 
 const MAX_JOBS = 20;
@@ -44,6 +45,11 @@ export class BatchProcessorService implements ILifecycle {
     private jobs: BatchJob[] = [];
     private currentAbort: AbortController | null = null;
     private loaded = false;
+    private deadLetterQueue?: IDeadLetterQueue;
+
+    constructor(opts?: { deadLetterQueue?: IDeadLetterQueue }) {
+        this.deadLetterQueue = opts?.deadLetterQueue;
+    }
 
     async init(): Promise<void> {
         // Lazy init via ensureLoaded() — nothing to do upfront
@@ -119,6 +125,7 @@ export class BatchProcessorService implements ILifecycle {
         const TASK_TIMEOUT_MS = 60_000;
         const MAX_RETRIES = 3;
         const RETRY_DELAY_MS = 1_000;
+        const dlq = this.deadLetterQueue;
 
         async function processTask(task: BatchTask, signal: AbortSignal): Promise<BatchResult> {
             const startTime = Date.now();
@@ -164,6 +171,15 @@ export class BatchProcessorService implements ILifecycle {
                         error: String(err),
                         timestamp: Date.now(),
                     });
+                    if (dlq) {
+                        dlq.push({
+                            event: 'batch:task_failed',
+                            payload: { task, attempt },
+                            error: String(err),
+                            context: { jobId },
+                            retryCount: attempt - 1,
+                        }).catch(() => {});
+                    }
                     return {
                         prompt: task.prompt,
                         provider: task.provider,

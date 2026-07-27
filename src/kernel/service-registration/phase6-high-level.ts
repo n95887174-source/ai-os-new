@@ -97,6 +97,7 @@ import { WorkflowService } from '../services/workflow-service';
 import { SourceAdapterRegistry } from '../services/research-adapters/source-adapter-registry';
 import { PromptLibraryService } from '../services/prompt-library-service';
 import { BatchProcessorService } from '../services/batch-processor-service';
+import type { IDeadLetterQueue } from '../contracts/dead-letter-queue';
 import { AgentAvatarService } from '../services/agent-avatar-service';
 
 export const registerPhase6: Phase = (helpers, ctx) => {
@@ -385,7 +386,13 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Prompt Library Service ─────────────────────────
     register('promptLibraryService', (_c) => new PromptLibraryService());
     // ── Batch Processor Service ────────────────────────
-    register('batchProcessorService', (_c) => new BatchProcessorService());
+    register(
+        'batchProcessorService',
+        (c) =>
+            new BatchProcessorService({
+                deadLetterQueue: c.get<IDeadLetterQueue>('deadLetterQueue'),
+            }),
+    );
     // ── Agent Avatar Service ───────────────────────────
     register('agentAvatarService', (_c) => new AgentAvatarService());
     // ── Meta-Learning / Self-Improvement Service ─────

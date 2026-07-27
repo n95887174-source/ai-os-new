@@ -1812,6 +1812,27 @@ Transitions:
 
 ---
 
+## Session 57 — Wire DLQ to batch-processor-service retry exhaustion (v4.5.0 → v4.6.0) ✅
+
+**Infinite retries/DLQ (Row 12): 45% → 52%. Typecheck 0 errors.**
+
+### Changes
+
+| #   | Что сделано                                                                                                                                                            |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `batch-processor-service.ts` — added `deadLetterQueue?` constructor param, captured as `dlq` local before `processTask()`, DLQ push on retry exhaustion in catch block |
+| 2   | `phase6-high-level.ts` — added `IDeadLetterQueue` import, wired `deadLetterQueue` from DI container into `BatchProcessorService` constructor                           |
+| 3   | `docs/ocs/reliability-matrix.md` — Row 12: ~45% → ~52%. Coverage Summary: 20-49% bucket 10→9 classes, 50-79% bucket 21→22 classes                                      |
+
+### Build result
+
+| Метрика   | Значение |
+| --------- | -------- |
+| tsc -b    | 0 errors |
+| Typecheck | ✅ pass  |
+
+---
+
 ## Session 56 — Fix HMR issues: RuntimeManager handler leak + ssrFallback cleanup (v4.5.0 → v4.6.0) ✅
 
 **HMR issues: 40% → 70%. Typecheck 0 errors.**
