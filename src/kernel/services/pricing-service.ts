@@ -34,6 +34,7 @@ const FALLBACK_PRICING: Record<string, { input: number; output: number; provider
     'qwen-2-72b': { input: 0.9, output: 0.9, provider: 'alibaba' },
     'qwen-2.5-72b': { input: 1.2, output: 1.8, provider: 'alibaba' },
     'mixtral-8x7b': { input: 0.5, output: 0.5, provider: 'mistral' },
+    'mistralai/mistral-nemo': { input: 0.15, output: 0.15, provider: 'nvidia' },
     'command-r-plus': { input: 3.0, output: 15.0, provider: 'cohere' },
     'dbrx-instruct': { input: 0.6, output: 2.4, provider: 'databricks' },
     free: { input: 0, output: 0, provider: 'openrouter' },
