@@ -117,10 +117,14 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         stream?: boolean,
         options?: SendMessageOptions,
     ): Record<string, unknown> {
-        return this.buildRequestBody(model, messages, stream, options, {
+        const body = this.buildRequestBody(model, messages, stream, options, {
             sanitizeModel: true,
             mapMessages: true,
         });
+        // Cap max_tokens to a safe limit (4096) to prevent OpenRouter from reserving 65k+ tokens and failing with 402 Payment Required
+        const maxTokens = options?.maxOutputTokens ? Math.min(options.maxOutputTokens, 4096) : 4096;
+        body.max_tokens = maxTokens;
+        return body;
     }
 
     protected override sanitizeModel(model: string): string {

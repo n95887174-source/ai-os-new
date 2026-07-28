@@ -494,7 +494,8 @@ export async function debateCallLlm(
                 const mem = deps.getMemory(sessionId);
 
                 // Convert memory steps to DebateArguments for the rich prompt builder
-                const allSteps = mem.getAllSteps();
+                // Limit to last 50 steps to prevent unbounded memory growth (~50KB per 10 agents × 5 rounds)
+                const allSteps = mem.getAllSteps().slice(-50);
                 const previousArguments: DebateArgument[] = allSteps.map((s, i) => ({
                     id: `${sessionId}-${s.agentId}-${i}`,
                     agentId: s.agentId,

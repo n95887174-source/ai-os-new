@@ -10,6 +10,30 @@ import type {
 import { BaseLLMAdapter } from '../core/base-adapter';
 import { LLMError, AuthError, RetryableError } from '../core/errors';
 
+function trimMessagesForGroq(messages: ChatMessage[]): ChatMessage[] {
+    if (messages.length <= 2) return messages;
+    const totalLen = messages.reduce((acc, m) => acc + (m.content?.length || 0), 0);
+    if (totalLen <= 6000) return messages;
+
+    const firstMsg = messages[0];
+    const recentMsgs = messages.slice(-2);
+    const trimmed: ChatMessage[] = [firstMsg];
+
+    if (messages.length > 3) {
+        trimmed.push({
+            role: 'system',
+            content: '[Previous debate history summarized due to Groq context window limits]',
+        });
+        for (const msg of recentMsgs) {
+            if (msg !== firstMsg) {
+                trimmed.push(msg);
+            }
+        }
+        return trimmed;
+    }
+    return messages;
+}
+
 export class GroqAdapter extends BaseLLMAdapter {
     id = 'groq';
 
@@ -25,9 +49,10 @@ export class GroqAdapter extends BaseLLMAdapter {
         signal?: AbortSignal,
     ): Promise<Omit<ProviderResponse, 'latency'>> {
         const client = this.getClient(apiKey);
+        const safeMessages = trimMessagesForGroq(messages);
         const body: Record<string, unknown> = {
             model,
-            messages: messages.map((m) => ({
+            messages: safeMessages.map((m) => ({
                 role: m.role,
                 content: m.content,
                 ...(m.toolCalls ? { tool_calls: m.toolCalls } : {}),
@@ -41,9 +66,21 @@ export class GroqAdapter extends BaseLLMAdapter {
         if (options?.toolChoice) body.tool_choice = options.toolChoice;
 
         try {
-            const completion = (await client.chat.completions.create(body as any, {
+            const completion = (await client.chat.completions.create(body as never, {
                 signal,
-            })) as any;
+            })) as {
+                choices?: {
+                    message?: {
+                        content?: string | null;
+                        tool_calls?: {
+                            function?: { name?: string; arguments?: string };
+                            id?: string;
+                        }[];
+                    };
+                    finish_reason?: string;
+                }[];
+                usage?: { total_tokens?: number };
+            };
             const choice = completion.choices?.[0];
             return {
                 content: choice?.message?.content || '',
@@ -51,7 +88,7 @@ export class GroqAdapter extends BaseLLMAdapter {
                 tokens: completion.usage?.total_tokens ?? 0,
                 toolCalls: this.extractToolCalls(choice?.message?.tool_calls),
             };
-        } catch (e: any) {
+        } catch (e: unknown) {
             throw this.normalizeError(e);
         }
     }
@@ -65,9 +102,10 @@ export class GroqAdapter extends BaseLLMAdapter {
         options?: SendMessageOptions,
     ): Promise<void> {
         const client = this.getClient(apiKey);
+        const safeMessages = trimMessagesForGroq(messages);
         const body: Record<string, unknown> = {
             model,
-            messages: messages.map((m) => ({
+            messages: safeMessages.map((m) => ({
                 role: m.role,
                 content: m.content,
                 ...(m.toolCalls ? { tool_calls: m.toolCalls } : {}),
@@ -82,16 +120,16 @@ export class GroqAdapter extends BaseLLMAdapter {
         if (options?.toolChoice) body.tool_choice = options.toolChoice;
 
         try {
-            const stream = (await client.chat.completions.create(body as any, {
+            const stream = (await client.chat.completions.create(body as never, {
                 signal,
-            })) as unknown as AsyncIterable<any>;
+            })) as unknown as AsyncIterable<{ choices?: { delta?: { content?: string } }[] }>;
             for await (const chunk of stream) {
                 const delta = chunk.choices?.[0]?.delta;
                 if (delta?.content) {
                     onChunk(delta.content);
                 }
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             throw this.normalizeError(e);
         }
     }
@@ -105,12 +143,12 @@ export class GroqAdapter extends BaseLLMAdapter {
                 latency: Date.now() - start,
                 models,
             };
-        } catch (e: any) {
+        } catch (e: unknown) {
             return {
                 status: 'error',
                 latency: Date.now() - start,
                 models: [],
-                error: e.message,
+                error: (e as Error).message,
             };
         }
     }
@@ -119,7 +157,7 @@ export class GroqAdapter extends BaseLLMAdapter {
         try {
             const client = this.getClient(apiKey);
             const list = await client.models.list();
-            return list.data?.map((m: any) => m.id) || [];
+            return list.data?.map((m: { id: string }) => m.id) || [];
         } catch {
             return [];
         }
@@ -135,7 +173,9 @@ export class GroqAdapter extends BaseLLMAdapter {
         return 'OTHER';
     }
 
-    private extractToolCalls(raw: any[] | undefined): ToolCall[] | undefined {
+    private extractToolCalls(
+        raw: { function?: { name?: string; arguments?: string }; id?: string }[] | undefined,
+    ): ToolCall[] | undefined {
         if (!raw || raw.length === 0) return undefined;
         return raw.map((tc) => ({
             id: tc.id || '',
@@ -147,16 +187,17 @@ export class GroqAdapter extends BaseLLMAdapter {
         }));
     }
 
-    private normalizeError(e: any): Error {
-        if (e.status === 401 || e.status === 403) {
-            return new AuthError(e.message, this.id, e.status);
+    private normalizeError(e: unknown): Error {
+        const err = e as { status?: number; message?: string; name?: string };
+        if (err.status === 401 || err.status === 403) {
+            return new AuthError(err.message || '', this.id, err.status);
         }
-        if (e.status === 429) {
-            return new RetryableError(e.message, this.id, e.status);
+        if (err.status === 429) {
+            return new RetryableError(err.message || '', this.id, err.status);
         }
-        if (e.name === 'APIConnectionTimeoutError' || e.name === 'TimeoutError') {
+        if (err.name === 'APIConnectionTimeoutError' || err.name === 'TimeoutError') {
             return new LLMError('Groq request timed out', this.id, 408);
         }
-        return e instanceof Error ? e : new LLMError(String(e), this.id, e.status || 500);
+        return e instanceof Error ? e : new LLMError(String(e), this.id, err.status || 500);
     }
 }

@@ -31,7 +31,7 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
     groq: ['llama-3.1-8b-instant'],
-    gemini: ['gemini-2.0-flash', 'gemini-3.1-flash-lite'],
+    gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
     openrouter: ['openrouter/free', 'meta-llama/llama-3.1-8b-instruct'],
     nvidia: ['meta/llama-3.3-70b-instruct'],
 };

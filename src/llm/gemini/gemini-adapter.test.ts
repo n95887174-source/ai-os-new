@@ -53,7 +53,7 @@ describe('GeminiAdapter', () => {
 
         const result = await adapter.sendMessage(
             messages,
-            'gemini-2.0-flash',
+            'gemini-3.1-flash-lite',
             'fake-api-key',
             undefined,
             {
@@ -105,7 +105,7 @@ describe('GeminiAdapter', () => {
             response: new Response(),
         });
 
-        await adapter.sendMessage(messages, 'gemini-2.0-flash', 'fake-api-key', undefined, {
+        await adapter.sendMessage(messages, 'gemini-3.1-flash-lite', 'fake-api-key', undefined, {
             responseFormat: {
                 type: 'json_object',
                 schema: {
@@ -136,7 +136,7 @@ describe('GeminiAdapter', () => {
             response: new Response(),
         });
 
-        await adapter.sendMessage(messages, 'gemini-2.0-flash', 'fake-api-key', undefined, {
+        await adapter.sendMessage(messages, 'gemini-3.1-flash-lite', 'fake-api-key', undefined, {
             safetySettings: [
                 { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
             ],

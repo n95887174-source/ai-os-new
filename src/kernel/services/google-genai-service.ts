@@ -119,7 +119,7 @@ export class GoogleGenAIService {
         this.#lastKeyFetch = Date.now();
     }
 
-    #model(modelName = 'gemini-2.0-flash', options?: SendMessageOptions): GenerativeModel {
+    #model(modelName = 'gemini-3.1-flash-lite', options?: SendMessageOptions): GenerativeModel {
         if (!this.#client) throw new Error('GoogleGenAI not configured — call setApiKey() first');
         const generationConfig: Record<string, unknown> = {};
         if (options?.temperature !== undefined) generationConfig.temperature = options.temperature;
@@ -179,7 +179,7 @@ export class GoogleGenAIService {
 
     async generateContent(
         messages: ChatMessage[],
-        model = 'gemini-2.0-flash',
+        model = 'gemini-3.1-flash-lite',
         options?: SendMessageOptions,
         signal?: AbortSignal,
     ): Promise<ProviderResponse> {
@@ -229,7 +229,7 @@ export class GoogleGenAIService {
     async streamContent(
         messages: ChatMessage[],
         onChunk: (text: string) => void,
-        model = 'gemini-2.0-flash',
+        model = 'gemini-3.1-flash-lite',
         options?: SendMessageOptions,
         signal?: AbortSignal,
     ): Promise<ProviderResponse> {
@@ -282,7 +282,7 @@ export class GoogleGenAIService {
         }
     }
 
-    async countTokens(text: string, model = 'gemini-2.0-flash'): Promise<number> {
+    async countTokens(text: string, model = 'gemini-3.1-flash-lite'): Promise<number> {
         await this.ensureConfigured();
         try {
             const m = this.#model(model);
@@ -412,7 +412,7 @@ export class GoogleGenAIService {
     async getModels(): Promise<string[]> {
         await this.ensureConfigured();
         const apiKey = this.#apiKey;
-        if (!apiKey) return ['gemini-2.0-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'];
+        if (!apiKey) return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
         try {
             const res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
                 headers: { 'x-goog-api-key': apiKey },
@@ -420,17 +420,11 @@ export class GoogleGenAIService {
             });
             if (!res.ok) {
                 res.body?.cancel()?.catch(() => {});
-                return ['gemini-2.0-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'];
+                return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
             }
-            const data = (await res.json()) as { models?: Array<{ name: string }> };
-            if (data.models) {
-                return data.models
-                    .map((x) => x.name.replace('models/', ''))
-                    .filter((n) => n.startsWith('gemini-'));
-            }
-            return ['gemini-2.0-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'];
+            return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
         } catch {
-            return ['gemini-2.0-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'];
+            return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
         }
     }
 }

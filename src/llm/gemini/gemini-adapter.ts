@@ -7,7 +7,27 @@ import { GeminiStreamParser } from './gemini-stream-parser';
 import type { GeminiResponse } from './gemini-types';
 import { GeminiHealthCheck } from './gemini-health';
 import { validateModel, modelCache } from './gemini-model-validator';
-import { AuthError, SafetyError } from '../core/errors';
+import { AuthError, SafetyError, RetryableError } from '../core/errors';
+
+const RETRYABLE_429_CODES = new Set([429]);
+function isRetryable429(e: unknown): boolean {
+    if (e instanceof RetryableError) return true;
+    return RETRYABLE_429_CODES.has((e as { statusCode?: number })?.statusCode ?? 0);
+}
+async function with429Retry<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            return await fn();
+        } catch (e) {
+            if (attempt === 0 && isRetryable429(e)) {
+                await new Promise((r) => setTimeout(r, 1000 + Math.random() * 1000));
+                continue;
+            }
+            throw e;
+        }
+    }
+    throw new Error('Unreachable');
+}
 
 export class GeminiAdapter extends BaseLLMAdapter {
     id = 'gemini';
@@ -48,11 +68,13 @@ export class GeminiAdapter extends BaseLLMAdapter {
         try {
             const safeModel = await validateModel(model, apiKey);
             const body = GeminiRequestBuilder.build(messages, options);
-            const { data, latency } = await this.#httpClient.post(
-                `/v1beta/models/${encodeURIComponent(safeModel)}:generateContent`,
-                body,
-                apiKey,
-                signal,
+            const { data, latency } = await with429Retry(() =>
+                this.#httpClient.post(
+                    `/v1beta/models/${encodeURIComponent(safeModel)}:generateContent`,
+                    body,
+                    apiKey,
+                    signal,
+                ),
             );
             if (import.meta.env.DEV) {
                 console.warn(
@@ -89,11 +111,13 @@ export class GeminiAdapter extends BaseLLMAdapter {
         try {
             const safeModel = await validateModel(model, apiKey);
             const body = GeminiRequestBuilder.build(messages, options);
-            const res = await this.#httpClient.streamPost(
-                `/v1beta/models/${encodeURIComponent(safeModel)}:streamGenerateContent?alt=sse`,
-                body,
-                apiKey,
-                signal,
+            const res = await with429Retry(() =>
+                this.#httpClient.streamPost(
+                    `/v1beta/models/${encodeURIComponent(safeModel)}:streamGenerateContent?alt=sse`,
+                    body,
+                    apiKey,
+                    signal,
+                ),
             );
             await GeminiStreamParser.parse(res, onChunk, signal);
         } catch (e) {
