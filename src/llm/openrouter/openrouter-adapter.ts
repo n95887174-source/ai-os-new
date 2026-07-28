@@ -12,6 +12,9 @@ import { FALLBACK_LOGGER } from '../../shared/utils/logger';
 const LOGGER = FALLBACK_LOGGER.child('OpenRouter');
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
+const MAX_RETRIES = 3;
+const BASE_RETRY_MS = 1000;
+
 function combineSignals(...signals: AbortSignal[]): AbortSignal {
     const ctrl = new AbortController();
     for (const s of signals) {
@@ -23,6 +26,19 @@ function combineSignals(...signals: AbortSignal[]): AbortSignal {
     }
     return ctrl.signal;
 }
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((r) => setTimeout(r, ms));
+}
+
+function formatHeaders(headers: Headers): Record<string, string> {
+    const out: Record<string, string> = {};
+    headers.forEach((v, k) => {
+        out[k] = v;
+    });
+    return out;
+}
+
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
     'STOP',
     'MAX_TOKENS',
@@ -121,8 +137,11 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             sanitizeModel: true,
             mapMessages: true,
         });
-        // Cap max_tokens to a safe limit (4096) to prevent OpenRouter from reserving 65k+ tokens and failing with 402 Payment Required
-        const maxTokens = options?.maxOutputTokens ? Math.min(options.maxOutputTokens, 4096) : 4096;
+        // Cap max_tokens to 16384 — prevents OpenRouter from reserving 65k+ tokens (402),
+        // but allows longer responses than the previous 4096 limit
+        const maxTokens = options?.maxOutputTokens
+            ? Math.min(options.maxOutputTokens, 16384)
+            : 16384;
         body.max_tokens = maxTokens;
         return body;
     }
@@ -169,6 +188,85 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         return { content, latency, tokens, finishReason, reasoning: undefined };
     }
 
+    private async fetchWithRetry(url: string, init: RequestInit, attempt = 1): Promise<Response> {
+        try {
+            const res = await fetch(url, init);
+
+            if (!res.ok) {
+                const cloned = res.clone();
+                const errorText = await cloned.text();
+                const bodyPreview = Array.from(errorText).slice(0, 300).join('');
+                const sanitized = sanitizeError(bodyPreview);
+                const headers = formatHeaders(res.headers);
+
+                LOGGER.warn(
+                    'OpenRouterAdapter',
+                    `HTTP ${res.status} (attempt ${attempt}/${MAX_RETRIES})`,
+                    {
+                        status: res.status,
+                        headers,
+                        body: sanitized,
+                    },
+                );
+
+                if (res.status === 402) {
+                    throw new LLMError(
+                        `OpenRouter: insufficient credits (402) — top up your account at https://openrouter.ai`,
+                        'openrouter',
+                        402,
+                    );
+                }
+
+                if (res.status === 429 || res.status >= 500) {
+                    if (attempt < MAX_RETRIES) {
+                        const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+                        const delay = retryAfter
+                            ? retryAfter * 1000
+                            : BASE_RETRY_MS *
+                              Math.pow(2, attempt - 1) *
+                              (0.5 + Math.random() * 0.5);
+                        LOGGER.warn('OpenRouterAdapter', `Retrying in ${Math.round(delay)}ms`, {
+                            attempt,
+                        });
+                        await sleep(delay);
+                        return this.fetchWithRetry(url, init, attempt + 1);
+                    }
+                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+                    throw new RetryableError(
+                        `OpenRouter Error: ${res.status} - ${sanitized}`,
+                        'openrouter',
+                        res.status,
+                        undefined,
+                        retryAfter,
+                    );
+                }
+
+                throw new LLMError(
+                    `OpenRouter Error: ${res.status} - ${sanitized}`,
+                    'openrouter',
+                    res.status,
+                );
+            }
+
+            return res;
+        } catch (e) {
+            if (e instanceof LLMError || e instanceof RetryableError) throw e;
+            const msg = e instanceof Error ? e.message : String(e);
+            if (attempt < MAX_RETRIES && !(e instanceof DOMException && e.name === 'AbortError')) {
+                const delay =
+                    BASE_RETRY_MS * Math.pow(2, attempt - 1) * (0.5 + Math.random() * 0.5);
+                LOGGER.warn(
+                    'OpenRouterAdapter',
+                    `Fetch failed (attempt ${attempt}/${MAX_RETRIES}), retrying in ${Math.round(delay)}ms`,
+                    { error: msg },
+                );
+                await sleep(delay);
+                return this.fetchWithRetry(url, init, attempt + 1);
+            }
+            throw e;
+        }
+    }
+
     async doSendMessage(
         messages: ChatMessage[],
         model: string,
@@ -186,32 +284,12 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
 
         try {
-            const res = await fetch(`${this.baseURL}/chat/completions`, {
+            const res = await this.fetchWithRetry(`${this.baseURL}/chat/completions`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
                 signal: mergedSignal,
             });
-
-            if (!res.ok) {
-                const errorText = await res.text();
-                const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
-                if (res.status === 429 || res.status >= 500) {
-                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                    throw new RetryableError(
-                        `OpenRouter Error: ${res.status} - ${sanitized}`,
-                        'openrouter',
-                        res.status,
-                        undefined,
-                        retryAfter,
-                    );
-                }
-                throw new LLMError(
-                    `OpenRouter Error: ${res.status} - ${sanitized}`,
-                    'openrouter',
-                    res.status,
-                );
-            }
 
             const data = await res.json();
             return this.toProviderResponse(data, 0);
@@ -238,32 +316,12 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
 
         try {
-            const res = await fetch(`${this.baseURL}/chat/completions`, {
+            const res = await this.fetchWithRetry(`${this.baseURL}/chat/completions`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
                 signal: mergedSignal,
             });
-
-            if (!res.ok) {
-                const errorText = await res.text();
-                const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
-                if (res.status === 429 || res.status >= 500) {
-                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                    throw new RetryableError(
-                        `OpenRouter Stream Error: ${res.status} - ${sanitized}`,
-                        'openrouter',
-                        res.status,
-                        undefined,
-                        retryAfter,
-                    );
-                }
-                throw new LLMError(
-                    `OpenRouter Stream Error: ${res.status} - ${sanitized}`,
-                    'openrouter',
-                    res.status,
-                );
-            }
 
             let finalFinishReason: string | undefined;
             let finalUsage: OpenRouterUsage | undefined;
