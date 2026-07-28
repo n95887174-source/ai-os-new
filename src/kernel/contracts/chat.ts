@@ -42,6 +42,11 @@ export interface ChatServiceDeps {
             prompt: string,
             priority?: string,
             agentId?: string,
+            probeResults?: Map<string, unknown>,
+            overrideState?: unknown,
+            suppressEmit?: boolean,
+            origin?: string,
+            sessionId?: string,
         ) => Array<{ provider: string; key: { id: string }; score?: number }>;
         getRaceCandidateDetails: (
             prompt: string,

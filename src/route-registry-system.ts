@@ -181,6 +181,13 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 color: '#76b900',
                 lazy: true,
             },
+            {
+                id: 'openrouter',
+                labelKey: 'nav.openrouter',
+                icon: Icons.share2,
+                color: '#a855f7',
+                lazy: true,
+            },
         ],
     },
     {

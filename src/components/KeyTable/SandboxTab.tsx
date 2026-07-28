@@ -47,6 +47,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
     const [error, setError] = useState<string | null>(null);
     const isMountedRef = useRef(true);
     const isDoneRef = useRef(false);
+    const activeRequestIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -152,15 +153,21 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
         const timeout = setTimeout(() => {
             if (!isMountedRef.current || isDoneRef.current) return;
             setStatus('error');
-            setError('Request timed out after 15 seconds');
-        }, 15000);
-        return () => clearTimeout(timeout);
+            setError('Request timed out after 60 seconds');
+            const rid = activeRequestIdRef.current;
+            if (rid) eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: rid });
+        }, 60000);
+        return () => {
+            clearTimeout(timeout);
+            if (isDoneRef.current) activeRequestIdRef.current = null;
+        };
     }, [status]);
 
     const handleSend = () => {
         if (!input.trim() || status === 'loading') return;
         const text = input.trim();
         const requestId = `sandbox-${apiKey.id}-${crypto.randomUUID().slice(0, 8)}`;
+        activeRequestIdRef.current = requestId;
         const newMessages = [...messages, { role: 'user' as const, content: text }];
         setMessages(newMessages);
         setInput('');

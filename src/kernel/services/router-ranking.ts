@@ -92,9 +92,11 @@ export class RouterRankingService {
         const allKeys = this.deps.keyService.getKeys();
 
         // Session affinity: if session is bound to a specific key, prefer it
+        let hadExistingBinding = false;
         if (sessionId && this.deps.sessionAffinityStore) {
             const binding = this.deps.sessionAffinityStore.getBoundKey(sessionId);
             if (binding) {
+                hadExistingBinding = true;
                 const boundKey = allKeys.find((k) => k.id === binding.keyId);
                 if (boundKey) {
                     const ks = this.deps.keyStateStore?.get(boundKey.id);
@@ -564,6 +566,17 @@ export class RouterRankingService {
                     source: 'router-shadow',
                 });
             }
+        }
+
+        // Initial session-key binding: create on first key selection
+        if (
+            sessionId &&
+            this.deps.sessionAffinityStore &&
+            !hadExistingBinding &&
+            rankedItems.length > 0
+        ) {
+            const topKey = rankedItems[0].key;
+            this.deps.sessionAffinityStore.bind(sessionId, topKey.id, topKey.provider);
         }
 
         return rankedItems.map((item) => item.key);

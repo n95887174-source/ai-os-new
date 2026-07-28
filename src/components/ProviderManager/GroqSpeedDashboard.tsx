@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePolling } from '../Common/usePolling';
 import { PersonalityCard } from './PersonalityCard';
 import { AchievementList } from './AchievementList';
+import GroqKeyTable from './GroqKeyTable';
 import { keyService, providerAchievementService } from '../../kernel/instances';
 
 interface SpeedRecord {
@@ -24,33 +25,46 @@ interface GroqKey {
     };
 }
 
+const MAX_HISTORY = 100;
+
 export default function GroqSpeedDashboard() {
     const [speedHistory, setSpeedHistory] = useState<SpeedRecord[]>([]);
     const [currentTps, setCurrentTps] = useState(0);
-    const [peakTps, setPeakTps] = useState(0);
     const [avgTtft, setAvgTtft] = useState(0);
     const [keys, setKeys] = useState<GroqKey[]>([]);
+    const [avgLatency, setAvgLatency] = useState(0);
 
     const load = useCallback(async () => {
         const k = (await keyService.getKeys()) as GroqKey[];
         const groqKeys = k.filter((x) => x.provider === 'groq');
         setKeys(groqKeys);
 
-        const records: SpeedRecord[] = groqKeys
-            .filter((x) => x.stats?.extended?.latencyBreakdown)
+        const avgLat = groqKeys.reduce((sum, x) => sum + (x.stats?.avgLatency ?? 0), 0);
+        const avgLatCount = groqKeys.filter((x) => x.stats?.avgLatency != null).length;
+        setAvgLatency(avgLatCount > 0 ? Math.round(avgLat / avgLatCount) : 0);
+
+        const newRecords: SpeedRecord[] = groqKeys
+            .filter((x) => {
+                const lb = x.stats?.extended?.latencyBreakdown;
+                return lb && (lb.tokensPerSec || lb.ttft || x.stats?.avgLatency);
+            })
             .map((x) => ({
                 timestamp: Date.now(),
                 tokensPerSec: x.stats!.extended!.latencyBreakdown!.tokensPerSec ?? 0,
                 ttft: x.stats!.extended!.latencyBreakdown!.ttft ?? 0,
                 latency: x.stats!.avgLatency ?? 0,
             }));
-        setSpeedHistory(records);
 
-        const tpsValues = records.map((r) => r.tokensPerSec);
-        const ttftValues = records.map((r) => r.ttft);
+        setSpeedHistory((prev) => {
+            if (newRecords.length === 0) return prev;
+            const combined = [...prev, ...newRecords];
+            return combined.slice(-MAX_HISTORY);
+        });
+
+        const tpsValues = newRecords.map((r) => r.tokensPerSec);
+        const ttftValues = newRecords.map((r) => r.ttft);
         if (tpsValues.length) {
             setCurrentTps(tpsValues[tpsValues.length - 1]);
-            setPeakTps(Math.max(...tpsValues));
             setAvgTtft(ttftValues.reduce((a, b) => a + b, 0) / ttftValues.length);
         }
     }, []);
@@ -60,8 +74,12 @@ export default function GroqSpeedDashboard() {
     }, [load]);
     usePolling(load, 5000);
 
+    const peakFromHistory =
+        speedHistory.length > 0 ? Math.max(...speedHistory.map((r) => r.tokensPerSec)) : 0;
+
     const currentTpsRounded = Math.round(currentTps);
-    const peakTpsRounded = Math.round(peakTps);
+    const peakTpsRounded = Math.round(peakFromHistory);
+    const avgLatencyRounded = Math.round(avgLatency);
 
     return (
         <div style={{ padding: 24 }}>
@@ -100,6 +118,12 @@ export default function GroqSpeedDashboard() {
                     color="#8b5cf6"
                 />
                 <StatCard icon="🔑" label="Active Keys" value={`${keys.length}`} color="#3b82f6" />
+                <StatCard
+                    icon="📊"
+                    label="Avg Latency"
+                    value={avgLatencyRounded > 0 ? `${avgLatencyRounded}ms` : '—'}
+                    color="#06b6d4"
+                />
             </div>
 
             {speedHistory.length > 0 && (
@@ -111,10 +135,15 @@ export default function GroqSpeedDashboard() {
                         border: '1px solid rgba(34,197,94,0.15)',
                     }}
                 >
-                    <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>📈 Speed History</h3>
+                    <h3 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>
+                        📈 Speed History ({speedHistory.length} data points)
+                    </h3>
                     <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 80 }}>
                         {speedHistory.slice(-20).map((rec, i) => {
-                            const h = Math.min(100, (rec.tokensPerSec / (peakTps || 1)) * 100);
+                            const h = Math.min(
+                                100,
+                                (rec.tokensPerSec / (peakFromHistory || 1)) * 100,
+                            );
                             return (
                                 <div
                                     key={i}
@@ -134,6 +163,8 @@ export default function GroqSpeedDashboard() {
                     </div>
                 </div>
             )}
+
+            <GroqKeyTable />
 
             <div style={{ marginTop: 24 }}>
                 <AchievementList

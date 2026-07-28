@@ -194,7 +194,7 @@ const ProviderTableRow: React.FC<
                 setTestStatus('error');
                 setTestError('Request timed out');
             }
-        }, 15000);
+        }, 45000);
 
         return () => {
             // Cancel the in-flight request on unmount/re-fire so it doesn't

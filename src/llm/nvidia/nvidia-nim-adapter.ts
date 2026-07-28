@@ -8,6 +8,18 @@ import { NvidiaNIMResponseSchema, type NvidiaNIMResponse } from './nvidia-nim-ty
 import { LLMError, RetryableError } from '../core/errors';
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
+function combineSignals(...signals: AbortSignal[]): AbortSignal {
+    const ctrl = new AbortController();
+    for (const s of signals) {
+        if (s.aborted) {
+            ctrl.abort(s.reason);
+            return ctrl.signal;
+        }
+        s.addEventListener('abort', () => ctrl.abort(s.reason), { once: true });
+    }
+    return ctrl.signal;
+}
+
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
     'STOP',
     'MAX_TOKENS',
@@ -43,7 +55,7 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     constructor(options?: NvidiaOptions) {
         super();
         this.baseURL = options?.baseURL ?? '/proxy/nvidia';
-        this._idleTimeoutMs = options?.idleTimeoutMs ?? 30000;
+        this._idleTimeoutMs = options?.idleTimeoutMs ?? 90000;
     }
 
     protected override sanitizeModel(model: string): string {
@@ -95,36 +107,45 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     ): Promise<Omit<ProviderResponse, 'latency'>> {
         const body = this.buildBody(messages, model, false, options);
         const headers = this.buildHeaders(apiKey);
+        const ctrl = new AbortController();
+        const timeout = setTimeout(
+            () => ctrl.abort(new DOMException('Timeout', 'TimeoutError')),
+            60000,
+        );
+        const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
 
-        const res = await fetch(`${this.baseURL}/v1/chat/completions`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal,
-        });
+        try {
+            const res = await fetch(`${this.baseURL}/v1/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: mergedSignal,
+            });
 
-        if (!res.ok) {
-            const errorText = await res.text();
-            if (res.status === 429) {
-                // H-02: Pass statusCode and retryAfter so circuit breaker respects server backoff
-                const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                throw new RetryableError(
-                    `Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`,
+            if (!res.ok) {
+                const errorText = await res.text();
+                if (res.status === 429) {
+                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+                    throw new RetryableError(
+                        `Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`,
+                        this.id,
+                        res.status,
+                        undefined,
+                        retryAfter,
+                    );
+                }
+                throw new LLMError(
+                    `NVIDIA NIM Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
                     this.id,
                     res.status,
-                    undefined,
-                    retryAfter,
                 );
             }
-            throw new LLMError(
-                `NVIDIA NIM Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                this.id,
-                res.status,
-            );
-        }
 
-        const data = (await res.json()) as NvidiaNIMResponse;
-        return this.toProviderResponse(data, 0);
+            const data = (await res.json()) as NvidiaNIMResponse;
+            return this.toProviderResponse(data, 0);
+        } finally {
+            clearTimeout(timeout);
+        }
     }
 
     async doStreamMessage(
@@ -137,51 +158,62 @@ export class NvidiaNIMAdapter extends BaseLLMAdapter {
     ): Promise<void> {
         const body = this.buildBody(messages, model, true, options);
         const headers = this.buildHeaders(apiKey);
+        const ctrl = new AbortController();
+        const timeout = setTimeout(
+            () => ctrl.abort(new DOMException('Timeout', 'TimeoutError')),
+            60000,
+        );
+        const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
 
-        const res = await fetch(`${this.baseURL}/v1/chat/completions`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal,
-        });
+        try {
+            const res = await fetch(`${this.baseURL}/v1/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: mergedSignal,
+            });
 
-        if (!res.ok) {
-            const errorText = await res.text();
-            if (res.status === 429) {
-                const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                throw new RetryableError(
-                    `Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`,
+            if (!res.ok) {
+                const errorText = await res.text();
+                if (res.status === 429) {
+                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+                    throw new RetryableError(
+                        `Rate limited by NIM: ${sanitizeError(errorText.slice(0, 200))}`,
+                        this.id,
+                        res.status,
+                        undefined,
+                        retryAfter,
+                    );
+                }
+                throw new LLMError(
+                    `NVIDIA NIM Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
                     this.id,
                     res.status,
-                    undefined,
-                    retryAfter,
                 );
             }
-            throw new LLMError(
-                `NVIDIA NIM Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                this.id,
-                res.status,
+
+            let finalFinishReason: string | undefined;
+
+            await parseSSEStream(
+                res,
+                (text) => onChunk(text),
+                (parsed: Record<string, unknown>) => {
+                    const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
+                    const choice = choices?.[0];
+                    const delta = choice?.delta as
+                        { content?: string; reasoning?: string } | undefined;
+                    if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
+                    return delta?.content;
+                },
+                undefined,
+                { signal: mergedSignal, idleTimeoutMs: this._idleTimeoutMs },
             );
-        }
 
-        let finalFinishReason: string | undefined;
-
-        await parseSSEStream(
-            res,
-            (text) => onChunk(text),
-            (parsed: Record<string, unknown>) => {
-                const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
-                const choice = choices?.[0];
-                const delta = choice?.delta as { content?: string; reasoning?: string } | undefined;
-                if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
-                return delta?.content;
-            },
-            undefined,
-            { signal, idleTimeoutMs: this._idleTimeoutMs },
-        );
-
-        if (finalFinishReason) {
-            onChunk('', { finishReason: finalFinishReason });
+            if (finalFinishReason) {
+                onChunk('', { finishReason: finalFinishReason });
+            }
+        } finally {
+            clearTimeout(timeout);
         }
     }
 

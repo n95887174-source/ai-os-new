@@ -184,11 +184,17 @@ export class ChatExecutor {
                     resolvedProvider.toLowerCase() === 'auto' ||
                     resolvedProvider.toLowerCase() === 'race'
                 ) {
+                    const sessionId = req.options?.sessionId;
                     const ranked = this.deps.routerService.getRankedProviders(
                         'content',
                         promptText,
                         req.priority,
                         agentId,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        sessionId,
                     );
                     if (ranked.length > 0) {
                         resolvedProvider = ranked[0].provider;
@@ -383,6 +389,10 @@ export class ChatExecutor {
                         }
 
                         const latencyMs = Math.round(performance.now() - startTime);
+                        const tps =
+                            latencyMs > 0 && result?.tokens
+                                ? Math.round((result.tokens / (latencyMs / 1000)) * 10) / 10
+                                : 0;
 
                         // H-119: Scan LLM response for sensitive content before emitting
                         if (result?.content && promptSecurityService.getConfig().enabled) {
@@ -427,6 +437,7 @@ export class ChatExecutor {
                                 latency: latencyMs,
                                 status: 'done',
                                 tokens: result.tokens,
+                                tps,
                                 finishReason: result.finishReason,
                             } satisfies ChatResponse);
 
@@ -668,6 +679,10 @@ export class ChatExecutor {
                 this.deps.keyService.getKey?.(winner.keyId) ??
                 this.deps.keyService.getKeys().find((k) => k.provider === winner.provider);
 
+            const raceTps =
+                result.latency > 0 && response.tokens
+                    ? Math.round((response.tokens / (result.latency / 1000)) * 10) / 10
+                    : 0;
             const res: ChatResponse = {
                 id: crypto.randomUUID(),
                 requestId,
@@ -678,6 +693,7 @@ export class ChatExecutor {
                 latency: result.latency,
                 status: 'done',
                 tokens: response.tokens,
+                tps: raceTps,
                 strategy: 'race',
             };
 

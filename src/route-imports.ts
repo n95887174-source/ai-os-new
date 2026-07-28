@@ -72,6 +72,9 @@ const ProviderDashboard = React.lazy(
 const GroqSpeedDashboard = React.lazy(
     () => import('./components/ProviderManager/GroqSpeedDashboard'),
 );
+const OpenRouterPanelLazy = React.lazy(
+    () => import('./components/OpenRouterPanel/OpenRouterPanel'),
+);
 const DebateSystemResearch = React.lazy(
     () => import('./components/DebateResearch/DebateSystemResearch'),
 );
@@ -401,6 +404,7 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'key-notes': KeyNotesPanel,
     'provider-dashboard': ProviderDashboard,
     'groq-speed': GroqSpeedDashboard,
+    openrouter: OpenRouterPanelLazy,
     'smart-routing': SmartRoutingPanelLazy,
     'nvidia-enterprise': NvidiaEnterprisePanelLazy,
     'provider-marketplace': ProviderMarketplace,

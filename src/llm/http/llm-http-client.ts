@@ -154,6 +154,23 @@ export class LLMHttpClient {
         };
     }
 
+    #handleFetchError(err: unknown, mergedSignal: AbortSignal): never {
+        const reason = mergedSignal.reason;
+        const isTimeout =
+            (err as DOMException)?.name === 'TimeoutError' ||
+            (reason as DOMException)?.name === 'TimeoutError' ||
+            (reason as DOMException)?.message === 'Timeout';
+        if (isTimeout) {
+            throw new LLMError(
+                `${this.#provider} request timed out after ${this.#timeoutMs}ms`,
+                this.#provider,
+                408,
+            );
+        }
+        if (err instanceof Error) throw err;
+        throw new DOMException('Aborted', 'AbortError');
+    }
+
     async post(
         path: string,
         body: unknown,
@@ -169,20 +186,25 @@ export class LLMHttpClient {
         const { signal: mergedSignal, controller } = this.#withTimeout(signal);
         const done = this.#trackInFlight(controller, path);
         try {
-            const res = await fetch(`${this.#baseUrl}${path}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...this.#defaultHeaders,
-                    [this.#authHeaderName]: apiKey,
-                },
-                body: bodyStr,
-                signal: mergedSignal,
-            });
+            let res: Response;
+            try {
+                res = await fetch(`${this.#baseUrl}${path}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...this.#defaultHeaders,
+                        [this.#authHeaderName]: apiKey,
+                    },
+                    body: bodyStr,
+                    signal: mergedSignal,
+                });
+            } catch (err) {
+                this.#handleFetchError(err, mergedSignal);
+            }
 
             if (mergedSignal.aborted) {
                 res.body?.cancel()?.catch(() => {});
-                throw new DOMException('Aborted', 'AbortError');
+                this.#handleFetchError(mergedSignal.reason, mergedSignal);
             }
 
             if (res.status === 401 || res.status === 403) {
@@ -259,18 +281,23 @@ export class LLMHttpClient {
         const { signal: mergedSignal, controller } = this.#withTimeout(signal);
         const done = this.#trackInFlight(controller, path);
         try {
-            const res = await fetch(`${this.#baseUrl}${path}`, {
-                method: 'GET',
-                headers: {
-                    ...this.#defaultHeaders,
-                    [this.#authHeaderName]: apiKey,
-                },
-                signal: mergedSignal,
-            });
+            let res: Response;
+            try {
+                res = await fetch(`${this.#baseUrl}${path}`, {
+                    method: 'GET',
+                    headers: {
+                        ...this.#defaultHeaders,
+                        [this.#authHeaderName]: apiKey,
+                    },
+                    signal: mergedSignal,
+                });
+            } catch (err) {
+                this.#handleFetchError(err, mergedSignal);
+            }
 
             if (mergedSignal.aborted) {
                 res.body?.cancel()?.catch(() => {});
-                throw new DOMException('Aborted', 'AbortError');
+                this.#handleFetchError(mergedSignal.reason, mergedSignal);
             }
 
             if (res.status === 401 || res.status === 403) {
@@ -340,20 +367,25 @@ export class LLMHttpClient {
         const { signal: mergedSignal, controller } = this.#withTimeout(signal);
         const done = this.#trackInFlight(controller, path);
         try {
-            const res = await fetch(`${this.#baseUrl}${path}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...this.#defaultHeaders,
-                    [this.#authHeaderName]: apiKey,
-                },
-                body: JSON.stringify(body),
-                signal: mergedSignal,
-            });
+            let res: Response;
+            try {
+                res = await fetch(`${this.#baseUrl}${path}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...this.#defaultHeaders,
+                        [this.#authHeaderName]: apiKey,
+                    },
+                    body: JSON.stringify(body),
+                    signal: mergedSignal,
+                });
+            } catch (err) {
+                this.#handleFetchError(err, mergedSignal);
+            }
 
             if (mergedSignal.aborted) {
                 res.body?.cancel()?.catch(() => {});
-                throw new DOMException('Aborted', 'AbortError');
+                this.#handleFetchError(mergedSignal.reason, mergedSignal);
             }
 
             if (res.status === 401 || res.status === 403) {

@@ -71,6 +71,7 @@ const ru = {
     'nav.provider_marketplace': 'Провайдер marketplace',
     'nav.smart_routing': 'smart Маршрутизация',
     'nav.nvidia_enterprise': 'Nvidia enterprise',
+    'nav.openrouter': 'OpenRouter ◈',
     'nav.governance': 'governance',
     'nav.policies': 'policies',
     'nav.policy_editor': 'Политика editor',

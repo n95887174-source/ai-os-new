@@ -12,6 +12,17 @@ import { FALLBACK_LOGGER } from '../../shared/utils/logger';
 const LOGGER = FALLBACK_LOGGER.child('OpenRouter');
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
+function combineSignals(...signals: AbortSignal[]): AbortSignal {
+    const ctrl = new AbortController();
+    for (const s of signals) {
+        if (s.aborted) {
+            ctrl.abort(s.reason);
+            return ctrl.signal;
+        }
+        s.addEventListener('abort', () => ctrl.abort(s.reason), { once: true });
+    }
+    return ctrl.signal;
+}
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
     'STOP',
     'MAX_TOKENS',
@@ -163,36 +174,46 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     ): Promise<Omit<ProviderResponse, 'latency'>> {
         const body = this.buildBody(messages, model, false, options);
         const headers = this.buildHeaders(apiKey);
+        const ctrl = new AbortController();
+        const timeout = setTimeout(
+            () => ctrl.abort(new DOMException('Timeout', 'TimeoutError')),
+            60000,
+        );
+        const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
 
-        const res = await fetch(`${this.baseURL}/chat/completions`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal,
-        });
+        try {
+            const res = await fetch(`${this.baseURL}/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: mergedSignal,
+            });
 
-        if (!res.ok) {
-            const errorText = await res.text();
-            const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
-            if (res.status === 429 || res.status >= 500) {
-                const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                throw new RetryableError(
+            if (!res.ok) {
+                const errorText = await res.text();
+                const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
+                if (res.status === 429 || res.status >= 500) {
+                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+                    throw new RetryableError(
+                        `OpenRouter Error: ${res.status} - ${sanitized}`,
+                        'openrouter',
+                        res.status,
+                        undefined,
+                        retryAfter,
+                    );
+                }
+                throw new LLMError(
                     `OpenRouter Error: ${res.status} - ${sanitized}`,
                     'openrouter',
                     res.status,
-                    undefined,
-                    retryAfter,
                 );
             }
-            throw new LLMError(
-                `OpenRouter Error: ${res.status} - ${sanitized}`,
-                'openrouter',
-                res.status,
-            );
-        }
 
-        const data = await res.json();
-        return this.toProviderResponse(data, 0);
+            const data = await res.json();
+            return this.toProviderResponse(data, 0);
+        } finally {
+            clearTimeout(timeout);
+        }
     }
 
     async doStreamMessage(
@@ -205,63 +226,74 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     ): Promise<void> {
         const body = this.buildBody(messages, model, true, options);
         const headers = this.buildHeaders(apiKey);
+        const ctrl = new AbortController();
+        const timeout = setTimeout(
+            () => ctrl.abort(new DOMException('Timeout', 'TimeoutError')),
+            60000,
+        );
+        const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
 
-        const res = await fetch(`${this.baseURL}/chat/completions`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal,
-        });
+        try {
+            const res = await fetch(`${this.baseURL}/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: mergedSignal,
+            });
 
-        if (!res.ok) {
-            const errorText = await res.text();
-            const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
-            if (res.status === 429 || res.status >= 500) {
-                const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                throw new RetryableError(
+            if (!res.ok) {
+                const errorText = await res.text();
+                const sanitized = sanitizeError(Array.from(errorText).slice(0, 200).join(''));
+                if (res.status === 429 || res.status >= 500) {
+                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
+                    throw new RetryableError(
+                        `OpenRouter Stream Error: ${res.status} - ${sanitized}`,
+                        'openrouter',
+                        res.status,
+                        undefined,
+                        retryAfter,
+                    );
+                }
+                throw new LLMError(
                     `OpenRouter Stream Error: ${res.status} - ${sanitized}`,
                     'openrouter',
                     res.status,
-                    undefined,
-                    retryAfter,
                 );
             }
-            throw new LLMError(
-                `OpenRouter Stream Error: ${res.status} - ${sanitized}`,
-                'openrouter',
-                res.status,
+
+            let finalFinishReason: string | undefined;
+            let finalUsage: OpenRouterUsage | undefined;
+            let finalReasoning: string | undefined;
+
+            await parseSSEStream(
+                res,
+                (text) => onChunk(text),
+                (parsed: Record<string, unknown>) => {
+                    const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
+                    const choice = choices?.[0];
+                    const delta = choice?.delta as
+                        { content?: string; reasoning?: string } | undefined;
+                    if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
+                    if (parsed.usage) finalUsage = parsed.usage as OpenRouterUsage;
+                    if (delta?.reasoning) finalReasoning = (finalReasoning || '') + delta.reasoning;
+                    return delta?.content;
+                },
+                undefined,
+                { signal: mergedSignal, idleTimeoutMs: 30000 },
             );
-        }
 
-        let finalFinishReason: string | undefined;
-        let finalUsage: OpenRouterUsage | undefined;
-        let finalReasoning: string | undefined;
-
-        await parseSSEStream(
-            res,
-            (text) => onChunk(text),
-            (parsed: Record<string, unknown>) => {
-                const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
-                const choice = choices?.[0];
-                const delta = choice?.delta as { content?: string; reasoning?: string } | undefined;
-                if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
-                if (parsed.usage) finalUsage = parsed.usage as OpenRouterUsage;
-                if (delta?.reasoning) finalReasoning = (finalReasoning || '') + delta.reasoning;
-                return delta?.content;
-            },
-            undefined,
-            { signal, idleTimeoutMs: 30000 },
-        );
-
-        const normalizedFinishReason = finalFinishReason
-            ? normalizeFinishReason(finalFinishReason)
-            : undefined;
-        if (finalFinishReason || finalUsage || finalReasoning) {
-            onChunk('', {
-                finishReason: normalizedFinishReason,
-                usage: finalUsage as Record<string, unknown> | undefined,
-                reasoning: finalReasoning,
-            });
+            const normalizedFinishReason = finalFinishReason
+                ? normalizeFinishReason(finalFinishReason)
+                : undefined;
+            if (finalFinishReason || finalUsage || finalReasoning) {
+                onChunk('', {
+                    finishReason: normalizedFinishReason,
+                    usage: finalUsage as Record<string, unknown> | undefined,
+                    reasoning: finalReasoning,
+                });
+            }
+        } finally {
+            clearTimeout(timeout);
         }
     }
 

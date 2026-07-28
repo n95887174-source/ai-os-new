@@ -50,6 +50,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
 
         const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
 
+        console.log(`[QuickTest] SEND_MESSAGE to ${p}/${resolvedModel} (reqId=${reqId})`);
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,
             model: resolvedModel,
@@ -62,6 +63,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
         const cleanup = () => {
             subResp();
             subStreamEnd();
+            subStreamErr();
         };
 
         const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res) => {
@@ -69,6 +71,11 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             if (res.requestId === reqId) {
                 isDone = true;
                 cleanup();
+                clearTimeout(timeout);
+                console.log(
+                    `[QuickTest] MESSAGE_RESPONSE received in ${Date.now() - start}ms`,
+                    res.status,
+                );
                 if (res.status === 'error') {
                     setTestStatus('error');
                     setTestError(res.error || 'Unknown error');
@@ -88,6 +95,8 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             if (requestId === reqId) {
                 isDone = true;
                 cleanup();
+                clearTimeout(timeout);
+                console.log(`[QuickTest] STREAM_END received in ${Date.now() - start}ms`);
                 setTestStatus('success');
                 setTestResult({
                     content: fullContent,
@@ -97,13 +106,27 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             }
         });
 
-        void setTimeout(() => {
+        const subStreamErr = eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, error }) => {
+            if (isDone) return;
+            if (requestId === reqId) {
+                isDone = true;
+                cleanup();
+                clearTimeout(timeout);
+                console.log(`[QuickTest] STREAM_ERROR received in ${Date.now() - start}ms`, error);
+                setTestStatus('error');
+                setTestError(error || 'Stream error');
+            }
+        });
+
+        const timeout = setTimeout(() => {
             if (isDone) return;
             isDone = true;
             cleanup();
+            eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: reqId });
+            console.log(`[QuickTest] TIMEOUT after 60000ms (reqId=${reqId})`);
             setTestStatus('error');
             setTestError('Request timed out');
-        }, 15000);
+        }, 60000);
     };
 
     return (

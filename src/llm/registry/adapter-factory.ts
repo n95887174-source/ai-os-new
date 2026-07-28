@@ -13,6 +13,7 @@ import { NvidiaNIMAdapter } from '../nvidia/nvidia-nim-adapter';
 import { MockAdapter } from '../mock/mock-adapter';
 import { OpenAiCompatibleAdapter } from '../openai-compatible/openai-compatible-adapter';
 import { CerebrasAdapter } from '../cerebras/cerebras-adapter';
+import { GroqAdapter } from '../groq/groq-adapter';
 import { CloudflareAdapter } from '../cloudflare/cloudflare-adapter';
 import type { LLMProviderAdapter } from '../core/types';
 import type { LLMContext } from '../../kernel/contracts/llm-context';
@@ -110,11 +111,7 @@ export class AdapterFactory {
                 adapter = new MockAdapter();
                 break;
             case 'groq':
-                adapter = new OpenAiCompatibleAdapter(
-                    'groq',
-                    'https://api.groq.com/openai/v1',
-                    true,
-                );
+                adapter = new GroqAdapter();
                 break;
             case 'openai':
                 adapter = new OpenAiCompatibleAdapter('openai', 'https://api.openai.com/v1', true);

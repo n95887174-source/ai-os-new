@@ -179,12 +179,14 @@ export function sanitizeModel(model: string): void {
 
 export async function validateModel(model: string, apiKey: string): Promise<string> {
     sanitizeModel(model);
-    const cached = await modelCache.get(apiKey);
-    if (cached && cached.size > 0 && !cached.has(model)) {
-        rootLogger.warn(
-            'GeminiModelValidator',
-            `Model "${model}" not in recent model list — may fail at runtime`,
-        );
-    }
+    // Non-blocking background fetch of cached model list to prevent delaying execution
+    void modelCache.get(apiKey).then((cached) => {
+        if (cached && cached.size > 0 && !cached.has(model)) {
+            rootLogger.warn(
+                'GeminiModelValidator',
+                `Model "${model}" not in recent model list — may fail at runtime`,
+            );
+        }
+    }).catch(() => {});
     return model;
 }

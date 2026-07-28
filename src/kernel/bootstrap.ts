@@ -285,13 +285,26 @@ export class SystemBootstrap implements IBootstrap {
         for (const tier of INIT_TIERS) {
             const tierNames = tier[0] === '*' ? [...serviceMap.keys()] : tier;
             for (const name of tierNames) {
-                const svc = serviceMap.get(name);
+                let svc = serviceMap.get(name);
+                if (!svc) {
+                    // B-121: Services registered via registerFactory (lazy) are not in
+                    // lifecycle entries until container.get() triggers their factory.
+                    // Resolve now to trigger lazy registration + lifecycle init.
+                    try {
+                        const instance = this.container.get<ILifecycle>(name);
+                        if (instance) {
+                            svc = instance;
+                        }
+                    } catch {
+                        continue;
+                    }
+                }
                 if (!svc) continue;
                 const hasStatus = this.lifecycle
                     .getStatuses()
                     .some((s) => s.name === name && s.status === 'ok');
                 if (!hasStatus) {
-                    await this.lifecycle.tryInitIfPresent(name, svc);
+                    await this.lifecycle.tryInitIfPresent(name, svc as any);
                 }
             }
         }

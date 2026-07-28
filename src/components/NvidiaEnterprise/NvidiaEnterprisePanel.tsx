@@ -31,6 +31,7 @@ import {
     FeatureRow,
     StatCard,
 } from './NvidiaEnterpriseComponents';
+import NvidiaKeyTable from './NvidiaKeyTable';
 
 export default function NvidiaEnterprisePanel() {
     const [config, setConfig] = useState<NvidiaEnterpriseConfig>(() =>
@@ -58,7 +59,14 @@ export default function NvidiaEnterprisePanel() {
     const [ngcOrgInput, setNgcOrgInput] = useState('');
     const [connecting, setConnecting] = useState(false);
     const [tab, setTab] = useState<
-        'overview' | 'compliance' | 'sla' | 'regions' | 'features' | 'costs' | 'achievements'
+        | 'overview'
+        | 'compliance'
+        | 'sla'
+        | 'regions'
+        | 'keys'
+        | 'features'
+        | 'costs'
+        | 'achievements'
     >('overview');
 
     const refresh = useCallback(() => {
@@ -106,6 +114,7 @@ export default function NvidiaEnterprisePanel() {
         { key: 'compliance', label: 'Compliance', icon: <Shield size={16} /> },
         { key: 'sla', label: 'SLA History', icon: <Activity size={16} /> },
         { key: 'regions', label: 'Regions', icon: <Globe size={16} /> },
+        { key: 'keys', label: 'Keys', icon: <Server size={16} /> },
         { key: 'features', label: 'Features', icon: <Settings size={16} /> },
         { key: 'costs', label: 'Cost Analytics', icon: <DollarSign size={16} /> },
         { key: 'achievements', label: 'Achievements', icon: <Cpu size={16} /> },
@@ -534,6 +543,20 @@ export default function NvidiaEnterprisePanel() {
                             <RegionCard key={r.region} r={r} />
                         ))}
                     </div>
+                </div>
+            )}
+
+            {tab === 'keys' && (
+                <div
+                    style={{
+                        background: 'rgba(118,185,0,0.04)',
+                        border: '1px solid rgba(118,185,0,0.12)',
+                        borderRadius: 12,
+                        padding: 16,
+                    }}
+                >
+                    <h3 style={{ margin: '0 0 16px', fontSize: '0.95rem' }}>NVIDIA NIM Keys</h3>
+                    <NvidiaKeyTable />
                 </div>
             )}
 

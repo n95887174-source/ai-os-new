@@ -71,6 +71,7 @@ const en = {
     'nav.provider_marketplace': 'Provider Marketplace',
     'nav.smart_routing': 'Smart Routing 🧭',
     'nav.nvidia_enterprise': 'NVIDIA Enterprise 🏢',
+    'nav.openrouter': 'OpenRouter ◈',
     'nav.governance': 'GOVERNANCE',
     'nav.policies': 'Policies',
     'nav.policy_editor': 'Policy Rules Engine',
