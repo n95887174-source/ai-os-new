@@ -51,6 +51,9 @@ export const INIT_TIERS: string[][] = [
         'chatService',
         'memoryOrchestrator',
         'advisorService',
+        'contributionService',
+        'cognitiveIntelligenceService',
+        'pressureMapService',
     ],
     // Tier 6 — remaining (no explicit deps or self-contained)
     ['*'],

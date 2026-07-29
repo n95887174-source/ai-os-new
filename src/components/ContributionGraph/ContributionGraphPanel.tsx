@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GitCommit, TrendingUp, Flame } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
-import { contributionService } from '../../kernel/instances';
+import { contributionService } from '../../kernel/instances/services-extras';
+import { eventBus, EVENTS } from '../../kernel/instances/events';
 
 const LEVEL_COLORS = ['#1e293b', '#0e4429', '#006d32', '#26a641', '#39d353'];
 
 const ContributionGraphPanelContent: React.FC = () => {
-    const [graph] = useState(() => contributionService.getGraph());
-    const [streak] = useState(() => contributionService.getStreak());
+    const isMounted = useRef(true);
+    const [graph, setGraph] = useState(() => contributionService.getGraph());
+    const [streak, setStreak] = useState(() => contributionService.getStreak());
     const [months] = useState(() => {
         const m = [
             'Jan',
@@ -31,6 +33,24 @@ const ContributionGraphPanelContent: React.FC = () => {
         }
         return result;
     });
+
+    useEffect(() => {
+        isMounted.current = true;
+        const refresh = () => {
+            if (!isMounted.current) return;
+            setGraph(contributionService.getGraph());
+            setStreak(contributionService.getStreak());
+        };
+        const unsubs = [
+            eventBus.on(EVENTS.STREAM_END, refresh),
+            eventBus.on(EVENTS.DEBATE_AGENT_RESPONDED, refresh),
+            eventBus.on(EVENTS.KEY_HEALTH_CHECK_COMPLETED, refresh),
+        ];
+        return () => {
+            isMounted.current = false;
+            unsubs.forEach((u) => u());
+        };
+    }, []);
 
     return (
         <div style={{ padding: 16, height: '100%', overflowY: 'auto' }}>

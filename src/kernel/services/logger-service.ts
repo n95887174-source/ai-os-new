@@ -82,7 +82,7 @@ export class LoggerService implements ILogger {
     }
 
     child(service: string): ILogger {
-        return new LoggerService(service, this.minLevelName, { buffer: [], seq: 0 });
+        return new LoggerService(service, this.minLevelName, { buffer: this.state.buffer, seq: 0 });
     }
 
     debug(service: string, message: string, meta?: Record<string, unknown>): void {
@@ -120,6 +120,7 @@ export class LoggerService implements ILogger {
             correlationId:
                 this.state.currentTrace?.correlationId ??
                 (meta?.correlationId as string | undefined),
+            latency: meta?.latency as number | undefined,
             error: err,
             meta,
         };

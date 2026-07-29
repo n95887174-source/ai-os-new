@@ -22,36 +22,43 @@ function computePercentiles(sorted: number[], p: number): number {
 }
 
 export function aggregate(entries: ReadonlyArray<LogEntry>): ServiceStats[] {
-    const byService = new Map<string, number[]>();
+    const allServices = new Set<string>();
+    const latencies = new Map<string, number[]>();
     const errorCount = new Map<string, number>();
     const warnCount = new Map<string, number>();
     const lastSeen = new Map<string, number>();
+    const counts = new Map<string, number>();
+
     for (const e of entries) {
-        if (e.service && typeof e.latency === 'number' && e.latency > 0) {
-            const list = byService.get(e.service) ?? [];
+        if (!e.service) continue;
+        allServices.add(e.service);
+        counts.set(e.service, (counts.get(e.service) ?? 0) + 1);
+
+        if (typeof e.latency === 'number' && e.latency > 0) {
+            const list = latencies.get(e.service) ?? [];
             list.push(e.latency);
-            byService.set(e.service, list);
-            const t = e.timestamp;
-            if (!lastSeen.has(e.service) || (lastSeen.get(e.service) ?? 0) < t)
-                lastSeen.set(e.service, t);
+            latencies.set(e.service, list);
         }
-        if (e.level === 'error')
-            errorCount.set(
-                e.service ?? 'unknown',
-                (errorCount.get(e.service ?? 'unknown') ?? 0) + 1,
-            );
-        if (e.level === 'warn')
-            warnCount.set(e.service ?? 'unknown', (warnCount.get(e.service ?? 'unknown') ?? 0) + 1);
+
+        const t = e.timestamp;
+        if (!lastSeen.has(e.service) || (lastSeen.get(e.service) ?? 0) < t)
+            lastSeen.set(e.service, t);
+
+        if (e.level === 'error') errorCount.set(e.service, (errorCount.get(e.service) ?? 0) + 1);
+        if (e.level === 'warn') warnCount.set(e.service, (warnCount.get(e.service) ?? 0) + 1);
     }
+
     const out: ServiceStats[] = [];
-    for (const [service, lats] of byService.entries()) {
+    for (const service of allServices) {
+        const lats = latencies.get(service) ?? [];
         const sorted = [...lats].sort((a, b) => a - b);
         const sum = sorted.reduce((s, v) => s + v, 0);
+        const len = sorted.length;
         out.push({
             service,
-            count: sorted.length,
+            count: counts.get(service) ?? 0,
             totalLatency: sum,
-            avgLatency: sum / sorted.length,
+            avgLatency: len > 0 ? sum / len : 0,
             p50: computePercentiles(sorted, 0.5),
             p95: computePercentiles(sorted, 0.95),
             p99: computePercentiles(sorted, 0.99),
