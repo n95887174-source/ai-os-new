@@ -275,6 +275,7 @@ export class ToolService {
         await this.persist();
         this.executionHistory = [];
         this.tools = [];
+        this.rateLimitCounters.clear();
     }
 
     private async load() {

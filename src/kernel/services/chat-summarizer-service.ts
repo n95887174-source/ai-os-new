@@ -359,4 +359,9 @@ UNRESOLVED: [questions or topics that remain open]`;
         this.summaries.set(sessionId, merged);
         return merged;
     }
+
+    destroy(): void {
+        this.summaries.clear();
+        this.loaded = false;
+    }
 }

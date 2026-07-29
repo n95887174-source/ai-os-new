@@ -6,9 +6,9 @@ import type {
     ToolCall,
     StreamMeta,
 } from '../core/types';
-import { LLMError, RetryableError, AuthError } from '../core/errors';
+import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
-import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
+import { LLMHttpClient } from '../http/llm-http-client';
 import { OpenAiCompatibleResponseSchema } from './openai-compatible-types';
 
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
@@ -45,19 +45,21 @@ function extractToolCalls(msg: Record<string, unknown> | undefined): ToolCall[] 
 
 export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     id: string;
-    private baseUrl: string;
-    private useProxy: boolean;
+    private httpClient: LLMHttpClient;
 
     constructor(id: string, baseUrl: string, useProxy = false) {
         super();
         this.id = id;
-        this.baseUrl = baseUrl;
-        this.useProxy = useProxy;
-    }
-
-    private getUrl(path: string): string {
-        if (this.useProxy) return `/proxy/${this.id}${path}`;
-        return `${this.baseUrl}${path}`;
+        const proxyUrl = useProxy ? `/proxy/${this.id}` : baseUrl;
+        this.httpClient = new LLMHttpClient(
+            proxyUrl,
+            {
+                'Content-Type': 'application/json',
+                ...(this.id === 'groq' ? { Origin: 'http://localhost:5173' } : {}),
+            },
+            'authorization',
+            this.id,
+        );
     }
 
     private buildBody(
@@ -85,32 +87,6 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         };
     }
 
-    private async handleNonOk(res: Response, id: string): Promise<never> {
-        const errorText = await res.text();
-        if (res.status === 429) {
-            const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
-            throw new RetryableError(
-                `${id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                id,
-                res.status,
-                undefined,
-                retryAfterMs,
-            );
-        }
-        if (res.status === 401 || res.status === 403) {
-            throw new AuthError(
-                `${id} Auth Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                id,
-                res.status,
-            );
-        }
-        throw new LLMError(
-            `${id} Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-            id,
-            res.status,
-        );
-    }
-
     async doSendMessage(
         messages: ChatMessage[],
         model: string,
@@ -119,23 +95,13 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         signal?: AbortSignal,
     ): Promise<Omit<ProviderResponse, 'latency'>> {
         const body = this.buildBody(model, messages, false, options);
-        const res = await fetch(this.getUrl('/chat/completions'), {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                ...(this.id === 'groq' ? { Origin: 'http://localhost:5173' } : {}),
-            },
-            body: JSON.stringify(body),
+        const { data } = await this.httpClient.post(
+            '/chat/completions',
+            body,
+            `Bearer ${apiKey}`,
             signal,
-        });
-
-        if (!res.ok) {
-            await this.handleNonOk(res, this.id);
-        }
-
-        const data = (await res.json()) as Record<string, unknown>;
-        return this.toProviderResponse(data);
+        );
+        return this.toProviderResponse(data as Record<string, unknown>);
     }
 
     async doStreamMessage(
@@ -146,8 +112,6 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         signal?: AbortSignal,
         options?: SendMessageOptions,
     ): Promise<void> {
-        // L-11: Fragile heuristic — classification models can't be reliably detected by name.
-        // Relies on convention used by common model families.
         const isClassificationModel = model.includes('distil') || model.includes('guard');
 
         if (isClassificationModel) {
@@ -157,42 +121,12 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
         }
 
         const body = this.buildBody(model, messages, true, options);
-        const res = await fetch(this.getUrl('/chat/completions'), {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-                ...(this.id === 'groq' ? { Origin: 'http://localhost:5173' } : {}),
-            },
-            body: JSON.stringify(body),
+        const res = await this.httpClient.streamPost(
+            '/chat/completions',
+            body,
+            `Bearer ${apiKey}`,
             signal,
-        });
-
-        if (!res.ok) {
-            const errorText = await res.text();
-            if (res.status === 429) {
-                const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                throw new RetryableError(
-                    `${this.id} Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                    this.id,
-                    res.status,
-                    undefined,
-                    retryAfterMs,
-                );
-            }
-            if (res.status === 401 || res.status === 403) {
-                throw new AuthError(
-                    `${this.id} Auth Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                    this.id,
-                    res.status,
-                );
-            }
-            throw new LLMError(
-                `${this.id} Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                this.id,
-                res.status,
-            );
-        }
+        );
 
         let finalFinishReason: string | undefined;
         let finalUsage: { total_tokens?: number } | undefined;
@@ -256,18 +190,10 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
             return [];
         }
         try {
-            const res = await fetch(this.getUrl('/models'), {
-                headers: { Authorization: `Bearer ${apiKey}` },
-                signal,
-            });
-            if (!res.ok) {
-                res.body?.cancel();
-                this._lastModelFetchFail = Date.now();
-                return [];
-            }
-            const data = await res.json();
+            const { data } = await this.httpClient.get('/models', `Bearer ${apiKey}`, signal);
             this._lastModelFetchFail = 0;
-            return data.data?.map((m: { id: string }) => m.id) || [];
+            const resp = data as { data?: Array<{ id: string }> };
+            return resp.data?.map((m) => m.id) || [];
         } catch (e) {
             if (e instanceof DOMException && e.name === 'AbortError') throw e;
             this._lastModelFetchFail = Date.now();

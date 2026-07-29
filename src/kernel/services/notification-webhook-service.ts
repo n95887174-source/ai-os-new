@@ -73,8 +73,12 @@ export interface NotificationWebhookServiceDeps {
 
 const WEBHOOKS_KEY = 'super_agents_webhooks';
 const MAX_WEBHOOKS = 50;
-const MAX_RETRIES = CONFIG.webhooks.maxRetries;
-const RETRY_DELAY_MS = CONFIG.webhooks.retryDelayMs;
+function getMaxRetries(): number {
+    return CONFIG.webhooks.maxRetries;
+}
+function getRetryDelayMs(): number {
+    return CONFIG.webhooks.retryDelayMs;
+}
 
 function formatPayload(
     provider: WebhookProvider,
@@ -246,11 +250,14 @@ export class NotificationWebhookService {
                 return true;
             }
 
-            if (attempt < MAX_RETRIES && res.status >= 500) {
+            if (attempt < getMaxRetries() && res.status >= 500) {
                 await res.body?.cancel();
                 const jitter = Math.random() * 0.5 + 0.75;
                 await new Promise<void>((resolve) => {
-                    const t = setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt) * jitter);
+                    const t = setTimeout(
+                        resolve,
+                        getRetryDelayMs() * Math.pow(2, attempt) * jitter,
+                    );
                     this.retryTimers.add(t);
                 });
                 return this.sendWithRetry(webhook, event, data, attempt + 1);
@@ -262,7 +269,7 @@ export class NotificationWebhookService {
                 event,
                 statusCode: res.status,
             });
-            if (attempt >= MAX_RETRIES) {
+            if (attempt >= getMaxRetries()) {
                 this.deps.eventBus.emit(EVENTS.WEBHOOK_DELIVERY_FAILED, {
                     webhookId: webhook.id,
                     event,
@@ -286,17 +293,20 @@ export class NotificationWebhookService {
             }
             return false;
         } catch (e) {
-            if (attempt < MAX_RETRIES) {
+            if (attempt < getMaxRetries()) {
                 const jitter = Math.random() * 0.5 + 0.75;
                 await new Promise<void>((resolve) => {
-                    const t = setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt) * jitter);
+                    const t = setTimeout(
+                        resolve,
+                        getRetryDelayMs() * Math.pow(2, attempt) * jitter,
+                    );
                     this.retryTimers.add(t);
                 });
                 return this.sendWithRetry(webhook, event, data, attempt + 1);
             }
             LOGGER.warn('NotificationWebhookService', 'Failed to send webhook after retries', {
                 webhookName: webhook.name,
-                attempts: MAX_RETRIES + 1,
+                attempts: getMaxRetries() + 1,
                 error: e,
             });
             this.deps.eventBus.emit(EVENTS.WEBHOOK_DELIVERY_FAILED, {

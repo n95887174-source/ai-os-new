@@ -1,4 +1,7 @@
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+
+const LOGGER = rootLogger.child('AgentVersion');
 
 export interface AgentVersion {
     id: string;
@@ -34,7 +37,10 @@ export class AgentVersionService {
         this.unsubs.push(
             this.deps.eventBus.on(EVENTS.SYSTEM_NODE_REMOVED, async (...args: unknown[]) => {
                 const data = args[0] as { id?: string } | undefined;
-                if (data?.id) await this.clearVersions(data.id).catch(() => {});
+                if (data?.id)
+                    await this.clearVersions(data.id).catch((e) =>
+                        LOGGER.error('AgentVersion', 'clearVersions failed', { error: e }),
+                    );
             }),
         );
     }

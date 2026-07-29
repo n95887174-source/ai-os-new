@@ -137,12 +137,7 @@ export class DebatePersistenceManager {
     ): Promise<void> {
         const parsed = DebateSessionRecordSchema.safeParse(record);
         if (!parsed.success) {
-            console.error(
-                `[DebatePersistence] Zod validation failed for ${sessionId}`,
-                parsed.error.issues,
-                record,
-            );
-            LOGGER.warn('DebatePersistence', `saveSnapshot validation failed for ${sessionId}`, {
+            LOGGER.error('DebatePersistence', `saveSnapshot validation failed for ${sessionId}`, {
                 errors: parsed.error.issues,
             });
             throw new Error(
@@ -248,10 +243,9 @@ export class DebatePersistenceManager {
             }
             await this.attemptSave(record as Record<string, unknown>, sessionId, session);
         } catch (primaryErr) {
-            console.error(
-                `[DebatePersistence] Primary saveSnapshot failed for ${sessionId}`,
-                primaryErr,
-            );
+            LOGGER.error('DebatePersistence', `Primary saveSnapshot failed for ${sessionId}`, {
+                error: primaryErr,
+            });
             LOGGER.warn(
                 'DebatePersistence',
                 `Primary saveSnapshot failed for ${sessionId}, attempting minimal save`,
@@ -312,9 +306,10 @@ export class DebatePersistenceManager {
                     },
                 );
             } catch (fallbackErr) {
-                console.error(
-                    `[DebatePersistence] Minimal saveSnapshot also failed for ${sessionId}`,
-                    fallbackErr,
+                LOGGER.error(
+                    'DebatePersistence',
+                    `Minimal saveSnapshot also failed for ${sessionId}`,
+                    { error: fallbackErr },
                 );
                 LOGGER.error(
                     'DebatePersistence',

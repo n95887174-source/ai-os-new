@@ -1,8 +1,8 @@
 import { BaseLLMAdapter, type SendMessageOptions } from '../core/base-adapter';
 import type { ChatMessage, ProviderResponse, HealthCheckResult, StreamMeta } from '../core/types';
-import { LLMError, RetryableError } from '../core/errors';
+import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
-import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
+import { LLMHttpClient } from '../http/llm-http-client';
 
 const CLOUDFLARE_FREE_TIER = { requestsPerDay: 14400, tokensPerDay: 1000000 };
 const DEFAULT_BASE_URL = 'https://api.cloudflare.com/client/v4/accounts';
@@ -15,11 +15,13 @@ export class CloudflareAdapter extends BaseLLMAdapter {
     readonly id = 'cloudflare';
     private baseUrl: string;
     private useProxy: boolean;
+    private httpClient: LLMHttpClient;
 
     constructor(baseUrl?: string, useProxy = true) {
         super();
         this.baseUrl = baseUrl || DEFAULT_BASE_URL;
         this.useProxy = useProxy;
+        this.httpClient = new LLMHttpClient('', {}, 'authorization', 'cloudflare', 60000);
     }
 
     private parseAuth(apiKey: string): { accountId: string; token: string } {
@@ -32,7 +34,6 @@ export class CloudflareAdapter extends BaseLLMAdapter {
             }
             return { accountId, token };
         }
-        // Fallback: assume just a token with a default account pathway via proxy
         return { accountId: '', token: apiKey };
     }
 
@@ -67,51 +68,16 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         const body = this.buildBody(model, messages, false, options);
         const url = this.getUrl(apiKey, '/chat/completions');
 
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
-            signal,
-        });
-
-        if (!res.ok) {
-            const errorText = await res.text();
-            if (res.status === 429) {
-                const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                throw new RetryableError(
-                    `Cloudflare Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                    'cloudflare',
-                    res.status,
-                    undefined,
-                    retryAfterMs,
-                );
-            }
-            throw new LLMError(
-                `Cloudflare Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                'cloudflare',
-                res.status,
-            );
-        }
-
-        let data: Record<string, unknown>;
-        try {
-            data = await res.json();
-        } catch {
-            throw new LLMError('Cloudflare: Invalid JSON response', 'cloudflare', res.status);
-        }
-        // H-11: Guarded access with safe fallbacks for API format drift
-        const respData = data as {
+        const result = await this.httpClient.post(url, body, `Bearer ${token}`, signal);
+        const data = result.data as {
             choices?: Array<{ message?: { content?: unknown } }>;
             result?: { response?: unknown; usage?: { total_tokens?: number } };
             usage?: { total_tokens?: number };
         };
-        const content = respData.choices?.[0]?.message?.content ?? respData.result?.response ?? '';
+        const content = data.choices?.[0]?.message?.content ?? data.result?.response ?? '';
         return {
             content: typeof content === 'string' ? content : String(content ?? ''),
-            tokens: respData.usage?.total_tokens ?? respData.result?.usage?.total_tokens ?? 0,
+            tokens: data.usage?.total_tokens ?? data.result?.usage?.total_tokens ?? 0,
         };
     }
 
@@ -127,34 +93,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         const body = this.buildBody(model, messages, true, options);
         const url = this.getUrl(apiKey, '/chat/completions');
 
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
-            signal,
-        });
-
-        if (!res.ok) {
-            const errorText = await res.text();
-            if (res.status === 429) {
-                const retryAfterMs = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                throw new RetryableError(
-                    `Cloudflare Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                    'cloudflare',
-                    res.status,
-                    undefined,
-                    retryAfterMs,
-                );
-            }
-            throw new LLMError(
-                `Cloudflare Stream Error: ${res.status} - ${sanitizeError(errorText.slice(0, 200))}`,
-                'cloudflare',
-                res.status,
-            );
-        }
+        const res = await this.httpClient.streamPost(url, body, `Bearer ${token}`, signal);
 
         let finalFinishReason: string | undefined;
 
@@ -210,21 +149,14 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         try {
             const base = this.useProxy ? `/proxy/cloudflare` : this.baseUrl;
             const url = accountId ? `${base}/${accountId}/ai/v1/models/search` : `${base}/models`;
-            const res = await fetch(url, {
-                headers: { Authorization: `Bearer ${token}` },
-                signal,
-            });
-            if (!res.ok) {
-                res.body?.cancel();
-                this._lastModelFetchFail = Date.now();
-                return [];
-            }
-            const data = await res.json();
+            const result = await this.httpClient.get(url, `Bearer ${token}`, signal);
+            const data = result.data as {
+                success?: boolean;
+                result?: Array<{ id: string; name?: string }>;
+            };
             if (data.success && Array.isArray(data.result)) {
                 this._lastModelFetchFail = 0;
-                return data.result
-                    .map((m: { id: string; name?: string }) => m.id || m.name)
-                    .filter(Boolean);
+                return data.result.map((m) => m.id || m.name).filter(Boolean) as string[];
             }
             this._lastModelFetchFail = 0;
             return [];

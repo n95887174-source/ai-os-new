@@ -724,9 +724,10 @@ export class DebateSyncManager {
                     try {
                         await this.engine.saveSnapshot(this.runtimeSessionId);
                     } catch (e) {
-                        console.error(
-                            '[DebateSyncManager] saveSnapshot in syncSession (governor stop) failed',
-                            e,
+                        LOGGER.error(
+                            'DebateSyncManager',
+                            'saveSnapshot in syncSession (governor stop) failed',
+                            { error: e },
                         );
                     }
                 }

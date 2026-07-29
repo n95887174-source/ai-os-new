@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { getDexieDb } from '../database-service';
 import { eventBus } from '../../instances';
+import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
+
+const LOGGER = rootLogger.child('DexieStorage');
 import type {
     StorageLayer,
     KeyStore,
@@ -487,9 +490,11 @@ class DexieDebateStore implements DebateStore {
             const current = await getDexieDb().debateSessions.get(record.id);
             const currentVersion = (current as { version?: number })?.version ?? 0;
             if (current && record.version != null && record.version < currentVersion) {
-                console.error(
-                    `[DexieDebateStore] version conflict: id=${record.id} db=${currentVersion} attempted=${record.version} record.hasVersion=${'version' in record}`,
-                );
+                LOGGER.error('DexieStorage', 'version conflict', {
+                    id: record.id,
+                    db: currentVersion,
+                    attempted: record.version,
+                });
                 eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
                     sessionId: record.id,
                     currentVersion,

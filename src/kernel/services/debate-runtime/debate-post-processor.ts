@@ -131,6 +131,11 @@ export class DebatePostProcessor {
         this.fedContents = [];
     }
 
+    destroy(): void {
+        this.processedArgIds.clear();
+        this.fedContents = [];
+    }
+
     process(session: DebateSession): DebateArgument[] {
         this.processArgumentTree(session);
         this.processDuplicates(session);

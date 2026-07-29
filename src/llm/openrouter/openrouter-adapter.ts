@@ -1,9 +1,9 @@
 import type { ChatMessage, ProviderResponse, HealthCheckResult, StreamMeta } from '../core/types';
 import type { SendMessageOptions } from '../core/base-adapter';
 import { BaseLLMAdapter } from '../core/base-adapter';
-import { LLMError, RetryableError } from '../core/errors';
+import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
-import { sanitizeError, parseRetryAfterHeader } from '../http/llm-http-client';
+import { LLMHttpClient } from '../http/llm-http-client';
 import { estimateTokenCount } from '../utils/token-counter';
 import type { OpenRouterUsage } from './openrouter-types';
 import { OpenRouterResponseSchema } from './openrouter-types';
@@ -12,32 +12,6 @@ import { FALLBACK_LOGGER } from '../../shared/utils/logger';
 const LOGGER = FALLBACK_LOGGER.child('OpenRouter');
 
 const MODEL_NAME_RE = /^[a-zA-Z0-9_.\-/]+$/;
-const MAX_RETRIES = 3;
-const BASE_RETRY_MS = 1000;
-
-function combineSignals(...signals: AbortSignal[]): AbortSignal {
-    const ctrl = new AbortController();
-    for (const s of signals) {
-        if (s.aborted) {
-            ctrl.abort(s.reason);
-            return ctrl.signal;
-        }
-        s.addEventListener('abort', () => ctrl.abort(s.reason), { once: true });
-    }
-    return ctrl.signal;
-}
-
-function sleep(ms: number): Promise<void> {
-    return new Promise((r) => setTimeout(r, ms));
-}
-
-function formatHeaders(headers: Headers): Record<string, string> {
-    const out: Record<string, string> = {};
-    headers.forEach((v, k) => {
-        out[k] = v;
-    });
-    return out;
-}
 
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
     'STOP',
@@ -57,6 +31,7 @@ function normalizeFinishReason(reason: string | undefined): ProviderResponse['fi
         ? (upper as NonNullable<ProviderResponse['finishReason']>)
         : 'OTHER';
 }
+
 const DEFAULT_MODEL_CACHE_TTL = 5 * 60 * 1000;
 
 export class OpenRouterAdapter extends BaseLLMAdapter {
@@ -65,6 +40,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
     private baseURL: string;
     private defaultOrigin: string;
     private modelCacheTTL: number;
+    private httpClient: LLMHttpClient;
     private modelCaches = new Map<
         string,
         { models: string[]; timestamp: number; promise: Promise<string[]> | null }
@@ -80,6 +56,16 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             import.meta.env.VITE_APP_ORIGIN ??
             (typeof window !== 'undefined' ? window.location.origin : '');
         this.modelCacheTTL = options?.modelCacheTTL ?? DEFAULT_MODEL_CACHE_TTL;
+        this.httpClient = new LLMHttpClient(
+            this.baseURL,
+            {
+                'HTTP-Referer': this.defaultOrigin,
+                'X-Title': 'Super-Agents OS',
+            },
+            'authorization',
+            'openrouter',
+            60000,
+        );
     }
 
     /** Force-refresh model cache on next access */
@@ -116,15 +102,6 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
                 return existing?.models ?? [];
             });
         return entry.promise;
-    }
-
-    private buildHeaders(apiKey: string): Record<string, string> {
-        return {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': this.defaultOrigin,
-            'X-Title': 'Super-Agents OS',
-        };
     }
 
     private buildBody(
@@ -173,7 +150,7 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         const openRouterErr = data.error;
         if (openRouterErr?.message) {
             throw new LLMError(
-                `OpenRouter API error: ${sanitizeError(String(openRouterErr.message))}`,
+                `OpenRouter API error: ${String(openRouterErr.message)}`,
                 'openrouter',
                 typeof (openRouterErr as { code?: unknown }).code === 'number'
                     ? (openRouterErr as { code: number }).code
@@ -188,85 +165,6 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         return { content, latency, tokens, finishReason, reasoning: undefined };
     }
 
-    private async fetchWithRetry(url: string, init: RequestInit, attempt = 1): Promise<Response> {
-        try {
-            const res = await fetch(url, init);
-
-            if (!res.ok) {
-                const cloned = res.clone();
-                const errorText = await cloned.text();
-                const bodyPreview = Array.from(errorText).slice(0, 300).join('');
-                const sanitized = sanitizeError(bodyPreview);
-                const headers = formatHeaders(res.headers);
-
-                LOGGER.warn(
-                    'OpenRouterAdapter',
-                    `HTTP ${res.status} (attempt ${attempt}/${MAX_RETRIES})`,
-                    {
-                        status: res.status,
-                        headers,
-                        body: sanitized,
-                    },
-                );
-
-                if (res.status === 402) {
-                    throw new LLMError(
-                        `OpenRouter: insufficient credits (402) — top up your account at https://openrouter.ai`,
-                        'openrouter',
-                        402,
-                    );
-                }
-
-                if (res.status === 429 || res.status >= 500) {
-                    if (attempt < MAX_RETRIES) {
-                        const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                        const delay = retryAfter
-                            ? retryAfter * 1000
-                            : BASE_RETRY_MS *
-                              Math.pow(2, attempt - 1) *
-                              (0.5 + Math.random() * 0.5);
-                        LOGGER.warn('OpenRouterAdapter', `Retrying in ${Math.round(delay)}ms`, {
-                            attempt,
-                        });
-                        await sleep(delay);
-                        return this.fetchWithRetry(url, init, attempt + 1);
-                    }
-                    const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
-                    throw new RetryableError(
-                        `OpenRouter Error: ${res.status} - ${sanitized}`,
-                        'openrouter',
-                        res.status,
-                        undefined,
-                        retryAfter,
-                    );
-                }
-
-                throw new LLMError(
-                    `OpenRouter Error: ${res.status} - ${sanitized}`,
-                    'openrouter',
-                    res.status,
-                );
-            }
-
-            return res;
-        } catch (e) {
-            if (e instanceof LLMError || e instanceof RetryableError) throw e;
-            const msg = e instanceof Error ? e.message : String(e);
-            if (attempt < MAX_RETRIES && !(e instanceof DOMException && e.name === 'AbortError')) {
-                const delay =
-                    BASE_RETRY_MS * Math.pow(2, attempt - 1) * (0.5 + Math.random() * 0.5);
-                LOGGER.warn(
-                    'OpenRouterAdapter',
-                    `Fetch failed (attempt ${attempt}/${MAX_RETRIES}), retrying in ${Math.round(delay)}ms`,
-                    { error: msg },
-                );
-                await sleep(delay);
-                return this.fetchWithRetry(url, init, attempt + 1);
-            }
-            throw e;
-        }
-    }
-
     async doSendMessage(
         messages: ChatMessage[],
         model: string,
@@ -275,27 +173,14 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         signal: AbortSignal | undefined,
     ): Promise<Omit<ProviderResponse, 'latency'>> {
         const body = this.buildBody(messages, model, false, options);
-        const headers = this.buildHeaders(apiKey);
-        const ctrl = new AbortController();
-        const timeout = setTimeout(
-            () => ctrl.abort(new DOMException('Timeout', 'TimeoutError')),
-            60000,
+
+        const result = await this.httpClient.post(
+            '/chat/completions',
+            body,
+            `Bearer ${apiKey}`,
+            signal,
         );
-        const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
-
-        try {
-            const res = await this.fetchWithRetry(`${this.baseURL}/chat/completions`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(body),
-                signal: mergedSignal,
-            });
-
-            const data = await res.json();
-            return this.toProviderResponse(data, 0);
-        } finally {
-            clearTimeout(timeout);
-        }
+        return this.toProviderResponse(result.data, result.latency);
     }
 
     async doStreamMessage(
@@ -307,70 +192,50 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
         options: SendMessageOptions | undefined,
     ): Promise<void> {
         const body = this.buildBody(messages, model, true, options);
-        const headers = this.buildHeaders(apiKey);
-        const ctrl = new AbortController();
-        const timeout = setTimeout(
-            () => ctrl.abort(new DOMException('Timeout', 'TimeoutError')),
-            60000,
+
+        const res = await this.httpClient.streamPost(
+            '/chat/completions',
+            body,
+            `Bearer ${apiKey}`,
+            signal,
         );
-        const mergedSignal = signal ? combineSignals(signal, ctrl.signal) : ctrl.signal;
 
-        try {
-            const res = await this.fetchWithRetry(`${this.baseURL}/chat/completions`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(body),
-                signal: mergedSignal,
+        let finalFinishReason: string | undefined;
+        let finalUsage: OpenRouterUsage | undefined;
+        let finalReasoning: string | undefined;
+
+        await parseSSEStream(
+            res,
+            (text) => onChunk(text),
+            (parsed: Record<string, unknown>) => {
+                const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
+                const choice = choices?.[0];
+                const delta = choice?.delta as { content?: string; reasoning?: string } | undefined;
+                if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
+                if (parsed.usage) finalUsage = parsed.usage as OpenRouterUsage;
+                if (delta?.reasoning) finalReasoning = (finalReasoning || '') + delta.reasoning;
+                return delta?.content;
+            },
+            undefined,
+            { signal, idleTimeoutMs: 30000 },
+        );
+
+        const normalizedFinishReason = finalFinishReason
+            ? normalizeFinishReason(finalFinishReason)
+            : undefined;
+        if (finalFinishReason || finalUsage || finalReasoning) {
+            onChunk('', {
+                finishReason: normalizedFinishReason,
+                usage: finalUsage as Record<string, unknown> | undefined,
+                reasoning: finalReasoning,
             });
-
-            let finalFinishReason: string | undefined;
-            let finalUsage: OpenRouterUsage | undefined;
-            let finalReasoning: string | undefined;
-
-            await parseSSEStream(
-                res,
-                (text) => onChunk(text),
-                (parsed: Record<string, unknown>) => {
-                    const choices = parsed.choices as Array<Record<string, unknown>> | undefined;
-                    const choice = choices?.[0];
-                    const delta = choice?.delta as
-                        { content?: string; reasoning?: string } | undefined;
-                    if (choice?.finish_reason) finalFinishReason = choice.finish_reason as string;
-                    if (parsed.usage) finalUsage = parsed.usage as OpenRouterUsage;
-                    if (delta?.reasoning) finalReasoning = (finalReasoning || '') + delta.reasoning;
-                    return delta?.content;
-                },
-                undefined,
-                { signal: mergedSignal, idleTimeoutMs: 30000 },
-            );
-
-            const normalizedFinishReason = finalFinishReason
-                ? normalizeFinishReason(finalFinishReason)
-                : undefined;
-            if (finalFinishReason || finalUsage || finalReasoning) {
-                onChunk('', {
-                    finishReason: normalizedFinishReason,
-                    usage: finalUsage as Record<string, unknown> | undefined,
-                    reasoning: finalReasoning,
-                });
-            }
-        } finally {
-            clearTimeout(timeout);
         }
     }
 
     async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {
         try {
-            const headers = this.buildHeaders(apiKey);
-            const res = await fetch(`${this.baseURL}/models`, { headers, signal });
-            if (!res.ok) {
-                res.body?.cancel()?.catch(() => {});
-                LOGGER.warn('OpenRouterAdapter', `getAvailableModels returned ${res.status}`, {
-                    status: res.status,
-                });
-                return [];
-            }
-            const data = (await res.json()) as { data?: Array<{ id: string }> };
+            const result = await this.httpClient.get('/models', `Bearer ${apiKey}`, signal);
+            const data = result.data as { data?: Array<{ id: string }> };
             return (
                 data.data
                     ?.filter((m): m is { id: string } => typeof m.id === 'string')
@@ -386,30 +251,22 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
 
     async rotateKey(currentKey: string): Promise<{ newKey: string; label?: string } | null> {
         try {
-            // OpenRouter key management API: POST /api/v1/keys
-            const headers = this.buildHeaders(currentKey);
-            const res = await fetch(`${this.baseURL}/keys`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
+            const result = await this.httpClient.post(
+                '/keys',
+                {
                     label: `Rotated ${new Date().toISOString().slice(0, 10)}`,
-                }),
-                signal: AbortSignal.timeout(15000),
-            });
-            if (!res.ok) {
-                console.warn(`[OpenRouter] rotateKey returned ${res.status}`);
-                res.body?.cancel()?.catch(() => {});
-                return null;
-            }
-            const data = (await res.json()) as { key?: string; data?: { key?: string } };
+                },
+                `Bearer ${currentKey}`,
+                AbortSignal.timeout(15000),
+            );
+            const data = result.data as { key?: string; data?: { key?: string } };
             const newKey = data.key || data.data?.key;
             if (!newKey) return null;
             return { newKey, label: `Rotated ${Date.now()}` };
         } catch (e) {
-            console.warn(
-                '[OpenRouter] rotateKey failed:',
-                e instanceof Error ? e.message : 'unknown',
-            );
+            LOGGER.warn('OpenRouterAdapter', 'rotateKey failed', {
+                error: e instanceof Error ? e.message : 'unknown',
+            });
             return null;
         }
     }
