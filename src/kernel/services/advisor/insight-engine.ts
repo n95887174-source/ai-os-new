@@ -1,10 +1,7 @@
 import type { IInsightEngine, LLMAnalysisResult, AdvisorMetrics } from '../../contracts/advisor';
 import type { KeyState } from '../../contracts/key-state';
 import { safeJsonParse } from '../../../kernel/utils/safe-json';
-import {
-    PROVIDER_DEFAULT_MODELS,
-    PROVIDER_PREFERRED_MODELS,
-} from '../../../kernel/utils/provider-default-models';
+import { PROVIDER_DEFAULT_MODELS } from '../../../kernel/utils/provider-default-models';
 
 export interface InsightEngineDeps {
     eventBus: {
@@ -224,7 +221,7 @@ Focus on actionable, specific improvements.`;
                 const PROVDER_DEFAULTS: Record<string, string> = {
                     ...PROVIDER_DEFAULT_MODELS,
                     gemini: 'gemini-3.1-flash-lite',
-                    groq: PROVIDER_PREFERRED_MODELS.groq?.[1] ?? 'llama-3.3-70b-versatile',
+                    groq: 'llama-3.3-70b-versatile',
                     openrouter: PROVIDER_DEFAULT_MODELS.openrouter,
                     nvidia: 'meta/llama-3.3-70b-instruct',
                     deepseek: 'deepseek-chat',

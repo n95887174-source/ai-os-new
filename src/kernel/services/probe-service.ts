@@ -402,13 +402,9 @@ export class ProbeService implements IProbeService, ILifecycle {
         }
     }
 
-    /** Force GC hint by allocating+freeding a large buffer. */
+    /** Hint to V8 to run GC: yield to event loop + invoke global gc if exposed. */
     private forceGCHint(): void {
-        try {
-            new ArrayBuffer(64 * 1024 * 1024);
-        } catch {
-            // best-effort
-        }
+        (globalThis as { gc?: () => void }).gc?.();
     }
 
     async probeAll(): Promise<ProbeResult[]> {

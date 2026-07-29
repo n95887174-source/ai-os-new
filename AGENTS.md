@@ -1552,6 +1552,41 @@ This is per-agent (each call gets fresh sets), but with a single provider the de
 
 ---
 
+## Session 76 — Fix 3 empty panels (ContributionGraph, PerformanceProfiler, PressureMap) (v4.5.0 → v4.6.0) ✅
+
+**Committed + pushed: `d201bb05`. Typecheck clean (prior build verified).**
+
+### Проблема
+
+3 панели показывали "0 0 0" или "loading" / "empty" после запуска дебатов с настроенными API ключами:
+
+1. `/contribution-graph` — всегда 0 total, 0 streak, 0 longest
+2. `/performance-profiler` — всегда "performance_profiler.empty"
+3. `/pressure-map` (PressureMapPanel + PressureMap) — всегда loading
+
+### Корневые причины
+
+| Панель              | Причина                                                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| ContributionGraph   | `useState(() => contributionService.getGraph())` — one-shot, нет реактивности. `contributionService` не в INIT_TIERS → init()  |
+| PerformanceProfiler | `aggregate()` требовал `latency > 0`, но LoggerService.log не заполняет latency. `child()` не делился буфером родителя → пусто |
+| PressureMap         | `pressureMapService` + `cognitiveIntelligenceService` не в INIT_TIERS → init() не вызывался → событий нет, данных нет          |
+
+### Изменения
+
+| #   | Файл                         | Изменение                                                                                            |
+| --- | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | `ContributionGraphPanel.tsx` | `useState`→`useEffect` с подпиской на STREAM_END, DEBATE_AGENT_RESPONDED, KEY_HEALTH_CHECK_COMPLETED |
+| 2   | `profiler-utils.ts`          | `aggregate()` считает ВСЕ записи per service (не только с latency>0), отдельно error/warn count      |
+| 3   | `logger-service.ts`          | `child()` делит буфер родителя; `latency` извлекается из `meta` при создании LogEntry                |
+| 4   | `bootstrap-phases.ts`        | Добавлены `contributionService`, `cognitiveIntelligenceService`, `pressureMapService` в Tier 5       |
+
+### Итог
+
+3 панели починены. После перезагрузки и запуска дебатов данные должны появиться.
+
+---
+
 ## Session 75 — 31 специализированных аудита (раздел 5.1–5.4 из docs/aaa.md) (v4.5.0 → v4.6.0)
 
 ### Цель
