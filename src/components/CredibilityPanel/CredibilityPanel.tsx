@@ -280,6 +280,15 @@ export const CredibilityPanel: React.FC = () => {
                         return (
                             <div
                                 key={i}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setCustomSource(src);
+                                        setResult(scoreSource(src));
+                                    }
+                                }}
                                 style={{
                                     padding: '10px 14px',
                                     borderRadius: 8,

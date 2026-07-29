@@ -2,11 +2,8 @@ import type {
     SourceVerificationResult,
     IAdversarialSourceService,
 } from '../../contracts/debate-adversarial-source';
-
-const LOGGER = {
-    warn: (msg: string, data?: Record<string, unknown>) =>
-        console.warn(`[AdversarialSource] ${msg}`, data ?? ''),
-};
+import { rootLogger } from '../logger-service';
+const LOGGER = rootLogger.child('AdversarialSource');
 
 const FETCH_TIMEOUT_MS = 5000;
 const MAX_VERIFICATIONS_PER_CALL = 3;
@@ -52,7 +49,7 @@ export class AdversarialSourceService implements IAdversarialSourceService {
                     });
                 }
             } catch {
-                LOGGER.warn('Failed to verify source', { url });
+                LOGGER.warn('AdversarialSource', 'Failed to verify source', { url });
             }
         }
 

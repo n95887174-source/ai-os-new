@@ -221,6 +221,12 @@ export class StrategyManager extends StrategyRegistry {
         }
     }
 
+    destroy(): void {
+        this._initialized = false;
+        this.versionHistories.clear();
+        super.destroy();
+    }
+
     private async persistVersionHistory(strategyId: string): Promise<void> {
         if (!this.storage) return;
         try {

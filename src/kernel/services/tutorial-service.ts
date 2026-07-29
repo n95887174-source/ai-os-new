@@ -26,6 +26,7 @@ export class TutorialService implements ITutorialService {
     async start(): Promise<void> {}
 
     async destroy(): Promise<void> {
+        this._initialized = false;
         this.saveProgress();
         this.tutorials.clear();
         this.progress.clear();

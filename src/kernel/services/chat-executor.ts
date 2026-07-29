@@ -151,7 +151,11 @@ export class ChatExecutor {
                             result: scanResult,
                             blocked: true,
                         })
-                        .catch(() => {});
+                        .catch((err) =>
+                            LOGGER.error('ChatExecutor', 'Security addEvent (blocked) failed', {
+                                error: err,
+                            }),
+                        );
                     throw new LLMError(
                         'SecurityError',
                         `Prompt blocked: ${scanResult.summary}`,
@@ -266,7 +270,13 @@ export class ChatExecutor {
                                     result: scanResult,
                                     blocked: false,
                                 })
-                                .catch(() => {});
+                                .catch((err) =>
+                                    LOGGER.error(
+                                        'ChatExecutor',
+                                        'Security addEvent (permitted) failed',
+                                        { error: err },
+                                    ),
+                                );
                         }
 
                         let result: Awaited<ReturnType<ILLMClientService['sendMessage']>>;
@@ -351,7 +361,14 @@ export class ChatExecutor {
                                 signal: sessionController.signal,
                                 onChunk,
                             });
-                            const inflightEntry = inflightPromise.then(() => {}).catch(() => {});
+                            const inflightEntry = inflightPromise
+                                .then(() => {})
+                                .catch((err) =>
+                                    LOGGER.error('ChatExecutor', 'Inflight request failed', {
+                                        cacheKey,
+                                        error: err,
+                                    }),
+                                );
                             if (this.cacheInflight.size >= this.MAX_CACHE_INFLIGHT) {
                                 const firstKey = this.cacheInflight.keys().next().value;
                                 if (firstKey) this.cacheInflight.delete(firstKey);
@@ -421,7 +438,13 @@ export class ChatExecutor {
                                         result: outputScan,
                                         blocked: true,
                                     })
-                                    .catch(() => {});
+                                    .catch((err) =>
+                                        LOGGER.error(
+                                            'ChatExecutor',
+                                            'Security addEvent (response blocked) failed',
+                                            { error: err },
+                                        ),
+                                    );
                                 return;
                             }
                         }
@@ -737,7 +760,7 @@ export class ChatExecutor {
     }
 
     private emitError(req: QueuedRequest, error: string) {
-        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+        this.deps.eventBus.emitOnce(EVENTS.MESSAGE_RESPONSE, req.requestId, {
             id: `err-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             requestId: req.requestId,
             provider: req.provider,
@@ -757,7 +780,7 @@ export class ChatExecutor {
     }
 
     private emitStatus(req: QueuedRequest, status: ChatResponse['status']) {
-        this.deps.eventBus.emit(EVENTS.MESSAGE_RESPONSE, {
+        this.deps.eventBus.emitOnce(EVENTS.MESSAGE_RESPONSE, req.requestId || crypto.randomUUID(), {
             id: `st-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
             requestId: req.requestId || crypto.randomUUID(),
             provider: req.provider || 'unknown',

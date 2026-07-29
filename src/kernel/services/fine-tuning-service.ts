@@ -6,6 +6,8 @@ import type {
     FineTuningMethod,
 } from '../contracts/fine-tuning';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+import { rootLogger } from './logger-service';
+const FT_LOGGER = rootLogger.child('FineTuningService');
 
 const STORAGE_KEY = 'fine_tuning_data';
 
@@ -157,8 +159,9 @@ export class FineTuningService implements IFineTuningService {
             return;
         }
 
-        console.warn(
-            '[FineTuningService] startJob uses @deprecated MOCK backend — simulated progress, no real training API call',
+        FT_LOGGER.warn(
+            'FineTuningService',
+            'startJob uses @deprecated MOCK backend — simulated progress, no real training API call',
             { jobId },
         );
         job.status = 'preparing';

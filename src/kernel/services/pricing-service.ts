@@ -324,7 +324,9 @@ export class PricingService implements ICostCalculator {
     }
 
     destroy() {
+        this._initialized = false;
         this.prefixCache.clear();
+        this.userOverrides = {};
         this.fetchPromise = null;
     }
 }

@@ -123,6 +123,10 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
 
     destroy(): void {
         this.sessionBuffers.clear();
+        this.aggregatedMetrics.clear();
+        this.sessionHistory = [];
+        this.baselineSessions = [];
+        this.scoreSnapshots = [];
     }
 
     record(event: QualityImpactEvent): void {
@@ -503,13 +507,20 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
                 (a, b) => (b.metric?.avgJudgeScoreDelta ?? 0) - (a.metric?.avgJudgeScoreDelta ?? 0),
             );
 
-        console.log(`\n[QualityImpact] Session ${sessionId}: ${sorted.length} techniques`);
+        LOGGER.info('QualityImpactCollector', `Session ${sessionId}: ${sorted.length} techniques`);
         for (const entry of sorted) {
             const m = entry.metric;
             if (!m) continue;
             const sign = m.avgJudgeScoreDelta >= 0 ? '+' : '';
-            console.log(
-                `  ${entry.techId}: ${sign}${(m.avgJudgeScoreDelta * 100).toFixed(1)}% (n=${entry.count}, ${m.totalSessions} sessions, p=${m.pValue?.toFixed(4) ?? 'N/A'}, ${m.confidence})`,
+            LOGGER.info(
+                'QualityImpactCollector',
+                `${entry.techId}: ${sign}${(m.avgJudgeScoreDelta * 100).toFixed(1)}%`,
+                {
+                    n: entry.count,
+                    sessions: m.totalSessions,
+                    pValue: m.pValue?.toFixed(4) ?? 'N/A',
+                    confidence: m.confidence,
+                },
             );
         }
     }

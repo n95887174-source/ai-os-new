@@ -341,8 +341,11 @@ export class RoleService {
     }
 
     destroy() {
+        this._initialized = false;
         if (this.statsDebounceTimer) clearTimeout(this.statsDebounceTimer);
         this.unsubs.forEach((u) => u());
+        this.assignments.clear();
+        this.usageStats.clear();
     }
 
     private setupListeners() {

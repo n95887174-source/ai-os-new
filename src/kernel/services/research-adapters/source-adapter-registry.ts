@@ -27,6 +27,8 @@ import {
     WolframAlphaAdapter,
     RestrictedAdapter,
 } from './source-adapters';
+import { rootLogger } from '../logger-service';
+const SAR_LOGGER = rootLogger.child('SourceAdapterRegistry');
 
 const DEFAULT_CONFIG: SourceAdapterConfig = {
     apiKeys: {},
@@ -237,19 +239,21 @@ export class SourceAdapterRegistry {
                 const valid = sources.filter((s) => {
                     const r = ResearchSourceSchema.safeParse(s);
                     if (!r.success) {
-                        console.warn(
-                            '[SourceAdapterRegistry] Invalid result from',
-                            adapter.name,
-                            r.error.issues,
-                        );
+                        SAR_LOGGER.warn('SourceAdapterRegistry', 'Invalid result from', {
+                            adapter: adapter.name,
+                            issues: r.error.issues,
+                        });
                     }
                     return r.success;
                 });
                 if (valid.length > 0) {
                     results.set(adapter.name, valid);
                 }
-            } catch {
-                // skip failed adapter silently
+            } catch (err) {
+                SAR_LOGGER.warn('SourceAdapterRegistry', 'search failed for adapter', {
+                    adapter: adapter.name,
+                    error: String(err),
+                });
             }
         });
 
@@ -271,17 +275,23 @@ export class SourceAdapterRegistry {
                 const valid = sources.filter((s) => {
                     const r = ResearchSourceSchema.safeParse(s);
                     if (!r.success) {
-                        console.warn(
-                            '[SourceAdapterRegistry] Invalid result from',
-                            adapter.name,
-                            r.error.issues,
+                        SAR_LOGGER.warn(
+                            'SourceAdapterRegistry',
+                            'Invalid result from (searchBySource)',
+                            {
+                                adapter: adapter.name,
+                                issues: r.error.issues,
+                            },
                         );
                     }
                     return r.success;
                 });
                 if (valid.length > 0) results.set(type, valid);
-            } catch {
-                // skip
+            } catch (err) {
+                SAR_LOGGER.warn('SourceAdapterRegistry', 'searchBySource failed for adapter', {
+                    adapter: adapter.name,
+                    error: String(err),
+                });
             }
         });
         await Promise.allSettled(promises);

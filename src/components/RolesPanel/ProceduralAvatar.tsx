@@ -119,7 +119,7 @@ export const ProceduralAvatar: React.FC<ProceduralAvatarProps> = ({
     return (
         <img
             src={encoded}
-            alt="avatar"
+            alt={`${seed} avatar`}
             style={{
                 width: size,
                 height: size,

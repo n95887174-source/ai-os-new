@@ -264,6 +264,11 @@ export class RouterConfigManager {
         await this.deps.database.setKv(CONFIG_KEY, this.config);
     }
 
+    destroy(): void {
+        this._initialized = false;
+        _instance = null;
+    }
+
     resolveProfileForRequest(): string {
         const ab = this.config.abTest;
         if (ab && ab.enabled && ab.splitPercent > 0) {

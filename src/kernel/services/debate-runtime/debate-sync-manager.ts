@@ -394,10 +394,20 @@ export class DebateSyncManager {
         if (chatSessionId && session?.id) {
             this.deps.sessionManager
                 .link(chatSessionId, session.id, 'chat_to_debate', `Debate: ${topic}`)
-                .catch(() => {});
+                .catch((err) =>
+                    LOGGER.error('DebateSyncManager', 'Failed to link debate to chat session', {
+                        error: err,
+                    }),
+                );
             this.deps.sessionManager
                 .updateMeta(chatSessionId, { linkedDebateId: session.id })
-                .catch(() => {});
+                .catch((err) =>
+                    LOGGER.error(
+                        'DebateSyncManager',
+                        'Failed to update session meta with linkedDebateId',
+                        { error: err },
+                    ),
+                );
         }
     }
 

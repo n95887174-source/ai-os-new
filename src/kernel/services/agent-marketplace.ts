@@ -141,7 +141,9 @@ export class AgentMarketplace implements ILifecycle {
             this.items.shift();
         }
         this.items.push(newItem);
-        void this.persist();
+        void this.persist().catch((err) =>
+            LOGGER.warn('AgentMarketplace', 'publish persist failed', { error: err }),
+        );
         return { ...newItem };
     }
 
@@ -149,7 +151,9 @@ export class AgentMarketplace implements ILifecycle {
         const item = this.items.find((i) => i.id === itemId);
         if (item) {
             item.downloads++;
-            void this.persist();
+            void this.persist().catch((err) =>
+                LOGGER.warn('AgentMarketplace', 'install persist failed', { error: err }),
+            );
             return { ...item };
         }
         return null;

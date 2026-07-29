@@ -241,8 +241,9 @@ export class DebatePersistenceManager {
                 failedModels: JSON.stringify(snap.failedModels ? [...snap.failedModels] : []),
             };
             if (snap.version === 1) {
-                console.warn(
-                    `[DebatePersistence] saveSnapshot version=1 for ${sessionId} phase=${snap.phase} round=${snap.round}`,
+                LOGGER.warn(
+                    'DebatePersistence',
+                    `saveSnapshot version=1 for ${sessionId} phase=${snap.phase} round=${snap.round}`,
                 );
             }
             await this.attemptSave(record as Record<string, unknown>, sessionId, session);

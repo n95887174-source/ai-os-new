@@ -4,6 +4,8 @@ import type { ChatMessage } from '../types/llm-types';
 import type { IDatabaseService } from '../types/interfaces';
 import { BucketStorageAdapter } from './storage-adapter';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+const LOGGER = rootLogger.child('ChatBookmarks');
 
 export interface ChatBookmark {
     id: string;
@@ -57,8 +59,9 @@ function createDbStorage(db: IDatabaseService): NonNullable<ChatBookmarksService
                 filtered.unshift(bookmark);
                 const truncated = filtered.slice(0, 500);
                 if (truncated.length < filtered.length) {
-                    console.warn(
-                        `[ChatBookmarks] Truncated ${filtered.length - 500} bookmarks (max 500)`,
+                    LOGGER.warn(
+                        'ChatBookmarks',
+                        `Truncated ${filtered.length - 500} bookmarks (max 500)`,
                     );
                 }
                 if (await db.setKvCas(STORAGE_KEY, truncated, version)) return;

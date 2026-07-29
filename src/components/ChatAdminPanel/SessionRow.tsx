@@ -65,7 +65,14 @@ const SessionRow: React.FC<SessionRowProps> = ({
                 style={{ cursor: 'pointer' }}
                 onClick={onToggleSelect}
                 role="button"
+                tabIndex={0}
                 aria-label={`Toggle selection for session ${session.title}`}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onToggleSelect();
+                    }
+                }}
             >
                 {isSelected ? (
                     <CheckSquare size={20} color="#3b82f6" aria-hidden="true" />

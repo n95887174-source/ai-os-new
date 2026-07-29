@@ -271,6 +271,7 @@ export class ToolService {
     }
 
     async destroy(): Promise<void> {
+        this._initialized = false;
         await this.persist();
         this.executionHistory = [];
         this.tools = [];

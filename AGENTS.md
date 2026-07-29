@@ -1549,3 +1549,51 @@ This is per-agent (each call gets fresh sets), but with a single provider the de
 | #   | File                      | Change                                                                                                                                                                                                                         |
 | --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1   | `google-genai-service.ts` | Split `config` into `generationConfig` (temperature, maxOutputTokens, stopSequences, responseMimeType, thinkingConfig) + `modelParams` (tools, safetySettings). `getGenerativeModel()` now receives fields at correct nesting. |
+
+---
+
+## Session 75 — 31 специализированных аудита (раздел 5.1–5.4 из docs/aaa.md) (v4.5.0 → v4.6.0)
+
+### Цель
+
+Запустить 31 специализированный аудит из `docs/aaa.md` (разделы 5.1 Консистентность, 5.2 Надёжность, 5.3 Мониторинг, 5.4 Архитектура) и записать результаты в `docs/ocs/resultall.md`.
+
+### План
+
+| #   | Аудит                                                                        | Статус                     |
+| --- | ---------------------------------------------------------------------------- | -------------------------- |
+| 1   | **5.1.1** Idempotency                                                        | 🟢 Done (54 findings)      |
+| 2   | **5.1.2** Dual-write                                                         | 🟢 Done (22 findings)      |
+| 3   | **5.1.3** Event loss                                                         | 🟢 Done (12 findings)      |
+| 4   | **5.1.4** Event duplication                                                  | 🟢 Done (11 findings)      |
+| 5   | **5.1.5** Partial failure/rollback                                           | 🟢 Done (8C, 10H findings) |
+| 6   | **5.1.6** Crash consistency                                                  | 🟢 Done (18 findings)      |
+| 7   | **5.1.7** Stale state/versioning                                             | 🟢 Done (53 findings)      |
+| 8   | **5.1.8** Lost updates                                                       | 🟢 Done (24 findings)      |
+| 9   | **5.1.9** Ordering bugs                                                      | 🟢 Done (13 findings)      |
+| 10  | **5.2.1–5.2.5** Retry storms, DLQ, FAF, leaks                                | 🟢 Done (35 findings)      |
+| 11  | **5.2.6–5.2.10** Backpressure, Concurrency, Network, Provider, Rate limits   | 🟢 Done (9 findings)       |
+| 12  | **5.2.11–5.2.15** Budget, State-machine, Events, Replay, Non-determinism     | 🟢 Done (12 findings)      |
+| 13  | **5.3.1–5.3.5** Observability, Silent errors, Promises, Security, Corruption | 🟢 Done (62 findings)      |
+| 14  | **5.4.1–5.4.5** Init, Shutdown, HMR, Cross-tab, Workers                      | 🟢 Done (28 findings)      |
+| 15  | **5.4.6–5.4.10** Config, Schema, Cache, DI, Dead code                        | 🟢 Done (32 findings)      |
+
+### Changes
+
+| #   | Аудит                              | Находок                 | Ключевые Critical                                                                                                        |
+| --- | ---------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **5.1.1** Idempotency              | 54 (14C, 16H, 12M, 12L) | DEBATE_SESSION_FAILED 7x без dedup; MESSAGE_RESPONSE 12x без dedup; нет Idempotency-Key в HTTP                           |
+| 2   | **5.1.2** Dual-write               | 22 (5C, 8H, 5M, 4L)     | debate-human-service 3x emit до fire-and-forget persist; mcp-service removeServer save не await                          |
+| 3   | **5.1.3** Event loss               | 12 (1C, 4H, 5M, 2L)     | emit() возвращает void — нет ack; DEBATE_SESSION_FAILED 7 сайтов без idempotency                                         |
+| 4   | **5.1.4** Event duplication        | 11 (4C, 2H, 3M, 2L)     | Cross-tab эхо-петля CHAT_FORKED; DEBATE_UPDATED подавлен на 30с; неверный формат в debateLiveStore                       |
+| 5   | **5.1.5** Partial failure/rollback | 8C, 10H                 | federated-memory 10+ void persist; key-service updateKeyStatus emit до save; virtual-key-service debounced persist       |
+| 6   | **5.1.6** Crash consistency        | 18 (2C, 5H, 9M, 2L)     | ai_os_clean_shutdown флаг никогда не устанавливается; sync-backup пишется но не читается                                 |
+| 7   | **5.1.7** Stale state/versioning   | 53 (14C, 18H, 12M, 9L)  | PolicyService 3-key blind write; BudgetService 5 blind writes; DexieSessionStore silent skip; 32 сервиса без CAS         |
+| 8   | **5.1.8** Lost updates             | 24 (1C, 9H, 5M, 9L)     | group-manager persist без try/catch; research-run void persist без beforeunload                                          |
+| 9   | **5.1.9** Ordering bugs            | 13 (3C, 3H, 3M, 4L)     | Chat _sendQueue теряет сообщения; cancelSending не чистит очередь; нет causal ordering в EventBus                        |
+| 10  | **5.2.1–5.2.5**                    | 35 (0C, 11H, 15M, 9L)   | Fire-and-forget void persist в 4+ сервисах; ResearchEngine 10 Maps без лимита; DI init без await                         |
+| 11  | **5.2.6–5.2.10**                   | 9 (3C, 2H, 4M/L)        | Race-executor без лимита кандидатов; TypeError от fetch() не распознаётся; global semaphore блокирует                    |
+| 12  | **5.2.11–5.2.15**                  | 12 (6C, 2H, 4M)         | BudgetService нет hard stop; transition() bypass guards; 63 события с z.unknown(); guardian-registry Math.random         |
+| 13  | **5.3.1–5.3.5**                    | 62 (3C, 13H, 24M, 22L)  | config-service мутации без authorization; нет мониторинга доставки событий; 4 пустых catch в debate-llm-caller           |
+| 14  | **5.4.1–5.4.5**                    | 28                      | Cross-tab broadcast без timestamp проверки; worker fire-and-forget теряет данные; нет HMR dispose для unhandledrejection |
+| 15  | **5.4.6–5.4.10**                   | 32 (4C, 11H, 13M, 4L)   | 3 deprecated метода в policy-service (600+ строк dead code); 5 mock-сервисов; 5 синглтонов вне DI                        |

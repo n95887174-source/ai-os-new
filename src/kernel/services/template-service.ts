@@ -81,6 +81,12 @@ export class TemplateService {
         await this.persist();
     }
 
+    destroy(): void {
+        this._initialized = false;
+        this.templates = [];
+        this.initPromise = null;
+    }
+
     private async persist() {
         try {
             await this.deps.database.setKv(TEMPLATES_KEY, this.templates);

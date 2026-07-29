@@ -108,6 +108,11 @@ export class RoleVersionService {
         return { versionA: a, versionB: b, changes };
     }
 
+    destroy(): void {
+        this._initialized = false;
+        this.versions.clear();
+    }
+
     private persist(): void {
         const all: RoleVersion[] = [];
         for (const list of this.versions.values()) all.push(...list);

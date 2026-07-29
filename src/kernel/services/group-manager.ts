@@ -5,6 +5,8 @@ import type { ApiKey } from '../types/metrics-types';
 import type { Result } from '../contracts/results';
 import { ok, fail } from '../contracts/results';
 import type { IEventBus } from '../types/interfaces';
+import { rootLogger } from './logger-service';
+const GM_LOGGER = rootLogger.child('GroupManager');
 const KV_GROUPS = 'key_groups';
 const DEFAULT_GROUP_ID = '__default__';
 const DEFAULT_GROUP_NAME = 'Default';
@@ -81,7 +83,11 @@ export class GroupManagerService implements IGroupManager {
                 }
                 this.passports.delete(data.id);
                 this.allKeysCache = null;
-                void this.persist();
+                void this.persist().catch((err) =>
+                    GM_LOGGER.error('GroupManager', 'persist failed on KEY_REMOVED', {
+                        error: err,
+                    }),
+                );
             }),
         );
         // D-06: Invalidate cache on external key add — covers keys added via KeyService directly
@@ -100,8 +106,11 @@ export class GroupManagerService implements IGroupManager {
     }
 
     async destroy(): Promise<void> {
+        this._initialized = false;
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
+        this.groups = [];
+        this.passports.clear();
         await this.persist();
     }
 
@@ -322,7 +331,9 @@ export class GroupManagerService implements IGroupManager {
             source: 'migration',
         };
         this.passports.set(k.id, p);
-        void this.persist();
+        void this.persist().catch((err) =>
+            GM_LOGGER.error('GroupManager', 'ensurePassport persist failed', { error: err }),
+        );
         return p;
     }
 
@@ -362,9 +373,10 @@ export class GroupManagerService implements IGroupManager {
             g.keyIds = g.keyIds.filter((id) => allKeyIds.has(id));
             if (g.keyIds.length < before) {
                 if (import.meta.env.DEV)
-                    console.log(
-                        `[GroupManager] cleaned ${before - g.keyIds.length} orphan keyIds from group "${g.name}"`,
-                    );
+                    GM_LOGGER.debug('GroupManager', 'cleaned orphan keyIds', {
+                        count: before - g.keyIds.length,
+                        group: g.name,
+                    });
             }
         }
 

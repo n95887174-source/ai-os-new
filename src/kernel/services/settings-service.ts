@@ -369,6 +369,7 @@ export class SettingsService implements ISettingsService {
     }
 
     async destroy() {
+        this._initialized = false;
         this.listeners.clear();
     }
 

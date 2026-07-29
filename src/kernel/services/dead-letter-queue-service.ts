@@ -13,6 +13,7 @@ export class DeadLetterQueueService implements IDeadLetterQueue {
         getKv: <T>(id: string) => Promise<T | null>;
         setKv: <T>(id: string, value: T) => Promise<void>;
     };
+    private _initialized = false;
 
     constructor(deps: {
         getKv: <T>(id: string) => Promise<T | null>;
@@ -22,6 +23,8 @@ export class DeadLetterQueueService implements IDeadLetterQueue {
     }
 
     async init(): Promise<void> {
+        if (this._initialized) return;
+        this._initialized = true;
         try {
             const saved = await this.deps.getKv<DeadLetterEntry[]>(DLQ_STORAGE_KEY);
             if (saved) this.entries = saved;

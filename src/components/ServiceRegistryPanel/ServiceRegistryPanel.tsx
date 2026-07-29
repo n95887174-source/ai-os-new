@@ -729,6 +729,16 @@ const ServiceRegistryPanel: React.FC = () => {
                                                     selectedService === name ? null : name,
                                                 )
                                             }
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault();
+                                                    setSelectedService(
+                                                        selectedService === name ? null : name,
+                                                    );
+                                                }
+                                            }}
                                             style={{
                                                 ...styles.tableRow,
                                                 background:
@@ -855,7 +865,21 @@ const Th: React.FC<{
     onClick?: () => void;
     width?: string;
 }> = ({ children, onClick, width }) => (
-    <th onClick={onClick} style={{ ...styles.th, width, cursor: onClick ? 'pointer' : 'default' }}>
+    <th
+        onClick={onClick}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={
+            onClick
+                ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onClick();
+                      }
+                  }
+                : undefined
+        }
+        style={{ ...styles.th, width, cursor: onClick ? 'pointer' : 'default' }}
+    >
         {children}
     </th>
 );

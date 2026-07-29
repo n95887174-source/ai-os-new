@@ -15,6 +15,8 @@ import { EVENTS } from '../events/event-registry';
 import { TEAM_TEMPLATES } from './team-template-definitions';
 import { BucketStorageAdapter } from './storage-adapter';
 import { SeededRng } from '../utils/seedable-rng';
+import { rootLogger } from './logger-service';
+const RTS_LOGGER = rootLogger.child('RoleTeamService');
 
 const genId = () => crypto.randomUUID();
 const genExecId = () => crypto.randomUUID();
@@ -96,7 +98,7 @@ export class RoleTeamService implements IRoleTeamService {
         this.deps.database
             .setKv(TEAMS_STORAGE_KEY, Array.from(this.teams.values()))
             .catch((e: unknown) => {
-                console.warn('[RoleTeamService] persistTeams failed', e);
+                RTS_LOGGER.warn('RoleTeamService', 'persistTeams failed', { error: e });
             });
     }
 
@@ -104,7 +106,7 @@ export class RoleTeamService implements IRoleTeamService {
         this.deps.database
             .setKv(EXECUTIONS_STORAGE_KEY, Array.from(this.executions.values()))
             .catch((e: unknown) => {
-                console.warn('[RoleTeamService] persistExecutions failed', e);
+                RTS_LOGGER.warn('RoleTeamService', 'persistExecutions failed', { error: e });
             });
     }
 

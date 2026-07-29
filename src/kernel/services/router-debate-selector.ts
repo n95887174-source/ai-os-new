@@ -1,6 +1,8 @@
 import type { ApiKey } from '../types/metrics-types';
 import type { IKeyStateStore } from '../contracts/key-state';
 import type { RouterDecisionRecorder } from './router-decision-recorder';
+import { rootLogger } from './logger-service';
+const RDS_LOGGER = rootLogger.child('RouterDebateSelector');
 
 export interface DebateSelectorDeps {
     keyService: {
@@ -72,7 +74,7 @@ export class RouterDebateSelector {
             }
             return true;
         });
-        console.log('[DEBATE_FALLBACK] getDebateProviders primary pass', {
+        RDS_LOGGER.debug('RouterDebateSelector', 'getDebateProviders primary pass', {
             totalKeys: allKeys.length,
             activeCount: activeKeys.length,
             activeProviders: activeKeys.map(
@@ -125,7 +127,7 @@ export class RouterDebateSelector {
                 return true;
             });
         }
-        console.log('[DEBATE_FALLBACK] getDebateProviders active after filter', {
+        RDS_LOGGER.debug('RouterDebateSelector', 'getDebateProviders active after filter', {
             fallbackUsed: activeKeys.length,
             providers: activeKeys.map((k) => {
                 const ks = this.deps.keyStateStore?.get(k.id);

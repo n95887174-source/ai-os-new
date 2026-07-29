@@ -1,3 +1,6 @@
+import { rootLogger } from './logger-service';
+const PS_LOGGER = rootLogger.child('PromptStore');
+
 const STORAGE_KEY = 'superagents_prompt_overrides';
 
 export type PromptRole = 'attacker' | 'defender' | 'judge' | 'pro' | 'con' | 'default';
@@ -36,7 +39,7 @@ async function loadOverrides(): Promise<Partial<Record<PromptRole, string>>> {
         _overrideCache = raw ?? {};
         return _overrideCache;
     } catch (e) {
-        console.warn('[PromptStore] loadOverrides failed', e);
+        PS_LOGGER.warn('PromptStore', 'loadOverrides failed', { error: e });
     }
     return {};
 }
@@ -45,7 +48,7 @@ async function saveOverrides(overrides: Partial<Record<PromptRole, string>>): Pr
     try {
         await (await db()).setKv(STORAGE_KEY, overrides);
     } catch (e) {
-        console.warn('[PromptStore] saveOverrides failed', e);
+        PS_LOGGER.warn('PromptStore', 'saveOverrides failed', { error: e });
     }
 }
 
@@ -76,6 +79,6 @@ export async function resetAllPrompts(): Promise<void> {
     try {
         await (await db()).setKv(STORAGE_KEY, {});
     } catch (e) {
-        console.warn('[PromptStore] resetAllPrompts failed', e);
+        PS_LOGGER.warn('PromptStore', 'resetAllPrompts failed', { error: e });
     }
 }

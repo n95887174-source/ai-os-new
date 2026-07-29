@@ -47,7 +47,7 @@ export class DebateHumanService implements IDebateHumanService {
             sessionId: session.id,
             argument: arg,
         });
-        this.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+        this.eventBus.emitOnce(EVENTS.DEBATE_UPDATED, session.id, session);
         void persistActiveSession(this.debateStore, session);
     }
 
@@ -66,7 +66,7 @@ export class DebateHumanService implements IDebateHumanService {
             list.push(vote);
         }
         session.roundVotes[vote.round] = list;
-        this.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+        this.eventBus.emitOnce(EVENTS.DEBATE_UPDATED, session.id, session);
         void persistActiveSession(this.debateStore, session);
     }
 
@@ -81,7 +81,7 @@ export class DebateHumanService implements IDebateHumanService {
         const idx = list.findIndex((v) => v.voter === voter && v.votedAgentId === votedAgentId);
         if (idx >= 0) list.splice(idx, 1);
         session.roundVotes[round] = list;
-        this.eventBus.emit(EVENTS.DEBATE_UPDATED, session);
+        this.eventBus.emitOnce(EVENTS.DEBATE_UPDATED, session.id, session);
         void persistActiveSession(this.debateStore, session);
     }
 

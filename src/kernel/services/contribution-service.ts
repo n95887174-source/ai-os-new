@@ -59,6 +59,7 @@ export class ContributionService implements IContributionService, ILifecycle {
     }
 
     destroy(): void {
+        this._initialized = false;
         this.destroyed = true;
         this.unsubs.forEach((fn) => fn());
         this.unsubs = [];

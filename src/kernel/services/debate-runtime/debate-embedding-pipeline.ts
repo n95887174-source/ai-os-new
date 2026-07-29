@@ -207,6 +207,7 @@ export class DebateEmbeddingPipeline {
     }
 
     destroy(): void {
+        this._initialized = false;
         this.chunks.clear();
         this.chunkIdCounter = 0;
     }

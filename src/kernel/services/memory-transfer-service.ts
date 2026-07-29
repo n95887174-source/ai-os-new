@@ -324,4 +324,10 @@ export class MemoryTransferService implements IMemoryTransferService {
         const entries = sections.length;
         return { sections, entries };
     }
+
+    destroy(): void {
+        this.initialized = false;
+        this.exports = [];
+        this.imports = [];
+    }
 }

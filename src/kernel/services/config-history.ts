@@ -208,6 +208,7 @@ export class ConfigHistoryService {
     }
 
     destroy(): void {
+        this._initialized = false;
         this.history = [];
     }
 }

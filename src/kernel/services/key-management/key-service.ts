@@ -25,6 +25,7 @@ import type { KeyStore } from '../../contracts/storage/key-store';
 import { initStats, initExtendedStats } from './key-registry-utils';
 import { CONFIG } from '../config-registry';
 import { rootLogger } from '../logger-service';
+const LOGGER = rootLogger.child('KeyService');
 import { ssrSafeStorage } from '../../utils/ssr-storage';
 
 import type { FreeTierLimit } from './key-types';
@@ -255,7 +256,7 @@ export class KeyService implements IKeyRotationManager {
         await this.registry.loadKeys();
         const keysAfterLoad = this.registry.getKeys();
         if (import.meta.env.DEV)
-            console.log('[KEY_FLOW] KeyService final keys count:', {
+            LOGGER.debug('KeyService', 'KeyService final keys count', {
                 count: keysAfterLoad.length,
                 providers: [...new Set(keysAfterLoad.map((k) => k.provider))],
                 activeCount: keysAfterLoad.filter((k) => k.status === 'active').length,
@@ -440,7 +441,7 @@ export class KeyService implements IKeyRotationManager {
         const restored = await this.registry.forceResyncFromDexie();
         if (restored > 0) {
             this.notify();
-            this.deps.eventBus.emit(EVENTS.KEYS_LOADED, this.registry.getKeys());
+            this.deps.eventBus.emitOnce(EVENTS.KEYS_LOADED, 'global', this.registry.getKeys());
         }
         return restored;
     }
@@ -525,8 +526,8 @@ export class KeyService implements IKeyRotationManager {
 
     private emitKeyUpdate = () => {
         const keys = [...this.registry.getKeys()];
-        this.deps.eventBus.emit(EVENTS.KEY_UPDATED, keys);
-        this.deps.eventBus.emit(EVENTS.KEYS_LOADED, keys);
+        this.deps.eventBus.emitOnce(EVENTS.KEY_UPDATED, 'all', keys);
+        this.deps.eventBus.emitOnce(EVENTS.KEYS_LOADED, 'all', keys);
     };
 
     // C-07: leading=true fires first update immediately, coalesces rapid subsequent calls
@@ -767,7 +768,11 @@ export class KeyService implements IKeyRotationManager {
             if (key.history.length > 100) key.history = key.history.slice(-99);
         });
         if (prev === undefined) return;
-        this.registry.saveKeys();
+        this.registry
+            .saveKeys()
+            .catch((err) =>
+                LOGGER.error('KeyService', 'updateKeyStatus saveKeys failed', { id, status }, err),
+            );
         this.notify();
         this.deps.eventBus.emitOnce(EVENTS.KEY_STATE_CHANGED, `${id}:${provider}:${status}`, {
             id,
@@ -781,7 +786,11 @@ export class KeyService implements IKeyRotationManager {
         this.registry.modifyKey(id, (key) => {
             key.availableModels = models;
         });
-        this.registry.saveKeys();
+        this.registry
+            .saveKeys()
+            .catch((err) =>
+                LOGGER.error('KeyService', 'updateAvailableModels saveKeys failed', { id }, err),
+            );
         this.notify();
     }
 
@@ -850,7 +859,16 @@ export class KeyService implements IKeyRotationManager {
             found = true;
         });
         if (!found) return false;
-        this.registry.saveKeys();
+        this.registry
+            .saveKeys()
+            .catch((err) =>
+                LOGGER.error(
+                    'KeyService',
+                    'quarantineKey saveKeys failed',
+                    { idOrFingerprint, source },
+                    err,
+                ),
+            );
         this.notify();
         return true;
     }
@@ -1249,9 +1267,7 @@ export class KeyService implements IKeyRotationManager {
                 ]);
             });
         } catch (e) {
-            rootLogger
-                ?.child('KeyService')
-                ?.error('KeyService', 'clearAllData: Dexie clear failed', { error: e });
+            LOGGER.error('KeyService', 'clearAllData: Dexie clear failed', { error: e });
         }
         BucketStorageAdapter.removeItem(STORAGE_KEY);
         this.deps.eventBus.emit(EVENTS.CLEAR_DATA, undefined);

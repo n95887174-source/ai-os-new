@@ -1,9 +1,12 @@
+import { rootLogger } from './logger-service';
 import type {
     ProviderAchievement,
     AchievementProgress,
     IProviderAchievementService,
 } from '../contracts/provider-achievements';
 import type { IDatabaseService } from '../types/interfaces';
+
+const LOGGER = rootLogger.child('ProviderAchievement');
 
 function defs(): ProviderAchievement[] {
     const all: ProviderAchievement[] = [];
@@ -502,7 +505,7 @@ export class ProviderAchievementService implements IProviderAchievementService {
 
     private async _load(): Promise<void> {
         if (!this._database) {
-            console.warn('[ProviderAchievement] No database injected — achievements not persisted');
+            LOGGER.warn('ProviderAchievement', 'No database injected — achievements not persisted');
             return;
         }
         try {
@@ -555,14 +558,22 @@ export class ProviderAchievementService implements IProviderAchievementService {
 
     reset(): void {
         this._awarded.clear();
-        this._database?.setKv(STORAGE_KEY, []).catch(() => {});
+        this._database
+            ?.setKv(STORAGE_KEY, [])
+            .catch((err) =>
+                LOGGER.error('ProviderAchievement', 'Failed to persist reset', {}, err),
+            );
     }
 
     private _persist(): void {
         if (!this._database) {
-            console.warn('[ProviderAchievement] No database injected — achievement not persisted');
+            LOGGER.warn('ProviderAchievement', 'No database injected — achievement not persisted');
             return;
         }
-        this._database.setKv(STORAGE_KEY, [...this._awarded]).catch(() => {});
+        this._database
+            .setKv(STORAGE_KEY, [...this._awarded])
+            .catch((err) =>
+                LOGGER.error('ProviderAchievement', 'Failed to persist achievements', {}, err),
+            );
     }
 }

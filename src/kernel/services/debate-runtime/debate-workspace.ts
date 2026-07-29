@@ -187,6 +187,7 @@ export class DebateWorkspace {
     }
 
     destroy(): void {
+        this._initialized = false;
         this.index = { rooms: [], activeRoomId: null, lastUpdated: Date.now() };
     }
 }

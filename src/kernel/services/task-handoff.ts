@@ -156,6 +156,11 @@ export class TaskHandoffService {
         return all.sort((a, b) => b.createdAt - a.createdAt);
     }
 
+    destroy(): void {
+        this._initialized = false;
+        this.handoffs.clear();
+    }
+
     getPendingFor(agentId: string): HandoffRequest[] {
         return Array.from(this.handoffs.values())
             .filter((h) => h.toAgent === agentId && h.status === 'pending')

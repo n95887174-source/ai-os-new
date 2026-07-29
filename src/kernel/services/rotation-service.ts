@@ -41,6 +41,7 @@ export class RotationService implements IRotationService {
     }
 
     destroy() {
+        this._initialized = false;
         for (const t of this.timers.values()) clearTimeout(t.timer);
         this.timers.clear();
         if (this.monitorInterval) {

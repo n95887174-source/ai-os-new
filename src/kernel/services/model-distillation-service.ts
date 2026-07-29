@@ -5,6 +5,8 @@ import type {
     DistillationConfig,
 } from '../contracts/model-distillation';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+import { rootLogger } from './logger-service';
+const MD_LOGGER = rootLogger.child('DistillationService');
 
 const STORAGE_KEY = 'distillation_data';
 
@@ -142,8 +144,9 @@ export class DistillationService implements IDistillationService {
             return;
         }
 
-        console.warn(
-            '[DistillationService] startJob uses @deprecated MOCK backend — simulated progress, no real distillation API call',
+        MD_LOGGER.warn(
+            'DistillationService',
+            'startJob uses @deprecated MOCK backend — simulated progress, no real distillation API call',
             { jobId },
         );
         job.status = 'preparing';

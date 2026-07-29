@@ -189,7 +189,7 @@ export class KeyRegistry {
         // re-reading from storage layers that were intentionally excluded.
         if (isBootstrapPhase()) {
             if (import.meta.env.DEV)
-                console.log('[KEY_REGISTRY] reload() no-op during bootstrap phase');
+                LOGGER.debug('KeyRegistry', 'reload() no-op during bootstrap phase');
             return;
         }
 
@@ -316,7 +316,9 @@ export class KeyRegistry {
                         this.keys,
                     );
                     if (import.meta.env.DEV)
-                        console.log('[KEY_SYNC] final committed count:', this.keys.length);
+                        LOGGER.debug('KeyRegistry', 'final committed count', {
+                            count: this.keys.length,
+                        });
                     return;
                 }
             }
@@ -437,7 +439,9 @@ export class KeyRegistry {
             this.setKeysInternal('loadKeys:dexie', migrated);
             this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
             if (import.meta.env.DEV)
-                console.log('[KEY_SYNC] final committed count:', this.keys.length);
+                LOGGER.debug('KeyRegistry', 'final committed count (loadKeys)', {
+                    count: this.keys.length,
+                });
         } catch (e) {
             LOGGER.error('KeyRegistry', 'Failed to load API keys', { error: String(e) });
             if (import.meta.env.DEV)
@@ -548,11 +552,16 @@ export class KeyRegistry {
             this.setKeysInternal('forceResyncFromDexie', loaded, { force: true });
             this.traceKeyDrop(_dropRun, 'assign', before, this.keys.length, this.keys);
             if (import.meta.env.DEV)
-                console.log('[KEY_SYNC] force resync — committed count:', this.keys.length);
+                LOGGER.debug('KeyRegistry', 'force resync — committed count', {
+                    count: this.keys.length,
+                });
             return this.keys.length;
         } finally {
             if (import.meta.env.DEV)
-                console.log(`[KEY_DROP_TRACE] run=${_dropRun} stage=end final=${this.keys.length}`);
+                LOGGER.debug('KeyRegistry', 'KEY_DROP_TRACE end', {
+                    run: _dropRun,
+                    final: this.keys.length,
+                });
         }
     }
 
@@ -706,7 +715,16 @@ export class KeyRegistry {
             // saveKeys() upserts via bulkPut but doesn't delete stale keys if
             // stale computation was skipped. This direct delete is the final
             // guarantee that the key is gone from Dexie.
-            await this.deps.keyStore.deleteKey(id).catch(() => {});
+            await this.deps.keyStore
+                .deleteKey(id)
+                .catch((err) =>
+                    LOGGER.error(
+                        'KeyRegistry',
+                        'deleteKey failed — stale key may remain in Dexie',
+                        { id },
+                        err,
+                    ),
+                );
         } catch (e) {
             // Rollback in-memory state on persist failure
             this.keys = preRemoveSnapshot;

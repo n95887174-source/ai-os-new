@@ -290,7 +290,6 @@ export class PolicyService {
                     this.persistPromise = undefined;
                 }
             })();
-            this.persistPromise?.catch(() => {});
         }, 50);
     }
 
@@ -382,62 +381,6 @@ export class PolicyService {
     sanitizeOutput(nodeId: string, output: string): string {
         const result = this.enforcePrivacy({ nodeId, output });
         return result.blocked && result.sanitized ? result.sanitized : output;
-    }
-
-    // ── Migrated from legacy: content safety ──────────────────────────
-
-    /** @deprecated C-84: Dead code — content safety is handled by PromptSecurityService + orchestration pipeline */
-    checkContentSafety(data: { nodeId: string; output?: string }): ContentSafetyResult {
-        const policy = this.activePolicies.find((p) => p.type === 'content');
-        if (!policy || policy.action === 'warn') return { blocked: false };
-        const contentToCheck = typeof data === 'string' ? data : data?.output || '';
-        const patterns = this.securityPatterns.filter((p) => p.type === 'toxic');
-        let sanitized = contentToCheck;
-        let detected = false;
-        for (const { pattern, label, replacement } of patterns) {
-            let regex: RegExp;
-            try {
-                regex = new RegExp(pattern, 'gi');
-            } catch {
-                continue;
-            }
-            if (sanitized.match(regex)) {
-                detected = true;
-                sanitized = sanitized.replace(regex, replacement);
-                this.recordViolation({
-                    policyId: policy.id,
-                    nodeId: data.nodeId,
-                    type: 'content',
-                    severity: 'warning',
-                    detail: `Content safety match: ${label}`,
-                    resolved: false,
-                });
-            }
-        }
-        return detected ? { blocked: true, sanitized } : { blocked: false };
-    }
-
-    // ── Migrated from legacy: rate limiting ───────────────────────────
-
-    /** @deprecated C-84: Dead code — rate limiting is handled by RateLimitDecorator + tool-executor.checkRateLimit */
-    checkRateLimit(data: { nodeId: string; requestCount?: number }): boolean {
-        const policy = this.activePolicies.find((p) => p.type === 'rate_limit');
-        if (!policy) return true;
-        const limit = policy.value as number;
-        if (limit && (data.requestCount || 0) > limit) {
-            this.recordViolation({
-                policyId: policy.id,
-                nodeId: data.nodeId,
-                type: 'rate_limit',
-                severity: 'warning',
-                detail: `Rate limit exceeded: ${data.requestCount} > ${limit}`,
-                value: data.requestCount,
-                threshold: limit,
-                resolved: false,
-            });
-            return false;
-        }
-        return true;
     }
 
     // ── Migrated from legacy: model blacklist ─────────────────────────

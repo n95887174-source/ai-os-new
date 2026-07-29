@@ -214,7 +214,9 @@ export class PromptSecurityService implements IPromptSecurityService {
 
     scan(prompt: string): PromptScanResult {
         // H-105: ensure config loaded before scan
-        this.ensureLoaded().catch(() => {});
+        this.ensureLoaded().catch((err) =>
+            LOGGER.error('PromptSecurityService', 'ensureLoaded failed in scan', { error: err }),
+        );
         if (!this.config.enabled) {
             return { safe: true, score: 0, findings: [], summary: 'Scan disabled' };
         }

@@ -13,8 +13,10 @@ import type {
     ServicesConfigSection,
 } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
-
+import { rootLogger } from './logger-service';
 import { withTransaction } from '../utils/with-transaction';
+
+const LOGGER = rootLogger.child('ConfigService');
 
 export interface ConfigServiceDeps {
     database: {
@@ -80,7 +82,9 @@ export class ConfigService {
                 this.applyOverlays(saved);
             }
         } catch (e) {
-            console.warn('ConfigService: Failed to load config overlays, using defaults', e);
+            LOGGER.warn('ConfigService', 'Failed to load config overlays, using defaults', {
+                error: e,
+            });
             this.overlays = {};
         }
 

@@ -51,7 +51,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
                             }}
                             onClick={onToggleAll}
                             role="button"
+                            tabIndex={0}
                             aria-label="Toggle select all sessions"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    onToggleAll();
+                                }
+                            }}
                         >
                             {allSelected && sessions.length > 0 ? (
                                 <CheckSquare size={18} color="#3b82f6" aria-hidden="true" />

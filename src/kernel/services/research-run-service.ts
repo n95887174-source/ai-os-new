@@ -54,6 +54,7 @@ export class ResearchRunService {
     }
 
     destroy(): void {
+        this._initialized = false;
         this._flushPersist();
         if (this._onUnload && typeof window !== 'undefined') {
             window.removeEventListener('beforeunload', this._onUnload);
@@ -72,7 +73,7 @@ export class ResearchRunService {
         this.runs.unshift(run);
         if (this.runs.length > ResearchRunService.MAX_RUNS)
             this.runs.length = ResearchRunService.MAX_RUNS;
-        void this.persist(); // B10-153
+        void this.persist();
         return run;
     }
 
@@ -83,7 +84,7 @@ export class ResearchRunService {
             run.completedAt = Date.now();
             run.findings = findings;
             run.summary = summary;
-            void this.persist(); // B10-153
+            void this.persist();
         }
     }
 
@@ -93,7 +94,7 @@ export class ResearchRunService {
             run.status = 'failed';
             run.completedAt = Date.now();
             run.error = error;
-            void this.persist(); // B10-153
+            void this.persist();
         }
     }
 
@@ -111,12 +112,12 @@ export class ResearchRunService {
 
     deleteRun(id: string) {
         this.runs = this.runs.filter((r) => r.id !== id);
-        void this.persist(); // B10-153
+        void this.persist();
     }
 
     clearAll() {
         this.runs = [];
-        void this.persist(); // B10-153
+        void this.persist();
     }
 
     /** Flush pending debounced persist immediately */

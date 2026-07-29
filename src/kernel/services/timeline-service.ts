@@ -232,6 +232,7 @@ export class TimelineService implements ITimelineContract {
     }
 
     destroy() {
+        this._initialized = false;
         this.unsubs.forEach((u) => u());
         this.unsubs = [];
         this.events = [];

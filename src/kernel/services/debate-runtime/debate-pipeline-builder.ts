@@ -102,7 +102,7 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                 const msg = 'All LLM providers failed preflight — no working keys available';
                 LOGGER.warn('DebatePipeline', msg, { sessionId });
                 session.transition('failed');
-                engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                engine.deps.eventBus.emitOnce(EVENTS.DEBATE_SESSION_FAILED, sessionId, {
                     sessionId,
                     error: msg,
                 });
@@ -345,7 +345,7 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                 }
             } catch (e) {
                 session.transition('failed');
-                engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                engine.deps.eventBus.emitOnce(EVENTS.DEBATE_SESSION_FAILED, sessionId, {
                     sessionId,
                     error: String(e),
                 });
@@ -461,7 +461,7 @@ export function buildPipeline(engine: PipelineEngine, isResume: boolean): Debate
                         /* ignore */
                     }
                 }
-                engine.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                engine.deps.eventBus.emitOnce(EVENTS.DEBATE_SESSION_FAILED, sessionId, {
                     sessionId,
                     error: String(e),
                 });

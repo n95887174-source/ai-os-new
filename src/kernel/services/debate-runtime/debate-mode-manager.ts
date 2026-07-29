@@ -225,6 +225,7 @@ export class DebateModeManagerPersistent extends DebateModeManager {
     }
 
     destroy(): void {
+        this._initialized = false;
         this.versionHistories.clear();
     }
 }

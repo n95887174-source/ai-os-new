@@ -348,10 +348,6 @@ export class DebateProviderResolver {
             const DEBATE_PROVIDER_BATCH = 5;
             const providerKeys = routerService.getDebateProviders(DEBATE_PROVIDER_BATCH);
             const pkSummary = providerKeys.map((pk) => `${pk.provider}:${pk.key.id.slice(0, 8)}`);
-            console.log('[DEBATE_FALLBACK] Step 4: getDebateProviders(1)', {
-                count: providerKeys.length,
-                providers: pkSummary,
-            });
             rootLogger.debug('DebateProviderResolver', 'Step 4: getDebateProviders(1)', {
                 count: providerKeys.length,
                 providers: pkSummary,
@@ -365,10 +361,6 @@ export class DebateProviderResolver {
                     hasAnyUntriedModel(pk.key.provider, pk.key.availableModels),
             );
             if (available) {
-                console.log('[DEBATE_FALLBACK] Step 4: found provider', {
-                    provider: available.key.provider,
-                    keyId: available.key.id.slice(0, 8),
-                });
                 rootLogger.debug('DebateProviderResolver', 'Step 4: found provider', {
                     provider: available.key.provider,
                     keyId: available.key.id.slice(0, 8),
@@ -383,10 +375,6 @@ export class DebateProviderResolver {
                     (pk) =>
                         `${pk.provider}:${pk.key.id.slice(0, 8)} canUse=${this.providerCanBeUsed(pk.key.provider, session)} active=${pk.key.status === 'active'} authOk=${!this.isKeyAuthFailed(pk.key.id)} triedAlready=${triedKeys.has(pk.key.id)}`,
                 );
-                console.log('[DEBATE_FALLBACK] Step 4: no available provider', {
-                    triedKeys: triedDetails,
-                    failedProviders: failedProvidersArr,
-                });
                 rootLogger.warn('DebateProviderResolver', 'Step 4: no available provider', {
                     triedKeys: triedDetails,
                     failedProviders: failedProvidersArr,

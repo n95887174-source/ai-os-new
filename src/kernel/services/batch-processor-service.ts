@@ -38,6 +38,8 @@ export interface BatchJob {
 import type { ILifecycle } from '../contracts/lifecycle';
 import type { IDeadLetterQueue } from '../contracts/dead-letter-queue';
 import { EVENTS } from '../events/event-names';
+import { rootLogger } from './logger-service';
+const BATCH_LOGGER = rootLogger.child('BatchProcessorService');
 
 const MAX_JOBS = 20;
 
@@ -178,7 +180,11 @@ export class BatchProcessorService implements ILifecycle {
                             error: String(err),
                             context: { jobId },
                             retryCount: attempt - 1,
-                        }).catch(() => {});
+                        }).catch((dlqErr) => {
+                            BATCH_LOGGER.error('BatchProcessorService', 'DLQ push failed', {
+                                error: dlqErr,
+                            });
+                        });
                     }
                     return {
                         prompt: task.prompt,

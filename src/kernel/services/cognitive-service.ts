@@ -142,6 +142,8 @@ export class CognitiveService {
             this.persistTimer = null;
         }
         this.persistQueued = false;
+        this.traces = [];
+        this.activeTraces.clear();
     }
 
     // ================= LOAD =================

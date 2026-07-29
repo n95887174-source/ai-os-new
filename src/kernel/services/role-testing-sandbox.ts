@@ -297,6 +297,12 @@ export class RoleTestingSandboxService {
         LOGGER.info('RoleTestingSandbox', 'Results cleared', { roleId });
     }
 
+    destroy(): void {
+        this._initialized = false;
+        this.testCases.clear();
+        this.results = [];
+    }
+
     private async save(): Promise<void> {
         const testCasesEntries: [string, TestCase[]][] = Array.from(this.testCases.entries());
         await (

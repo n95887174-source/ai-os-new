@@ -86,6 +86,7 @@ export class HypothesisService implements IHypothesisService {
     }
 
     destroy(): void {
+        this._initialized = false;
         this.hypotheses = [];
     }
 

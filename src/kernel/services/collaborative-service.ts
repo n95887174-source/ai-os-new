@@ -41,6 +41,10 @@ export class CollaborativeService {
 
     constructor(private deps: CollabServiceDeps) {}
 
+    destroy(): void {
+        this.sessions.clear();
+    }
+
     joinDebate(sessionId: string, userName: string, role: CollabRole, debateId?: string): boolean {
         let session = this.sessions.get(sessionId);
         if (!session) {

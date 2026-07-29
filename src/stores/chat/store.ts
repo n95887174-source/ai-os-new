@@ -84,6 +84,8 @@ interface QueuedMessage {
     maxTokens?: number;
 }
 const _sendQueue = new Map<string, QueuedMessage[]>();
+const MAX_QUEUE_SIZE = 50;
+const _historyLimitWarned = new Set<string>();
 
 export const useChatStore = create<ChatStoreShape>((set, get) => {
     const uas = updateActiveSession(set, get);
@@ -237,7 +239,11 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         setSessions: (updater) => set((s) => ({ sessions: updater(s.sessions) })),
         setActiveSessionId: (id) => set({ activeSessionId: id }),
         addActiveRequestId: (requestId) =>
-            set((s) => ({ activeRequestIds: new Set([...s.activeRequestIds, requestId]) })),
+            set((s) => {
+                const next = new Set(s.activeRequestIds);
+                next.add(requestId);
+                return { activeRequestIds: next };
+            }),
         removeActiveRequestId: (requestId) =>
             set((s) => {
                 const newSet = new Set(s.activeRequestIds);
@@ -269,6 +275,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             const sessionId = get().activeSessionId;
             const existing = _sendQueue.get(sessionId);
             if (existing) {
+                if (existing.length >= MAX_QUEUE_SIZE) {
+                    eventBus.emit(EVENTS.NOTIFICATION, {
+                        message: `Send queue full (${MAX_QUEUE_SIZE}) — message dropped`,
+                        type: 'warning',
+                    });
+                    return;
+                }
                 existing.push({ targets, text, systemPromptArg, temperature, maxTokens });
                 return;
             }
@@ -283,6 +296,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             if (!lockResult.lock) {
                 console.warn('[ChatStore] Failed to acquire chat lock, proceeding without lock', {
                     error: lockResult.error,
+                });
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to acquire chat lock — concurrent send may conflict',
+                    type: 'warning',
                 });
             }
             try {
@@ -300,6 +317,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 });
                 if (get().isAnySending()) {
                     console.warn('[ChatStore] sendMessage already in progress, ignored');
+                    eventBus.emit(EVENTS.NOTIFICATION, {
+                        message: 'Cannot send — another message is still being sent',
+                        type: 'warning',
+                    });
                     govOp.complete();
                     return;
                 }
@@ -415,7 +436,8 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
 
                 const sessBefore = get().sessions.find((s) => s.id === sessionId);
                 const wouldExceed = (sessBefore?.history.length ?? 0) >= MAX_HISTORY;
-                if (wouldExceed) {
+                if (wouldExceed && !_historyLimitWarned.has(sessionId)) {
+                    _historyLimitWarned.add(sessionId);
                     const lostCount = (sessBefore?.history.length ?? 0) - MAX_HISTORY + 1;
                     eventBus.emit(EVENTS.NOTIFICATION, {
                         message: `Chat history limit (${MAX_HISTORY} entries) reached — ${lostCount} older message(s) will be removed from context.`,
@@ -526,11 +548,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 set({ activeRequestIds: new Set() });
                 return;
             }
+            // Emit CANCEL_MESSAGE FIRST, then remove IDs — handlers need to find entries
             for (const req of allLoadingReqs) {
                 if (req.requestId)
                     eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
             }
             const sessionIdsToUpdate = new Set(allLoadingReqs.map((r) => r.sessionId));
+            // THEN mark responses and clear active IDs
             set((s) => {
                 const newActiveIds = new Set(s.activeRequestIds);
                 for (const req of allLoadingReqs) {
@@ -555,6 +579,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     ),
                 };
             });
+            // Clean send queue for all affected sessions
+            for (const sid of sessionIdsToUpdate) {
+                _sendQueue.delete(sid);
+            }
         },
 
         cancelMessage: (requestId) => {
@@ -584,12 +612,14 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 const oldEntry = session?.history.find((e) => e.id === entryId);
                 // Cancel any in-flight requests for this entry before clearing
                 if (oldEntry) {
+                    const cancelPromises: Promise<void>[] = [];
                     for (const r of oldEntry.responses) {
                         if (r.status === 'loading' || r.status === 'streaming') {
                             eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: r.requestId });
                             get().removeActiveRequestId(r.requestId);
                         }
                     }
+                    await Promise.allSettled(cancelPromises);
                 }
                 const sStore = resolveSessionStore();
                 if (!sStore) {
@@ -674,9 +704,17 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         },
 
         createSession: async (title = 'New Chat') => {
-            const id = await sessionManager
-                .create('chat', { title })
-                .catch(() => crypto.randomUUID());
+            let id: string;
+            try {
+                id = await sessionManager.create('chat', { title });
+            } catch (e) {
+                console.error('[ChatStore] Failed to create session', e);
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: 'Failed to create new chat session',
+                    type: 'error',
+                });
+                return '';
+            }
             const newSession: ChatSession = {
                 id,
                 title,
@@ -693,6 +731,8 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             for (const [reqId, ref] of requestEntryMap) {
                 if (ref.sessionId === id) requestEntryMap.delete(reqId);
             }
+            // Clean send queue for deleted session
+            _sendQueue.delete(id);
             try {
                 await sessionManager.delete(id);
             } catch (e) {
@@ -707,18 +747,22 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 const now = Date.now();
                 const timestamps = new Map(s.deletedAtTimestamps);
                 timestamps.set(id, now);
-                // Prune entries older than TTL
+                // Prune entries older than TTL (copy keys first to avoid Map mutation during iteration)
+                const expired: string[] = [];
                 for (const [tsId, ts] of timestamps) {
-                    if (now - ts > DELETED_IDS_TTL) timestamps.delete(tsId);
+                    if (now - ts > DELETED_IDS_TTL) expired.push(tsId);
                 }
+                for (const tsId of expired) timestamps.delete(tsId);
                 const updated = new Set(timestamps.keys());
                 if (updated.size > 1000) {
                     const arr = [...updated];
                     updated.clear();
                     for (const x of arr.slice(arr.length - 1000)) updated.add(x);
+                    const stale: string[] = [];
                     for (const [tsId] of timestamps) {
-                        if (!updated.has(tsId)) timestamps.delete(tsId);
+                        if (!updated.has(tsId)) stale.push(tsId);
                     }
+                    for (const tsId of stale) timestamps.delete(tsId);
                 }
                 const filtered = s.sessions.filter((x) => x.id !== id);
                 if (filtered.length === 0) {
@@ -1020,6 +1064,8 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         destroy: () => {
             _unsubs.forEach((u) => u());
             _unsubs.length = 0;
+            _sendQueue.clear();
+            _historyLimitWarned.clear();
         },
     };
 });

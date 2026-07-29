@@ -440,7 +440,9 @@ export class AgentService {
                 },
                 { once: true },
             );
-        }).catch(() => {});
+        }).catch((err) =>
+            LOGGER.debug('AgentService', 'restartAgent delayed promise', { error: String(err) }),
+        );
         if (!this.lifecycleStates.has(agentId)) return;
         this.transitionLifecycle(agentId, 'initializing', 'ready');
         this.deps.eventBus.emit(EVENTS.AGENT_RESTARTED, { id: agentId });

@@ -371,6 +371,11 @@ export class EloRatingService {
         LOGGER.info('EloRating', 'All ratings reset');
     }
 
+    destroy(): void {
+        this._initialized = false;
+        this.profiles.clear();
+    }
+
     private save(): void {
         this.storage.setItem(
             'elo-ratings:profiles',

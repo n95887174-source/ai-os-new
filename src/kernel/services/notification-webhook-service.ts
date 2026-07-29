@@ -278,7 +278,11 @@ export class NotificationWebhookService {
                         context: { webhookId: webhook.id, webhookName: webhook.name },
                         retryCount: attempt,
                     })
-                    .catch(() => {});
+                    .catch((err) =>
+                        LOGGER.error('NotificationWebhookService', 'DLQ push failed (HTTP)', {
+                            error: err,
+                        }),
+                    );
             }
             return false;
         } catch (e) {
@@ -310,7 +314,11 @@ export class NotificationWebhookService {
                     context: { webhookId: webhook.id, webhookName: webhook.name },
                     retryCount: attempt,
                 })
-                .catch(() => {});
+                .catch((err) =>
+                    LOGGER.error('NotificationWebhookService', 'DLQ push failed (catch)', {
+                        error: err,
+                    }),
+                );
             return false;
         }
     }

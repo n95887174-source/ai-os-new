@@ -139,7 +139,11 @@ export class AgentJournalService {
                 durationMs: 0,
                 tokensUsed: 0,
                 tags: [],
-            }).catch(() => {});
+            }).catch((err) =>
+                this.deps.logger?.error('AgentJournal', 'record failed (COGNITIVE_STEP_ACTIVE)', {
+                    error: String(err),
+                }),
+            );
         });
         this.unsubs.push(off1);
 

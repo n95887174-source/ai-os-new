@@ -150,9 +150,12 @@ function logMemory(label: string, beforeMB: number): void {
     const afterMB = getHeapMB();
     const deltaMB = afterMB - beforeMB;
     if (Math.abs(deltaMB) > 3) {
-        console.log(
-            `[MEMORY] ${label}: ${beforeMB}MB → ${afterMB}MB (Δ${deltaMB >= 0 ? '+' : ''}${deltaMB}MB)`,
-        );
+        LOGGER.debug('DebateLlmCaller', 'Memory snapshot', {
+            label,
+            beforeMB,
+            afterMB,
+            deltaMB: Math.round(deltaMB * 100) / 100,
+        });
     }
 }
 
@@ -410,11 +413,6 @@ export async function debateCallLlm(
                     const fp = Array.from(
                         (session as { _failedProviders?: Set<string> })._failedProviders ?? [],
                     );
-                    console.log('[DEBATE_FALLBACK] resolveProvider returned null', {
-                        anyWorking,
-                        allKeysCount: allKeys.length,
-                        failedProviders: fp,
-                    });
                     LOGGER.warn('DebateLlmCaller', 'resolveProvider returned null', {
                         anyWorking,
                         allKeysCount: allKeys.length,
@@ -429,12 +427,6 @@ export async function debateCallLlm(
                 resolvedKey = resolved.key;
                 modelId = resolved.modelId;
                 if (prevProvider && prevProvider !== resolvedKey.provider) {
-                    console.log('[DEBATE_FALLBACK] PROVIDER SWITCH', {
-                        from: prevProvider,
-                        to: resolvedKey.provider,
-                        model: modelId,
-                        agentId: participant.agentId,
-                    });
                     LOGGER.info('DebateLlmCaller', 'PROVIDER SWITCH', {
                         from: prevProvider,
                         to: resolvedKey.provider,
@@ -1915,13 +1907,12 @@ export async function debateCallLlm(
                     cleanupGov = () => govOp!.signal.removeEventListener('abort', onGovAbort);
                 }
 
-                console.log('[DEBATE_FALLBACK] Calling adapter.sendMessage', {
+                LOGGER.debug('DebateLlmCaller', 'Calling adapter.sendMessage', {
                     provider: resolvedKey.provider,
                     model: modelId,
                     keyId: resolvedKey?.id?.slice(0, 8) ?? 'unknown',
                     agentId: participant.agentId,
                     msgCount: messages.length,
-                    timestamp: Date.now(),
                 });
                 const heapBeforeSendMsg = getHeapMB();
                 let response: { content: string };
@@ -1936,18 +1927,16 @@ export async function debateCallLlm(
                         `sendMsg[${participant.agentId.slice(0, 8)}] ${resolvedKey.provider}/${modelId}`,
                         heapBeforeSendMsg,
                     );
-                    console.log('[DEBATE_FALLBACK] adapter.sendMessage OK', {
+                    LOGGER.debug('DebateLlmCaller', 'adapter.sendMessage OK', {
                         provider: resolvedKey.provider,
                         model: modelId,
                         contentLen: response.content?.length,
-                        timestamp: Date.now(),
                     });
                 } catch (e) {
-                    console.log('[DEBATE_FALLBACK] adapter.sendMessage FAILED', {
+                    LOGGER.debug('DebateLlmCaller', 'adapter.sendMessage FAILED', {
                         provider: resolvedKey.provider,
                         model: modelId,
                         error: e instanceof Error ? e.message : String(e),
-                        timestamp: Date.now(),
                     });
                     govOp?.fail(e instanceof Error ? e : new Error(String(e)));
                     throw e;
@@ -2520,7 +2509,9 @@ export async function debateCallLlm(
                                 },
                                 retryCount: retries,
                             })
-                            .catch(() => {});
+                            .catch((err) =>
+                                LOGGER.error('DebateLlmCaller', 'DLQ push failed', err),
+                            );
                         throw new Error('All LLM providers unavailable — debate cannot proceed', {
                             cause: e,
                         });
@@ -2556,7 +2547,9 @@ export async function debateCallLlm(
                                 context: { retries },
                                 retryCount: retries,
                             })
-                            .catch(() => {});
+                            .catch((err) =>
+                                LOGGER.error('DebateLlmCaller', 'DLQ push failed', err),
+                            );
                         throw new Error('LLM call timed out', { cause: e });
                     }
                     await backoffWait(retries, externalSignal);
@@ -2591,7 +2584,7 @@ export async function debateCallLlm(
                         context: { retries, round: session.round },
                         retryCount: count,
                     })
-                    .catch(() => {});
+                    .catch((err) => LOGGER.error('DebateLlmCaller', 'DLQ push failed', err));
                 throw new Error(error, { cause: e });
             }
         }
@@ -2605,7 +2598,7 @@ export async function debateCallLlm(
                 context: { retries },
                 retryCount: retries,
             })
-            .catch(() => {});
+            .catch((err) => LOGGER.error('DebateLlmCaller', 'DLQ push failed', err));
         throw new Error('LLM call failed after max retries');
     } catch (outerErr) {
         // Catch-all error boundary: clean up abort controllers and normalize.

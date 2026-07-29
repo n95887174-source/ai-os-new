@@ -224,7 +224,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         if (this._destroyed) return promise;
         const id = `${name}-${++this._nextOpId}`;
         this._pendingOps.set(id, promise);
-        promise.finally(() => this._pendingOps.delete(id)).catch(() => {});
+        promise
+            .finally(() => this._pendingOps.delete(id))
+            .catch((err) => LOGGER.error('DebateEngine', 'Pending op failed', err));
         return promise;
     }
 
@@ -471,7 +473,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     this._trackOp(
                         `beforeunload-save:${sessionId}`,
                         this.saveSnapshot(sessionId),
-                    ).catch(() => {});
+                    ).catch((err) => LOGGER.error('DebateEngine', 'beforeunload save failed', err));
                 }
                 // audit1#2: Sync localStorage fallback for crash recovery
                 try {
@@ -738,7 +740,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                         'DebateEngine',
                         `Session ${sessionId} exceeded max duration (${getDebateMaxDurationMs()}ms) — cancelling`,
                     );
-                    this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                    this.deps.eventBus.emitOnce(EVENTS.DEBATE_SESSION_FAILED, sessionId, {
                         sessionId,
                         error: 'Debate exceeded max duration',
                     });
@@ -763,7 +765,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                     } catch {
                         /* phase already terminal */
                     }
-                    this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                    this.deps.eventBus.emitOnce(EVENTS.DEBATE_SESSION_FAILED, sessionId, {
                         sessionId,
                         error: result.error,
                     });
@@ -971,7 +973,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                         /* phase already terminal */
                     }
                 }
-                this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+                this.deps.eventBus.emitOnce(EVENTS.DEBATE_SESSION_FAILED, sessionId, {
                     sessionId,
                     error: String(e),
                 });
@@ -979,14 +981,14 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     cancelSession(sessionId: string): void {
-        console.log('[cancelSession] ENTER', {
+        LOGGER.debug('DebateEngine', 'cancelSession ENTER', {
             sessionId,
             hasSession: this.sessions.has(sessionId),
             activeSessions: this.sessions.size,
         });
         const session = this.sessions.get(sessionId);
         if (!session) {
-            console.warn('[cancelSession] session not found', {
+            LOGGER.warn('DebateEngine', 'cancelSession session not found', {
                 sessionId,
                 sessionsKeys: [...this.sessions.keys()],
             });
@@ -999,15 +1001,31 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 .acquire(`debate:${sessionId}`, { ttl: 10_000 })
                 .then((result) => {
                     if (result.lock) {
-                        lockSvc.release(result.lock).catch(() => {});
+                        lockSvc
+                            .release(result.lock)
+                            .catch((err) =>
+                                LOGGER.error(
+                                    'DebateEngine',
+                                    'Failed to release cancel lock',
+                                    { sessionId },
+                                    err,
+                                ),
+                            );
                     }
                 })
-                .catch(() => {});
+                .catch((err) =>
+                    LOGGER.error(
+                        'DebateEngine',
+                        'Failed to acquire cancel lock',
+                        { sessionId },
+                        err,
+                    ),
+                );
         }
-        console.log(
-            '[cancelSession] phase=%s, runningSessions=%d',
-            session.phase,
-            this.runningSessions.size,
+        LOGGER.debug(
+            'DebateEngine',
+            `cancelSession phase=${session.phase}, runningSessions=${this.runningSessions.size}`,
+            { sessionId },
         );
 
         // Shared cleanup for terminal phases — destroys all engine-internal
@@ -1072,29 +1090,35 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         };
 
         if (session.phase === 'cancelled') {
-            console.log('[cancelSession] already cancelled — cleaning up maps', { sessionId });
+            LOGGER.debug('DebateEngine', 'cancelSession already cancelled — cleaning up maps', {
+                sessionId,
+            });
             cleanupMaps();
-            console.log('[cancelSession] cleanup done (cancelled path)', {
+            LOGGER.debug('DebateEngine', 'cancelSession cleanup done (cancelled path)', {
                 sessionId,
                 sessionsLeft: this.sessions.size,
             });
             return;
         }
         if (session.phase === 'completed' || session.phase === 'failed') {
-            console.log('[cancelSession] terminal phase %s — cleaning up maps', session.phase, {
-                sessionId,
-            });
+            LOGGER.debug(
+                'DebateEngine',
+                `cancelSession terminal phase ${session.phase} — cleaning up maps`,
+                { sessionId },
+            );
             cleanupMaps();
-            console.log('[cancelSession] cleanup done (terminal path)', {
+            LOGGER.debug('DebateEngine', 'cancelSession cleanup done (terminal path)', {
                 sessionId,
                 sessionsLeft: this.sessions.size,
             });
             return;
         }
         // Active phase — abort agents, transition, emit, then clean up maps
-        console.log('[cancelSession] active phase %s — aborting agents', session.phase, {
-            sessionId,
-        });
+        LOGGER.debug(
+            'DebateEngine',
+            `cancelSession active phase ${session.phase} — aborting agents`,
+            { sessionId },
+        );
         const agentControllers = this.sessionAbortControllers.get(sessionId);
         if (agentControllers) {
             for (const [, controller] of agentControllers)
@@ -1108,7 +1132,9 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         const orchestrator = this.getContext(sessionId)?.orchestrator;
         orchestrator?.abort(sessionId);
         session.transition('cancelled');
-        console.log('[cancelSession] transition done, phase=%s', session.phase, { sessionId });
+        LOGGER.debug('DebateEngine', `cancelSession transition done, phase=${session.phase}`, {
+            sessionId,
+        });
         this.sessionPhaseControllers.get(sessionId)?.abort();
         this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_CANCELLED, { sessionId });
         cleanupMaps();
@@ -1116,7 +1142,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         // The async generator may still be running (await in executor), and needs
         // the signal to stop at the next `if (this.aborted.has(sessionId)) return;` check.
         orchestrator?.abort(sessionId);
-        console.log('[cancelSession] cleanup done (active path)', {
+        LOGGER.debug('DebateEngine', 'cancelSession cleanup done (active path)', {
             sessionId,
             sessionsLeft: this.sessions.size,
         });

@@ -301,6 +301,14 @@ export const RhetoricPanel: React.FC = () => {
                         <div
                             key={d.id}
                             onClick={() => setSelectedDevice(d)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setSelectedDevice(d);
+                                }
+                            }}
                             style={{
                                 padding: '6px 10px',
                                 borderRadius: 8,

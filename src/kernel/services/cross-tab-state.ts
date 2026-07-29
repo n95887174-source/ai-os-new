@@ -309,7 +309,8 @@ class CrossTabStateSync implements ICrossTabStateSync {
             case 'key-update': {
                 LOGGER.debug('CrossTabStateSync', 'Cross-tab key update, refreshing local state');
                 const keyPayload = z.array(ApiKeySchema).safeParse(message.payload);
-                if (keyPayload.success) eventBus.emit(EVENTS.KEY_UPDATED, keyPayload.data);
+                if (keyPayload.success)
+                    eventBus.emitOnce(EVENTS.KEY_UPDATED, 'cross-tab:key-update', keyPayload.data);
                 else
                     LOGGER.warn('CrossTabStateSync', 'malformed key-update payload', {
                         issues: keyPayload.error.issues,
@@ -322,7 +323,12 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     'Cross-tab kernel update, refreshing local state',
                 );
                 const kernelPayload = SystemStateSchema.safeParse(message.payload);
-                if (kernelPayload.success) eventBus.emit(EVENTS.KERNEL_UPDATED, kernelPayload.data);
+                if (kernelPayload.success)
+                    eventBus.emitOnce(
+                        EVENTS.KERNEL_UPDATED,
+                        'cross-tab:kernel-update',
+                        kernelPayload.data,
+                    );
                 else
                     LOGGER.warn('CrossTabStateSync', 'malformed kernel-state-update payload', {
                         issues: kernelPayload.error.issues,
@@ -334,7 +340,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     'CrossTabStateSync',
                     'Cross-tab chat session update, refreshing local state',
                 );
-                eventBus.emit(EVENTS.CHAT_FORKED, message.payload);
+                eventBus.emitOnce(EVENTS.CHAT_FORKED, 'cross-tab:chat-forked', message.payload);
                 break;
             case 'settings-update': {
                 LOGGER.debug(
@@ -344,7 +350,11 @@ class CrossTabStateSync implements ICrossTabStateSync {
                 const settingsSchema = EVENT_REGISTRY.SETTINGS_UPDATED.schema;
                 const settingsPayload = settingsSchema.safeParse(message.payload);
                 if (settingsPayload.success)
-                    eventBus.emit(EVENTS.SETTINGS_UPDATED, settingsPayload.data);
+                    eventBus.emitOnce(
+                        EVENTS.SETTINGS_UPDATED,
+                        'cross-tab:settings-update',
+                        settingsPayload.data,
+                    );
                 else
                     LOGGER.warn('CrossTabStateSync', 'malformed settings-update payload', {
                         issues: settingsPayload.error.issues,

@@ -5,6 +5,8 @@ import type {
     AgentExecutor,
 } from '../../contracts/debate-runtime';
 import { DebateTopologyService } from './debate-topology';
+import { rootLogger } from '../logger-service';
+const ORC_LOGGER = rootLogger.child('DebateOrchestrator');
 
 function getHeapMB(): number {
     try {
@@ -96,9 +98,10 @@ export class DebateOrchestrator implements IDebateOrchestrator {
             const roundNum = r + 1;
             const nodeIds = nodeGroup.map((n) => n.id);
             const roundHeapMB = getHeapMB();
-            console.log(
-                `[MEMORY] Round ${roundNum} start: ${roundHeapMB}MB (${nodeIds.length} agents)`,
-            );
+            ORC_LOGGER.debug('DebateOrchestrator', `Round ${roundNum} start`, {
+                heapMB: roundHeapMB,
+                agents: nodeIds.length,
+            });
             yield { type: 'round:start', round: roundNum, nodes: nodeIds };
 
             // Phase 2: orchestrator drives the full agent lifecycle.
@@ -155,8 +158,9 @@ export class DebateOrchestrator implements IDebateOrchestrator {
 
                 // On resume, skip agents that already produced an argument in this round
                 if (skipAgents?.has(node.id)) {
-                    console.log(
-                        `[Orchestrator] Skipping ${node.id} — already responded in round ${roundNum} (resume)`,
+                    ORC_LOGGER.debug(
+                        'DebateOrchestrator',
+                        `Skipping ${node.id} — already responded in round ${roundNum} (resume)`,
                     );
                     continue;
                 }
@@ -243,9 +247,10 @@ export class DebateOrchestrator implements IDebateOrchestrator {
 
             const roundEndHeap = getHeapMB();
             if (roundEndHeap - roundHeapMB > 5) {
-                console.log(
-                    `[MEMORY] Round ${roundNum} end: ${roundEndHeap}MB (Δ+${roundEndHeap - roundHeapMB}MB this round)`,
-                );
+                ORC_LOGGER.debug('DebateOrchestrator', `Round ${roundNum} end`, {
+                    heapMB: roundEndHeap,
+                    deltaMB: roundEndHeap - roundHeapMB,
+                });
             }
             yield {
                 type: 'round:end',
@@ -260,9 +265,11 @@ export class DebateOrchestrator implements IDebateOrchestrator {
         const endHeap = getHeapMB();
         const totalDelta = endHeap - startHeap;
         if (Math.abs(totalDelta) > 5) {
-            console.log(
-                `[MEMORY] === Debate complete: ${startHeap}MB → ${endHeap}MB (Δ${totalDelta >= 0 ? '+' : ''}${totalDelta}MB)`,
-            );
+            ORC_LOGGER.debug('DebateOrchestrator', 'Debate complete', {
+                startHeapMB: startHeap,
+                endHeapMB: endHeap,
+                deltaMB: totalDelta,
+            });
         }
         yield { type: 'topology:complete' };
     }

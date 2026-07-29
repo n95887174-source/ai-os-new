@@ -9,6 +9,8 @@ import type { DebateSyncManager } from './debate-sync-manager';
 type DebateService = DebateSyncManager;
 import type { OrchestrationService } from '../orchestration-service';
 import type { ISessionManager } from '../../contracts/session-manager';
+import { rootLogger } from '../logger-service';
+const DA_LOGGER = rootLogger.child('DebateApi');
 
 export interface CreateDebateBody {
     topic: string;
@@ -279,7 +281,7 @@ export class DebateApiService {
                 try {
                     sub.push(event);
                 } catch (e) {
-                    console.warn('[DebateApi] broadcast skipped bad subscriber', e);
+                    DA_LOGGER.warn('DebateApi', 'broadcast skipped bad subscriber', { error: e });
                 }
             }
         }

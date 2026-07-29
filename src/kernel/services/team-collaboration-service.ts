@@ -7,6 +7,8 @@ import type {
     CollaborationPermission,
 } from '../contracts/team-collaboration';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+import { rootLogger } from './logger-service';
+const TC_LOGGER = rootLogger.child('TeamCollaboration');
 
 const STORAGE_KEY = 'team_collaboration';
 const SYNC_CHANNEL = 'team-collab-sync';
@@ -46,7 +48,7 @@ export class TeamCollaborationService implements ITeamCollaborationService {
                 this.sharedSessions = data.sharedSessions ?? [];
             }
         } catch (err) {
-            console.warn('[TeamCollaboration] init load failed', err);
+            TC_LOGGER.warn('TeamCollaboration', 'init load failed', { error: err });
             this.teams = [];
             this.invites = [];
             this.sharedSessions = [];
@@ -59,7 +61,7 @@ export class TeamCollaborationService implements ITeamCollaborationService {
                 if (this.bc) this.bc.close();
             });
         } catch (err) {
-            console.warn('[TeamCollaboration] BroadcastChannel unavailable', err);
+            TC_LOGGER.warn('TeamCollaboration', 'BroadcastChannel unavailable', { error: err });
         }
     }
 
@@ -89,7 +91,7 @@ export class TeamCollaborationService implements ITeamCollaborationService {
                 this.sharedSessions = data.sharedSessions ?? [];
             }
         } catch (err) {
-            console.warn('[TeamCollaboration] reload failed', err);
+            TC_LOGGER.warn('TeamCollaboration', 'reload failed', { error: err });
         }
     }
 
@@ -103,7 +105,7 @@ export class TeamCollaborationService implements ITeamCollaborationService {
             ssrSafeStorage.setItem(STORAGE_KEY, data);
             if (this.bc) this.bc.postMessage('reload');
         } catch (err) {
-            console.warn('[TeamCollaboration] persist failed', err);
+            TC_LOGGER.warn('TeamCollaboration', 'persist failed', { error: err });
         }
     }
 

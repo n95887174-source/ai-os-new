@@ -386,7 +386,16 @@ export class MemoryService implements IMemoryEngine {
                 const snapshot = tx.capture(this.memories);
                 tx.deferPersist(doPersist, async () => {
                     this.memories = snapshot as MemoryEntry[];
-                    await this.memoryRepo.delete(newEntry.id).catch(() => {});
+                    await this.memoryRepo
+                        .delete(newEntry.id)
+                        .catch((err) =>
+                            LOGGER.error(
+                                'MemoryEngine',
+                                'Rollback delete failed',
+                                { id: '?' },
+                                err,
+                            ),
+                        );
                 });
                 tx.onCommit(onCommit);
             } else {
@@ -394,7 +403,16 @@ export class MemoryService implements IMemoryEngine {
                     const snapshot = structuredClone(this.memories);
                     itx.deferPersist(doPersist, async () => {
                         this.memories = snapshot;
-                        await this.memoryRepo.delete(newEntry.id).catch(() => {});
+                        await this.memoryRepo
+                            .delete(newEntry.id)
+                            .catch((err) =>
+                                LOGGER.error(
+                                    'MemoryEngine',
+                                    'Rollback delete failed',
+                                    { id: '?' },
+                                    err,
+                                ),
+                            );
                     });
                     itx.onCommit(onCommit);
                 });
@@ -446,7 +464,16 @@ export class MemoryService implements IMemoryEngine {
                 const snapshot = tx.capture(this.memories);
                 tx.deferPersist(doPersist, async () => {
                     this.memories = snapshot as MemoryEntry[];
-                    await this.memoryRepo.delete(deterministicId).catch(() => {});
+                    await this.memoryRepo
+                        .delete(deterministicId)
+                        .catch((err) =>
+                            LOGGER.error(
+                                'MemoryEngine',
+                                'Rollback delete failed',
+                                { id: '?' },
+                                err,
+                            ),
+                        );
                 });
                 tx.onCommit(onCommit);
             } else {
@@ -454,7 +481,16 @@ export class MemoryService implements IMemoryEngine {
                     const snapshot = structuredClone(this.memories);
                     itx.deferPersist(doPersist, async () => {
                         this.memories = snapshot;
-                        await this.memoryRepo.delete(deterministicId).catch(() => {});
+                        await this.memoryRepo
+                            .delete(deterministicId)
+                            .catch((err) =>
+                                LOGGER.error(
+                                    'MemoryEngine',
+                                    'Rollback delete failed',
+                                    { id: '?' },
+                                    err,
+                                ),
+                            );
                     });
                     itx.onCommit(onCommit);
                 });
@@ -674,7 +710,16 @@ export class MemoryService implements IMemoryEngine {
                     const snapshot = tx.capture(this.memories);
                     tx.deferPersist(doPersist, async () => {
                         this.memories = snapshot as MemoryEntry[];
-                        await this.memoryRepo.delete(newId).catch(() => {});
+                        await this.memoryRepo
+                            .delete(newId)
+                            .catch((err) =>
+                                LOGGER.error(
+                                    'MemoryEngine',
+                                    'Rollback delete failed',
+                                    { id: '?' },
+                                    err,
+                                ),
+                            );
                     });
                     tx.onCommit(onCommit);
                 } else {
@@ -682,7 +727,16 @@ export class MemoryService implements IMemoryEngine {
                         const snapshot = structuredClone(this.memories);
                         itx.deferPersist(doPersist, async () => {
                             this.memories = snapshot;
-                            await this.memoryRepo.delete(newId).catch(() => {});
+                            await this.memoryRepo
+                                .delete(newId)
+                                .catch((err) =>
+                                    LOGGER.error(
+                                        'MemoryEngine',
+                                        'Rollback delete failed',
+                                        { id: '?' },
+                                        err,
+                                    ),
+                                );
                         });
                         itx.onCommit(onCommit);
                     });

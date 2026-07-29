@@ -157,7 +157,9 @@ export class TimeMachineService implements ITimeMachineService {
             scope: snap.scope,
             timestamp: snap.timestamp,
         });
-        void this.persist();
+        void this.persist().catch((err) =>
+            LOGGER.warn('TimeMachineService', 'createSnapshot persist failed', { error: err }),
+        );
         return { ...snap };
     }
 
@@ -246,7 +248,9 @@ export class TimeMachineService implements ITimeMachineService {
         if (this._lastRestoredId === id) {
             this._lastRestoredId = null;
         }
-        void this.persist();
+        void this.persist().catch((err) =>
+            LOGGER.warn('TimeMachineService', 'deleteSnapshot persist failed', { error: err }),
+        );
     }
 
     compareSnapshots(id1: string, id2: string): { key: string; before: string; after: string }[] {

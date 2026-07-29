@@ -232,6 +232,7 @@ export class ProviderTracker implements IProviderTracker {
         this.unsubs = [];
         this.transientHealthEvents = [];
         this._metrics.clear();
+        this.latencyWarnings.clear();
     }
 
     getMetrics(

@@ -195,6 +195,11 @@ export class ExperimentEngine implements IExperimentEngine {
         return assignment;
     }
 
+    destroy(): void {
+        this.initialized = false;
+        this.experiments = [];
+    }
+
     private async persist(): Promise<void> {
         try {
             ssrSafeStorage.setItem(STORAGE_KEY, JSON.stringify(this.experiments));

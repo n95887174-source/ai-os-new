@@ -272,7 +272,7 @@ export function createPhaseChangeHandler(
                 `Unhandled error in phase handler for ${from}→${to}${logSuffix ?? ''}`,
                 { error: e, sessionId },
             );
-            deps.eventBus.emit(EVENTS.DEBATE_SESSION_FAILED, {
+            deps.eventBus.emitOnce(EVENTS.DEBATE_SESSION_FAILED, sessionId, {
                 sessionId,
                 error: `ScoringError: ${e instanceof Error ? e.message : String(e)}`,
             });

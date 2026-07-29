@@ -67,7 +67,9 @@ export class LoggerService implements ILogger {
     private flushPersist(): void {
         if (!this.persistDeps || !this.persistDirty) return;
         this.persistDirty = false;
-        this.persistDeps.setKv('logger:buffer', this.state.buffer.slice(-500)).catch(() => {});
+        this.persistDeps
+            .setKv('logger:buffer', this.state.buffer.slice(-500))
+            .catch((err) => console.error('[LoggerService] Failed to persist log buffer', err));
     }
 
     setTraceContext(tc?: ITraceContext) {

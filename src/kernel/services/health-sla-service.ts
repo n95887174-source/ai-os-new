@@ -1,5 +1,7 @@
 import type { IHealthSlaService, SlaProfile, SlaRule } from '../contracts/health-sla';
 import type { IProviderTracker } from '../types/interfaces';
+import { rootLogger } from './logger-service';
+const HS_LOGGER = rootLogger.child('HealthSlaService');
 
 const genId = () => crypto.randomUUID();
 const genRuleId = () => crypto.randomUUID();
@@ -151,8 +153,9 @@ export class HealthSlaService implements IHealthSlaService {
     evaluateProfile(profileId: string): { ruleId: string; passed: boolean; actual: number }[] {
         const profile = this.profiles.find((p) => p.id === profileId);
         if (!profile) throw new Error(`Profile ${profileId} not found`);
-        console.warn(
-            '[HealthSlaService] evaluateProfile uses @deprecated MOCK backend — metrics are simulated',
+        HS_LOGGER.warn(
+            'HealthSlaService',
+            'evaluateProfile uses @deprecated MOCK backend — metrics are simulated',
             { profileId, profileName: profile.name },
         );
         return profile.rules.map((rule) => {
