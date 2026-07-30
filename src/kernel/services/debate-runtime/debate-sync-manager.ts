@@ -444,11 +444,16 @@ export class DebateSyncManager {
                 // runtimeSessionId). If terminal, it was handled — skip silently.
                 if (this.runtimeSessionId !== runtimeId) {
                     const oldSnap = this.engine?.getSession(runtimeId);
-                    if (
-                        oldSnap &&
-                        (oldSnap.phase === 'completed' ||
-                            oldSnap.phase === 'cancelled' ||
-                            oldSnap.phase === 'failed')
+                    if (!oldSnap) {
+                        LOGGER.debug(
+                            'DebateSyncManager',
+                            'Skipping finalize — old session already cleaned up by engine',
+                            { runtimeId },
+                        );
+                    } else if (
+                        oldSnap.phase === 'completed' ||
+                        oldSnap.phase === 'cancelled' ||
+                        oldSnap.phase === 'failed'
                     ) {
                         LOGGER.debug(
                             'DebateSyncManager',
@@ -462,7 +467,7 @@ export class DebateSyncManager {
                             {
                                 expected: runtimeId,
                                 actual: this.runtimeSessionId,
-                                phase: oldSnap?.phase ?? 'unknown',
+                                phase: oldSnap.phase,
                             },
                         );
                     }
