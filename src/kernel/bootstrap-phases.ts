@@ -50,6 +50,7 @@ export const INIT_TIERS: string[][] = [
         'agentService',
         'chatService',
         'memoryOrchestrator',
+        'memoryService',
         'advisorService',
         'contributionService',
         'cognitiveIntelligenceService',

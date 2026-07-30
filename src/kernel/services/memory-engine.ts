@@ -275,11 +275,11 @@ export class MemoryService implements IMemoryEngine {
                 await this.withMemoriesLock(async () => {
                     this.memories = loaded;
                 });
-                return;
             }
         } catch (e) {
             LOGGER.error('MemoryEngine', 'Failed to load memory mesh', { error: e });
         }
+        this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.memories);
     }
 
     private setupListeners() {
