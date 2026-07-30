@@ -52,6 +52,7 @@ export const INIT_TIERS: string[][] = [
         'memoryOrchestrator',
         'memoryService',
         'advisorService',
+        'debateKnowledgeSync',
         'contributionService',
         'cognitiveIntelligenceService',
         'pressureMapService',
