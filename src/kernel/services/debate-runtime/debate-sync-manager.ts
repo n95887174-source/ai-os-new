@@ -438,15 +438,34 @@ export class DebateSyncManager {
                 // pipeline finished), skip finalize — the new debate owns the
                 // listeners now. finalizeInternal() would clear them, corrupting
                 // the new session.
+                // Check if the old session was already finalized via the sync path
+                // (startRoundtableDebate/startTopologyDebate calls finalizeInternal
+                // for the previous session before initEngineSession overwrites
+                // runtimeSessionId). If terminal, it was handled — skip silently.
                 if (this.runtimeSessionId !== runtimeId) {
-                    LOGGER.warn(
-                        'DebateSyncManager',
-                        'Skipping finalize — runtimeSessionId changed',
-                        {
-                            expected: runtimeId,
-                            actual: this.runtimeSessionId,
-                        },
-                    );
+                    const oldSnap = this.engine?.getSession(runtimeId);
+                    if (
+                        oldSnap &&
+                        (oldSnap.phase === 'completed' ||
+                            oldSnap.phase === 'cancelled' ||
+                            oldSnap.phase === 'failed')
+                    ) {
+                        LOGGER.debug(
+                            'DebateSyncManager',
+                            'Skipping finalize — old session already finalized via sync path',
+                            { runtimeId },
+                        );
+                    } else {
+                        LOGGER.warn(
+                            'DebateSyncManager',
+                            'Skipping finalize — runtimeSessionId changed, old session not terminal',
+                            {
+                                expected: runtimeId,
+                                actual: this.runtimeSessionId,
+                                phase: oldSnap?.phase ?? 'unknown',
+                            },
+                        );
+                    }
                     return;
                 }
                 this.finalizeInternal();
