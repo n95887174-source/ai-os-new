@@ -26,7 +26,11 @@ export class DebateKnowledgeSyncService {
     init(): void {
         this.unsubs.push(
             this.deps.eventBus.onSafe<DebateSession>(EVENTS.DEBATE_UPDATED, (session) => {
-                if (session.status === 'completed') {
+                if (
+                    session.status === 'completed' ||
+                    session.status === 'failed' ||
+                    session.status === 'cancelled'
+                ) {
                     void this.syncSession(session);
                 }
             }),

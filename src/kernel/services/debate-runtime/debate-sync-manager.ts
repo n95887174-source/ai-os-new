@@ -825,13 +825,24 @@ export class DebateSyncManager {
         const session = this.activeSession;
         if (session && (session.status === 'cancelled' || session.status === 'failed')) {
             this.clearTimers();
+            // Emit events even for failed/cancelled sessions — the session may have
+            // accumulated arguments before the failure, and listeners like
+            // DebateKnowledgeSyncService need them for memory sync.
+            emitFinalizeEvents(session, {
+                interpreter: this._interpreter,
+                eventBus: this.deps!.eventBus,
+            });
             this.clearListeners();
             this.runtimeSessionId = null;
             this.bridgeCtx = null;
             this.activeSession = null;
-            LOGGER.info('DebateSyncManager', 'finalizeInternal: terminal session — skipping', {
-                status: session.status,
-            });
+            LOGGER.info(
+                'DebateSyncManager',
+                'finalizeInternal: terminal session — events emitted',
+                {
+                    status: session.status,
+                },
+            );
             return;
         }
         this.clearTimers();
@@ -865,7 +876,9 @@ export class DebateSyncManager {
         // Persist BEFORE emitting events — prevents dual-write where listeners
         // react to DEBATE_ENDED before data is saved to the database
         this.deps!.sessionManager.saveToDebateHistory(session);
-        emitFinalizeEvents(session, {
+        // Use storeSession (contentful clone) for emit so that knowledge-sync
+        // receives argument content for claim extraction, not the stripped session.
+        emitFinalizeEvents(storeSession, {
             interpreter: this._interpreter,
             eventBus: this.deps!.eventBus,
         });
