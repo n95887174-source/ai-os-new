@@ -1,6 +1,7 @@
 import type { ILLMClientService } from './provider-adapter';
 import type { ChatMessage, ProviderResponse, SendMessageOptions } from '../types/llm-types';
 import type { ILogger } from './logger';
+import type { IPromptSecurityService } from './prompt-security-types';
 
 export interface ChatServiceDeps {
     eventBus: {
@@ -9,6 +10,7 @@ export interface ChatServiceDeps {
         emit: (event: string, data?: unknown) => void;
         emitOnce: (event: string, key: string, data?: unknown) => boolean;
     };
+    promptSecurityService: IPromptSecurityService;
     keyService: {
         selectFromPool: (
             provider: string,

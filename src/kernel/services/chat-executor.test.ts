@@ -83,7 +83,20 @@ function makeMockSendMessage(opts?: {
 
 function createMockDeps(overrides: Partial<ChatServiceDeps> = {}): ChatServiceDeps {
     return {
-        eventBus: { on: vi.fn(), onSafe: vi.fn(), emit: mockEmit },
+        eventBus: {
+            on: vi.fn(),
+            onSafe: vi.fn(),
+            emit: mockEmit,
+            emitOnce: vi.fn().mockReturnValue(true),
+        },
+        promptSecurityService: {
+            scan: vi.fn().mockReturnValue({ safe: true, score: 0, findings: [], summary: '' }),
+            getConfig: vi.fn().mockReturnValue({ enabled: false, blockOnScore: 7, rules: [] }),
+            updateConfig: vi.fn(),
+            addEvent: vi.fn().mockResolvedValue(undefined),
+            getHistory: vi.fn().mockResolvedValue([]),
+            clearHistory: vi.fn().mockResolvedValue(undefined),
+        },
         keyService: {
             selectFromPool: vi.fn(),
             selectWithBurst: vi.fn(),

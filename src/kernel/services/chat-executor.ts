@@ -5,7 +5,6 @@ import { CONFIG } from './config-registry';
 import { LLMError } from '../errors';
 import type { ChatServiceDeps } from '../contracts/chat';
 import { rootLogger } from './logger-service';
-import { promptSecurityService } from '../instances/extra-references';
 
 const LOGGER = rootLogger.child('ChatExecutor');
 
@@ -135,16 +134,16 @@ export class ChatExecutor {
                     .join(' ');
 
                 // B-016: Security scan before any LLM call
-                const scanResult = promptSecurityService.scan(promptText);
+                const scanResult = this.deps.promptSecurityService.scan(promptText);
                 if (
                     !scanResult.safe &&
-                    scanResult.score >= promptSecurityService.getConfig().blockOnScore
+                    scanResult.score >= this.deps.promptSecurityService.getConfig().blockOnScore
                 ) {
                     this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
                         type: 'warning',
                         message: `Prompt blocked by security scan: ${scanResult.summary}`,
                     });
-                    await promptSecurityService
+                    await this.deps.promptSecurityService
                         .addEvent({
                             timestamp: Date.now(),
                             prompt: promptText.slice(0, 200),
@@ -242,8 +241,8 @@ export class ChatExecutor {
 
                     try {
                         // S-04: Security scan prompt before any LLM call
-                        if (promptSecurityService.getConfig().enabled) {
-                            const scanResult = promptSecurityService.scan(promptText);
+                        if (this.deps.promptSecurityService.getConfig().enabled) {
+                            const scanResult = this.deps.promptSecurityService.scan(promptText);
                             if (!scanResult.safe) {
                                 LOGGER.warn('ChatExecutor', 'Prompt blocked by security scan', {
                                     requestId,
@@ -263,7 +262,7 @@ export class ChatExecutor {
                                 } satisfies ChatResponse);
                                 return;
                             }
-                            promptSecurityService
+                            this.deps.promptSecurityService
                                 .addEvent({
                                     timestamp: Date.now(),
                                     prompt: promptText.slice(0, 200),
@@ -412,8 +411,11 @@ export class ChatExecutor {
                                 : 0;
 
                         // H-119: Scan LLM response for sensitive content before emitting
-                        if (result?.content && promptSecurityService.getConfig().enabled) {
-                            const outputScan = promptSecurityService.scan(result.content);
+                        if (
+                            result?.content &&
+                            this.deps.promptSecurityService.getConfig().enabled
+                        ) {
+                            const outputScan = this.deps.promptSecurityService.scan(result.content);
                             if (!outputScan.safe) {
                                 LOGGER.warn('ChatExecutor', 'Response blocked by security scan', {
                                     requestId,
@@ -431,7 +433,7 @@ export class ChatExecutor {
                                     status: 'error',
                                     error: `Response blocked by security policy (score: ${outputScan.score}/10)`,
                                 } satisfies ChatResponse);
-                                promptSecurityService
+                                this.deps.promptSecurityService
                                     .addEvent({
                                         timestamp: Date.now(),
                                         prompt: promptText.slice(0, 200),

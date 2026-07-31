@@ -109,6 +109,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
             new ChatService(
                 asDeps<ConstructorParameters<typeof ChatService>[0]>({
                     eventBus: c.get<IEventBus>('eventBus'),
+                    promptSecurityService: c.get<PromptSecurityService>('promptSecurityService'),
                     keyService: c.get<KeyService>('keyService'),
                     virtualKeyService: c.get<VirtualKeyService>('virtualKeyService'),
                     settingsService: c.get<SettingsService>('settingsService'),
