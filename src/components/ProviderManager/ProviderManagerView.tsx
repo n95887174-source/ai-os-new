@@ -10,6 +10,7 @@ import {
     Upload,
     Loader2,
     Users,
+    ShieldAlert,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApiKey } from '../../types/metrics';
@@ -113,6 +114,38 @@ const ProviderManagerView: React.FC<ProviderManagerViewProps> = ({
     return (
         <>
             <motion.div variants={containerVariants} initial="hidden" animate="show">
+                <motion.div
+                    variants={itemVariants}
+                    style={{
+                        display: 'flex',
+                        gap: '0.75rem',
+                        alignItems: 'flex-start',
+                        padding: '0.75rem 1rem',
+                        borderRadius: 12,
+                        border: '1px solid rgba(239,68,68,0.35)',
+                        background:
+                            'linear-gradient(90deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0.03) 100%)',
+                        marginBottom: '1rem',
+                        fontSize: '0.8rem',
+                        color: '#fca5a5',
+                        lineHeight: 1.45,
+                    }}
+                    role="alert"
+                    aria-live="polite"
+                >
+                    <ShieldAlert
+                        size={18}
+                        color="#ef4444"
+                        aria-hidden="true"
+                        style={{ flexShrink: 0, marginTop: 2 }}
+                    />
+                    <div>
+                        <span style={{ fontWeight: 800, color: '#fca5a5' }}>
+                            {t('provider_manager.plaintext_warning_title')}:{' '}
+                        </span>
+                        {t('provider_manager.plaintext_warning_body')}
+                    </div>
+                </motion.div>
                 <motion.div variants={itemVariants} className="provider-header">
                     <div>
                         <h2 className="provider-heading">{t('provider_manager.title')}</h2>

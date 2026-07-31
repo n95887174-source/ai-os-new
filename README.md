@@ -41,7 +41,7 @@ SuperAgents OS reimagines the browser as an AI operating system. Every component
 
 **Key principles:**
 
-- **Local-first**: API keys encrypted at rest in IndexedDB, never leave your browser
+- **Local-first**: API keys stored locally in IndexedDB, never leave your browser
 - **Event-driven**: All communication flows through a typed EventBus — panels and services are decoupled
 - **Multi-strategy routing**: UCB1 bandit, broadcast, race, cost-optimized, and more
 - **Pluggable providers**: Gemini, OpenRouter, Groq, NVIDIA, OpenAI-compatible, and custom endpoints
@@ -85,7 +85,9 @@ The system is built on three design patterns:
 
 ### Provider Management
 
-Connect any LLM provider through API keys. Keys are encrypted using AES-GCM with PBKDF2-derivated keys and stored in IndexedDB.
+Connect any LLM provider through API keys. Keys are stored in IndexedDB (browser storage) and never leave your machine.
+
+> **⚠️ Security note:** API keys are currently stored **in plaintext** in browser storage — they can be read by any code running in this browser profile. Treat this as a single-user, single-machine tool (equivalent to keeping keys in a `.env` file) and **do not use it on shared machines**.
 
 **Supported providers:**
 

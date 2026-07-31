@@ -2432,6 +2432,9 @@ const ru = {
     'provider_manager.aria.import': 'Импорт',
     'provider_manager.check_all_health': 'Проверить состояние всех',
     'provider_manager.empty_state': 'Пусто',
+    'provider_manager.plaintext_warning_title': 'Ключи API хранятся без шифрования',
+    'provider_manager.plaintext_warning_body':
+        'Ключи API хранятся в открытом виде в хранилище браузера и могут быть прочитаны любым кодом, работающим в этом профиле браузера. Не используйте на общих машинах.',
     'provider_manager.tab.browse_models': 'Обзор моделей',
     'provider_manager.tab.installed': 'Установлено',
     'provider_manager.tab.resource_pools': 'Пулы ресурсов',

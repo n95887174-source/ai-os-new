@@ -53,6 +53,45 @@ npm run lint               # eslint
 npm run check:circular-kernel  # circular deps check
 ```
 
+## Current Session — Consolidated Plan P0 (docs/new/CONSOLIDATED_PLAN.md)
+
+### План
+
+| #   | Задача                                                                      | Статус     |
+| --- | --------------------------------------------------------------------------- | ---------- |
+| 1   | **P0.9** — DependencyCruiser rules, module-level `new Function()`           | 🟢 Done    |
+| 2   | **P0.15** — AgentControlPanel inject no-op → debateHumanService.addArgument | 🟢 Done    |
+| 3   | **P0.11** — ChatExecutor singleton → DI promptSecurityService               | 🟢 Done    |
+| 4   | **P0.12** — ServiceRegistryPanel split (1391 → 421 lines)                   | 🟢 Done    |
+| 5   | **P0.13** — QualityImpactDashboardPanel split (1201 → 51 lines)             | 🟢 Done    |
+| 6   | **P0.14** — DashboardPanel split (1088 → ~380 lines)                        | 🟢 Done    |
+| 7   | **P0.1** — API keys plaintext → честный README + red-warning в UI           | 🟢 Done    |
+| 8   | **P0.2** — `new Function()` → AST interpreter (meriyah)                     | ⚪ Pending |
+| 9   | **P0.4** — admin token → proper auth                                        | ⚪ Pending |
+
+### Changes (P0.1)
+
+| #   | Что сделано                                                                                                                                                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `README.md` — убраны ложные заявления об AES-GCM/PBKDF2 шифровании; добавлен честный Security note (plaintext в IndexedDB, single-user, не для общих машин) |
+| 2   | `ProviderManagerView.tsx` — red-warning banner (ShieldAlert, role="alert") поверх панели управления ключами                                                 |
+| 3   | `en.ts`/`ru.ts` — добавлены `provider_manager.plaintext_warning_title` / `plaintext_warning_body`                                                           |
+| 4   | tsc 0 errors, build 13.97s. Note: ProviderManager.test — 1 pre-existing failure (`eventBus.onSafe is not a function`), подтверждён на HEAD                  |
+
+### Changes (P0.14)
+
+| #   | Что сделано                                                                                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `DashboardHeader.tsx` — header, system online badge, Run Diagnostics + Add Provider buttons                                       |
+| 2   | `GetStartedPanel.tsx` — onboarding panel (AnimatePresence, показан при 0 active и 0 keys)                                         |
+| 3   | `QuickActionBar.tsx` — New Debate / Open Sandbox кнопки                                                                           |
+| 4   | `CriticalAlertBanner.tsx` — alert banner (ShieldAlert, role="alert")                                                              |
+| 5   | `StatsGrid.tsx` — 6 stat cards (server, throughput, rps, debates, tokens, cost); статы вычисляются внутри компонента              |
+| 6   | `RoutingActivitySection.tsx` — routing decisions список                                                                           |
+| 7   | `LiveTerminalSection.tsx` — event log; экспортирует тип `RecentEvent`                                                             |
+| 8   | `DashboardPanel.tsx` — 1088 → ~380 строк; подключён существующий `InferenceMeshSection` (убрана inline-дупликация inference mesh) |
+| 9   | 9 тестов `DashboardPanel.test.tsx` ✅, tsc 0 errors, build 15.76s, DashboardPanel chunk 30.56 kB. Commit `398dd1d5`               |
+
 ## Session 1 — Стабилизация и освоение (v4.5.0 → v4.6.0) ✅
 
 ### Цель

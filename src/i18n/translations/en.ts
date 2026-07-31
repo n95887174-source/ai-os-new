@@ -2684,6 +2684,9 @@ const en = {
     'provider_manager.aria.import': 'Import',
     'provider_manager.check_all_health': 'Check All Health',
     'provider_manager.empty_state': 'Empty State',
+    'provider_manager.plaintext_warning_title': 'API keys stored unencrypted',
+    'provider_manager.plaintext_warning_body':
+        'Your API keys are stored in plaintext in browser storage and can be read by any code running in this browser profile. Do not use on shared machines.',
     'provider_manager.tab.browse_models': 'Browse Models',
     'provider_manager.tab.installed': 'Installed',
     'provider_manager.tab.resource_pools': 'Resource Pools',
