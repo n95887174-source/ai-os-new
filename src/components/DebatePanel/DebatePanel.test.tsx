@@ -25,74 +25,112 @@ const {
     mockGetActiveSession,
     mockDebateHumanService,
     mockDebateEngine,
-} = vi.hoisted(() => ({
-    mockNodes: [
-        { id: 'agent-1', type: 'agent', label: 'Agent Alpha', config: {} },
-        { id: 'agent-2', type: 'agent', label: 'Agent Beta', config: {} },
-        { id: 'agent-3', type: 'agent', label: 'Agent Gamma', config: {} },
-        { id: 'router-1', type: 'router', label: 'Router', config: {} },
-    ],
-    mockDebateService: {
-        getSession: vi.fn(),
-        startDebate: vi.fn(),
-        pauseDebate: vi.fn(),
-        resumeDebate: vi.fn(),
-        stopDebate: vi.fn(),
-        getArguments: vi.fn(() => []),
-        exportAsMarkdown: vi.fn(() => ''),
-        destroy: vi.fn(),
-        getVerdict: vi.fn(() => null),
-        getHistory: vi.fn(() => []),
-        setFactCheckLevel: vi.fn(),
-        getActiveDebateSession: mockGetActiveSession,
-        getDebateGovernorState: vi.fn(() => null),
-    },
-    mockGetActiveSession: vi.fn(),
-    mockDebateHumanService: {
-        addArgument: vi.fn(),
-        getHumanVotes: vi.fn(() => []),
-        recordHumanVote: vi.fn(),
-    },
-    mockDebateEngine: {
-        pauseSession: vi.fn(),
-        resumeSession: vi.fn(),
-        cancelSession: vi.fn(),
-    },
-}));
+} = vi.hoisted(() => {
+    const mockGetActiveSession = vi.fn();
+    return {
+        mockNodes: [
+            { id: 'agent-1', type: 'agent', label: 'Agent Alpha', config: {} },
+            { id: 'agent-2', type: 'agent', label: 'Agent Beta', config: {} },
+            { id: 'agent-3', type: 'agent', label: 'Agent Gamma', config: {} },
+            { id: 'router-1', type: 'router', label: 'Router', config: {} },
+        ],
+        mockGetActiveSession,
+        mockDebateService: {
+            getSession: vi.fn(),
+            startDebate: vi.fn(),
+            pauseDebate: vi.fn(),
+            resumeDebate: vi.fn(),
+            stopDebate: vi.fn(),
+            getArguments: vi.fn(() => []),
+            exportAsMarkdown: vi.fn(() => ''),
+            destroy: vi.fn(),
+            getVerdict: vi.fn(() => null),
+            getHistory: vi.fn(() => []),
+            setFactCheckLevel: vi.fn(),
+            getActiveDebateSession: mockGetActiveSession,
+            getCachedVerdict: vi.fn(() => null),
+            getDebateGovernorState: vi.fn(() => null),
+        },
+        mockDebateHumanService: {
+            addArgument: vi.fn(),
+            getHumanVotes: vi.fn(() => []),
+            recordHumanVote: vi.fn(),
+        },
+        mockDebateEngine: {
+            pauseSession: vi.fn(),
+            resumeSession: vi.fn(),
+            cancelSession: vi.fn(),
+        },
+    };
+});
 
-vi.mock('../../kernel/instances', () => ({
-    orchestrator: {
-        getActiveTopology: vi.fn(() => ({
-            nodes: mockNodes,
-            edges: [],
-            policies: [],
-        })),
-    },
-    debateService: mockDebateService,
-    debateHumanService: mockDebateHumanService,
-    debateEngine: mockDebateEngine,
-    debateWorkspace: {
-        syncFromEngine: vi.fn(),
-        listRooms: vi.fn(() => []),
-        createRoom: vi.fn(),
-        setActiveRoom: vi.fn(),
-        closeRoom: vi.fn(),
-    },
-    hypothesisService: {
-        proposeHypothesis: vi.fn(),
-        getHypotheses: vi.fn(() => []),
-    },
-    autoDebateService: {
-        getResults: vi.fn(() => null),
-        getWinRates: vi.fn(() => []),
-    },
-    sessionManager: {
-        getDebateHistory: vi.fn(() => []),
-        restoreDebateSession: vi.fn(),
-        deleteDebateHistory: vi.fn(),
-        archiveDebateSession: vi.fn(),
-    },
-}));
+vi.mock('../../kernel/instances', () => {
+    const handlers = new Map<string, Array<(payload: unknown) => void>>();
+    const subscribe = (event: string, cb: (payload: unknown) => void) => {
+        const list = handlers.get(event) ?? [];
+        list.push(cb);
+        handlers.set(event, list);
+        return () => {
+            const current = handlers.get(event);
+            if (!current) return;
+            const i = current.indexOf(cb);
+            if (i >= 0) current.splice(i, 1);
+        };
+    };
+    const eventBus = {
+        on: (event: string, cb: (payload: unknown) => void) => subscribe(event, cb),
+        onSafe: (event: string, cb: (payload: unknown) => void) => subscribe(event, cb),
+        emit: (event: string, payload: unknown) => {
+            (handlers.get(event) ?? []).forEach((cb) => cb(payload));
+        },
+    };
+    return {
+        orchestrator: {
+            getActiveTopology: vi.fn(() => ({
+                nodes: mockNodes,
+                edges: [],
+                policies: [],
+            })),
+        },
+        debateService: mockDebateService,
+        debateHumanService: mockDebateHumanService,
+        debateEngine: mockDebateEngine,
+        debateWorkspace: {
+            syncFromEngine: vi.fn(),
+            listRooms: vi.fn(() => []),
+            createRoom: vi.fn(),
+            setActiveRoom: vi.fn(),
+            closeRoom: vi.fn(),
+        },
+        hypothesisService: {
+            proposeHypothesis: vi.fn(),
+            getHypotheses: vi.fn(() => []),
+        },
+        autoDebateService: {
+            getResults: vi.fn(() => null),
+            getWinRates: vi.fn(() => []),
+        },
+        sessionManager: {
+            getDebateHistory: vi.fn(() => []),
+            restoreDebateSession: vi.fn(),
+            deleteDebateHistory: vi.fn(),
+            archiveDebateSession: vi.fn(),
+        },
+        eventBus,
+        EVENTS: {
+            NOTIFICATION: 'notification',
+            DEBATE_VERDICT_GENERATED: 'debate:verdict_generated',
+            DEBATE_SESSION_CANCELLED: 'debate:cancelled',
+            DEBATE_SESSION_FAILED: 'debate:failed',
+        },
+        getAllSettings: vi.fn(() => ({})),
+        getArchetypePrompt: vi.fn(() => undefined),
+        getArchetypeName: vi.fn(() => undefined),
+        getArchetypesForRole: vi.fn(() => []),
+        getRecommendedArchetypes: vi.fn(() => null),
+        getHistoricalFigure: vi.fn(() => null),
+    };
+});
 
 vi.mock('react-router-dom', () => ({
     useSearchParams: () => [new URLSearchParams(), vi.fn()],

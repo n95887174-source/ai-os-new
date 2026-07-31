@@ -44,11 +44,11 @@ import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { autoDebateService as autoDebate } from '../../kernel/instances';
 import { DebateTabContent } from './DebateTabContent';
-import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import { useChatStore } from '../../stores/chat/store';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useNow } from '../../hooks/useNow';
+import { useDebatePanelSubscriptions } from './useDebatePanelSubscriptions';
 import { HistoricalFiguresPicker } from './HistoricalFiguresPicker';
 import { getHistoricalFigure } from '../../kernel/instances';
 import {
@@ -146,10 +146,6 @@ const DebatePanel: React.FC = () => {
     });
     const [error, setError] = useState<string | null>(null);
     const { t } = useTranslation();
-    const tRef = useRef(t);
-    useEffect(() => {
-        tRef.current = t;
-    }, [t]);
     const [actionLoading, setActionLoading] = useState<'start' | 'inject' | null>(null);
     const [autoResults, setAutoResults] = useState(() => {
         try {
@@ -173,20 +169,6 @@ const DebatePanel: React.FC = () => {
     >('active');
     const [streamingArgIds, setStreamingArgIds] = useState<Set<string>>(new Set());
     const [verdict, setVerdict] = useState<DebateVerdict | null>(null);
-
-    useEffect(() => {
-        const unsub = useDebateLiveStore.subscribe((state) => {
-            queueMicrotask(() => {
-                setStreamingArgIds(new Set(state.streamingContent.keys()));
-            });
-        });
-        return () => {
-            unsub();
-            // Note: destroy() intentionally omitted — useDebateLiveStore is a singleton
-            // shared between DebatePanel and DebateRuntimePanel. Calling destroy() here
-            // would kill subscriptions for the other panel. Cleanup happens at app shutdown.
-        };
-    }, []);
     const [agentArchetypes, setAgentArchetypes] = useState<Record<string, string>>({});
     const [agentConstraints, setAgentConstraints] = useState<Record<string, string>>({});
     const [debateTemperature, setDebateTemperature] = useState(5);
@@ -238,12 +220,28 @@ const DebatePanel: React.FC = () => {
     const isMountedRef = useRef(true);
     const timersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
 
-    useEffect(() => {
-        isMountedRef.current = true;
-        return () => {
-            isMountedRef.current = false;
-        };
-    }, []);
+    useDebatePanelSubscriptions({
+        session,
+        setSession,
+        setStreamingArgIds,
+        setVerdict,
+        setIsLoading,
+        setError,
+        setActionLoading,
+        setViewTab,
+        setShowVotePanel,
+        setSelectedAgents,
+        syncHumanVotesFromSession,
+        refreshHistory,
+        prevRoundRef,
+        sessionRef,
+        scrollRef,
+        timersRef,
+        isMountedRef,
+        selectedAgentsRef,
+        t,
+        getCachedVerdict: (id) => debateService.getCachedVerdict(id),
+    });
 
     useEffect(() => {
         selectedAgentsRef.current = selectedAgents;
@@ -264,117 +262,6 @@ const DebatePanel: React.FC = () => {
             });
         }
     }, [topic]);
-
-    useEffect(() => {
-        const unsub = eventBus.onSafe<DebateSession>('debate:updated', (data) => {
-            if (!isMountedRef.current) return;
-            // Guard: skip non-session payloads (e.g. metricsInterval emits DEBATE_UPDATED with {sessionId:'', type:'store_metrics'})
-            if (!data.topic || !data.status) return;
-            // audit2#1: skip updates from other debate sessions
-            if (data.id && sessionRef.current?.id && data.id !== sessionRef.current?.id) return;
-            queueMicrotask(() => {
-                if (!isMountedRef.current) return;
-                try {
-                    const prevRound = prevRoundRef.current;
-                    if (
-                        data.currentRound > prevRound &&
-                        prevRound > 0 &&
-                        data.status === 'active'
-                    ) {
-                        setShowVotePanel(data.currentRound - 1);
-                    }
-                    prevRoundRef.current = data.currentRound;
-                    syncHumanVotesFromSession(data);
-                    setSession({ ...data });
-                    lastSessionRef.current = data;
-                    if (data.status === 'active') {
-                        setViewTab((prev) => (prev === 'verdict' ? 'active' : prev));
-                    }
-                    if (data.status === 'completed') {
-                        setViewTab((prev) => (prev === 'active' ? 'verdict' : prev));
-                    }
-                    setIsLoading(false);
-                    setError(null);
-                    setActionLoading(null);
-                    const scrollTimer = setTimeout(() => {
-                        if (scrollRef.current) {
-                            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                        }
-                    }, 100);
-                    timersRef.current.add(scrollTimer);
-                } catch {
-                    if (isMountedRef.current) setError(tRef.current('debate.error_process_update'));
-                }
-            });
-        });
-        const timer = setTimeout(() => {
-            if (isMountedRef.current) setIsLoading(false);
-        }, 3000);
-
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        refreshHistory();
-        const top = orchestrator.getActiveTopology();
-        if (top && selectedAgentsRef.current.length === 0) {
-            const agents = top.nodes.filter((n) => n.type === 'agent').map((n) => n.id);
-            setSelectedAgents(agents.slice(0, 10));
-        }
-
-        const timers = timersRef.current;
-        return () => {
-            unsub();
-            clearTimeout(timer);
-            timers.forEach(clearTimeout);
-            timers.clear();
-        };
-    }, [syncHumanVotesFromSession, refreshHistory]);
-
-    useEffect(() => {
-        const unsubVerdict = eventBus.on(EVENTS.DEBATE_VERDICT_GENERATED, (data) => {
-            const payload = data as { sessionId: string; verdict: DebateVerdict };
-            // audit2#2: only accept verdict for the current session
-            if (payload.sessionId && session?.id && payload.sessionId !== session?.id) return;
-            setVerdict(payload.verdict);
-        });
-        if (session?.id && session.status === 'completed') {
-            const cached = debateService.getCachedVerdict(session.id);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            if (cached) setVerdict(cached);
-        }
-        return () => {
-            unsubVerdict();
-        };
-    }, [session?.id, session?.status]);
-
-    // Listen for session terminal events (cancelled/completed/failed)
-    // to force UI refresh when Stop button or engine ends the session.
-    useEffect(() => {
-        const unsubCancel = eventBus.on(
-            EVENTS.DEBATE_SESSION_CANCELLED,
-            (payload: { sessionId: string }) => {
-                if (!isMountedRef.current) return;
-                if (sessionRef.current?.id && payload.sessionId !== sessionRef.current.id) return;
-                setSession(null);
-                setIsLoading(false);
-                setError(null);
-                setActionLoading(null);
-            },
-        );
-        const unsubFail = eventBus.on(
-            EVENTS.DEBATE_SESSION_FAILED,
-            (payload: { sessionId: string }) => {
-                if (!isMountedRef.current) return;
-                if (sessionRef.current?.id && payload.sessionId !== sessionRef.current.id) return;
-                setSession(null);
-                setIsLoading(false);
-                setError(null);
-                setActionLoading(null);
-            },
-        );
-        return () => {
-            unsubCancel();
-            unsubFail();
-        };
-    }, []);
 
     useEffect(() => {
         const thesis = searchParams.get('thesis');
