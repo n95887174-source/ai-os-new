@@ -1,23 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { usePolling } from '../Common/usePolling';
-import {
-    Activity,
-    DollarSign,
-    Key,
-    MessageSquare,
-    RefreshCw,
-    ShieldAlert,
-    Terminal,
-    Zap,
-    Server,
-    Network,
-    AlertTriangle,
-    X,
-    MessageCircle,
-    FlaskConical,
-} from 'lucide-react';
-import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, X } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { kernel } from '../../kernel/instances';
 import { settingsService } from '../../kernel/instances';
@@ -26,47 +9,28 @@ import { budgetService } from '../../kernel/instances';
 import { routerService } from '../../kernel/instances';
 import { monitoringService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { FREE_TIER_LIMITS } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
 import type { RouterDecision } from '../../kernel/instances';
-import { getStatusColor, latencyColor, StatusBadge } from '../Common/status-vocabulary';
-import {
-    QuickActionBtn,
-    SectionTitle,
-    EmptyState,
-    QuotaDisplay,
-    formatNumber,
-    summarizeEvent,
-} from './DashboardComponents';
+import { summarizeEvent } from './DashboardComponents';
 import SystemHealthPanel from './SystemHealthPanel';
 import { ProviderPressureMap } from './ProviderPressureMap';
+import { InferenceMeshSection } from './InferenceMeshSection';
+import DashboardHeader from './DashboardHeader';
+import GetStartedPanel from './GetStartedPanel';
+import QuickActionBar from './QuickActionBar';
+import CriticalAlertBanner from './CriticalAlertBanner';
+import StatsGrid from './StatsGrid';
+import RoutingActivitySection from './RoutingActivitySection';
+import LiveTerminalSection, { type RecentEvent } from './LiveTerminalSection';
+import { dismissBtn, errorBanner } from '../../styles/common';
 
-import {
-    dismissBtn,
-    errorBanner,
-    flex1,
-    flexCenterGap2Mb05,
-    flexCenterGap3,
-    flexColGap3,
-    panelRounded16,
-    statusDot,
-    textSecondary,
-} from '../../styles/common';
 interface DashboardPanelProps {
     onNavigate: (page: string) => void;
 }
-
-type RecentEvent = {
-    id: number;
-    time: string;
-    event: string;
-    summary: string;
-    severity: 'info' | 'success' | 'warning' | 'error';
-};
 
 const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     const rawKeys = useKeyStore((s) => s.keys);
@@ -331,54 +295,6 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
     const hasProviderErrors =
         providerCounts.error > 0 || (systemState?.violations?.length ?? 0) > 0;
 
-    const stats = [
-        {
-            label: t('dashboard.active_llms'),
-            value: `${providerCounts.active}/${keys.length}`,
-            hint: t('dashboard.active_llms_hint', {
-                error: providerCounts.error,
-                inactive: providerCounts.inactive,
-            }),
-            icon: <Server size={22} />,
-            color: providerCounts.active > 0 ? '#10b981' : '#f59e0b',
-        },
-        {
-            label: t('dashboard.global_throughput'),
-            value: todayRequests.toString(),
-            hint: t('dashboard.today_sessions', { count: safeTraces.length }),
-            icon: <Activity size={22} />,
-            color: '#3b82f6',
-        },
-        {
-            label: t('dashboard.rps'),
-            value: rps.toString(),
-            hint: t('dashboard.rps_hint'),
-            icon: <Zap size={22} />,
-            color: '#06b6d4',
-        },
-        {
-            label: t('dashboard.active_debates'),
-            value: activeDebates.toString(),
-            hint: t('dashboard.active_debates_hint'),
-            icon: <MessageCircle size={22} />,
-            color: '#8b5cf6',
-        },
-        {
-            label: t('dashboard.token_burn'),
-            value: formatNumber(totalTokens),
-            hint: t('dashboard.token_burn_hint'),
-            icon: <MessageSquare size={22} />,
-            color: '#a855f7',
-        },
-        {
-            label: t('dashboard.calculated_cost'),
-            value: `$${estimatedCost.toFixed(4)}`,
-            hint: t('dashboard.calculated_cost_hint'),
-            icon: <DollarSign size={22} />,
-            color: '#f59e0b',
-        },
-    ];
-
     return (
         <div
             style={{
@@ -391,270 +307,22 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 paddingRight: '0.5rem',
             }}
         >
-            {/* Header */}
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-end',
-                    gap: '1rem',
-                    flexWrap: 'wrap',
-                }}
-            >
-                <div>
-                    <div style={flexCenterGap2Mb05}>
-                        <motion.div
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                            style={statusDot}
-                            aria-hidden="true"
-                        />
-                        <span
-                            style={{
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                color: '#10b981',
-                                letterSpacing: '0.1em',
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            {t('dashboard.system_online')}
-                        </span>
-                    </div>
-                    <h1
-                        style={{
-                            fontSize: '2rem',
-                            fontWeight: 800,
-                            margin: '0 0 0.25rem',
-                            letterSpacing: '-0.02em',
-                            color: '#f8fafc',
-                        }}
-                    >
-                        {t('dashboard.mission_control')}
-                    </h1>
-                    <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: 0 }}>
-                        {t('dashboard.subtitle')}
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button
-                        onClick={() => {
-                            checkAllHealth();
-                        }}
-                        style={{
-                            padding: '0.75rem 1.25rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            borderRadius: 12,
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                        }}
-                        aria-label={t('dashboard.run_diagnostics_aria')}
-                    >
-                        <RefreshCw size={16} aria-hidden="true" /> {t('dashboard.run_diagnostics')}
-                    </button>
-                    <button
-                        onClick={() => onNavigate('keys')}
-                        style={{
-                            padding: '0.75rem 1.25rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            borderRadius: 12,
-                            background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
-                            border: 'none',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            boxShadow: '0 4px 15px rgba(59,130,246,0.3)',
-                        }}
-                        aria-label={t('dashboard.add_provider_aria')}
-                    >
-                        <Key size={16} aria-hidden="true" /> {t('dashboard.add_provider')}
-                    </button>
-                </div>
-            </div>
+            <DashboardHeader checkAllHealth={checkAllHealth} onNavigate={onNavigate} />
 
-            {/* Get Started — shown when no active providers */}
-            <AnimatePresence>
-                {providerCounts.active === 0 && keys.length === 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.97 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.97 }}
-                        style={{
-                            display: 'flex',
-                            gap: '1.5rem',
-                            padding: '1.5rem',
-                            borderRadius: 16,
-                            border: '1px solid rgba(59,130,246,0.4)',
-                            background:
-                                'linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.08) 100%)',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 52,
-                                height: 52,
-                                borderRadius: 14,
-                                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                                boxShadow: '0 4px 16px rgba(59,130,246,0.4)',
-                            }}
-                        >
-                            <MessageSquare size={26} color="white" />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <div
-                                style={{
-                                    fontSize: '1.05rem',
-                                    fontWeight: 700,
-                                    color: '#f8fafc',
-                                    marginBottom: '0.25rem',
-                                }}
-                            >
-                                {t('onboarding.dashboard_get_started_title')}
-                            </div>
-                            <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5 }}>
-                                {t('onboarding.dashboard_get_started_body')}
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
-                            <button
-                                onClick={() => onNavigate('chat')}
-                                style={{
-                                    padding: '0.6rem 1.1rem',
-                                    background: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.12)',
-                                    borderRadius: 10,
-                                    cursor: 'pointer',
-                                    color: '#e2e8f0',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 600,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                }}
-                            >
-                                {t('onboarding.dashboard_explore')}
-                            </button>
-                            <button
-                                onClick={() => onNavigate('keys')}
-                                style={{
-                                    padding: '0.6rem 1.1rem',
-                                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                                    border: 'none',
-                                    borderRadius: 10,
-                                    cursor: 'pointer',
-                                    color: 'white',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 600,
-                                    boxShadow: '0 4px 12px rgba(59,130,246,0.35)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                }}
-                            >
-                                <Key size={15} />
-                                {t('onboarding.dashboard_add_key')}
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <GetStartedPanel
+                show={providerCounts.active === 0 && keys.length === 0}
+                onNavigate={onNavigate}
+            />
 
-            {/* Quick Action Bar */}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <QuickActionBtn
-                    icon={<MessageCircle size={14} />}
-                    label={t('dashboard.new_debate')}
-                    onClick={() => onNavigate('debate')}
-                />
-                <QuickActionBtn
-                    icon={<FlaskConical size={14} />}
-                    label={t('dashboard.open_sandbox')}
-                    onClick={() => onNavigate('keys')}
-                />
-            </div>
+            <QuickActionBar onNavigate={onNavigate} />
 
-            {/* Critical Alert Banner */}
-            <AnimatePresence>
-                {hasProviderErrors && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20, height: 0 }}
-                        animate={{ opacity: 1, y: 0, height: 'auto' }}
-                        exit={{ opacity: 0, y: -20, height: 0 }}
-                        style={{
-                            display: 'flex',
-                            gap: '1rem',
-                            alignItems: 'center',
-                            padding: '1.25rem 1.5rem',
-                            borderRadius: 16,
-                            border: '1px solid rgba(239,68,68,0.3)',
-                            background:
-                                'linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.02) 100%)',
-                            overflow: 'hidden',
-                        }}
-                        role="alert"
-                        aria-live="polite"
-                    >
-                        <ShieldAlert size={24} color="#ef4444" aria-hidden="true" />
-                        <div style={flex1}>
-                            <div
-                                style={{
-                                    fontSize: '0.95rem',
-                                    fontWeight: 800,
-                                    color: '#fca5a5',
-                                    marginBottom: '0.2rem',
-                                }}
-                            >
-                                {t('dashboard.system_attention_required')}
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: '#fecaca', opacity: 0.8 }}>
-                                {t('dashboard.alert_provider_errors', {
-                                    errors: providerCounts.error,
-                                    violations: systemState.violations?.length ?? 0,
-                                    fallback: fallbackEnabled
-                                        ? t('common.active')
-                                        : t('common.disabled'),
-                                })}
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => onNavigate('events')}
-                            style={{
-                                padding: '0.6rem 1rem',
-                                borderRadius: 10,
-                                border: '1px solid rgba(239,68,68,0.3)',
-                                background: 'rgba(239,68,68,0.1)',
-                                color: '#fca5a5',
-                                cursor: 'pointer',
-                                fontWeight: 700,
-                            }}
-                            aria-label={t('dashboard.review_logs_aria')}
-                        >
-                            {t('dashboard.review_logs')}
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <CriticalAlertBanner
+                show={hasProviderErrors}
+                providerErrors={providerCounts.error}
+                violations={systemState.violations?.length ?? 0}
+                fallbackEnabled={fallbackEnabled}
+                onNavigate={onNavigate}
+            />
 
             {error && (
                 <div style={errorBanner} role="alert">
@@ -668,86 +336,17 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                     </button>
                 </div>
             )}
-            {/* Top Stats Grid */}
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: '1.25rem',
-                }}
-            >
-                {stats.map((stat, i) => (
-                    <motion.div
-                        key={stat.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="glass-panel"
-                        style={{
-                            padding: '1.5rem',
-                            borderRadius: 16,
-                            position: 'relative',
-                            overflow: 'hidden',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            background:
-                                'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)',
-                        }}
-                    >
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: -20,
-                                right: -20,
-                                width: 80,
-                                height: 80,
-                                borderRadius: '50%',
-                                background: stat.color,
-                                opacity: 0.05,
-                                filter: 'blur(20px)',
-                            }}
-                            aria-hidden="true"
-                        />
-                        <div
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start',
-                                marginBottom: '1rem',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    color: stat.color,
-                                    background: `${stat.color}15`,
-                                    padding: '0.6rem',
-                                    borderRadius: 12,
-                                    border: `1px solid ${stat.color}30`,
-                                }}
-                            >
-                                {stat.icon}
-                            </div>
-                        </div>
-                        <div
-                            style={{
-                                fontSize: '2rem',
-                                fontWeight: 800,
-                                color: '#f8fafc',
-                                letterSpacing: '-0.02em',
-                                marginBottom: '0.25rem',
-                                lineHeight: 1,
-                            }}
-                        >
-                            {stat.value}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>
-                            {stat.label}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>
-                            {stat.hint}
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+
+            <StatsGrid
+                providerCounts={providerCounts}
+                keysLength={keys.length}
+                todayRequests={todayRequests}
+                tracesCount={safeTraces.length}
+                rps={rps}
+                activeDebates={activeDebates}
+                totalTokens={totalTokens}
+                estimatedCost={estimatedCost}
+            />
 
             <SystemHealthPanel
                 providerCounts={providerCounts}
@@ -763,91 +362,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
 
             <ProviderPressureMap keys={keys} onNavigate={onNavigate} />
 
-            {/* Routing Activity */}
-            <div className="glass-panel" style={panelRounded16}>
-                <SectionTitle
-                    icon={<Zap size={16} color="#f59e0b" />}
-                    title={t('dashboard.routing_activity')}
-                    action={t('dashboard.full_view')}
-                    onAction={() => onNavigate('routing')}
-                />
-                {routerDecisions.length > 0 ? (
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.4rem',
-                            marginTop: '0.5rem',
-                        }}
-                    >
-                        {routerDecisions.slice(0, 6).map((d, i) => {
-                            const top = d.scores[0];
-                            return (
-                                <div
-                                    key={`${d.requestId}-${i}`}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.75rem',
-                                        padding: '0.5rem 0.75rem',
-                                        borderRadius: 8,
-                                        background: 'rgba(0,0,0,0.15)',
-                                        fontSize: '0.7rem',
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            color: '#475569',
-                                            fontFamily: 'monospace',
-                                            minWidth: 60,
-                                        }}
-                                    >
-                                        {new Date(d.timestamp).toLocaleTimeString()}
-                                    </span>
-                                    <span
-                                        style={{
-                                            padding: '0.15rem 0.4rem',
-                                            borderRadius: 4,
-                                            background: 'rgba(245,158,11,0.1)',
-                                            color: '#f59e0b',
-                                            fontWeight: 700,
-                                            fontSize: '0.6rem',
-                                        }}
-                                    >
-                                        {d.strategy}
-                                    </span>
-                                    <span style={textSecondary}>→</span>
-                                    <span style={{ color: '#10b981', fontWeight: 700 }}>
-                                        {d.selected}
-                                    </span>
-                                    {d.secondBest && (
-                                        <span style={textSecondary}>
-                                            (fallback: {d.secondBest})
-                                        </span>
-                                    )}
-                                    {top && (
-                                        <span style={{ marginLeft: 'auto', color: '#64748b' }}>
-                                            score: {top.score.toFixed(3)}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div
-                        style={{
-                            textAlign: 'center',
-                            padding: '1.5rem',
-                            color: '#64748b',
-                            fontSize: '0.75rem',
-                            fontStyle: 'italic',
-                        }}
-                    >
-                        {t('dashboard.no_routing_decisions')}
-                    </div>
-                )}
-            </div>
+            <RoutingActivitySection decisions={routerDecisions} onNavigate={onNavigate} />
 
             <div
                 style={{
@@ -857,228 +372,9 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                     alignItems: 'start',
                 }}
             >
-                {/* Active Providers List */}
-                <div
-                    className="glass-panel"
-                    style={{
-                        padding: '1.5rem',
-                        borderRadius: 16,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '1rem',
-                    }}
-                >
-                    <SectionTitle
-                        icon={<Network size={20} color="#3b82f6" />}
-                        title={t('dashboard.inference_mesh')}
-                        action={t('dashboard.configure')}
-                        onAction={() => onNavigate('keys')}
-                    />
-                    <div style={flexColGap3}>
-                        {keys.map((key) => (
-                            <div
-                                key={key.id}
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr 0.7fr 0.7fr 1fr 0.6fr auto',
-                                    gap: '0.75rem',
-                                    alignItems: 'center',
-                                    padding: '1rem',
-                                    borderRadius: 12,
-                                    background: 'rgba(255,255,255,0.02)',
-                                    border: '1px solid rgba(255,255,255,0.03)',
-                                    transition: 'all 0.2s',
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.03)';
-                                }}
-                            >
-                                <div style={flexCenterGap3}>
-                                    <ProviderIcon provider={key.provider} size={18} />
-                                    <div>
-                                        <div
-                                            style={{
-                                                fontWeight: 800,
-                                                fontSize: '0.9rem',
-                                                color: '#e2e8f0',
-                                            }}
-                                        >
-                                            {key.label}
-                                        </div>
-                                        <div
-                                            style={{
-                                                color: '#64748b',
-                                                fontSize: '0.7rem',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                marginTop: '0.1rem',
-                                            }}
-                                        >
-                                            {key.provider}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <StatusBadge status={key.status} size="sm" />
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: '0.8rem',
-                                        color: '#94a3b8',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 4,
-                                    }}
-                                >
-                                    <Zap size={12} color={latencyColor(key.latency || 0)} />{' '}
-                                    {key.latency
-                                        ? `${key.latency}${t('chat.latency_ms')}`
-                                        : t('dashboard.dash')}
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                                    {key.stats?.extended?.usageToday ? (
-                                        <QuotaDisplay
-                                            used={key.stats.extended.usageToday.requests}
-                                            limit={FREE_TIER_LIMITS[key.provider]?.requestsPerDay}
-                                        />
-                                    ) : (
-                                        t('dashboard.dash')
-                                    )}
-                                </div>
-                                <div
-                                    style={{ fontSize: '0.8rem', color: '#94a3b8' }}
-                                >{`${key.stats?.successCount || 0} ${t('dashboard.reqs_unit')}`}</div>
-                                <button
-                                    onClick={() => onNavigate('keys')}
-                                    style={{
-                                        padding: '0.4rem 0.6rem',
-                                        borderRadius: 8,
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#94a3b8',
-                                        cursor: 'pointer',
-                                        fontSize: '0.7rem',
-                                        fontWeight: 700,
-                                    }}
-                                    aria-label={`${t('dashboard.inspect_aria')} ${key.label}`}
-                                >
-                                    {t('dashboard.inspect')}
-                                </button>
-                            </div>
-                        ))}
-                        {keys.length === 0 && (
-                            <EmptyState
-                                text={t('dashboard.no_providers')}
-                                action={t('dashboard.connect_provider')}
-                                onAction={() => onNavigate('keys')}
-                            />
-                        )}
-                    </div>
-                </div>
+                <InferenceMeshSection keys={keys} onNavigate={onNavigate} />
 
-                {/* Live Terminal / Event Log */}
-                <div
-                    className="glass-panel"
-                    style={{
-                        borderRadius: 16,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                    }}
-                >
-                    <div
-                        style={{
-                            padding: '1.25rem 1.5rem',
-                            background: 'rgba(0,0,0,0.3)',
-                            borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        }}
-                    >
-                        <SectionTitle
-                            icon={<Terminal size={18} color="#a855f7" />}
-                            title={t('dashboard.live_system_stream')}
-                            action={t('dashboard.full_logs')}
-                            onAction={() => onNavigate('events')}
-                        />
-                    </div>
-                    <div
-                        style={{
-                            padding: '1.5rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.85rem',
-                            background: '#020617',
-                            height: '100%',
-                            minHeight: 300,
-                        }}
-                    >
-                        {events.map((event) => (
-                            <div
-                                key={`${event.id}-${event.event}`}
-                                style={{
-                                    display: 'flex',
-                                    gap: '1rem',
-                                    alignItems: 'flex-start',
-                                    fontSize: '0.8rem',
-                                    fontFamily: 'JetBrains Mono, monospace',
-                                }}
-                            >
-                                <span style={{ color: '#475569', flexShrink: 0, marginTop: 2 }}>
-                                    [{event.time}]
-                                </span>
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '0.2rem',
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            color: getStatusColor(event.severity),
-                                            fontWeight: 700,
-                                        }}
-                                    >
-                                        {event.event}
-                                    </div>
-                                    <div
-                                        style={{
-                                            color: '#cbd5e1',
-                                            opacity: 0.8,
-                                            lineHeight: 1.4,
-                                            wordBreak: 'break-word',
-                                        }}
-                                    >
-                                        {event.summary}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {events.length === 0 && (
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%',
-                                    color: '#475569',
-                                }}
-                            >
-                                <Activity
-                                    size={32}
-                                    style={{ marginBottom: '1rem', opacity: 0.5 }}
-                                />
-                                <span>{t('dashboard.awaiting_telemetry')}</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <LiveTerminalSection events={events} onNavigate={onNavigate} />
             </div>
             <ModuleInfo moduleKey="dashboard" />
         </div>
