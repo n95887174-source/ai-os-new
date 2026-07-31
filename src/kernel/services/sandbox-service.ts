@@ -118,8 +118,9 @@ export class SandboxService {
     ): Promise<unknown> {
         if (!this.codeExecutionEnabled) {
             throw new Error(
-                'Sandbox code execution is disabled in production because the current worker runner requires unsafe-eval. ' +
-                    'Enable VITE_SANDBOX_ENABLED=true only for deployments with a CSP that intentionally permits it.',
+                'Sandbox code execution is disabled in production because the worker runner is ' +
+                    'intentionally gated by VITE_SANDBOX_ENABLED. Enable VITE_SANDBOX_ENABLED=true ' +
+                    'to allow agent-generated scripts to run in the isolated worker.',
             );
         }
 
