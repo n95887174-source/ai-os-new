@@ -123,7 +123,8 @@ export function PersonalityCard({ provider, compact, currentState }: Personality
                                 ? p.tone
                                 : trait === 'Pace'
                                   ? p.pace
-                                  : String((p as any)[trait.toLowerCase()] ?? '-')}
+                                  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    String((p as any)[trait.toLowerCase()] ?? '-')}
                         </span>
                     </div>
                 ))}

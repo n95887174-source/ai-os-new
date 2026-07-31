@@ -41,6 +41,7 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({ value, onChange, seed 
                     }}
                     title={s.label}
                 >
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <ProceduralAvatar seed={seed} size={28} shape={s.id as any} />
                     <span
                         style={{

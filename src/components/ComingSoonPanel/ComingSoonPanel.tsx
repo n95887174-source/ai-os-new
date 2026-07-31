@@ -24,7 +24,9 @@ const ComingSoonPanel: React.FC<Props> = ({ routeId, serviceName }) => {
                 justifyContent: 'center',
             }}
         >
-            <ModuleInfo moduleKey={route as any} />
+            <ModuleInfo
+                moduleKey={route as unknown as Parameters<typeof ModuleInfo>[0]['moduleKey']}
+            />
 
             <div
                 style={{

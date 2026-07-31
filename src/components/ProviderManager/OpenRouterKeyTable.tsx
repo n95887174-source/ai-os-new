@@ -77,6 +77,7 @@ export default function OpenRouterKeyTable() {
             subStreamErr();
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const subResp = eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: any) => {
             if (isDone) return;
             if (res.requestId === reqId) {
@@ -104,6 +105,7 @@ export default function OpenRouterKeyTable() {
             }
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const subStreamEnd = eventBus.on(EVENTS.STREAM_END, ({ requestId, fullContent }: any) => {
             if (isDone) return;
             if (requestId === reqId) {
@@ -124,6 +126,7 @@ export default function OpenRouterKeyTable() {
             }
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const subStreamErr = eventBus.on(EVENTS.STREAM_ERROR, ({ requestId, error }: any) => {
             if (isDone) return;
             if (requestId === reqId) {

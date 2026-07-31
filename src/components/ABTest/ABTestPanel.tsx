@@ -92,47 +92,6 @@ const ABTestPanel: React.FC = () => {
         }
     };
 
-    const ResultRow: React.FC<{
-        label: string;
-        aVal: string;
-        bVal: string;
-        winner: string;
-        unit?: string;
-    }> = ({ label, aVal, bVal, winner, unit }) => (
-        <div
-            style={{
-                display: 'grid',
-                gridTemplateColumns: '120px 1fr 1fr',
-                gap: 8,
-                padding: '6px 8px',
-                fontSize: '0.8rem',
-                color: '#94a3b8',
-                background: 'rgba(255,255,255,0.02)',
-                borderRadius: 6,
-            }}
-        >
-            <span style={{ fontWeight: 600, color: '#64748b' }}>{label}</span>
-            <span
-                style={{
-                    color: winner === 'A' ? '#22c55e' : winner === 'B' ? '#f87171' : '#94a3b8',
-                }}
-            >
-                {aVal}
-                {unit}
-                {winner === 'A' && ' ✓'}
-            </span>
-            <span
-                style={{
-                    color: winner === 'B' ? '#22c55e' : winner === 'A' ? '#f87171' : '#94a3b8',
-                }}
-            >
-                {bVal}
-                {unit}
-                {winner === 'B' && ' ✓'}
-            </span>
-        </div>
-    );
-
     return (
         <div
             style={{
@@ -659,5 +618,46 @@ const ABTestPanel: React.FC = () => {
         </div>
     );
 };
+
+const ResultRow: React.FC<{
+    label: string;
+    aVal: string;
+    bVal: string;
+    winner: string;
+    unit?: string;
+}> = ({ label, aVal, bVal, winner, unit }) => (
+    <div
+        style={{
+            display: 'grid',
+            gridTemplateColumns: '120px 1fr 1fr',
+            gap: 8,
+            padding: '6px 8px',
+            fontSize: '0.8rem',
+            color: '#94a3b8',
+            background: 'rgba(255,255,255,0.02)',
+            borderRadius: 6,
+        }}
+    >
+        <span style={{ fontWeight: 600, color: '#64748b' }}>{label}</span>
+        <span
+            style={{
+                color: winner === 'A' ? '#22c55e' : winner === 'B' ? '#f87171' : '#94a3b8',
+            }}
+        >
+            {aVal}
+            {unit}
+            {winner === 'A' && ' ✓'}
+        </span>
+        <span
+            style={{
+                color: winner === 'B' ? '#22c55e' : winner === 'A' ? '#f87171' : '#94a3b8',
+            }}
+        >
+            {bVal}
+            {unit}
+            {winner === 'B' && ' ✓'}
+        </span>
+    </div>
+);
 
 export default ABTestPanel;

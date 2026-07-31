@@ -132,7 +132,9 @@ export class DatabaseService implements IDatabaseService {
         // C-02: clear the flag so next crash detection works
         try {
             ssrSafeStorage.removeItem(DatabaseService.CLEAN_SHUTDOWN_KEY);
-        } catch {}
+        } catch {
+            // ignore — ssrSafeStorage may not be available
+        }
         // C-01: clean stale distributed locks from crashed tabs
         this.cleanupStaleLocks().catch((e) => {
             LOGGER.warn('DatabaseService', 'Stale lock cleanup failed', { error: e });

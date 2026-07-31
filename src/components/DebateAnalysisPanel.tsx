@@ -47,6 +47,7 @@ const DebateAnalysisPanel: React.FC = () => {
                     ? active
                     : sessionManager.getDebateHistory().find((s) => s.id === sessionId);
             if (!session) return null;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const args = (session.arguments ?? []).map((a: any) => ({
                 agentId: a.agentId,
                 content: a.content,
@@ -239,6 +240,7 @@ const DebateAnalysisPanel: React.FC = () => {
                                     gap: '0.5rem',
                                 }}
                             >
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                 {analysis.fallacyStats.map((f: any) => (
                                     <FallacyCard
                                         key={f.type}
@@ -279,6 +281,7 @@ const DebateAnalysisPanel: React.FC = () => {
                                     gap: '0.5rem',
                                 }}
                             >
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                 {analysis.persuasion.byAgent.map((p: any) => (
                                     <PersuasionCard key={p.agentId} p={p} />
                                 ))}

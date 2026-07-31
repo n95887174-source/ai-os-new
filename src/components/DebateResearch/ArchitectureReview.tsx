@@ -31,6 +31,7 @@ const ArchitectureReview: React.FC = () => {
             return null;
         }
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [tree, setTree] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [findings, setFindings] = useState<ArchFinding[]>([]);

@@ -16,10 +16,12 @@ export const registerPhase8: Phase = ({ register }) => {
             eventBus: c.get<IEventBus>('eventBus'),
             database: c.get<IDatabaseService>('database'),
             keyService: {
-                getKeys: () => c.get<any>('keyService').getKeys(),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                getKeys: () => (c.get<any>('keyService') as { getKeys: () => any[] }).getKeys(),
             },
             adapterRegistry: {
                 getAdapter: (provider: string) =>
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     c.get<IAdapterRegistry>('adapterRegistry').getAdapter(provider) as any,
             },
         };

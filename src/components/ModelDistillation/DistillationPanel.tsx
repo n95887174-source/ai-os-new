@@ -65,6 +65,7 @@ const DISTILLATION_PANEL: React.FC = () => {
     };
 
     const teachers = distillationService.getTeacherModels();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const students = (distillationService as any).getStudentArchitectures();
 
     return (
@@ -236,6 +237,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                 }}
                             >
                                 <option value="">Select student...</option>
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                 {students.map((s: any) => (
                                     <option key={s.id} value={s.id}>
                                         {s.name} ({s.params})
@@ -271,6 +273,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                     <input
                                         type="number"
                                         step={f.step}
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                         value={(config as any)[f.key]}
                                         onChange={(e) =>
                                             setConfig({

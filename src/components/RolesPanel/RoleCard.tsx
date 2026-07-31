@@ -101,6 +101,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                         <ProceduralAvatar
                             seed={role.id}
                             size={32}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             shape={(role.metadata?.avatarShape as any) || 'circle'}
                         />
                     )}

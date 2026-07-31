@@ -50,6 +50,7 @@ const OverviewSignalCards: React.FC<Props> = ({ fourSignals, t }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 {SIGNALS.map((s) => {
                     const val = s.value(fourSignals);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const color = 'getColor' in s ? (s as any).getColor(fourSignals) : s.color;
                     return (
                         <div

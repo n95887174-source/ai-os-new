@@ -34,8 +34,35 @@ interface JSONRPCResponse {
 
 import { CONFIG } from './config-registry';
 import { isPrivateIP } from '../utils/network';
+import { sanitizePromptVar } from '../utils/sanitize';
 
 const SERVERS_KEY = 'super_agents_mcp_servers';
+
+function sanitizeExternalString(input: string): string {
+    return sanitizePromptVar(input)
+        .replace(/<\|[^|]*\|>/g, '')
+        .replace(/\[INST\]|\[\/INST\]|\[SYS\]|\[\/SYS\]/gi, '')
+        .replace(/\bHUMAN:\s*|\bAI:\s*|\bUSER:\s*|\bSYSTEM:\s*/gi, '')
+        .slice(0, 4000);
+}
+
+// Recursively sanitize external data by traversing all string values
+function sanitizeMcpResult(data: unknown): unknown {
+    if (typeof data === 'string') return sanitizeExternalString(data);
+    if (Array.isArray(data)) return data.map(sanitizeMcpResult);
+    if (data && typeof data === 'object' && data !== null) {
+        const result: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(data)) {
+            if (key === 'name' || key === 'description') {
+                result[key] = typeof value === 'string' ? sanitizeExternalString(value) : value;
+            } else {
+                result[key] = sanitizeMcpResult(value);
+            }
+        }
+        return result;
+    }
+    return data;
+}
 
 export interface MCPServiceDeps {
     eventBus: {
@@ -270,7 +297,12 @@ export class MCPService {
             const result = (await this.rpc(server, 'resources/list')) as {
                 resources: MCPResource[];
             };
-            return result.resources || [];
+            const resources: MCPResource[] = (result.resources || []).map((r: MCPResource) => ({
+                ...r,
+                name: sanitizeExternalString(r.name),
+                description: r.description ? sanitizeExternalString(r.description) : undefined,
+            }));
+            return resources;
         } catch (e) {
             LOGGER.warn('MCPService', 'RPC listResources failed, trying HTTP fallback', {
                 error: e,
@@ -279,7 +311,12 @@ export class MCPService {
                 const response = await this.safeFetch(
                     `${server.url.replace(/\/+$/, '')}/resources`,
                 );
-                return await response.json();
+                const raw = (await response.json()) as MCPResource[];
+                return (Array.isArray(raw) ? raw : []).map((r: MCPResource) => ({
+                    ...r,
+                    name: sanitizeExternalString(r.name),
+                    description: r.description ? sanitizeExternalString(r.description) : undefined,
+                }));
             } catch (e2) {
                 LOGGER.warn('MCPService', 'HTTP listResources also failed', { error: e2 });
                 return [];
@@ -296,7 +333,8 @@ export class MCPService {
                 const result = (await this.rpc(server, 'resources/read', { uri })) as {
                     contents: { text: string }[];
                 };
-                if (result.contents?.[0]?.text) return result.contents[0].text;
+                if (result.contents?.[0]?.text)
+                    return sanitizeExternalString(result.contents[0].text);
             } catch (e) {
                 LOGGER.warn('MCPService', 'RPC readResource failed', {
                     server: server.name,
@@ -324,7 +362,15 @@ export class MCPService {
         if (!server) throw new Error(`Server ${serverId} not found`);
         try {
             const result = (await this.rpc(server, 'tools/list')) as { tools: MCPTool[] };
-            return result.tools || [];
+            const tools = result.tools || [];
+            return tools.map((t) => ({
+                ...t,
+                name: sanitizeExternalString(t.name),
+                description: t.description ? sanitizeExternalString(t.description) : undefined,
+                inputSchema: t.inputSchema
+                    ? (sanitizeMcpResult(t.inputSchema) as Record<string, unknown>)
+                    : undefined,
+            }));
         } catch (e) {
             LOGGER.warn('MCPService', 'listTools failed', { server: server.name, error: e });
             return [];
@@ -339,7 +385,7 @@ export class MCPService {
         const server = this.servers.find((s) => s.id === serverId);
         if (!server) throw new Error(`Server ${serverId} not found`);
         const tools = await this.listTools(serverId);
-        const tool = tools.find((t) => t.name === toolName);
+        const tool = tools.find((t) => t.name === sanitizeExternalString(toolName));
         if (tool?.inputSchema && args) {
             if (tool.inputSchema.required) {
                 const required = tool.inputSchema.required as string[];
@@ -352,7 +398,8 @@ export class MCPService {
                 }
             }
         }
-        return await this.rpc(server, 'tools/call', { name: toolName, arguments: args });
+        const result = await this.rpc(server, 'tools/call', { name: toolName, arguments: args });
+        return sanitizeMcpResult(result);
     }
 
     getServers(): MCPServerConfig[] {

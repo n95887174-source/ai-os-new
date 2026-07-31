@@ -110,6 +110,7 @@ const CommunityHubPanel: React.FC = () => {
                 m.personaMarketplaceService.install(item.id);
             }
         } catch {
+            // ignore
         } finally {
             setImporting(null);
         }

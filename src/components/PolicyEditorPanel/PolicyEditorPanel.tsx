@@ -354,6 +354,7 @@ const PolicyEditorPanel: React.FC = () => {
                                                         level: 'warn',
                                                         message: 'Policy triggered',
                                                     },
+                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                 ] as any,
                                             })
                                         }

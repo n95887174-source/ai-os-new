@@ -111,7 +111,7 @@ function computeTrend(history: KeyHistoryEntry[]): {
 }
 
 const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
-    const history = apiKey.history || [];
+    const history = useMemo(() => apiKey.history || [], [apiKey.history]);
     const now = Date.now();
 
     const groups = useMemo(() => groupByDate([...history].reverse(), now), [history, now]);

@@ -274,93 +274,8 @@ const PolicyPanelLazy = React.lazy(() => import('./components/PolicyPanel/Policy
 const MCPPanelLazy = React.lazy(() => import('./components/MCPPanel/MCPPanel'));
 const PatternsPanelLazy = React.lazy(() => import('./components/PatternsPanel/PatternsPanel'));
 
-const SteelmanPanelLazy = React.lazy(() => import('./components/SteelmanPanel/SteelmanPanel'));
-const BayesianJudgePanelLazy = React.lazy(
-    () => import('./components/BayesianJudgePanel/BayesianJudgePanel'),
-);
-const BlindEvalPanelLazy = React.lazy(() => import('./components/BlindEvalPanel/BlindEvalPanel'));
-const CredibilityPanelLazy = React.lazy(
-    () => import('./components/CredibilityPanel/CredibilityPanel'),
-);
-const CalibrationPanelLazy = React.lazy(
-    () => import('./components/CalibrationPanel/CalibrationPanel'),
-);
-const ConsistencyPanelLazy = React.lazy(
-    () => import('./components/ConsistencyPanel/ConsistencyPanel'),
-);
-const FrameTrackerPanelLazy = React.lazy(
-    () => import('./components/FrameTrackerPanel/FrameTrackerPanel'),
-);
-const StanceDriftPanelLazy = React.lazy(
-    () => import('./components/StanceDriftPanel/StanceDriftPanel'),
-);
-const InsightBusPanelLazy = React.lazy(
-    () => import('./components/InsightBusPanel/InsightBusPanel'),
-);
-const EntanglementPanelLazy = React.lazy(
-    () => import('./components/EntanglementPanel/EntanglementPanel'),
-);
-const AnchoringPanelLazy = React.lazy(() => import('./components/AnchoringPanel/AnchoringPanel'));
-const MetaAgentPanelLazy = React.lazy(() => import('./components/MetaAgentPanel/MetaAgentPanel'));
-const OutcomeForecasterPanelLazy = React.lazy(
-    () => import('./components/OutcomeForecasterPanel/OutcomeForecasterPanel'),
-);
-const ConceptBlenderPanelLazy = React.lazy(
-    () => import('./components/ConceptBlenderPanel/ConceptBlenderPanel'),
-);
-const BeliefMiningPanelLazy = React.lazy(
-    () => import('./components/BeliefMiningPanel/BeliefMiningPanel'),
-);
-const MinimaxPlannerPanelLazy = React.lazy(
-    () => import('./components/MinimaxPlannerPanel/MinimaxPlannerPanel'),
-);
-const ExpertWitnessPanelLazy = React.lazy(
-    () => import('./components/ExpertWitnessPanel/ExpertWitnessPanel'),
-);
-const RhetoricPanelLazy = React.lazy(() => import('./components/RhetoricPanel/RhetoricPanel'));
-const BiasProfilerPanelLazy = React.lazy(
-    () => import('./components/BiasProfilerPanel/BiasProfilerPanel'),
-);
-const IncentiveDetectorPanelLazy = React.lazy(
-    () => import('./components/IncentiveDetectorPanel/IncentiveDetectorPanel'),
-);
-const StakeholderPanelLazy = React.lazy(
-    () => import('./components/StakeholderPanel/StakeholderPanel'),
-);
-const ScratchpadPanelLazy = React.lazy(
-    () => import('./components/ScratchpadPanel/ScratchpadPanel'),
-);
-const PersonaMixerPanelLazy = React.lazy(
-    () => import('./components/PersonaMixerPanel/PersonaMixerPanel'),
-);
-const BoPTrackerPanelLazy = React.lazy(
-    () => import('./components/BoPTrackerPanel/BoPTrackerPanel'),
-);
-const GotDeliberationPanelLazy = React.lazy(
-    () => import('./components/GotDeliberationPanel/GotDeliberationPanel'),
-);
-const SimilarityMonitorPanelLazy = React.lazy(
-    () => import('./components/SimilarityMonitorPanel/SimilarityMonitorPanel'),
-);
-const DriftDetectorPanelLazy = React.lazy(
-    () => import('./components/DriftDetectorPanel/DriftDetectorPanel'),
-);
-const ShadowOpponentPanelLazy = React.lazy(
-    () => import('./components/ShadowOpponentPanel/ShadowOpponentPanel'),
-);
-const AdversarialSourcePanelLazy = React.lazy(
-    () => import('./components/AdversarialSourcePanel/AdversarialSourcePanel'),
-);
-const VulnTargetingPanelLazy = React.lazy(
-    () => import('./components/VulnTargetingPanel/VulnTargetingPanel'),
-);
-const JustificationPanelLazy = React.lazy(
-    () => import('./components/JustificationPanel/JustificationPanel'),
-);
-const LogicalFormPanelLazy = React.lazy(
-    () => import('./components/LogicalFormPanel/LogicalFormPanel'),
-);
 const SchedulerPanelLazy = React.lazy(() => import('./components/SchedulerPanel/SchedulerPanel'));
+const ComingSoonPanel = React.lazy(() => import('./components/ComingSoonPanel/ComingSoonPanel'));
 
 // Component map: nav id → React component (dashboard handled manually for onNavigate)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -501,39 +416,39 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'aquarium-trading': AquariumTradingPanelLazy,
     'time-machine': TimeMachinePanelLazy,
     'contribution-graph': ContributionGraphPanelLazy,
-    // Coming Soon panels (32 debate sub-service panels)
-    steelman: SteelmanPanelLazy,
-    'bayesian-judge': BayesianJudgePanelLazy,
-    'blind-eval': BlindEvalPanelLazy,
-    credibility: CredibilityPanelLazy,
-    calibration: CalibrationPanelLazy,
-    consistency: ConsistencyPanelLazy,
-    'frame-tracker': FrameTrackerPanelLazy,
-    'stance-drift': StanceDriftPanelLazy,
-    'insight-bus': InsightBusPanelLazy,
-    entanglement: EntanglementPanelLazy,
-    anchoring: AnchoringPanelLazy,
-    'meta-agent': MetaAgentPanelLazy,
-    'outcome-forecaster': OutcomeForecasterPanelLazy,
-    'concept-blender': ConceptBlenderPanelLazy,
-    'belief-mining': BeliefMiningPanelLazy,
-    'minimax-planner': MinimaxPlannerPanelLazy,
-    'expert-witness': ExpertWitnessPanelLazy,
-    rhetoric: RhetoricPanelLazy,
-    'bias-profiler': BiasProfilerPanelLazy,
-    'incentive-detector': IncentiveDetectorPanelLazy,
-    stakeholder: StakeholderPanelLazy,
-    scratchpad: ScratchpadPanelLazy,
-    'persona-mixer': PersonaMixerPanelLazy,
-    'bop-tracker': BoPTrackerPanelLazy,
-    'got-deliberation': GotDeliberationPanelLazy,
-    similarity: SimilarityMonitorPanelLazy,
-    'drift-detector': DriftDetectorPanelLazy,
-    'shadow-opponent': ShadowOpponentPanelLazy,
-    'adversarial-source': AdversarialSourcePanelLazy,
-    'vuln-targeting': VulnTargetingPanelLazy,
-    justification: JustificationPanelLazy,
-    'logical-form': LogicalFormPanelLazy,
+    // Coming Soon panels (debate sub-service — not yet implemented)
+    steelman: ComingSoonPanel,
+    'bayesian-judge': ComingSoonPanel,
+    'blind-eval': ComingSoonPanel,
+    credibility: ComingSoonPanel,
+    calibration: ComingSoonPanel,
+    consistency: ComingSoonPanel,
+    'frame-tracker': ComingSoonPanel,
+    'stance-drift': ComingSoonPanel,
+    'insight-bus': ComingSoonPanel,
+    entanglement: ComingSoonPanel,
+    anchoring: ComingSoonPanel,
+    'meta-agent': ComingSoonPanel,
+    'outcome-forecaster': ComingSoonPanel,
+    'concept-blender': ComingSoonPanel,
+    'belief-mining': ComingSoonPanel,
+    'minimax-planner': ComingSoonPanel,
+    'expert-witness': ComingSoonPanel,
+    rhetoric: ComingSoonPanel,
+    'bias-profiler': ComingSoonPanel,
+    'incentive-detector': ComingSoonPanel,
+    stakeholder: ComingSoonPanel,
+    scratchpad: ComingSoonPanel,
+    'persona-mixer': ComingSoonPanel,
+    'bop-tracker': ComingSoonPanel,
+    'got-deliberation': ComingSoonPanel,
+    similarity: ComingSoonPanel,
+    'drift-detector': ComingSoonPanel,
+    'shadow-opponent': ComingSoonPanel,
+    'adversarial-source': ComingSoonPanel,
+    'vuln-targeting': ComingSoonPanel,
+    justification: ComingSoonPanel,
+    'logical-form': ComingSoonPanel,
     scheduler: SchedulerPanelLazy,
 };
 

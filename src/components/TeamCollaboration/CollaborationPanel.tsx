@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     Users,
     UserPlus,
@@ -47,17 +47,17 @@ const CollaborationPanel: React.FC = () => {
     const [copied, setCopied] = useState<string | null>(null);
     const [memberName, setMemberName] = useState('');
 
-    const refresh = () => {
+    const refresh = useCallback(() => {
         setTeams(teamCollaborationService.getTeams());
         if (selectedTeam) {
             setInvites(teamCollaborationService.getInvites(selectedTeam));
             setSharedSessions(teamCollaborationService.getSharedSessions(selectedTeam));
         }
-    };
+    }, [selectedTeam]);
 
     useEffect(() => {
         refresh();
-    }, [selectedTeam]);
+    }, [selectedTeam, refresh]);
 
     const handleCreate = () => {
         if (!teamName.trim()) return;

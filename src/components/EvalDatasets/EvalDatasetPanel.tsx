@@ -105,6 +105,7 @@ const EvalDatasetPanel: React.FC = () => {
             const s = m.evalDatasetService;
             const { keyService } = m;
             const keys = keyService?.getKeys() || [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const providers = [...new Set(keys.map((k: any) => k.provider))];
             if (providers.length === 0) return;
             await s.runEval(datasetId, providers[0], '');

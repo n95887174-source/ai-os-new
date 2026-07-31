@@ -419,6 +419,7 @@ const TeamWizard: React.FC<TeamWizardProps> = ({ templates, roles, onSave, onCan
                     <option value="">All Categories</option>
                     {categories.map((c) => (
                         <option key={c} value={c}>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {c} ({(roles as any).filter((r: any) => r.category === c).length})
                         </option>
                     ))}

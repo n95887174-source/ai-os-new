@@ -17,6 +17,7 @@ import { registerServices } from './service-registration/index';
 import { GroupManagerService } from './services/group-manager';
 import type { ApiKey } from './types/metrics-types';
 import { MemoryWatchdog } from './utils/memory-watchdog';
+// eslint-disable-next-line no-restricted-imports
 import { LLMHttpClient } from '../llm/http/llm-http-client';
 import { clearBootstrapSnapshot } from './bootstrap-state';
 import {
@@ -304,7 +305,7 @@ export class SystemBootstrap implements IBootstrap {
                     .getStatuses()
                     .some((s) => s.name === name && s.status === 'ok');
                 if (!hasStatus) {
-                    await this.lifecycle.tryInitIfPresent(name, svc as any);
+                    await this.lifecycle.tryInitIfPresent(name, svc as ILifecycle);
                 }
             }
         }

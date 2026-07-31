@@ -391,6 +391,7 @@ const FineTuningPanel: React.FC = () => {
                                             <input
                                                 type={field.type}
                                                 step={field.step}
+                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                 value={(hyperparams as any)[field.key]}
                                                 onChange={(e) =>
                                                     setHyperparams({

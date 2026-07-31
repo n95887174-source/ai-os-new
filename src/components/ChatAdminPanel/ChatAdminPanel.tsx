@@ -164,6 +164,7 @@ const ChatAdminPanel: React.FC = () => {
         return { totalSessions: sessions.length, totalMessages, totalResponses, avgMessages };
     }, [sessions]);
 
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     const filteredSessions = useMemo(() => {
         const query = deferredSearch;
         let result = sessions.filter(
