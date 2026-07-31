@@ -299,7 +299,8 @@ let _configDefaults: Readonly<ConfigRegistry> | undefined;
 function buildConfigDefaults(): Readonly<ConfigRegistry> {
     const clone = structuredClone(rawConfig);
     if (!clone.security) clone.security = {};
-    // adminToken as non-enumerable — not visible in JSON.stringify/Object.keys
+    // adminToken kept for forward-compat with future server mode; no longer enforced
+    // (single-user local-first app — it was only JS-heap obfuscation, not real auth)
     const adminToken = clone.security.adminToken || crypto.randomUUID();
     const webhookSecret = clone.security.webhookSecret || crypto.randomUUID();
     Object.defineProperty(clone.security, 'adminToken', {

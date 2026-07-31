@@ -11,15 +11,10 @@ export interface VirtualKey {
 
 export interface IVirtualKeyService {
     init(): Promise<void>;
-    create(
-        realKeyId: string,
-        label: string,
-        agentId?: string,
-        adminToken?: string,
-    ): Promise<VirtualKey>;
+    create(realKeyId: string, label: string, agentId?: string): Promise<VirtualKey>;
     lookup(id: string): VirtualKey | undefined;
     resolve(id: string): VirtualKey | undefined;
-    revoke(id: string, adminToken?: string): Promise<void>;
+    revoke(id: string): Promise<void>;
     list(): VirtualKey[];
     listActive(): VirtualKey[];
 }

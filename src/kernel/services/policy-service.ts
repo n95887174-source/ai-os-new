@@ -72,15 +72,6 @@ import { CONFIG } from './config-registry';
 
 import { rootLogger } from './logger-service';
 
-function constantTimeEqual(a: string, b: string): boolean {
-    if (a.length !== b.length) return false;
-    let result = 0;
-    for (let i = 0; i < a.length; i++) {
-        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-    }
-    return result === 0;
-}
-
 const LOGGER = rootLogger.child('PolicyService');
 
 const POLICIES_KEY = 'super_agents_policies';
@@ -117,23 +108,8 @@ export class PolicyService {
         this.activePolicies = [...this.initialPolicies];
     }
 
-    // C-79: audit + auth for mutation APIs
-    private verifyAdminToken(token?: string): boolean {
-        const expected = CONFIG.security?.adminToken;
-        if (!expected) return false;
-        if (!token) return false;
-        return constantTimeEqual(token, expected);
-    }
-
-    private auditMutation(action: string, detail: string, adminToken?: string): void {
-        if (!this.verifyAdminToken(adminToken)) {
-            LOGGER.warn('PolicyService', `Unauthorized ${action} attempt`, { action });
-            this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
-                message: `Unauthorized: ${action} requires admin token`,
-                type: 'error',
-            });
-            throw new Error(`Unauthorized: ${action} requires admin token`);
-        }
+    // C-79 removed: admin token was only obfuscation, not real auth (single-user local-first app)
+    private auditMutation(action: string, detail: string): void {
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
             message: `Policy mutation: ${action} — ${detail}`,
             type: 'info',
@@ -422,8 +398,8 @@ export class PolicyService {
         return list;
     }
 
-    async addPolicy(policy: ISPolicy | Omit<ISPolicy, 'id'>, adminToken?: string) {
-        this.auditMutation('addPolicy', JSON.stringify(policy).slice(0, 200), adminToken);
+    async addPolicy(policy: ISPolicy | Omit<ISPolicy, 'id'>) {
+        this.auditMutation('addPolicy', JSON.stringify(policy).slice(0, 200));
         const newPolicy = {
             ...policy,
             id: (policy as ISPolicy).id || genId('policy'),
@@ -432,18 +408,14 @@ export class PolicyService {
         await this.persist();
     }
 
-    async removePolicy(id: string, adminToken?: string) {
-        this.auditMutation('removePolicy', id, adminToken);
+    async removePolicy(id: string) {
+        this.auditMutation('removePolicy', id);
         this.activePolicies = this.activePolicies.filter((p) => p.id !== id);
         await this.persist();
     }
 
-    async updatePolicy(id: string, updates: Partial<ISPolicy>, adminToken?: string) {
-        this.auditMutation(
-            'updatePolicy',
-            `${id}: ${JSON.stringify(updates).slice(0, 200)}`,
-            adminToken,
-        );
+    async updatePolicy(id: string, updates: Partial<ISPolicy>) {
+        this.auditMutation('updatePolicy', `${id}: ${JSON.stringify(updates).slice(0, 200)}`);
         this.activePolicies = this.activePolicies.map((p) =>
             p.id === id ? { ...p, ...updates } : p,
         );
@@ -507,8 +479,8 @@ export class PolicyService {
         return { allowed: true };
     }
 
-    async setAgentPolicy(agentId: string, policy: AgentPolicy, adminToken?: string) {
-        this.auditMutation('setAgentPolicy', `${agentId}: freeOnly=${policy.freeOnly}`, adminToken);
+    async setAgentPolicy(agentId: string, policy: AgentPolicy) {
+        this.auditMutation('setAgentPolicy', `${agentId}: freeOnly=${policy.freeOnly}`);
         this.agentPolicies[agentId] = policy;
         await this.persist();
     }
@@ -525,8 +497,8 @@ export class PolicyService {
         );
     }
 
-    async removeAgentPolicy(agentId: string, adminToken?: string) {
-        this.auditMutation('removeAgentPolicy', agentId, adminToken);
+    async removeAgentPolicy(agentId: string) {
+        this.auditMutation('removeAgentPolicy', agentId);
         delete this.agentPolicies[agentId];
         await this.persist();
     }
@@ -542,17 +514,17 @@ export class PolicyService {
         return this.getSecurityPatterns();
     }
 
-    async addSecurityPattern(pattern: SecurityPattern, adminToken?: string) {
-        this.auditMutation('addSecurityPattern', `${pattern.type}: ${pattern.label}`, adminToken);
+    async addSecurityPattern(pattern: SecurityPattern) {
+        this.auditMutation('addSecurityPattern', `${pattern.type}: ${pattern.label}`);
         this.securityPatterns.push(pattern);
         await this.persist();
     }
-    addPattern(pattern: SecurityPattern, adminToken?: string) {
-        return this.addSecurityPattern(pattern, adminToken);
+    addPattern(pattern: SecurityPattern) {
+        return this.addSecurityPattern(pattern);
     }
 
-    async removeSecurityPattern(id: string, adminToken?: string) {
-        this.auditMutation('removeSecurityPattern', id, adminToken);
+    async removeSecurityPattern(id: string) {
+        this.auditMutation('removeSecurityPattern', id);
         this.securityPatterns = this.securityPatterns.filter((p) => p.id !== id);
         await this.persist();
     }
@@ -561,25 +533,22 @@ export class PolicyService {
         return this.securityPatterns.filter((p) => p.type === 'blocklist').map((p) => p.pattern);
     }
 
-    addBlockedModel(model: string, adminToken?: string) {
+    addBlockedModel(model: string) {
         const exists = this.securityPatterns.some(
             (p) => p.type === 'blocklist' && p.pattern === model,
         );
         if (!exists)
-            this.addSecurityPattern(
-                {
-                    id: `pattern-${Date.now()}`,
-                    type: 'blocklist',
-                    label: model,
-                    pattern: model,
-                    replacement: '',
-                },
-                adminToken,
-            );
+            this.addSecurityPattern({
+                id: `pattern-${Date.now()}`,
+                type: 'blocklist',
+                label: model,
+                pattern: model,
+                replacement: '',
+            });
     }
 
-    async removeBlockedModel(model: string, adminToken?: string) {
-        this.auditMutation('removeBlockedModel', model, adminToken);
+    async removeBlockedModel(model: string) {
+        this.auditMutation('removeBlockedModel', model);
         const idx = this.securityPatterns.findIndex(
             (p) => p.type === 'blocklist' && p.pattern === model,
         );
@@ -605,8 +574,8 @@ export class PolicyService {
         };
     }
 
-    async resolveViolation(id: string, adminToken?: string) {
-        this.auditMutation('resolveViolation', id, adminToken);
+    async resolveViolation(id: string) {
+        this.auditMutation('resolveViolation', id);
         const v = this.violations.find((v) => v.id === id);
         if (v) {
             v.resolved = true;
@@ -614,18 +583,14 @@ export class PolicyService {
         }
     }
 
-    async clearViolations(adminToken?: string) {
-        this.auditMutation(
-            'clearViolations',
-            `${this.violations.length} entries cleared`,
-            adminToken,
-        );
+    async clearViolations() {
+        this.auditMutation('clearViolations', `${this.violations.length} entries cleared`);
         this.violations = [];
         await this.persist();
     }
 
-    async setPatterns(patterns: SecurityPattern[], adminToken?: string) {
-        this.auditMutation('setPatterns', `${patterns.length} patterns`, adminToken);
+    async setPatterns(patterns: SecurityPattern[]) {
+        this.auditMutation('setPatterns', `${patterns.length} patterns`);
         this.securityPatterns.length = 0;
         this.securityPatterns.push(...patterns);
         await this.persist();

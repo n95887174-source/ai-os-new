@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PolicyService } from './policy-service';
-import { rawConfig } from './config-registry';
 import type { PolicyServiceDeps, ISPolicy, SecurityPattern, AgentPolicy } from './policy-service';
 
 function createDeps(): PolicyServiceDeps {
@@ -9,6 +8,7 @@ function createDeps(): PolicyServiceDeps {
             on: vi.fn().mockReturnValue(() => {}),
             onSafe: vi.fn().mockReturnValue(() => {}),
             emit: vi.fn(),
+            emitOnce: vi.fn().mockReturnValue(true),
         },
         database: {
             getKv: vi.fn().mockResolvedValue(null),
@@ -16,8 +16,6 @@ function createDeps(): PolicyServiceDeps {
         },
     };
 }
-
-const ADMIN_TOKEN = 'test-admin-token';
 
 describe('PolicyService', () => {
     let deps: PolicyServiceDeps;
@@ -31,7 +29,6 @@ describe('PolicyService', () => {
     });
 
     function makeService(): PolicyService {
-        rawConfig.security.adminToken = ADMIN_TOKEN;
         const s = new PolicyService(deps);
         return s;
     }
@@ -127,30 +124,28 @@ describe('PolicyService', () => {
         });
     });
 
-    describe('admin token enforcement', () => {
-        it('should throw on addPolicy without admin token', () => {
-            rawConfig.security.adminToken = undefined;
+    describe('mutations', () => {
+        it('should apply policy mutations without admin token', () => {
             const svc = new PolicyService(deps);
-            expect(() =>
-                svc.addPolicy({
-                    type: 'latency',
-                    target_nodes: ['all'],
-                    value: 100,
-                    action: 'warn',
-                }),
-            ).toThrow('Unauthorized');
+            svc.addPolicy({
+                type: 'latency',
+                target_nodes: ['all'],
+                value: 100,
+                action: 'warn',
+            });
+            expect(svc.getPolicies().some((p) => p.type === 'latency' && p.value === 100)).toBe(
+                true,
+            );
             svc.destroy();
         });
 
-        it('should throw with wrong admin token', () => {
-            rawConfig.security.adminToken = 'real-token';
+        it('should emit notification on mutation', () => {
             const svc = new PolicyService(deps);
-            expect(() =>
-                svc.addPolicy(
-                    { type: 'latency', target_nodes: ['all'], value: 100, action: 'warn' },
-                    'wrong-token',
-                ),
-            ).toThrow('Unauthorized');
+            svc.addPolicy({ type: 'latency', target_nodes: ['all'], value: 100, action: 'warn' });
+            expect(deps.eventBus.emit).toHaveBeenCalledWith(
+                'system:notification',
+                expect.objectContaining({ type: 'info' }),
+            );
             svc.destroy();
         });
     });
@@ -158,10 +153,12 @@ describe('PolicyService', () => {
     describe('policy CRUD', () => {
         it('should add a policy', () => {
             const svc = makeService();
-            svc.addPolicy(
-                { type: 'latency', target_nodes: ['node-1'], value: 500, action: 'warn' },
-                ADMIN_TOKEN,
-            );
+            svc.addPolicy({
+                type: 'latency',
+                target_nodes: ['node-1'],
+                value: 500,
+                action: 'warn',
+            });
             expect(svc.getPolicies().length).toBe(7);
             svc.destroy();
         });
@@ -169,7 +166,7 @@ describe('PolicyService', () => {
         it('should remove a policy', () => {
             const svc = makeService();
             const id = svc.getPolicies()[0].id;
-            svc.removePolicy(id, ADMIN_TOKEN);
+            svc.removePolicy(id);
             expect(svc.getPolicies().length).toBe(5);
             expect(svc.getPolicies().find((p) => p.id === id)).toBeUndefined();
             svc.destroy();
@@ -178,7 +175,7 @@ describe('PolicyService', () => {
         it('should update a policy', () => {
             const svc = makeService();
             const id = svc.getPolicies()[0].id;
-            svc.updatePolicy(id, { value: 9999 }, ADMIN_TOKEN);
+            svc.updatePolicy(id, { value: 9999 });
             expect(svc.getPolicies().find((p) => p.id === id)?.value).toBe(9999);
             svc.destroy();
         });
@@ -194,7 +191,7 @@ describe('PolicyService', () => {
                 allowedProviders: ['groq'],
                 deniedProviders: [],
             };
-            svc.setAgentPolicy('agent-1', policy, ADMIN_TOKEN);
+            svc.setAgentPolicy('agent-1', policy);
             expect(svc.getAgentPolicy('agent-1')).toEqual(policy);
             svc.destroy();
         });
@@ -209,46 +206,34 @@ describe('PolicyService', () => {
 
         it('should remove agent policy', () => {
             const svc = makeService();
-            svc.setAgentPolicy(
-                'agent-1',
-                {
-                    freeOnly: false,
-                    allowedModels: [],
-                    deniedModels: [],
-                    allowedProviders: [],
-                    deniedProviders: [],
-                },
-                ADMIN_TOKEN,
-            );
-            svc.removeAgentPolicy('agent-1', ADMIN_TOKEN);
+            svc.setAgentPolicy('agent-1', {
+                freeOnly: false,
+                allowedModels: [],
+                deniedModels: [],
+                allowedProviders: [],
+                deniedProviders: [],
+            });
+            svc.removeAgentPolicy('agent-1');
             expect(svc.getAgentPolicy('agent-1').freeOnly).toBe(false);
             svc.destroy();
         });
 
         it('should get all agent policies', () => {
             const svc = makeService();
-            svc.setAgentPolicy(
-                'a1',
-                {
-                    freeOnly: true,
-                    allowedModels: [],
-                    deniedModels: [],
-                    allowedProviders: ['groq'],
-                    deniedProviders: [],
-                },
-                ADMIN_TOKEN,
-            );
-            svc.setAgentPolicy(
-                'a2',
-                {
-                    freeOnly: false,
-                    allowedModels: ['gpt-4'],
-                    deniedModels: [],
-                    allowedProviders: [],
-                    deniedProviders: [],
-                },
-                ADMIN_TOKEN,
-            );
+            svc.setAgentPolicy('a1', {
+                freeOnly: true,
+                allowedModels: [],
+                deniedModels: [],
+                allowedProviders: ['groq'],
+                deniedProviders: [],
+            });
+            svc.setAgentPolicy('a2', {
+                freeOnly: false,
+                allowedModels: ['gpt-4'],
+                deniedModels: [],
+                allowedProviders: [],
+                deniedProviders: [],
+            });
             const all = svc.getAllAgentPolicies();
             expect(Object.keys(all).length).toBe(2);
             expect(all['a1'].freeOnly).toBe(true);
@@ -265,17 +250,13 @@ describe('PolicyService', () => {
 
         it('should block denied provider', () => {
             const svc = makeService();
-            svc.setAgentPolicy(
-                'agent-1',
-                {
-                    freeOnly: false,
-                    allowedModels: [],
-                    deniedModels: [],
-                    allowedProviders: [],
-                    deniedProviders: ['groq'],
-                },
-                ADMIN_TOKEN,
-            );
+            svc.setAgentPolicy('agent-1', {
+                freeOnly: false,
+                allowedModels: [],
+                deniedModels: [],
+                allowedProviders: [],
+                deniedProviders: ['groq'],
+            });
             const r = svc.checkAgentPolicy('agent-1', 'groq');
             expect(r.allowed).toBe(false);
             expect(r.blockedBy).toBe('provider');
@@ -284,17 +265,13 @@ describe('PolicyService', () => {
 
         it('should block provider not in allowed list', () => {
             const svc = makeService();
-            svc.setAgentPolicy(
-                'agent-1',
-                {
-                    freeOnly: false,
-                    allowedModels: [],
-                    deniedModels: [],
-                    allowedProviders: ['openrouter'],
-                    deniedProviders: [],
-                },
-                ADMIN_TOKEN,
-            );
+            svc.setAgentPolicy('agent-1', {
+                freeOnly: false,
+                allowedModels: [],
+                deniedModels: [],
+                allowedProviders: ['openrouter'],
+                deniedProviders: [],
+            });
             const r = svc.checkAgentPolicy('agent-1', 'groq');
             expect(r.allowed).toBe(false);
             svc.destroy();
@@ -302,17 +279,13 @@ describe('PolicyService', () => {
 
         it('should block denied model', () => {
             const svc = makeService();
-            svc.setAgentPolicy(
-                'agent-1',
-                {
-                    freeOnly: false,
-                    allowedModels: [],
-                    deniedModels: ['gpt-4'],
-                    allowedProviders: [],
-                    deniedProviders: [],
-                },
-                ADMIN_TOKEN,
-            );
+            svc.setAgentPolicy('agent-1', {
+                freeOnly: false,
+                allowedModels: [],
+                deniedModels: ['gpt-4'],
+                allowedProviders: [],
+                deniedProviders: [],
+            });
             const r = svc.checkAgentPolicy('agent-1', 'groq', 'gpt-4');
             expect(r.allowed).toBe(false);
             expect(r.blockedBy).toBe('model');
@@ -321,17 +294,13 @@ describe('PolicyService', () => {
 
         it('should block model not in allowed list', () => {
             const svc = makeService();
-            svc.setAgentPolicy(
-                'agent-1',
-                {
-                    freeOnly: false,
-                    allowedModels: ['llama-3'],
-                    deniedModels: [],
-                    allowedProviders: [],
-                    deniedProviders: [],
-                },
-                ADMIN_TOKEN,
-            );
+            svc.setAgentPolicy('agent-1', {
+                freeOnly: false,
+                allowedModels: ['llama-3'],
+                deniedModels: [],
+                allowedProviders: [],
+                deniedProviders: [],
+            });
             const r = svc.checkAgentPolicy('agent-1', 'groq', 'gpt-4');
             expect(r.allowed).toBe(false);
             svc.destroy();
@@ -339,17 +308,13 @@ describe('PolicyService', () => {
 
         it('should allow when policy permits provider and model', () => {
             const svc = makeService();
-            svc.setAgentPolicy(
-                'agent-1',
-                {
-                    freeOnly: false,
-                    allowedModels: [],
-                    deniedModels: [],
-                    allowedProviders: ['groq'],
-                    deniedProviders: [],
-                },
-                ADMIN_TOKEN,
-            );
+            svc.setAgentPolicy('agent-1', {
+                freeOnly: false,
+                allowedModels: [],
+                deniedModels: [],
+                allowedProviders: ['groq'],
+                deniedProviders: [],
+            });
             expect(svc.checkAgentPolicy('agent-1', 'groq', 'llama-3').allowed).toBe(true);
             svc.destroy();
         });
@@ -358,46 +323,58 @@ describe('PolicyService', () => {
     describe('security patterns', () => {
         it('should add a security pattern', () => {
             const svc = makeService();
-            svc.addSecurityPattern(
-                { id: 'pii-test', type: 'pii', label: 'test', pattern: 'test', replacement: '[T]' },
-                ADMIN_TOKEN,
-            );
+            svc.addSecurityPattern({
+                id: 'pii-test',
+                type: 'pii',
+                label: 'test',
+                pattern: 'test',
+                replacement: '[T]',
+            });
             expect(svc.getSecurityPatterns().length).toBe(1);
             svc.destroy();
         });
 
         it('should remove a security pattern', () => {
             const svc = makeService();
-            svc.addSecurityPattern(
-                { id: 'pii-x', type: 'pii', label: 'x', pattern: 'x', replacement: '[X]' },
-                ADMIN_TOKEN,
-            );
+            svc.addSecurityPattern({
+                id: 'pii-x',
+                type: 'pii',
+                label: 'x',
+                pattern: 'x',
+                replacement: '[X]',
+            });
             const id = svc.getSecurityPatterns()[0].id;
-            svc.removeSecurityPattern(id, ADMIN_TOKEN);
+            svc.removeSecurityPattern(id);
             expect(svc.getSecurityPatterns().find((p) => p.id === id)).toBeUndefined();
             svc.destroy();
         });
 
         it('should alias addPattern', () => {
             const svc = makeService();
-            svc.addPattern(
-                { id: 'pii-alias', type: 'pii', label: 'alias', pattern: 'x', replacement: '[X]' },
-                ADMIN_TOKEN,
-            );
+            svc.addPattern({
+                id: 'pii-alias',
+                type: 'pii',
+                label: 'alias',
+                pattern: 'x',
+                replacement: '[X]',
+            });
             expect(svc.getSecurityPatterns().some((p) => p.id === 'pii-alias')).toBe(true);
             svc.destroy();
         });
 
         it('should set patterns replacing all', () => {
             const svc = makeService();
-            svc.addSecurityPattern(
-                { id: 'pii-old', type: 'pii', label: 'old', pattern: 'old', replacement: '[O]' },
-                ADMIN_TOKEN,
-            );
+            svc.addSecurityPattern({
+                id: 'pii-old',
+                type: 'pii',
+                label: 'old',
+                pattern: 'old',
+                replacement: '[O]',
+            });
             const newPatterns: SecurityPattern[] = [
                 { id: 'pii-only', type: 'pii', label: 'only', pattern: 'only', replacement: '[O]' },
             ];
-            svc.setPatterns(newPatterns, ADMIN_TOKEN);
+            svc.setPatterns(newPatterns);
             expect(svc.getSecurityPatterns().length).toBe(1);
             expect(svc.getSecurityPatterns()[0].id).toBe('pii-only');
             svc.destroy();
@@ -405,27 +382,30 @@ describe('PolicyService', () => {
 
         it('should manage blocked models', () => {
             const svc = makeService();
-            svc.addBlockedModel('gpt-5', ADMIN_TOKEN);
+            svc.addBlockedModel('gpt-5');
             expect(svc.getBlockedModels()).toContain('gpt-5');
-            svc.removeBlockedModel('gpt-5', ADMIN_TOKEN);
+            svc.removeBlockedModel('gpt-5');
             expect(svc.getBlockedModels()).not.toContain('gpt-5');
             svc.destroy();
         });
 
         it('should not duplicate blocked models', () => {
             const svc = makeService();
-            svc.addBlockedModel('gpt-5', ADMIN_TOKEN);
-            svc.addBlockedModel('gpt-5', ADMIN_TOKEN);
+            svc.addBlockedModel('gpt-5');
+            svc.addBlockedModel('gpt-5');
             expect(svc.getBlockedModels().filter((m) => m === 'gpt-5').length).toBe(1);
             svc.destroy();
         });
 
         it('should get patterns via getPatterns alias', () => {
             const svc = makeService();
-            svc.addSecurityPattern(
-                { id: 'pii-x', type: 'pii', label: 'x', pattern: 'x', replacement: '[X]' },
-                ADMIN_TOKEN,
-            );
+            svc.addSecurityPattern({
+                id: 'pii-x',
+                type: 'pii',
+                label: 'x',
+                pattern: 'x',
+                replacement: '[X]',
+            });
             expect(svc.getPatterns()).toEqual(svc.getSecurityPatterns());
             svc.destroy();
         });
@@ -450,7 +430,7 @@ describe('PolicyService', () => {
             svc.enforcePrivacy({ nodeId: 'n1', output: 'Email: u@t.com' });
             const all = svc.getViolations(false);
             expect(all.length).toBe(1);
-            svc.resolveViolation(all[0].id, ADMIN_TOKEN);
+            svc.resolveViolation(all[0].id);
             expect(svc.getViolations(true).length).toBe(0);
             svc.destroy();
         });
@@ -468,7 +448,7 @@ describe('PolicyService', () => {
             const svc = await initSvc();
             svc.enforcePrivacy({ nodeId: 'n1', output: 'a@b.com' });
             expect(svc.getViolations().length).toBeGreaterThan(0);
-            svc.clearViolations(ADMIN_TOKEN);
+            svc.clearViolations();
             expect(svc.getViolations().length).toBe(0);
             svc.destroy();
         });
@@ -536,45 +516,19 @@ describe('PolicyService', () => {
             });
         });
 
-        describe('checkContentSafety', () => {
-            it('should detect toxic content', () => {
-                const r = svc.checkContentSafety({ nodeId: 'n1', output: 'hate speech' });
-                expect(r.blocked).toBe(true);
-                expect(r.sanitized).toContain('[CONTENT MASKED]');
-            });
-
-            it('should not block safe content', () => {
-                const r = svc.checkContentSafety({ nodeId: 'n1', output: 'Safe content.' });
-                expect(r.blocked).toBe(false);
-            });
-        });
-
-        describe('checkRateLimit', () => {
-            it('should allow under limit', () => {
-                expect(svc.checkRateLimit({ nodeId: 'n1', requestCount: 50 })).toBe(true);
-            });
-
-            it('should block over limit', () => {
-                expect(svc.checkRateLimit({ nodeId: 'n1', requestCount: 150 })).toBe(false);
-            });
-        });
-
         describe('checkModelBlacklist', () => {
             it('should allow non-blacklisted models', () => {
                 expect(svc.checkModelBlacklist('llama-3', 'n1')).toBe(true);
             });
 
             it('should check blacklist patterns case-insensitively', () => {
-                svc.addSecurityPattern(
-                    {
-                        id: 'block-test',
-                        type: 'blocklist',
-                        label: 'test',
-                        pattern: 'test-model',
-                        replacement: '',
-                    },
-                    ADMIN_TOKEN,
-                );
+                svc.addSecurityPattern({
+                    id: 'block-test',
+                    type: 'blocklist',
+                    label: 'test',
+                    pattern: 'test-model',
+                    replacement: '',
+                });
                 expect(svc.checkModelBlacklist('TEST-MODEL', 'n1')).toBe(false);
             });
         });
@@ -583,10 +537,7 @@ describe('PolicyService', () => {
     describe('persistence', () => {
         it('should call setKv after mutations', async () => {
             const svc = makeService();
-            svc.addPolicy(
-                { type: 'latency', target_nodes: ['all'], value: 100, action: 'warn' },
-                ADMIN_TOKEN,
-            );
+            svc.addPolicy({ type: 'latency', target_nodes: ['all'], value: 100, action: 'warn' });
             await vi.waitFor(() => {
                 expect(deps.database.setKv).toHaveBeenCalled();
             });

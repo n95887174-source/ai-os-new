@@ -1,8 +1,6 @@
 import type { IVirtualKeyService, VirtualKey } from '../contracts/virtual-key';
 import { EVENTS } from '../events/event-names';
-import { CONFIG } from './config-registry';
 import { rootLogger } from './logger-service';
-import { constantTimeEqual } from '../utils/constant-time';
 
 const LOGGER = rootLogger.child('VirtualKeyService');
 
@@ -123,23 +121,7 @@ export class VirtualKeyService implements IVirtualKeyService {
         this.debouncedPersist();
     }
 
-    private verifyAdminToken(token?: string): boolean {
-        const expected = CONFIG.security?.adminToken;
-        if (!expected) return false;
-        if (!token) return false;
-        return constantTimeEqual(token, expected);
-    }
-
-    async create(
-        realKeyId: string,
-        label: string,
-        agentId?: string,
-        adminToken?: string,
-    ): Promise<VirtualKey> {
-        if (!this.verifyAdminToken(adminToken)) {
-            LOGGER.warn('VirtualKeyService', 'Unauthorized create attempt');
-            throw new Error('Unauthorized: invalid admin token');
-        }
+    async create(realKeyId: string, label: string, agentId?: string): Promise<VirtualKey> {
         await this.init();
         const id = `vk_${crypto.randomUUID().slice(0, 12)}`;
         const vk: VirtualKey = {
@@ -158,9 +140,7 @@ export class VirtualKeyService implements IVirtualKeyService {
         this.cache.set(id, vk);
         await this.persistNow();
         this.deps.eventBus.emit(EVENTS.VIRTUAL_KEY_CREATED, { virtualKey: vk });
-        LOGGER.info('VirtualKeyService', `Virtual key created: ${label} -> ${keyData.provider}`, {
-            adminToken: '***',
-        });
+        LOGGER.info('VirtualKeyService', `Virtual key created: ${label} -> ${keyData.provider}`);
         return { ...vk };
     }
 
@@ -184,11 +164,7 @@ export class VirtualKeyService implements IVirtualKeyService {
         return undefined;
     }
 
-    async revoke(id: string, adminToken?: string): Promise<void> {
-        if (!this.verifyAdminToken(adminToken)) {
-            LOGGER.warn('VirtualKeyService', 'Unauthorized revoke attempt', { virtualKeyId: id });
-            throw new Error('Unauthorized: invalid admin token');
-        }
+    async revoke(id: string): Promise<void> {
         const vk = this.cache.get(id);
         if (vk) {
             this.cache.set(id, { ...vk, active: false });

@@ -1,8 +1,6 @@
 import { EVENTS } from '../events/event-names';
 import type { SecretStore, SecretRef, SecretStoreConfig } from '../contracts/secret-store';
 import { rootLogger } from './logger-service';
-import { CONFIG } from './config-registry';
-import { constantTimeEqual } from '../utils/constant-time';
 
 const LOGGER = rootLogger.child('ExternalSecretsService');
 
@@ -72,22 +70,7 @@ export class ExternalSecretsService {
         return true;
     }
 
-    private verifyAdminToken(token?: string): boolean {
-        const expected = CONFIG.security?.adminToken;
-        if (!expected) return false;
-        if (!token) return false;
-        return constantTimeEqual(token, expected);
-    }
-
-    async activateBackend(
-        type: BackendType,
-        config: SecretStoreConfig,
-        adminToken?: string,
-    ): Promise<boolean> {
-        if (!this.verifyAdminToken(adminToken)) {
-            LOGGER.warn('ExternalSecretsService', 'Unauthorized activateBackend attempt', { type });
-            throw new Error('Unauthorized: invalid admin token');
-        }
+    async activateBackend(type: BackendType, config: SecretStoreConfig): Promise<boolean> {
         const factory = this.deps.storeFactories?.[type];
         if (!factory) return false;
 
@@ -152,13 +135,7 @@ export class ExternalSecretsService {
         return ok;
     }
 
-    async deleteSecret(ref: SecretRef, adminToken?: string): Promise<boolean> {
-        if (!this.verifyAdminToken(adminToken)) {
-            LOGGER.warn('ExternalSecretsService', 'Unauthorized deleteSecret attempt', {
-                path: ref.path,
-            });
-            throw new Error('Unauthorized: invalid admin token');
-        }
+    async deleteSecret(ref: SecretRef): Promise<boolean> {
         let ok = false;
         for (const store of this.backends.values()) {
             if (
@@ -183,15 +160,7 @@ export class ExternalSecretsService {
     async migrateSecrets(
         from: BackendType,
         to: BackendType,
-        adminToken?: string,
     ): Promise<{ migrated: number; failed: number }> {
-        if (!this.verifyAdminToken(adminToken)) {
-            LOGGER.warn('ExternalSecretsService', 'Unauthorized migrateSecrets attempt', {
-                from,
-                to,
-            });
-            throw new Error('Unauthorized: invalid admin token');
-        }
         const source = this.backends.get(from);
         const target = this.backends.get(to);
         if (!source || !target) return { migrated: 0, failed: 0 };

@@ -329,8 +329,7 @@ export class AdminService {
             }));
     }
 
-    updateAgentConfig(id: string, config: Record<string, unknown>, adminToken?: string) {
-        if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
+    updateAgentConfig(id: string, config: Record<string, unknown>) {
         const topology = this.deps.orchestrator.getActiveTopology();
         if (topology) {
             const node = topology.nodes.find((n) => n.id === id);
@@ -349,8 +348,7 @@ export class AdminService {
         this.deps.eventBus.emit(EVENTS.AGENT_CONFIG_UPDATED, { id, config });
     }
 
-    async createBackup(adminToken?: string) {
-        if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
+    async createBackup() {
         const backup = this.deps.snapshotService.capture(
             'admin',
             'backup',
@@ -363,8 +361,7 @@ export class AdminService {
         return backup;
     }
 
-    async restoreFromBackup(backupId: string, adminToken?: string) {
-        if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
+    async restoreFromBackup(backupId: string) {
         const result = await this.deps.snapshotService.restoreById(backupId);
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
             message: result ? 'Backup restored successfully' : 'Backup restore failed',
@@ -415,8 +412,7 @@ export class AdminService {
         });
     }
 
-    reloadRuntime(adminToken?: string) {
-        if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
+    reloadRuntime() {
         this.deps.kernel.resetRuntime();
         this.deps.eventBus.emit(EVENTS.RELOAD, { timestamp: Date.now() });
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
@@ -432,8 +428,7 @@ export class AdminService {
         });
     }
 
-    clearLogs(adminToken?: string) {
-        if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
+    clearLogs() {
         const prev = this.auditLog.length;
         this.auditLog = [];
         this.deps.eventBus.emit(EVENTS.NOTIFICATION, {
@@ -442,8 +437,7 @@ export class AdminService {
         });
     }
 
-    resetAllStats(adminToken?: string) {
-        if (!this.verifyAdminToken(adminToken)) throw new Error('Unauthorized');
+    resetAllStats() {
         this.deps.agentService.resetAllStats();
         this.deps.metricsService.resetHistory();
         this.deps.kernel.resetMetrics();
@@ -476,29 +470,9 @@ export class AdminService {
         };
     }
 
-    // C-7: Auth token check before destructive operations.
-    // Clients must pass a valid session token matching the configured admin secret.
-    private constantTimeEqual(a: string, b: string): boolean {
-        if (a.length !== b.length) return false;
-        let result = 0;
-        for (let i = 0; i < a.length; i++) {
-            result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-        }
-        return result === 0;
-    }
+    // C-7 removed: admin token was only obfuscation, not real auth (single-user local-first app)
 
-    private verifyAdminToken(token?: string): boolean {
-        const expected = CONFIG.security?.adminToken;
-        if (!expected) return false;
-        if (!token) return false;
-        return this.constantTimeEqual(token, expected);
-    }
-
-    async executeCommand(command: string, args: Record<string, unknown>, adminToken?: string) {
-        // C-7: Require admin token for destructive commands
-        if (!this.verifyAdminToken(adminToken)) {
-            throw new Error('Unauthorized: invalid admin token');
-        }
+    async executeCommand(command: string, args: Record<string, unknown>) {
         this.logAudit({
             action: 'command_execution',
             actor: 'admin',

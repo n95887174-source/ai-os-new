@@ -57,17 +57,31 @@ npm run check:circular-kernel  # circular deps check
 
 ### План
 
-| #   | Задача                                                                      | Статус     |
-| --- | --------------------------------------------------------------------------- | ---------- |
-| 1   | **P0.9** — DependencyCruiser rules, module-level `new Function()`           | 🟢 Done    |
-| 2   | **P0.15** — AgentControlPanel inject no-op → debateHumanService.addArgument | 🟢 Done    |
-| 3   | **P0.11** — ChatExecutor singleton → DI promptSecurityService               | 🟢 Done    |
-| 4   | **P0.12** — ServiceRegistryPanel split (1391 → 421 lines)                   | 🟢 Done    |
-| 5   | **P0.13** — QualityImpactDashboardPanel split (1201 → 51 lines)             | 🟢 Done    |
-| 6   | **P0.14** — DashboardPanel split (1088 → ~380 lines)                        | 🟢 Done    |
-| 7   | **P0.1** — API keys plaintext → честный README + red-warning в UI           | 🟢 Done    |
-| 8   | **P0.2** — `new Function()` → AST interpreter (meriyah)                     | ⚪ Pending |
-| 9   | **P0.4** — admin token → proper auth                                        | ⚪ Pending |
+| #   | Задача                                                                      | Статус  |
+| --- | --------------------------------------------------------------------------- | ------- |
+| 1   | **P0.9** — DependencyCruiser rules, module-level `new Function()`           | 🟢 Done |
+| 2   | **P0.15** — AgentControlPanel inject no-op → debateHumanService.addArgument | 🟢 Done |
+| 3   | **P0.11** — ChatExecutor singleton → DI promptSecurityService               | 🟢 Done |
+| 4   | **P0.12** — ServiceRegistryPanel split (1391 → 421 lines)                   | 🟢 Done |
+| 5   | **P0.13** — QualityImpactDashboardPanel split (1201 → 51 lines)             | 🟢 Done |
+| 6   | **P0.14** — DashboardPanel split (1088 → ~380 lines)                        | 🟢 Done |
+| 7   | **P0.1** — API keys plaintext → честный README + red-warning в UI           | 🟢 Done |
+| 8   | **P0.2** — `new Function()` → AST interpreter (meriyah)                     | 🟢 Done |
+| 9   | **P0.4** — admin token → proper auth                                        | 🟢 Done |
+
+### Changes (P0.4)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Диагностика: `adminToken` был фальшивой защитой — `crypto.randomUUID()` в JS heap, читается любым кодом; `Object.defineProperty` non-enumerable — обфускация, не auth. Гейты **ломали production UI**: PolicyPanel/AgentPolicySection/LiveWorkspace/AgentsPanelContainer вызывают guarded-методы БЕЗ токена → ошибки `Unauthorized` |
+| 2   | `admin-service.ts` — удалены `verifyAdminToken` + приватный `constantTimeEqual`, сняты гейты с `updateAgentConfig`/`createBackup`/`restoreFromBackup`/`reloadRuntime`/`clearLogs`/`resetAllStats`/`executeCommand`                                                                                                                  |
+| 3   | `policy-service.ts` — удалены `verifyAdminToken` + `constantTimeEqual`; `auditMutation` больше не кидает `Unauthorized` (только NOTIFICATION + лог); сняты гейты с 12 мутационных методов                                                                                                                                           |
+| 4   | `virtual-key-service.ts` — удалены `verifyAdminToken` + import `constantTimeEqual`, сняты гейты с `create`/`revoke`; убран фейковый `adminToken: '***'` из лога                                                                                                                                                                     |
+| 5   | `external-secrets-service.ts` — удалены `verifyAdminToken` + import `constantTimeEqual`, сняты гейты с `activateBackend`/`deleteSecret`/`migrateSecrets`                                                                                                                                                                            |
+| 6   | `contracts/virtual-key.ts` — `IVirtualKeyService.create`/`revoke` больше не принимают `adminToken?`                                                                                                                                                                                                                                 |
+| 7   | `config-registry.ts` — `adminToken` оставлен как harmless (forward-compat для будущего server mode), добавлен честный комментарий                                                                                                                                                                                                   |
+| 8   | Тесты: `policy-service.test.ts` (admin token enforcement → mutations без токена), `virtual-key-service.test.ts`, `external-secrets-service.test.ts` переписаны под отсутствие гейтов; удалены мёртвые describe-блоки `checkContentSafety`/`checkRateLimit` (методов не существует)                                                  |
+| 9   | tsc 0 errors, eslint clean, 64 теста (3 файла) ✅, build 11.73s                                                                                                                                                                                                                                                                     |
 
 ### Changes (P0.1)
 
@@ -77,6 +91,19 @@ npm run check:circular-kernel  # circular deps check
 | 2   | `ProviderManagerView.tsx` — red-warning banner (ShieldAlert, role="alert") поверх панели управления ключами                                                 |
 | 3   | `en.ts`/`ru.ts` — добавлены `provider_manager.plaintext_warning_title` / `plaintext_warning_body`                                                           |
 | 4   | tsc 0 errors, build 13.97s. Note: ProviderManager.test — 1 pre-existing failure (`eventBus.onSafe is not a function`), подтверждён на HEAD                  |
+
+### Changes (P0.2)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                            |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `src/kernel/workers/sandbox-interpreter.ts` — полноценный AST-интерпретатор (meriyah): переменные/замыкания, destructuring, loops, try/catch/finally, switch, async/await, spread, стрелки, безопасные глобалы через Proxy, step (2M) + depth (2000) лимиты, валидация запрещённых API |
+| 2   | `src/kernel/workers/sandbox-interpreter.test.ts` — 55 тестов (validateSandboxCode, выражения, control flow, функции, os/data, sandboxing) ✅                                                                                                                                           |
+| 3   | Исправлена microtask-deferral sync-операций: `evalCall`/`evalAssignment`/`destructurePattern`/`evalVarDecl`/`evalIf`/`evalConditional`/`evalNew` выполняются синхронно когда возможно — нативные sync-callback'и (forEach) и рекурсия (depth limit) работают корректно                 |
+| 4   | `evalTry` переписан: finalizer выполняется ПОСЛЕ catch-блока (раньше запускался до завершения async-catch и перетирал результат); исключение из finally перекрывает body; rethrow с `cause`                                                                                            |
+| 5   | `evalStmt` получил fallback для expression-type statement'ов (стрелочные тела вида `() => ++c`)                                                                                                                                                                                        |
+| 6   | `sandbox.worker.ts` — `new Function`/CSP-detection удалены, импортирует `runSandboxCode`; cap_request RPC (allowedTools) сохранён; timeout через Promise.race                                                                                                                          |
+| 7   | `sandbox-service.ts` — prod-gating сообщение больше не требует unsafe-eval                                                                                                                                                                                                             |
+| 8   | tsc 0 errors, eslint clean, build 21s, `sandbox.worker-*.js` chunk 218KB (интерпретатор + meriyah). Commit `7fb26fce`                                                                                                                                                                  |
 
 ### Changes (P0.14)
 
