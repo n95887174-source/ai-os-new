@@ -1,19 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-    MessageSquare,
-    Play,
-    Pause,
-    Square,
-    Activity,
-    AlertTriangle,
-    X,
-    Download,
-    FileText,
-} from 'lucide-react';
+import { MessageSquare, AlertTriangle, X } from 'lucide-react';
 import {
     debateService,
-    debateEngine,
     debateHumanService,
     sessionManager,
     hypothesisService,
@@ -50,75 +39,16 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useNow } from '../../hooks/useNow';
 import { useDebatePanelSubscriptions } from './useDebatePanelSubscriptions';
 import { HistoricalFiguresPicker } from './HistoricalFiguresPicker';
+import { DebateSessionHeader } from './DebateSessionHeader';
 import { getHistoricalFigure } from '../../kernel/instances';
 import {
-    btnControlBase,
     debatePanelRoot,
-    debateStatusDot,
-    debateStatusText,
     dismissBtn,
     errorBanner,
-    flexGap2,
     pageSubtitleMuted,
     pageTitleLarge,
     sectionHeaderBottom,
 } from '../../styles/common';
-
-function buildDebateMarkdown(session: DebateSession): string {
-    const lines: string[] = [];
-    lines.push(`# ${session.topic}`);
-    lines.push('');
-    lines.push(
-        `**Strategy:** ${session.strategy} | **Rounds:** ${session.currentRound}/${session.maxRounds} | **Status:** ${session.status}`,
-    );
-    lines.push('');
-    lines.push('---');
-    lines.push('');
-    if (session.consensus) {
-        lines.push('## Consensus');
-        lines.push('');
-        lines.push(session.consensus);
-        lines.push('');
-        lines.push('---');
-        lines.push('');
-    }
-    if (session.interpretation) {
-        lines.push('## Interpretation');
-        lines.push('');
-        lines.push(session.interpretation.summary);
-        lines.push('');
-        lines.push('---');
-        lines.push('');
-    }
-    if (session.participants?.length) {
-        lines.push('## Participants');
-        lines.push('');
-        for (const p of session.participants) {
-            lines.push(`- **${p.name}** (${p.role})${p.modelId ? ` — ${p.modelId}` : ''}`);
-        }
-        lines.push('');
-        lines.push('---');
-        lines.push('');
-    }
-    if (session.arguments?.length) {
-        lines.push('## Arguments');
-        lines.push('');
-        for (const a of session.arguments) {
-            const agent = session.participants?.find((p) => p.id === a.agentId);
-            lines.push(`### Round ${a.round} — ${agent?.name ?? a.agentId}`);
-            lines.push('');
-            lines.push(`> ${a.content.replace(/\n/g, '\n> ')}`);
-            lines.push('');
-            lines.push(`*Confidence: ${((a.confidence ?? 0) * 100).toFixed(0)}%*`);
-            lines.push('');
-        }
-    }
-    lines.push('---');
-    lines.push('');
-    lines.push(`*Exported on ${new Date().toISOString()} from SuperAgents OS*`);
-    lines.push('');
-    return lines.join('\n');
-}
 
 const DebatePanel: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -432,275 +362,19 @@ const DebatePanel: React.FC = () => {
                 </div>
 
                 {session && (
-                    <div className="debate-header-session">
-                        <div className="debate-status-badge">
-                            <span style={debateStatusText}>
-                                <Activity size={16} color="#a855f7" aria-hidden="true" />{' '}
-                                {t('debate.round')
-                                    .replace('{0}', String(session.currentRound))
-                                    .replace('{1}', String(session.maxRounds))}
-                                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                                    {' | '}
-                                    {session.arguments?.filter(
-                                        (a) => a.round === session.currentRound,
-                                    ).length ?? 0}{' '}
-                                    args
-                                </span>
-                                {session.status === 'active' &&
-                                    (() => {
-                                        const roundArgs = (session.arguments ?? []).filter(
-                                            (a) => a.round === session.currentRound,
-                                        );
-                                        const firstTs =
-                                            roundArgs.length > 0
-                                                ? Math.min(
-                                                      ...roundArgs.map((a) => a.timestamp ?? now),
-                                                  )
-                                                : now;
-                                        const elapsed = Math.floor((now - firstTs) / 1000);
-                                        const mins = Math.floor(elapsed / 60);
-                                        const secs = elapsed % 60;
-                                        return (
-                                            <span
-                                                style={{
-                                                    color: '#64748b',
-                                                    fontSize: '0.7rem',
-                                                    fontFamily: 'monospace',
-                                                    marginLeft: 6,
-                                                }}
-                                            >
-                                                ⏱ {String(mins).padStart(2, '0')}:
-                                                {String(secs).padStart(2, '0')}
-                                            </span>
-                                        );
-                                    })()}
-                            </span>
-                            <span
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    color:
-                                        session.status === 'active'
-                                            ? '#10b981'
-                                            : session.status === 'paused'
-                                              ? '#f59e0b'
-                                              : '#64748b',
-                                }}
-                            >
-                                {session.status === 'active' ? (
-                                    <div className="pulsing" style={debateStatusDot} />
-                                ) : (
-                                    <Pause size={14} />
-                                )}
-                                {(session.status ?? 'active').toUpperCase()}
-                            </span>
-                        </div>
-
-                        <div style={flexGap2}>
-                            {session.status === 'active' ? (
-                                <button
-                                    onClick={() => {
-                                        try {
-                                            debateEngine.pauseSession(session.id);
-                                            setError(null);
-                                        } catch {
-                                            if (isMountedRef.current) {
-                                                setError(t('debate.error_pause'));
-                                                clearError();
-                                            }
-                                        }
-                                    }}
-                                    className="btn-secondary"
-                                    style={{
-                                        ...btnControlBase,
-                                        color: '#f59e0b',
-                                        borderColor: 'rgba(245,158,11,0.2)',
-                                        background: 'rgba(245,158,11,0.05)',
-                                    }}
-                                    title={t('debate.pause')}
-                                    aria-label={t('debate.pause')}
-                                >
-                                    <Pause size={18} aria-hidden="true" />
-                                </button>
-                            ) : session.status === 'paused' ? (
-                                <button
-                                    onClick={() => {
-                                        try {
-                                            debateEngine.resumeSession(session.id);
-                                            setError(null);
-                                        } catch {
-                                            if (isMountedRef.current) {
-                                                setError(t('debate.error_resume'));
-                                                clearError();
-                                            }
-                                        }
-                                    }}
-                                    className="btn-secondary"
-                                    style={{
-                                        ...btnControlBase,
-                                        color: '#10b981',
-                                        borderColor: 'rgba(16,185,129,0.2)',
-                                        background: 'rgba(16,185,129,0.05)',
-                                    }}
-                                    title={t('debate.resume')}
-                                    aria-label={t('debate.resume')}
-                                >
-                                    <Play size={18} fill="currentColor" aria-hidden="true" />
-                                </button>
-                            ) : null}
-                            {session.status !== 'completed' &&
-                                session.status !== 'cancelled' &&
-                                session.status !== 'failed' && (
-                                    <button
-                                        onClick={() => {
-                                            console.log('[DebatePanel] Stop clicked', {
-                                                id: session.id,
-                                                status: session.status,
-                                                phase: (session as { status?: string }).status,
-                                            });
-                                            try {
-                                                debateEngine.cancelSession(session.id);
-                                                console.log('[DebatePanel] cancelSession OK', {
-                                                    id: session.id,
-                                                });
-                                                setError(null);
-                                            } catch (e) {
-                                                if (isMountedRef.current) {
-                                                    console.error(
-                                                        '[DebatePanel] cancelSession failed:',
-                                                        e,
-                                                    );
-                                                    setError(t('debate.error_stop'));
-                                                    clearError();
-                                                }
-                                            }
-                                        }}
-                                        className="btn-secondary"
-                                        style={{
-                                            ...btnControlBase,
-                                            color: '#ef4444',
-                                            borderColor: 'rgba(239,68,68,0.2)',
-                                            background: 'rgba(239,68,68,0.05)',
-                                        }}
-                                        title={t('debate.stop')}
-                                        aria-label={t('debate.stop')}
-                                    >
-                                        <Square size={18} fill="currentColor" aria-hidden="true" />
-                                    </button>
-                                )}
-                            {session.status !== 'completed' &&
-                                session.status !== 'cancelled' &&
-                                session.status !== 'failed' && (
-                                    <select
-                                        value={factCheckLevel}
-                                        onChange={(e) => {
-                                            const v = e.target.value as 'off' | 'sampled' | 'all';
-                                            setFactCheckLevel(v);
-                                            debateService.factCheckService.setLevel(v);
-                                        }}
-                                        style={{
-                                            padding: '4px 8px',
-                                            borderRadius: 6,
-                                            fontSize: '0.75rem',
-                                            background: 'rgba(30,30,50,0.8)',
-                                            color: '#e2e8f0',
-                                            border: '1px solid rgba(100,116,139,0.3)',
-                                            cursor: 'pointer',
-                                        }}
-                                        title="Fact-Check Level"
-                                    >
-                                        <option value="off">Fact-Check: Off</option>
-                                        <option value="sampled">Fact-Check: Sampled</option>
-                                        <option value="all">Fact-Check: All</option>
-                                    </select>
-                                )}
-                            {session.status === 'completed' && (
-                                <div
-                                    style={{ position: 'relative', display: 'inline-flex', gap: 0 }}
-                                >
-                                    <button
-                                        onClick={() => {
-                                            const exportData = {
-                                                topic: session.topic,
-                                                strategy: session.strategy,
-                                                status: session.status,
-                                                maxRounds: session.maxRounds,
-                                                currentRound: session.currentRound,
-                                                participants: (session.participants ?? []).map(
-                                                    (p) => ({
-                                                        id: p.id,
-                                                        name: p.name,
-                                                        role: p.role,
-                                                        model: p.modelId,
-                                                    }),
-                                                ),
-                                                arguments: (session.arguments ?? []).map((a) => ({
-                                                    id: a.id,
-                                                    agentId: a.agentId,
-                                                    content: a.content,
-                                                    round: a.round,
-                                                    timestamp: a.timestamp,
-                                                    confidence: a.confidence,
-                                                })),
-                                                graphMetrics: session.graphMetrics,
-                                                interpretation: session.interpretation,
-                                            };
-                                            const blob = new Blob(
-                                                [JSON.stringify(exportData, null, 2)],
-                                                { type: 'application/json' },
-                                            );
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = `debate-${(session.topic ?? '').slice(0, 50).replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().slice(0, 10)}.json`;
-                                            a.click();
-                                            URL.revokeObjectURL(url);
-                                        }}
-                                        className="btn-secondary"
-                                        style={{
-                                            ...btnControlBase,
-                                            color: '#3b82f6',
-                                            borderColor: 'rgba(59,130,246,0.2)',
-                                            background: 'rgba(59,130,246,0.05)',
-                                            borderTopRightRadius: 0,
-                                            borderBottomRightRadius: 0,
-                                        }}
-                                        title="Export JSON"
-                                        aria-label="Export debate as JSON"
-                                    >
-                                        <Download size={18} aria-hidden="true" />
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            const md = buildDebateMarkdown(session);
-                                            const blob = new Blob([md], { type: 'text/markdown' });
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = `debate-${(session.topic ?? '').slice(0, 50).replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().slice(0, 10)}.md`;
-                                            a.click();
-                                            URL.revokeObjectURL(url);
-                                        }}
-                                        className="btn-secondary"
-                                        style={{
-                                            ...btnControlBase,
-                                            color: '#10b981',
-                                            borderColor: 'rgba(16,185,129,0.2)',
-                                            background: 'rgba(16,185,129,0.05)',
-                                            borderTopLeftRadius: 0,
-                                            borderBottomLeftRadius: 0,
-                                            borderLeft: 'none',
-                                        }}
-                                        title="Export Markdown"
-                                        aria-label="Export debate as Markdown"
-                                    >
-                                        <FileText size={18} aria-hidden="true" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <DebateSessionHeader
+                        session={session}
+                        now={now}
+                        factCheckLevel={factCheckLevel}
+                        onFactCheckLevelChange={(v) => {
+                            setFactCheckLevel(v);
+                            debateService.factCheckService.setLevel(v);
+                        }}
+                        isMountedRef={isMountedRef}
+                        setError={setError}
+                        clearError={clearError}
+                        t={t}
+                    />
                 )}
             </div>
 
