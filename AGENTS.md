@@ -57,26 +57,36 @@ npm run check:circular-kernel  # circular deps check
 
 ### План
 
-| #   | Задача                                                                      | Статус  |
-| --- | --------------------------------------------------------------------------- | ------- |
-| 1   | **P0.9** — DependencyCruiser rules, module-level `new Function()`           | 🟢 Done |
-| 2   | **P0.15** — AgentControlPanel inject no-op → debateHumanService.addArgument | 🟢 Done |
-| 3   | **P0.11** — ChatExecutor singleton → DI promptSecurityService               | 🟢 Done |
-| 4   | **P0.12** — ServiceRegistryPanel split (1391 → 421 lines)                   | 🟢 Done |
-| 5   | **P0.13** — QualityImpactDashboardPanel split (1201 → 51 lines)             | 🟢 Done |
-| 6   | **P0.14** — DashboardPanel split (1088 → ~380 lines)                        | 🟢 Done |
-| 7   | **P0.1** — API keys plaintext → честный README + red-warning в UI           | 🟢 Done |
-| 8   | **P0.2** — `new Function()` → AST interpreter (meriyah)                     | 🟢 Done |
-| 9   | **P0.4** — admin token → proper auth                                        | 🟢 Done |
-| 10  | **P0.3** — CI красный: lint errors/warnings + npm audit                     | 🟢 Done |
-| 11  | **P0.7** — 32 debate demo-заглушки → снесены (роуты уже на ComingSoonPanel) | 🟢 Done |
-| 12  | **P0.5** — MCP `wrapExternalData` санитизация `tools/list` + `tools/call`   | 🟢 Done |
-| 13  | **P0.6** — Webhook SSRF TOCTOU (HEAD-проверка → DNS rebind)                 | 🟢 Done |
-| 14  | **P0.8** — 47 МБ мусора `docs/ocs/erorrrrr*.md/txt` → удалён                | 🟢 Done |
-| 15  | **P0.9** — `ru.ts` ломаный русский (1873 строки) → переведены               | 🟢 Done |
-| 16  | **P0.10** — ComingSoonPanel подключён к 32 stub-роутам                      | 🟢 Done |
-| 17  | **P0.15** — DebatePanel split (825 → 499 строк)                             | 🟢 Done |
-| 18  | **P1.1** — 12 zustand stores покрыты тестами                                | 🟢 Done |
+| #   | Задача                                                                                 | Статус  |
+| --- | -------------------------------------------------------------------------------------- | ------- |
+| 1   | **P0.9** — DependencyCruiser rules, module-level `new Function()`                      | 🟢 Done |
+| 2   | **P0.15** — AgentControlPanel inject no-op → debateHumanService.addArgument            | 🟢 Done |
+| 3   | **P0.11** — ChatExecutor singleton → DI promptSecurityService                          | 🟢 Done |
+| 4   | **P0.12** — ServiceRegistryPanel split (1391 → 421 lines)                              | 🟢 Done |
+| 5   | **P0.13** — QualityImpactDashboardPanel split (1201 → 51 lines)                        | 🟢 Done |
+| 6   | **P0.14** — DashboardPanel split (1088 → ~380 lines)                                   | 🟢 Done |
+| 7   | **P0.1** — API keys plaintext → честный README + red-warning в UI                      | 🟢 Done |
+| 8   | **P0.2** — `new Function()` → AST interpreter (meriyah)                                | 🟢 Done |
+| 9   | **P0.4** — admin token → proper auth                                                   | 🟢 Done |
+| 10  | **P0.3** — CI красный: lint errors/warnings + npm audit                                | 🟢 Done |
+| 11  | **P0.7** — 32 debate demo-заглушки → снесены (роуты уже на ComingSoonPanel)            | 🟢 Done |
+| 12  | **P0.5** — MCP `wrapExternalData` санитизация `tools/list` + `tools/call`              | 🟢 Done |
+| 13  | **P0.6** — Webhook SSRF TOCTOU (HEAD-проверка → DNS rebind)                            | 🟢 Done |
+| 14  | **P0.8** — 47 МБ мусора `docs/ocs/erorrrrr*.md/txt` → удалён                           | 🟢 Done |
+| 15  | **P0.9** — `ru.ts` ломаный русский (1873 строки) → переведены                          | 🟢 Done |
+| 16  | **P0.10** — ComingSoonPanel подключён к 32 stub-роутам                                 | 🟢 Done |
+| 17  | **P0.15** — DebatePanel split (825 → 499 строк)                                        | 🟢 Done |
+| 18  | **P1.1** — 12 zustand stores покрыты тестами                                           | 🟢 Done |
+| 19  | **P1.2** — hooks покрыты тестами (usePoolStatus, useFocusTrap, useRoutingIntelligence) | 🟢 Done |
+
+### Changes (P1.2)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `useFocusTrap.test.tsx` — 9 тестов (JSX wrapper-компонент с ref, Tab/Shift+Tab wrap, middle-focus passthrough, non-Tab ignore, cleanup restore focus, toggle inactive→active)                                                                                                                     |
+| 2   | `usePoolStatus.test.ts` — 11 тестов (init keys/quotas, fallback quotas, refresh на KEY_ADDED/UPDATED/REMOVED/STATE_CHANGED, no-re-render при неизменных данных, unmount unsubscribe, setFreeTierLimit/setPoolStrategy/getPoolStrategy/getPoolKeyDistribution)                                     |
+| 3   | `useRoutingIntelligence.test.ts` — 16 тестов (init decisions/config/slaMode/abTest, refresh на ROUTER_SIGNAL/KEY_UPDATED, unmount unsubscribe, setFallbackChain/setDowngradeChain/updateFallbackLink/setSlaMode, setActiveProfile/updateActiveProfileWeights, startABTest true/false, stopABTest) |
+| 4   | Итого: **3 новых файла, 36 тестов** на `src/hooks/`. `npx vitest run src/hooks` — 36 ✅, `typecheck:fast` 0 errors, commit `ad57a7a7`                                                                                                                                                             |
 
 ### Changes (P1.1)
 
