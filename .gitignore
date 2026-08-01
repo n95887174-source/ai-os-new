@@ -68,6 +68,9 @@ test-summary.txt
 playwright-report/
 playwright/.cache/
 
+# Vitest coverage reports
+coverage/
+
 
 
 # Temp analysis files
