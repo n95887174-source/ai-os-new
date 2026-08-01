@@ -94,7 +94,6 @@ const SREAgentPanel: React.FC = () => {
             unsub2();
             unsub3();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refreshData]);
     // C-95: usePolling gates on document.hidden
     usePolling(refreshData, 5000);
