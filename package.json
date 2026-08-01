@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "test:coverage": "vitest run src/stores src/hooks src/kernel/events src/kernel/workers src/kernel/container.test.ts --coverage",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "proxy": "node scripts/cors-proxy.mjs",
     "sync-server": "node server/sync-server.mjs",

@@ -128,6 +128,43 @@ jobs:
             - name: Run tests
               run: npm run test
 
+    coverage:
+        name: Test Coverage
+        runs-on: ubuntu-latest
+        needs: quality
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: 'npm'
+
+            - name: Cache node_modules
+              uses: actions/cache@v4
+              id: cov-npm-cache
+              with:
+                  path: node_modules
+                  key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+            - name: Install dependencies
+              if: steps.cov-npm-cache.outputs.cache-hit != 'true'
+              run: npm ci --legacy-peer-deps
+
+            - name: Run tests with coverage
+              # P1.9: coverage is scoped to the covered directories via
+              # coverage.include in vitest.config.ts (stores, hooks,
+              # kernel/events, kernel/workers, container). Thresholds: 30%
+              # statements/lines/functions, 20% branches. Extend the include
+              # list as P1.3-P1.7 add tests to kernel/services, memory,
+              # key-management, llm. Note: `npm run test -- --coverage` would
+              # run the whole suite (OOM on some files) — this runs only the
+              # verified stable set.
+              run: npm run test:coverage
+
     security-audit:
         name: Security Audit
         runs-on: ubuntu-latest

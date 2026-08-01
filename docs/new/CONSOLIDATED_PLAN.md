@@ -65,7 +65,7 @@
 | P1.6  | **Покрыть LLM-провайдеры contract-тестами** — 1 из 9 имеет тест (gemini)                                                                    | `[E][Z]` | L (1w)   | ❌     |
 | P1.7  | **Покрыть workers тестами** — memory.worker (237 строк) + sandbox.worker (372 строк) — 0 тестов                                             | `[E]`    | M (2-3d) | ❌     |
 | P1.8  | **Настроить test coverage с threshold 30%** — `@vitest/coverage-v8` в devDeps, но не используется                                           | `[E][Z]` | S (2h)   | ✅     |
-| P1.9  | **Добавить `--coverage` в CI test job**                                                                                                     | `[A]`    | S (1h)   | ❌     |
+| P1.9  | **Добавить `--coverage` в CI test job**                                                                                                     | `[A]`    | S (1h)   | ✅     |
 | P1.10 | **Добавить `dep-graph` job в CI: `npm run check:deps`**                                                                                     | `[A]`    | S (30m)  | ❌     |
 | P1.11 | **Убрать exclude тестов из `tsconfig.app.json`** или создать `tsconfig.test.json`                                                           | `[A]`    | S (2h)   | ❌     |
 

@@ -79,6 +79,17 @@ npm run check:circular-kernel  # circular deps check
 | 18  | **P1.1** — 12 zustand stores покрыты тестами                                           | 🟢 Done |
 | 19  | **P1.2** — hooks покрыты тестами (usePoolStatus, useFocusTrap, useRoutingIntelligence) | 🟢 Done |
 | 20  | **P1.8** — test coverage threshold 30% (scoped include, рабочий `--coverage`)          | 🟢 Done |
+| 21  | **P1.9** — CI coverage job (стабильный набор, отдельный от OOM-прогона)                | 🟢 Done |
+
+### Changes (P1.9)
+
+| #   | Что сделано                                                                                                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `package.json` — добавлен скрипт `test:coverage`: `vitest run src/stores src/hooks src/kernel/events src/kernel/workers src/kernel/container.test.ts --coverage` (только проверенный стабильный набор, 326 ✅)                                                |
+| 2   | `.github/workflows/ci.yml` — добавлен job `coverage` (после `test`): установка deps + `npm run test:coverage`. Отдельный job вместо `npm run test -- --coverage`, потому что полный прогон всего src OOM-ится на некоторых файлах (пре-существующая проблема) |
+| 3   | Измерено 2026-08-01: `npm run test:coverage` → **64.92% stmts / 54.41% branch / 68.48% funcs / 67.61% lines, 326 ✅, зелёный** (пороги 30/20/30/30)                                                                                                           |
+| 4   | `docs/new/CONSOLIDATED_PLAN.md` — P1.9 ✅                                                                                                                                                                                                                     |
+| 5   | Примечание: `vitest.config.ts:7` LSP-ошибка `'test' does not exist in type 'UserConfigExport'` — пре-существующая, игнорировать. Следующая задача — **P1.10** (добавить `dep-graph` job в CI: `npm run check:deps`)                                           |
 
 ### Changes (P1.8)
 
