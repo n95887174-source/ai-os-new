@@ -514,6 +514,10 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 const q = _sendQueue.get(sessionId);
                 if (q && q.length > 0) {
                     const next = q.shift()!;
+                    // Remove the queue entry before recursing so the flushed
+                    // message is processed instead of re-queued into the still-
+                    // present (now empty) entry — previously it was lost forever.
+                    _sendQueue.delete(sessionId);
                     get().sendMessage(
                         next.targets,
                         next.text,
