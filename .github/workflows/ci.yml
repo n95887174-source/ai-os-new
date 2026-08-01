@@ -223,6 +223,38 @@ jobs:
             - name: Check kernel circular deps
               run: npm run check:circular-kernel
 
+    dep-graph:
+        name: Dependency Graph Check
+        runs-on: ubuntu-latest
+        needs: quality
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: 'npm'
+
+            - name: Cache node_modules
+              uses: actions/cache@v4
+              id: dep-npm-cache
+              with:
+                  path: node_modules
+                  key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+            - name: Install dependencies
+              if: steps.dep-npm-cache.outputs.cache-hit != 'true'
+              run: npm ci --legacy-peer-deps
+
+            - name: Check dependency graph rules
+              # P1.10: dependency-cruiser enforces layer rules (UI -> Application
+              # -> Kernel -> Infrastructure) and the composition-root exception.
+              # 0 violations expected (1418 modules, 5074 deps cruised 2026-08-01).
+              run: npm run check:deps
+
     e2e:
         name: E2E Tests
         runs-on: ubuntu-latest

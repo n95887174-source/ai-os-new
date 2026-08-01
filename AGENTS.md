@@ -80,6 +80,16 @@ npm run check:circular-kernel  # circular deps check
 | 19  | **P1.2** — hooks покрыты тестами (usePoolStatus, useFocusTrap, useRoutingIntelligence) | 🟢 Done |
 | 20  | **P1.8** — test coverage threshold 30% (scoped include, рабочий `--coverage`)          | 🟢 Done |
 | 21  | **P1.9** — CI coverage job (стабильный набор, отдельный от OOM-прогона)                | 🟢 Done |
+| 22  | **P1.10** — CI dep-graph job: `npm run check:deps`                                     | 🟢 Done |
+
+### Changes (P1.10)
+
+| #   | Что сделано                                                                                                                                                                                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `.github/workflows/ci.yml` — добавлен job `dep-graph` (после `circular-check`): установка deps + `npm run check:deps`. Обеспечивает enforcement layer rules (UI → Application → Kernel → Infrastructure) + composition-root exception на каждый PR |
+| 2   | Проверено локально 2026-08-01: `npm run check:deps` → **0 violations (1418 modules, 5074 dependencies cruised)**                                                                                                                                   |
+| 3   | `docs/new/CONSOLIDATED_PLAN.md` — P1.10 ✅                                                                                                                                                                                                         |
+| 4   | Примечание: `vitest.config.ts:7` LSP-ошибка — пре-существующая, игнорировать. Следующая задача — **P1.11** (убрать exclude тестов из `tsconfig.app.json` или создать `tsconfig.test.json`)                                                         |
 
 ### Changes (P1.9)
 
