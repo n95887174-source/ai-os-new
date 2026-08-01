@@ -57,7 +57,7 @@
 
 | #     | Задача                                                                                                                                      | Аудиты   | Усилие   | Статус |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------- | ------ |
-| P1.1  | **Покрыть stores тестами** — 0 тестов на 12 zustand-сторов. Приоритет: `useKeyStore`, `debateLiveStore`, `chat/store.ts`, `useSystemStatus` | All 5    | L (1w)   | ❌     |
+| P1.1  | **Покрыть stores тестами** — 0 тестов на 12 zustand-сторов. Приоритет: `useKeyStore`, `debateLiveStore`, `chat/store.ts`, `useSystemStatus` | All 5    | L (1w)   | ✅     |
 | P1.2  | **Покрыть hooks тестами** — 0 тестов на 9 хуков. Приоритет: `usePoolStatus`, `useFocusTrap`, `useRoutingIntelligence`                       | All 5    | M (2-3d) | ❌     |
 | P1.3  | **Покрыть debate-runtime тестами** — 6 тестов на 102 файла (5.9%). Цель: 30% на engine, llm-caller, metrics, interpreter, finalizer         | `[E][M]` | XL (2w)  | ❌     |
 | P1.4  | **Покрыть memory subdir тестами** — 0 тестов на 10 файлов (7-store architecture)                                                            | `[E]`    | M (3-5d) | ❌     |

@@ -76,8 +76,25 @@ npm run check:circular-kernel  # circular deps check
 | 15  | **P0.9** — `ru.ts` ломаный русский (1873 строки) → переведены               | 🟢 Done |
 | 16  | **P0.10** — ComingSoonPanel подключён к 32 stub-роутам                      | 🟢 Done |
 | 17  | **P0.15** — DebatePanel split (825 → 499 строк)                             | 🟢 Done |
+| 18  | **P1.1** — 12 zustand stores покрыты тестами                                | 🟢 Done |
 
-### Changes (P0.15)
+### Changes (P1.1)
+
+| #   | Что сделано                                                                                                                                                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Диагностика: 12 zustand-сторов с 0 тестами. Приоритет — `useKeyStore`, `debateLiveStore`, `chat/store.ts`, `useSystemStatus`. Обнаружен и починен баг очереди отправки в `chat/store.ts` (см. ниже)                                                                |
+| 2   | `debateLiveStore.test.ts` — 21 тест (event-driven: аргументы, раунды, стриминг, таймеры, verdict)                                                                                                                                                                  |
+| 3   | `useKeyStore.test.ts` — 24 теста (actions, health-check события, импорт/экспорт, фильтрация)                                                                                                                                                                       |
+| 4   | `useSystemStatus.test.ts` — 7 тестов (hook через renderHook + fake timers, debounce 50ms, staleness)                                                                                                                                                               |
+| 5   | `chat/store.test.ts` — 36 тестов + **фикс бага**: `sendMessage` finally-flush не удалял запись из `_sendQueue` → сообщение из очереди само-пере-регистрировалось и застревало (все последующие send падали); фикс — `_sendQueue.delete(sessionId)` перед рекурсией |
+| 6   | `activeDebateStore.test.ts` — 8 тестов (session/governorState + adapter-прокси)                                                                                                                                                                                    |
+| 7   | `useNotificationStore.test.ts` — 8 тестов (badges increment/clear/clearAll)                                                                                                                                                                                        |
+| 8   | `uiPreferencesStore.test.ts` — 19 тестов (persist middleware, layout, recent commands, миграция v0→v2 через dynamic import)                                                                                                                                        |
+| 9   | `topologyTraceStore.test.ts` — 11 тестов (raw string events `cognitive:step:*`, caps, clear, destroy-last)                                                                                                                                                         |
+| 10  | `useKeyIntelligence.test.ts` — 7 тестов (pipeline run, error event emit, unmount abort)                                                                                                                                                                            |
+| 11  | `debate-session-store/index.test.ts` — 20 тестов (Dexie liveQuery mock, CRUD, filter, pause/resume/archive/tag/folder/rename/pin)                                                                                                                                  |
+| 12  | `useChatStore.test.ts` — 2 smoke-теста (barrel re-exports)                                                                                                                                                                                                         |
+| 13  | Итого: **11 новых файлов, 163 теста** на `src/stores/`. `npm run vitest run src/stores` — 163 ✅, `typecheck:fast` 0 errors, commit `4cc1c39a`                                                                                                                     |
 
 | #   | Что сделано                                                                                                                                                                                                                                             |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
