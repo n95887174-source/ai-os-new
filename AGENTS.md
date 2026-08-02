@@ -82,6 +82,20 @@ npm run check:circular-kernel  # circular deps check
 | 21  | **P1.9** — CI coverage job (стабильный набор, отдельный от OOM-прогона)                | 🟢 Done |
 | 22  | **P1.10** — CI dep-graph job: `npm run check:deps`                                     | 🟢 Done |
 | 23  | **P1.11** — Тесты включены в типизацию (`tsconfig.test.json`)                          | 🟢 Done |
+| 24  | **P1.12** — i18n монолиты разбиты на namespace-файлы (17 на локаль)                    | 🟢 Done |
+
+### Changes (P1.12)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `en.ts` (2734 ключа) и `ru.ts` (2715) монолиты разбиты на **17 namespace-файлов на локалю**: `nav`, `common`, `errors`, `settings`, `debate`, `agents`, `memory`, `chat`, `providers`, `dashboard`, `analytics`, `quality`, `budget`, `observability`, `integrations`, `governance`, `workspace` — в `src/i18n/translations/{en,ru}/` |
+| 2   | Каждый namespace экспортирует `const {ns}: Record<string, string>` с плоскими ключами (`prefix.name`) — **формат и поведение не изменились**, все вызовы `t('a.b.c')` работают как раньше, правки в call-sites не требуются                                                                                                           |
+| 3   | `{en,ru}/index.ts` — импортируют все namespace и объединяют через spread; сохраняют контракт `import('./en')` → `mod.en`, `import('./ru')` → `mod.ru` для `translations/index.ts` (dynamic import теперь резолвится в директорию)                                                                                                     |
+| 4   | Генерация выполнена скриптом (`tsx`): парсинг монолитов через `ts.transpileModule` + `eval`, группировка по top-level префиксу, 80 префиксов → 17 файлов, JSON-эскейпинг значений. Верификация: объединённый объект **идентичен оригиналу** (2734 en / 2715 ru ключей, 0 отличий значений)                                            |
+| 5   | Проверено: `npm run typecheck:fast` → 0 errors; `npx tsc -b --noEmit` → 0 errors; `npm run build` → 11.68s ✅ (`en`/`ru` chunk'и формируются как раньше); prettier — single-quote формат                                                                                                                                              |
+| 6   | Временные скрипты `scripts/split-i18n.tmp.ts`, `scripts/verify-i18n.tmp.ts` удалены                                                                                                                                                                                                                                                   |
+| 7   | `docs/new/CONSOLIDATED_PLAN.md` — P1.12 ✅                                                                                                                                                                                                                                                                                            |
+| 8   | Примечание: `vitest.config.ts:7` LSP-ошибка — пре-существующая, игнорировать. Следующая задача — **P1.13** (заменить 26 прямых `t`-импортов на `useTranslation()`)                                                                                                                                                                    |
 
 ### Changes (P1.11)
 
