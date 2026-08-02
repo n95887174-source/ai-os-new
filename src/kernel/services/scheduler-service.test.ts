@@ -10,11 +10,8 @@ describe('SchedulerService', () => {
 
     beforeEach(() => {
         emitSpy = vi.spyOn(EventBus, 'emit').mockImplementation(() => {});
-        // @ts-expect-error mock
         vi.spyOn(BucketStorageAdapter.AGENTS, 'get').mockResolvedValue(null);
-        // @ts-expect-error mock
         vi.spyOn(BucketStorageAdapter.AGENTS, 'set').mockResolvedValue(undefined);
-        // @ts-expect-error mock
         vi.spyOn(BucketStorageAdapter.AGENTS, 'remove').mockResolvedValue(undefined);
 
         db = { getKv: vi.fn(), setKv: vi.fn() };

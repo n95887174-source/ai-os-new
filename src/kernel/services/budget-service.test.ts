@@ -24,7 +24,7 @@ function createDeps(overrides?: Partial<BudgetServiceDeps>): BudgetServiceDeps {
             ),
             getInputCost: vi.fn(() => 0.000003),
             getOutputCost: vi.fn(() => 0.000015),
-            ...(overrides?.costCalculator as Partial<typeof overrides.costCalculator>),
+            ...(overrides?.costCalculator as Partial<BudgetServiceDeps['costCalculator']>),
         },
     } as BudgetServiceDeps;
 }
@@ -205,7 +205,7 @@ describe('BudgetService', () => {
             deps.eventBus.onSafe = vi.fn((_event: string, cb: (data: unknown) => void) => {
                 handler = cb;
                 return vi.fn();
-            });
+            }) as unknown as BudgetServiceDeps['eventBus']['onSafe'];
             service = new BudgetService(deps);
             await service.init();
 
@@ -232,7 +232,7 @@ describe('BudgetService', () => {
             deps.eventBus.onSafe = vi.fn((_event: string, cb: (data: unknown) => void) => {
                 handler = cb;
                 return vi.fn();
-            });
+            }) as unknown as BudgetServiceDeps['eventBus']['onSafe'];
             service = new BudgetService(deps);
             await service.init();
 
@@ -253,7 +253,7 @@ describe('BudgetService', () => {
             deps.eventBus.onSafe = vi.fn((_event: string, cb: (data: unknown) => void) => {
                 handler = cb;
                 return vi.fn();
-            });
+            }) as unknown as BudgetServiceDeps['eventBus']['onSafe'];
             service = new BudgetService(deps);
             await service.init();
 
@@ -272,7 +272,7 @@ describe('BudgetService', () => {
             deps.eventBus.onSafe = vi.fn((_event: string, cb: (data: unknown) => void) => {
                 handler = cb;
                 return vi.fn();
-            });
+            }) as unknown as BudgetServiceDeps['eventBus']['onSafe'];
             deps.costCalculator.calculateCost = vi.fn(() => 60);
             service = new BudgetService(deps);
             await service.init();
@@ -300,7 +300,7 @@ describe('BudgetService', () => {
             deps.eventBus.onSafe = vi.fn((_event: string, cb: (data: unknown) => void) => {
                 handler = cb;
                 return vi.fn();
-            });
+            }) as unknown as BudgetServiceDeps['eventBus']['onSafe'];
             deps.costCalculator.calculateCost = vi.fn(() => 10);
             service = new BudgetService(deps);
             await service.init();
@@ -579,10 +579,12 @@ describe('BudgetService', () => {
             db.set('super_agents_pricing_budget', { monthlyBudget: 200 });
             deps = createDeps({
                 database: {
-                    getKv: vi.fn(async <T>(id: string) => (db.get(id) ?? null) as T | null),
+                    getKv: vi.fn(
+                        async <T>(id: string) => (db.get(id) ?? null) as T | null,
+                    ) as unknown as BudgetServiceDeps['database']['getKv'],
                     setKv: vi.fn(async <T>(id: string, value: T) => {
                         db.set(id, value);
-                    }),
+                    }) as unknown as BudgetServiceDeps['database']['setKv'],
                 },
             });
             service = new BudgetService(deps);
@@ -595,10 +597,12 @@ describe('BudgetService', () => {
             db.set('provider_budgets', { openai: 150, gemini: 75 });
             deps = createDeps({
                 database: {
-                    getKv: vi.fn(async <T>(id: string) => (db.get(id) ?? null) as T | null),
+                    getKv: vi.fn(
+                        async <T>(id: string) => (db.get(id) ?? null) as T | null,
+                    ) as unknown as BudgetServiceDeps['database']['getKv'],
                     setKv: vi.fn(async <T>(id: string, value: T) => {
                         db.set(id, value);
-                    }),
+                    }) as unknown as BudgetServiceDeps['database']['setKv'],
                 },
             });
             service = new BudgetService(deps);
@@ -623,10 +627,12 @@ describe('BudgetService', () => {
             ]);
             deps = createDeps({
                 database: {
-                    getKv: vi.fn(async <T>(id: string) => (db.get(id) ?? null) as T | null),
+                    getKv: vi.fn(
+                        async <T>(id: string) => (db.get(id) ?? null) as T | null,
+                    ) as unknown as BudgetServiceDeps['database']['getKv'],
                     setKv: vi.fn(async <T>(id: string, value: T) => {
                         db.set(id, value);
-                    }),
+                    }) as unknown as BudgetServiceDeps['database']['setKv'],
                 },
             });
             service = new BudgetService(deps);

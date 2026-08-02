@@ -190,6 +190,13 @@ vi.mock('./DebateSetupWizard', () => ({
         actionLoading: string | null;
         onStart: () => void;
         t: (k: string) => string;
+        onTopicChange: (v: string) => void;
+        strategy: string;
+        onStrategyChange: (v: string) => void;
+        maxRounds: number;
+        onMaxRoundsChange: (v: number) => void;
+        selectedAgents: string[];
+        onToggleAgent: (id: string) => void;
     }) => (
         <div>
             <div>{t('debate.config_title')}</div>

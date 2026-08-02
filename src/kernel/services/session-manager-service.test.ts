@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SessionManagerService } from './session-manager-service';
+import type { DebateStore } from '../contracts/storage/debate-store';
+import type { SessionStore } from '../contracts/storage/session-store';
+import type { DebateTimelineRepository } from '../dal/debate-timeline-repository';
+import type { DebateOverrideRepository } from '../dal/debate-override-repository';
+import type { SessionLinkRepository } from '../dal/session-link-repository';
+import type { IEventBus } from '../types/interfaces';
 
 function mockStore<T extends Record<string, unknown>>() {
     const data = new Map<string, T>();
@@ -76,14 +82,12 @@ function mockRepo() {
 }
 
 function createService() {
-    const debateStore = mockStore() as unknown as Parameters<typeof SessionManagerService>[1];
-    const sessionStore = mockSessionStore() as unknown as Parameters<
-        typeof SessionManagerService
-    >[0];
-    const eventBus = { emit: vi.fn() } as unknown as Parameters<typeof SessionManagerService>[2];
-    const timelineRepo = mockRepo() as unknown as Parameters<typeof SessionManagerService>[3];
-    const overrideRepo = mockRepo() as unknown as Parameters<typeof SessionManagerService>[4];
-    const linkRepo = mockRepo() as unknown as Parameters<typeof SessionManagerService>[5];
+    const debateStore = mockStore() as unknown as DebateStore;
+    const sessionStore = mockSessionStore() as unknown as SessionStore;
+    const eventBus = { emit: vi.fn() } as unknown as IEventBus;
+    const timelineRepo = mockRepo() as unknown as DebateTimelineRepository;
+    const overrideRepo = mockRepo() as unknown as DebateOverrideRepository;
+    const linkRepo = mockRepo() as unknown as SessionLinkRepository;
 
     const service = new SessionManagerService(
         sessionStore as never,

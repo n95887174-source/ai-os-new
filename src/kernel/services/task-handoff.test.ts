@@ -36,25 +36,25 @@ describe('TaskHandoffService', () => {
     }
 
     describe('handoff', () => {
-        it('should create a handoff request', () => {
-            const h = createHandoff();
+        it('should create a handoff request', async () => {
+            const h = await createHandoff();
             expect(h.id).toBeTruthy();
             expect(h.status).toBe('pending');
             expect(h.fromAgent).toBe('agent-a');
             expect(h.toAgent).toBe('agent-b');
         });
 
-        it('should emit event on creation', () => {
-            createHandoff();
+        it('should emit event on creation', async () => {
+            await createHandoff();
             expect(deps.eventBus.emit).toHaveBeenCalledWith(
                 expect.stringContaining('handoff'),
                 expect.objectContaining({ fromAgent: 'agent-a', toAgent: 'agent-b' }),
             );
         });
 
-        it('should enforce MAX_HANDOFFS limit', () => {
+        it('should enforce MAX_HANDOFFS limit', async () => {
             for (let i = 0; i < 250; i++) {
-                svc.handoff({
+                await svc.handoff({
                     fromAgent: 'a',
                     toAgent: 'b',
                     description: `h${i}`,
@@ -64,90 +64,92 @@ describe('TaskHandoffService', () => {
             expect(svc.getHandoffs()).toHaveLength(200);
         });
 
-        it('should validate target agent existence', () => {
+        it('should validate target agent existence', async () => {
             deps = makeDeps({ getLifecycleState: vi.fn().mockReturnValue(undefined) });
             svc = new TaskHandoffService(deps);
-            expect(() => createHandoff()).toThrow('Handoff target agent "agent-b" does not exist');
+            await expect(createHandoff()).rejects.toThrow(
+                'Handoff target agent "agent-b" does not exist',
+            );
         });
     });
 
     describe('state transitions', () => {
-        it('should accept a pending handoff', () => {
-            const h = createHandoff();
-            svc.accept(h.id);
+        it('should accept a pending handoff', async () => {
+            const h = await createHandoff();
+            await svc.accept(h.id);
             expect(svc.getHandoffs().find((x) => x.id === h.id)!.status).toBe('accepted');
         });
 
-        it('should complete a handoff', () => {
-            const h = createHandoff();
-            svc.complete(h.id, 'done');
+        it('should complete a handoff', async () => {
+            const h = await createHandoff();
+            await svc.complete(h.id, 'done');
             const updated = svc.getHandoffs().find((x) => x.id === h.id)!;
             expect(updated.status).toBe('completed');
             expect(updated.result).toBe('done');
             expect(updated.completedAt).toBeGreaterThan(0);
         });
 
-        it('should fail a handoff', () => {
-            const h = createHandoff();
-            svc.fail(h.id, 'error occurred');
+        it('should fail a handoff', async () => {
+            const h = await createHandoff();
+            await svc.fail(h.id, 'error occurred');
             const updated = svc.getHandoffs().find((x) => x.id === h.id)!;
             expect(updated.status).toBe('failed');
             expect(updated.result).toBe('error occurred');
         });
 
-        it('should cancel a pending handoff', () => {
-            const h = createHandoff();
-            svc.cancel(h.id);
+        it('should cancel a pending handoff', async () => {
+            const h = await createHandoff();
+            await svc.cancel(h.id);
             expect(svc.getHandoffs().find((x) => x.id === h.id)!.status).toBe('cancelled');
         });
 
-        it('should not cancel completed handoff', () => {
-            const h = createHandoff();
-            svc.complete(h.id, 'done');
-            svc.cancel(h.id);
+        it('should not cancel completed handoff', async () => {
+            const h = await createHandoff();
+            await svc.complete(h.id, 'done');
+            await svc.cancel(h.id);
             expect(svc.getHandoffs().find((x) => x.id === h.id)!.status).toBe('completed');
         });
 
-        it('should be no-op for unknown id', () => {
-            expect(() => svc.accept('unknown')).not.toThrow();
-            expect(() => svc.complete('unknown', 'x')).not.toThrow();
-            expect(() => svc.cancel('unknown')).not.toThrow();
+        it('should be no-op for unknown id', async () => {
+            await expect(svc.accept('unknown')).resolves.toBeUndefined();
+            await expect(svc.complete('unknown', 'x')).resolves.toBeUndefined();
+            await expect(svc.cancel('unknown')).resolves.toBeUndefined();
         });
     });
 
     describe('getHandoffs', () => {
-        it('should return all handoffs sorted by creation date', () => {
-            createHandoff();
-            createHandoff();
+        it('should return all handoffs sorted by creation date', async () => {
+            await createHandoff();
+            await createHandoff();
             const all = svc.getHandoffs();
             expect(all).toHaveLength(2);
         });
 
-        it('should filter by agent', () => {
-            svc.handoff({ fromAgent: 'a', toAgent: 'b', description: 'x', context: 'x' });
-            svc.handoff({ fromAgent: 'c', toAgent: 'd', description: 'y', context: 'y' });
+        it('should filter by agent', async () => {
+            await svc.handoff({ fromAgent: 'a', toAgent: 'b', description: 'x', context: 'x' });
+            await svc.handoff({ fromAgent: 'c', toAgent: 'd', description: 'y', context: 'y' });
             expect(svc.getHandoffs('a')).toHaveLength(1);
             expect(svc.getHandoffs('d')).toHaveLength(1);
         });
     });
 
     describe('getPendingFor', () => {
-        it('should return pending handoffs sorted by priority', () => {
-            svc.handoff({
+        it('should return pending handoffs sorted by priority', async () => {
+            await svc.handoff({
                 fromAgent: 'a',
                 toAgent: 'agent-b',
                 description: 'low',
                 context: 'x',
                 priority: 'low',
             });
-            svc.handoff({
+            await svc.handoff({
                 fromAgent: 'a',
                 toAgent: 'agent-b',
                 description: 'critical',
                 context: 'x',
                 priority: 'critical',
             });
-            svc.handoff({
+            await svc.handoff({
                 fromAgent: 'a',
                 toAgent: 'agent-b',
                 description: 'normal',
@@ -161,9 +163,9 @@ describe('TaskHandoffService', () => {
             expect(pending[2].description).toBe('low');
         });
 
-        it('should not include non-pending handoffs', () => {
-            const h = createHandoff();
-            svc.complete(h.id, 'done');
+        it('should not include non-pending handoffs', async () => {
+            const h = await createHandoff();
+            await svc.complete(h.id, 'done');
             expect(svc.getPendingFor('agent-b')).toHaveLength(0);
         });
     });

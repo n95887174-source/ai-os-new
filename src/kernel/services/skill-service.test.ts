@@ -38,7 +38,7 @@ function makeSkill(overrides?: Partial<CognitiveSkill>): CognitiveSkill {
 
 function createDeps(): SkillServiceDeps {
     return {
-        eventBus: { emit: vi.fn() },
+        eventBus: { emit: vi.fn(), emitOnce: vi.fn(() => true) },
         skillsStore: createMockSkillsStore(),
     };
 }

@@ -100,9 +100,13 @@ describe('FactCheckService', () => {
             const arg: DebateArgument = {
                 id: 'a1',
                 agentId: 'ag1',
+                agentName: 'Agent 1',
                 content: 'The study found 80% improvement.',
-                stance: 'pro',
+                position: 'pro',
                 round: 1,
+                confidence: 0.8,
+                timestamp: 1000,
+                source: 'llm',
             };
             expect(await service.checkArgument(arg)).toBeNull();
         });
@@ -112,9 +116,13 @@ describe('FactCheckService', () => {
             const arg: DebateArgument = {
                 id: 'a2',
                 agentId: 'ag1',
+                agentName: 'Agent 1',
                 content: 'Hello world.',
-                stance: 'pro',
+                position: 'pro',
                 round: 1,
+                confidence: 0.8,
+                timestamp: 1000,
+                source: 'llm',
             };
             expect(await service.checkArgument(arg)).toBeNull();
         });
@@ -124,10 +132,14 @@ describe('FactCheckService', () => {
         const arg: DebateArgument = {
             id: 'a1',
             agentId: 'ag1',
+            agentName: 'Agent 1',
             content:
                 'The study shows 85% of users prefer option A, according to research published in 2024.',
-            stance: 'pro',
+            position: 'pro',
             round: 1,
+            confidence: 0.8,
+            timestamp: 1000,
+            source: 'llm',
         };
 
         it('returns fact check result with parsed verdict', async () => {
@@ -226,10 +238,14 @@ describe('FactCheckService', () => {
             const sameArg: DebateArgument = {
                 id: 'a2',
                 agentId: 'ag1',
+                agentName: 'Agent 1',
                 content:
                     'The study shows 85% of users prefer option A, according to research published in 2024.',
-                stance: 'pro',
+                position: 'pro',
                 round: 1,
+                confidence: 0.8,
+                timestamp: 1000,
+                source: 'llm',
             };
             await service.checkArgument(arg);
             const callCount = mockSend.mock.calls.length;
@@ -270,9 +286,13 @@ describe('FactCheckService', () => {
         const arg: DebateArgument = {
             id: 'a1',
             agentId: 'ag1',
+            agentName: 'Agent 1',
             content: 'According to research, 95% of tests pass.',
-            stance: 'pro',
+            position: 'pro',
             round: 1,
+            confidence: 0.8,
+            timestamp: 1000,
+            source: 'llm',
         };
 
         beforeEach(async () => {

@@ -38,7 +38,7 @@ function createDeps(overrides?: Partial<MetricsServiceDeps>): MetricsServiceDeps
     } as MetricsServiceDeps;
 }
 
-function makeProviderState(id: string, overrides?: Record<string, unknown>) {
+function makeProviderState(_id: string, overrides?: Record<string, unknown>) {
     return {
         status: 'healthy' as const,
         avgTTFT: 150,
@@ -429,7 +429,7 @@ describe('MetricsService', () => {
         it('clears intervals and unsubscribes', async () => {
             const unsub = vi.fn();
             deps = createDeps({
-                eventBus: { on: vi.fn(() => unsub), emit: vi.fn() },
+                eventBus: { on: vi.fn(() => unsub), emit: vi.fn(), emitOnce: vi.fn(() => true) },
                 kernel: deps.kernel,
             });
             service = new MetricsService(deps);
