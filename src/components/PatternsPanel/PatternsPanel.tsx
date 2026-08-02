@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { eventBus, EVENTS } from '../../kernel/instances';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { INITIAL_NOTES } from './pattern-constants';
 import type { PatternNote } from './pattern-constants';
@@ -11,6 +11,7 @@ import InsightFeed from './InsightFeed';
 import PatternDetailModal from './PatternDetailModal';
 
 const PatternsPanel: React.FC = () => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<string>('all');
     const [notes] = useState<PatternNote[]>(INITIAL_NOTES);
     const [searchQuery, setSearchQuery] = useState('');

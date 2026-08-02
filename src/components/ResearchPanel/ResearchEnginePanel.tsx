@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useVisibilityInterval } from '../../utils/visibility-interval';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Layers, Plus } from 'lucide-react';
-import { t as translate } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { SourceType } from '../../kernel/contracts/research-engine';
 import { researchEngine, sourceAdapterRegistry } from '../../kernel/instances';
 import { SOURCE_COLORS } from './research-constants';
@@ -10,6 +10,7 @@ import SessionCard from './SessionCard';
 import type { ResearchSession } from '../../kernel/contracts/research-engine';
 
 const ResearchEnginePanel: React.FC = () => {
+    const { t } = useTranslation();
     const [sessions, setSessions] = useState<ResearchSession[]>([]);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [newTitle, setNewTitle] = useState('');
@@ -89,10 +90,10 @@ const ResearchEnginePanel: React.FC = () => {
                             gap: 8,
                         }}
                     >
-                        <Layers size={22} color="#8b5cf6" /> {translate('research_engine.title')}
+                        <Layers size={22} color="#8b5cf6" /> {t('research_engine.title')}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
-                        {translate('research_engine.subtitle')}
+                        {t('research_engine.subtitle')}
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -114,7 +115,7 @@ const ResearchEnginePanel: React.FC = () => {
                         title={`${sourceStats.enabled}/${sourceStats.total} sources enabled`}
                     >
                         <Search size={14} /> {sourceStats.enabled}/{sourceStats.total}{' '}
-                        {translate('research_engine.sources')}
+                        {t('research_engine.sources')}
                     </button>
                     <button
                         onClick={() => setShowForm(!showForm)}
@@ -132,7 +133,7 @@ const ResearchEnginePanel: React.FC = () => {
                             fontSize: '0.8rem',
                         }}
                     >
-                        <Plus size={16} /> {translate('research_engine.new_session')}
+                        <Plus size={16} /> {t('research_engine.new_session')}
                     </button>
                 </div>
             </div>
@@ -164,8 +165,7 @@ const ResearchEnginePanel: React.FC = () => {
                                     color: '#94a3b8',
                                 }}
                             >
-                                <Search size={14} />{' '}
-                                {translate('research_engine.available_sources')} (
+                                <Search size={14} /> {t('research_engine.available_sources')} (
                                 {sourceStats.total})
                                 <span
                                     style={{
@@ -269,7 +269,7 @@ const ResearchEnginePanel: React.FC = () => {
                             <input
                                 value={newTitle}
                                 onChange={(e) => setNewTitle(e.target.value)}
-                                placeholder={translate('research_engine.title_placeholder')}
+                                placeholder={t('research_engine.title_placeholder')}
                                 style={{
                                     padding: '10px 12px',
                                     borderRadius: 8,
@@ -283,7 +283,7 @@ const ResearchEnginePanel: React.FC = () => {
                             <textarea
                                 value={newQuestion}
                                 onChange={(e) => setNewQuestion(e.target.value)}
-                                placeholder={translate('research_engine.question_placeholder')}
+                                placeholder={t('research_engine.question_placeholder')}
                                 rows={3}
                                 style={{
                                     padding: '10px 12px',
@@ -310,7 +310,7 @@ const ResearchEnginePanel: React.FC = () => {
                                         fontSize: '0.78rem',
                                     }}
                                 >
-                                    {translate('common.cancel')}
+                                    {t('common.cancel')}
                                 </button>
                                 <button
                                     onClick={handleCreate}
@@ -327,7 +327,7 @@ const ResearchEnginePanel: React.FC = () => {
                                         opacity: !newTitle.trim() || !newQuestion.trim() ? 0.5 : 1,
                                     }}
                                 >
-                                    {translate('research_engine.start')}
+                                    {t('research_engine.start')}
                                 </button>
                             </div>
                         </div>
@@ -347,9 +347,9 @@ const ResearchEnginePanel: React.FC = () => {
                     }}
                 >
                     <Layers size={40} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
-                    <div>{translate('research_engine.empty')}</div>
+                    <div>{t('research_engine.empty')}</div>
                     <div style={{ fontSize: '0.75rem', marginTop: 4 }}>
-                        {translate('research_engine.empty_desc')}
+                        {t('research_engine.empty_desc')}
                     </div>
                 </div>
             )}

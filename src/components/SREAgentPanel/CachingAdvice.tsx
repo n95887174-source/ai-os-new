@@ -1,5 +1,5 @@
 import { Layers } from 'lucide-react';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import { flexAlignCenterGap2Mb03 } from '../../styles/common';
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
 }
 
 const CachingAdvice: React.FC<Props> = ({ estimatedSavings, details }) => {
+    const { t } = useTranslation();
     if (!estimatedSavings && !details) return null;
     return (
         <div

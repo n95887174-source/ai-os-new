@@ -26,6 +26,7 @@ vi.mock('../../kernel/instances', () => ({
     keyService: {
         getAlerts: () => mockGetAlerts(),
     },
+    settingsService: { getSettings: () => ({ language: 'en' }), subscribe: () => () => {} },
 }));
 
 describe('AlertLayer', () => {

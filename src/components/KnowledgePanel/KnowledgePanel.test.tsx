@@ -33,6 +33,7 @@ vi.mock('../../kernel/instances', () => ({
     },
     eventBus: { emit: vi.fn(), on: vi.fn(() => vi.fn()), off: vi.fn() },
     EVENTS: { MEMORY_UPDATED: 'memory:updated' },
+    settingsService: { getSettings: () => ({ language: 'en' }), subscribe: () => () => {} },
 }));
 
 vi.mock('../../i18n/translations', () => ({

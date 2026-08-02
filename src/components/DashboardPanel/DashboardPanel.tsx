@@ -192,6 +192,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                             event,
                             summary: summarizeEvent(
                                 data as Record<string, unknown> | string | null | undefined,
+                                t,
                             ),
                             severity,
                         },
@@ -222,7 +223,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             if (unsubscribeHealth) unsubscribeHealth();
             if (unsubscribeAll) unsubscribeAll();
         };
-    }, [clearError]);
+    }, [clearError, t]);
 
     const providerCounts = useMemo(
         () => ({

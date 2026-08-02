@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Bot, TrendingUp, Shield } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { usePolling } from '../Common/usePolling';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import { emptyStateCenter, emptyStateTitle } from '../../styles/common';
 import { advisorService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
@@ -18,6 +18,7 @@ import CachingAdvice from './CachingAdvice';
 import AlertItem from './AlertItem';
 
 const SREAgentPanel: React.FC = () => {
+    const { t } = useTranslation();
     const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
     const [alerts, setAlerts] = useState<SREAlert[]>([]);
     const [metrics, setMetrics] = useState<{

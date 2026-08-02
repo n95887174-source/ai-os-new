@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../../stores/chat/store';
 import { useDebateSessionStore } from '../../stores/debate-session-store';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import { ContextMenu } from '../Common/ContextMenu';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { Pin, Edit3, Trash2, ExternalLink, Star } from 'lucide-react';
@@ -109,6 +109,7 @@ type SessionItem = {
 };
 
 export const SessionHubPanel: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const chatSessions = useChatStore((s) => s.sessions);
     const debateMeta = useDebateSessionStore((s) => s.sessions);

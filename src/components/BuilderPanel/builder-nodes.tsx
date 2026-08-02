@@ -2,7 +2,7 @@ import { Handle, Position, type Node, type Edge } from '@xyflow/react';
 import { Bot, ShieldCheck, Cpu, Wrench, GitBranch, Blocks } from 'lucide-react';
 import { genId } from '../../utils/gen-id';
 import { nodeDetailRow } from '../../styles/common';
-import { t as tt } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { ISTopology } from '../../kernel/contracts/topology';
 
 export const generateId = () => genId();
@@ -122,40 +122,43 @@ export const AgentNode = ({
     id?: string;
     data: { label: string; type: string; config?: Record<string, unknown> };
     selected: boolean;
-}) => (
-    <BaseNode
-        id={id}
-        data={data}
-        selected={selected}
-        icon={Bot}
-        color="#3b82f6"
-        typeLabel={tt('builder.node.agent')}
-    >
-        <div style={nodeDetailRow}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Cpu size={12} /> Model Engine
-            </span>
-            <span
-                style={{
-                    fontWeight: 600,
-                    background: 'rgba(0,0,0,0.3)',
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                }}
-            >
-                {(data.config?.model as string) || 'Auto'}
-            </span>
-        </div>
-        <div style={nodeDetailRow}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Wrench size={12} /> Capabilities
-            </span>
-            <span style={{ fontWeight: 600 }}>
-                {(data.config?.tools as unknown[])?.length || 0} active
-            </span>
-        </div>
-    </BaseNode>
-);
+}) => {
+    const { t: tt } = useTranslation();
+    return (
+        <BaseNode
+            id={id}
+            data={data}
+            selected={selected}
+            icon={Bot}
+            color="#3b82f6"
+            typeLabel={tt('builder.node.agent')}
+        >
+            <div style={nodeDetailRow}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Cpu size={12} /> Model Engine
+                </span>
+                <span
+                    style={{
+                        fontWeight: 600,
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                    }}
+                >
+                    {(data.config?.model as string) || 'Auto'}
+                </span>
+            </div>
+            <div style={nodeDetailRow}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Wrench size={12} /> Capabilities
+                </span>
+                <span style={{ fontWeight: 600 }}>
+                    {(data.config?.tools as unknown[])?.length || 0} active
+                </span>
+            </div>
+        </BaseNode>
+    );
+};
 
 export const RouterNode = ({
     id,
@@ -165,20 +168,23 @@ export const RouterNode = ({
     id?: string;
     data: { label: string; type: string; config?: Record<string, unknown> };
     selected: boolean;
-}) => (
-    <BaseNode
-        id={id}
-        data={data}
-        selected={selected}
-        icon={GitBranch}
-        color="#f59e0b"
-        typeLabel={tt('builder.node.router')}
-    >
-        <div style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>
-            Analyzes input and dynamically routes execution to the optimal branch.
-        </div>
-    </BaseNode>
-);
+}) => {
+    const { t: tt } = useTranslation();
+    return (
+        <BaseNode
+            id={id}
+            data={data}
+            selected={selected}
+            icon={GitBranch}
+            color="#f59e0b"
+            typeLabel={tt('builder.node.router')}
+        >
+            <div style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>
+                Analyzes input and dynamically routes execution to the optimal branch.
+            </div>
+        </BaseNode>
+    );
+};
 
 export const GuardrailNode = ({
     id,
@@ -188,23 +194,26 @@ export const GuardrailNode = ({
     id?: string;
     data: { label: string; type: string; config?: Record<string, unknown> };
     selected: boolean;
-}) => (
-    <BaseNode
-        id={id}
-        data={data}
-        selected={selected}
-        icon={ShieldCheck}
-        color="#10b981"
-        typeLabel={tt('builder.node.guardrail')}
-    >
-        <div style={nodeDetailRow}>
-            <span>Blocked Words</span>
-            <span style={{ fontWeight: 600, color: '#fca5a5' }}>
-                {(data.config?.blockedKeywords as unknown[])?.length || 3} rules
-            </span>
-        </div>
-    </BaseNode>
-);
+}) => {
+    const { t: tt } = useTranslation();
+    return (
+        <BaseNode
+            id={id}
+            data={data}
+            selected={selected}
+            icon={ShieldCheck}
+            color="#10b981"
+            typeLabel={tt('builder.node.guardrail')}
+        >
+            <div style={nodeDetailRow}>
+                <span>Blocked Words</span>
+                <span style={{ fontWeight: 600, color: '#fca5a5' }}>
+                    {(data.config?.blockedKeywords as unknown[])?.length || 3} rules
+                </span>
+            </div>
+        </BaseNode>
+    );
+};
 
 export const ToolNode = ({
     id,
@@ -214,31 +223,34 @@ export const ToolNode = ({
     id?: string;
     data: { label: string; type: string; config?: Record<string, unknown> };
     selected: boolean;
-}) => (
-    <BaseNode
-        id={id}
-        data={data}
-        selected={selected}
-        icon={Blocks}
-        color="#8b5cf6"
-        typeLabel={tt('builder.node.tool')}
-    >
-        <div style={nodeDetailRow}>
-            <span>Bound Capability</span>
-            <span
-                style={{
-                    fontWeight: 600,
-                    textOverflow: 'ellipsis',
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100px',
-                }}
-            >
-                {(data.config?.toolId as string) || 'None'}
-            </span>
-        </div>
-    </BaseNode>
-);
+}) => {
+    const { t: tt } = useTranslation();
+    return (
+        <BaseNode
+            id={id}
+            data={data}
+            selected={selected}
+            icon={Blocks}
+            color="#8b5cf6"
+            typeLabel={tt('builder.node.tool')}
+        >
+            <div style={nodeDetailRow}>
+                <span>Bound Capability</span>
+                <span
+                    style={{
+                        fontWeight: 600,
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '100px',
+                    }}
+                >
+                    {(data.config?.toolId as string) || 'None'}
+                </span>
+            </div>
+        </BaseNode>
+    );
+};
 
 export const mapDSLToNodes = (topology: ISTopology): Node[] => {
     return topology.nodes.map((n) => ({

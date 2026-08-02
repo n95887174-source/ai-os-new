@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X, AlertTriangle, Info, CheckCircle, Activity } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { keyService } from '../../kernel/instances';
-import { t as translate } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { ProviderAlert } from '../../types/metrics';
 
 interface Toast {
@@ -31,6 +31,7 @@ const getToastType = (type: string): Toast['type'] => {
 };
 
 const AlertLayer: React.FC = () => {
+    const { t } = useTranslation();
     const [toasts, setToasts] = useState<Toast[]>([]);
     const [alerts, setAlerts] = useState<ProviderAlert[]>([]);
     const [expanded, setExpanded] = useState(false);
@@ -48,7 +49,7 @@ const AlertLayer: React.FC = () => {
         timers.current.set(
             id,
             setTimeout(() => {
-                setToasts((prev) => prev.filter((t) => t.id !== id));
+                setToasts((prev) => prev.filter((x) => x.id !== id));
                 timers.current.delete(id);
             }, TOAST_DURATION),
         );
@@ -61,7 +62,7 @@ const AlertLayer: React.FC = () => {
             clearTimeout(timer);
             timers.current.delete(id);
         }
-        setToasts((prev) => prev.filter((t) => t.id !== id));
+        setToasts((prev) => prev.filter((x) => x.id !== id));
     }, []);
 
     useEffect(() => {
@@ -135,7 +136,7 @@ const AlertLayer: React.FC = () => {
 
         return () => {
             unsubs.forEach((u) => u());
-            currentTimers.forEach((t) => clearTimeout(t));
+            currentTimers.forEach((timer) => clearTimeout(timer));
         };
     }, [addToast]);
 
@@ -158,22 +159,22 @@ const AlertLayer: React.FC = () => {
                 pointerEvents: 'none',
             }}
         >
-            {toasts.map((t) => (
+            {toasts.map((toast) => (
                 <div
-                    key={t.id}
+                    key={toast.id}
                     onMouseEnter={() => {
-                        const timer = timers.current.get(t.id);
+                        const timer = timers.current.get(toast.id);
                         if (timer) {
                             clearTimeout(timer);
-                            timers.current.delete(t.id);
+                            timers.current.delete(toast.id);
                         }
                     }}
                     onMouseLeave={() => {
                         timers.current.set(
-                            t.id,
+                            toast.id,
                             setTimeout(() => {
-                                setToasts((prev) => prev.filter((x) => x.id !== t.id));
-                                timers.current.delete(t.id);
+                                setToasts((prev) => prev.filter((x) => x.id !== toast.id));
+                                timers.current.delete(toast.id);
                             }, TOAST_DURATION),
                         );
                     }}
@@ -182,7 +183,7 @@ const AlertLayer: React.FC = () => {
                         padding: '0.75rem 1rem',
                         borderRadius: 12,
                         background: '#1e293b',
-                        border: `1px solid ${t.type === 'error' ? '#ef4444' : t.type === 'warning' ? '#f59e0b' : t.type === 'success' ? '#10b981' : '#3b82f6'}30`,
+                        border: `1px solid ${toast.type === 'error' ? '#ef4444' : toast.type === 'warning' ? '#f59e0b' : toast.type === 'success' ? '#10b981' : '#3b82f6'}30`,
                         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
                         display: 'flex',
                         alignItems: 'flex-start',
@@ -190,7 +191,7 @@ const AlertLayer: React.FC = () => {
                         animation: 'slideIn 0.3s ease',
                     }}
                 >
-                    <div style={{ marginTop: 2 }}>{ICONS[t.type]}</div>
+                    <div style={{ marginTop: 2 }}>{ICONS[toast.type]}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div
                             style={{
@@ -200,7 +201,7 @@ const AlertLayer: React.FC = () => {
                                 marginBottom: 2,
                             }}
                         >
-                            {t.title}
+                            {toast.title}
                         </div>
                         <div
                             style={{
@@ -209,12 +210,12 @@ const AlertLayer: React.FC = () => {
                                 wordBreak: 'break-word',
                             }}
                         >
-                            {t.message}
+                            {toast.message}
                         </div>
                     </div>
                     <button
-                        onClick={() => dismissToast(t.id)}
-                        aria-label={translate('common.close')}
+                        onClick={() => dismissToast(toast.id)}
+                        aria-label={t('common.close')}
                         style={{
                             background: 'none',
                             border: 'none',

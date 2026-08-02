@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Search, MessageSquare, Home } from 'lucide-react';
-import { t as translate } from './i18n/translations';
+import { useTranslation } from './i18n/useTranslation';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import { NAV_SECTIONS } from './route-registry';
 import { PANEL_COMPONENTS, PanelLoader } from './route-imports';
@@ -32,6 +32,7 @@ function Panel(key: string): React.ComponentType<Record<string, unknown>> {
 // /chat-admin → ChatAdminPanel (admin-only, no nav entry)
 
 const NotFound: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [searchVal, setSearchVal] = useState('');
@@ -41,22 +42,22 @@ const NotFound: React.FC = () => {
         if (pathPart) {
             return allItems
                 .filter((item) => {
-                    const label = translate(item.labelKey).toLowerCase();
+                    const label = t(item.labelKey).toLowerCase();
                     return label.includes(pathPart) || item.id.includes(pathPart);
                 })
                 .slice(0, 6);
         }
         return allItems.slice(0, 8);
-    }, [location.pathname]);
+    }, [location.pathname, t]);
     const filtered = React.useMemo(() => {
         if (!searchVal) return suggestions;
         const q = searchVal.toLowerCase();
         return NAV_SECTIONS.flatMap((s) => s.items)
             .filter((item) => {
-                return translate(item.labelKey).toLowerCase().includes(q) || item.id.includes(q);
+                return t(item.labelKey).toLowerCase().includes(q) || item.id.includes(q);
             })
             .slice(0, 8);
-    }, [searchVal, suggestions]);
+    }, [searchVal, suggestions, t]);
 
     return (
         <div
@@ -83,7 +84,7 @@ const NotFound: React.FC = () => {
                 404
             </div>
             <div style={{ fontSize: '1.2rem', color: '#94a3b8', fontWeight: 600 }}>
-                {translate('not_found.title')}
+                {t('not_found.title')}
             </div>
             <div
                 style={{
@@ -93,7 +94,7 @@ const NotFound: React.FC = () => {
                     textAlign: 'center',
                 }}
             >
-                {translate('not_found.description', undefined, { path: location.pathname })}
+                {t('not_found.description', { path: location.pathname })}
             </div>
             <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
                 <Search
@@ -110,7 +111,7 @@ const NotFound: React.FC = () => {
                 <input
                     value={searchVal}
                     onChange={(e) => setSearchVal(e.target.value)}
-                    placeholder={translate('not_found.search_placeholder')}
+                    placeholder={t('not_found.search_placeholder')}
                     autoFocus
                     style={{
                         width: '100%',
@@ -153,7 +154,7 @@ const NotFound: React.FC = () => {
                         }}
                     >
                         {item.icon}
-                        <span>{translate(item.labelKey)}</span>
+                        <span>{t(item.labelKey)}</span>
                     </button>
                 ))}
             </div>

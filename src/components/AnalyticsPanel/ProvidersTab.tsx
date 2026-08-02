@@ -2,7 +2,7 @@ import { motion, type Variants } from 'framer-motion';
 import { Cpu } from 'lucide-react';
 import type { ProviderMetrics } from '../../types/metrics';
 import { providerMetricBox } from '../../styles/common';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface ProvidersTabProps {
     metrics: Record<string, ProviderMetrics>;
@@ -10,6 +10,7 @@ interface ProvidersTabProps {
 }
 
 export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariants }) => {
+    const { t } = useTranslation();
     return (
         <motion.div
             key="providers"

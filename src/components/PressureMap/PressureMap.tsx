@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePolling } from '../Common/usePolling';
 import { Activity, AlertTriangle, Globe, Database, RefreshCw, Thermometer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { pressureMapService } from '../../kernel/instances';
 import type { PressureMapSnapshot, ProviderPressureEntry } from '../../kernel/instances';
@@ -79,6 +79,7 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
 }
 
 const ProviderCard: React.FC<{ data: ProviderPressureEntry }> = ({ data }) => {
+    const { t } = useTranslation();
     const colors = pColor(data.level);
     const statusScore = data.breakdown.status;
     const statusColor = statusScore >= 0.8 ? '#22c55e' : statusScore >= 0.5 ? '#eab308' : '#ef4444';
@@ -228,6 +229,7 @@ const ProviderCard: React.FC<{ data: ProviderPressureEntry }> = ({ data }) => {
 };
 
 const PressureMap: React.FC = () => {
+    const { t } = useTranslation();
     const [snapshot, setSnapshot] = useState<PressureMapSnapshot | null>(null);
 
     const refresh = () => {

@@ -5,6 +5,10 @@ import ErrorBoundary from './ErrorBoundary';
 vi.mock('../../kernel/instances', () => ({
     eventBus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
     rootLogger: { error: vi.fn() },
+    settingsService: {
+        getSettings: () => ({ language: 'en' }),
+        subscribe: () => () => {},
+    },
 }));
 
 vi.mock('../../kernel/events/event-names', () => ({
@@ -26,6 +30,11 @@ vi.mock('../../i18n/translations', () => ({
         };
         return map[key] ?? key;
     },
+    setLanguage: () => {},
+}));
+
+vi.mock('../../i18n/translations/index', () => ({
+    loadLocale: () => Promise.resolve({}),
 }));
 
 const CrashChild = () => {

@@ -4,7 +4,7 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import { rootLogger } from '../../kernel/instances';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
     children: ReactNode;
@@ -12,12 +12,16 @@ interface Props {
     variant?: 'page' | 'panel';
 }
 
+interface ErrorBoundaryProps extends Props {
+    t: (key: string, params?: Record<string, string | number>) => string;
+}
+
 interface State {
     hasError: boolean;
     error: Error | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryBase extends Component<ErrorBoundaryProps, State> {
     public state: State = { hasError: false, error: null };
 
     public static getDerivedStateFromError(error: Error): State {
@@ -53,6 +57,7 @@ class ErrorBoundary extends Component<Props, State> {
     };
 
     public render() {
+        const t = this.props.t;
         if (this.state.hasError) {
             if (this.props.variant === 'panel') {
                 return (
@@ -105,5 +110,10 @@ class ErrorBoundary extends Component<Props, State> {
         return this.props.children;
     }
 }
+
+const ErrorBoundary: React.FC<Props> = (props) => {
+    const { t } = useTranslation();
+    return <ErrorBoundaryBase {...props} t={t} />;
+};
 
 export default ErrorBoundary;

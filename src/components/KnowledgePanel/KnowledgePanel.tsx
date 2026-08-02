@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import { useConfirm } from '../../hooks/useConfirm';
 import { memoryService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
@@ -19,6 +19,7 @@ import {
 import type { GraphNodeData } from './graph-utils';
 
 const KnowledgePanel: React.FC = () => {
+    const { t } = useTranslation();
     const { confirm, ConfirmDialog } = useConfirm();
     const [memories, setMemories] = useState(() => {
         try {

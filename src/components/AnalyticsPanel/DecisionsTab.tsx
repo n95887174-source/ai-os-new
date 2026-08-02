@@ -1,7 +1,7 @@
 import { motion, type Variants } from 'framer-motion';
 import { ZapOff, ChevronRight } from 'lucide-react';
 import type { DecisionTrace } from '../../types/metrics';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface DecisionsTabProps {
     history: DecisionTrace[];
@@ -14,6 +14,7 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
     currentTime,
     itemVariants,
 }) => {
+    const { t } = useTranslation();
     if (history.length === 0) {
         return (
             <motion.div
@@ -137,7 +138,7 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                         </div>
                         <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
                             {d.secondBest
-                                ? t('analytics.decision_chosen', undefined, {
+                                ? t('analytics.decision_chosen', {
                                       provider: d.secondBest,
                                   })
                                 : t('analytics.decision_sole')}

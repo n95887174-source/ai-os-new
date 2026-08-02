@@ -1,11 +1,12 @@
 import React from 'react';
-import { t as translate } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 
 export const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = ({
     data,
     color,
     height = 40,
 }) => {
+    const { t } = useTranslation();
     if (!data.length) return null;
     if (data.length === 1) {
         return (
@@ -22,7 +23,7 @@ export const Sparkline: React.FC<{ data: number[]; color: string; height?: numbe
                     fontSize: '0.75rem',
                 }}
             >
-                {translate('analytics.sparkline.insufficient_data')}
+                {t('analytics.sparkline.insufficient_data')}
             </div>
         );
     }

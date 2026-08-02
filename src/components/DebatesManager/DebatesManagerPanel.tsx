@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDebateSessionStore } from '../../stores/debate-session-store';
 import type { DebateSessionMeta } from '../../stores/debate-session-store/types';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import { runtime } from '../../kernel/runtime';
 import type { ISessionManager, SessionLink } from '../../kernel/contracts/session-manager';
 
@@ -127,6 +127,7 @@ function getStatusGroup(s: DebateSessionMeta): string {
 }
 
 export const DebatesManagerPanel: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const sessions = useDebateSessionStore((s) => s.sessions);
     const activeSessionId = useDebateSessionStore((s) => s.activeSessionId);

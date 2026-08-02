@@ -15,7 +15,8 @@ import {
     Activity,
     Thermometer,
 } from 'lucide-react';
-import { t, type TranslationKey } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
+import type { TranslationKey } from '../../i18n/translations';
 
 const EMOJI_MAP: Record<string, string> = {
     telescope: '\u{1F52D}',
@@ -219,6 +220,7 @@ interface ModuleInfoProps {
 }
 
 const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) => {
+    const { t } = useTranslation();
     const lines = (t(MODULE_INFO_KEY[moduleKey]) || '').split('\n').filter((l) => l.trim());
 
     return (

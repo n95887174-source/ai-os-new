@@ -1,7 +1,9 @@
 import React from 'react';
 import { Box } from 'lucide-react';
 import { pctColor } from '../Common/status-vocabulary';
-import { t as translate } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
+
+export type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
 export function QuickActionBtn({
     icon,
@@ -151,21 +153,22 @@ export const formatNumber = (value: number) => {
 };
 
 export const QuotaDisplay = ({ used, limit }: { used: number; limit: number | undefined }) => {
-    if (!limit || limit === 0)
-        return <>{`${formatNumber(used)} ${translate('common.req_unit')}`}</>;
+    const { t } = useTranslation();
+    if (!limit || limit === 0) return <>{`${formatNumber(used)} ${t('common.req_unit')}`}</>;
     const pct = Math.round((used / limit) * 100);
     return (
         <>
             <span style={{ color: pctColor(pct) }}>{formatNumber(used)}</span> /{' '}
-            {formatNumber(limit)} {translate('common.req_unit')}
+            {formatNumber(limit)} {t('common.req_unit')}
         </>
     );
 };
 
 export const summarizeEvent = (
     data: Record<string, unknown> | string | null | undefined,
+    t: TranslateFn,
 ): string => {
-    if (!data) return translate('dashboard.summary_no_payload');
+    if (!data) return t('dashboard.summary_no_payload');
     if (typeof data === 'string') return data;
     if (data.message) return String(data.message);
     if (data.provider)
@@ -174,6 +177,6 @@ export const summarizeEvent = (
     try {
         return JSON.stringify(data).slice(0, 100) + '...';
     } catch {
-        return translate('dashboard.summary_complex_payload');
+        return t('dashboard.summary_complex_payload');
     }
 };

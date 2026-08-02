@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Zap, Sparkles, DollarSign, Mountain, Ghost } from 'lucide-react';
-import { t as translate } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { GuardianAspect, IGuardian } from '../../kernel/contracts/guardian';
 import { bridgeKeeperService } from '../../kernel/instances';
 import { usePolling } from '../Common/usePolling';
@@ -28,9 +28,10 @@ const ASPECT_COLORS: Record<GuardianAspect, string> = {
 const bridgeKeeper = bridgeKeeperService;
 
 const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
+    const { t } = useTranslation();
     const status = guardian.getStatus();
     const accentColor = ASPECT_COLORS[guardian.aspect] || '#64748b';
-    const aspectLabel = translate(`guardians.aspect_${guardian.aspect}` as never) as string;
+    const aspectLabel = t(`guardians.aspect_${guardian.aspect}`);
 
     return (
         <div
@@ -118,7 +119,7 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
 
             {status.providerCount > 0 && (
                 <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                    {translate('guardians.providers' as never)}:{' '}
+                    {t('guardians.providers')}:{' '}
                     <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
                         {status.providers.join(', ')}
                     </span>
@@ -149,9 +150,7 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
                         color: status.active ? accentColor : '#64748b',
                     }}
                 >
-                    {status.active
-                        ? translate('guardians.active' as never)
-                        : translate('guardians.inactive' as never)}
+                    {status.active ? t('guardians.active') : t('guardians.inactive')}
                 </span>
             </div>
         </div>
@@ -159,6 +158,7 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
 };
 
 const GuardiansPanel: React.FC = () => {
+    const { t } = useTranslation();
     const [guardians, setGuardians] = useState<IGuardian[]>(() => bridgeKeeper.getAllGuardians());
 
     const refreshGuardians = () => setGuardians(bridgeKeeper.getAllGuardians());
@@ -175,10 +175,10 @@ const GuardiansPanel: React.FC = () => {
                         marginBottom: '0.25rem',
                     }}
                 >
-                    {translate('guardians.title' as never)}
+                    {t('guardians.title')}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                    {translate('guardians.subtitle' as never)}
+                    {t('guardians.subtitle')}
                 </div>
             </div>
 

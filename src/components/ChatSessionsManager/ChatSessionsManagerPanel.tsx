@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../../stores/chat/store';
 import type { ChatSession } from '../../stores/chat/types';
-import { t } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import { runtime } from '../../kernel/runtime';
 import type { ISessionManager, SessionLink } from '../../kernel/contracts/session-manager';
 
@@ -104,6 +104,7 @@ function lastMessagePreview(s: ChatSession, maxLen = 80): string {
 }
 
 export const ChatSessionsManagerPanel: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const sessions = useChatStore((s) => s.sessions);
     const activeSessionId = useChatStore((s) => s.activeSessionId);
