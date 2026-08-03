@@ -94,6 +94,14 @@ npm run check:circular-kernel  # circular deps check
 | 33  | **P1.21** — cognitive-aux панели: JSDoc + UI badge «Experimental» (27 панелей)            | 🟢 Done |
 | 34  | **P1.22** — 13 React.memo на 644 .tsx — мемоизировать 10 тяжёлых list-row компонентов     | 🟢 Done |
 | 35  | **P1.23** — Заменить `console.log/.warn/.error` в UI компонентах на `LOGGER`              | 🟢 Done |
+| 36  | **P1.24** — Security headers в nginx (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) | 🟢 Done |
+
+### Changes (P1.24)
+
+| #   | Что сделано                                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Проверены конфигурации `docker/nginx.conf` и `docker/nginx-ssl.conf` — настроены X-Frame-Options, X-Content-Type-Options, CSP, HSTS |
+| 2   | Следующая задача — **P1.25** (Обновление зависимостей / audit)                                                                      |
 
 ### Changes (P1.23)
 
