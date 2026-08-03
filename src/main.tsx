@@ -5,6 +5,8 @@ import './styles/index.css';
 import './theme-init'; // Must run before React mounts — sets dark class on <html>
 import { runtime } from './kernel/runtime';
 import { eventBus } from './kernel/instances';
+import { defaultContainer } from './kernel/container';
+import { registerDebateStoreAdapters } from './stores/register-debate-store-adapters';
 import { BrowserRouter } from 'react-router-dom';
 
 import ErrorBoundary from './components/Common/ErrorBoundary';
@@ -82,6 +84,11 @@ const bootSplash = (
 );
 
 root.render(bootSplash);
+
+// UI composition root: register zustand-backed debate store adapters into the
+// DI container BEFORE runtime.start() so service-registration phases can resolve
+// them via container tokens (kernel must not import src/stores/).
+registerDebateStoreAdapters(defaultContainer);
 
 try {
     await runtime.start();

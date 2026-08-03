@@ -90,8 +90,7 @@ import { BeliefMiningService } from '../services/debate-runtime/debate-belief-mi
 import { FactCheckService } from '../services/fact-check-service';
 import { DebatePostProcessor } from '../services/debate-runtime/debate-post-processor';
 import { DebateSyncManager } from '../services/debate-runtime/debate-sync-manager';
-import { createDebateSessionStoreAdapter } from '../../stores/activeDebateStore';
-import { createDebateLiveStoreAdapter } from '../../stores/debateLiveStore';
+import { resolveDebateStoreAdapters } from './debate-store-adapters';
 import { DebateHumanService } from '../services/debate-runtime/debate-human-service';
 import { DebateQueryEngine } from '../services/debate-runtime/debate-query-engine';
 import {
@@ -243,8 +242,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             },
             queryEngine: new DebateQueryEngine(),
             debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
-            activeDebateStore: createDebateSessionStoreAdapter(),
-            debateLiveStore: createDebateLiveStoreAdapter(),
+            ...resolveDebateStoreAdapters(ctx.container),
             get sessionManager() {
                 return _container.get<
                     import('../services/session-manager-service').SessionManagerService

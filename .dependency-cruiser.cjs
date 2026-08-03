@@ -20,8 +20,8 @@ module.exports = {
             name: 'no-ui-in-kernel',
             severity: 'error',
             comment:
-                'Kernel must not import UI components or stores. Exception: composition root (service-registration/) wires all layers.',
-            from: { path: '^src/kernel/', pathNot: '^src/kernel/service-registration/' },
+                'Kernel must not import UI components or stores. UI-backed adapters are registered into the DI container by the UI composition root.',
+            from: { path: '^src/kernel/' },
             to: { path: '^src/(components|stores)/' },
         },
         {
