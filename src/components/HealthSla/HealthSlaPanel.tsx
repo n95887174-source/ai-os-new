@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Play, Shield, XCircle } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
+import { DemoGate } from '../Common/DemoGate';
 import { healthSlaService } from '../../kernel/instances';
 
 const METRIC_LABELS: Record<string, string> = {
@@ -431,7 +432,9 @@ const HealthSlaPanelContent: React.FC = () => {
 
 const HealthSlaPanel: React.FC = () => (
     <PanelLoader name="Health SLA">
-        <HealthSlaPanelContent />
+        <DemoGate title="Health SLA Config">
+            <HealthSlaPanelContent />
+        </DemoGate>
     </PanelLoader>
 );
 

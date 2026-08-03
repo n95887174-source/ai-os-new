@@ -139,6 +139,9 @@ const settings: Record<string, string> = {
     'settings.max_entries': 'Максимум записей',
     'settings.memory_system': 'Система памяти',
     'settings.memory_system_desc': 'Описание системы памяти',
+    'settings.mock_services': 'Демо / Мок-сервисы',
+    'settings.mock_services_desc':
+        'Показывать демо-панели с симуляцией (Deploy, Fine-Tuning, Distillation, Health SLA) с бейджем Demo',
     'settings.metrics': 'Метрики',
     'settings.model_downgrade': 'Даунгрейд модели',
     'settings.monitoring': 'Мониторинг',

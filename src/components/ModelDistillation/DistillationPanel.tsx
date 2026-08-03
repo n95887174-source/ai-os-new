@@ -13,6 +13,7 @@ import {
     BarChart3,
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
+import { DemoGate } from '../Common/DemoGate';
 import { distillationService } from '../../kernel/instances';
 import type {
     DistillationJob,
@@ -507,7 +508,9 @@ const DISTILLATION_PANEL: React.FC = () => {
 export default function DistillationPanelWrapper() {
     return (
         <PanelLoader title="Model Distillation">
-            <DISTILLATION_PANEL />
+            <DemoGate title="Model Distillation">
+                <DISTILLATION_PANEL />
+            </DemoGate>
         </PanelLoader>
     );
 }

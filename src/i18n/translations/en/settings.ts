@@ -139,6 +139,9 @@ const settings: Record<string, string> = {
     'settings.max_entries': 'Max Entries',
     'settings.memory_system': 'Memory System',
     'settings.memory_system_desc': 'Enable the memory system for persistent recall',
+    'settings.mock_services': 'Demo / Mock Services',
+    'settings.mock_services_desc':
+        'Show simulated demo panels (Deploy, Fine-Tuning, Distillation, Health SLA) with a Demo badge',
     'settings.metrics': 'Metrics',
     'settings.model_downgrade': 'Model Downgrade',
     'settings.monitoring': 'Monitoring',

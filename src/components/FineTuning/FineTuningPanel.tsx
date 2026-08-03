@@ -13,6 +13,7 @@ import {
     Database,
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
+import { DemoGate } from '../Common/DemoGate';
 import { usePolling } from '../Common/usePolling';
 import { fineTuningService } from '../../kernel/instances';
 import type {
@@ -806,7 +807,9 @@ const FineTuningPanel: React.FC = () => {
 export default function FineTuningPanelWrapper() {
     return (
         <PanelLoader title="Fine-Tuning Studio">
-            <FineTuningPanel />
+            <DemoGate title="Fine-Tuning Studio">
+                <FineTuningPanel />
+            </DemoGate>
         </PanelLoader>
     );
 }

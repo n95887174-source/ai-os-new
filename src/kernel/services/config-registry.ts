@@ -285,6 +285,9 @@ export const rawConfig: ConfigRegistry = {
         ui: {
             experimentalVisuals: false,
         },
+        mockServices: {
+            enabled: true,
+        },
     },
 
     storage: {} as StorageConfigSection,

@@ -12,6 +12,7 @@ import {
     RefreshCw,
     Database,
     Circle,
+    FlaskConical,
 } from 'lucide-react';
 import { CONFIG } from '../../kernel/instances';
 import { setFeatureFlag } from '../../kernel/services/config-mutations';
@@ -435,6 +436,25 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                 );
                             }}
                             accent="#06b6d4"
+                        />
+                    </SettingRow>
+                    <SettingRow
+                        icon={<FlaskConical size={20} aria-hidden="true" />}
+                        title={t('settings.mock_services')}
+                        description={t('settings.mock_services_desc')}
+                    >
+                        <Toggle
+                            checked={featureFlags['mockServices.enabled'] ?? true}
+                            onChange={(v) => {
+                                setFeatureFlag('mockServices.enabled', v);
+                                setFeatureFlags(
+                                    safeClone(CONFIG.featureFlags) as unknown as Record<
+                                        string,
+                                        boolean
+                                    >,
+                                );
+                            }}
+                            accent="#f59e0b"
                         />
                     </SettingRow>
                 </div>

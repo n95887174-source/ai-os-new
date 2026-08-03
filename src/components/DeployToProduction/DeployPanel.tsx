@@ -17,6 +17,7 @@ import {
     Layers,
 } from 'lucide-react';
 import PanelLoader from '../PanelLoader';
+import { DemoGate } from '../Common/DemoGate';
 import { deployService } from '../../kernel/instances';
 import type {
     DeployConfig,
@@ -772,7 +773,9 @@ const inputStyle: React.CSSProperties = {
 
 const DeployPanel: React.FC = () => (
     <PanelLoader>
-        <DeployPanelContent />
+        <DemoGate title="Deploy to Production">
+            <DeployPanelContent />
+        </DemoGate>
     </PanelLoader>
 );
 
