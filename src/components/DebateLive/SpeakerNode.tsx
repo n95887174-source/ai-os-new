@@ -179,7 +179,13 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
                     aria-live="polite"
                     role="status"
                 >
-                    {isActive && streamText ? 'speaking...' : thinking ? 'thinking...' : ''}
+                    {streamText
+                        ? streamText
+                        : isActive
+                          ? 'speaking...'
+                          : thinking
+                            ? 'thinking...'
+                            : ''}
                 </motion.div>
             )}
         </div>

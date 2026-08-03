@@ -307,33 +307,64 @@ export async function debateCallLlm(
                     cleanupGov = () => govOp!.signal.removeEventListener('abort', onGovAbort);
                 }
 
-                LOGGER.debug('DebateLlmCaller', 'Calling adapter.sendMessage', {
+                LOGGER.debug('DebateLlmCaller', 'Calling adapter', {
                     provider: resolvedKey.provider,
                     model: modelId,
                     keyId: resolvedKey?.id?.slice(0, 8) ?? 'unknown',
                     agentId: participant.agentId,
                     msgCount: messages.length,
+                    mode: adapter.streamMessage ? 'stream' : 'single',
                 });
                 const heapBeforeSendMsg = getHeapMB();
                 let response: { content: string };
                 try {
-                    response = await adapter.sendMessage(
-                        messages,
-                        modelId,
-                        resolvedKey.key,
-                        controller.signal,
-                    );
+                    if (adapter.streamMessage) {
+                        // P1.20: Real-time token streaming — forward each chunk to the
+                        // live store as it is generated, so the user sees the response
+                        // instead of waiting 30s+ for the full reply without feedback.
+                        let streamed = '';
+                        await adapter.streamMessage(
+                            messages,
+                            modelId,
+                            resolvedKey.key,
+                            (chunk) => {
+                                if (!chunk) return;
+                                streamed += chunk;
+                                deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
+                                    sessionId: session.id,
+                                    agentId: participant.agentId,
+                                    chunk,
+                                });
+                            },
+                            controller.signal,
+                        );
+                        response = { content: streamed };
+                    } else {
+                        response = await adapter.sendMessage(
+                            messages,
+                            modelId,
+                            resolvedKey.key,
+                            controller.signal,
+                        );
+                        // Non-streaming adapter (e.g. mock): emit the full response as a
+                        // single chunk to preserve the existing live feedback behaviour.
+                        deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
+                            sessionId: session.id,
+                            agentId: participant.agentId,
+                            chunk: response.content,
+                        });
+                    }
                     logMemory(
                         `sendMsg[${participant.agentId.slice(0, 8)}] ${resolvedKey.provider}/${modelId}`,
                         heapBeforeSendMsg,
                     );
-                    LOGGER.debug('DebateLlmCaller', 'adapter.sendMessage OK', {
+                    LOGGER.debug('DebateLlmCaller', 'adapter call OK', {
                         provider: resolvedKey.provider,
                         model: modelId,
                         contentLen: response.content?.length,
                     });
                 } catch (e) {
-                    LOGGER.debug('DebateLlmCaller', 'adapter.sendMessage FAILED', {
+                    LOGGER.debug('DebateLlmCaller', 'adapter call FAILED', {
                         provider: resolvedKey.provider,
                         model: modelId,
                         error: e instanceof Error ? e.message : String(e),
@@ -453,12 +484,6 @@ export async function debateCallLlm(
                         });
                     }
                 }
-
-                deps.eventBus.emit(EVENTS.DEBATE_AGENT_CHUNK, {
-                    sessionId: session.id,
-                    agentId: participant.agentId,
-                    chunk: content,
-                });
 
                 deps.qualityCollector?.record({
                     id: `${sessionId}-arg-${participant.agentId}-${Date.now()}`,

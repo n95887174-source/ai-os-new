@@ -57,39 +57,52 @@ npm run check:circular-kernel  # circular deps check
 
 ### План
 
-| #   | Задача                                                                                 | Статус  |
-| --- | -------------------------------------------------------------------------------------- | ------- |
-| 1   | **P0.9** — DependencyCruiser rules, module-level `new Function()`                      | 🟢 Done |
-| 2   | **P0.15** — AgentControlPanel inject no-op → debateHumanService.addArgument            | 🟢 Done |
-| 3   | **P0.11** — ChatExecutor singleton → DI promptSecurityService                          | 🟢 Done |
-| 4   | **P0.12** — ServiceRegistryPanel split (1391 → 421 lines)                              | 🟢 Done |
-| 5   | **P0.13** — QualityImpactDashboardPanel split (1201 → 51 lines)                        | 🟢 Done |
-| 6   | **P0.14** — DashboardPanel split (1088 → ~380 lines)                                   | 🟢 Done |
-| 7   | **P0.1** — API keys plaintext → честный README + red-warning в UI                      | 🟢 Done |
-| 8   | **P0.2** — `new Function()` → AST interpreter (meriyah)                                | 🟢 Done |
-| 9   | **P0.4** — admin token → proper auth                                                   | 🟢 Done |
-| 10  | **P0.3** — CI красный: lint errors/warnings + npm audit                                | 🟢 Done |
-| 11  | **P0.7** — 32 debate demo-заглушки → снесены (роуты уже на ComingSoonPanel)            | 🟢 Done |
-| 12  | **P0.5** — MCP `wrapExternalData` санитизация `tools/list` + `tools/call`              | 🟢 Done |
-| 13  | **P0.6** — Webhook SSRF TOCTOU (HEAD-проверка → DNS rebind)                            | 🟢 Done |
-| 14  | **P0.8** — 47 МБ мусора `docs/ocs/erorrrrr*.md/txt` → удалён                           | 🟢 Done |
-| 15  | **P0.9** — `ru.ts` ломаный русский (1873 строки) → переведены                          | 🟢 Done |
-| 16  | **P0.10** — ComingSoonPanel подключён к 32 stub-роутам                                 | 🟢 Done |
-| 17  | **P0.15** — DebatePanel split (825 → 499 строк)                                        | 🟢 Done |
-| 18  | **P1.1** — 12 zustand stores покрыты тестами                                           | 🟢 Done |
-| 19  | **P1.2** — hooks покрыты тестами (usePoolStatus, useFocusTrap, useRoutingIntelligence) | 🟢 Done |
-| 20  | **P1.8** — test coverage threshold 30% (scoped include, рабочий `--coverage`)          | 🟢 Done |
-| 21  | **P1.9** — CI coverage job (стабильный набор, отдельный от OOM-прогона)                | 🟢 Done |
-| 22  | **P1.10** — CI dep-graph job: `npm run check:deps`                                     | 🟢 Done |
-| 23  | **P1.11** — Тесты включены в типизацию (`tsconfig.test.json`)                          | 🟢 Done |
-| 24  | **P1.12** — i18n монолиты разбиты на namespace-файлы (17 на локаль)                    | 🟢 Done |
-| 25  | **P1.13** — 26 прямых `t`-импортов → `useTranslation()`                                | 🟢 Done |
-| 26  | **P1.14** — `debate-llm-caller.ts` split (2729 → 1027 строк)                           | 🟢 Done |
-| 27  | **P1.15** — `memory-engine.ts` split (996 → 794 строк)                                 | 🟢 Done |
-| 28  | **P1.16** — `key-service.ts` split (1339 → 1083 строк)                                 | 🟢 Done |
-| 29  | **P1.17** — layer violation: store-адаптеры из `src/stores/` → DI-токены               | 🟢 Done |
-| 30  | **P1.18** — 8 `@deprecated MOCK` сервисов → feature-flag + DemoBadge                   | 🟢 Done |
-| 31  | **P1.19** — DAL не покрыт тестами → 70 тестов (14 файлов) + фикс compound-index prune  | 🟢 Done |
+| #   | Задача                                                                                    | Статус  |
+| --- | ----------------------------------------------------------------------------------------- | ------- |
+| 1   | **P0.9** — DependencyCruiser rules, module-level `new Function()`                         | 🟢 Done |
+| 2   | **P0.15** — AgentControlPanel inject no-op → debateHumanService.addArgument               | 🟢 Done |
+| 3   | **P0.11** — ChatExecutor singleton → DI promptSecurityService                             | 🟢 Done |
+| 4   | **P0.12** — ServiceRegistryPanel split (1391 → 421 lines)                                 | 🟢 Done |
+| 5   | **P0.13** — QualityImpactDashboardPanel split (1201 → 51 lines)                           | 🟢 Done |
+| 6   | **P0.14** — DashboardPanel split (1088 → ~380 lines)                                      | 🟢 Done |
+| 7   | **P0.1** — API keys plaintext → честный README + red-warning в UI                         | 🟢 Done |
+| 8   | **P0.2** — `new Function()` → AST interpreter (meriyah)                                   | 🟢 Done |
+| 9   | **P0.4** — admin token → proper auth                                                      | 🟢 Done |
+| 10  | **P0.3** — CI красный: lint errors/warnings + npm audit                                   | 🟢 Done |
+| 11  | **P0.7** — 32 debate demo-заглушки → снесены (роуты уже на ComingSoonPanel)               | 🟢 Done |
+| 12  | **P0.5** — MCP `wrapExternalData` санитизация `tools/list` + `tools/call`                 | 🟢 Done |
+| 13  | **P0.6** — Webhook SSRF TOCTOU (HEAD-проверка → DNS rebind)                               | 🟢 Done |
+| 14  | **P0.8** — 47 МБ мусора `docs/ocs/erorrrrr*.md/txt` → удалён                              | 🟢 Done |
+| 15  | **P0.9** — `ru.ts` ломаный русский (1873 строки) → переведены                             | 🟢 Done |
+| 16  | **P0.10** — ComingSoonPanel подключён к 32 stub-роутам                                    | 🟢 Done |
+| 17  | **P0.15** — DebatePanel split (825 → 499 строк)                                           | 🟢 Done |
+| 18  | **P1.1** — 12 zustand stores покрыты тестами                                              | 🟢 Done |
+| 19  | **P1.2** — hooks покрыты тестами (usePoolStatus, useFocusTrap, useRoutingIntelligence)    | 🟢 Done |
+| 20  | **P1.8** — test coverage threshold 30% (scoped include, рабочий `--coverage`)             | 🟢 Done |
+| 21  | **P1.9** — CI coverage job (стабильный набор, отдельный от OOM-прогона)                   | 🟢 Done |
+| 22  | **P1.10** — CI dep-graph job: `npm run check:deps`                                        | 🟢 Done |
+| 23  | **P1.11** — Тесты включены в типизацию (`tsconfig.test.json`)                             | 🟢 Done |
+| 24  | **P1.12** — i18n монолиты разбиты на namespace-файлы (17 на локаль)                       | 🟢 Done |
+| 25  | **P1.13** — 26 прямых `t`-импортов → `useTranslation()`                                   | 🟢 Done |
+| 26  | **P1.14** — `debate-llm-caller.ts` split (2729 → 1027 строк)                              | 🟢 Done |
+| 27  | **P1.15** — `memory-engine.ts` split (996 → 794 строк)                                    | 🟢 Done |
+| 28  | **P1.16** — `key-service.ts` split (1339 → 1083 строк)                                    | 🟢 Done |
+| 29  | **P1.17** — layer violation: store-адаптеры из `src/stores/` → DI-токены                  | 🟢 Done |
+| 30  | **P1.18** — 8 `@deprecated MOCK` сервисов → feature-flag + DemoBadge                      | 🟢 Done |
+| 31  | **P1.19** — DAL не покрыт тестами → 70 тестов (14 файлов) + фикс compound-index prune     | 🟢 Done |
+| 32  | **P1.20** — Добавить streaming в live дебаты (сейчас пользователь ждёт 30с+ без feedback) | 🟢 Done |
+
+### Changes (P1.20)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Диагностика**: вся streaming-инфраструктура уже существовала — все 4 дефолтных адаптера (groq, gemini, openrouter, nvidia) реализуют `streamMessage` с token-callback'ами, `debateLiveStore.streamingContent` + событие `DEBATE_AGENT_CHUNK` уже подключены, но `debate-llm-caller.ts` вызывал не-streaming `adapter.sendMessage` и эмитил весь ответ одним «мега-чанком» — пользователь видел ничего 30с+. Единственный недостающий кусок — пер-токенный forward                                                                                                                                                                                  |
+| 2   | `debate-llm-caller.ts` — вызов `adapter.sendMessage` (строки ~320) заменён на `adapter.streamMessage` (когда доступен): каждый непустой chunk аккумулируется в `content` и **по-токенно** эмитится в `DEBATE_AGENT_CHUNK { sessionId, agentId, chunk }`; `stripSpeakerPrefix`/валидация/пост-процессинг/`DEBATE_AGENT_RESPONDED` работают как раньше (финальный content собирается из стрима). Для адаптеров без `streamMessage` (например mock) — фолбэк на `sendMessage` с эмитом полного ответа одним chunk (поведение сохранено). Удалён дублирующий emit полного `content` после валидации (он конкатенировался бы к уже отстримленным токенам) |
+| 3   | `SpeakerNode.tsx` — `{isActive && streamText ? 'speaking...' : ...}` → показ **реального** `streamText` (сырые токены с CSS ellipsis) вместо статичного «speaking...»; `aria-live="polite"`/`role="status"` сохранены. Теперь пользователь видит текст по мере генерации                                                                                                                                                                                                                                                                                                                                                                             |
+| 4   | Хранение/очистка не менялись: `streamingContent` ключ `sessionId:agentId`, кап 10240 символов, очистка на `DEBATE_AGENT_ERROR`/`TIMEOUT`/`FALLBACK`/`RESPONDED`. Частичный текст при внутреннем retry (валидация/duplicate reject) остаётся до следующей попытки или финальной ошибки — приемлемо, уходит при `RESPONDED`/`ERROR`                                                                                                                                                                                                                                                                                                                    |
+| 5   | Проверено: `npx tsc --noEmit -p tsconfig.app.json` → 0 errors; `npx vitest run src/stores/debateLiveStore.test.ts src/kernel/services/debate-runtime` → **107 ✅**; `npm run build` → ✅ (19.29s); `npm run check:deps` → 0 violations (1472 modules, 5173 deps)                                                                                                                                                                                                                                                                                                                                                                                     |
+| 6   | `docs/new/CONSOLIDATED_PLAN.md` — P1.20 ✅                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 7   | Примечание: `vitest.config.ts:7` LSP-ошибка — пре-существующая, игнорировать. Следующая задача — **P1.21** (маркировать cognitive-aux панели: JSDoc + UI badge «Experimental»)                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ### Changes (P1.19)
 
