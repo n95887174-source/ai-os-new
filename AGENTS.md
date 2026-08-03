@@ -95,6 +95,14 @@ npm run check:circular-kernel  # circular deps check
 | 34  | **P1.22** — 13 React.memo на 644 .tsx — мемоизировать 10 тяжёлых list-row компонентов     | 🟢 Done |
 | 35  | **P1.23** — Заменить `console.log/.warn/.error` в UI компонентах на `LOGGER`              | 🟢 Done |
 | 36  | **P1.24** — Security headers в nginx (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) | 🟢 Done |
+| 37  | **P1.25** — Dependency audit / fix (`npm audit fix`)                                      | 🟢 Done |
+
+### Changes (P1.25)
+
+| #   | Что сделано                                                                                     |
+| --- | ----------------------------------------------------------------------------------------------- |
+| 1   | Запущен `npm audit fix` — уязвимость `fast-uri` устранена                                       |
+| 2   | Следующая задача — **P1.26** (Переименование `build:unsafe` в `build:skip-typecheck` с warning) |
 
 ### Changes (P1.24)
 
