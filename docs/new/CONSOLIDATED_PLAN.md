@@ -85,7 +85,7 @@
 | P1.16 | **Разбить `key-service.ts` (1339 строк)** — facade уже есть, вынести логику в существующие key-management/*                                                                                    | `[E][Z]` | M (2-3d) | ✅ 1339 → 1083 строк (3 модуля)                                         |
 | P1.17 | **Layer violation в service-registration** — `phase3-debate-runtime.ts` и `phase6-high-level.ts` импортируют adapter-фабрики из `src/stores/`. Исключение в `.dependency-cruiser.cjs` — убрать | `[A]`    | S (1d)   | ✅ DI-токены + UI-регистрация адаптеров (0 violations)                  |
 | P1.18 | **8 `@deprecated MOCK` сервисов с UI-панелями** — deploy, fine-tuning, model-distillation, health-sla, provider-migration, sleep-engine. Либо feature-flag с бейджем "Demo", либо удалить      | `[A]`    | M (2-3d) | ✅ feature-flag `mockServices.enabled` + DemoBadge/DemoGate на 4 панели |
-| P1.19 | **DAL не покрыт тестами** — 17 файлов, 0 тестов                                                                                                                                                | `[Z]`    | L (1w)   | ❌                                                                      |
+| P1.19 | **DAL не покрыт тестами** — 17 файлов, 0 тестов                                                                                                                                                | `[Z]`    | L (1w)   | ✅ 70 тестов (14 файлов) + фикс compound-index prune                    |
 
 ### UX/Performance
 

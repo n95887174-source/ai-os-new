@@ -124,9 +124,11 @@ class DexieMemoryStoreImpl implements DexieMemoryStore {
         if (options.type) {
             collection = db.memories.where('[metadata.type]').equals(options.type);
         } else if (options.before) {
-            collection = db.memories.where('[metadata.timestamp]').below(options.before);
+            // Compound index `[metadata.timestamp]` requires an array bound —
+            // a scalar `.below(x)` compares a number against array keys and matches nothing.
+            collection = db.memories.where('[metadata.timestamp]').below([options.before]);
         } else if (options.after) {
-            collection = db.memories.where('[metadata.timestamp]').above(options.after);
+            collection = db.memories.where('[metadata.timestamp]').above([options.after]);
         } else {
             collection = db.memories.orderBy('id');
         }

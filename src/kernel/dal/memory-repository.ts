@@ -187,7 +187,7 @@ export class MemoryRepository {
         // DAL-3: Query DB directly instead of only cache-resident entries
         const oldEntries = await this.db.memories
             .where('[metadata.timestamp]')
-            .below(beforeTimestamp)
+            .below([beforeTimestamp])
             .primaryKeys();
 
         if (oldEntries.length > 0) {
