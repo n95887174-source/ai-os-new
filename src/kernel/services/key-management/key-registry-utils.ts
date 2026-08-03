@@ -194,3 +194,53 @@ export function getStats(keys: ApiKey[]) {
         providers: providers.size,
     };
 }
+
+export function ensureExtendedStats(key: ApiKey): void {
+    if (!key.stats) key.stats = initStats();
+    if (!key.stats.extended) key.stats.extended = initExtendedStats();
+    const ext = key.stats.extended!;
+    if (!ext.usageToday)
+        ext.usageToday = { tokens: 0, weightedTokens: 0, requests: 0, estimatedCost: 0 };
+    if (!ext.usageMonthly) ext.usageMonthly = { tokens: 0, requests: 0, estimatedCost: 0 };
+    if (!ext.latencyBreakdown) ext.latencyBreakdown = { ttft: 0, total: 0, tokensPerSec: 0 };
+    if (!ext.errorBreakdown)
+        ext.errorBreakdown = {
+            rateLimit: 0,
+            timeout: 0,
+            serverError: 0,
+            validationError: 0,
+            other: 0,
+            provider: 0,
+        };
+    if (!ext.fourSignals)
+        ext.fourSignals = { latency: 0, throughput: 0, errorRate: 0, saturation: 0 };
+    if (!ext.rules) ext.rules = structuredClone(CONFIG.keys.defaultRules);
+}
+
+export type RestoreKeyInput = {
+    id: string;
+    provider: string;
+    key?: string;
+    model?: string;
+    status?: string;
+    label?: string;
+};
+
+export function buildRestoreKeys(keysData: RestoreKeyInput[]): ApiKey[] {
+    return keysData.map((k) => ({
+        id: k.id,
+        provider: k.provider,
+        key: k.key || '',
+        model: k.model || '',
+        status: (k.status as ApiKey['status']) || 'active',
+        label: k.label || k.id,
+        stats: {
+            successCount: 0,
+            errorCount: 0,
+            totalTokens: 0,
+            avgLatency: 0,
+            minLatency: 0,
+            maxLatency: 0,
+        },
+    }));
+}
