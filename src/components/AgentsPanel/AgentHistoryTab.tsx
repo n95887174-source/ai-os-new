@@ -1,5 +1,6 @@
 import React from 'react';
-import { agentVersionService } from '../../kernel/instances';
+import { agentVersionService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('AgentHistoryTab');
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { PanelSkeleton } from '../Common/Skeleton';
 
@@ -16,7 +17,7 @@ export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
                 setLoading(false);
             })
             .catch((err) => {
-                console.warn('[AgentHistoryTab] Failed to load versions', err);
+                LOGGER.warn('AgentHistoryTab', 'Failed to load versions', { error: err });
                 setLoading(false);
             });
     }, [agentId]);

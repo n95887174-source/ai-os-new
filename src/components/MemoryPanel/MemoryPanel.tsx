@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { memoryService } from '../../kernel/instances';
+import { memoryService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('MemoryPanel');
 import type { MemoryEntry } from '../../types/memory';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { CONFIG } from '../../kernel/instances';
@@ -169,7 +170,7 @@ const MemoryPanel: React.FC = () => {
                 setError(null);
             }
         } catch (err) {
-            console.warn('[MemoryPanel] Failed to wipe memory index:', err);
+            LOGGER.warn('Failed to wipe memory index', err);
             if (isMountedRef.current) {
                 setError(t('memory.error_wipe'));
                 clearError();
@@ -177,29 +178,32 @@ const MemoryPanel: React.FC = () => {
         }
     };
 
-    const handleDeleteMemory = async (id: string) => {
-        if (
-            !(await confirm({
-                title: 'Delete Memory',
-                message: 'Delete this memory entry?',
-                variant: 'danger',
-            }))
-        )
-            return;
-        try {
-            await memoryService.deleteMemory(id);
-            if (isMountedRef.current) {
-                setMemories((prev) => prev.filter((m) => m.id !== id));
-                setError(null);
+    const handleDeleteMemory = useCallback(
+        async (id: string) => {
+            if (
+                !(await confirm({
+                    title: 'Delete Memory',
+                    message: 'Delete this memory entry?',
+                    variant: 'danger',
+                }))
+            )
+                return;
+            try {
+                await memoryService.deleteMemory(id);
+                if (isMountedRef.current) {
+                    setMemories((prev) => prev.filter((m) => m.id !== id));
+                    setError(null);
+                }
+            } catch (err) {
+                LOGGER.warn('Failed to delete memory entry', err);
+                if (isMountedRef.current) {
+                    setError(t('memory.error_delete'));
+                    clearError();
+                }
             }
-        } catch (err) {
-            console.warn('[MemoryPanel] Failed to delete memory entry:', err);
-            if (isMountedRef.current) {
-                setError(t('memory.error_delete'));
-                clearError();
-            }
-        }
-    };
+        },
+        [confirm, clearError, t],
+    );
 
     const handleExportVectors = async () => {
         try {
@@ -216,7 +220,7 @@ const MemoryPanel: React.FC = () => {
                 type: 'success',
             });
         } catch (err) {
-            console.warn('[MemoryPanel] Export failed:', err);
+            LOGGER.warn('Export failed', err);
             if (isMountedRef.current) {
                 setError(t('memory.error_export'));
                 clearError();
@@ -240,7 +244,7 @@ const MemoryPanel: React.FC = () => {
         setSemanticMode(next);
         configService
             .updateServices({ memory: { semanticEnabled: next, autoEmbedOnStore: true } })
-            .catch((e) => console.warn('[MemoryPanel] Config update failed:', e));
+            .catch((e) => LOGGER.warn('Config update failed', e));
         if (next) void Promise.resolve();
     };
 

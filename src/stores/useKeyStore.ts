@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { useMemo } from 'react';
 import { liveQuery } from 'dexie';
 import { eventBus, EVENTS, keyService, groupManager, keyStateStore } from './key-store-deps';
-import { getDexieDb } from '../kernel/instances';
+import { getDexieDb, rootLogger } from '../kernel/instances';
+const LOGGER = rootLogger.child('KeyStore');
 import { tryGetServiceProp } from '../kernel/service-helper';
 import type { ApiKey, KeyNote, ProviderAlert } from '../types/metrics';
 
@@ -203,7 +204,7 @@ function ensureInitialized(
             }, 200);
         },
         error: (err: unknown) => {
-            console.warn('[KeyStore] liveQuery error:', err);
+            LOGGER.warn('KeyStore', 'liveQuery error', { error: err });
             const fallback = groupManager?.getAllKeys?.() || [];
             if (fallback.length > 0) {
                 set(() => ({
@@ -410,7 +411,10 @@ export const useKeyStore = create<Store>((set, get) => {
                 }
             }
             if (errors.length > 0) {
-                console.warn('[KeyStore] enableAllKeys: errors on', errors.length, 'keys');
+                LOGGER.warn('KeyStore', 'enableAllKeys failed for some keys', {
+                    errorCount: errors.length,
+                    errors,
+                });
                 eventBus.emit(EVENTS.METRICS_ALERT, {
                     id: 'enable-all-keys',
                     metric: 'partial_failure',
@@ -431,7 +435,10 @@ export const useKeyStore = create<Store>((set, get) => {
                 }
             }
             if (errors.length > 0) {
-                console.warn('[KeyStore] disableAllKeys: errors on', errors.length, 'keys');
+                LOGGER.warn('KeyStore', 'disableAllKeys failed for some keys', {
+                    errorCount: errors.length,
+                    errors,
+                });
                 eventBus.emit(EVENTS.METRICS_ALERT, {
                     id: 'disable-all-keys',
                     metric: 'partial_failure',

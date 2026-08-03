@@ -8,6 +8,9 @@ import type { GeminiResponse } from './gemini-types';
 import { GeminiHealthCheck } from './gemini-health';
 import { validateModel, modelCache } from './gemini-model-validator';
 import { AuthError, SafetyError, RetryableError } from '../core/errors';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('GeminiAdapter');
 
 const RETRYABLE_429_CODES = new Set([429]);
 function isRetryable429(e: unknown): boolean {
@@ -77,10 +80,9 @@ export class GeminiAdapter extends BaseLLMAdapter {
                 ),
             );
             if (import.meta.env.DEV) {
-                console.warn(
-                    `[GeminiAdapter] response for ${safeModel}:`,
-                    JSON.stringify(data).slice(0, 1000),
-                );
+                LOGGER.warn('GeminiAdapter', `response for ${safeModel}`, {
+                    response: JSON.stringify(data).slice(0, 1000),
+                });
             }
             const raw = data as GeminiResponse;
             const result = toProviderResponse(raw, latency);

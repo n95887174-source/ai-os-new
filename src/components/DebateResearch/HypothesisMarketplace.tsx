@@ -12,14 +12,8 @@ import {
     Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { hypothesisService } from '../../kernel/instances';
-import type {
-    ResearchHypothesis,
-    HypothesisCategory,
-    HypothesisStatus,
-} from '../../kernel/types/research-types';
-import { HYPOTHESIS_CATEGORIES, HYPOTHESIS_STATUSES } from '../../kernel/types/research-types';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { hypothesisService, eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('HypothesisMarketplace');
 import { glassPanel } from '../../styles/common';
 import { StorageAdapter } from '../../kernel/services/storage-adapter';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -87,7 +81,7 @@ export const HypothesisMarketplace: React.FC = () => {
                 const all = hypothesisService.getAll();
                 if (isMountedRef.current) setHypotheses(all);
             } catch (e) {
-                console.warn('[HypothesisMarketplace] Failed to load:', e);
+                LOGGER.warn('HypothesisMarketplace', 'Failed to load', { error: e });
             }
         };
         load();
@@ -145,7 +139,7 @@ export const HypothesisMarketplace: React.FC = () => {
             setShowPropose(false);
             setHypotheses(hypothesisService.getAll());
         } catch (e) {
-            console.warn('[HypothesisMarketplace] Failed to propose:', e);
+            LOGGER.warn('HypothesisMarketplace', 'Failed to propose', { error: e });
         }
     };
 

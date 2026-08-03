@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { groupManager, keyService } from '../../kernel/instances';
+import { groupManager, keyService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('GroupsPanel');
 import { useKeyStore, refreshKeyStore } from '../../stores/useKeyStore';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Users, Plus, Check, X, Shield, FolderTree } from 'lucide-react';
@@ -96,7 +97,7 @@ const GroupsPanel: React.FC = () => {
             await groupManager.assignKeyToGroup(keyId, targetGroup);
             await refresh();
         } catch (e) {
-            console.error('Failed to move key:', e);
+            LOGGER.error('Failed to move key', e);
             setError('Failed to move key to group');
         }
     };

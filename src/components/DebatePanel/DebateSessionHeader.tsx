@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Pause, Square, Activity, Download, FileText } from 'lucide-react';
-import { debateEngine } from '../../kernel/instances';
+import { debateEngine, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('DebateSessionHeader');
 import type { DebateSession } from '../../kernel/instances';
 import { buildDebateMarkdown } from './debate-markdown';
 import { btnControlBase, debateStatusDot, debateStatusText, flexGap2 } from '../../styles/common';
@@ -58,14 +59,14 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
     };
 
     const handleStop = () => {
-        console.log('[DebatePanel] Stop clicked', {
+        LOGGER.info('DebateSessionHeader', 'Stop clicked', {
             id: session.id,
             status: session.status,
             phase: (session as { status?: string }).status,
         });
         try {
             debateEngine.cancelSession(session.id);
-            console.log('[DebatePanel] cancelSession OK', { id: session.id });
+            LOGGER.info('DebateSessionHeader', 'cancelSession OK', { id: session.id });
             setError(null);
         } catch (e) {
             if (isMountedRef.current) {

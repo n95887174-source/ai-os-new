@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { usePolling } from '../Common/usePolling';
 import { Thermometer, Gauge, Server, MessageCircle, RefreshCw } from 'lucide-react';
-import { pressureMapService } from '../../kernel/instances';
+import { pressureMapService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('PressureMapPanel');
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import type {
@@ -46,7 +47,7 @@ const PressureMapPanel: React.FC = () => {
             setAlerts(pressureMapService.getAlerts() ?? []);
             setTrends(pressureMapService.getPressureHistory('global') ?? []);
         } catch {
-            console.warn('[PressureMapPanel] Failed to load pressure data');
+            LOGGER.warn('Failed to load pressure data');
         }
     }, []);
 

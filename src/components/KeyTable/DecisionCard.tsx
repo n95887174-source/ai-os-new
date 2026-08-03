@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RouterDecision, PipelineStep } from '../../kernel/instances';
 import DecisionExpandedView from './DecisionExpandedView';
@@ -23,7 +23,7 @@ interface Props {
     keyId: string;
 }
 
-const DecisionCard: React.FC<Props> = ({ decision: d, keyId }) => {
+const DecisionCard: React.FC<Props> = memo(({ decision: d, keyId }) => {
     const [expanded, setExpanded] = useState(false);
     const skipEntry = d.skipped.find((s) => s.keyId === keyId);
     const finalState = skipEntry
@@ -161,6 +161,6 @@ const DecisionCard: React.FC<Props> = ({ decision: d, keyId }) => {
             </AnimatePresence>
         </div>
     );
-};
+});
 
 export default DecisionCard;

@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { liveQuery } from 'dexie';
 import { runtime } from '../../kernel/runtime';
 import { genId } from '../../utils/gen-id';
-import { getDexieDb } from '../../kernel/instances';
+import { getDexieDb, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('DebateSessionStore');
 import type { DebateParticipant, DebateSession } from '../../kernel/contracts/debate-types';
 import type { DebateSessionMeta, DebateSessionStoreShape } from './types';
 import type { ISessionManager } from '../../kernel/contracts/session-manager';
@@ -60,7 +61,7 @@ async function getLinkedIds(id: string): Promise<string[]> {
         const links = await mgr.getLinked(id);
         return links.map((l) => (l.fromId === id ? l.toId : l.fromId));
     } catch (err) {
-        console.warn('[DebateSessionStore] getLinkedIds failed', err);
+        LOGGER.warn('DebateSessionStore', 'getLinkedIds failed', { error: err });
         return [];
     }
 }
@@ -70,7 +71,7 @@ function toMeta(r: DebateRecord, linkedIds?: string[]): DebateSessionMeta {
     try {
         p = (safeJsonParse(r.participants || '[]') as DebateParticipant[]) ?? [];
     } catch (err) {
-        console.warn('[DebateSessionStore] toMeta parse participants failed', err);
+        LOGGER.warn('DebateSessionStore', 'toMeta parse participants failed', { error: err });
         p = [];
     }
     return {
@@ -101,13 +102,13 @@ async function loadFull(id: string): Promise<DebateSession | null> {
         try {
             args = (safeJsonParse(r.arguments || '[]') as unknown[]) ?? [];
         } catch (err) {
-            console.warn('[DebateSessionStore] loadFull parse arguments failed', err);
+            LOGGER.warn('DebateSessionStore', 'loadFull parse arguments failed', { error: err });
             args = [];
         }
         try {
             parts = (safeJsonParse(r.participants || '[]') as unknown[]) ?? [];
         } catch (err) {
-            console.warn('[DebateSessionStore] loadFull parse participants failed', err);
+            LOGGER.warn('DebateSessionStore', 'loadFull parse participants failed', { error: err });
             parts = [];
         }
         let storedConfig: Record<string, unknown> = {};
@@ -116,7 +117,7 @@ async function loadFull(id: string): Promise<DebateSession | null> {
                 Record<string, unknown> | undefined;
             storedConfig = ((topology?.config || topology) as Record<string, unknown>) ?? {};
         } catch (err) {
-            console.warn('[DebateSessionStore] loadFull parse topology failed', err);
+            LOGGER.warn('DebateSessionStore', 'loadFull parse topology failed', { error: err });
         }
         return {
             id: r.id,
@@ -142,7 +143,7 @@ async function loadFull(id: string): Promise<DebateSession | null> {
             },
         };
     } catch (err) {
-        console.warn('[DebateSessionStore] loadFull failed', err);
+        LOGGER.warn('DebateSessionStore', 'loadFull failed', { error: err });
         return null;
     }
 }
@@ -177,7 +178,7 @@ function ensureLiveQuery(
             }, 200);
         },
         error: (err: unknown) => {
-            console.warn('[DebateSessionStore] liveQuery error:', err);
+            LOGGER.warn('DebateSessionStore', 'liveQuery error', { error: err });
             useDebateSessionStore.setState({ isLoaded: true });
         },
     });
@@ -269,7 +270,7 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
                     records.map(async (r) => toMeta(r, await getLinkedIds(r.id))),
                 );
             } catch (err) {
-                console.warn('[DebateSessionStore] listSessions failed', err);
+                LOGGER.warn('DebateSessionStore', 'listSessions failed', { error: err });
                 return [];
             }
         },
@@ -393,7 +394,7 @@ export const useDebateSessionStore = create<DebateSessionStoreShape>((set, get) 
                 const metas = await recordsToMetas(records);
                 set({ sessions: metas, isLoaded: true });
             } catch (err) {
-                console.warn('[DebateSessionStore] refresh failed', err);
+                LOGGER.warn('DebateSessionStore', 'refresh failed', { error: err });
                 set({ sessions: [], isLoaded: true });
             }
         },

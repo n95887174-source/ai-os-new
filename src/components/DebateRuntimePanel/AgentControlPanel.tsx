@@ -11,7 +11,13 @@ import {
     Loader2,
     Check,
 } from 'lucide-react';
-import { agentService, debateService, debateHumanService } from '../../kernel/instances';
+import {
+    agentService,
+    debateService,
+    debateHumanService,
+    rootLogger,
+} from '../../kernel/instances';
+const LOGGER = rootLogger.child('AgentControlPanel');
 import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
@@ -87,7 +93,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
         try {
             await agentService.restartAgent(agentId);
         } catch (e) {
-            console.warn('[AgentControlPanel] restart failed:', e);
+            LOGGER.warn('AgentControlPanel', 'restart failed', { error: e });
             eventBus.emit(EVENTS.NOTIFICATION, {
                 message: `Agent restart failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
                 type: 'error',
@@ -115,7 +121,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
             try {
                 const activeSession = debateService.getActiveDebateSession();
                 if (!activeSession) {
-                    console.warn('[AgentControlPanel] no active debate session');
+                    LOGGER.warn('AgentControlPanel', 'no active debate session');
                     eventBus.emit(EVENTS.NOTIFICATION, {
                         message: 'Cannot inject message — no active debate session',
                         type: 'error',
@@ -132,7 +138,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                 );
                 setInjectText((prev) => ({ ...prev, [agentId]: '' }));
             } catch (e) {
-                console.warn('[AgentControlPanel] inject failed:', e);
+                LOGGER.warn('AgentControlPanel', 'inject failed', { error: e });
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: `Inject failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
                     type: 'error',

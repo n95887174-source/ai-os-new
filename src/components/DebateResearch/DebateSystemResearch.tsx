@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Debate-system research scratchpad — research-grade, not production surface (P1.21).
+ */
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

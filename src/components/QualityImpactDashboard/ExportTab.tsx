@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { qualityImpactCollector } from '../../kernel/instances';
+import { qualityImpactCollector, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ExportTab');
 import { useTranslation } from '../../i18n/useTranslation';
 import { tableContainerStyle } from './quality-impact-shared';
 
@@ -25,7 +26,7 @@ const ExportTab: React.FC = () => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) {
-            console.warn('Export JSON failed', e);
+            LOGGER.warn('Export JSON failed', e);
         }
         setExporting(null);
     }, []);
@@ -50,7 +51,7 @@ const ExportTab: React.FC = () => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) {
-            console.warn('Export CSV failed', e);
+            LOGGER.warn('Export CSV failed', e);
         }
         setExporting(null);
     }, []);

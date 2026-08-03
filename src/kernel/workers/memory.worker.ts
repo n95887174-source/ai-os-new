@@ -6,6 +6,8 @@ import {
     type AnyOrama,
 } from '@orama/orama';
 import type { MemoryEntry } from '../../types/memory';
+import { rootLogger } from '../services/logger-service';
+const LOGGER = rootLogger.child('MemoryWorker');
 
 let db: unknown = null;
 let entries: MemoryEntry[] = [];
@@ -74,7 +76,7 @@ function pruneEntries(): void {
             try {
                 if (db) void oramaRemove(db as AnyOrama, entry.id);
             } catch (e) {
-                console.warn('[MemoryWorker] prune remove error:', e);
+                LOGGER.warn('MemoryWorker', 'prune remove error', { error: e });
             }
         }
     }
@@ -145,7 +147,7 @@ self.onmessage = async (event: MessageEvent) => {
                     try {
                         if (db) await oramaRemove(db as AnyOrama, entry.id);
                     } catch (e) {
-                        console.warn('[MemoryWorker] upsert remove error:', e);
+                        LOGGER.warn('MemoryWorker', 'upsert remove error', { error: e });
                     }
                 } else {
                     entries.push(entry);
@@ -176,7 +178,7 @@ self.onmessage = async (event: MessageEvent) => {
                 try {
                     if (db) await oramaRemove(db as AnyOrama, id);
                 } catch (e) {
-                    console.warn('[MemoryWorker] remove error:', e);
+                    LOGGER.warn('MemoryWorker', 'remove error', { error: e });
                 }
                 self.postMessage({ requestId, type: 'remove', payload: { id } });
                 break;

@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Federated memory — research-grade, not production surface (P1.21).
+ */
 import React, { useState } from 'react';
 import { Server, Wifi, WifiOff, RefreshCw, Clock, Activity, Plus, X } from 'lucide-react';
 import PanelLoader from '../PanelLoader';

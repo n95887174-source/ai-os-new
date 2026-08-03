@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Meta-learning insights — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useCallback } from 'react';
 import { Brain, Lightbulb, TrendingUp, TrendingDown, Minus, RefreshCw, Zap } from 'lucide-react';
 import PanelLoader from '../PanelLoader';

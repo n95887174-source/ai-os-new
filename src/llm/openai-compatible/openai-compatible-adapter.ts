@@ -10,6 +10,9 @@ import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
 import { LLMHttpClient } from '../http/llm-http-client';
 import { OpenAiCompatibleResponseSchema } from './openai-compatible-types';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('OpenAICompatibleAdapter');
 
 const FINISH_REASONS = new Set<NonNullable<ProviderResponse['finishReason']>>([
     'STOP',
@@ -74,7 +77,9 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
     private toProviderResponse(data: Record<string, unknown>): Omit<ProviderResponse, 'latency'> {
         const parsed = OpenAiCompatibleResponseSchema.safeParse(data);
         if (!parsed.success) {
-            console.warn(`[${this.id}] Response validation failed:`, parsed.error.issues);
+            LOGGER.warn('OpenAICompatibleAdapter', `[${this.id}] Response validation failed`, {
+                issues: parsed.error.issues,
+            });
         }
         const safe = parsed.success ? parsed.data : data;
         const choice = (safe.choices as Array<Record<string, unknown>> | undefined)?.[0];

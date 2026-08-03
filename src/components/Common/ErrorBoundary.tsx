@@ -29,11 +29,6 @@ class ErrorBoundaryBase extends Component<ErrorBoundaryProps, State> {
     }
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error(
-            `[ErrorBoundary:${this.props.name || 'Root'}]`,
-            error,
-            errorInfo.componentStack,
-        );
         rootLogger.error('ErrorBoundary', error.message, {
             name: this.props.name,
             componentStack: errorInfo.componentStack,

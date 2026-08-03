@@ -1,5 +1,8 @@
 import type { ProviderResponse, SafetyRating, ToolCall } from '../core/types';
 import type { GeminiResponse, GeminiCandidate, StreamMeta } from './gemini-types';
+import { rootLogger } from '../../kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('GeminiResponseMapper');
 
 const BLOCKED_REASONS = new Set([
     'SAFETY',
@@ -64,7 +67,7 @@ export function toProviderResponse(data: GeminiResponse, latency: number): Provi
         if (pf?.blockReason) {
             const errMsg = `Response blocked by Gemini. Reason: ${pf.blockReason}${pf.blockReasonMessage ? ` — ${pf.blockReasonMessage}` : ''}.`;
             if (import.meta.env.DEV) {
-                console.warn('[GeminiMapper] blocked —', errMsg);
+                LOGGER.warn('GeminiResponseMapper', `blocked — ${errMsg}`);
             }
             return {
                 content: '',
@@ -77,7 +80,7 @@ export function toProviderResponse(data: GeminiResponse, latency: number): Provi
             };
         }
         if (import.meta.env.DEV) {
-            console.warn('[GeminiMapper] no candidates, no blockReason — returning empty');
+            LOGGER.warn('GeminiResponseMapper', 'no candidates, no blockReason — returning empty');
         }
         return {
             content: '',

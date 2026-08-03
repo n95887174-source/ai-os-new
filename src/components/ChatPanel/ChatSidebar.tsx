@@ -6,6 +6,8 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { useConfirm } from '../../hooks/useConfirm';
 import { groupSessions } from './chat-panel-utils';
 import type { ChatEntry } from '../../stores/useChatStore';
+import { rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ChatSidebar');
 
 interface Props {
     showSidebar: boolean;
@@ -69,7 +71,7 @@ const ChatSidebar: React.FC<Props> = ({
             try {
                 deleteSession(id);
             } catch {
-                console.error('Failed to delete session', id);
+                LOGGER.error('Failed to delete session', id);
             }
             if (id === activeSessionId) {
                 const nextSession = sessions.find((s) => s.id !== id);
@@ -92,7 +94,7 @@ const ChatSidebar: React.FC<Props> = ({
         try {
             useChatStore.getState().clearHistory();
         } catch {
-            console.error('Failed to clear chat history');
+            LOGGER.error('Failed to clear chat history');
         }
     }, [confirmClear, t]);
 

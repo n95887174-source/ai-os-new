@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Counterfactual analysis — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertTriangle, CheckCircle2, Zap } from 'lucide-react';
 import {

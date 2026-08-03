@@ -12,7 +12,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Play, Save, Link, Activity, AlertTriangle } from 'lucide-react';
-import { orchestrator, toolService } from '../../kernel/instances';
+import { orchestrator, toolService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('CognitiveBuilder');
 import { useKeyStore } from '../../stores/useKeyStore';
 import { AuditorTopology } from '../../kernel/state/topology-defaults';
 import type { ISTopology, ISNode, ISEdge } from '../../kernel/contracts/topology';
@@ -161,7 +162,7 @@ const CognitiveBuilder: React.FC = () => {
                 });
             })
             .catch((e) => {
-                console.warn('[CognitiveBuilder] Failed to save workflow:', e);
+                LOGGER.warn('Failed to save workflow', e);
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to save workflow',
                     type: 'error',
@@ -194,7 +195,7 @@ const CognitiveBuilder: React.FC = () => {
             });
             setError(null);
         } catch (err) {
-            console.error('[CognitiveBuilder] Deploy failed:', err);
+            LOGGER.error('Deploy failed', err);
             if (isMountedRef.current) {
                 setError(t('builder.error_deploy'));
                 clearError();

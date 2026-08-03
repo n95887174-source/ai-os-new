@@ -1,7 +1,12 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Causal debugger — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { GitBranch, Search } from 'lucide-react';
 import { textXxsMuted, detailGrid2, sectionHeaderDebug } from '../../styles/common';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('CausalDebugger');
 import {
     causalTimelineService,
     causalScopeManager,
@@ -98,7 +103,7 @@ const CausalDebugger: React.FC = () => {
             const report = truthConsistencyMonitor?.check(kState.providers, keyMap);
             setConsistencyReport(report ?? null);
             if (report && (report.status === 'DRIFT' || report.status === 'CRITICAL')) {
-                console.warn('[CausalDebugger] Consistency drift detected', {
+                LOGGER.warn('Consistency drift detected', {
                     status: report.status,
                     driftScore: report.driftScore,
                     mismatchCount: report.mismatches.length,
@@ -108,7 +113,7 @@ const CausalDebugger: React.FC = () => {
             }
         } catch (e) {
             setConsistencyReport(null);
-            console.warn('[CausalDebugger] Consistency check failed:', e);
+            LOGGER.warn('Consistency check failed', e);
         }
     }, []);
 

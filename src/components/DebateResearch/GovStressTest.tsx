@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Governance stress-test harness — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useMemo, useCallback } from 'react';
 import { Shield, Play, Loader2, Download, Search, X, Filter, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

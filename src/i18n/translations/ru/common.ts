@@ -158,6 +158,9 @@ const common: Record<string, string> = {
     'palette.recent': 'Недавние',
     'palette.select': 'Выбрать',
     'sidepanel.add_provider': 'Добавить провайдера',
+    'experimental.badge': 'Экспериментально',
+    'experimental.badge_title':
+        'Исследовательская / экспериментальная панель — не production-grade',
 };
 
 export { common };

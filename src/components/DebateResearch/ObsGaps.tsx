@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Observability gaps scanner — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Play, Loader2, Download, Search, X, Lightbulb, FileText } from 'lucide-react';

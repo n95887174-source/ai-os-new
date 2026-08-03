@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { RefreshCw, Settings } from 'lucide-react';
 import { flexAlignCenterGap2 } from '../../styles/common';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -10,7 +11,7 @@ interface Props {
     onDisconnectRequest: (id: string) => void;
 }
 
-const ConnectorCard: React.FC<Props> = ({ connector: c, onConnect, onDisconnectRequest }) => {
+const ConnectorCard: React.FC<Props> = memo(({ connector: c, onConnect, onDisconnectRequest }) => {
     const { t } = useTranslation();
     const sc = getConnectorStyle(c.status);
 
@@ -105,6 +106,6 @@ const ConnectorCard: React.FC<Props> = ({ connector: c, onConnect, onDisconnectR
             )}
         </div>
     );
-};
+});
 
 export default ConnectorCard;

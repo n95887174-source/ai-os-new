@@ -228,6 +228,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.database,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'health',
@@ -270,6 +271,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.shuffle,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'dependency-map',
@@ -305,6 +307,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.gitBranch,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'causal-debugger',
@@ -312,6 +315,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.shuffle,
                 color: '#a78bfa',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'counterfactual',
@@ -319,6 +323,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.messageCircle,
                 color: '#f59e0b',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'aquarium',
@@ -326,6 +331,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.eye,
                 color: '#06b6d4',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'ecosystem',
@@ -333,6 +339,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.fish,
                 color: '#22c55e',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'health-sla',
@@ -354,6 +361,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.server,
                 color: '#3b82f6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'memory-export-import',
@@ -368,6 +376,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.fish,
                 color: '#06b6d4',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'scheduler',
@@ -375,6 +384,7 @@ export const SYSTEM_SECTIONS: NavSection[] = [
                 icon: Icons.clock,
                 color: '#3b82f6',
                 lazy: true,
+                experimental: true,
             },
         ],
     },

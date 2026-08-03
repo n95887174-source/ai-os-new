@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Download, CheckCircle2, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { roleService } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { roleService, eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('RoleLibrary');
 import { LIBRARY_ROLES, getLibraryRolesByCategory } from '../../data/role-library';
 import type { LibraryRole } from '../../data/role-library';
 import type { RoleCategory } from '../../types/role';
@@ -95,7 +95,7 @@ const RoleLibrary: React.FC = () => {
                 type: 'success',
             });
         } catch (err) {
-            console.warn('[RoleLibrary] Failed to install role:', err);
+            LOGGER.warn('Failed to install role', err);
             eventBus.emit(EVENTS.NOTIFICATION, {
                 message: `Failed to install ${role.name}`,
                 type: 'error',

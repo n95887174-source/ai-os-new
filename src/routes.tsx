@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { Search, MessageSquare, Home } from 'lucide-react';
 import { useTranslation } from './i18n/useTranslation';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+import ExperimentalBadge from './components/Common/ExperimentalBadge';
 import { NAV_SECTIONS } from './route-registry';
 import { PANEL_COMPONENTS, PanelLoader } from './route-imports';
 const DashboardPanel = React.lazy(() => import('./components/DashboardPanel/DashboardPanel'));
@@ -221,19 +222,28 @@ export const AppRoutes: React.FC = () => {
                         const Component = PANEL_COMPONENTS[item.id];
                         if (!Component) return null;
                         const routePath = item.path ?? `/${item.id}`;
+                        const badge = item.experimental ? <ExperimentalBadge /> : null;
+                        const wrapped = item.lazy ? (
+                            <PanelLoader name={item.id}>
+                                <Component />
+                            </PanelLoader>
+                        ) : (
+                            <ErrorBoundary name={item.id} variant="panel">
+                                <Component />
+                            </ErrorBoundary>
+                        );
                         return (
                             <Route
                                 key={`${s.id}-${item.id}`}
                                 path={routePath}
                                 element={
-                                    item.lazy ? (
-                                        <PanelLoader name={item.id}>
-                                            <Component />
-                                        </PanelLoader>
+                                    badge ? (
+                                        <div style={{ padding: '0.5rem 1rem' }}>
+                                            {badge}
+                                            {wrapped}
+                                        </div>
                                     ) : (
-                                        <ErrorBoundary name={item.id} variant="panel">
-                                            <Component />
-                                        </ErrorBoundary>
+                                        wrapped
                                     )
                                 }
                             />

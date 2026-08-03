@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Prompt strategy audit — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, AlertTriangle, Lightbulb, Search, X } from 'lucide-react';

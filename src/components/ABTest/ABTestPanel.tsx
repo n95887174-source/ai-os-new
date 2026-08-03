@@ -1,6 +1,11 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * A/B test harness — research-grade, not production surface (P1.21).
+ */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { runABTest, getABTestHistory } from '../../kernel/services/ab-test-service';
-import { keyService } from '../../kernel/instances';
+import { keyService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ABTestPanel');
 import { useTranslation } from '../../i18n/useTranslation';
 import {
     GitCompare,
@@ -86,7 +91,7 @@ const ABTestPanel: React.FC = () => {
             loadHistory();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'AB test failed');
-            console.warn('[ABTest]', e);
+            LOGGER.warn('AB test failed', e);
         } finally {
             setRunning(false);
         }

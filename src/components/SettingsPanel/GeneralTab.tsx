@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { CONFIG } from '../../kernel/instances';
 import { setFeatureFlag } from '../../kernel/services/config-mutations';
-import { settingsService } from '../../kernel/instances';
+import { settingsService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('GeneralTab');
 import type { SystemSettings } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { safeClone } from '../../shared/utils/safe-json';
@@ -81,7 +82,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             setSettings((prev) => ({ ...prev, themeConfig: next }));
                             settingsService.updateSettings({ themeConfig: next });
                         } catch (e) {
-                            console.warn('[SettingsPanel] Failed to update highContrast:', e);
+                            LOGGER.warn('Failed to update highContrast', e);
                         }
                     }}
                     accent="#f97316"
@@ -163,10 +164,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    console.warn(
-                                        '[SettingsPanel] Failed to update autoSaveInterval:',
-                                        e,
-                                    );
+                                    LOGGER.warn('Failed to update autoSaveInterval', e);
                                 }
                             }}
                             style={settingSelect}
@@ -197,10 +195,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    console.warn(
-                                        '[SettingsPanel] Failed to update maxHistoryEntries:',
-                                        e,
-                                    );
+                                    LOGGER.warn('Failed to update maxHistoryEntries', e);
                                 }
                             }}
                             style={settingSelect}
@@ -231,10 +226,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    console.warn(
-                                        '[SettingsPanel] Failed to update maxTraceEntries:',
-                                        e,
-                                    );
+                                    LOGGER.warn('Failed to update maxTraceEntries', e);
                                 }
                             }}
                             style={settingSelect}
@@ -265,10 +257,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    console.warn(
-                                        '[SettingsPanel] Failed to update pruneMemoriesAfterDays:',
-                                        e,
-                                    );
+                                    LOGGER.warn('Failed to update pruneMemoriesAfterDays', e);
                                 }
                             }}
                             style={settingSelect}
@@ -300,10 +289,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    console.warn(
-                                        '[SettingsPanel] Failed to update exportOnShutdown:',
-                                        e,
-                                    );
+                                    LOGGER.warn('Failed to update exportOnShutdown', e);
                                 }
                             }}
                             accent="#3b82f6"

@@ -2,6 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Terminal, X } from 'lucide-react';
 import { useConfirm } from '../../hooks/useConfirm';
 import DOMPurify from 'dompurify';
+import { rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('CodeRunner');
 
 const EXECUTABLE_LANGS = new Set(['js', 'javascript', 'ts', 'typescript', 'html', 'css']);
 // Python removed from EXECUTABLE_LANGS — sandbox iframe does not support Python execution.
@@ -92,7 +94,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
             try {
                 document.body.removeChild(iframeRef.current);
             } catch {
-                console.warn('[CodeRunner] Failed to remove iframe');
+                LOGGER.warn('Failed to remove iframe');
             }
             iframeRef.current = null;
         }

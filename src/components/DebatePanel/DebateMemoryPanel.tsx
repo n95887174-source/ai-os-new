@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Brain } from 'lucide-react';
-import { debateHumanService, debateService, eventBus } from '../../kernel/instances';
+import { debateHumanService, debateService, eventBus, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('DebateMemoryPanel');
 import { computeStats, findRelated, getCurrentSessions } from './debate-memory-helpers';
 import DebateMemoryStats from './DebateMemoryStats';
 import RelatedDebates from './RelatedDebates';
@@ -82,7 +83,7 @@ export const DebateMemoryPanel: React.FC<DebateMemoryPanelProps> = ({ onSelectSe
                 0.8,
             );
         } catch (e) {
-            console.warn('[DebateMemoryPanel] inject memory failed:', e);
+            LOGGER.warn('DebateMemoryPanel', 'inject memory failed', { error: e });
         } finally {
             setInjecting(false);
         }

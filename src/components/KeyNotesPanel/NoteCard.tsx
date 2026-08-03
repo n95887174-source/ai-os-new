@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Image as ImageIcon, FileText, Trash2 } from 'lucide-react';
 import { textMutedXs, textWhiteXs, flexBetween } from '../../styles/common';
@@ -9,7 +10,7 @@ interface NoteCardProps {
     onPreview: (file: NonNullable<EnhancedNote['attachments']>[number]) => void;
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onPreview }) => (
+export const NoteCard: React.FC<NoteCardProps> = memo(({ note, onDelete, onPreview }) => (
     <motion.div
         key={note.id}
         initial={{ opacity: 0, y: 8 }}
@@ -107,4 +108,4 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onPreview })
             </div>
         )}
     </motion.div>
-);
+));

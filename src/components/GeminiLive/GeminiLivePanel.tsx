@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Gemini live voice surface — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Square, Send, Loader2, Volume2, AlertCircle } from 'lucide-react';
 import PanelLoader from '../PanelLoader';

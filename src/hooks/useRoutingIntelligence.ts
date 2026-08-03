@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { eventBus, EVENTS } from '../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../kernel/instances';
+const LOGGER = rootLogger.child('RoutingIntelligence');
 import { routerService, settingsService } from '../kernel/instances';
 import type { FallbackLink, RoutingPolicySnapshot } from '../kernel/contracts/index';
 import type { RouterDecision } from '../kernel/instances';
@@ -96,7 +97,9 @@ export function useRoutingIntelligence(): UseRoutingResult {
                         },
                     });
                 } catch (e) {
-                    console.warn('[RoutingIntelligence] Failed to persist fallback chain:', e);
+                    LOGGER.warn('RoutingIntelligence', 'Failed to persist fallback chain', {
+                        error: e,
+                    });
                 }
                 return {
                     ...current,

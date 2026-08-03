@@ -12,6 +12,9 @@ import { BrowserRouter } from 'react-router-dom';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 
 import { EVENTS } from './kernel/events/event-names';
+import { rootLogger } from './kernel/services/logger-service';
+
+const LOGGER = rootLogger.child('Main');
 
 // Global unhandled rejection handler — catches ONLY errors that somehow bypass
 // both the runtime.start() try/catch and all service-level error handlers.
@@ -38,13 +41,14 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
             }
         ).memory;
         if (mem) {
-            console.log(
+            LOGGER.info(
+                'Main',
                 `[Memory] heap: ${(mem.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB / ${(mem.totalJSHeapSize / 1024 / 1024).toFixed(1)}MB`,
             );
         }
         memCount++;
         if (memCount > 10) {
-            console.log('[Memory] Still alive after 5 minutes');
+            LOGGER.info('Main', '[Memory] Still alive after 5 minutes');
             memCount = 0;
         }
     }, 30000);
@@ -168,11 +172,11 @@ w.__checkConsistency = async () => {
     const { truthConsistencyMonitor, kernel } = await import('./kernel/instances');
     const kState = kernel?.getState();
     if (!kState) {
-        console.warn('[Consistency] kernel not ready');
+        LOGGER.warn('Main', '[Consistency] kernel not ready');
         return null;
     }
     const report = truthConsistencyMonitor?.check(kState.providers, {});
-    console.log('[Consistency] Report:', JSON.stringify(report, null, 2));
+    LOGGER.info('Main', '[Consistency] Report', { value: JSON.stringify(report, null, 2) });
     return report;
 };
 
@@ -180,9 +184,9 @@ w.__probeAll = async () => {
     const { probeService } = await import('./kernel/instances');
     if (probeService && typeof probeService.probeAll === 'function') {
         const result = await probeService.probeAll();
-        console.log('[Probe] probeAll completed:', JSON.stringify(result));
+        LOGGER.info('Main', '[Probe] probeAll completed', { value: JSON.stringify(result) });
         return result;
     }
-    console.warn('[Probe] probeService not available');
+    LOGGER.warn('Main', '[Probe] probeService not available');
     return null;
 };

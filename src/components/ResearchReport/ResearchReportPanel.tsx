@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Research reports — research-grade, not production surface (P1.21).
+ */
 import React, { useState } from 'react';
 import {
     FileText,

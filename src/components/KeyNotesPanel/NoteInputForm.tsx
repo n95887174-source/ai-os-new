@@ -2,6 +2,8 @@ import React, { useRef } from 'react';
 import { Plus, Paperclip, Image as ImageIcon, FileText, X, Loader2 } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { AttachedFile } from './key-notes-types';
+import { rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('NoteInputForm');
 
 interface NoteInputFormProps {
     text: string;
@@ -42,7 +44,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
             if (total + file.size > 3 * 1024 * 1024) break;
             const reader = new FileReader();
             reader.onerror = () => {
-                console.error('[NoteInputForm] FileReader failed', file.name, reader.error);
+                LOGGER.error('FileReader failed', file.name, reader.error);
                 onFileError?.(file.name, reader.error);
             };
             reader.onload = () => {

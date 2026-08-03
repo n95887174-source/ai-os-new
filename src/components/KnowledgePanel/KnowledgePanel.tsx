@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useConfirm } from '../../hooks/useConfirm';
-import { memoryService } from '../../kernel/instances';
+import { memoryService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('KnowledgePanel');
 import { eventBus, EVENTS } from '../../kernel/instances';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import GraphHeader from './GraphHeader';
@@ -121,7 +122,7 @@ const KnowledgePanel: React.FC = () => {
                 setError(null);
             }
         } catch (e) {
-            console.warn('[KnowledgePanel] Failed to delete memory node:', e);
+            LOGGER.warn('Failed to delete memory node', e);
             if (isMountedRef.current) {
                 setError(t('knowledge.error_delete'));
                 clearErrorAfterDelay();
@@ -160,7 +161,7 @@ const KnowledgePanel: React.FC = () => {
                 setError(null);
             }
         } catch (e) {
-            console.warn('[KnowledgePanel] Failed to update memory node:', e);
+            LOGGER.warn('Failed to update memory node', e);
             if (isMountedRef.current) {
                 setError(t('knowledge.error_update'));
                 clearErrorAfterDelay();

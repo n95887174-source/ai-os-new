@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cacheService, kernel, providerTracker } from '../../kernel/instances';
+import { cacheService, kernel, providerTracker, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('AnalyticsPanel');
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
 import { BarChart3, Activity, Globe, History, AlertTriangle, X } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
@@ -73,7 +74,7 @@ const AnalyticsPanel: React.FC = () => {
                     return next.length > 24 ? next.slice(-24) : next;
                 });
             } catch (e) {
-                console.warn('[AnalyticsPanel] Failed to process telemetry update:', e);
+                LOGGER.warn('Failed to process telemetry update', e);
                 if (isMountedRef.current) {
                     setError('Failed to process telemetry update');
                     clearError();

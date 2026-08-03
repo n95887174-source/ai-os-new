@@ -1,6 +1,11 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Interactive OS exploration — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Code, X } from 'lucide-react';
-import { workspaceService } from '../../kernel/instances';
+import { workspaceService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ProjectOsExplorer');
 import type { FileNode } from '../../kernel/contracts/workspace';
 import { useTranslation } from '../../i18n/useTranslation';
 import { StorageAdapter } from '../../kernel/services/storage-adapter';
@@ -53,7 +58,7 @@ const ProjectOsExplorer: React.FC = () => {
             const t = await workspaceService.listTree();
             setTree(t);
         } catch (e) {
-            console.warn('[ProjectOsExplorer] refreshTree error:', e);
+            LOGGER.warn('ProjectOsExplorer', 'refreshTree error', { error: e });
         } finally {
             setTreeLoading(false);
         }
@@ -93,7 +98,7 @@ const ProjectOsExplorer: React.FC = () => {
             setWorkspaceName(workspaceService.getWorkspaceName());
             await refreshTree();
         } catch (e) {
-            console.warn('[ProjectOsExplorer] attach error:', e);
+            LOGGER.warn('ProjectOsExplorer', 'attach error', { error: e });
         }
     };
 

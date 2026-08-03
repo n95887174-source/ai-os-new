@@ -9,10 +9,8 @@ import {
     Swords,
     Scale,
 } from 'lucide-react';
-import { collaborativeService } from '../../kernel/instances';
-import type { CollabRole, HumanParticipant } from '../../kernel/services/collaborative-service';
-import type { DebateSession } from '../../kernel/instances';
-import { eventBus } from '../../kernel/instances';
+import { collaborativeService, eventBus, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('CollabDebatePanel');
 
 const ROLE_ICONS: Record<CollabRole, React.ReactNode> = {
     pro: <Swords size={14} />,
@@ -69,7 +67,7 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
             setJoined(true);
             setParticipants(collaborativeService.getParticipants(session.id));
         } catch (err) {
-            console.warn('[CollabDebate] Failed to join:', err);
+            LOGGER.warn('CollabDebatePanel', 'Failed to join', { error: err });
             setError(err instanceof Error ? err.message : 'Failed to join debate');
         }
     };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, Search, RefreshCw, Server, AlertTriangle, Power, PowerOff } from 'lucide-react';
 import {
@@ -7,7 +7,8 @@ import {
     type MCPTool,
     type MCPResource,
 } from '../../kernel/instances';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('MCPPanel');
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -46,23 +47,26 @@ const MCPPanel: React.FC = () => {
         }
     })();
 
-    const handleConnect = async (id: string) => {
-        setConnectingId(id);
-        try {
-            await mcpService.connect(id);
-            setServers(mcpService.getServers());
-        } catch (err) {
-            setServers(mcpService.getServers());
-            setError(
-                `${t('mcp.error_connect')}: ${err instanceof Error ? err.message : String(err)}`,
-            );
-            clearError();
-        } finally {
-            setConnectingId(null);
-        }
-    };
+    const handleConnect = useCallback(
+        async (id: string) => {
+            setConnectingId(id);
+            try {
+                await mcpService.connect(id);
+                setServers(mcpService.getServers());
+            } catch (err) {
+                setServers(mcpService.getServers());
+                setError(
+                    `${t('mcp.error_connect')}: ${err instanceof Error ? err.message : String(err)}`,
+                );
+                clearError();
+            } finally {
+                setConnectingId(null);
+            }
+        },
+        [clearError, t],
+    );
 
-    const handleDisconnect = async (id: string) => {
+    const handleDisconnect = useCallback(async (id: string) => {
         setConnectingId(id);
         try {
             await mcpService.disconnect(id);
@@ -70,9 +74,9 @@ const MCPPanel: React.FC = () => {
         } finally {
             setConnectingId(null);
         }
-    };
+    }, []);
 
-    const handleReconnectAll = async () => {
+    const handleReconnectAll = useCallback(async () => {
         try {
             const count = await mcpService.reconnectAll();
             setServers(mcpService.getServers());
@@ -84,48 +88,59 @@ const MCPPanel: React.FC = () => {
             setError(t('mcp.error_reconnect'));
             clearError();
         }
-    };
+    }, [clearError, t]);
 
-    const handleRemoveServer = async (server: MCPServerConfig) => {
-        if (
-            !(await confirm({
-                title: 'Remove Server',
-                message: `Remove server "${server.name}"?`,
-                variant: 'danger',
-            }))
-        )
-            return;
-        mcpService.removeServer(server.id);
-        setServers(mcpService.getServers());
-    };
+    const handleRemoveServer = useCallback(
+        async (server: MCPServerConfig) => {
+            if (
+                !(await confirm({
+                    title: 'Remove Server',
+                    message: `Remove server "${server.name}"?`,
+                    variant: 'danger',
+                }))
+            )
+                return;
+            mcpService.removeServer(server.id);
+            setServers(mcpService.getServers());
+        },
+        [confirm],
+    );
 
-    const toggleExpand = async (id: string) => {
-        if (expandedServer === id) {
-            setExpandedServer(null);
-            return;
-        }
-        setExpandedServer(id);
-        const server = servers.find((s) => s.id === id);
-        if (!server) return;
-        if (!serverTools[id]) {
-            setLoadingTools((prev) => ({ ...prev, [id]: true }));
-            try {
-                const [tools, resources] = await Promise.all([
-                    mcpService.listTools(id),
-                    mcpService.listResources(id),
-                ]);
-                if (isMountedRef.current) {
-                    setServerTools((prev) => ({ ...prev, [id]: tools }));
-                    setServerResources((prev) => ({ ...prev, [id]: resources }));
-                }
-            } catch {
-                setError(t('mcp.error_load'));
-                clearError();
-            } finally {
-                if (isMountedRef.current) setLoadingTools((prev) => ({ ...prev, [id]: false }));
+    const toggleExpand = useCallback(
+        async (id: string) => {
+            if (expandedServer === id) {
+                setExpandedServer(null);
+                return;
             }
-        }
-    };
+            setExpandedServer(id);
+            const server = servers.find((s) => s.id === id);
+            if (!server) return;
+            if (!serverTools[id]) {
+                setLoadingTools((prev) => ({ ...prev, [id]: true }));
+                try {
+                    const [tools, resources] = await Promise.all([
+                        mcpService.listTools(id),
+                        mcpService.listResources(id),
+                    ]);
+                    if (isMountedRef.current) {
+                        setServerTools((prev) => ({ ...prev, [id]: tools }));
+                        setServerResources((prev) => ({ ...prev, [id]: resources }));
+                    }
+                } catch (err) {
+                    LOGGER.warn('Failed to fetch tools/resources', err);
+                    if (isMountedRef.current) {
+                        setError(t('mcp.error_list'));
+                        clearError();
+                    }
+                } finally {
+                    if (isMountedRef.current) {
+                        setLoadingTools((prev) => ({ ...prev, [id]: false }));
+                    }
+                }
+            }
+        },
+        [expandedServer, servers, serverTools, clearError, t],
+    );
 
     const filteredServers = (servers ?? []).filter(
         (s) =>

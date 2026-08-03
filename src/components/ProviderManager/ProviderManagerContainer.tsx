@@ -7,7 +7,8 @@ import type { ApiKey } from '../../types/metrics';
 import ProviderManagerView from './ProviderManagerView';
 import type { TabId } from './ProviderManagerView';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ProviderManagerContainer');
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import { groupManager } from '../../kernel/instances';
 
@@ -124,7 +125,7 @@ const ProviderManagerContainer: React.FC = () => {
                     }
                 } catch (e) {
                     const msg = e instanceof Error ? e.message : 'Unknown error';
-                    console.warn('[ProviderManager] Failed to import providers:', e);
+                    LOGGER.warn('Failed to import providers', e);
                     eventBus.emit(EVENTS.NOTIFICATION, {
                         message: `Import failed: ${msg}`,
                         type: 'error',

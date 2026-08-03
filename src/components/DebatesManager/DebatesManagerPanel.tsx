@@ -4,6 +4,8 @@ import { useDebateSessionStore } from '../../stores/debate-session-store';
 import type { DebateSessionMeta } from '../../stores/debate-session-store/types';
 import { useTranslation } from '../../i18n/useTranslation';
 import { runtime } from '../../kernel/runtime';
+import { rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('DebatesManagerPanel');
 import type { ISessionManager, SessionLink } from '../../kernel/contracts/session-manager';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -255,7 +257,7 @@ export const DebatesManagerPanel: React.FC = () => {
             );
             setLinks(await sm.getLinked(active.id));
         } catch (e) {
-            console.warn('Link failed:', e);
+            LOGGER.warn('DebatesManagerPanel', 'Link failed', { error: e });
         }
         setLinkInput('');
     }, [active, linkInput]);

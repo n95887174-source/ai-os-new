@@ -4,7 +4,8 @@ import { Activity, AlertTriangle, Globe, Database, RefreshCw, Thermometer } from
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../../i18n/useTranslation';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { pressureMapService } from '../../kernel/instances';
+import { pressureMapService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('PressureMap');
 import type { PressureMapSnapshot, ProviderPressureEntry } from '../../kernel/instances';
 import { getPressureLevelColor } from '../Common/status-vocabulary';
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
@@ -236,7 +237,7 @@ const PressureMap: React.FC = () => {
         try {
             setSnapshot(pressureMapService.getSnapshot());
         } catch (e) {
-            console.warn('[PressureMap] Failed to get snapshot:', e);
+            LOGGER.warn('Failed to get snapshot', e);
         }
     };
 

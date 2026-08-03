@@ -51,8 +51,8 @@ export const registerPhase1: Phase = (helpers, ctx) => {
     const keyStore = storageLayer?.keys;
     const configStore = storageLayer?.config;
 
-    if (typeof console !== 'undefined' && import.meta.env.DEV) {
-        console.log('[KEY_FLOW] keyStore implementation type:', {
+    if (import.meta.env.DEV) {
+        LOGGER.debug('Phase1Foundation', '[KEY_FLOW] keyStore implementation type', {
             storageLayerExists: !!storageLayer,
             keyStoreExists: !!keyStore,
             isStub: !storageLayer,

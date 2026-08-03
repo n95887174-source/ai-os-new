@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { adminService, probeService, keyStateStore } from '../../kernel/instances';
+import { adminService, probeService, keyStateStore, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('HealthPanel');
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { keyService, kernel } from '../../kernel/instances';
 import type { HealthEvent } from '../../kernel/instances';
@@ -140,7 +141,7 @@ const HealthPanel: React.FC = () => {
                 setHealthEvents(kernel.getHealthEvents());
                 setError(null);
             } catch (e) {
-                console.warn('[HealthPanel] Failed to refresh system health:', e);
+                LOGGER.warn('Failed to refresh system health', e);
                 if (isMountedRef.current) {
                     setError(t('health.error_refresh'));
                     clearError();

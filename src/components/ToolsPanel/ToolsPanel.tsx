@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Wrench, Plus, Search, Download, Upload, AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toolService } from '../../kernel/instances';
@@ -50,6 +50,23 @@ const ToolsPanel: React.FC = () => {
     const isMountedRef = useRef(true);
 
     const clearError = useAutoClearError(setError);
+
+    const handleToggleTool = useCallback(
+        (id: string) => {
+            try {
+                toolService.toggleTool(id);
+                if (isMountedRef.current) setTools(toolService.getTools());
+                if (isMountedRef.current) setError(null);
+            } catch (err) {
+                console.warn('[ToolsPanel] Failed to toggle tool:', err);
+                if (isMountedRef.current) {
+                    setError(t('common.unknown_error'));
+                    clearError();
+                }
+            }
+        },
+        [clearError, t],
+    );
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -349,24 +366,8 @@ const ToolsPanel: React.FC = () => {
                                         key={tool.id}
                                         tool={tool}
                                         selected={selectedTool?.id === tool.id}
-                                        onSelect={(t) => setSelectedTool(t)}
-                                        onToggle={(id) => {
-                                            try {
-                                                toolService.toggleTool(id);
-                                                if (isMountedRef.current)
-                                                    setTools(toolService.getTools());
-                                                if (isMountedRef.current) setError(null);
-                                            } catch (err) {
-                                                console.warn(
-                                                    '[ToolsPanel] Failed to toggle tool:',
-                                                    err,
-                                                );
-                                                if (isMountedRef.current) {
-                                                    setError(t('common.unknown_error'));
-                                                    clearError();
-                                                }
-                                            }
-                                        }}
+                                        onSelect={setSelectedTool}
+                                        onToggle={handleToggleTool}
                                         t={t}
                                     />
                                 ))}

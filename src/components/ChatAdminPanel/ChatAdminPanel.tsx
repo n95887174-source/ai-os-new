@@ -2,7 +2,8 @@ import React, { useState, useMemo, useDeferredValue, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { useChatStore } from '../../stores/useChatStore';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ChatAdminPanel');
 import { ConfirmDialog } from '../ConfirmDialog';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 import AdminHeader from './AdminHeader';
@@ -98,7 +99,7 @@ const ChatAdminPanel: React.FC = () => {
                     type: 'success',
                 });
             } catch (e) {
-                console.warn('[ChatAdminPanel] Failed to parse imported file:', e);
+                LOGGER.warn('ChatAdminPanel', 'Failed to parse imported file', { error: e });
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to parse the imported file. Please check the JSON format.',
                     type: 'error',

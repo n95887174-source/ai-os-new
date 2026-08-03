@@ -1,6 +1,11 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Model routing experiments — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Route, Play, Download, Loader2, Clock, Cpu } from 'lucide-react';
-import { adapterRegistry, routingExperimentsService } from '../../kernel/instances';
+import { adapterRegistry, routingExperimentsService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('RoutingExperiments');
 import type {
     RoutingExperimentResult,
     RoutingExperimentRun,
@@ -35,7 +40,7 @@ const RoutingExperiments: React.FC = () => {
         routingExperimentsService
             .getHistory()
             .then(setHistory)
-            .catch((e) => console.warn('[RoutingExperiments] History load failed:', e));
+            .catch((e) => LOGGER.warn('RoutingExperiments', 'History load failed', { error: e }));
     }, []);
 
     const refreshHistory = useCallback(async () => {

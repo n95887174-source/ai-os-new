@@ -5,6 +5,8 @@ import { toolService } from '../../kernel/instances';
 import { roleService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../kernel/instances';
+import { rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('AgentsPanel');
 import AgentsPanelView from './AgentsPanelView';
 import { AgentsPanelContext } from './AgentsPanelContext';
 import type { Agent, UiAgentTemplate, TabId, ViewMode, StatusFilter } from './AgentsPanelContext';
@@ -193,7 +195,7 @@ const AgentsPanelContainer: React.FC = () => {
                 setAgents(getAgentsFromTopology());
                 setError(null);
             } catch (e) {
-                console.warn('[AgentsPanel] Failed to update agent configuration:', e);
+                LOGGER.warn('AgentsPanel', 'Failed to update agent configuration', { error: e });
                 setErrorWithTimeout('Failed to update agent configuration');
             }
         },
@@ -228,8 +230,9 @@ const AgentsPanelContainer: React.FC = () => {
                     template?.config as Record<string, unknown> | undefined,
                 );
                 if (!newId) {
-                    console.warn(
-                        '[AgentsPanel] deployNewAgent: spawnAgent returned null — no active topology',
+                    LOGGER.warn(
+                        'AgentsPanel',
+                        'deployNewAgent: spawnAgent returned null — no active topology',
                     );
                     setErrorWithTimeout('Failed to spawn agent: no active topology');
                     return;
@@ -239,7 +242,7 @@ const AgentsPanelContainer: React.FC = () => {
                 setActiveTab('config');
                 setError(null);
             } catch (e) {
-                console.warn('[AgentsPanel] Failed to deploy agent:', e);
+                LOGGER.warn('AgentsPanel', 'Failed to deploy agent', { error: e });
                 setErrorWithTimeout('Failed to deploy agent');
             }
         },
@@ -253,7 +256,7 @@ const AgentsPanelContainer: React.FC = () => {
                 setAgents(getAgentsFromTopology());
                 setError(null);
             } catch (e) {
-                console.warn('[AgentsPanel] Failed to toggle agent status:', e);
+                LOGGER.warn('AgentsPanel', 'Failed to toggle agent status', { error: e });
                 setErrorWithTimeout('Failed to toggle agent status');
             }
         },
@@ -280,7 +283,7 @@ const AgentsPanelContainer: React.FC = () => {
                 setSelectedAgentId(null);
                 eventBus.emit(EVENTS.NOTIFICATION, { message: 'Agent deleted', type: 'info' });
             } catch (e) {
-                console.warn('[AgentsPanel] Failed to delete agent:', e);
+                LOGGER.warn('AgentsPanel', 'Failed to delete agent', { error: e });
                 setErrorWithTimeout('Failed to delete agent');
             }
         },
@@ -309,7 +312,7 @@ const AgentsPanelContainer: React.FC = () => {
                     type: 'success',
                 });
             } catch (e) {
-                console.warn('[AgentsPanel] Failed to duplicate agent:', e);
+                LOGGER.warn('AgentsPanel', 'Failed to duplicate agent', { error: e });
                 setErrorWithTimeout('Failed to duplicate agent');
             }
         },
@@ -323,7 +326,7 @@ const AgentsPanelContainer: React.FC = () => {
                 setAgentStats({ ...agentService.getAllStats() });
                 eventBus.emit(EVENTS.NOTIFICATION, { message: 'Agent stats reset', type: 'info' });
             } catch (e) {
-                console.warn('[AgentsPanel] Failed to reset stats:', e);
+                LOGGER.warn('AgentsPanel', 'Failed to reset stats', { error: e });
                 setErrorWithTimeout('Failed to reset stats');
             }
         },
@@ -377,7 +380,7 @@ const AgentsPanelContainer: React.FC = () => {
                     type: 'success',
                 });
             } catch (e) {
-                console.warn('[AgentsPanel] Failed to import agents:', e);
+                LOGGER.warn('AgentsPanel', 'Failed to import agents', { error: e });
                 eventBus.emit(EVENTS.NOTIFICATION, {
                     message: 'Failed to import agents',
                     type: 'error',

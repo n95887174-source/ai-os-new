@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * What-if simulation surface — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useCallback } from 'react';
 import { usePolling } from '../Common/usePolling';
 import {

@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Scheduler surface — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useCallback } from 'react';
 import { Calendar, Info, Clock, Plus, RefreshCw, ListTodo } from 'lucide-react';
 import { getAllSettings, setSetting } from '../../kernel/instances';

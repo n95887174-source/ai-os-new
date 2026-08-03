@@ -1,4 +1,8 @@
-/** Experimental visual panel — same provider health data as HealthPanel. Sidebar: feature flag ui.experimentalVisuals. */
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Same provider health data as HealthPanel, rendered as an aquarium showcase.
+ * Sidebar: feature flag ui.experimentalVisuals. Research-grade — not production surface (P1.21).
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,7 +20,8 @@ import {
     HelpCircle,
 } from 'lucide-react';
 import { useKeyStore } from '../../stores/useKeyStore';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('AquariumPanel');
 import ModuleInfo from '../ModuleInfo/ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -175,7 +180,7 @@ const AquariumPanel: React.FC = () => {
                                 );
                                 aquariumScreenshotsService.exportAsFile(ss.id);
                             } catch (e) {
-                                console.warn('[Aquarium] Screenshot failed:', e);
+                                LOGGER.warn('Screenshot failed', e);
                             }
                         }}
                         className="aquarium-feed-btn"

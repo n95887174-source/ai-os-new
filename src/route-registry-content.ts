@@ -44,6 +44,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.search,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'hypothesis-gen',
@@ -51,6 +52,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.flaskConical,
                 color: '#3b82f6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'research-engine',
@@ -58,6 +60,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.layers,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'tutorials',
@@ -72,6 +75,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.bookText,
                 color: '#10b981',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'prompt-audit',
@@ -79,6 +83,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.terminal,
                 color: '#f59e0b',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'routing-experiments',
@@ -86,6 +91,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.barChart3,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'gov-stress-test',
@@ -93,6 +99,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.shield,
                 color: '#ef4444',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'obs-gaps',
@@ -100,6 +107,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.crosshair,
                 color: '#f97316',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'debate-system-research',
@@ -107,6 +115,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.flaskConical,
                 color: '#a855f7',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'research-reports',
@@ -114,6 +123,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.bookOpen,
                 color: '#a855f7',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'research-advanced',
@@ -121,6 +131,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.layers,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'research-gemini',
@@ -128,6 +139,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.sparkles,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'template-sharing',
@@ -202,6 +214,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.flaskConical,
                 color: '#a855f7',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'prompts',
@@ -244,6 +257,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.gitCompare,
                 color: '#8b5cf6',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'fine-tuning',
@@ -286,6 +300,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.mic,
                 color: '#4285F4',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'meta-learning',
@@ -293,6 +308,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.brain,
                 color: '#a855f7',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'quantum-inspiration',
@@ -300,6 +316,7 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 icon: Icons.atom,
                 color: '#a855f7',
                 lazy: true,
+                experimental: true,
             },
             {
                 id: 'model-distillation',

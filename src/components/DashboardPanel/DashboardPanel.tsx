@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { usePolling } from '../Common/usePolling';
 import { AlertTriangle, X } from 'lucide-react';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('DashboardPanel');
 import { kernel } from '../../kernel/instances';
 import { settingsService } from '../../kernel/instances';
 import { cognitiveService, debateEngine } from '../../kernel/instances';
@@ -119,7 +120,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 setSystemState(state as unknown as SystemState);
                 setError(null);
             } catch (e) {
-                console.warn('[DashboardPanel] Failed to update system state:', e);
+                LOGGER.warn('Failed to update system state', e);
                 if (isMountedRef.current) {
                     setError('Failed to update system state');
                     clearError();
@@ -142,7 +143,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                     setTraces([...newTraces]);
                     setError(null);
                 } catch (e) {
-                    console.warn('[DashboardPanel] Failed to update traces:', e);
+                    LOGGER.warn('Failed to update traces', e);
                     if (isMountedRef.current) {
                         setError('Failed to update traces');
                         clearError();
@@ -156,7 +157,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             try {
                 setHealthIndicators(monitoringService?.getSystemHealthIndicators?.());
             } catch {
-                console.warn('[DashboardPanel] Health indicator refresh failed');
+                LOGGER.warn('Health indicator refresh failed');
             }
         });
 
@@ -200,7 +201,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                     ].slice(0, 10),
                 );
             } catch (e) {
-                console.warn('[DashboardPanel] Failed to process event:', e);
+                LOGGER.warn('Failed to process event', e);
                 if (isMountedRef.current) {
                     setError('Failed to process event');
                     clearError();
@@ -212,8 +213,8 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
         if (typeof maybeUnsubscribe === 'function') {
             unsubscribeAll = maybeUnsubscribe;
         } else {
-            console.warn(
-                '[DashboardPanel] eventBus.subscribeAll does not return an unsubscribe function; event bus may leak',
+            LOGGER.warn(
+                'eventBus.subscribeAll does not return an unsubscribe function; event bus may leak',
             );
         }
 

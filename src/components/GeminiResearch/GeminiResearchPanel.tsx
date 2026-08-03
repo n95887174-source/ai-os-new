@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Gemini-powered research — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, Sparkles, Shield, AlertTriangle, FileText, Users } from 'lucide-react';

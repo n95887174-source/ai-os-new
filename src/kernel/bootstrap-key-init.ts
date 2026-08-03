@@ -8,6 +8,9 @@ import { logDexieIdentityWithCount, verifyDexieInstance } from './services/dexie
 import { setBootstrapSnapshot } from './bootstrap-state';
 import { safeJsonParse } from '../kernel/utils/safe-json';
 import { ssrSafeStorage } from './utils/ssr-storage';
+import { rootLogger } from './services/logger-service';
+
+const LOGGER = rootLogger.child('BootstrapKeyInit');
 
 export async function runKeyMigration(container: IContainer, logger: LoggerService): Promise<void> {
     try {
@@ -63,7 +66,9 @@ export async function loadBootstrapSnapshot(
     if (snapshotKeys.length === 0) {
         const dexieRaw = await getDexieDb().apiKeys.toArray();
         if (import.meta.env.DEV)
-            console.log('[BOOTSTRAP_SNAPSHOT_RAW] dexie count:', dexieRaw.length);
+            LOGGER.info('BootstrapKeyInit', '[BOOTSTRAP_SNAPSHOT_RAW] dexie count', {
+                value: dexieRaw.length,
+            });
 
         if (dexieRaw.length > 0) {
             snapshotKeys = [...dexieRaw];
@@ -130,8 +135,14 @@ export async function loadBootstrapSnapshot(
         }
     }
 
-    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_FINAL] count:', snapshotKeys.length);
-    if (import.meta.env.DEV) console.log('[BOOTSTRAP_SNAPSHOT_SOURCE]', snapshotSource);
+    if (import.meta.env.DEV)
+        LOGGER.info('BootstrapKeyInit', '[BOOTSTRAP_SNAPSHOT_FINAL] count', {
+            value: snapshotKeys.length,
+        });
+    if (import.meta.env.DEV)
+        LOGGER.info('BootstrapKeyInit', '[BOOTSTRAP_SNAPSHOT_SOURCE]', {
+            value: snapshotSource,
+        });
 
     interface BootstrapGlobals {
         __BOOTSTRAP_PHASE__?: boolean;

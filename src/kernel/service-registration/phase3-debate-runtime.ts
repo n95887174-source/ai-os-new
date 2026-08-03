@@ -8,6 +8,8 @@
  * Imperative calls (setDeps, setEngine) remain outside factories.
  */
 import type { Phase } from './helpers';
+import { rootLogger } from '../services/logger-service';
+const LOGGER = rootLogger.child('Phase3DebateRuntime');
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { IContainer } from '../container';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
@@ -186,7 +188,9 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     const _experimentEngine = new ExperimentEngine();
     _experimentEngine
         .init()
-        .catch((e: unknown) => console.warn('[phase3] ExperimentEngine.init failed', String(e)));
+        .catch((e: unknown) =>
+            LOGGER.warn('Phase3DebateRuntime', 'ExperimentEngine.init failed', { error: e }),
+        );
     _container.register('experimentEngine', _experimentEngine);
 
     // FactCheckService, DebatePostProcessor, DebateSyncManager — created eagerly

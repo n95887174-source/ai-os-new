@@ -7,7 +7,8 @@ import type { SessionStore } from '../../kernel/contracts/storage/session-store'
 import { runtime } from '../../kernel/runtime';
 import { BucketStorageAdapter } from '../../kernel/storage-adapter-instance';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
-import { getDexieDb } from '../../kernel/instances';
+import { getDexieDb, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ChatHydration');
 
 function cleanupOrphanLoading(sessions: ChatSession[]): ChatSession[] {
     let changed = false;
@@ -81,7 +82,7 @@ export function useChatStoreHydration(): void {
                     }
                 }
             } catch (err) {
-                console.warn('[Hydration] corrupt localStorage data', err);
+                LOGGER.warn('ChatHydration', 'corrupt localStorage data', { error: err });
             }
             BucketStorageAdapter.removeItem('super_agents_chat_sessions');
             BucketStorageAdapter.removeItem('super_agents_chat_sessions_ts');
@@ -102,12 +103,14 @@ export function useChatStoreHydration(): void {
                     }
                 }
             } catch (err) {
-                console.warn('[Hydration] corrupt backup', err);
+                LOGGER.warn('ChatHydration', 'corrupt backup', { error: err });
             }
         };
 
         migrateLegacy().catch((e) => console.error('[Hydration] migrateLegacy failed', e));
-        void restoreBackup().catch((e) => console.warn('[Hydration] restoreBackup failed', e));
+        void restoreBackup().catch((e) =>
+            LOGGER.warn('ChatHydration', 'restoreBackup failed', { error: e }),
+        );
 
         const db = getDexieDb();
         const observable = liveQuery(() =>
@@ -165,7 +168,7 @@ export function useChatStoreHydration(): void {
                 });
             },
             error: (err: unknown) => {
-                console.warn('[ChatStore] liveQuery error:', err);
+                LOGGER.warn('ChatHydration', 'liveQuery error', { error: err });
                 if (!useChatStore.getState().isLoaded) {
                     useChatStore.setState({ isLoaded: true });
                 }

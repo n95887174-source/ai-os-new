@@ -1,7 +1,12 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Architecture review tool — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, Loader2 } from 'lucide-react';
-import { workspaceService, architectureReviewService } from '../../kernel/instances';
+import { workspaceService, architectureReviewService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ArchitectureReview');
 import type { ArchFinding, ArchDebtItem } from '../../kernel/contracts/architecture-review';
 import { useTranslation } from '../../i18n/useTranslation';
 import EmptyAttachState from './EmptyAttachState';
@@ -54,7 +59,7 @@ const ArchitectureReview: React.FC = () => {
                 const content = await workspaceService.readFile(DEBT_REPORT_PATH);
                 setDebtItems(architectureReviewService.parseDebtReport(content));
             } catch (e) {
-                console.warn('[ArchitectureReview] debt report load error:', e);
+                LOGGER.warn('ArchitectureReview', 'debt report load error', { error: e });
             }
         })();
     }, [attached]);
@@ -80,7 +85,7 @@ const ArchitectureReview: React.FC = () => {
             setWorkspaceName(workspaceService.getWorkspaceName());
             await refreshTree();
         } catch (e) {
-            console.warn('[ArchitectureReview] attach error:', e);
+            LOGGER.warn('ArchitectureReview', 'attach error', { error: e });
         }
     };
 

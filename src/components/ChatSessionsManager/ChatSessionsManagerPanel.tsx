@@ -5,6 +5,8 @@ import type { ChatSession } from '../../stores/chat/types';
 import { useTranslation } from '../../i18n/useTranslation';
 import { runtime } from '../../kernel/runtime';
 import type { ISessionManager, SessionLink } from '../../kernel/contracts/session-manager';
+import { rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ChatSessionsManagerPanel');
 
 const STATUS_COLORS: Record<string, string> = {
     active: '#22c55e',
@@ -212,7 +214,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
             );
             setLinks(await sm.getLinked(active.id));
         } catch (e) {
-            console.warn('Link failed:', e);
+            LOGGER.warn('Link failed', e);
         }
         setLinkInput('');
     }, [active, linkInput]);

@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Model playground — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Send, Loader2, Check, X, AlertCircle, Clock, DollarSign } from 'lucide-react';
 import { keyService, adapterRegistry } from '../../kernel/instances';

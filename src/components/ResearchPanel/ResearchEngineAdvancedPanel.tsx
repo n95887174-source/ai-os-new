@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Advanced research engine surface — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useVisibilityInterval } from '../../utils/visibility-interval';
 import {

@@ -1,5 +1,7 @@
-import { debateEngine } from '../kernel/instances';
+import { debateEngine, rootLogger } from '../kernel/instances';
 import { btn } from './DebateReplayTypes';
+
+const LOGGER = rootLogger.child('DebateReplayLiveControls');
 
 interface Props {
     selectedId: string | null;
@@ -11,7 +13,7 @@ const DebateReplayLiveControls: React.FC<Props> = ({ selectedId }) => {
         try {
             debateEngine.pauseSession(selectedId);
         } catch (e) {
-            console.warn('[DebateReplay] pause failed:', e);
+            LOGGER.warn('DebateReplayLiveControls', 'pause failed', { error: e });
         }
     };
     const handleResume = () => {
@@ -19,7 +21,7 @@ const DebateReplayLiveControls: React.FC<Props> = ({ selectedId }) => {
         try {
             debateEngine.resumeSession(selectedId);
         } catch (e) {
-            console.warn('[DebateReplay] resume failed:', e);
+            LOGGER.warn('DebateReplayLiveControls', 'resume failed', { error: e });
         }
     };
     const handleCancel = () => {
@@ -27,7 +29,7 @@ const DebateReplayLiveControls: React.FC<Props> = ({ selectedId }) => {
         try {
             debateEngine.cancelSession(selectedId);
         } catch (e) {
-            console.warn('[DebateReplay] cancel failed:', e);
+            LOGGER.warn('DebateReplayLiveControls', 'cancel failed', { error: e });
         }
     };
     return (

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, Send } from 'lucide-react';
 import type { ApiKey } from '../../types/metrics';
-import { eventBus, EVENTS } from '../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('QuickTestSection');
 import { PROVIDER_DEFAULT_MODELS } from '../../kernel/utils/provider-default-models';
 import { useTranslation } from '../../i18n/useTranslation';
 import {
@@ -50,7 +51,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
 
         const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
 
-        console.log(`[QuickTest] SEND_MESSAGE to ${p}/${resolvedModel} (reqId=${reqId})`);
+        LOGGER.debug(`SEND_MESSAGE to ${p}/${resolvedModel} (reqId=${reqId})`);
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,
             model: resolvedModel,
@@ -72,10 +73,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
                 isDone = true;
                 cleanup();
                 clearTimeout(timeout);
-                console.log(
-                    `[QuickTest] MESSAGE_RESPONSE received in ${Date.now() - start}ms`,
-                    res.status,
-                );
+                LOGGER.debug(`MESSAGE_RESPONSE received in ${Date.now() - start}ms`, res.status);
                 if (res.status === 'error') {
                     setTestStatus('error');
                     setTestError(res.error || 'Unknown error');
@@ -96,7 +94,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
                 isDone = true;
                 cleanup();
                 clearTimeout(timeout);
-                console.log(`[QuickTest] STREAM_END received in ${Date.now() - start}ms`);
+                LOGGER.debug(`STREAM_END received in ${Date.now() - start}ms`);
                 setTestStatus('success');
                 setTestResult({
                     content: fullContent,
@@ -112,7 +110,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
                 isDone = true;
                 cleanup();
                 clearTimeout(timeout);
-                console.log(`[QuickTest] STREAM_ERROR received in ${Date.now() - start}ms`, error);
+                LOGGER.debug(`STREAM_ERROR received in ${Date.now() - start}ms`, error);
                 setTestStatus('error');
                 setTestError(error || 'Stream error');
             }
@@ -123,7 +121,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             isDone = true;
             cleanup();
             eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: reqId });
-            console.log(`[QuickTest] TIMEOUT after 60000ms (reqId=${reqId})`);
+            LOGGER.warn(`TIMEOUT after 60000ms (reqId=${reqId})`);
             setTestStatus('error');
             setTestError('Request timed out');
         }, 60000);

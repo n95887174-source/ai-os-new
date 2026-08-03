@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import type { ChatResponse } from '../../types/chat';
 import type { ChatMessage } from '../../kernel/types/llm-types';
 import type { SessionStore } from '../../kernel/contracts/storage/session-store';
-import { CONFIG } from '../../kernel/instances';
+import { CONFIG, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ChatStore');
 import {
     eventBus,
     EVENTS,
@@ -294,7 +295,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             const distLock = getDistributedLock();
             const lockResult = await distLock.acquire(`chat:${sessionId}`, { ttl: 120_000 });
             if (!lockResult.lock) {
-                console.warn('[ChatStore] Failed to acquire chat lock, proceeding without lock', {
+                LOGGER.warn('ChatStore', 'Failed to acquire chat lock, proceeding without lock', {
                     error: lockResult.error,
                 });
                 eventBus.emit(EVENTS.NOTIFICATION, {
@@ -316,7 +317,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     metadata: { textPreview: text.slice(0, 80) },
                 });
                 if (get().isAnySending()) {
-                    console.warn('[ChatStore] sendMessage already in progress, ignored');
+                    LOGGER.warn('ChatStore', 'sendMessage already in progress, ignored');
                     eventBus.emit(EVENTS.NOTIFICATION, {
                         message: 'Cannot send — another message is still being sent',
                         type: 'warning',
@@ -338,7 +339,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     try {
                         relatedMemories = (await memoryService.search(text, 3)) || [];
                     } catch (e) {
-                        console.warn('[ChatStore] Memory search failed:', e);
+                        LOGGER.warn('ChatStore', 'Memory search failed', { error: e });
                     }
                     cancelGuard();
                 }
@@ -360,7 +361,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                             },
                         });
                     } catch (e) {
-                        console.warn('[ChatStore] Memory store failed:', e);
+                        LOGGER.warn('ChatStore', 'Memory store failed', { error: e });
                     }
                     cancelGuard();
                 }
@@ -509,7 +510,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 if (lockResult.lock) {
                     distLock
                         .release(lockResult.lock)
-                        .catch((e) => console.warn('[ChatStore] Failed to release chat lock', e));
+                        .catch((e) =>
+                            LOGGER.warn('ChatStore', 'Failed to release chat lock', { error: e }),
+                        );
                 }
                 const q = _sendQueue.get(sessionId);
                 if (q && q.length > 0) {
@@ -606,7 +609,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             const distLock = getDistributedLock();
             const lockResult = await distLock.acquire(`chat:${sessionId}`, { ttl: 30_000 });
             if (!lockResult.lock) {
-                console.warn('[ChatStore] editEntry failed to acquire lock', {
+                LOGGER.warn('ChatStore', 'editEntry failed to acquire lock', {
                     error: lockResult.error,
                 });
                 return;
@@ -627,7 +630,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 }
                 const sStore = resolveSessionStore();
                 if (!sStore) {
-                    console.warn('[ChatStore] No session store available, editEntry not persisted');
+                    LOGGER.warn('ChatStore', 'No session store available, editEntry not persisted');
                     return;
                 }
                 const fullSession = get().sessions.find((s) => s.id === sessionId);
@@ -657,7 +660,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             } finally {
                 distLock
                     .release(lockResult.lock)
-                    .catch((e) => console.warn('[ChatStore] Failed to release editEntry lock', e));
+                    .catch((e) =>
+                        LOGGER.warn('ChatStore', 'Failed to release editEntry lock', { error: e }),
+                    );
             }
         },
 
@@ -666,7 +671,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             const distLock = getDistributedLock();
             const lockResult = await distLock.acquire(`chat:${sessionId}`, { ttl: 30_000 });
             if (!lockResult.lock) {
-                console.warn('[ChatStore] clearHistory failed to acquire lock', {
+                LOGGER.warn('ChatStore', 'clearHistory failed to acquire lock', {
                     error: lockResult.error,
                 });
                 return;
@@ -699,11 +704,11 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 uas(() => []);
                 set({ activeRequestIds: new Set() });
             } finally {
-                distLock
-                    .release(lockResult.lock)
-                    .catch((e) =>
-                        console.warn('[ChatStore] Failed to release clearHistory lock', e),
-                    );
+                distLock.release(lockResult.lock).catch((e) =>
+                    LOGGER.warn('ChatStore', 'Failed to release clearHistory lock', {
+                        error: e,
+                    }),
+                );
             }
         },
 

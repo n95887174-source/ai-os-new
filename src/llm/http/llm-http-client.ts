@@ -1,5 +1,8 @@
 import { AuthError, RetryableError, LLMError } from '../core/errors';
+import { rootLogger } from '../../kernel/services/logger-service';
 export { sanitizeObject, sanitizeError, sanitizeApiKey } from '../../shared/utils/sanitize';
+
+const LOGGER = rootLogger.child('LlmHttpClient');
 
 export interface HttpResult {
     data: unknown;
@@ -243,10 +246,9 @@ export class LLMHttpClient {
                     return '';
                 });
                 if (import.meta.env.DEV) {
-                    console.warn(
-                        `[${this.#provider}] POST ${res.status} body:`,
-                        errorBody.slice(0, 500),
-                    );
+                    LOGGER.warn('LlmHttpClient', `[${this.#provider}] POST ${res.status} body`, {
+                        body: errorBody.slice(0, 500),
+                    });
                 }
                 throw new LLMError(
                     `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
@@ -325,10 +327,9 @@ export class LLMHttpClient {
                     return '';
                 });
                 if (import.meta.env.DEV) {
-                    console.warn(
-                        `[${this.#provider}] GET ${res.status} body:`,
-                        errorBody.slice(0, 500),
-                    );
+                    LOGGER.warn('LlmHttpClient', `[${this.#provider}] GET ${res.status} body`, {
+                        body: errorBody.slice(0, 500),
+                    });
                 }
                 throw new LLMError(
                     `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,
@@ -413,10 +414,9 @@ export class LLMHttpClient {
                     return '';
                 });
                 if (import.meta.env.DEV) {
-                    console.warn(
-                        `[${this.#provider}] STREAM ${res.status} body:`,
-                        errorBody.slice(0, 500),
-                    );
+                    LOGGER.warn('LlmHttpClient', `[${this.#provider}] STREAM ${res.status} body`, {
+                        body: errorBody.slice(0, 500),
+                    });
                 }
                 throw new LLMError(
                     `HTTP ${res.status}: ${errorBody.slice(0, 200)}`,

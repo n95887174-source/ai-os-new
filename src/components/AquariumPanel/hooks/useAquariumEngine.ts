@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { eventBus, EVENTS } from '../../../kernel/instances';
+import { eventBus, EVENTS, rootLogger } from '../../../kernel/instances';
+const LOGGER = rootLogger.child('useAquariumEngine');
 import { providerColors } from '../../../styles/common';
 import type { ChatResponse } from '../../../types/chat';
 import type { FishState, Food, Bubble } from '../types';
@@ -153,7 +154,7 @@ export const useAquariumEngine = (
                     }, 3000),
                 );
             } catch (e) {
-                console.warn('[AquariumPanel] Error processing message event:', e);
+                LOGGER.warn('Error processing message event', e);
                 if (isMountedRef.current) {
                     setError(t('aquarium.error_message'));
                     clearError();

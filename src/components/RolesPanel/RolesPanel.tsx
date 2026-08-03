@@ -2,7 +2,8 @@ import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Search, Play, BookOpen, UserCog, AlertTriangle, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { roleService } from '../../kernel/instances';
+import { roleService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('RolesPanel');
 import type { Role } from '../../types/role';
 import type { RoleUsageStats } from '../../kernel/instances';
 import { RoleCard } from './RoleCard';
@@ -96,7 +97,7 @@ const RolesPanel: React.FC = () => {
             roleService.deleteRole(id);
             if (isMountedRef.current) setError(null);
         } catch (err) {
-            console.warn('[RolesPanel] Failed to delete role:', err);
+            LOGGER.warn('Failed to delete role', err);
             if (isMountedRef.current) {
                 setError(t('roles.error_delete'));
                 clearError();
@@ -128,7 +129,7 @@ const RolesPanel: React.FC = () => {
                 setError(null);
             }
         } catch (err) {
-            console.warn('[RolesPanel] Failed to save role:', err);
+            LOGGER.warn('Failed to save role', err);
             if (isMountedRef.current) {
                 setError(t('roles.error_save'));
                 clearError();
@@ -177,7 +178,7 @@ const RolesPanel: React.FC = () => {
                     type: 'success',
                 });
             } catch (err) {
-                console.warn('[RolesPanel] Failed to duplicate role:', err);
+                LOGGER.warn('Failed to duplicate role', err);
                 if (isMountedRef.current) {
                     setError(t('roles.error_duplicate'));
                     clearError();

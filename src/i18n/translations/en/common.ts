@@ -158,6 +158,8 @@ const common: Record<string, string> = {
     'palette.recent': 'Recent',
     'palette.select': 'Select',
     'sidepanel.add_provider': 'Add Provider',
+    'experimental.badge': 'Experimental',
+    'experimental.badge_title': 'Research / experimental panel — not production-grade',
 };
 
 export { common };

@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Memory palace visualization — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { PalaceState } from '../../kernel/services/memory/memory-palace';

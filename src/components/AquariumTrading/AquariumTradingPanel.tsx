@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Aquarium trading game showcase — research-grade, not production surface (P1.21).
+ */
 import React, { useState } from 'react';
 import { Fish, Send, X, Check, Ban } from 'lucide-react';
 import PanelLoader from '../PanelLoader';

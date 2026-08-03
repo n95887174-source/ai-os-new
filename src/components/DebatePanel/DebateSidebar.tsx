@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { usePolling } from '../Common/usePolling';
 import { Plus, MessageCircle, Trash2, Search, X } from 'lucide-react';
-import { debateWorkspace } from '../../kernel/instances';
+import { debateWorkspace, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('DebateSidebar');
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { WorkspaceRoomEntry } from '../../kernel/services/debate-runtime/debate-workspace';
 
@@ -69,7 +70,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
             debateWorkspace.syncFromEngine();
             setRooms(debateWorkspace.listRooms());
         } catch (e) {
-            console.warn('[DebateSidebar] loadRooms failed:', e);
+            LOGGER.warn('DebateSidebar', 'loadRooms failed', { error: e });
         }
     }, []);
 

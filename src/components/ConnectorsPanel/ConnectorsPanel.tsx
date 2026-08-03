@@ -2,7 +2,8 @@ import { genId } from '../../utils/gen-id';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, Plus, Globe } from 'lucide-react';
-import { eventBus, EVENTS, connectorService } from '../../kernel/instances';
+import { eventBus, EVENTS, connectorService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ConnectorsPanel');
 import { useTranslation } from '../../i18n/useTranslation';
 import { DEFAULT_CONNECTORS } from './connector-constants';
 import ConnectorHeader from './ConnectorHeader';
@@ -47,7 +48,7 @@ const ConnectorsPanel: React.FC = () => {
                     setConnectors(allConns);
                 }
             } catch (e) {
-                console.warn('[ConnectorsPanel] Failed to load connectors:', e);
+                LOGGER.warn('Failed to load connectors', e);
                 if (isMountedRef.current) {
                     setErrorMsg('Could not load connectors. Using default configuration.');
                     clearErrorAfterDelay();
@@ -70,7 +71,7 @@ const ConnectorsPanel: React.FC = () => {
             try {
                 await connectorService.saveAll(updated);
             } catch (e) {
-                console.warn('[ConnectorsPanel] Failed to save:', e);
+                LOGGER.warn('Failed to save', e);
                 if (isMountedRef.current) {
                     setErrorMsg('Could not save connector changes.');
                     clearErrorAfterDelay();

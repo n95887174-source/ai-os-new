@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, MessageCircle, Trash2, Play, Bot, Activity, Clock, Loader2 } from 'lucide-react';
 import { runtime } from '../../kernel/runtime';
-import { debateWorkspace } from '../../kernel/instances';
+import { debateWorkspace, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('DebateWorkspacePanel');
 import { useTranslation } from '../../i18n/useTranslation';
 import type { WorkspaceRoomEntry } from '../../kernel/services/debate-runtime/debate-workspace';
 import { useNavigate } from 'react-router-dom';
@@ -39,12 +40,12 @@ const DebateWorkspacePanel: React.FC = () => {
             try {
                 debateWorkspace.syncFromEngine();
             } catch (e) {
-                console.warn('[DebateWorkspace] syncFromEngine failed:', e);
+                LOGGER.warn('DebateWorkspacePanel', 'syncFromEngine failed', { error: e });
             }
             if (isMountedRef.current) setRooms(debateWorkspace.listRooms());
             if (isMountedRef.current) setReady(true);
         } catch (e) {
-            console.warn('[DebateWorkspace] loadRooms failed:', e);
+            LOGGER.warn('DebateWorkspacePanel', 'loadRooms failed', { error: e });
         }
     }, []);
 

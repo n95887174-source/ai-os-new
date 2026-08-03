@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Hypothesis generation playground — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Lightbulb, Plus, X, Search } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';

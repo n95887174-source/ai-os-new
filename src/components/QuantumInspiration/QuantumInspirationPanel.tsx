@@ -1,3 +1,7 @@
+/**
+ * Cognitive-aux / research panel (Experimental).
+ * Quantum-inspiration showcase — research-grade, not production surface (P1.21).
+ */
 import React, { useState, useCallback } from 'react';
 import { usePolling } from '../Common/usePolling';
 import { Atom, Zap, BarChart3 } from 'lucide-react';

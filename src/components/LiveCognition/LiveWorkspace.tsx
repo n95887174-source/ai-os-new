@@ -4,7 +4,8 @@ import { Network, Brain, AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 import AgentLiveBoard from '../DashboardPanel/AgentLiveBoard';
 import IntelligenceGraph from '../DashboardPanel/IntelligenceGraph';
-import { adminService, kernel } from '../../kernel/instances';
+import { adminService, kernel, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('LiveWorkspace');
 import { eventBus, EVENTS } from '../../kernel/instances';
 import LiveStatCard from './LiveStatCard';
 import EventLog from './EventLog';
@@ -40,7 +41,7 @@ const LiveWorkspace: React.FC = () => {
                 setHealth(adminService.getSystemHealth());
                 setError(null);
             } catch (e) {
-                console.warn('[LiveWorkspace] Failed to update health:', e);
+                LOGGER.warn('Failed to update health', e);
                 if (isMountedRef.current) {
                     setError('Failed to update system health');
                     clearErrorAfterDelay();
@@ -67,7 +68,7 @@ const LiveWorkspace: React.FC = () => {
                 );
                 setError(null);
             } catch (e) {
-                console.warn('[LiveWorkspace] Failed to process event:', e);
+                LOGGER.warn('Failed to process event', e);
                 if (isMountedRef.current) {
                     setError('Failed to process event');
                     clearErrorAfterDelay();
@@ -76,10 +77,7 @@ const LiveWorkspace: React.FC = () => {
         };
         const maybeUnsubscribe = eventBus.subscribeAll(eventHandler);
         if (typeof maybeUnsubscribe === 'function') unsubscribeAll = maybeUnsubscribe;
-        else
-            console.warn(
-                '[LiveWorkspace] eventBus.subscribeAll does not return an unsubscribe function',
-            );
+        else LOGGER.warn('eventBus.subscribeAll does not return an unsubscribe function');
         const savedIntervalRef = intervalRef;
         const savedTimeoutRef = errorTimeoutRef;
         return () => {

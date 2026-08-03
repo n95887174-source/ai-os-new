@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plug, PlugZap, Wrench, Trash2, FileText } from 'lucide-react';
 import { getStatusColor } from '../Common/status-vocabulary';
@@ -17,7 +18,7 @@ interface MCPServerCardProps {
     onRemove: (server: MCPServerConfig) => void;
 }
 
-export function MCPServerCard({
+export const MCPServerCard = memo(function MCPServerCard({
     server,
     isExpanded,
     tools,
@@ -351,4 +352,4 @@ export function MCPServerCard({
             </AnimatePresence>
         </div>
     );
-}
+});

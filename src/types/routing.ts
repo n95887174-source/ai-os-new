@@ -10,6 +10,8 @@ export interface RouteMeta {
     color: string;
     lazy?: boolean;
     featureFlag?: FeatureFlag;
+    /** Marks a cognitive-aux / research panel — shows an "Experimental" badge in the UI (P1.21). */
+    experimental?: boolean;
 }
 
 export interface NavSection {

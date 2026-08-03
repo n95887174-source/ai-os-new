@@ -346,7 +346,7 @@ const AgentsPanelView: React.FC = () => {
                                     agent={agent}
                                     agentStats={agentStats}
                                     viewMode={viewMode}
-                                    onSelect={(id) => onSetSelectedAgentId(id)}
+                                    onSelect={onSetSelectedAgentId}
                                     onToggleStatus={onToggleStatus}
                                     t={t}
                                 />
