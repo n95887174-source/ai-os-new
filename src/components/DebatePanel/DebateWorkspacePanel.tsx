@@ -99,7 +99,7 @@ const DebateWorkspacePanel: React.FC = () => {
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             setError('Create failed: ' + msg);
-            console.error('[DebateWorkspace] createRoom error:', e);
+            LOGGER.error('DebateWorkspacePanel', 'Create room failed', { error: e });
         } finally {
             setIsCreating(false);
         }
@@ -119,7 +119,7 @@ const DebateWorkspacePanel: React.FC = () => {
                 await debateWorkspace.closeRoom(roomId);
                 loadRooms();
             } catch (e) {
-                console.error('[DebateWorkspace] closeRoom error:', e);
+                LOGGER.error('DebateWorkspacePanel', 'Close room failed', { error: e });
             }
         },
         [loadRooms],

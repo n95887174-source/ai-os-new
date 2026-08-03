@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Wrench, Plus, Search, Download, Upload, AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toolService } from '../../kernel/instances';
+import { toolService, rootLogger } from '../../kernel/instances';
+const LOGGER = rootLogger.child('ToolsPanel');
 import type { ToolDefinition } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import type { EventMap } from '../../kernel/instances';
@@ -32,7 +33,7 @@ const ToolsPanel: React.FC = () => {
         try {
             return toolService.getTools();
         } catch (e) {
-            console.warn('[ToolsPanel] Failed to load tools:', e);
+            LOGGER.warn('ToolsPanel', 'Failed to load tools', { error: e });
             return [];
         }
     });
@@ -58,7 +59,7 @@ const ToolsPanel: React.FC = () => {
                 if (isMountedRef.current) setTools(toolService.getTools());
                 if (isMountedRef.current) setError(null);
             } catch (err) {
-                console.warn('[ToolsPanel] Failed to toggle tool:', err);
+                LOGGER.warn('ToolsPanel', 'Failed to toggle tool', { error: err });
                 if (isMountedRef.current) {
                     setError(t('common.unknown_error'));
                     clearError();
@@ -99,7 +100,7 @@ const ToolsPanel: React.FC = () => {
             });
             if (isMountedRef.current) setError(null);
         } catch (err) {
-            console.warn('[ToolsPanel] Export failed:', err);
+            LOGGER.warn('ToolsPanel', 'Export failed', { error: err });
             if (isMountedRef.current) {
                 setError(t('common.unknown_error'));
                 clearError();
@@ -123,7 +124,7 @@ const ToolsPanel: React.FC = () => {
                     setError(null);
                 }
             } catch (err) {
-                console.warn('[ToolsPanel] Failed to import tools:', err);
+                LOGGER.warn('ToolsPanel', 'Failed to import tools', { error: err });
                 if (isMountedRef.current) {
                     setError(t('common.unknown_error'));
                     clearError();
@@ -173,7 +174,7 @@ const ToolsPanel: React.FC = () => {
             const formattedOutput = `Execution completed in ${latency}ms\nStatus: ${result.status.toUpperCase()}\n\nResult:\n${JSON.stringify(result.data || result.error, null, 2)}`;
             setTestOutput(formattedOutput);
         } catch (execErr) {
-            console.warn('[ToolsPanel] Tool execution failed:', execErr);
+            LOGGER.warn('ToolsPanel', 'Tool execution failed', { error: execErr });
             if (isMountedRef.current) {
                 setTestOutput(t('common.unknown_error'));
                 setError(t('common.unknown_error'));

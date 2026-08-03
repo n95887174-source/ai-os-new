@@ -70,7 +70,7 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
             setError(null);
         } catch (e) {
             if (isMountedRef.current) {
-                console.error('[DebatePanel] cancelSession failed:', e);
+                LOGGER.error('DebateSessionHeader', 'cancelSession failed', { error: e });
                 setError(t('debate.error_stop'));
                 clearError();
             }

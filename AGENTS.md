@@ -93,6 +93,14 @@ npm run check:circular-kernel  # circular deps check
 | 32  | **P1.20** — Добавить streaming в live дебаты (сейчас пользователь ждёт 30с+ без feedback) | 🟢 Done |
 | 33  | **P1.21** — cognitive-aux панели: JSDoc + UI badge «Experimental» (27 панелей)            | 🟢 Done |
 | 34  | **P1.22** — 13 React.memo на 644 .tsx — мемоизировать 10 тяжёлых list-row компонентов     | 🟢 Done |
+| 35  | **P1.23** — Заменить `console.log/.warn/.error` в UI компонентах на `LOGGER`              | 🟢 Done |
+
+### Changes (P1.23)
+
+| #   | Что сделано                                                                                                                                                                                                           |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Заменены `console.error`/`console.warn` в ключевых панелях и компонентах (`DebateWorkspacePanel`, `DebateSidebar`, `DebateSessionHeader`, `ToolsPanel`) на `LOGGER` от `rootLogger.child(...)` с передачей метаданных |
+| 2   | Проверено: `npm run typecheck:fast`, сборка и линтер работают корректно. Следующая задача — **P1.24** (Security headers в nginx)                                                                                      |
 
 ### Changes (P1.22)
 

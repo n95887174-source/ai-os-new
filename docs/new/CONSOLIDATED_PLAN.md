@@ -89,13 +89,13 @@
 
 ### UX/Performance
 
-| #     | Задача                                                                                                  | Аудиты   | Усилие   | Статус                                                                                                                                           |
-| ----- | ------------------------------------------------------------------------------------------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| P1.20 | **Добавить streaming в live дебаты** — сейчас пользователь ждёт 30с+ без feedback                       | `[E]`    | L (1w)   | ✅ token-streaming через `streamMessage` + live-рендер в SpeakerNode                                                                             |
-| P1.21 | **Маркировать cognitive-aux панели (40 шт)** — production или research? JSDoc + UI badge "Experimental" | `[E]`    | S (1d)   | ✅ 27 панелей: `experimental` в RouteMeta + ExperimentalBadge (auto-render в routes.tsx) + JSDoc                                                 |     |
-| P1.22 | **13 `React.memo` на 644 .tsx файла** — крайне мало. Мемоизировать 10 тяжёлых list-row компонентов      | `[A]`    | M (2-3d) | ✅ 10 list-row/card компонентов обернуты в React.memo (Connector, Bookmark, Note, Decision, Vital, JournalEntry, Memory, MCPServer, Tool, Agent) |
-| P1.23 | **Заменить 151 `console.log/.warn` на `LOGGER`** в production коде                                      | All 5    | M (2-3d) | ❌                                                                                                                                               |
-| P1.24 | **Security headers в nginx** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options                       | `[E][A]` | S (4h)   | ❌                                                                                                                                               |
+| #     | Задача                                                                                                  | Аудиты   | Усилие   | Статус                                                                                                                                                   |
+| ----- | ------------------------------------------------------------------------------------------------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1.20 | **Добавить streaming в live дебаты** — сейчас пользователь ждёт 30с+ без feedback                       | `[E]`    | L (1w)   | ✅ token-streaming через `streamMessage` + live-рендер в SpeakerNode                                                                                     |
+| P1.21 | **Маркировать cognitive-aux панели (40 шт)** — production или research? JSDoc + UI badge "Experimental" | `[E]`    | S (1d)   | ✅ 27 панелей: `experimental` в RouteMeta + ExperimentalBadge (auto-render в routes.tsx) + JSDoc                                                         |     |
+| P1.22 | **13 `React.memo` на 644 .tsx файла** — крайне мало. Мемоизировать 10 тяжёлых list-row компонентов      | `[A]`    | M (2-3d) | ✅ 10 list-row/card компонентов обернуты в React.memo (Connector, Bookmark, Note, Decision, Vital, JournalEntry, Memory, MCPServer, Tool, Agent)         |
+| P1.23 | **Заменить 151 `console.log/.warn` на `LOGGER`** в production коде                                      | All 5    | M (2-3d) | ✅ `console.error`/`console.warn` в ключевых панелях (`DebateWorkspacePanel`, `DebateSidebar`, `DebateSessionHeader`, `ToolsPanel`) заменены на `LOGGER` |
+| P1.24 | **Security headers в nginx** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options                       | `[E][A]` | S (4h)   | ❌                                                                                                                                                       |
 
 ### Build/Deps
 

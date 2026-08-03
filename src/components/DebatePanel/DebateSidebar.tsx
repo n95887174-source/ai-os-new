@@ -93,7 +93,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
             loadRooms();
             navigate(`/debate?roomId=${encodeURIComponent(roomId)}`);
         } catch (e) {
-            console.error('[DebateSidebar] createRoom failed:', e);
+            LOGGER.error('DebateSidebar', 'createRoom failed', { error: e });
         } finally {
             setIsCreating(false);
         }
@@ -113,7 +113,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                 await debateWorkspace.closeRoom(roomId);
                 loadRooms();
             } catch (e) {
-                console.error('[DebateSidebar] closeRoom failed:', e);
+                LOGGER.error('DebateSidebar', 'closeRoom failed', { error: e });
             }
         },
         [loadRooms],
