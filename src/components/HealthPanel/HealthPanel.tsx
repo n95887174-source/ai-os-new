@@ -23,7 +23,7 @@ import type { AlertEntry } from '../../kernel/types/interfaces';
 import { APP_VERSION } from '../../utils/version';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { dismissBtn, statusDot } from '../../styles/common';
 import { generateId, type Bee } from './health-panel-utils';
 import { VitalCard } from './VitalCard';

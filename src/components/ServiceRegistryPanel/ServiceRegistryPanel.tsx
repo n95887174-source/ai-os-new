@@ -3,7 +3,7 @@ import { runtime } from '../../kernel/runtime';
 import { useTranslation } from '../../i18n/useTranslation';
 import { Search } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { SERVICE_PHASE, SERVICE_ROUTE_MAP, ROUTE_PATH, VALID_ROUTE_IDS } from './service-phases';
 import { serviceSourceFiles, serviceSourcePaths } from './service-source-data';
 import {

@@ -99,7 +99,7 @@ vi.mock('../ProviderIcon/ProviderIcon', () => ({
     ),
 }));
 
-vi.mock('../ModuleInfo/ModuleInfo', () => ({
+vi.mock('../ModuleInfo', () => ({
     default: () => <div data-testid="module-info" />,
 }));
 

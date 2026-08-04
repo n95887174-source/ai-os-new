@@ -127,7 +127,7 @@
 | #     | Задача                                                                                              | Аудиты   | Усилие |
 | ----- | --------------------------------------------------------------------------------------------------- | -------- | ------ |
 | P2.7  | Dead-code cleanup: removed `finalizeDebate` (deprecated) + `checkModelBlacklist` (annotated dead)   | `[A][E]` | S (2h) | ✅  |
-| P2.8  | 92/165 директорий компонентов (56%) содержат 1 файл — кандидаты на объединение                      | `[A]`    | L (1w) |
+| P2.8  | 65 single-file component directories flattened → `src/components/`                                  | `[A]`    | L (1w) | ✅  |
 | P2.9  | 9 панелей задублированы как `.tsx` + директория — консолидировать                                   | `[A]`    | S (1d) |
 | P2.10 | `ChatService` (40 строк) — wrapper без логики. Слить в ChatExecutor или дать ответственность        | `[E]`    | S (4h) |
 | P2.11 | `cross-tab-lock-service.ts` vs `cross-tab-state.ts` — задокументировать границу или консолидировать | `[E]`    | S (2h) |

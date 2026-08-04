@@ -22,7 +22,7 @@ import RoutingSLAView from './RoutingSLAView';
 import ResourcePoolsView from './ResourcePoolsView';
 import RoutingIntelligenceView from './RoutingIntelligenceView';
 import ProviderDetailModal from './ProviderDetailModal';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 
 export type TabId = 'installed' | 'browse' | 'routing' | 'pools' | 'intel';
 export const TABS: TabId[] = ['installed', 'browse', 'routing', 'pools', 'intel'];

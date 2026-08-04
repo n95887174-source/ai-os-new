@@ -9,7 +9,7 @@ import { configService } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useConfirm } from '../../hooks/useConfirm';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import MemoryHeader from './MemoryHeader';
 import MemoryErrorAlert from './MemoryErrorAlert';
 import CollectionTabs from './CollectionTabs';

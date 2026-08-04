@@ -11,7 +11,7 @@ import {
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { DebateRuntimeEvents } from '../../kernel/events/debate-runtime-events';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import type {
     DebateSessionSnapshot,
     TopologyType,

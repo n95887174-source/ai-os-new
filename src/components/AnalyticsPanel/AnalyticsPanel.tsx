@@ -6,7 +6,7 @@ const LOGGER = rootLogger.child('AnalyticsPanel');
 import type { ProviderMetrics, DecisionTrace, SystemState } from '../../types/metrics';
 import { BarChart3, Activity, Globe, History, AlertTriangle, X } from 'lucide-react';
 import { eventBus, EVENTS } from '../../kernel/instances';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { dismissBtn, errorBanner } from '../../styles/common';
 

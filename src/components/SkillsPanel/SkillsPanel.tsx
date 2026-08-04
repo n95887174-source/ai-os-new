@@ -19,7 +19,7 @@ import { eventBus, EVENTS } from '../../kernel/instances';
 import type { EventMap } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import {
     dismissBtnRed,
     errorBannerLg,

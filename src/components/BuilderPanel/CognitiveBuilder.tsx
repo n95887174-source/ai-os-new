@@ -22,7 +22,7 @@ import { database } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { errorBanner, dismissBtn } from '../../styles/common';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import {
     AgentNode,
     RouterNode,

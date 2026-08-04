@@ -96,7 +96,7 @@ vi.mock('./hooks/useLatest', () => ({
   useLatest: (val: unknown) => ({ current: val }),
 }));
 
-vi.mock('../ModuleInfo/ModuleInfo', () => ({ default: () => null }));
+vi.mock('../ModuleInfo', () => ({ default: () => null }));
 
 vi.mock('./components/Fish', () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

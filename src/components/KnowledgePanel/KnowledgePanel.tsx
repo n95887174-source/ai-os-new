@@ -4,7 +4,7 @@ import { useConfirm } from '../../hooks/useConfirm';
 import { memoryService, rootLogger } from '../../kernel/instances';
 const LOGGER = rootLogger.child('KnowledgePanel');
 import { eventBus, EVENTS } from '../../kernel/instances';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import GraphHeader from './GraphHeader';
 import ErrorBanner from './ErrorBanner';
 import SearchAndFilter from './SearchAndFilter';

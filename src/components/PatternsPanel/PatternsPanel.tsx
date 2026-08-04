@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { INITIAL_NOTES } from './pattern-constants';
 import type { PatternNote } from './pattern-constants';
 import PatternHeader from './PatternHeader';

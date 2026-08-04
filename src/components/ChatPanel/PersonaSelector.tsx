@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChatStore } from '../../stores/useChatStore';
 import { personaService } from '../../kernel/instances';
 import { PERSONA_DEFINITIONS } from '../../kernel/services/persona-definitions';
-import PersonaPickerPanel from '../PersonaPicker/PersonaPickerPanel';
+import PersonaPickerPanel from '../PersonaPickerPanel';
 import type { PersonaEntry } from '../../kernel/contracts/persona-entry';
 import type { Persona } from '../../kernel/services/persona-service';
 

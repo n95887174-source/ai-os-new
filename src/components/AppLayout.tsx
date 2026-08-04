@@ -6,7 +6,7 @@ import { Sidebar } from './Sidebar';
 import { AppRoutes } from '../routes';
 import { GlobalErrorBoundary } from './GlobalErrorBoundary';
 import AlertLayer from './AlertLayer/AlertLayer';
-import { CommandPalette, useCommandPalette } from './CommandPalette/CommandPalette';
+import { CommandPalette, useCommandPalette } from './CommandPalette';
 import { Breadcrumbs } from './Common/Breadcrumbs';
 import { OnboardingWizard } from './OnboardingWizard/OnboardingWizard';
 import { KeyboardShortcutsModal } from './Common/KeyboardShortcutsModal';

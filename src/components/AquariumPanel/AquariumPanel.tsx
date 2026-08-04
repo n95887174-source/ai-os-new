@@ -22,7 +22,7 @@ import {
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS, rootLogger } from '../../kernel/instances';
 const LOGGER = rootLogger.child('AquariumPanel');
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { infoCardMini, flexBetweenMb05, providerColors } from '../../styles/common';

@@ -5,7 +5,7 @@ import { usePoolStatus } from '../../hooks/usePoolStatus';
 import type { PoolStrategy } from '../../kernel/instances';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
 import { POOL_DEFS } from '../../constants/pools';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import {
     getStatusColor,
     pctColor,

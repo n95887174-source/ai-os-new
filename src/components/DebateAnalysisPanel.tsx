@@ -7,7 +7,7 @@ import { sessionManager, debateService } from '../kernel/instances';
 import { analyzeDebate } from '../kernel/utils/debate-analysis';
 import type { DebateAnalysis } from '../kernel/utils/debate-analysis';
 import { errorContainer, dismissBtnRed } from '../styles/common';
-import { StatCard, FallacyCard, PersuasionCard, ToneChart } from './DebateAnalysisPanel/components';
+import { StatCard, FallacyCard, PersuasionCard, ToneChart } from './components';
 
 const DebateAnalysisPanel: React.FC = () => {
     const { t, lang } = useTranslation();

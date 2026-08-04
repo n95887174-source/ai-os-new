@@ -8,7 +8,7 @@ import TraceDebugger from './TraceDebugger';
 import TopologyTraceView from './TopologyTraceView';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { emptyStateFlex } from '../../styles/common';
 import { getStatusColor } from '../Common/status-vocabulary';
 

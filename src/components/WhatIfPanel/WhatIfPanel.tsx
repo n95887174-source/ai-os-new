@@ -19,7 +19,7 @@ import {
 import { whatIfService } from '../../kernel/instances';
 import { debateEngine } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 
 type SimType = 'topology' | 'participant' | 'budget' | 'provider' | 'strategy';
 

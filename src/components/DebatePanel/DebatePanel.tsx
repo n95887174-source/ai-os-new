@@ -28,7 +28,7 @@ import {
 import { orchestrator } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import { autoDebateService as autoDebate } from '../../kernel/instances';

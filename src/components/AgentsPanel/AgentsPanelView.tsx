@@ -21,7 +21,7 @@ import { ModalShell } from '../ModalShell';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { templateService, agentService } from '../../kernel/instances';
 import type { AgentTemplate as ServiceAgentTemplate } from '../../kernel/services/template-service';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { AgentStatsDashboard } from './AgentStatsDashboard';
 import { LiveActivityStream } from './LiveActivityStream';
 import { EloLeaderboard } from './EloLeaderboard';

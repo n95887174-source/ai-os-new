@@ -1,5 +1,5 @@
 import { MessageSquare, Search, FileDown, Activity, Split, Settings } from 'lucide-react';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { iconBtnMuted } from '../../styles/common';
 
 interface Props {

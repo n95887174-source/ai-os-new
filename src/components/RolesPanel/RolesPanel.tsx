@@ -12,7 +12,7 @@ import { toolService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import { RoleAnalytics } from './RoleAnalytics';
 import { PermissionMatrix } from './PermissionMatrix';
 import RoleLibrary from './RoleLibrary';

@@ -12,7 +12,7 @@ import { monitoringService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import type { SystemState } from '../../types/metrics';
 import type { CognitiveTrace } from '../../types/domain';
 import type { RouterDecision } from '../../kernel/instances';

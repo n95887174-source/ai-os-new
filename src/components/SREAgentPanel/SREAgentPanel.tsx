@@ -6,7 +6,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { emptyStateCenter, emptyStateTitle } from '../../styles/common';
 import { advisorService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import type { OptimizationSuggestion } from '../../kernel/instances';
 import type { SREAlert } from './sre-constants';
 import SREHeader from './SREHeader';

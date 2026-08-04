@@ -11,7 +11,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { getPolicyDimensionColor } from '../Common/status-vocabulary';
 import { errorBannerLg, formFieldWhite, modalFormSelect, modalLabelUppercase, patternCard, statCard, tabButtonBase, textareaDark } from '../../styles/common';
 import { useConfirm } from '../../hooks/useConfirm';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 
 const POLICY_TYPE_LABELS: Record<PolicyType, { labelKey: string; icon: string }> = {
   latency: { labelKey: 'policy.type_latency', icon: '⏱' },

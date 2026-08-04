@@ -165,7 +165,7 @@ vi.mock('../../i18n/useTranslation', () => ({
     }),
 }));
 
-vi.mock('../ModuleInfo/ModuleInfo', () => ({
+vi.mock('../ModuleInfo', () => ({
     default: () => null,
 }));
 

@@ -27,7 +27,7 @@ import { safeClone } from '../../shared/utils/safe-json';
 import { APP_VERSION } from '../../utils/version';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import PromptsTab from './PromptsTab';
 import { canonicalHealthColor, canonicalHealthLabel } from '../Common/status-vocabulary';
 import type { SettingsTab, RuntimeConfigForm } from './settings-shared';

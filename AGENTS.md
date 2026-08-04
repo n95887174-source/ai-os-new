@@ -107,16 +107,21 @@ npm run check:circular-kernel  # circular deps check
 | 46  | **P2.5** — Разбить `chat/store.ts` (1090 → 598 строк, 3 модуля)                           | 🟢 Done |
 | 47  | **P2.6** — Разбить `useKeyStore.ts` (542 → 220 строк, 3 модуля)                           | 🟢 Done |
 | 48  | **P2.7** — Dead-code cleanup: `finalizeDebate` + `checkModelBlacklist`                    | 🟢 Done |
+| 49  | **P2.8** — Flatten 65 single-file component directories → `src/components/`               | 🟢 Done |
 
-### Changes (P2.7)
+### Changes (P2.8)
 
-| #   | Что сделано                                                                                                                                                                      |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `debate-finalizer.ts` — удалён deprecated `finalizeDebate()` wrapper (4 строки, nunca не импортировался); обновлён JSDoc в `debate-sync-manager.ts:125`                          |
-| 2   | `policy-service.ts` — удалён `checkModelBlacklist()` (22 строки, `@deprecated C-84`) + вызов в `checkAgentPolicy()` (6 строк); удалены 2 теста в `policy-service.test.ts`        |
-| 3   | Проверено: `npm run build:skip-typecheck` → ✅; `npx vitest run src/kernel/services/policy-service.test.ts` → 43 ✅; `npx vitest run src/kernel/services/debate-runtime` → 86 ✅ |
-| 4   | `docs/new/CONSOLIDATED_PLAN.md` — P2.7 ✅                                                                                                                                        |
-| 5   | Следующая задача — **P2.8** (92/165 директорий компонентов содержат 1 файл)                                                                                                      |
+| #   | Что сделано                                                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **65 single-file directories flattened**: `Foo/Foo.tsx` → `Foo.tsx` in `src/components/`; directories removed; 65 empty dirs deleted                                                  |
+| 2   | **`route-imports.ts`** — all 65 import paths updated from `./components/Foo/Foo` → `./components/Foo`                                                                                 |
+| 3   | **Import path fixes in flattened files**: `../../` → `../` (depth change) + `../Sibling` → `./Sibling` (sibling directory references now same-level)                                  |
+| 4   | **Import path fixes in consuming files**: `../Foo/Foo` → `../Foo` in 35 files (DebatePanel, DashboardPanel, MCPPanel, etc.) for ModuleInfo, PersonaPicker, DebatePanel, etc.          |
+| 5   | **Special case**: `DebateAnalysisPanel/components.tsx` moved to `src/components/components.tsx` with relative paths updated; `DebateAnalysisPanel.tsx` import fixed to `./components` |
+| 6   | **`AppLayout.tsx`** — `./CommandPalette/CommandPalette` → `./CommandPalette`                                                                                                          |
+| 7   | Проверено: `npm run build:skip-typecheck` → ✅ (3842 modules, 0 errors)                                                                                                               |
+| 8   | `docs/new/CONSOLIDATED_PLAN.md` — P2.8 ✅                                                                                                                                             |
+| 9   | Следующая задача — **P2.9** (9 панелей задублированы как .tsx + директория)                                                                                                           |
 
 ### Changes (P2.6)
 

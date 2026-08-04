@@ -4,7 +4,7 @@ import { Thermometer, Gauge, Server, MessageCircle, RefreshCw } from 'lucide-rea
 import { pressureMapService, rootLogger } from '../../kernel/instances';
 const LOGGER = rootLogger.child('PressureMapPanel');
 import { useTranslation } from '../../i18n/useTranslation';
-import ModuleInfo from '../ModuleInfo/ModuleInfo';
+import ModuleInfo from '../ModuleInfo';
 import type {
     PressureMapSnapshot,
     PressureTrendPoint,
