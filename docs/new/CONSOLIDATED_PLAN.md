@@ -120,7 +120,7 @@
 | P2.3 | Разбить `RolesPanel/RoleAnalytics.tsx` (1005 → orchestrator + 3 компонента)                    | `[E]`  | M (2-3d) | ✅     |
 | P2.4 | Разбить `debate-engine.ts` (1278 → 800 строк, 3 модуля) — Facade + sub-orchestrators           | `[E]`  | L (1w)   | ✅     |
 | P2.5 | Разбить `chat/store.ts` (1090 → 598 строк, 3 модуля) — event-handlers + send-message + helpers | `[E]`  | M (3-5d) | ✅     |
-| P2.6 | Разбить `useKeyStore.ts` (535 строк) — keys + pool + intelligence                              | `[E]`  | S (1d)   |
+| P2.6 | Разбить `useKeyStore.ts` (542 → 220 строк, 3 модуля) — utils + init + orchestrator             | `[E]`  | S (1d)   | ✅     |
 
 ### Dead code / Consolidation
 

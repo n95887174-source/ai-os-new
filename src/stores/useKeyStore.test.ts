@@ -55,6 +55,9 @@ vi.mock('../kernel/instances', () => ({
     keyService,
     groupManager,
     keyStateStore,
+    rootLogger: {
+        child: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }),
+    },
 }));
 vi.mock('dexie', async (importOriginal) => {
     const actual = (await importOriginal<typeof import('dexie')>()) as Record<string, unknown>;
