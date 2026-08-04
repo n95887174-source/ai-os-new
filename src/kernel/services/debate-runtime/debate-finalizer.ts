@@ -38,9 +38,3 @@ export function emitFinalizeEvents(session: DebateSession, deps: FinalizerDeps):
         consensus: session.consensus,
     });
 }
-
-/** @deprecated Use finalizeDebateState + emitFinalizeEvents separately for dual-write-safe ordering */
-export function finalizeDebate(session: DebateSession, deps: FinalizerDeps): void {
-    finalizeDebateState(session, deps);
-    emitFinalizeEvents(session, deps);
-}

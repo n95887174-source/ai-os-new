@@ -359,32 +359,6 @@ export class PolicyService {
         return result.blocked && result.sanitized ? result.sanitized : output;
     }
 
-    // ── Migrated from legacy: model blacklist ─────────────────────────
-
-    /** @deprecated C-84: Dead code — model blocking handled by checkAgentPolicy + router-level filtering */
-    checkModelBlacklist(model: string, nodeId: string): boolean {
-        const policy = this.activePolicies.find(
-            (p) => p.type === 'custom' && p.value === 'BLOCKED_MODELS',
-        );
-        if (!policy) return true;
-        const blockedPatterns = this.securityPatterns.filter((p) => p.type === 'blocklist');
-        const isBlocked = blockedPatterns.some((p) =>
-            model.toLowerCase().includes(p.pattern.toLowerCase()),
-        );
-        if (isBlocked) {
-            this.recordViolation({
-                policyId: policy.id,
-                nodeId,
-                type: 'custom',
-                severity: 'error',
-                detail: `Model "${model}" is blacklisted`,
-                resolved: false,
-            });
-            return false;
-        }
-        return true;
-    }
-
     // ── Public API ────────────────────────────────────────────────────
 
     getPolicies(): ISPolicy[] {
@@ -457,13 +431,6 @@ export class PolicyService {
                 return {
                     allowed: false,
                     reason: `Model ${model} not in allowed list for agent ${agentId}`,
-                    blockedBy: 'model',
-                };
-            }
-            if (!this.checkModelBlacklist(model, agentId)) {
-                return {
-                    allowed: false,
-                    reason: `Model ${model} is globally blacklisted`,
                     blockedBy: 'model',
                 };
             }

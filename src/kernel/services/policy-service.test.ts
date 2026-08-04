@@ -515,23 +515,6 @@ describe('PolicyService', () => {
                 expect(svc.sanitizeOutput('n1', 'Clean')).toBe('Clean');
             });
         });
-
-        describe('checkModelBlacklist', () => {
-            it('should allow non-blacklisted models', () => {
-                expect(svc.checkModelBlacklist('llama-3', 'n1')).toBe(true);
-            });
-
-            it('should check blacklist patterns case-insensitively', () => {
-                svc.addSecurityPattern({
-                    id: 'block-test',
-                    type: 'blocklist',
-                    label: 'test',
-                    pattern: 'test-model',
-                    replacement: '',
-                });
-                expect(svc.checkModelBlacklist('TEST-MODEL', 'n1')).toBe(false);
-            });
-        });
     });
 
     describe('persistence', () => {

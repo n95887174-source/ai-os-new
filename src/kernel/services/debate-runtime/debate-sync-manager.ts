@@ -122,7 +122,7 @@ export class DebateSyncManager {
      * Strip argument content for rounds older than keepRounds behind the latest round.
      * Called under memory pressure to free LLM response strings without destroying
      * the argument structure (IDs, agentIds, metadata remain intact).
-     * The governor's internal state and finalizeDebate metrics are unaffected.
+     * The governor's internal state and metrics are unaffected.
      */
     truncateArguments(keepRounds = 2): number {
         if (!this.activeSession?.arguments?.length) return 0;

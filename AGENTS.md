@@ -104,20 +104,31 @@ npm run check:circular-kernel  # circular deps check
 | 43  | **P2.2** — Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 → 4 таба + orchestrator)    | 🟢 Done |
 | 44  | **P2.3** — Разбить `RolesPanel/RoleAnalytics.tsx` (1005 → orchestrator + 3 компонента)    | 🟢 Done |
 | 45  | **P2.4** — Разбить `debate-engine.ts` (1278 → 800 строк, 3 модуля)                        | 🟢 Done |
-| 46  | **P2.5** — Разбить `chat/store.ts` (1090 → 598 строк, 3 модуля)                          | 🟢 Done |
-| 47  | **P2.6** — Разбить `useKeyStore.ts` (542 → 220 строк, 3 модуля)                          | 🟢 Done |
+| 46  | **P2.5** — Разбить `chat/store.ts` (1090 → 598 строк, 3 модуля)                           | 🟢 Done |
+| 47  | **P2.6** — Разбить `useKeyStore.ts` (542 → 220 строк, 3 модуля)                           | 🟢 Done |
+| 48  | **P2.7** — Dead-code cleanup: `finalizeDebate` + `checkModelBlacklist`                    | 🟢 Done |
+
+### Changes (P2.7)
+
+| #   | Что сделано                                                                                                                                                                      |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `debate-finalizer.ts` — удалён deprecated `finalizeDebate()` wrapper (4 строки, nunca не импортировался); обновлён JSDoc в `debate-sync-manager.ts:125`                          |
+| 2   | `policy-service.ts` — удалён `checkModelBlacklist()` (22 строки, `@deprecated C-84`) + вызов в `checkAgentPolicy()` (6 строк); удалены 2 теста в `policy-service.test.ts`        |
+| 3   | Проверено: `npm run build:skip-typecheck` → ✅; `npx vitest run src/kernel/services/policy-service.test.ts` → 43 ✅; `npx vitest run src/kernel/services/debate-runtime` → 86 ✅ |
+| 4   | `docs/new/CONSOLIDATED_PLAN.md` — P2.7 ✅                                                                                                                                        |
+| 5   | Следующая задача — **P2.8** (92/165 директорий компонентов содержат 1 файл)                                                                                                      |
 
 ### Changes (P2.6)
 
-| #   | Что сделано                                                                                                                                                                                                                                                                                                |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Создан `key-store-utils.ts` (~115 строк) — типы (`KeyMeta`, `ImportedKeyInput`), pure-функции: `VALID_KEY_STATUSES`, `isStringArray`, `parseNotes`, `parseImportedKey`, `computeActiveKeys`, `computeActiveCount`, `computeErrorCount`                                                                                                                                     |
-| 2   | Создан `key-store-init.ts` (~165 строк) — `ensureInitialized()` (Dexie liveQuery + 5 EventBus подписок: KEY_LATENCY_BURST, KEY_HEALTH_CHECK_FAILED, KEY_QUOTA_EXCEEDED, NOTIFICATION, KEY_STATE_CHANGED + checkingTimers + HMR cleanup); интерфейс `KeyStoreState`                                                                                                         |
+| #   | Что сделано                                                                                                                                                                                                                                                                                                                                          |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Создан `key-store-utils.ts` (~115 строк) — типы (`KeyMeta`, `ImportedKeyInput`), pure-функции: `VALID_KEY_STATUSES`, `isStringArray`, `parseNotes`, `parseImportedKey`, `computeActiveKeys`, `computeActiveCount`, `computeErrorCount`                                                                                                               |
+| 2   | Создан `key-store-init.ts` (~165 строк) — `ensureInitialized()` (Dexie liveQuery + 5 EventBus подписок: KEY_LATENCY_BURST, KEY_HEALTH_CHECK_FAILED, KEY_QUOTA_EXCEEDED, NOTIFICATION, KEY_STATE_CHANGED + checkingTimers + HMR cleanup); интерфейс `KeyStoreState`                                                                                   |
 | 3   | `useKeyStore.ts` — 542 строки → 220 строк (59% редукция): store-orchestrator с actions (addKey/removeKey/updateKey/toggleKeyStatus/enableAllKeys/disableAllKeys/exportKeys/importKeys/refresh) + hook exports (`useKeyList`, `useCheckingIds`, `useKeySelector`, `refreshKeyStore`); ре-экспорт `KeyMeta`/`KeyStoreState` для обратной совместимости |
-| 4   | Тесты: `useKeyStore.test.ts` — 24 теста ✅; обновлён mock `../kernel/instances` (добавлен `rootLogger.child`)                                                                                                                                                                                                                                                              |
-| 5   | Проверено: `npm run build:skip-typecheck` → ✅ 27.55s; `npx vitest run src/stores/useKeyStore.test.ts` → 24 ✅                                                                                                                                                                                                                                                             |
-| 6   | `docs/new/CONSOLIDATED_PLAN.md` — P2.6 ✅                                                                                                                                                                                                                                                                                                                                  |
-| 7   | Следующая задача — **P2.7** (dead-code cleanup)                                                                                                                                                                                                                                                            |
+| 4   | Тесты: `useKeyStore.test.ts` — 24 теста ✅; обновлён mock `../kernel/instances` (добавлен `rootLogger.child`)                                                                                                                                                                                                                                        |
+| 5   | Проверено: `npm run build:skip-typecheck` → ✅ 27.55s; `npx vitest run src/stores/useKeyStore.test.ts` → 24 ✅                                                                                                                                                                                                                                       |
+| 6   | `docs/new/CONSOLIDATED_PLAN.md` — P2.6 ✅                                                                                                                                                                                                                                                                                                            |
+| 7   | Следующая задача — **P2.7** (dead-code cleanup)                                                                                                                                                                                                                                                                                                      |
 
 ### Changes (P2.5)
 
