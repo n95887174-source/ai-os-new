@@ -103,6 +103,19 @@ npm run check:circular-kernel  # circular deps check
 | 42  | **P2.1** — Разбить `RolesPanel/TeamWizard.tsx` (1107 → 7 step-компонентов)                | 🟢 Done |
 | 43  | **P2.2** — Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 → 4 таба + orchestrator)    | 🟢 Done |
 | 44  | **P2.3** — Разбить `RolesPanel/RoleAnalytics.tsx` (1005 → orchestrator + 3 компонента)    | 🟢 Done |
+| 45  | **P2.4** — Разбить `debate-engine.ts` (1278 → 800 строк, 3 модуля)                        | 🟢 Done |
+
+### Changes (P2.4)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                                |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Создан `debate-engine-types.ts` (~120 строк) — `KeyServiceLike`, `RouterServiceLike`, `DebateEngineDeps` (48 полей), `getDebateMaxDurationMs()` + 38 type-only импортов contract'ов                                                                                                                        |
+| 2   | Создан `debate-provider-preflight.ts` (~200 строк) — warm cache (`warmCache`, `WARM_CACHE_TTL`), `isProviderWarm()`, `markProviderWarm()`, `getPreflightTimeout()`, `runProviderPreflight()` (cold-start compensation + auth error handling + C13 guard), `evictExpiredWarmCache()`, `clearWarmCacheAll()` |
+| 3   | Создан `debate-engine-cancel.ts` (~200 строк) — `cancelDebateSession()` (cleanupMaps closure + 3-phase cancel: cancelled/terminal/active + queueMicrotask re-check defense), `cleanupStaleSessions()` (30min stale sweep)                                                                                  |
+| 4   | `debate-engine.ts` — 1278 строк → ~800 строк (37% редукция): импорты сокращены с 77 до ~45 (удалены 38 type-only contract импортов), preflight/cancel/cleanup делегированы в извлечённые модули; re-export `DebateEngineDeps` для обратной совместимости                                                   |
+| 5   | Проверено: `npx tsc --noEmit` → 0 ошибок в новом коде                                                                                                                                                                                                                                                      |
+| 6   | `docs/new/CONSOLIDATED_PLAN.md` — P2.4 ✅                                                                                                                                                                                                                                                                  |
+| 7   | Следующая задача — **P2.5** (`chat/store.ts` 1081 строк)                                                                                                                                                                                                                                                   |
 
 ### Changes (P2.3)
 

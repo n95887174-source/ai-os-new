@@ -1,17 +1,11 @@
 import { genId } from '../../../utils/gen-id';
-import { CONFIG } from '../config-registry';
-import { DebateProviderResolver, DEBATE_MODEL_PRIORITY, isLargeModel } from './debate-query-engine';
+import { DebateProviderResolver } from './debate-query-engine';
 import { buildConclusionLlmCall } from './debate-conclusion-engine';
 import { DebateTopologyService } from './debate-topology';
 import { DebateOrchestrator } from './debate-orchestrator';
 import { buildPipeline } from './debate-pipeline-builder';
 import type { PipelineEngine, PipelineEngineDeps } from './debate-pipeline-builder';
-import {
-    debateCallLlm,
-    debateGetDefaultPrompt,
-    cleanupSessionMaps,
-    type LlmCallerDeps,
-} from './debate-llm-caller';
+import { debateCallLlm, debateGetDefaultPrompt, type LlmCallerDeps } from './debate-llm-caller';
 import type {
     DebateTopology,
     ParticipantConfig,
@@ -22,172 +16,35 @@ import type {
     TimelineEntry,
 } from '../../contracts/debate-runtime';
 import type { DebateSession as DebateSessionInterface } from '../../contracts/debate-types';
-import type { IEventBus } from '../../types/interfaces';
 import type { ILifecycle } from '../../contracts/lifecycle';
-import type { IAdapterRegistry } from '../../contracts/provider-adapter';
-import type { IDistributedLock } from '../../contracts/cross-tab-lock';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
-import type { DebatePolicyEngine } from './debate-policy-engine';
-import type { DebateRAGRetriever } from './debate-rag-retriever';
-import type { DebateMemoryExtractor } from './debate-memory-extractor';
-import type { IEntanglementEngine, IAnchoringService } from '../../contracts/debate-entanglement';
-import type { IArgumentGraphService } from '../../contracts/debate-argument-graph';
-import type { IVulnerabilityTargetingService } from '../../contracts/debate-vulnerability';
-import type { IShadowOpponentService } from '../../contracts/debate-shadow-opponent';
-import type { IAdversarialSourceService } from '../../contracts/debate-adversarial-source';
-import type { IBeliefMiningService } from '../../contracts/debate-belief-mining';
-import type { IMinimaxPlanner } from '../../contracts/debate-minimax';
-import type { IMetaAgentController } from '../../contracts/debate-meta-agent';
-import type { ISteelmanService } from '../../contracts/debate-steelman';
-import type { IBoPTrackerService } from '../../contracts/debate-bop';
-import type { IConsistencyService } from '../../contracts/debate-consistency';
-import type { ICredibilityScorer } from '../../contracts/debate-credibility';
-import type { ISimilarityMonitor } from '../../contracts/debate-similarity';
-import type { IPersonaDriftDetector } from '../../contracts/debate-drift';
-import type { IInsightBus } from '../../contracts/debate-insight-bus';
-import type { ILogicalFormExtractor } from '../../contracts/debate-logic';
-import type { IJustificationEnforcer } from '../../contracts/debate-justification';
-import type { IBiasProfiler } from '../../contracts/debate-bias';
-import type { IInterruptQueue } from '../../contracts/debate-interrupt';
-import type { IStakeholderMapper } from '../../contracts/debate-stakeholder';
-import type { ICalibrationService } from '../../contracts/debate-calibration';
-import type { IPersonaMixer } from '../../contracts/debate-persona-mixer';
-import type { IFrameTracker } from '../../contracts/debate-frame-tracker';
-import type { IExpertWitnessService } from '../../contracts/debate-expert-witness';
-import type { IBayesianJudge } from '../../contracts/debate-bayesian';
-import type { IStanceDriftTracker } from '../../contracts/debate-stance-drift';
-import type { IRhetoricalDeviceSelector } from '../../contracts/debate-rhetorical-device';
-import type { IScratchpadService } from '../../contracts/debate-scratchpad';
-import type { IBlindEvaluationService } from '../../contracts/debate-blind-eval';
-import type { IDebateEvaluator } from '../../contracts/debate-runtime';
-import type { IQualityImpactCollector } from '../../contracts/quality-impact';
-import type { IIncentiveDetector } from '../../contracts/debate-incentives';
-import type { IGoTDeliberation } from '../../contracts/debate-got';
-import type { IConceptBlender } from '../../contracts/debate-blending';
-import type { IOutcomeForecaster } from '../../contracts/debate-forecaster';
 import { createPhaseChangeHandler } from './debate-phase-handler';
 
 import { DebateSessionContext } from './debate-session-context';
 import { DebateMemory } from './debate-memory';
 import { DebateBudget } from './debate-budget';
 import { DebateSession as DebateSessionClass } from './debate-session';
-import type { DebateStore } from '../../contracts/storage/debate-store';
 import { snapshotToSession, type SnapshotBridgeContext } from './debate-snapshot-bridge';
 import {
     DebatePersistenceManager,
     type PersistenceEngineState,
     type PersistenceDeps,
 } from './debate-persistence-manager';
+
+import type { DebateEngineDeps } from './debate-engine-types';
+import { getDebateMaxDurationMs } from './debate-engine-types';
+import {
+    runProviderPreflight,
+    evictExpiredWarmCache,
+    clearWarmCacheAll,
+    getWarmCacheSize,
+} from './debate-provider-preflight';
+import { cancelDebateSession, cleanupStaleSessions } from './debate-engine-cancel';
+
 const LOGGER = rootLogger.child('DebateEngine');
 
-interface KeyServiceLike {
-    getKeys(): Array<{
-        id: string;
-        key: string;
-        provider: string;
-        status: string;
-        model?: string;
-        availableModels?: string[];
-    }>;
-    recordUsage(
-        keyId: string,
-        latency: number,
-        tokens: number,
-        modelId: string,
-        metadata?: Record<string, unknown>,
-    ): void;
-    updateKeyStatus(keyId: string, status: string): void;
-}
-
-interface RouterServiceLike {
-    getDebateProviders(count: number): Array<{
-        provider: string;
-        key: { id: string; provider: string; key: string; availableModels?: string[] };
-    }>;
-    getRankedProviders(
-        strategy: string,
-        prompt: string,
-    ): Array<{ id: string; provider: string; key: string; availableModels?: string[] }>;
-}
-
-interface DebateEngineDeps {
-    eventBus: IEventBus;
-    getRouterService: () => RouterServiceLike;
-    getKeyService: () => KeyServiceLike;
-    getAdapterRegistry: () => IAdapterRegistry;
-    getKeyStateStore?: () => {
-        get(
-            id: string,
-        ):
-            | { flags: { authFailed: boolean; circuitOpen: boolean; rateLimited: boolean } }
-            | undefined;
-        update(id: string, patch: { flags: Record<string, boolean> }): void;
-    };
-    debateStore?: DebateStore;
-    getExecutionGovernor?: () => {
-        start(spec: { type: string; timeoutMs: number; metadata?: Record<string, unknown> }): {
-            complete(): void;
-            fail(e: Error): void;
-            signal: AbortSignal;
-        };
-    };
-    policyEngine?: DebatePolicyEngine;
-    ragRetriever?: DebateRAGRetriever;
-    memoryExtractor?: DebateMemoryExtractor;
-    evaluator?: IDebateEvaluator;
-    providerResolver?: DebateProviderResolver;
-    entanglementEngine?: IEntanglementEngine;
-    anchoringService?: IAnchoringService;
-    argumentGraphService?: IArgumentGraphService;
-    vulnerabilityTargeting?: IVulnerabilityTargetingService;
-    shadowOpponent?: IShadowOpponentService;
-    adversarialSource?: IAdversarialSourceService;
-    beliefMiningService?: IBeliefMiningService;
-    minimaxPlanner?: IMinimaxPlanner;
-    metaAgent?: IMetaAgentController;
-    steelmanService?: ISteelmanService;
-    boPTracker?: IBoPTrackerService;
-    consistencyService?: IConsistencyService;
-    credibilityScorer?: ICredibilityScorer;
-    similarityMonitor?: ISimilarityMonitor;
-    driftDetector?: IPersonaDriftDetector;
-    insightBus?: IInsightBus;
-    logicalFormExtractor?: ILogicalFormExtractor;
-    justificationEnforcer?: IJustificationEnforcer;
-    biasProfiler?: IBiasProfiler;
-    interruptQueue?: IInterruptQueue;
-    stakeholderMapper?: IStakeholderMapper;
-    calibrationService?: ICalibrationService;
-    personaMixer?: IPersonaMixer;
-    frameTracker?: IFrameTracker;
-    expertWitness?: IExpertWitnessService;
-    bayesianJudge?: IBayesianJudge;
-    stanceDriftTracker?: IStanceDriftTracker;
-    rhetoricalDeviceSelector?: IRhetoricalDeviceSelector;
-    scratchpadService?: IScratchpadService;
-    blindEval?: IBlindEvaluationService;
-    factCheckService?: {
-        getForArgument(argumentId: string):
-            | {
-                  overallScore: number;
-                  results: Array<{ verdict: string; claim: string; reasoning: string }>;
-              }
-            | undefined;
-    };
-    qualityCollector?: IQualityImpactCollector;
-    incentiveDetector?: IIncentiveDetector;
-    gotDeliberation?: IGoTDeliberation;
-    conceptBlender?: IConceptBlender;
-    outcomeForecaster?: IOutcomeForecaster;
-    deadLetterQueue?: import('../../contracts/dead-letter-queue').IDeadLetterQueue;
-    distributedLock?: IDistributedLock;
-}
-
-// P1-2: overall debate duration watchdog — default 30min, configurable via CONFIG
-function getDebateMaxDurationMs(): number {
-    return CONFIG?.services?.debate?.maxDurationMs ?? 1_800_000;
-}
+export type { DebateEngineDeps } from './debate-engine-types';
 
 export class DebateEngine implements IDebateEngine, ILifecycle {
     private sessionContexts = new Map<string, DebateSessionContext>();
@@ -204,11 +61,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     private sessionAbortControllers = new Map<string, Map<string, AbortController>>();
     private sessionPhaseControllers = new Map<string, AbortController>();
     private runningSessions = new Set<string>();
-    // Warm provider cache: avoids re-preflighting known-good provider:model pairs
-    // across sessions. TTL: 5 minutes.
-    private static warmCache = new Map<string, number>();
-    private static readonly WARM_CACHE_TTL = 5 * 60 * 1000;
-
     private preflightDone = new Set<string>();
     /** C13: Guards against duplicate concurrent preflight for the same provider across sessions */
     private _preflightingProviders = new Set<string>();
@@ -264,177 +116,15 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         this.persistence = new DebatePersistenceManager(persistenceState, persistenceDeps);
     }
 
-    // Provider-specific preflight timeout multipliers (cold-start compensation)
-    private static readonly PROVIDER_PREFLIGHT_TIMEOUT: Record<string, number> = {
-        nvidia: 25000,
-        'nvidia-nim': 25000,
-    };
-
-    private isProviderWarm(provider: string, model: string): boolean {
-        const key = `${provider}:${model}`;
-        const ts = DebateEngine.warmCache.get(key);
-        return ts !== undefined && Date.now() - ts < DebateEngine.WARM_CACHE_TTL;
-    }
-
-    private markProviderWarm(provider: string, model: string): void {
-        DebateEngine.warmCache.set(`${provider}:${model}`, Date.now());
-    }
-
-    private getPreflightTimeout(provider: string, model: string): number {
-        const providerOverride = DebateEngine.PROVIDER_PREFLIGHT_TIMEOUT[provider.toLowerCase()];
-        if (providerOverride) return providerOverride;
-        return isLargeModel(model) ? 30000 : 20000;
-    }
-
-    private async runProviderPreflight(sessionId: string): Promise<void> {
-        const session = this.sessions.get(sessionId);
-        if (!session || this.preflightDone.has(sessionId)) return;
-        this.preflightDone.add(sessionId);
-
-        const keyService = this.deps.getKeyService();
-        const adapterRegistry = this.deps.getAdapterRegistry();
-        const providers = new Set<string>();
-        for (const p of session.participants) {
-            if (p.provider) providers.add(p.provider);
-        }
-        // Also gather providers available via routing
-        try {
-            const routerKeys = this.deps
-                .getRouterService()
-                .getDebateProviders(session.participants.length);
-            for (const rk of routerKeys) providers.add(rk.key.provider);
-        } catch {
-            /* best-effort */
-        }
-        if (providers.size === 0) return;
-
-        // Guard: skip preflight if keys aren't loaded yet (race condition on page load)
-        const allKeys = keyService.getKeys();
-        if (allKeys.length === 0) return;
-
-        const tasks: Promise<void>[] = [];
-        for (const provider of providers) {
-            if (session.hasProviderFailed(provider)) continue;
-            // C13: Skip provider if another session is already preflighting it
-            if (this._preflightingProviders.has(provider)) continue;
-            this._preflightingProviders.add(provider);
-            const keys = allKeys.filter((k) => k.provider === provider && k.status === 'active');
-            if (keys.length === 0) {
-                session.markProviderFailed(provider);
-                continue;
-            }
-            const key = keys[0];
-            const adapter = adapterRegistry.getAdapter(provider);
-            if (!adapter) {
-                session.markProviderFailed(provider);
-                continue;
-            }
-            const models = DEBATE_MODEL_PRIORITY[provider.toLowerCase()] ?? [];
-            if (models.length === 0) continue;
-
-            const preflightTask = (async () => {
-                for (const model of models) {
-                    // Skip preflight for known-warm models
-                    if (this.isProviderWarm(provider, model)) {
-                        LOGGER.debug(
-                            'DebateEngine',
-                            `preflight: ${provider}/${model} WARM (skipping)`,
-                        );
-                        return;
-                    }
-
-                    const ctrl = new AbortController();
-                    const preflightTimeout = this.getPreflightTimeout(provider, model);
-                    const timer = setTimeout(
-                        () => ctrl.abort(new Error('PreflightTimedOut')),
-                        preflightTimeout,
-                    );
-                    let timedOut: boolean;
-                    try {
-                        await adapter.sendMessage(
-                            [{ role: 'user', content: 'Reply only: OK' }],
-                            model,
-                            key.key,
-                            ctrl.signal,
-                        );
-                        this.markProviderWarm(provider, model);
-                        LOGGER.debug(
-                            'DebateEngine',
-                            `preflight: ${provider}/${model} OK (${preflightTimeout}ms budget)`,
-                        );
-                        return; // First working model is enough for this provider
-                    } catch (e) {
-                        const errMsg = String(e);
-                        timedOut = errMsg.includes('PreflightTimedOut');
-                        const sc = (e as { statusCode?: number }).statusCode;
-                        const isAuth =
-                            sc === 401 ||
-                            sc === 402 ||
-                            sc === 403 ||
-                            errMsg.includes('401') ||
-                            errMsg.includes('403') ||
-                            errMsg.includes('Authentication failed') ||
-                            errMsg.includes('Invalid API Key') ||
-                            errMsg.includes('Unauthorized') ||
-                            errMsg.includes('Forbidden');
-                        if (isAuth) {
-                            LOGGER.warn(
-                                'DebateEngine',
-                                `preflight: ${provider}/${model} auth error — marking provider failed`,
-                            );
-                            session.markProviderFailed(provider);
-                            const kss = this.deps.getKeyStateStore?.();
-                            if (kss) {
-                                try {
-                                    kss.update(key.id, { flags: { authFailed: true } });
-                                } catch {
-                                    /* best-effort */
-                                }
-                            }
-                            return; // Auth errors are provider-wide, don't try other models
-                        }
-                        if (timedOut) {
-                            LOGGER.warn(
-                                'DebateEngine',
-                                `preflight: ${provider}/${model} timed out (${preflightTimeout}ms) — skipping remaining models, same endpoint`,
-                            );
-                            // Don't try other models — same endpoint, same cold-start delay
-                            break;
-                        }
-                        // Other transient error — try next model
-                        LOGGER.warn(
-                            'DebateEngine',
-                            `preflight: ${provider}/${model} failed (${errMsg.slice(0, 60)}), trying next model`,
-                        );
-                    } finally {
-                        clearTimeout(timer);
-                    }
-                }
-                // All models failed for this provider
-                session.markProviderFailed(provider);
-                LOGGER.warn(
-                    'DebateEngine',
-                    `preflight: ${provider} — all models failed, marking provider unavailable`,
-                );
-            })();
-            preflightTask.finally(() => this._preflightingProviders.delete(provider));
-            tasks.push(preflightTask);
-        }
-        await Promise.allSettled(tasks);
-    }
-
     async init(): Promise<void> {}
     private _started = false;
     private _beforeUnloadHandler?: () => void;
-    private _visibilityHandler?: () => void; // H-33: stored for cleanup in destroy()
+    private _visibilityHandler?: () => void;
     async start(): Promise<void> {
         if (this._started) return;
         this._started = true;
-        this.cleanupInterval = setInterval(() => this.cleanupStaleSessions(), 60000);
-        this.warmCacheEvictInterval = setInterval(
-            () => this.evictExpiredWarmCache(),
-            DebateEngine.WARM_CACHE_TTL,
-        );
+        this.cleanupInterval = setInterval(() => this._cleanupStaleSessions(), 60000);
+        this.warmCacheEvictInterval = setInterval(() => evictExpiredWarmCache(), 5 * 60 * 1000);
         // C1: Use visibilitychange (fires 5-10s before beforeunload) to persist
         // snapshots before tab close. Also keep a sync localStorage fallback for
         // beforeunload since async saveSnapshot may not complete in time.
@@ -543,57 +233,22 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         }
     }
 
-    private cleanupStaleSessions(): void {
-        const staleTimeout = 30 * 60 * 1000;
-        const now = Date.now();
-        for (const [sessionId, session] of this.sessions) {
-            const snap = session.snapshot();
-            if (
-                snap.phase === 'completed' ||
-                snap.phase === 'failed' ||
-                snap.phase === 'cancelled' ||
-                snap.phase === 'paused'
-            ) {
-                if (now - snap.updatedAt > staleTimeout) {
-                    this._cancelledSessionIds.add(sessionId);
-                    session.destroy();
-                    this.sessions.delete(sessionId);
-                    const budget = this.budgets.get(sessionId);
-                    if (budget) (budget as DebateBudget).destroy();
-                    this.budgets.delete(sessionId);
-                    const mem = this.memories.get(sessionId);
-                    if (mem) mem.destroy();
-                    this.memories.delete(sessionId);
-                    const ctx = this.sessionContexts.get(sessionId);
-                    if (ctx) ctx.destroy();
-                    this.sessionContexts.delete(sessionId);
-                    this.providerResolver.clearSession(sessionId);
-                    const timer = this.sessionTimeoutTimers.get(sessionId);
-                    if (timer) clearTimeout(timer);
-                    this.sessionTimeoutTimers.delete(sessionId);
-                    this.sessionStartTimes.delete(sessionId);
-                    this.runningSessions.delete(sessionId);
-                    this.preflightDone.delete(sessionId);
-                    this.sessionPhaseControllers.get(sessionId)?.abort();
-                    this.sessionPhaseControllers.delete(sessionId);
-                    const abortCtls = this.sessionAbortControllers.get(sessionId);
-                    if (abortCtls) {
-                        for (const [, c] of abortCtls) c.abort(new Error('cleanup'));
-                        abortCtls.clear();
-                    }
-                    this.sessionAbortControllers.delete(sessionId);
-                }
-            }
-        }
-    }
-
-    private evictExpiredWarmCache(): void {
-        const now = Date.now();
-        for (const [key, ts] of DebateEngine.warmCache) {
-            if (now - ts >= DebateEngine.WARM_CACHE_TTL) {
-                DebateEngine.warmCache.delete(key);
-            }
-        }
+    private _cleanupStaleSessions(): void {
+        cleanupStaleSessions({
+            sessions: this.sessions,
+            budgets: this.budgets,
+            memories: this.memories,
+            sessionContexts: this.sessionContexts,
+            sessionAbortControllers: this.sessionAbortControllers,
+            sessionPhaseControllers: this.sessionPhaseControllers,
+            sessionTimeoutTimers: this.sessionTimeoutTimers,
+            sessionStartTimes: this.sessionStartTimes,
+            runningSessions: this.runningSessions,
+            preflightDone: this.preflightDone,
+            _cancelledSessionIds: this._cancelledSessionIds,
+            providerResolver: this.providerResolver,
+            eventBus: this.deps.eventBus,
+        });
     }
 
     createSession(
@@ -805,6 +460,23 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
         };
     }
 
+    private async runProviderPreflight(sessionId: string): Promise<void> {
+        const session = this.sessions.get(sessionId);
+        if (!session) return;
+        return runProviderPreflight(
+            sessionId,
+            session,
+            {
+                getKeyService: () => this.deps.getKeyService(),
+                getRouterService: () => this.deps.getRouterService(),
+                getAdapterRegistry: () => this.deps.getAdapterRegistry(),
+                getKeyStateStore: this.deps.getKeyStateStore,
+            },
+            this.preflightDone,
+            this._preflightingProviders,
+        );
+    }
+
     private async callLLM(
         sessionId: string,
         session: IDebateSession,
@@ -981,170 +653,21 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
     }
 
     cancelSession(sessionId: string): void {
-        LOGGER.debug('DebateEngine', 'cancelSession ENTER', {
-            sessionId,
-            hasSession: this.sessions.has(sessionId),
-            activeSessions: this.sessions.size,
-        });
-        const session = this.sessions.get(sessionId);
-        if (!session) {
-            LOGGER.warn('DebateEngine', 'cancelSession session not found', {
-                sessionId,
-                sessionsKeys: [...this.sessions.keys()],
-            });
-            return;
-        }
-
-        const lockSvc = this.deps.distributedLock;
-        if (lockSvc) {
-            lockSvc
-                .acquire(`debate:${sessionId}`, { ttl: 10_000 })
-                .then((result) => {
-                    if (result.lock) {
-                        lockSvc
-                            .release(result.lock)
-                            .catch((err) =>
-                                LOGGER.error(
-                                    'DebateEngine',
-                                    'Failed to release cancel lock',
-                                    { sessionId },
-                                    err,
-                                ),
-                            );
-                    }
-                })
-                .catch((err) =>
-                    LOGGER.error(
-                        'DebateEngine',
-                        'Failed to acquire cancel lock',
-                        { sessionId },
-                        err,
-                    ),
-                );
-        }
-        LOGGER.debug(
-            'DebateEngine',
-            `cancelSession phase=${session.phase}, runningSessions=${this.runningSessions.size}`,
-            { sessionId },
-        );
-
-        // Shared cleanup for terminal phases — destroys all engine-internal
-        // maps/controllers to prevent memory leaks. Does NOT emit events
-        // (the event was already emitted when phase first transitioned).
-        const cleanupMaps = () => {
-            this._cancelledSessionIds.add(sessionId);
-            const budget = this.budgets.get(sessionId);
-            if (budget) (budget as DebateBudget).destroy();
-            this.budgets.delete(sessionId);
-            const mem = this.memories.get(sessionId);
-            if (mem) mem.destroy();
-            this.memories.delete(sessionId);
-            const ctx = this.sessionContexts.get(sessionId);
-            if (ctx) ctx.destroy();
-            this.sessionContexts.delete(sessionId);
-            session.destroy();
-            this.sessions.delete(sessionId);
-            this.providerResolver.clearSession(sessionId);
-            this.preflightDone.delete(sessionId);
-            this.runningSessions.delete(sessionId);
-            const timer = this.sessionTimeoutTimers.get(sessionId);
-            if (timer) {
-                clearTimeout(timer);
-                this.sessionTimeoutTimers.delete(sessionId);
-            }
-            this.sessionStartTimes.delete(sessionId);
-            this.sessionPhaseControllers.get(sessionId)?.abort();
-            this.sessionPhaseControllers.delete(sessionId);
-            const abortCtls = this.sessionAbortControllers.get(sessionId);
-            if (abortCtls) {
-                for (const [, c] of abortCtls) c.abort(new Error('SessionCancelled'));
-                abortCtls.clear();
-            }
-            this.sessionAbortControllers.delete(sessionId);
-            cleanupSessionMaps(sessionId);
-            // The orphan cleanup loop has been removed because getContext() now
-            // checks _cancelledSessionIds and returns a throwaway context instead
-            // of recreating one in the sessionContexts map. Async pipeline events
-            // that fire after cleanupMaps will get a minimal context that doesn't
-            // persist and has no side effects.
-            // RE-CHECK: async pipeline events may recreate sessionAbortControllers
-            // after the initial delete above. Schedule a deferred cleanup to catch
-            // any leaked entries. This is a defense-in-depth measure — the primary
-            // defense is the isSessionCancelled check in debateCallLlm() that
-            // prevents NEW calls from creating entries after cancellation.
-            queueMicrotask(() => {
-                const recreated = this.sessionAbortControllers.get(sessionId);
-                if (recreated && recreated.size > 0) {
-                    LOGGER.warn(
-                        'DebateEngine',
-                        'cleanupMaps re-check caught leaked abort controllers',
-                        {
-                            sessionId,
-                            count: recreated.size,
-                        },
-                    );
-                    recreated.clear();
-                    this.sessionAbortControllers.delete(sessionId);
-                }
-            });
-        };
-
-        if (session.phase === 'cancelled') {
-            LOGGER.debug('DebateEngine', 'cancelSession already cancelled — cleaning up maps', {
-                sessionId,
-            });
-            cleanupMaps();
-            LOGGER.debug('DebateEngine', 'cancelSession cleanup done (cancelled path)', {
-                sessionId,
-                sessionsLeft: this.sessions.size,
-            });
-            return;
-        }
-        if (session.phase === 'completed' || session.phase === 'failed') {
-            LOGGER.debug(
-                'DebateEngine',
-                `cancelSession terminal phase ${session.phase} — cleaning up maps`,
-                { sessionId },
-            );
-            cleanupMaps();
-            LOGGER.debug('DebateEngine', 'cancelSession cleanup done (terminal path)', {
-                sessionId,
-                sessionsLeft: this.sessions.size,
-            });
-            return;
-        }
-        // Active phase — abort agents, transition, emit, then clean up maps
-        LOGGER.debug(
-            'DebateEngine',
-            `cancelSession active phase ${session.phase} — aborting agents`,
-            { sessionId },
-        );
-        const agentControllers = this.sessionAbortControllers.get(sessionId);
-        if (agentControllers) {
-            for (const [, controller] of agentControllers)
-                controller.abort(new Error('SessionCancelled'));
-            agentControllers.clear();
-        }
-        this.sessionAbortControllers.delete(sessionId);
-        // Save orchestrator reference BEFORE cleanupMaps() — ctx.destroy() calls
-        // orchestrator.destroy() which removes the session from the `aborted` Set.
-        // Without this, the async generator continues yielding events after cancel.
-        const orchestrator = this.getContext(sessionId)?.orchestrator;
-        orchestrator?.abort(sessionId);
-        session.transition('cancelled');
-        LOGGER.debug('DebateEngine', `cancelSession transition done, phase=${session.phase}`, {
-            sessionId,
-        });
-        this.sessionPhaseControllers.get(sessionId)?.abort();
-        this.deps.eventBus.emit(EVENTS.DEBATE_SESSION_CANCELLED, { sessionId });
-        cleanupMaps();
-        // Re-establish abort signal since ctx.destroy() removed it.
-        // The async generator may still be running (await in executor), and needs
-        // the signal to stop at the next `if (this.aborted.has(sessionId)) return;` check.
-        orchestrator?.abort(sessionId);
-        LOGGER.debug('DebateEngine', 'cancelSession cleanup done (active path)', {
-            sessionId,
-            sessionsLeft: this.sessions.size,
+        cancelDebateSession(sessionId, {
+            sessions: this.sessions,
+            budgets: this.budgets,
+            memories: this.memories,
+            sessionContexts: this.sessionContexts,
+            sessionAbortControllers: this.sessionAbortControllers,
+            sessionPhaseControllers: this.sessionPhaseControllers,
+            sessionTimeoutTimers: this.sessionTimeoutTimers,
+            sessionStartTimes: this.sessionStartTimes,
+            runningSessions: this.runningSessions,
+            preflightDone: this.preflightDone,
+            _cancelledSessionIds: this._cancelledSessionIds,
+            providerResolver: this.providerResolver,
+            eventBus: this.deps.eventBus,
+            distributedLock: this.deps.distributedLock,
         });
     }
 
@@ -1209,7 +732,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             sessionPhaseControllers: this.sessionPhaseControllers.size,
             runningSessions: this.runningSessions.size,
             preflightDone: this.preflightDone.size,
-            warmCache: DebateEngine.warmCache.size,
+            warmCache: getWarmCacheSize(),
         };
     }
 
@@ -1258,7 +781,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             clearInterval(this.warmCacheEvictInterval);
             this.warmCacheEvictInterval = null;
         }
-        DebateEngine.warmCache.clear();
+        clearWarmCacheAll();
         if (typeof window !== 'undefined' && this._beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this._beforeUnloadHandler);
             this._beforeUnloadHandler = undefined;
@@ -1273,6 +796,6 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
 
     /** Clear the warm cache — called by MemoryWatchdog on heap pressure. */
     clearWarmCache(): void {
-        DebateEngine.warmCache.clear();
+        clearWarmCacheAll();
     }
 }
