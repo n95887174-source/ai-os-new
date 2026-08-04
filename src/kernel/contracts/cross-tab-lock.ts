@@ -1,3 +1,8 @@
+/**
+ * Distributed mutual-exclusion lock via Dexie transactions.
+ * Use for: protecting session-level writes (debate, chat) from concurrent tab access.
+ * Do NOT use for: broadcasting state — see ICrossTabStateSync instead.
+ */
 export type LockResource =
     | `debate:${string}`
     | `chat:${string}`

@@ -13,6 +13,11 @@ export interface RateLimitState {
     resetAt: number;
 }
 
+/**
+ * Cross-tab state synchronization via BroadcastChannel.
+ * Use for: propagating infrastructure state (circuit breaker, rate limits) to all tabs.
+ * Do NOT use for: mutual exclusion — see IDistributedLock instead.
+ */
 export interface ICrossTabStateSync {
     updateCircuitBreaker(state: CircuitBreakerState): void;
     updateRateLimit(state: RateLimitState): void;

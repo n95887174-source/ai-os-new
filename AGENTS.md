@@ -110,6 +110,7 @@ npm run check:circular-kernel  # circular deps check
 | 49  | **P2.8** — Flatten 65 single-file component directories → `src/components/`               | 🟢 Done |
 | 50  | **P2.9** — 9 панелей задублированы как .tsx + директория — консолидировать                | ⏭️ Skip |
 | 51  | **P2.10** — ChatService wrapper → ChatExecutor merge                                      | 🟢 Done |
+| 52  | **P2.11** — cross-tab-lock vs cross-tab-state — задокументировать границу                 | 🟢 Done |
 
 ### Changes (P2.8)
 
@@ -148,6 +149,16 @@ npm run check:circular-kernel  # circular deps check
 | 9   | Проверено: `npm run build:skip-typecheck` → ✅ (35s)                                                                                                   |
 | 10  | `docs/new/CONSOLIDATED_PLAN.md` — P2.10 ✅                                                                                                             |
 | 11  | Следующая задача — **P2.11** (cross-tab-lock vs cross-tab-state)                                                                                       |
+
+### Changes (P2.11)
+
+| #   | Что сделано                                                                                                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `contracts/cross-tab-lock.ts` — JSDoc: "distributed mutual-exclusion lock via Dexie transactions. Use for session-level writes. Do NOT use for broadcasting"                                      |
+| 2   | `contracts/cross-tab-state.ts` — JSDoc: "cross-tab state sync via BroadcastChannel. Use for propagating infrastructure state. Do NOT use for mutual exclusion"                                    |
+| 3   | Анализ: zero overlap — lock = acquire/release/heartbeat (Dexie transactions); state sync = broadcast/subscribe (BroadcastChannel). Different paradigms, storage, consumers. Consolidation harmful |
+| 4   | `docs/new/CONSOLIDATED_PLAN.md` — P2.11 ✅                                                                                                                                                        |
+| 5   | Следующая задача — **P2.12** (role-definitions.ts → src/data/)                                                                                                                                    |
 
 ### Changes (P2.6)
 
