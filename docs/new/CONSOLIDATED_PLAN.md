@@ -116,7 +116,7 @@
 | #    | Задача                                                                                   | Аудиты | Усилие   | Статус |
 | ---- | ---------------------------------------------------------------------------------------- | ------ | -------- | ------ |
 | P2.1 | Разбить `RolesPanel/TeamWizard.tsx` (1107 → 7 step-компонентов, orchestrator ~190 строк) | `[E]`  | M (2-3d) | ✅     |
-| P2.2 | Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 строк)                                | `[E]`  | M (2-3d) |
+| P2.2 | Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 → 4 таба + orchestrator)              | `[E]`  | M (2-3d) | ✅     |
 | P2.3 | Разбить `RolesPanel/RoleAnalytics.tsx` (1005 строк)                                      | `[E]`  | M (2-3d) |
 | P2.4 | Разбить `debate-engine.ts` (1278 строк, 50+ импортов) — Facade + sub-orchestrators       | `[E]`  | L (1w)   |
 | P2.5 | Разбить `chat/store.ts` (1081 строк) — split на chat-messages + chat-meta + chat-input   | `[E]`  | M (3-5d) |

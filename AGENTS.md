@@ -101,6 +101,21 @@ npm run check:circular-kernel  # circular deps check
 | 40  | **P1.28** — Dependabot config `.github/dependabot.yml`                                    | 🟢 Done |
 | 41  | **P1.29** — `npm audit` step в CI (уже есть security-audit job)                           | 🟢 Done |
 | 42  | **P2.1** — Разбить `RolesPanel/TeamWizard.tsx` (1107 → 7 step-компонентов)                | 🟢 Done |
+| 43  | **P2.2** — Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 → 4 таба + orchestrator)    | 🟢 Done |
+
+### Changes (P2.2)
+
+| #   | Что сделано                                                                                                                                                                                                                 |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Создан `consortia-constants.ts` — shared styles (`tabStyle`, `card`, `chip`) + color maps (`CATEGORY_COLORS`, `CONSULIA_COLORS`, `STRATEGY_COLORS`)                                                                         |
+| 2   | `RolesTab.tsx` — roles grid: `UnifiedRoleEntry[]` → cards с category badge + tags; ~100 строк                                                                                                                               |
+| 3   | `ConsiliaTab.tsx` — consilia grid: `Consilium[]` → cards с type badge + participant range; ~60 строк                                                                                                                        |
+| 4   | `TemplatesTab.tsx` — templates grid: `GroupTemplate[]` → cards с category badge + tags; ~70 строк                                                                                                                           |
+| 5   | `TeamsTab.tsx` — teams view (~350 строк): my-teams/marketplace toggle, TeamWizard integration, team cards с action buttons (Details/Chat/Debate), task input + execution + TeamPipeline, TeamDetailsPanel + TeamChat modals |
+| 6   | `RolesConsortiaPanel.tsx` — 1066 строк → ~250 строк thin orchestrator: tab state, search/filter, data fetching (svc + teams), tab switching, delegates to `RolesTab`/`ConsiliaTab`/`TemplatesTab`/`TeamsTab`                |
+| 7   | Проверено: `npx vite build` → ✅ 15.47s; typecheck → 0 ошибок в новом коде                                                                                                                                                  |
+| 8   | `docs/new/CONSOLIDATED_PLAN.md` — P2.2 ✅                                                                                                                                                                                   |
+| 9   | Следующая задача — **P2.3** (`RolesPanel/RoleAnalytics.tsx` 1005 строк)                                                                                                                                                     |
 
 ### Changes (P2.1)
 
