@@ -170,11 +170,11 @@
 
 | #     | Задача                                                                                | Аудиты | Усилие   |
 | ----- | ------------------------------------------------------------------------------------- | ------ | -------- |
-| P3.1  | Понизить TypeScript до `~5.9.x` для совместимости с madge (убрать `legacy-peer-deps`) | `[A]`  | M (2-3d) |
-| P3.2  | Удалить dead code: `ComingSoonPanel`, `ABTest`, `Editors` если не используются        | `[E]`  | S (1d)   |
-| P3.3  | `@ts-ignore` / `@ts-expect-error` — 3 шт, починить                                    | `[E]`  | S (2h)   |
-| P3.4  | Federated memory — если заглушка, удалить или честно пометить                         | `[E]`  | S (1d)   |
-| P3.5  | Memory palace + sleep engine — проверить usage, возможно dead code                    | `[E]`  | S (2h)   |
+| P3.1  | Понизить TypeScript до `~5.9.x` для совместимости с madge (убрать `legacy-peer-deps`) | `[A]`  | M (2-3d) | ⏭️ Skip |
+| P3.2  | Удалить dead code: `ComingSoonPanel`, `ABTest`, `Editors` если не используются        | `[E]`  | S (1d)   | ⏭️ Skip |
+| P3.3  | `@ts-ignore` / `@ts-expect-error` — 3 шт, починить                                    | `[E]`  | S (2h)   | ✅      |
+| P3.4  | Federated memory — если заглушка, удалить или честно пометить                         | `[E]`  | S (1d)   | ✅      |
+| P3.5  | Memory palace + sleep engine — проверить usage, возможно dead code                    | `[E]`  | S (2h)   | ⏭️ Skip |
 | P3.6  | A11y аудит Sidebar + иконочные кнопки без `aria-label`                                | `[E]`  | M (2-3d) |
 | P3.7  | Расширить commitlint (scope-enum, subject-case)                                       | `[E]`  | S (30m)  |
 | P3.8  | Audit `ws` usage — где используется WebSocket?                                        | `[E]`  | S (2h)   |
