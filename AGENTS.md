@@ -102,6 +102,20 @@ npm run check:circular-kernel  # circular deps check
 | 41  | **P1.29** — `npm audit` step в CI (уже есть security-audit job)                           | 🟢 Done |
 | 42  | **P2.1** — Разбить `RolesPanel/TeamWizard.tsx` (1107 → 7 step-компонентов)                | 🟢 Done |
 | 43  | **P2.2** — Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 → 4 таба + orchestrator)    | 🟢 Done |
+| 44  | **P2.3** — Разбить `RolesPanel/RoleAnalytics.tsx` (1005 → orchestrator + 3 компонента)    | 🟢 Done |
+
+### Changes (P2.3)
+
+| #   | Что сделано                                                                                                                                                                                                                                                     |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Создан `analytics-utils.ts` — 8 чистых функций вычисления данных: `computeSummary`, `computeTopRoles` (с `eloScore`), `computeCategorySegments`, `computeDailyActivity`, `computeToolUsage`, `computeTempCorrelation`, `computeHeatmap`, `computeFatigueAlerts` |
+| 2   | `AnalyticsOverview.tsx` (~300 строк) — summary cards (4 stat-карточки) + per-role bar chart + category donut; экспортирует `MiniBar` и `DonutChart` для переиспользования                                                                                       |
+| 3   | `AnalyticsTimeSeries.tsx` (~130 строк) — daily activity bar chart (14 дней, invocations + errors)                                                                                                                                                               |
+| 4   | `AnalyticsAdvanced.tsx` (~280 строк) — tool usage (top 10) + temperature vs success rate + hourly heatmap (top 5 roles) + ELO leaderboard + fatigue alerts                                                                                                      |
+| 5   | `RoleAnalytics.tsx` — 1005 строк → ~80 строк thin orchestrator: вычисляет данные через `analytics-utils`, композирует `AnalyticsOverview` + `AnalyticsTimeSeries` + `AnalyticsAdvanced`; named export `RoleAnalytics` сохранён                                  |
+| 6   | Проверено: `npx tsc --noEmit` → 0 ошибок в новом коде                                                                                                                                                                                                           |
+| 7   | `docs/new/CONSOLIDATED_PLAN.md` — P2.3 ✅                                                                                                                                                                                                                       |
+| 8   | Следующая задача — **P2.4** (`debate-engine.ts` 1278 строк)                                                                                                                                                                                                     |
 
 ### Changes (P2.2)
 
