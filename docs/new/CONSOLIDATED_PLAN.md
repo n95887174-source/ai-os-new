@@ -136,9 +136,9 @@
 
 | #     | Задача                                                                             | Аудиты | Усилие   |
 | ----- | ---------------------------------------------------------------------------------- | ------ | -------- |
-| P2.12 | `role-definitions.ts` (3068 строк) → `src/data/`                                   | `[E]`  | S (4h)   |
-| P2.13 | `team-template-definitions.ts` (2397 строк) → `src/data/`                          | `[E]`  | S (2h)   |
-| P2.14 | `persona-definitions.ts` (2088 строк) → `src/data/`                                | `[E]`  | S (2h)   |
+| P2.12 | `role-definitions.ts` (3068 строк) → `src/data/`                                   | `[E]`  | S (4h)   | ✅  |
+| P2.13 | `team-template-definitions.ts` (2397 строк) → `src/data/`                          | `[E]`  | S (2h)   | ✅  |
+| P2.14 | `persona-definitions.ts` (2088 строк) → `src/data/`                                | `[E]`  | S (2h)   | ✅  |
 | P2.15 | `debate-prompt-builder.ts` (1618 строк) — разбить по доменам + добавить versioning | `[E]`  | M (3-5d) |
 
 ### UX

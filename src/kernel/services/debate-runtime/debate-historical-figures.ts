@@ -1,4 +1,4 @@
-import { PERSONA_DEFINITIONS } from '../persona-definitions';
+import { PERSONA_DEFINITIONS } from '../../../data/persona-definitions';
 import type { PersonaEntry } from '../../contracts/persona-entry';
 
 export interface HistoricalFigure {

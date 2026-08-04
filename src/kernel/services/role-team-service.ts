@@ -12,7 +12,7 @@ import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { ApiKey } from '../types/metrics-types';
 import type { AdapterMessage } from '../contracts/provider-adapter';
 import { EVENTS } from '../events/event-registry';
-import { TEAM_TEMPLATES } from './team-template-definitions';
+import { TEAM_TEMPLATES } from '../../data/team-template-definitions';
 import { BucketStorageAdapter } from './storage-adapter';
 import { SeededRng } from '../utils/seedable-rng';
 import { rootLogger } from './logger-service';

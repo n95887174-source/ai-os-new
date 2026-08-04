@@ -1,4 +1,4 @@
-import { PERSONA_DEFINITIONS } from '../persona-definitions';
+import { PERSONA_DEFINITIONS } from '../../../data/persona-definitions';
 
 export type DebateArchetypeId =
     'scientist' | 'skeptic' | 'devils-advocate' | 'pragmatist' | 'optimist' | 'cynic';

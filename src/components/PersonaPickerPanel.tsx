@@ -12,12 +12,8 @@ import {
     Star,
     Sparkles,
 } from 'lucide-react';
-import { PERSONA_DEFINITIONS } from '../kernel/services/persona-definitions';
-import type {
-    PersonaEntry,
-    PersonaCategory,
-    PersonaEra,
-} from '../kernel/contracts/persona-entry';
+import { PERSONA_DEFINITIONS } from '../data/persona-definitions';
+import type { PersonaEntry, PersonaCategory, PersonaEra } from '../kernel/contracts/persona-entry';
 
 const CATEGORY_COLORS: Record<PersonaCategory, string> = {
     scientist: '#3b82f6',

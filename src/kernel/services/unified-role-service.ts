@@ -7,7 +7,7 @@ import type {
     ConsiliumType,
     TemplateCategory,
 } from '../contracts/unified-role';
-import { ROLE_DEFINITIONS } from './role-definitions';
+import { ROLE_DEFINITIONS } from '../../data/role-definitions';
 import { CONSILIUM_DEFINITIONS } from './consilium-definitions';
 import { GROUP_TEMPLATES } from './group-template-definitions';
 

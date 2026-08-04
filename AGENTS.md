@@ -111,6 +111,9 @@ npm run check:circular-kernel  # circular deps check
 | 50  | **P2.9** — 9 панелей задублированы как .tsx + директория — консолидировать                | ⏭️ Skip |
 | 51  | **P2.10** — ChatService wrapper → ChatExecutor merge                                      | 🟢 Done |
 | 52  | **P2.11** — cross-tab-lock vs cross-tab-state — задокументировать границу                 | 🟢 Done |
+| 53  | **P2.12** — role-definitions.ts → src/data/                                               | 🟢 Done |
+| 54  | **P2.13** — team-template-definitions.ts → src/data/                                      | 🟢 Done |
+| 55  | **P2.14** — persona-definitions.ts → src/data/                                            | 🟢 Done |
 
 ### Changes (P2.8)
 
@@ -159,6 +162,18 @@ npm run check:circular-kernel  # circular deps check
 | 3   | Анализ: zero overlap — lock = acquire/release/heartbeat (Dexie transactions); state sync = broadcast/subscribe (BroadcastChannel). Different paradigms, storage, consumers. Consolidation harmful |
 | 4   | `docs/new/CONSOLIDATED_PLAN.md` — P2.11 ✅                                                                                                                                                        |
 | 5   | Следующая задача — **P2.12** (role-definitions.ts → src/data/)                                                                                                                                    |
+
+### Changes (P2.12)
+
+| #   | Что сделано                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `role-definitions.ts` (3046 строк) перемещён из `src/kernel/services/` → `src/data/`                                                                   |
+| 2   | `team-template-definitions.ts` (2384 строки) перемещён из `src/kernel/services/` → `src/data/`                                                         |
+| 3   | `persona-definitions.ts` (1997 строк) перемещён из `src/kernel/services/` → `src/data/`                                                                |
+| 4   | Обновлены 6 import paths в: unified-role-service, role-team-service, PersonaSelector, PersonaPickerPanel, debate-archetypes, debate-historical-figures |
+| 5   | Проверено: `npm run build:skip-typecheck` → ✅ (24s)                                                                                                   |
+| 6   | `docs/new/CONSOLIDATED_PLAN.md` — P2.12, P2.13, P2.14 ✅                                                                                               |
+| 7   | Следующая задача — **P2.15** (debate-prompt-builder.ts split)                                                                                          |
 
 ### Changes (P2.6)
 
