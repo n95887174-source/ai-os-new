@@ -339,28 +339,28 @@ Adjust routing behavior in **Settings → SLA Mode**:
 
 ## Scripts
 
-| Script                          | Description                         |
-| ------------------------------- | ----------------------------------- |
-| `npm run dev`                   | Start development server (HMR)      |
-| `npm run build`                 | TypeScript check + production build |
-| `npm run preview`               | Preview production build            |
-| `npm run test`                  | Run all tests (Vitest)              |
-| `npm run test:ui`               | Run tests with UI dashboard         |
-| `npm run test:e2e`              | Run Playwright e2e tests            |
-| `npm run lint`                  | ESLint check                        |
-| `npm run typecheck`             | TypeScript check (no emit)          |
-| `npm run lint:staged`           | Lint staged files                   |
-| `npm run check:circular-kernel` | Check circular deps in kernel       |
-| `npm run check:deps`            | Check unused/missing dependencies   |
-| `npm run proxy`                 | Start CORS proxy server             |
-| `npm run build:unsafe`          | Build with increased memory         |
-| `npm run check:deps:graph`      | Generate dependency graph SVG       |
-| `npm run dev:shared`            | Runs Vite + sync-server together    |
-| `npm run fix:unused`            | Remove unused exports               |
-| `npm run prepare`               | Install husky hooks                 |
-| `npm run sync-server`           | Start collaboration sync server     |
-| `npm run test:watch`            | Watch mode tests                    |
-| `npm run typecheck:watch`       | Watch mode type checking            |
+| Script                          | Description                                                                  |
+| ------------------------------- | ---------------------------------------------------------------------------- |
+| `npm run dev`                   | Start development server (HMR)                                               |
+| `npm run build`                 | TypeScript check + production build                                          |
+| `npm run preview`               | Preview production build                                                     |
+| `npm run test`                  | Run all tests (Vitest)                                                       |
+| `npm run test:ui`               | Run tests with UI dashboard                                                  |
+| `npm run test:e2e`              | Run Playwright e2e tests                                                     |
+| `npm run lint`                  | ESLint check                                                                 |
+| `npm run typecheck`             | TypeScript check (no emit)                                                   |
+| `npm run lint:staged`           | Lint staged files                                                            |
+| `npm run check:circular-kernel` | Check circular deps in kernel                                                |
+| `npm run check:deps`            | Check unused/missing dependencies                                            |
+| `npm run proxy`                 | Start CORS proxy server                                                      |
+| `npm run build:skip-typecheck`  | Vite build WITHOUT typecheck (prints warning — use only for quick iteration) |
+| `npm run check:deps:graph`      | Generate dependency graph SVG                                                |
+| `npm run dev:shared`            | Runs Vite + sync-server together                                             |
+| `npm run fix:unused`            | Remove unused exports                                                        |
+| `npm run prepare`               | Install husky hooks                                                          |
+| `npm run sync-server`           | Start collaboration sync server                                              |
+| `npm run test:watch`            | Watch mode tests                                                             |
+| `npm run typecheck:watch`       | Watch mode type checking                                                     |
 
 ---
 

@@ -96,13 +96,18 @@ npm run check:circular-kernel  # circular deps check
 | 35  | **P1.23** — Заменить `console.log/.warn/.error` в UI компонентах на `LOGGER`              | 🟢 Done |
 | 36  | **P1.24** — Security headers в nginx (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) | 🟢 Done |
 | 37  | **P1.25** — Dependency audit / fix (`npm audit fix`)                                      | 🟢 Done |
+| 38  | **P1.26** — Переименовать `build:unsafe` в `build:skip-typecheck` с warning               | 🟢 Done |
+
+### Changes (P1.26)
+
+| #   | Что сделано                                                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `package.json` — скрипт `build:unsafe` переименован в `build:skip-typecheck`; печатает stderr-warning перед `vite build` (никакие TS-ошибки не замалчиваются тихо) |
+| 2   | `README.md` — строка `build:unsafe` обновлена на `build:skip-typecheck` с пометкой «use only for quick iteration»                                                  |
+| 3   | `docs/new/CONSOLIDATED_PLAN.md` — P1.26 ✅                                                                                                                         |
+| 4   | Следующая задача — **P1.27** (`sourcemap: 'hidden'` + upload в Sentry/Datadog)                                                                                     |
 
 ### Changes (P1.25)
-
-| #   | Что сделано                                                                                     |
-| --- | ----------------------------------------------------------------------------------------------- |
-| 1   | Запущен `npm audit fix` — уязвимость `fast-uri` устранена                                       |
-| 2   | Следующая задача — **P1.26** (Переименование `build:unsafe` в `build:skip-typecheck` с warning) |
 
 ### Changes (P1.24)
 
