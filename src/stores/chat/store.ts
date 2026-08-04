@@ -1,70 +1,19 @@
 import { create } from 'zustand';
-import type { ChatResponse } from '../../types/chat';
-import type { ChatMessage } from '../../kernel/types/llm-types';
-import type { SessionStore } from '../../kernel/contracts/storage/session-store';
-import { CONFIG, rootLogger } from '../../kernel/instances';
+import { rootLogger } from '../../kernel/instances';
 const LOGGER = rootLogger.child('ChatStore');
-import {
-    eventBus,
-    EVENTS,
-    runtime,
-    executionGovernor,
-    memoryService,
-    workspaceService,
-    sessionManager,
-    getDistributedLock,
-} from './service-deps';
+import { eventBus, EVENTS, sessionManager, getDistributedLock } from './service-deps';
+import { setupChatEventHandlers } from './chat-event-handlers';
+import { createSendMessageHandler, _sendQueue, _historyLimitWarned } from './chat-send-message';
+import { resolveSessionStore, updateSessionInList } from './store-helpers';
 import type { ChatStoreShape, ChatEntry, ChatSession, ZustandSet, ZustandGet } from './types';
 import {
     DEFAULT_SESSION,
     SESSION_BATCH_SIZE,
-    MAX_HISTORY,
     MODEL_CONTEXT_WINDOWS,
     DELETED_IDS_TTL,
-    genId,
     rebuildRequestEntryMap,
     requestEntryMap,
 } from './types';
-
-let _sessionStore: SessionStore | null = null;
-function resolveSessionStore(): SessionStore | null {
-    if (_sessionStore) return _sessionStore;
-    _sessionStore =
-        runtime.getService<{ sessions: SessionStore }>('storageLayer')?.sessions ?? null;
-    return _sessionStore;
-}
-
-/** C-93: Helper to update a single session by findIndex instead of map-all. */
-function updateSessionInList(
-    sessions: ChatSession[],
-    id: string,
-    patch: Partial<ChatSession>,
-): ChatSession[] {
-    const idx = sessions.findIndex((s) => s.id === id);
-    if (idx === -1) return sessions;
-    const next = [...sessions];
-    next[idx] = { ...next[idx], ...patch, updatedAt: Date.now() };
-    return next;
-}
-
-/** C-93: Helper to update a single chat entry inside a session by entry id. */
-function updateEntryInSession(
-    sessions: ChatSession[],
-    sessionId: string,
-    entryId: string,
-    entryUpdater: (entry: ChatEntry) => ChatEntry,
-): ChatSession[] {
-    const sessIdx = sessions.findIndex((s) => s.id === sessionId);
-    if (sessIdx === -1) return sessions;
-    const session = sessions[sessIdx];
-    const entryIdx = session.history.findIndex((e) => e.id === entryId);
-    if (entryIdx === -1) return sessions;
-    const next = [...sessions];
-    const nextHistory = [...session.history];
-    nextHistory[entryIdx] = entryUpdater(nextHistory[entryIdx]);
-    next[sessIdx] = { ...session, history: nextHistory, updatedAt: Date.now() };
-    return next;
-}
 
 const updateActiveSession =
     (set: ZustandSet, get: ZustandGet) =>
@@ -77,155 +26,10 @@ const updateActiveSession =
         }));
     };
 
-interface QueuedMessage {
-    targets: Array<{ provider: string; model: string; keyId?: string }>;
-    text: string;
-    systemPromptArg?: string;
-    temperature?: number;
-    maxTokens?: number;
-}
-const _sendQueue = new Map<string, QueuedMessage[]>();
-const MAX_QUEUE_SIZE = 50;
-const _historyLimitWarned = new Set<string>();
-
 export const useChatStore = create<ChatStoreShape>((set, get) => {
     const uas = updateActiveSession(set, get);
 
-    const _unsubs: Array<() => void> = [];
-
-    // Subscribe to response events (set up once, per closure over set/get)
-    // These bridge SEND_MESSAGE → ChatExecutor → response events
-    _unsubs.push(
-        eventBus.on(EVENTS.MESSAGE_RESPONSE, (res: ChatResponse) => {
-            const ref = requestEntryMap.get(res.requestId);
-            if (!ref) return;
-            set((s) => {
-                const newActiveIds = new Set(s.activeRequestIds);
-                if (
-                    res.status === 'done' ||
-                    res.status === 'error' ||
-                    res.status === 'cancelled' ||
-                    res.status === 'timeout'
-                ) {
-                    newActiveIds.delete(res.requestId);
-                }
-                return {
-                    sessions: updateEntryInSession(
-                        s.sessions,
-                        ref.sessionId,
-                        ref.entryId,
-                        (entry) => ({
-                            ...entry,
-                            responses: entry.responses.map((r) =>
-                                r.requestId === res.requestId ? { ...r, ...res } : r,
-                            ),
-                        }),
-                    ),
-                    activeRequestIds: newActiveIds,
-                };
-            });
-        }),
-    );
-
-    _unsubs.push(
-        eventBus.on(EVENTS.STREAM_START, (payload) => {
-            const ref = requestEntryMap.get(payload.requestId);
-            if (!ref) return;
-            set((s) => ({
-                sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
-                    ...entry,
-                    responses: entry.responses.map((r) =>
-                        r.requestId === payload.requestId
-                            ? { ...r, status: 'streaming' as const }
-                            : r,
-                    ),
-                })),
-            }));
-        }),
-    );
-
-    _unsubs.push(
-        eventBus.on(EVENTS.STREAM_CHUNK, (payload) => {
-            const ref = requestEntryMap.get(payload.requestId);
-            if (!ref) return;
-            set((s) => ({
-                sessions: updateEntryInSession(s.sessions, ref.sessionId, ref.entryId, (entry) => ({
-                    ...entry,
-                    responses: entry.responses.map((r) =>
-                        r.requestId === payload.requestId
-                            ? { ...r, content: r.content + payload.chunk }
-                            : r,
-                    ),
-                })),
-            }));
-        }),
-    );
-
-    _unsubs.push(
-        eventBus.on(EVENTS.STREAM_END, (payload) => {
-            if (!payload.requestId) return;
-            const ref = requestEntryMap.get(payload.requestId);
-            if (!ref) return;
-            set((s) => {
-                const newActiveIds = new Set(s.activeRequestIds);
-                newActiveIds.delete(payload.requestId);
-                return {
-                    sessions: updateEntryInSession(
-                        s.sessions,
-                        ref.sessionId,
-                        ref.entryId,
-                        (entry) => ({
-                            ...entry,
-                            responses: entry.responses.map((r) =>
-                                r.requestId === payload.requestId
-                                    ? {
-                                          ...r,
-                                          content: payload.fullContent || r.content,
-                                          latency: payload.latency || r.latency,
-                                          tokens: payload.tokens ?? r.tokens,
-                                          status: 'done' as const,
-                                      }
-                                    : r,
-                            ),
-                        }),
-                    ),
-                    activeRequestIds: newActiveIds,
-                };
-            });
-        }),
-    );
-
-    _unsubs.push(
-        eventBus.on(EVENTS.STREAM_ERROR, (payload) => {
-            const ref = requestEntryMap.get(payload.requestId);
-            if (!ref) return;
-            set((s) => {
-                const newActiveIds = new Set(s.activeRequestIds);
-                newActiveIds.delete(payload.requestId);
-                return {
-                    sessions: updateEntryInSession(
-                        s.sessions,
-                        ref.sessionId,
-                        ref.entryId,
-                        (entry) => ({
-                            ...entry,
-                            responses: entry.responses.map((r) =>
-                                r.requestId === payload.requestId
-                                    ? {
-                                          ...r,
-                                          content: '',
-                                          error: payload.error,
-                                          status: 'error' as const,
-                                      }
-                                    : r,
-                            ),
-                        }),
-                    ),
-                    activeRequestIds: newActiveIds,
-                };
-            });
-        }),
-    );
+    const _unsubs = setupChatEventHandlers(set, get);
 
     return {
         sessions: [DEFAULT_SESSION],
@@ -272,267 +76,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             }
         },
 
-        sendMessage: async (targets, text, systemPromptArg, temperature, maxTokens) => {
-            const sessionId = get().activeSessionId;
-            const existing = _sendQueue.get(sessionId);
-            if (existing) {
-                if (existing.length >= MAX_QUEUE_SIZE) {
-                    eventBus.emit(EVENTS.NOTIFICATION, {
-                        message: `Send queue full (${MAX_QUEUE_SIZE}) — message dropped`,
-                        type: 'warning',
-                    });
-                    return;
-                }
-                existing.push({ targets, text, systemPromptArg, temperature, maxTokens });
-                return;
-            }
-            _sendQueue.set(sessionId, []);
-            const requestId = `chat-${crypto.randomUUID()}`;
-            const entryId = crypto.randomUUID();
-            let requestIdsToTrack: string[] = [];
-            let govOp;
-            let currentHistory: ChatEntry[];
-            const distLock = getDistributedLock();
-            const lockResult = await distLock.acquire(`chat:${sessionId}`, { ttl: 120_000 });
-            if (!lockResult.lock) {
-                LOGGER.warn('ChatStore', 'Failed to acquire chat lock, proceeding without lock', {
-                    error: lockResult.error,
-                });
-                eventBus.emit(EVENTS.NOTIFICATION, {
-                    message: 'Failed to acquire chat lock — concurrent send may conflict',
-                    type: 'warning',
-                });
-            }
-            try {
-                currentHistory = (
-                    get().sessions.find((s) => s.id === sessionId)?.history ?? []
-                ).slice(-MAX_HISTORY);
-                requestIdsToTrack =
-                    targets.length > 1
-                        ? targets.map((t, idx) => `${requestId}-${t.provider}-${t.keyId ?? idx}`)
-                        : [requestId];
-                govOp = executionGovernor.start({
-                    type: 'send-message',
-                    timeoutMs: 120_000,
-                    metadata: { textPreview: text.slice(0, 80) },
-                });
-                if (get().isAnySending()) {
-                    LOGGER.warn('ChatStore', 'sendMessage already in progress, ignored');
-                    eventBus.emit(EVENTS.NOTIFICATION, {
-                        message: 'Cannot send — another message is still being sent',
-                        type: 'warning',
-                    });
-                    govOp.complete();
-                    return;
-                }
-                requestIdsToTrack.forEach((rid) => get().addActiveRequestId(rid));
-
-                // P0-7: cancel check — throws if all tracked request IDs were cancelled
-                const cancelGuard = () => {
-                    const ids = get().activeRequestIds;
-                    const anyActive = requestIdsToTrack.some((rid) => ids.has(rid));
-                    if (!anyActive) throw new Error('CANCELLED');
-                };
-
-                let relatedMemories: Array<{ entry: { content: string }; score?: number }> = [];
-                if (CONFIG.featureFlags.memory.ragOnChat) {
-                    try {
-                        relatedMemories = (await memoryService.search(text, 3)) || [];
-                    } catch (e) {
-                        LOGGER.warn('ChatStore', 'Memory search failed', { error: e });
-                    }
-                    cancelGuard();
-                }
-                const contextPrefix =
-                    relatedMemories.length > 0
-                        ? `[RECALLED CONTEXT]\n${relatedMemories.map((m) => `- ${m.entry.content}`).join('\n')}\n\n`
-                        : '';
-
-                if (CONFIG.featureFlags.memory.autoStore) {
-                    try {
-                        await memoryService.store({
-                            content: text,
-                            metadata: {
-                                source: 'user',
-                                type: 'chat_query' as const,
-                                timestamp: Date.now(),
-                                importance: 0.5,
-                                chatId: sessionId,
-                            },
-                        });
-                    } catch (e) {
-                        LOGGER.warn('ChatStore', 'Memory store failed', { error: e });
-                    }
-                    cancelGuard();
-                }
-
-                const workspaceContext = workspaceService.isAttached()
-                    ? (await workspaceService.getFileTreeSnapshot()).slice(0, 5000)
-                    : null;
-                cancelGuard();
-
-                const sanitize = (content: string): string =>
-                    content
-                        .replace(/^(system|SYSTEM|System)\s*:/gm, '[filtered]:')
-                        .replace(
-                            /^(IMPORTANT NEW|IGNORE ALL|OVERRIDE|DISREGARD|You are now|From now on|New instructions)/gim,
-                            '[filtered]',
-                        );
-
-                const messages: ChatMessage[] = [
-                    ...(systemPromptArg
-                        ? [{ role: 'system' as const, content: sanitize(systemPromptArg) }]
-                        : []),
-                    ...(workspaceContext
-                        ? [
-                              {
-                                  role: 'system' as const,
-                                  content: sanitize(
-                                      `[WORKSPACE FILES]\n${workspaceContext}\n\nYou can read any file by asking me to use the read_file tool.`,
-                                  ),
-                              },
-                          ]
-                        : []),
-                    ...currentHistory.flatMap<ChatMessage>((h) => {
-                        if (h.role === 'system')
-                            return [{ role: 'system' as const, content: sanitize(h.text) }];
-                        return [
-                            { role: 'user' as const, content: sanitize(h.text) },
-                            ...h.responses
-                                .filter((r) => r.status === 'done')
-                                .map((r) => ({
-                                    role: 'assistant' as const,
-                                    content: sanitize(r.content),
-                                })),
-                        ];
-                    }),
-                    { role: 'user' as const, content: sanitize(contextPrefix + text) },
-                ];
-
-                const loadingResponses: ChatResponse[] = targets.map((t, idx) => ({
-                    id: genId(),
-                    requestId:
-                        targets.length > 1
-                            ? `${requestId}-${t.provider}-${t.keyId ?? idx}`
-                            : requestId,
-                    provider: t.provider,
-                    model: t.model,
-                    content: '',
-                    latency: 0,
-                    status: 'loading',
-                }));
-
-                const newEntry: ChatEntry = {
-                    id: entryId,
-                    requestId,
-                    role: 'user',
-                    text,
-                    responses: loadingResponses,
-                    timestamp: Date.now(),
-                    recalledMemories: relatedMemories.map((m) => ({
-                        content: m.entry.content,
-                        score: m.score,
-                    })),
-                };
-
-                const sessBefore = get().sessions.find((s) => s.id === sessionId);
-                const wouldExceed = (sessBefore?.history.length ?? 0) >= MAX_HISTORY;
-                if (wouldExceed && !_historyLimitWarned.has(sessionId)) {
-                    _historyLimitWarned.add(sessionId);
-                    const lostCount = (sessBefore?.history.length ?? 0) - MAX_HISTORY + 1;
-                    eventBus.emit(EVENTS.NOTIFICATION, {
-                        message: `Chat history limit (${MAX_HISTORY} entries) reached — ${lostCount} older message(s) will be removed from context.`,
-                        type: 'warning',
-                    });
-                }
-                // P0-5: persist to Dexie BEFORE Zustand update — crash-safe write-through
-                const sStore = resolveSessionStore();
-                if (sStore) {
-                    const currentSessions = get().sessions;
-                    const stateWithNew = {
-                        ...get(),
-                        sessions: updateSessionInList(currentSessions, sessionId, {
-                            history: [
-                                ...(currentSessions.find((x) => x.id === sessionId)?.history ?? []),
-                                newEntry,
-                            ],
-                        }),
-                    };
-                    await sStore.syncSessions(stateWithNew.sessions, []).catch((e) => {
-                        console.error(
-                            '[ChatStore] write-through persist failed — message not saved',
-                            e,
-                        );
-                        eventBus.emit(EVENTS.NOTIFICATION, {
-                            message: 'Failed to save message in database',
-                            type: 'error',
-                        });
-                        throw e;
-                    });
-                }
-
-                set((s) => ({
-                    sessions: updateSessionInList(s.sessions, sessionId, {
-                        history: [
-                            ...(s.sessions.find((x) => x.id === sessionId)?.history ?? []),
-                            newEntry,
-                        ].slice(-MAX_HISTORY),
-                    }),
-                }));
-
-                // Register requestIds BEFORE emitting SEND_MESSAGE so response handlers
-                // can find the entry synchronously via requestEntryMap
-                for (const resp of loadingResponses) {
-                    requestEntryMap.set(resp.requestId, { sessionId, entryId });
-                }
-
-                targets.forEach((t, idx) => {
-                    eventBus.emit(EVENTS.SEND_MESSAGE, {
-                        requestId: loadingResponses[idx].requestId,
-                        provider: t.provider,
-                        model: t.model,
-                        keyId: t.keyId,
-                        messages,
-                        options: { temperature, maxTokens },
-                    });
-                });
-
-                govOp.complete();
-            } catch (e) {
-                requestIdsToTrack?.forEach((rid) => get().removeActiveRequestId(rid));
-                if (e instanceof Error && e.message === 'CANCELLED') {
-                    govOp?.complete();
-                    return;
-                }
-                govOp?.fail(e instanceof Error ? e : new Error(String(e)));
-                throw e;
-            } finally {
-                if (lockResult.lock) {
-                    distLock
-                        .release(lockResult.lock)
-                        .catch((e) =>
-                            LOGGER.warn('ChatStore', 'Failed to release chat lock', { error: e }),
-                        );
-                }
-                const q = _sendQueue.get(sessionId);
-                if (q && q.length > 0) {
-                    const next = q.shift()!;
-                    // Remove the queue entry before recursing so the flushed
-                    // message is processed instead of re-queued into the still-
-                    // present (now empty) entry — previously it was lost forever.
-                    _sendQueue.delete(sessionId);
-                    get().sendMessage(
-                        next.targets,
-                        next.text,
-                        next.systemPromptArg,
-                        next.temperature,
-                        next.maxTokens,
-                    );
-                } else {
-                    _sendQueue.delete(sessionId);
-                }
-            }
-        },
+        sendMessage: createSendMessageHandler(set, get),
 
         cancelSending: () => {
             const sessions = get().sessions;
@@ -555,13 +99,11 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 set({ activeRequestIds: new Set() });
                 return;
             }
-            // Emit CANCEL_MESSAGE FIRST, then remove IDs — handlers need to find entries
             for (const req of allLoadingReqs) {
                 if (req.requestId)
                     eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: req.requestId });
             }
             const sessionIdsToUpdate = new Set(allLoadingReqs.map((r) => r.sessionId));
-            // THEN mark responses and clear active IDs
             set((s) => {
                 const newActiveIds = new Set(s.activeRequestIds);
                 for (const req of allLoadingReqs) {
@@ -586,7 +128,6 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                     ),
                 };
             });
-            // Clean send queue for all affected sessions
             for (const sid of sessionIdsToUpdate) {
                 _sendQueue.delete(sid);
             }
@@ -617,16 +158,13 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             try {
                 const session = get().sessions.find((s) => s.id === sessionId);
                 const oldEntry = session?.history.find((e) => e.id === entryId);
-                // Cancel any in-flight requests for this entry before clearing
                 if (oldEntry) {
-                    const cancelPromises: Promise<void>[] = [];
                     for (const r of oldEntry.responses) {
                         if (r.status === 'loading' || r.status === 'streaming') {
                             eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: r.requestId });
                             get().removeActiveRequestId(r.requestId);
                         }
                     }
-                    await Promise.allSettled(cancelPromises);
                 }
                 const sStore = resolveSessionStore();
                 if (!sStore) {
@@ -635,7 +173,6 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 }
                 const fullSession = get().sessions.find((s) => s.id === sessionId);
                 if (!fullSession) return;
-                // Persist-then-emit: write to Dexie first, update Zustand only on success
                 try {
                     await sStore.put({
                         ...fullSession,
@@ -660,7 +197,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
             } finally {
                 distLock
                     .release(lockResult.lock)
-                    .catch((e) =>
+                    .catch((e: unknown) =>
                         LOGGER.warn('ChatStore', 'Failed to release editEntry lock', { error: e }),
                     );
             }
@@ -704,7 +241,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 uas(() => []);
                 set({ activeRequestIds: new Set() });
             } finally {
-                distLock.release(lockResult.lock).catch((e) =>
+                distLock.release(lockResult.lock).catch((e: unknown) =>
                     LOGGER.warn('ChatStore', 'Failed to release clearHistory lock', {
                         error: e,
                     }),
@@ -736,11 +273,9 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
         },
 
         deleteSession: async (id) => {
-            // Prune requestEntryMap entries for this session
             for (const [reqId, ref] of requestEntryMap) {
                 if (ref.sessionId === id) requestEntryMap.delete(reqId);
             }
-            // Clean send queue for deleted session
             _sendQueue.delete(id);
             try {
                 await sessionManager.delete(id);
@@ -756,7 +291,6 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 const now = Date.now();
                 const timestamps = new Map(s.deletedAtTimestamps);
                 timestamps.set(id, now);
-                // Prune entries older than TTL (copy keys first to avoid Map mutation during iteration)
                 const expired: string[] = [];
                 for (const [tsId, ts] of timestamps) {
                     if (now - ts > DELETED_IDS_TTL) expired.push(tsId);

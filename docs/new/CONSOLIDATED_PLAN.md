@@ -113,14 +113,14 @@
 
 ### God-файлы (cleanup)
 
-| #    | Задача                                                                                   | Аудиты | Усилие   | Статус |
-| ---- | ---------------------------------------------------------------------------------------- | ------ | -------- | ------ |
-| P2.1 | Разбить `RolesPanel/TeamWizard.tsx` (1107 → 7 step-компонентов, orchestrator ~190 строк) | `[E]`  | M (2-3d) | ✅     |
-| P2.2 | Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 → 4 таба + orchestrator)              | `[E]`  | M (2-3d) | ✅     |
-| P2.3 | Разбить `RolesPanel/RoleAnalytics.tsx` (1005 → orchestrator + 3 компонента)              | `[E]`  | M (2-3d) | ✅     |
-| P2.4 | Разбить `debate-engine.ts` (1278 → 800 строк, 3 модуля) — Facade + sub-orchestrators     | `[E]`  | L (1w)   | ✅     |
-| P2.5 | Разбить `chat/store.ts` (1081 строк) — split на chat-messages + chat-meta + chat-input   | `[E]`  | M (3-5d) |
-| P2.6 | Разбить `useKeyStore.ts` (535 строк) — keys + pool + intelligence                        | `[E]`  | S (1d)   |
+| #    | Задача                                                                                         | Аудиты | Усилие   | Статус |
+| ---- | ---------------------------------------------------------------------------------------------- | ------ | -------- | ------ |
+| P2.1 | Разбить `RolesPanel/TeamWizard.tsx` (1107 → 7 step-компонентов, orchestrator ~190 строк)       | `[E]`  | M (2-3d) | ✅     |
+| P2.2 | Разбить `RolesPanel/RolesConsortiaPanel.tsx` (1066 → 4 таба + orchestrator)                    | `[E]`  | M (2-3d) | ✅     |
+| P2.3 | Разбить `RolesPanel/RoleAnalytics.tsx` (1005 → orchestrator + 3 компонента)                    | `[E]`  | M (2-3d) | ✅     |
+| P2.4 | Разбить `debate-engine.ts` (1278 → 800 строк, 3 модуля) — Facade + sub-orchestrators           | `[E]`  | L (1w)   | ✅     |
+| P2.5 | Разбить `chat/store.ts` (1090 → 598 строк, 3 модуля) — event-handlers + send-message + helpers | `[E]`  | M (3-5d) | ✅     |
+| P2.6 | Разбить `useKeyStore.ts` (535 строк) — keys + pool + intelligence                              | `[E]`  | S (1d)   |
 
 ### Dead code / Consolidation
 

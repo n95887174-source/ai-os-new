@@ -92,7 +92,12 @@ vi.mock('./service-deps', () => ({
     sessionManager: mockSessionManager,
     getDistributedLock: () => mockLock,
 }));
-vi.mock('../../kernel/instances', () => ({ CONFIG: mockConfig }));
+vi.mock('../../kernel/instances', () => ({
+    CONFIG: mockConfig,
+    rootLogger: {
+        child: () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }),
+    },
+}));
 
 import { useChatStore } from './store';
 import { requestEntryMap } from './types';
