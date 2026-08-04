@@ -100,6 +100,19 @@ npm run check:circular-kernel  # circular deps check
 | 39  | **P1.27** — `sourcemap: 'hidden'` + upload в Sentry/Datadog                               | 🟢 Done |
 | 40  | **P1.28** — Dependabot config `.github/dependabot.yml`                                    | 🟢 Done |
 | 41  | **P1.29** — `npm audit` step в CI (уже есть security-audit job)                           | 🟢 Done |
+| 42  | **P2.1** — Разбить `RolesPanel/TeamWizard.tsx` (1107 → 7 step-компонентов)                | 🟢 Done |
+
+### Changes (P2.1)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Создан `team-wizard/` поддиректория в `RolesPanel/` с 8 файлами: `wizard-constants.ts` (shared styles + `TeamState` тип + `TEAM_DOMAINS`/`DOMAIN_DESCRIPTIONS`), 7 step-компонентов (`DomainPicker`, `TemplatePicker`, `RoleSelector`, `StrategyPicker`, `LeaderAssignment`, `ConfigStep`, `ReviewStep`)                                                      |
+| 2   | `TeamWizard.tsx` — 1107 строк → ~200 строк thin orchestrator: хранит step state, навигацию (canNext/nextStep/prevStep/selectTemplate), step indicator и footer (Back/Next/Create). Все render-функции заменены на компоненты-шаги, `team`/`setTeam` пробрасываются через `TeamState` пропс                                                                    |
+| 3   | Каждый step-компонент получает минимальный набор пропсов через `TeamState { team, setTeam }` + уникальные для шага пропсы; локальные фильтры/состояния (`roleSearch`, `roleCategory`, `selectedDomain`) живут в step-компонентах если не нужны родителю; `filteredTemplates` считается в `TemplatePicker` через `useMemo`, `filteredRoles` — в `RoleSelector` |
+| 4   | `RolesConsortiaPanel.tsx:25,597` — import/usage `TeamWizard` не изменился (default export с тем же `TeamWizardProps`接口ом)                                                                                                                                                                                                                                   |
+| 5   | Проверено: `npx vite build` → ✅ 17.15s; typecheck на новом `team-wizard/` → 0 ошибок                                                                                                                                                                                                                                                                         |
+| 6   | `docs/new/CONSOLIDATED_PLAN.md` — P2.1 ✅                                                                                                                                                                                                                                                                                                                     |
+| 7   | Следующая задача — **P2.2** (`RolesPanel/RolesConsortiaPanel.tsx` 1066 строк)                                                                                                                                                                                                                                                                                 |
 
 ### Changes (P1.28)
 
