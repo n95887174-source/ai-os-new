@@ -3,10 +3,10 @@
 ## 📂 Root Directory
 
 - `docs/ПОЛНЫЙ_РЕЕСТР.md`: Complete system passport (246 entries, Russian).
-- `docs/SERVICES_RU.md`: All 299 DI services catalog (Russian).
+- `docs/SERVICES_RU.md`: All 352 DI services catalog (Russian).
 - `docs/events.md`: 198+ typed events with payloads and Zod schemas.
 - `docs/STRUCTURE.md`: This file — detailed project structure.
-- `docs/07-ui-layer_RU.md`: All 145 UI panels with categories, event maps (Russian).
+- `docs/07-ui-layer_RU.md`: All 638 UI panels with categories, event maps (Russian).
 - `README.md`: Public project overview and getting started guide.
 - `CHANGELOG.md`: Detailed record of all versions.
 - `AGENTS.md`: Root-level OpenCode agent guide with commands, patterns, and kernel details.
@@ -25,14 +25,14 @@
 - `security.ts`: WebCrypto AES-GCM encryption.
 - `runtime.ts`: LifecycleManager for lifecycle management (init → start → destroy LIFO).
 - `transaction.ts`: TransactionContext — deferred persistence/emission/commit hooks.
-- `contracts/`: 123 contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, `ILifecycle`, `ILogger`, `ITransaction`, `IRotationService`, `IKeyStateStore`, `IStorageAdapter`, `IFeatureFlagService`, `IAudienceService`, `IBridgeKeeperService`, `IEcosystemEngine`, `IResearchEngine`, `IUnifiedRoleRegistry`, etc.)
+- `contracts/`: 177 contract interfaces (`IKeyVault`, `IProviderAdapter`, `IBudgetService`, `ILifecycle`, `ILogger`, `ITransaction`, `IRotationService`, `IKeyStateStore`, `IStorageAdapter`, `IFeatureFlagService`, `IAudienceService`, `IBridgeKeeperService`, `IEcosystemEngine`, `IResearchEngine`, `IUnifiedRoleRegistry`, etc.)
 - `service-list.ts`: Phase-based bootstrap service list — critical vs optional classification
 - `events/`: Event name constants + typed payloads (`event-registry.ts` — 198+ registered schemas, `event-names.ts`, `cognitive-events.ts`, `domain-events.ts`, `debate-runtime-events.ts`).
 - `types/`: Zod schemas (`schema-types.ts` — 20+ schemas + EventValidators), domain types (`domain-types.ts`).
 - `state/`: State shape interfaces + defaults (`topology-defaults.ts`).
 - `utils/`: Kernel utilities (`tokenEstimate.ts`, `ssr-storage.ts`, `sanitize.ts`).
 - `instances.ts`: 126 lazyService singleton exports for runtime resolution
-- `services/`: 303 files across 15 subdirectories:
+- `services/`: 352 files across 15 subdirectories:
   - `key-management/` — vault, registry, health, quotas, analytics, fingerprints, alerts, lifecycle, facade, pool-selector
   - `provider-runtime/` — instances, sessions, state, budget
   - `event-sourcing/` — recorder, checkpoints, replay engine
@@ -67,7 +67,7 @@
 
 ### 🎨 UI Components (`/src/components/`)
 
-- 130+ panels across 9 nav sections: Dashboard, Chat, Tasks, SRE Agent, Builder, Debate Arena, Debate Rooms, Debate Replay, Tournament, Argument Graph, Debate Analysis, Live Workspace, Mission Control, Agents, Agent Marketplace, Providers, Key Pools, Connectors, MCP Servers, Skills, Tools, Cache, Webhooks, Rotations, Key Groups, Log Browser, Traces, Router Trace, Memory, Memory Palace, Health, System Health, Docs Health, Pressure Map, What-If, Runtime Pressure, Provider Dashboard, Dependency Graph, Diagnostics, State Inspector, Profiler, Shadow Compare, Causal Debugger, Counterfactual, Session Bindings, Analytics, Routing AI, Economics, Budget, Cost Analytics, Provider Marketplace, Policies, Roles, Roles Consortia, Audit Log, Config History, Service Registry, Patterns, Knowledge, Files, Documentation, Bookmarks, Message Search, Chat Export, Topics, Key Notes, Agent Journal, Decision Log, Settings, Project OS Explorer, Hypothesis Generator, Architecture Review, Prompt Audit, Routing Experiments, Governance Stress-Test, Obs Gaps, Editing Tools, Rich Text Editor, Code Editor, DSL Canvas, Schema Editor, Guardians, Audience, Deploy, Workflows, Prompt Library, Prompt Security, Model Compare, Google Studio, Gemini Live, Export/Import, Tutorials, Community Hub, Eval Datasets, Custom Metrics, Federated Memory, Plugin SDK, Persona Marketplace, Template Sharing, Memory Transfer, Aquarium Trading, Time Machine, Contribution Graph, Agent Comparison, Debate Templates, Provider Migration, Health SLA, Session Hub, Pattern Analysis, Counterfactual Explorer, Spatial Web, Nvidia Enterprise, Batch Processor, Rotations Scheduler
+- 638 panels across 9 nav sections: Dashboard, Chat, Tasks, SRE Agent, Builder, Debate Arena, Debate Rooms, Debate Replay, Tournament, Argument Graph, Debate Analysis, Live Workspace, Mission Control, Agents, Agent Marketplace, Providers, Key Pools, Connectors, MCP Servers, Skills, Tools, Cache, Webhooks, Rotations, Key Groups, Log Browser, Traces, Router Trace, Memory, Memory Palace, Health, System Health, Docs Health, Pressure Map, What-If, Runtime Pressure, Provider Dashboard, Dependency Graph, Diagnostics, State Inspector, Profiler, Shadow Compare, Causal Debugger, Counterfactual, Session Bindings, Analytics, Routing AI, Economics, Budget, Cost Analytics, Provider Marketplace, Policies, Roles, Roles Consortia, Audit Log, Config History, Service Registry, Patterns, Knowledge, Files, Documentation, Bookmarks, Message Search, Chat Export, Topics, Key Notes, Agent Journal, Decision Log, Settings, Project OS Explorer, Hypothesis Generator, Architecture Review, Prompt Audit, Routing Experiments, Governance Stress-Test, Obs Gaps, Editing Tools, Rich Text Editor, Code Editor, DSL Canvas, Schema Editor, Guardians, Audience, Deploy, Workflows, Prompt Library, Prompt Security, Model Compare, Google Studio, Gemini Live, Export/Import, Tutorials, Community Hub, Eval Datasets, Custom Metrics, Federated Memory, Plugin SDK, Persona Marketplace, Template Sharing, Memory Transfer, Aquarium Trading, Time Machine, Contribution Graph, Agent Comparison, Debate Templates, Provider Migration, Health SLA, Session Hub, Pattern Analysis, Counterfactual Explorer, Spatial Web, Nvidia Enterprise, Batch Processor, Rotations Scheduler
 - `ModalShell.tsx`: Reusable focus-trapped modal wrapper (`@react-aria/focus` FocusScope), used by 7 modals
 - `PanelLoader.tsx`: Reusable lazy-loading wrapper with ErrorBoundary
 - `PageThemeContext.tsx`: Per-route theme override with localStorage persistence
@@ -77,7 +77,7 @@
 - `en.ts` / `ru.ts`: Flat translation objects (~400+ keys each)
 - `I18nProvider.tsx`: React context provider with locale toggle
 - `useTranslation.ts`: Hook with `t()` function
-- Panels migrated: all 130+ panels have i18n keys
+- Panels migrated: all 638 panels have i18n keys
 
 ### 🎨 Styles (`/src/styles/`)
 
@@ -91,6 +91,13 @@
 - `debateLiveStore.ts`: Live debate streaming state with emotion tracking
 - `usePoolStatus.ts`: Key pool health status
 - `useRoutingIntelligence.ts`: Router decision tracking
+- `activeDebateStore.ts`: Active debate session state
+- `topologyTraceStore.ts`: Topology trace state
+- `uiPreferencesStore.ts`: UI preferences (theme, locale, etc.)
+- `useKeyIntelligence.ts`: Key intelligence state
+- `useNotificationStore.ts`: Notification state
+- `useSystemStatus.ts`: System status state
+- 22 store files total (including 7 test files + 3 key-store modules)
 
 ### 📦 Types (`/src/types/`)
 

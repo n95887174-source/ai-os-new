@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Autonomous, event-driven multi-agent runtime. v4.5.0 — 162 contracts, 346 services, 12 LLM adapters, 75+ UI panels.
+Autonomous, event-driven multi-agent runtime. v4.5.0 — 177 contracts, 352 services, 7 LLM adapters + 11 decorators, 638 UI panels.
 
 ## Workflow Convention
 
@@ -23,14 +23,14 @@ Autonomous, event-driven multi-agent runtime. v4.5.0 — 162 contracts, 346 serv
 
 ## Architecture Layers
 
-- `src/kernel/contracts/` — 162 interfaces + types
-- `src/kernel/services/` — 346 implementations
+- `src/kernel/contracts/` — 177 interfaces + types
+- `src/kernel/services/` — 352 implementations
 - `src/kernel/events/` — event names + payloads
 - `src/kernel/state/` — state shapes (19 files)
-- `src/llm/` — provider adapters + decorators (12 adapters)
-- `src/components/` — React UI (75+ panels)
-- `src/stores/` — Zustand stores
-- `docs/` — architecture docs (38 files, RU/EN)
+- `src/llm/` — 7 provider adapters + 11 decorators
+- `src/components/` — React UI (638 panels)
+- `src/stores/` — Zustand stores (22 files)
+- `docs/` — architecture docs (63 files, RU/EN)
 
 ## Code Rules
 
