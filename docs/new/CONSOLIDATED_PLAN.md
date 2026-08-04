@@ -104,8 +104,8 @@
 | P1.25 | **Audit / dependency update** — `npm audit fix` выполнен (fast-uri устранен, react-router оставлен из-за breaking downgrade в SPA) | `[A]`  | S (30m) | ✅ `npm audit fix` выполнен                                                            |
 | P1.26 | **Удалить `build:unsafe` или переименовать в `build:skip-typecheck` с warning**                                                    | `[A]`  | S (15m) | ✅ переименован в `build:skip-typecheck` + stderr warning, README обновлён             |
 | P1.27 | **`sourcemap: 'hidden'` + upload в Sentry/Datadog**                                                                                | `[A]`  | S (4h)  | ✅ `sourcemap:'hidden'` + `scripts/upload-sourcemaps.mjs` (no-op без кредов) + CI step |
-| P1.28 | **Добавить Dependabot config** (`.github/dependabot.yml`)                                                                          | `[E]`  | S (30m) | ❌                                                                                     |
-| P1.29 | **Добавить `npm audit` step в CI** — сейчас `audit=false` в .npmrc                                                                 | `[E]`  | S (1h)  | ❌                                                                                     |
+| P1.28 | **Добавить Dependabot config** (`.github/dependabot.yml`)                                                                          | `[E]`  | S (30m) | ✅ npm + github-actions, weekly, ignores (react-router/zod/ts)                         |
+| P1.29 | **Добавить `npm audit` step в CI** — сейчас `audit=false` в .npmrc                                                                 | `[E]`  | S (1h)  | ✅ security-audit job уже есть (`npm audit --audit-level=critical`)                    |
 
 ---
 

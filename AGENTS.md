@@ -98,6 +98,24 @@ npm run check:circular-kernel  # circular deps check
 | 37  | **P1.25** — Dependency audit / fix (`npm audit fix`)                                      | 🟢 Done |
 | 38  | **P1.26** — Переименовать `build:unsafe` в `build:skip-typecheck` с warning               | 🟢 Done |
 | 39  | **P1.27** — `sourcemap: 'hidden'` + upload в Sentry/Datadog                               | 🟢 Done |
+| 40  | **P1.28** — Dependabot config `.github/dependabot.yml`                                    | 🟢 Done |
+| 41  | **P1.29** — `npm audit` step в CI (уже есть security-audit job)                           | 🟢 Done |
+
+### Changes (P1.28)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`.github/dependabot.yml`** (новый) — `version: 2`, два ecosystems: `npm` (weekly, monday 08:00 UTC, limit 10 PRs) и `github-actions` (weekly, limit 5 PRs); ignore для `react-router`/`react-router-dom` (GHSA-qwww-vcr4-c8h2 — breaking downgrade нужен вручную), `zod`, `typescript`; labels + reviewer + commit-message prefix |
+| 2   | `docs/new/CONSOLIDATED_PLAN.md` — P1.28 ✅                                                                                                                                                                                                                                                                                          |
+| 3   | Следующая задача — **P1.29** (`npm audit` step в CI)                                                                                                                                                                                                                                                                                |
+
+### Changes (P1.29)
+
+| #   | Что сделано                                                                                                                                                                                                                                                          |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Проверено: `security-audit` job уже существует в `.github/workflows/ci.yml` (`npm audit --audit-level=critical`, P0.3). `.npmrc` `audit=false` подавляет только auto-audit после `npm ci`, но НЕ влияет на явный `npm audit` в CI. Задача закрыта — шаг уже на месте |
+| 2   | `docs/new/CONSOLIDATED_PLAN.md` — P1.29 ✅                                                                                                                                                                                                                           |
+| 3   | Следующая задача — **P2.x** (см. CONSOLIDATED_PLAN.md: P2.1 `RolesPanel/TeamWizard.tsx` 1106 строк, P2.2 `RolesPanel/RolesConsortiaPanel.tsx` 1066 строк)                                                                                                            |
 
 ### Changes (P1.27)
 
