@@ -42,7 +42,11 @@ export default defineConfig({
     },
     build: {
         target: 'es2023',
-        sourcemap: false,
+        // P1.27: generate sourcemaps but keep them out of the shipped JS/CSS
+        // (no `//# sourceMappingURL=` emitted). Maps are uploaded to
+        // Sentry/Datadog by `scripts/upload-sourcemaps.mjs` and never served
+        // to clients, so production source is not leaked.
+        sourcemap: 'hidden',
         minify: 'esbuild',
         chunkSizeWarningLimit: 700,
         rollupOptions: {

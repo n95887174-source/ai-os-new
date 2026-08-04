@@ -97,6 +97,19 @@ npm run check:circular-kernel  # circular deps check
 | 36  | **P1.24** — Security headers в nginx (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) | 🟢 Done |
 | 37  | **P1.25** — Dependency audit / fix (`npm audit fix`)                                      | 🟢 Done |
 | 38  | **P1.26** — Переименовать `build:unsafe` в `build:skip-typecheck` с warning               | 🟢 Done |
+| 39  | **P1.27** — `sourcemap: 'hidden'` + upload в Sentry/Datadog                               | 🟢 Done |
+
+### Changes (P1.27)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                                           |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `vite.config.ts` — `sourcemap: false` → `sourcemap: 'hidden'`: карты генерируются (проверено: 475 .map, v3, sources 173), но `sourceMappingURL` НЕ внедряется в бандл (grep по dist/assets/*.js → False) — исходники не утекают клиентам                                                                              |
+| 2   | **`scripts/upload-sourcemaps.mjs`** (новый) — загрузка `.map` в Sentry (`@sentry/cli` через npx) или Datadog (`datadog-ci` через npx); release = `SENTRY_RELEASE`/`VITE_APP_VERSION`/`pkg.version`; без кредов (`SENTRY_AUTH_TOKEN`+`SENTRY_ORG`+`SENTRY_PROJECT` или `DATADOG_API_KEY`) — чистый no-op exit 0 с info |
+| 3   | `package.json` — скрипт `sourcemaps:upload` → `node scripts/upload-sourcemaps.mjs`                                                                                                                                                                                                                                    |
+| 4   | `.github/workflows/ci.yml` — в deploy job добавлен step «Upload sourcemaps» (после download artifact, до Pages upload), gated `if: env.SENTRY_AUTH_TOKEN != ''                                                                                                                                                        |     | env.DATADOG_API_KEY != ''`, secrets прокидываются, release = `github.sha` |
+| 5   | Проверено: `npm run build:skip-typecheck` → ✅ 22.23s, map: включены; `node scripts/upload-sourcemaps.mjs` → no-op exit 0; map JSON валиден (version 3)                                                                                                                                                               |
+| 6   | `docs/new/CONSOLIDATED_PLAN.md` — P1.27 ✅                                                                                                                                                                                                                                                                            |
+| 7   | Следующая задача — **P1.28** (Dependabot config `.github/dependabot.yml`)                                                                                                                                                                                                                                             |
 
 ### Changes (P1.26)
 

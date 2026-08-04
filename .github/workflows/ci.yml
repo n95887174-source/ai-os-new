@@ -312,6 +312,23 @@ jobs:
                   name: dist
                   path: dist/
 
+            - name: Upload sourcemaps to error tracking (Sentry/Datadog)
+              # P1.27: `sourcemap: 'hidden'` produces maps but does not embed
+              # sourceMappingURL, so dist is safe to ship. Upload maps from the
+              # artifact to Sentry (or Datadog) for stacktrace de-minification.
+              # The script no-ops cleanly when no credentials are configured, so
+              # the deploy is not blocked for backends without error tracking.
+              if: env.SENTRY_AUTH_TOKEN != '' || env.DATADOG_API_KEY != ''
+              env:
+                  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+                  SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+                  SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+                  SENTRY_RELEASE: ${{ github.sha }}
+                  DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+                  DATADOG_SITE: ${{ secrets.DATADOG_SITE }}
+                  DD_SERVICE: ${{ secrets.DD_SERVICE }}
+              run: npm run sourcemaps:upload
+
             - name: Upload Pages artifact
               uses: actions/upload-pages-artifact@v3
               with:

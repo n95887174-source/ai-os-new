@@ -15,6 +15,7 @@
     "dev": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js",
     "build": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -b && node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "build:skip-typecheck": "node -e \"console.error('WARNING: skipping typecheck — broken types will NOT fail this build. Prefer `npm run build` for CI/ship.')\" && node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
+    "sourcemaps:upload": "node scripts/upload-sourcemaps.mjs",
     "lint": "eslint .",
     "lint:staged": "lint-staged",
     "typecheck": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -b --noEmit",

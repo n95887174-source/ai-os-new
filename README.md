@@ -354,6 +354,7 @@ Adjust routing behavior in **Settings → SLA Mode**:
 | `npm run check:deps`            | Check unused/missing dependencies                                            |
 | `npm run proxy`                 | Start CORS proxy server                                                      |
 | `npm run build:skip-typecheck`  | Vite build WITHOUT typecheck (prints warning — use only for quick iteration) |
+| `npm run sourcemaps:upload`     | Upload hidden sourcemaps to Sentry/Datadog (no-op without credentials)       |
 | `npm run check:deps:graph`      | Generate dependency graph SVG                                                |
 | `npm run dev:shared`            | Runs Vite + sync-server together                                             |
 | `npm run fix:unused`            | Remove unused exports                                                        |
