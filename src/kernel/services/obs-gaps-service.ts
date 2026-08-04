@@ -306,7 +306,7 @@ const SERVICE_FILE_MAP: Record<string, string> = {
     budgetService: 'src/kernel/services/budget-service.ts',
     usageTracker: 'src/kernel/services/usage-tracker.ts',
     cacheService: 'src/kernel/services/cache-service.ts',
-    chatService: 'src/kernel/services/chat-service.ts',
+    chatService: 'src/kernel/services/chat-executor.ts',
     timelineService: 'src/kernel/services/timeline-service.ts',
     adminService: 'src/kernel/services/admin-service.ts',
     healthScoreService: 'src/kernel/services/health-score-service.ts',

@@ -38,7 +38,7 @@ import type { ICustomMetricsService } from '../contracts/custom-metrics';
 import type { IUnifiedRoleRegistry } from '../contracts/unified-role';
 import type { IEcosystemEngine } from '../contracts/ecosystem';
 import type { IRoleTeamService } from '../contracts/role-team';
-import type { ChatService } from '../services/chat-service';
+import type { ChatExecutor } from '../services/chat-executor';
 import type { AutoDebateService as AutoDebateServiceType } from '../services/debate-runtime/auto-debate/auto-debate-service';
 
 export { database, keyService, adapterRegistry } from './core-references';
@@ -68,7 +68,7 @@ export const cognitiveService = lazyService<CognitiveService>('cognitiveService'
 export const advisorService = lazyService<AdvisorService>('advisorService');
 export const pressureMapService = lazyService<PressureMapService>('pressureMapService');
 export const debateService = lazyService<DebateService>('debateService');
-export const chatService = lazyService<ChatService>('chatService');
+export const chatService = lazyService<ChatExecutor>('chatService');
 export const autoDebateService = lazyService<AutoDebateServiceType>('autoDebateService');
 export const workspaceService = lazyService<WorkspaceService>('workspaceService');
 export const keyStateStore = lazyService<KeyStateStore>('keyStateStore');

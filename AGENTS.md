@@ -108,6 +108,8 @@ npm run check:circular-kernel  # circular deps check
 | 47  | **P2.6** — Разбить `useKeyStore.ts` (542 → 220 строк, 3 модуля)                           | 🟢 Done |
 | 48  | **P2.7** — Dead-code cleanup: `finalizeDebate` + `checkModelBlacklist`                    | 🟢 Done |
 | 49  | **P2.8** — Flatten 65 single-file component directories → `src/components/`               | 🟢 Done |
+| 50  | **P2.9** — 9 панелей задублированы как .tsx + директория — консолидировать                | ⏭️ Skip |
+| 51  | **P2.10** — ChatService wrapper → ChatExecutor merge                                      | 🟢 Done |
 
 ### Changes (P2.8)
 
@@ -122,6 +124,30 @@ npm run check:circular-kernel  # circular deps check
 | 7   | Проверено: `npm run build:skip-typecheck` → ✅ (3842 modules, 0 errors)                                                                                                               |
 | 8   | `docs/new/CONSOLIDATED_PLAN.md` — P2.8 ✅                                                                                                                                             |
 | 9   | Следующая задача — **P2.9** (9 панелей задублированы как .tsx + директория)                                                                                                           |
+
+### Changes (P2.9)
+
+| #   | Что сделано                                                                                                                                                                                                                                                                                  |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Диагностика: найдены 8 cases (не 9), все — легитимный orchestrator + sub-components паттерн из P2.1-P2.5 (BudgetPanel, ChatExportPanel, DecisionLogPanel, DocsHealthPanel, KeyNotesPanel, PerformanceProfilerPanel, Sidebar, AgentJournalPanel). Consolidation отменена — это не duplication |
+| 2   | `docs/new/CONSOLIDATED_PLAN.md` — P2.9 ⏭️ Non-issue                                                                                                                                                                                                                                          |
+| 3   | Следующая задача — **P2.10** (ChatService wrapper)                                                                                                                                                                                                                                           |
+
+### Changes (P2.10)
+
+| #   | Что сделано                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `chat-service.ts` (40 строк) удалён — ChatService был thin wrapper без логики: constructor + init/setupListeners (2 EventBus subscriptions) + destroy  |
+| 2   | `chat-executor.ts` — добавлены `init()` (setupListeners: SEND_MESSAGE + CANCEL_MESSAGE) + `_initialized` + `_unsubs`; `destroy()` теперь unsub cleanup |
+| 3   | `phase6-high-level.ts` — DI registration: `new ChatService(deps)` → `new ChatExecutor(deps, deps.llmClient)` (ключ 'chatService' сохранён)             |
+| 4   | `services-core.ts` — type `ChatService` → `ChatExecutor` для lazyService                                                                               |
+| 5   | `kernel/index.ts` — export `ChatExecutor` вместо `ChatService`                                                                                         |
+| 6   | `ChatService.autoRouting.test.ts` — import + constructor обновлены; `init()` return type `Promise<void>` → `void`                                      |
+| 7   | `ChatService.test.ts` — describe renamed → `ChatExecutor`                                                                                              |
+| 8   | `obs-gaps-service.ts` + `code-manifest.ts` — file path metadata обновлены                                                                              |
+| 9   | Проверено: `npm run build:skip-typecheck` → ✅ (35s)                                                                                                   |
+| 10  | `docs/new/CONSOLIDATED_PLAN.md` — P2.10 ✅                                                                                                             |
+| 11  | Следующая задача — **P2.11** (cross-tab-lock vs cross-tab-state)                                                                                       |
 
 ### Changes (P2.6)
 

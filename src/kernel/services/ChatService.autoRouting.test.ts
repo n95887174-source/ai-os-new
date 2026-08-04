@@ -87,8 +87,8 @@ const mockLLMClient = {
     buildRequestBody: vi.fn().mockResolvedValue({ model: 'test-model', messages: [] }),
 };
 
-describe('ChatService auto-routing', () => {
-    let chatService: { init: () => Promise<void>; destroy: () => void };
+describe('ChatExecutor auto-routing', () => {
+    let chatService: { init: () => void; destroy: () => void };
 
     beforeEach(async () => {
         vi.clearAllMocks();
@@ -100,7 +100,7 @@ describe('ChatService auto-routing', () => {
         mockLLMClient.chat.mockResolvedValue(mockLLMResponse);
         mockLLMClient.sendMessage.mockResolvedValue(mockLLMResponse);
 
-        const { ChatService } = await import('./chat-service');
+        const { ChatExecutor } = await import('./chat-executor');
 
         const deps = {
             eventBus: mockEventBus,
@@ -120,7 +120,7 @@ describe('ChatService auto-routing', () => {
             logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        chatService = new ChatService(deps as any);
+        chatService = new ChatExecutor(deps as any, (deps as any).llmClient);
         await chatService.init();
     });
 

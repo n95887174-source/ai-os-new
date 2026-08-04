@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { eventBus, EVENTS } from '../instances';
 
-describe('ChatService', () => {
+describe('ChatExecutor', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });

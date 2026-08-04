@@ -158,9 +158,9 @@ const FILE_ENTRIES: CodeManifestEntry[] = [
         location: 'services/router-config-manager.ts',
     },
     {
-        name: 'src/kernel/services/chat-service.ts',
+        name: 'src/kernel/services/chat-executor.ts',
         type: 'file_path',
-        location: 'services/chat-service.ts',
+        location: 'services/chat-executor.ts',
     },
     {
         name: 'src/kernel/services/lifecycle-manager.ts',
@@ -810,7 +810,7 @@ const SERVICE_ENTRIES: CodeManifestEntry[] = [
     { name: 'LoggerService', type: 'service_name', location: 'services/logger-service.ts' },
     { name: 'ConfigService', type: 'service_name', location: 'services/config-service.ts' },
     { name: 'ProbeService', type: 'service_name', location: 'services/probe-service.ts' },
-    { name: 'ChatService', type: 'service_name', location: 'services/chat-service.ts' },
+    { name: 'ChatExecutor', type: 'service_name', location: 'services/chat-executor.ts' },
     { name: 'AgentService', type: 'service_name', location: 'services/agent-service.ts' },
     { name: 'RoleService', type: 'service_name', location: 'services/role-service.ts' },
     { name: 'MemoryEngine', type: 'service_name', location: 'services/memory-engine.ts' },

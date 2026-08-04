@@ -19,10 +19,25 @@ export class ChatExecutor {
     private readonly ACTIVE_REQUEST_TTL = 10 * 60 * 1000;
     private _staleTimer: ReturnType<typeof setInterval> | null = null;
     private _destroyed = false;
+    private _initialized = false;
+    private _unsubs: Array<() => void> = [];
 
     constructor(deps: ChatServiceDeps, llmClient: ILLMClientService) {
         this.deps = deps;
         this.llmClient = llmClient;
+    }
+
+    init(): void {
+        if (this._initialized) return;
+        this._initialized = true;
+        this._unsubs.push(
+            this.deps.eventBus.on(EVENTS.SEND_MESSAGE, (req) => {
+                this.handleMessage(req as QueuedRequest);
+            }),
+            this.deps.eventBus.onSafe<{ requestId?: string }>(EVENTS.CANCEL_MESSAGE, (d) => {
+                if (d && typeof d.requestId === 'string') this.cancelRequest(d.requestId);
+            }),
+        );
     }
 
     private startStaleTimer(): void {
@@ -76,6 +91,8 @@ export class ChatExecutor {
         this.activeRequests.clear();
         this.executingMessages.clear();
         this.cacheInflight.clear();
+        for (const unsub of this._unsubs) unsub();
+        this._unsubs = [];
     }
 
     private async executeRequest(initialReq: QueuedRequest): Promise<void> {

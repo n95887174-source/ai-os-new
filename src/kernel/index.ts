@@ -64,7 +64,7 @@ export type {
     ContentSafetyResult,
 } from './services/policy-service';
 
-export { ChatService } from './services/chat-service';
+export { ChatExecutor } from './services/chat-executor';
 export type { ChatServiceDeps } from './contracts/chat';
 
 export { AgentService } from './services/agent-service';

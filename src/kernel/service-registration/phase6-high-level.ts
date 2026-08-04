@@ -36,7 +36,7 @@ import type { OrchestrationService } from '../services/orchestration-service';
 import type { AgentService } from '../services/agent-service';
 import type { MetricsService } from '../services/metrics-service';
 import type { AgentHealthMonitor } from '../services/agent-health-monitor';
-import { ChatService } from '../services/chat-service';
+import { ChatExecutor } from '../services/chat-executor';
 import { WorkspaceService } from '../services/workspace-service';
 import { ProbeService } from '../services/probe-service';
 import { AutoDebateService } from '../services/debate-runtime/auto-debate/auto-debate-service';
@@ -104,8 +104,8 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     register(
         'chatService',
         (c) =>
-            new ChatService(
-                asDeps<ConstructorParameters<typeof ChatService>[0]>({
+            new ChatExecutor(
+                asDeps<ConstructorParameters<typeof ChatExecutor>[0]>({
                     eventBus: c.get<IEventBus>('eventBus'),
                     promptSecurityService: c.get<PromptSecurityService>('promptSecurityService'),
                     keyService: c.get<KeyService>('keyService'),
