@@ -160,7 +160,7 @@
 | P2.23 | Удалить `docs/aaa.md` (118 КБ, дубликат)                                                                 | `[A]`    | S (5m)  | ✅  |
 | P2.24 | Разбить `AGENTS.md` — оставить инструкции (100 строк), вывести historical notes в `docs/SESSION_LOG.md`  | `[A][E]` | S (2h)  | ✅  |
 | P2.25 | Синхронизировать метрики (contracts, services, panels) между AGENTS.md, STRUCTURE.md, SYSTEM_MANIFEST.md | `[A]`    | S (2h)  | ✅  |
-| P2.26 | Сгенерировать panel-map mermaid из route-registry-core.ts                                                | `[A]`    | S (4h)  |
+| P2.26 | Сгенерировать panel-map mermaid из route-registry-core.ts                                                | `[A]`    | S (4h)  | ✅  |
 | P2.27 | `DEBT_REPORT.md` устарел — переписать, убрав закрытые задачи                                             | `[A]`    | S (1d)  |
 | P2.28 | Задокументировать federated memory статус (работает или заглушка)                                        | `[E]`    | S (30m) |
 
