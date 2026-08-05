@@ -167,7 +167,7 @@ export class MCPService {
 
     private validateUri(uri: string): void {
         const decoded = decodeURIComponent(uri.replace(/\+/g, ' '));
-        const allowedSchemes = ['http:', 'https:', 'file:', 'ws:', 'wss:', 'mcp:'];
+        const allowedSchemes = ['http:', 'https:'];
         const scheme = decoded.split('://')[0] + ':';
         if (!allowedSchemes.includes(scheme))
             throw new Error(`MCP URI scheme not allowed: ${scheme}`);

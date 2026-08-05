@@ -4,23 +4,15 @@ import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('VirtualKeyService');
 
-// M-9: XOR+base64 obfuscation for realKeyId at rest
-const OBFUSCATION_KEY = 0x5a;
-function obfuscateId(id: string): string {
-    return btoa(
-        Array.from(new TextEncoder().encode(id))
-            .map((b) => String.fromCharCode(b ^ OBFUSCATION_KEY))
-            .join(''),
-    );
+// Display-only masking: prevents realKeyId from appearing in plaintext in logs/UI.
+// NOT encrypted — this is NOT a security boundary. Do not rely on this for confidentiality.
+function maskId(id: string): string {
+    return btoa(id);
 }
-function deobfuscateId(encoded: string): string {
+function unmaskId(encoded: string): string {
     try {
-        const raw = atob(encoded);
-        return new TextDecoder().decode(
-            new Uint8Array(Array.from(raw).map((c) => c.charCodeAt(0) ^ OBFUSCATION_KEY)),
-        );
+        return atob(encoded);
     } catch {
-        // fallback: already plaintext (legacy data or migration)
         return encoded;
     }
 }
@@ -87,7 +79,7 @@ export class VirtualKeyService implements IVirtualKeyService {
                 for (const k of stored) {
                     this.cache.set(k.id, {
                         ...k,
-                        realKeyId: deobfuscateId(k.realKeyId),
+                        realKeyId: unmaskId(k.realKeyId),
                     });
                 }
             }
@@ -212,7 +204,7 @@ export class VirtualKeyService implements IVirtualKeyService {
         try {
             const obfuscated = this.list().map((vk) => ({
                 ...vk,
-                realKeyId: obfuscateId(vk.realKeyId),
+                realKeyId: maskId(vk.realKeyId),
             }));
             await this.deps.database.setKv('virtual_keys', obfuscated);
         } catch (e) {

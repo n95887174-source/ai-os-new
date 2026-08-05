@@ -17,7 +17,7 @@ import ChatStatusToast from './ChatStatusToast';
 import ChatExportOverlay from './ChatExportOverlay';
 
 import { iconBtnMuted } from '../../styles/common';
-import { DEFAULT_MODELS, type ExecutionMode } from './chat-panel-utils';
+import { DEFAULT_MODELS } from './chat-panel-utils';
 
 const ChatPanel: React.FC = () => {
     const { activeKeys } = useKeyList();
@@ -133,14 +133,20 @@ const ChatPanel: React.FC = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, [historyLen, lastContentLen]);
 
+    const [selectedModelPerKey, setSelectedModelPerKey] = useState<Record<string, string>>({});
+
     const handleSend = useCallback(
-        (text: string, _mode: ExecutionMode) => {
+        (text: string) => {
             sendMessage(
-                selectedKeys.map((id) => ({ provider: 'auto', model: selectedModel, keyId: id })),
+                selectedKeys.map((id) => ({
+                    provider: 'auto',
+                    model: selectedModelPerKey[id] || selectedModel,
+                    keyId: id,
+                })),
                 text,
             );
         },
-        [sendMessage, selectedKeys, selectedModel],
+        [sendMessage, selectedKeys, selectedModel, selectedModelPerKey],
     );
 
     const handleStartEdit = useCallback((id: string, text: string) => {
@@ -177,11 +183,15 @@ const ChatPanel: React.FC = () => {
             const entry = historyEntries?.find((e) => e.id === entryId);
             const originalText = entry?.text || '';
             sendMessage(
-                selectedKeys.map((id) => ({ provider: 'auto', model: selectedModel, keyId: id })),
+                selectedKeys.map((id) => ({
+                    provider: 'auto',
+                    model: selectedModelPerKey[id] || selectedModel,
+                    keyId: id,
+                })),
                 originalText,
             );
         },
-        [sendMessage, selectedKeys, selectedModel, historyEntries],
+        [sendMessage, selectedKeys, selectedModel, selectedModelPerKey, historyEntries],
     );
 
     const activeConfig = activeSessionId ? getSessionConfig() : undefined;
@@ -330,11 +340,13 @@ const ChatPanel: React.FC = () => {
                 <ChatInputArea
                     selectedKeys={selectedKeys}
                     selectedModel={selectedModel}
+                    selectedModelPerKey={selectedModelPerKey}
                     onSend={handleSend}
                     isSending={isSending}
                     onError={(msg) => showStatus(msg, 'error')}
                     onKeysChange={setSelectedKeys}
                     onModelChange={setSelectedModel}
+                    onSelectedModelsChange={setSelectedModelPerKey}
                 />
             </div>
 

@@ -7,6 +7,7 @@ import type {
     DeployStatus,
 } from '../contracts/deploy';
 import { ssrSafeStorage } from '../utils/ssr-storage';
+import { isPrivateIP } from '../utils/network';
 
 const LOGGER = rootLogger.child('DeployService');
 
@@ -112,6 +113,21 @@ export class DeployService implements IDeployService {
         if (!cfg) throw new Error(`Deploy config ${configId} not found`);
 
         if (this.apiEndpoint) {
+            // SSRF protection: validate endpoint before making any network request
+            let parsed: URL;
+            try {
+                parsed = new URL(this.apiEndpoint);
+            } catch {
+                throw new Error(`Deploy endpoint is not a valid URL: ${this.apiEndpoint}`);
+            }
+            if (parsed.protocol !== 'https:') {
+                throw new Error(`Deploy endpoint must use HTTPS, got: ${parsed.protocol}`);
+            }
+            if (isPrivateIP(parsed.hostname)) {
+                throw new Error(
+                    `Deploy endpoint resolves to a private/internal IP: ${parsed.hostname}`,
+                );
+            }
             const dep: Deployment = {
                 id: id(),
                 configId,

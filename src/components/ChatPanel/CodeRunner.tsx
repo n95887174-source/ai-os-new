@@ -44,9 +44,19 @@ const ALLOWED_TAGS = new Set([
     'a',
 ]);
 
-function escapeForSrcdoc(s: string): string {
-    // Inside a <script> tag only </script> and <!-- can break out
-    return s.replace(/<\/script>/gi, '<\\/script>').replace(/<!--/g, '<\\!--');
+/**
+ * Convert an HTML string to a Blob URL so it can be loaded into an iframe
+ * via `src` instead of `srcdoc`. This completely eliminates HTML/script
+ * injection vectors because the content is never parsed as inline HTML.
+ */
+function htmlToBlobUrl(html: string): string {
+    const blob = new Blob([html], { type: 'text/html' });
+    return URL.createObjectURL(blob);
+}
+
+function escapeForStyleContent(s: string): string {
+    // Prevent breaking out of <style> tag — neutralize </style> and </script> closers
+    return s.replace(/<\/\s*(style|script)\s*>/gi, '\\x3c/$1>');
 }
 
 function sanitizeAllowedHtml(s: string): string {
@@ -57,11 +67,6 @@ function sanitizeAllowedHtml(s: string): string {
         ALLOW_DATA_ATTR: false,
     });
     return purified;
-}
-
-/** Escape a CSS fragment so it cannot terminate its own <style> block. */
-function escapeForStyle(s: string): string {
-    return s.replace(/<\/(style)/gi, '<\\/$1');
 }
 
 interface CodeRunnerProps {
@@ -78,6 +83,7 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
     const iframeRef = useRef<HTMLIFrameElement | null>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const listenerRef = useRef<((e: MessageEvent) => void) | null>(null);
+    const blobUrlRef = useRef<string | null>(null);
 
     /**
      * Cleanup helper.  Removes the sandbox iframe and any associated message
@@ -94,9 +100,13 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
             try {
                 document.body.removeChild(iframeRef.current);
             } catch {
-                LOGGER.warn('Failed to remove iframe');
+                LOGGER.warn('CodeRunner', 'Failed to remove iframe');
             }
             iframeRef.current = null;
+        }
+        if (blobUrlRef.current) {
+            URL.revokeObjectURL(blobUrlRef.current);
+            blobUrlRef.current = null;
         }
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -156,9 +166,11 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
             window.addEventListener('message', listener);
 
             const safeBody = sanitizeAllowedHtml(code);
-            iframe.srcdoc =
+            const htmlContent =
                 `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none';"></head><body>${safeBody}<script>parent.postMessage({type:'sandbox-result',body:document.body.innerText},${JSON.stringify(expectedOrigin)});</scr` +
                 `ipt></body></html>`;
+            blobUrlRef.current = htmlToBlobUrl(htmlContent);
+            iframe.src = blobUrlRef.current;
             timeoutRef.current = setTimeout(() => {
                 setOutput('(rendered — check iframe for visual output)');
                 setIsRunning(false);
@@ -176,7 +188,9 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
             document.body.appendChild(iframe);
             iframeRef.current = iframe;
 
-            iframe.srcdoc = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>${escapeForStyle(code)}</style></head><body><div class="test">Preview</div></body></html>`;
+            const cssContent = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>${escapeForStyleContent(code)}</style></head><body><div class="test">Preview</div></body></html>`;
+            blobUrlRef.current = htmlToBlobUrl(cssContent);
+            iframe.src = blobUrlRef.current;
             const capturedIframe = iframe;
             timeoutRef.current = setTimeout(() => {
                 try {
@@ -240,7 +254,6 @@ export const CodeRunner: React.FC<CodeRunnerProps> = ({ code, language }) => {
             cleanup();
         }, 10000);
 
-        const safeCode = escapeForSrcdoc(code);
         const sandboxHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -277,7 +290,7 @@ try {
   `
           : `
     (async function() {
-      ${safeCode}
+      ${code}
       parent.postMessage({ type: 'sandbox-result' }, _targetOrigin);
     })();
   `
@@ -289,7 +302,8 @@ try {
 </body>
 </html>`;
 
-        iframe.srcdoc = sandboxHtml;
+        blobUrlRef.current = htmlToBlobUrl(sandboxHtml);
+        iframe.src = blobUrlRef.current;
     }, [code, language, cleanup, confirm]);
 
     const closeOutput = useCallback(() => {

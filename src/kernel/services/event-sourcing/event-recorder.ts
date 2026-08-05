@@ -174,7 +174,10 @@ export class EventRecorder {
         const beforeUnloadHandler = () => {
             if (this._pendingPersistData) {
                 try {
-                    ssrSafeStorage.setItem(walKey, JSON.stringify(this._pendingPersistData));
+                    ssrSafeStorage.setItem(
+                        walKey,
+                        JSON.stringify(this.sanitizePayloadForWal(this._pendingPersistData)),
+                    );
                 } catch {
                     // localStorage full — non-critical
                 }
@@ -464,6 +467,37 @@ export class EventRecorder {
         }
     }
 
+    // SECURITY: Sanitize event payloads before WAL persistence to localStorage.
+    // localStorage is accessible to any script on the same origin (XSS exposure).
+    // We strip keys/secrets and truncate large content fields to minimize data leakage
+    // if an attacker gains script execution in the browser context.
+    private sanitizePayloadForWal(data: { events: RecordedEvent[]; sequence: number }): {
+        events: RecordedEvent[];
+        sequence: number;
+    } {
+        const SENSITIVE_KEYS =
+            /(?:key|token|secret|password|api_?key|apiKey|credential|authorization)/i;
+        const strip = (obj: unknown): unknown => {
+            if (obj === null || typeof obj !== 'object') return obj;
+            if (Array.isArray(obj)) return obj.map(strip);
+            const result: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+                if (SENSITIVE_KEYS.test(k)) {
+                    result[k] = '[REDACTED]';
+                } else if (typeof v === 'string' && k === 'content' && v.length > 200) {
+                    result[k] = v.slice(0, 100) + '…[truncated]';
+                } else {
+                    result[k] = strip(v);
+                }
+            }
+            return result;
+        };
+        return {
+            sequence: data.sequence,
+            events: data.events.map((ev) => ({ ...ev, data: strip(ev.data) })),
+        };
+    }
+
     private schedulePersist(): void {
         if (!this.store || this.persistQueued || this._destroyed) return;
         this.persistQueued = true;
@@ -471,7 +505,10 @@ export class EventRecorder {
         this._pendingPersistData = { events: [...this.events], sequence: this.sequence };
         // Synchronous WAL write — survives tab close
         try {
-            ssrSafeStorage.setItem('event-recorder:wal', JSON.stringify(this._pendingPersistData));
+            ssrSafeStorage.setItem(
+                'event-recorder:wal',
+                JSON.stringify(this.sanitizePayloadForWal(this._pendingPersistData)),
+            );
         } catch {
             // silently ignore — ssrSafeStorage.setItem can fail in restricted environments
         }

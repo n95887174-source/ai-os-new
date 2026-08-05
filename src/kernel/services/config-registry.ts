@@ -305,7 +305,23 @@ function buildConfigDefaults(): Readonly<ConfigRegistry> {
     // adminToken kept for forward-compat with future server mode; no longer enforced
     // (single-user local-first app — it was only JS-heap obfuscation, not real auth)
     const adminToken = clone.security.adminToken || crypto.randomUUID();
-    const webhookSecret = clone.security.webhookSecret || crypto.randomUUID();
+    let webhookSecret = clone.security.webhookSecret;
+    if (!webhookSecret) {
+        const STORAGE_KEY = 'superagents_webhook_secret';
+        try {
+            webhookSecret = localStorage.getItem(STORAGE_KEY) || undefined;
+        } catch {
+            /* storage unavailable — fall through */
+        }
+        if (!webhookSecret) {
+            webhookSecret = crypto.randomUUID();
+            try {
+                localStorage.setItem(STORAGE_KEY, webhookSecret);
+            } catch {
+                /* storage unavailable — use in-memory only */
+            }
+        }
+    }
     Object.defineProperty(clone.security, 'adminToken', {
         value: adminToken,
         enumerable: false,

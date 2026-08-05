@@ -20,7 +20,15 @@ export class SecurityService implements ISecurityService {
 
     async initialize(password: string, _userId?: string): Promise<boolean> {
         try {
-            const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+            const STORAGE_KEY = 'security_salt';
+            let salt: Uint8Array;
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                salt = base64Decode(saved);
+            } else {
+                salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+                localStorage.setItem(STORAGE_KEY, base64Encode(salt.buffer as ArrayBuffer));
+            }
             this._salt = salt;
             this._key = await this._deriveKey(password, salt);
             return true;
