@@ -11,7 +11,6 @@ import type { Phase } from './helpers';
 import { rootLogger } from '../services/logger-service';
 const LOGGER = rootLogger.child('Phase3DebateRuntime');
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
-import type { IContainer } from '../container';
 import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { StorageLayer, DebateStore } from '../contracts/storage/storage-layer';
 import type { KeyService } from '../services/key-management/key-service';
@@ -169,101 +168,104 @@ const EMPTY_DEBATE_STORE: DebateStore = {
 
 export const registerPhase3: Phase = (helpers, ctx) => {
     const { register, asDeps } = helpers;
-    const _container: IContainer = ctx.container;
     const storageLayer = ctx.container.get<StorageLayer>('storageLayer');
 
-    // A-04: embedPipeline created once as a plain const — used directly by
-    // all dependent services (debateRAGRetriever, debateEngine).
-    const embedPipeline = new DebateEmbeddingPipeline({ embedText: simpleEmbedText });
-    const debateEvaluator = new DebateEvaluator(new DpoStrategySampler());
-    const debateMemoryExtractor = new DebateMemoryExtractor();
-    const debateRAGRetriever = new DebateRAGRetriever({ embeddingPipeline: embedPipeline });
+    // Lazy factory registrations — services created on first container.get().
+    register(
+        'debateEmbeddingPipeline',
+        (_c) => new DebateEmbeddingPipeline({ embedText: simpleEmbedText }),
+    );
+    register('debateEvaluator', (_c) => new DebateEvaluator(new DpoStrategySampler()));
+    register('debateMemoryExtractor', (_c) => new DebateMemoryExtractor());
+    register(
+        'debateRAGRetriever',
+        (c) =>
+            new DebateRAGRetriever({
+                embeddingPipeline: c.get<DebateEmbeddingPipeline>('debateEmbeddingPipeline'),
+            }),
+    );
 
-    // QualityImpactCollector — created eagerly, registered in DI, passed to
-    // DebateEngine and DebateSyncManager for P0 MVP instrumentation.
-    const _qualityCollector = new QualityImpactCollector();
-    _container.register('qualityImpactCollector', _qualityCollector);
+    register('qualityImpactCollector', (_c) => new QualityImpactCollector());
 
-    // ExperimentEngine — A/B testing of quality techniques, registered in DI
-    const _experimentEngine = new ExperimentEngine();
-    _experimentEngine
-        .init()
-        .catch((e: unknown) =>
-            LOGGER.warn('Phase3DebateRuntime', 'ExperimentEngine.init failed', { error: e }),
-        );
-    _container.register('experimentEngine', _experimentEngine);
-
-    // FactCheckService, DebatePostProcessor, DebateSyncManager — created eagerly
-    // as singletons (same pattern as embedPipeline) and wired to DI.
-    const _eventBus = _container.get<IEventBus>('eventBus');
-    const _factCheckService = new FactCheckService({
-        eventBus: _eventBus,
-        getApiKey: (provider: string) => {
-            const ks = _container.get<KeyService>('keyService');
-            const keys = ks.getKeys();
-            const key = keys.find(
-                (k) => k.provider.toLowerCase() === provider.toLowerCase() && k.status === 'active',
+    register('experimentEngine', (_c) => {
+        const engine = new ExperimentEngine();
+        engine
+            .init()
+            .catch((e: unknown) =>
+                LOGGER.warn('Phase3DebateRuntime', 'ExperimentEngine.init failed', { error: e }),
             );
-            return key?.key;
-        },
-        sendMessage: async (messages, model, apiKey) => {
-            const providers = _container
-                .get<import('../services/provider-router').RouterService>('routerService')
-                .getDebateProviders(1);
-            const adapter = _container
-                .get<ProviderAdapterRegistry>('providerAdapterRegistry')
-                .getAdapter(providers[0]?.provider || 'groq');
-            if (!adapter) throw new Error('No adapter');
-            const res = await adapter.sendMessage(
-                messages as ChatMessage[],
-                model,
-                apiKey,
-                new AbortController().signal,
-            );
-            return { content: res.content };
-        },
+        return engine;
     });
-    _container.register('factCheckService', _factCheckService);
-    const _postProcessor = new DebatePostProcessor({ factCheckService: _factCheckService });
-    const _syncManager = new DebateSyncManager(_postProcessor);
-    _syncManager.setDeps(
-        asDeps<DebateServiceDeps>({
-            database: _container.get<IDatabaseService>('database'),
-            eventBus: _eventBus,
-            get routerService() {
-                return _container.get<import('../services/provider-router').RouterService>(
-                    'routerService',
+
+    register('factCheckService', (c) => {
+        const eventBus = c.get<IEventBus>('eventBus');
+        return new FactCheckService({
+            eventBus,
+            getApiKey: (provider: string) => {
+                const ks = c.get<KeyService>('keyService');
+                const keys = ks.getKeys();
+                const key = keys.find(
+                    (k) =>
+                        k.provider.toLowerCase() === provider.toLowerCase() &&
+                        k.status === 'active',
                 );
+                return key?.key;
             },
-            get keyService() {
-                return _container.get<KeyService>('keyService');
+            sendMessage: async (messages, model, apiKey) => {
+                const providers = c
+                    .get<import('../services/provider-router').RouterService>('routerService')
+                    .getDebateProviders(1);
+                const adapter = c
+                    .get<ProviderAdapterRegistry>('providerAdapterRegistry')
+                    .getAdapter(providers[0]?.provider || 'groq');
+                if (!adapter) throw new Error('No adapter');
+                const res = await adapter.sendMessage(
+                    messages as ChatMessage[],
+                    model,
+                    apiKey,
+                    new AbortController().signal,
+                );
+                return { content: res.content };
             },
-            get adapterRegistry() {
-                return _container.get<ProviderAdapterRegistry>('providerAdapterRegistry');
-            },
-            get workspaceService() {
-                return _container.get<WorkspaceService>('workspaceService');
-            },
-            queryEngine: new DebateQueryEngine(),
-            debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
-            ...resolveDebateStoreAdapters(ctx.container),
-            get sessionManager() {
-                return _container.get<
-                    import('../services/session-manager-service').SessionManagerService
-                >('sessionManagerService');
-            },
-            qualityCollector: _qualityCollector,
-            experimentEngine: _experimentEngine,
-        }),
-    );
-    const _humanService = new DebateHumanService(
-        _eventBus,
-        storageLayer?.debates ?? EMPTY_DEBATE_STORE,
-        {
-            updateConvergenceScore: (session) => _postProcessor.updateConvergenceScore(session),
-        },
-    );
-    register('debateService', (_c) => _syncManager);
+        });
+    });
+
+    register('debateService', (c) => {
+        const factCheckService = c.get<FactCheckService>('factCheckService');
+        const postProcessor = new DebatePostProcessor({ factCheckService });
+        const syncManager = new DebateSyncManager(postProcessor);
+        syncManager.setDeps(
+            asDeps<DebateServiceDeps>({
+                database: c.get<IDatabaseService>('database'),
+                eventBus: c.get<IEventBus>('eventBus'),
+                get routerService() {
+                    return c.get<import('../services/provider-router').RouterService>(
+                        'routerService',
+                    );
+                },
+                get keyService() {
+                    return c.get<KeyService>('keyService');
+                },
+                get adapterRegistry() {
+                    return c.get<ProviderAdapterRegistry>('providerAdapterRegistry');
+                },
+                get workspaceService() {
+                    return c.get<WorkspaceService>('workspaceService');
+                },
+                queryEngine: new DebateQueryEngine(),
+                debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
+                ...resolveDebateStoreAdapters(ctx.container),
+                get sessionManager() {
+                    return c.get<
+                        import('../services/session-manager-service').SessionManagerService
+                    >('sessionManagerService');
+                },
+                qualityCollector: c.get<QualityImpactCollector>('qualityImpactCollector'),
+                experimentEngine: c.get<ExperimentEngine>('experimentEngine'),
+            }),
+        );
+        return syncManager;
+    });
 
     register(
         'collaborativeService',
@@ -435,14 +437,6 @@ export const registerPhase3: Phase = (helpers, ctx) => {
     register('conceptBlender', (_c) => new ConceptBlender());
     register('outcomeForecaster', (_c) => new OutcomeForecaster());
 
-    // A-04: embedPipeline, evaluator, extractor created as plain consts above.
-    // They are singletons but not registered individually — they are passed
-    // directly to services that need them, avoiding extra factory indirection.
-    register('debateEmbeddingPipeline', (_c) => embedPipeline);
-    register('debateRAGRetriever', (_c) => debateRAGRetriever);
-    register('debateMemoryExtractor', (_c) => debateMemoryExtractor);
-    register('debateEvaluator', (_c) => debateEvaluator);
-
     register('debateEngine', (c) => {
         const noopGet = () => undefined;
         const noopUpdate = () => {};
@@ -497,9 +491,9 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             },
             debateStore: storageLayer?.debates ?? EMPTY_DEBATE_STORE,
             policyEngine: c.get<DebatePolicyEngine>('debatePolicyEngine'),
-            ragRetriever: debateRAGRetriever,
-            memoryExtractor: debateMemoryExtractor,
-            evaluator: debateEvaluator,
+            ragRetriever: c.get<DebateRAGRetriever>('debateRAGRetriever'),
+            memoryExtractor: c.get<DebateMemoryExtractor>('debateMemoryExtractor'),
+            evaluator: c.get<DebateEvaluator>('debateEvaluator'),
             entanglementEngine: c.get<IEntanglementEngine>('entanglementEngine'),
             anchoringService: c.get<IAnchoringService>('anchoringService'),
             argumentGraphService: c.get<IArgumentGraphService>('argumentGraphService'),
@@ -532,7 +526,7 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             rhetoricalDeviceSelector: c.get<IRhetoricalDeviceSelector>('rhetoricalDeviceSelector'),
             scratchpadService: c.get<IScratchpadService>('scratchpadService'),
             blindEval: c.get<IBlindEvaluationService>('blindEval'),
-            qualityCollector: _qualityCollector,
+            qualityCollector: c.get<QualityImpactCollector>('qualityImpactCollector'),
             incentiveDetector: c.get<IIncentiveDetector>('incentiveDetector'),
             gotDeliberation: c.get<IGoTDeliberation>('gotDeliberation'),
             conceptBlender: c.get<IConceptBlender>('conceptBlender'),
@@ -544,7 +538,17 @@ export const registerPhase3: Phase = (helpers, ctx) => {
         });
     });
 
-    register('debateHumanService', (_c) => _humanService);
+    register('debateHumanService', (c) => {
+        const factCheckService = c.get<FactCheckService>('factCheckService');
+        const postProcessor = new DebatePostProcessor({ factCheckService });
+        return new DebateHumanService(
+            c.get<IEventBus>('eventBus'),
+            storageLayer?.debates ?? EMPTY_DEBATE_STORE,
+            {
+                updateConvergenceScore: (session) => postProcessor.updateConvergenceScore(session),
+            },
+        );
+    });
     register('strategyManager', (_c) => new StrategyManager(storageLayer.config));
     register('debateModeManager', (_c) => new DebateModeManagerPersistent(storageLayer));
 
@@ -595,9 +599,4 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                 ),
             }),
     );
-
-    // Wire DebateEngine to DebateSyncManager after all factories have executed.
-    const syncSvc = _container.get<DebateSyncManager>('debateService');
-    const debateEng = _container.get<DebateEngine>('debateEngine');
-    syncSvc.engine = debateEng;
 };
