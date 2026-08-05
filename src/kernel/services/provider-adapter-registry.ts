@@ -11,6 +11,8 @@ export interface ProviderRuntimeStatus {
 export class ProviderAdapterRegistry implements IAdapterRegistry {
     private factory: AdapterFactory;
     private adapters = new Map<string, IProviderAdapter>();
+    /** Event-bus subscriptions owned by the registry — cleaned up in destroy() */
+    private _unsubs: Array<() => void> = [];
 
     constructor(config?: AdapterFactoryConfig | AdapterFactory | LLMContext, ...rest: unknown[]) {
         if (config && 'logging' in config) {
@@ -127,6 +129,8 @@ export class ProviderAdapterRegistry implements IAdapterRegistry {
     }
 
     destroy(): void {
+        for (const unsub of this._unsubs) unsub();
+        this._unsubs = [];
         for (const [, adapter] of this.adapters) {
             let current: unknown = adapter;
             const seen = new Set<unknown>();

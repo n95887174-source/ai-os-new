@@ -267,9 +267,11 @@ export const AudiencePanel: React.FC = () => {
 
     const handleVote = (option: string) => {
         if (!poll) return;
-        poll.votes[option] = (poll.votes[option] || 0) + 1;
-        poll.totalVotes++;
-        setPoll({ ...poll });
+        setPoll({
+            ...poll,
+            votes: { ...poll.votes, [option]: (poll.votes[option] || 0) + 1 },
+            totalVotes: poll.totalVotes + 1,
+        });
     };
 
     const handleClosePoll = () => {
