@@ -1,5 +1,9 @@
 import type { DebateStrategy } from '../../contracts/debate-types';
 
+// Templates are defined inline for now; long-term they should live in a DB
+// with per-row versioning to support migrations and rollback.
+export const TEMPLATE_VERSION = 1;
+
 export interface DebateTemplate {
     id: string;
     name: string;
@@ -9,6 +13,7 @@ export interface DebateTemplate {
     maxRounds: number;
     debateTemperature: number;
     minAgents: number;
+    version: number;
 }
 
 export const DEBATE_TEMPLATES: DebateTemplate[] = [
@@ -22,6 +27,7 @@ export const DEBATE_TEMPLATES: DebateTemplate[] = [
         maxRounds: 4,
         debateTemperature: 0.35,
         minAgents: 3,
+        version: TEMPLATE_VERSION,
     },
     {
         id: 'adr',
@@ -32,6 +38,7 @@ export const DEBATE_TEMPLATES: DebateTemplate[] = [
         maxRounds: 5,
         debateTemperature: 0.4,
         minAgents: 4,
+        version: TEMPLATE_VERSION,
     },
     {
         id: 'post-mortem',
@@ -42,6 +49,7 @@ export const DEBATE_TEMPLATES: DebateTemplate[] = [
         maxRounds: 4,
         debateTemperature: 0.5,
         minAgents: 3,
+        version: TEMPLATE_VERSION,
     },
     {
         id: 'prompt-optimization',
@@ -52,6 +60,7 @@ export const DEBATE_TEMPLATES: DebateTemplate[] = [
         maxRounds: 3,
         debateTemperature: 0.55,
         minAgents: 3,
+        version: TEMPLATE_VERSION,
     },
 ];
 
