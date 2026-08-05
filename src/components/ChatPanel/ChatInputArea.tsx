@@ -3,43 +3,38 @@ import { Send, Square } from 'lucide-react';
 import { useKeyList } from '../../stores/useKeyStore';
 import { useChatStore } from '../../stores/useChatStore';
 import { useTranslation } from '../../i18n/useTranslation';
-import { PersonaSelector } from './PersonaSelector';
 import { VoiceButton } from './VoiceButton';
 import ProviderIcon from '../ProviderIcon/ProviderIcon';
-import { DEFAULT_MODELS, type ExecutionMode } from './chat-panel-utils';
+import { DEFAULT_MODELS } from './chat-panel-utils';
 
 interface Props {
     selectedKeys: string[];
     selectedModel: string;
-    onSend: (text: string, mode: ExecutionMode) => void;
+    selectedModelPerKey: Record<string, string>;
+    onSend: (text: string) => void;
     isSending: boolean;
     onError: (msg: string) => void;
     onKeysChange: (keys: string[]) => void;
     onModelChange: (model: string) => void;
+    onSelectedModelsChange: (models: Record<string, string>) => void;
 }
 
 const ChatInputArea: React.FC<Props> = ({
     selectedKeys,
     selectedModel: _selectedModel,
+    selectedModelPerKey,
     onSend,
     isSending,
     onError,
     onKeysChange,
     onModelChange,
+    onSelectedModelsChange,
 }) => {
     const { t } = useTranslation();
     const { activeKeys } = useKeyList();
     const cancelSending = useChatStore((s) => s.cancelSending);
 
     const [input, setInput] = useState('');
-    const [mode, setMode] = useState<ExecutionMode>('single');
-    const [selectedModelPerKey, setSelectedModelPerKey] = useState<Record<string, string>>(() => {
-        if (activeKeys.length === 0) return {};
-        return {
-            [activeKeys[0].id]:
-                activeKeys[0]?.availableModels?.[0] || DEFAULT_MODELS[activeKeys[0].provider] || '',
-        };
-    });
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
@@ -48,18 +43,18 @@ const ChatInputArea: React.FC<Props> = ({
                 const text = input.trim();
                 if (!text) return;
                 setInput('');
-                onSend(text, mode);
+                onSend(text);
             }
         },
-        [input, onSend, mode],
+        [input, onSend],
     );
 
     const handleSendClick = useCallback(() => {
         const text = input.trim();
         if (!text) return;
         setInput('');
-        onSend(text, mode);
-    }, [input, onSend, mode]);
+        onSend(text);
+    }, [input, onSend]);
 
     return (
         <div
@@ -69,46 +64,6 @@ const ChatInputArea: React.FC<Props> = ({
                 background: 'var(--bg-panel)',
             }}
         >
-            {/* Mode selector */}
-            <div
-                style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    marginBottom: '0.75rem',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                }}
-            >
-                {(['single', 'parallel', 'auto'] as ExecutionMode[]).map((m) => (
-                    <button
-                        key={m}
-                        onClick={() => setMode(m)}
-                        style={{
-                            padding: '0.3rem 0.75rem',
-                            borderRadius: 8,
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            background:
-                                mode === m ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)',
-                            border:
-                                mode === m
-                                    ? '1px solid rgba(59,130,246,0.3)'
-                                    : '1px solid var(--border)',
-                            color: mode === m ? '#3b82f6' : 'var(--text-muted)',
-                            transition: 'all 0.15s',
-                        }}
-                    >
-                        {m === 'single'
-                            ? t('chat.mode_single')
-                            : m === 'parallel'
-                              ? t('chat.mode_parallel')
-                              : t('chat.mode_auto')}
-                    </button>
-                ))}
-                <PersonaSelector />
-            </div>
-
             {/* Key pills */}
             <div
                 style={{
@@ -131,10 +86,10 @@ const ChatInputArea: React.FC<Props> = ({
                                 if (!isSelected && !selectedModelPerKey[k.id]) {
                                     const defaultModel =
                                         k.availableModels?.[0] || DEFAULT_MODELS[k.provider] || '';
-                                    setSelectedModelPerKey((prev) => ({
-                                        ...prev,
+                                    onSelectedModelsChange({
+                                        ...selectedModelPerKey,
                                         [k.id]: defaultModel,
-                                    }));
+                                    });
                                     onModelChange(defaultModel);
                                 }
                             }}
@@ -195,7 +150,10 @@ const ChatInputArea: React.FC<Props> = ({
                                     value={currentModel}
                                     onChange={(e) => {
                                         const m = e.target.value;
-                                        setSelectedModelPerKey((prev) => ({ ...prev, [k.id]: m }));
+                                        onSelectedModelsChange({
+                                            ...selectedModelPerKey,
+                                            [k.id]: m,
+                                        });
                                         onModelChange(m);
                                     }}
                                     style={{
