@@ -1,3 +1,8 @@
+/**
+ * Live debate streaming state — real-time debate session UI state
+ * (emotion tracking, live arguments, active round).
+ * Separate from activeDebateStore (session metadata) and debate-session-store (DB persistence).
+ */
 import { create } from 'zustand';
 import { eventBus } from '../kernel/events/event-bus';
 import { EVENTS } from '../kernel/events/event-names';

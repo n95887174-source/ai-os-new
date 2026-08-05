@@ -1,3 +1,7 @@
+/**
+ * Active debate session metadata — which debate is currently selected/active.
+ * Separate from debateLiveStore (streaming UI state) and debate-session-store (DB persistence).
+ */
 import { create } from 'zustand';
 import type { DebateSession } from '../kernel/contracts/debate-types';
 import type { GovernorState } from '../kernel/services/debate-runtime/debate-governor/types';
