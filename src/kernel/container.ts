@@ -44,8 +44,9 @@ export class Container implements IContainer {
     }
 
     registerFactory<T>(id: ServiceIdentifier, factory: (container: IContainer) => T): void {
+        const exists = this.factories.has(id) || this.services.has(id);
         this.factories.set(id, factory);
-        if (!this.services.has(id) && !this.factories.has(id)) {
+        if (!exists) {
             this.registrationOrder.push(id);
         }
         this.services.delete(id);
