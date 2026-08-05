@@ -32,12 +32,14 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
     const status = guardian.getStatus();
     const accentColor = ASPECT_COLORS[guardian.aspect] || '#64748b';
     const aspectLabel = t(`guardians.aspect_${guardian.aspect}`);
+    const [hovered, setHovered] = useState(false);
+    const isHovered = hovered && status.active;
 
     return (
         <div
             style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${status.active ? `${accentColor}33` : 'rgba(255,255,255,0.06)'}`,
+                background: isHovered ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${status.active ? (isHovered ? `${accentColor}66` : `${accentColor}33`) : 'rgba(255,255,255,0.06)'}`,
                 borderRadius: 16,
                 padding: '1.25rem',
                 display: 'flex',
@@ -46,16 +48,8 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
                 transition: 'all 0.2s',
                 opacity: status.active ? 1 : 0.5,
             }}
-            onMouseEnter={(e) => {
-                if (status.active) {
-                    e.currentTarget.style.borderColor = `${accentColor}66`;
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                }
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = `${accentColor}33`;
-                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div

@@ -15,7 +15,6 @@ const CATEGORIES: PersonaCategory[] = [
 
 const PersonaMarketplacePanelContent: React.FC = () => {
     const [listings, setListings] = useState(() => personaMarketplaceService.getListings());
-    const [, setInstalled] = useState(() => personaMarketplaceService.getInstalled());
     const [filter, setFilter] = useState<PersonaCategory | ''>('');
     const [search, setSearch] = useState('');
 
@@ -25,7 +24,6 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                 ? personaMarketplaceService.getListings(filter as PersonaCategory)
                 : personaMarketplaceService.getListings(),
         );
-        setInstalled(personaMarketplaceService.getInstalled());
     };
 
     const handleSearch = (q: string) => {

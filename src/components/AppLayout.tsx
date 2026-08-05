@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-// Route transitions use CSS animation instead of framer-motion to keep ~50KB gzip off the critical path
+// Route transitions use CSS animation instead of framer-motion to keep ~50KB gzip off the critical path.
+// TODO: CommandPalette and OnboardingWizard still synchronously import framer-motion (via their own imports).
+// To fully remove framer-motion from the critical path, split useCommandPalette into a separate file
+// (e.g. hooks/useCommandPalette.ts), then wrap CommandPalette and OnboardingWizard with React.lazy + Suspense.
 import { History, Search, Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { AppRoutes } from '../routes';

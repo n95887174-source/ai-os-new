@@ -15,6 +15,81 @@ import { Skeleton } from '../Common/Skeleton';
 import { workspaceService } from '../../kernel/instances';
 import type { FileNode } from '../../kernel/contracts/workspace';
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const BINARY_EXTENSIONS = new Set([
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+    'bmp',
+    'ico',
+    'webp',
+    'svg',
+    'tiff',
+    'tif',
+    'mp3',
+    'mp4',
+    'wav',
+    'ogg',
+    'flac',
+    'aac',
+    'wma',
+    'm4a',
+    'zip',
+    'gz',
+    'tar',
+    'bz2',
+    '7z',
+    'rar',
+    'xz',
+    'zst',
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'ppt',
+    'pptx',
+    'exe',
+    'dll',
+    'so',
+    'dylib',
+    'bin',
+    'dat',
+    'woff',
+    'woff2',
+    'ttf',
+    'otf',
+    'eot',
+    'avi',
+    'mov',
+    'mkv',
+    'wmv',
+    'flv',
+    'webm',
+    'm4v',
+    'sqlite',
+    'db',
+    'sqlite3',
+]);
+
+function isBinaryFile(filePath: string): boolean {
+    const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+    return BINARY_EXTENSIONS.has(ext);
+}
+
+function findFileNode(nodes: FileNode[], path: string): FileNode | null {
+    for (const node of nodes) {
+        if (node.path === path) return node;
+        if (node.children) {
+            const found = findFileNode(node.children, path);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
 const WorkspacePanel: React.FC = () => {
     const { t } = useTranslation();
     const [attached, setAttached] = useState(() => {
@@ -91,6 +166,17 @@ const WorkspacePanel: React.FC = () => {
         setPreviewError(null);
         setPreviewContent(null);
         try {
+            if (isBinaryFile(path)) {
+                setPreviewError('Binary file — preview not available.');
+                return;
+            }
+            const node = findFileNode(tree, path);
+            if (node?.size != null && node.size > MAX_FILE_SIZE) {
+                setPreviewError(
+                    `File too large (${formatSize(node.size)}). Maximum preview size is ${formatSize(MAX_FILE_SIZE)}.`,
+                );
+                return;
+            }
             const content = await workspaceService.readFile(path);
             setPreviewContent(content);
         } catch (e) {

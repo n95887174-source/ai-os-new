@@ -16,6 +16,7 @@ export function GoogleStudioPanel() {
     const [configError, setConfigError] = useState('');
     const [activeTab, setActiveTab] = useState<TabId>('chat');
     const [model, setModel] = useState('gemini-3.1-flash-lite');
+    const [apiKey, setApiKey] = useState('');
 
     useEffect(() => {
         let cancelled = false;
@@ -114,9 +115,10 @@ export function GoogleStudioPanel() {
                     </p>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <input
-                            id="gs-api-key"
                             type="password"
                             placeholder="AIza..."
+                            value={apiKey}
+                            onChange={(e) => setApiKey(e.target.value)}
                             style={{
                                 flex: 1,
                                 padding: '10px 14px',
@@ -129,11 +131,8 @@ export function GoogleStudioPanel() {
                         />
                         <button
                             onClick={() => {
-                                const el = document.getElementById(
-                                    'gs-api-key',
-                                ) as HTMLInputElement;
-                                if (el?.value?.trim()) {
-                                    googleGenAIService.setApiKey(el.value.trim());
+                                if (apiKey.trim()) {
+                                    googleGenAIService.setApiKey(apiKey.trim());
                                     setConfigured(true);
                                     setConfigError('');
                                 }
