@@ -226,12 +226,28 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
         });
     };
 
+    const sandboxEnabled = import.meta.env.VITE_SANDBOX_ENABLED === 'true';
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}
         >
+            {sandboxEnabled && (
+                <div
+                    style={{
+                        background: '#fef3c7',
+                        border: '1px solid #f59e0b',
+                        padding: '8px 12px',
+                        borderRadius: 6,
+                        marginBottom: 12,
+                        fontSize: 13,
+                    }}
+                >
+                    ⚠️ Sandbox mode is enabled. Code execution is restricted but CSP is weakened.
+                </div>
+            )}
             <div
                 style={{
                     display: 'flex',

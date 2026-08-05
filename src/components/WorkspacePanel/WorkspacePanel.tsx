@@ -1,3 +1,11 @@
+/**
+ * WorkspacePanel — File explorer and workspace browser.
+ *
+ * Allows attaching a local directory and browsing its file tree, searching
+ * by filename, and previewing text file content. Agents use this panel to
+ * read project files during chats and debates. Binary files and files over
+ * 5 MB are excluded from preview.
+ */
 import React, { useState, useCallback } from 'react';
 import {
     FolderOpen,

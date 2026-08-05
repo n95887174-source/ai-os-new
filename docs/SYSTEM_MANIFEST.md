@@ -1,71 +1,33 @@
-# SuperAgents OS — System Manifest
+# SuperAgents OS — System Manifest (Quick Reference)
 
-> **Version 4.5.0 (Multi-Agent Dialectic Arena · 25 Workforce · Metrics Layer)**
+> **Version 4.5.0** — Multi-Agent Dialectic Arena · 25 Workforce · Metrics Layer
 
-## 1. Architectural Reality
+## Architecture Stack
 
-SuperAgents OS — это **интегрированная среда выполнения** для распределенного интеллекта. В отличие от простых чат-ботов, система отделяет логику рассуждений (Reasoning) от исполнения (Execution), используя событийную модель на базе единой шины данных.
+- **Runtime**: Event-Driven Multi-Agent Orchestrator
+- **Kernel**: Reducer-pattern state machine with deep immutable state
+- **Consistency**: Transaction boundary (`ITransaction`) for atomic multi-mutation commits
+- **Lifecycle**: Standardized `ILifecycle` (init→start→destroy) via LifecycleManager
+- **Observability**: Structured `ILogger` with TraceContext span propagation
+- **Persistence**: Dexie.js (Transactional IndexedDB)
+- **Search**: Orama (BM25, Web Worker) + Transformers.js (Semantic embeddings, Web Worker)
+- **Execution**: Isolated WebWorker Sandboxing via Capability API
+- **Coordination**: Blackboard Pattern (Shared State)
+- **Protocol**: MCP (Model Context Protocol)
 
-## 2. Рабочие столпы системы
+## Key Metrics
 
-### 2.1 Event-Driven Core
+- **TypeScript**: 0 errors
+- **Build**: Successful in ~4s
+- **All kernel runtime errors**: fixed
 
-Все действия в системе — от ввода пользователя до ответа модели — это события.
-
-- **Observable:** Каждый шаг записывается в `Cognitive Traces`.
-- **Reactive:** Сервисы (Memory, Advisor, Metrics) реагируют на события автономно.
-
-### 2.2 Decision-Centric Runtime
-
-Система фокусируется на **прозрачности решений**. Через `OrchestrationService` и `Kernel` мы видим:
-
-- Какой провайдер был выбран и почему (Reputation/Latency).
-- Какие альтернативные пути были в графе выполнения.
-
-### 2.3 Programmable Intelligence (DSL)
-
-Внедрен **Intelligence DSL**, позволяющий описывать когнитивные процессы как направленные графы (DAG).
-
-- **Visual Builder:** Интерактивная среда для рисования топологий (агенты, роутеры, инструменты).
-- **Hot Swap:** Изменения в топологии применяются без перезагрузки системы.
-
-## Architecture Stack (v4.5.0)
-
-- **Runtime**: Event-Driven Multi-Agent Orchestrator.
-- **Kernel Pattern**: Reducer-pattern state machine with deep immutable state.
-- **Consistency**: Transaction boundary (`ITransaction`) for atomic multi-mutation commits with deferred persistence/emission.
-- **Lifecycle**: Standardized `ILifecycle` (init→start→destroy) via LifecycleManager with LIFO shutdown.
-- **Observability**: Structured `ILogger` contract with `LoggerService` buffering and TraceContext span propagation.
-- **Persistence**: Dexie.js (Transactional IndexedDB) — memories, sessions, keys, traces, roles, skills, connectors.
-- **Search**: Orama (Full-text BM25, Web Worker) + Transformers.js (Semantic embeddings, Web Worker).
-- **Execution**: Isolated WebWorker Sandboxing via Capability API.
-- **Coordination**: Blackboard Pattern (Shared State).
-- **Protocol**: MCP (Model Context Protocol).
-
-## 4. Тестирование (v4.5.0)
-
-- **TypeScript**: 0 errors (`npx tsc --noEmit`).
-- **Build**: Successful in ~4s (`npx vite build`).
-- **All kernel runtime errors**: fixed (race conditions, timers, lifecycle, state persistence).
-
-## 5. Kernel Hardening (v4.5.0)
-
-Ядро системы (`src/kernel/kernel.ts`) реализует защиту в глубину:
-
-### Deep Immutable State
+## Kernel Hardening
 
 - `getState()` → `deepFreeze(structuredClone(state))` — recursive freeze
-- Nested mutation (`state.weights.base.ttft = 999`) is impossible on returned reference
-- Internal mutations still allowed (reducer pattern accesses private `this.state`)
-
-### Init Validation
-
-- `validateState()` — per-field fallback (weights, decisions, SLA, etc.)
-- Version check (`data.version !== '2.1.0-safety'`) → defaults on mismatch
-- DB timeout via `Promise.race(getKv(), timeout(5s))`
+- `validateState()` — per-field fallback with version check
 - `setBaseWeights()` — clamp [0,1], NaN guard, sum>0 guard
-- `setSLAMode()` — whitelist validation against `VALID_SLA_MODES`
+- `setSLAMode()` — whitelist validation
 
 ---
 
-**Актуальный манифест системы SuperAgents OS.**
+_For the detailed deep-dive (philosophy, concepts, architecture diagrams, visual paradigms, maturity), see [SYSTEM_PASSPORT.md](./SYSTEM_PASSPORT.md)._

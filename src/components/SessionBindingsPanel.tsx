@@ -1,3 +1,11 @@
+/**
+ * SessionBindingsPanel — Displays session-to-API-key affinity bindings.
+ *
+ * Shows a live-updating table of which API keys are bound to which sessions,
+ * including provider name, key status (ready/limited/degraded/broken),
+ * pending eviction flags, and binding age. Used for monitoring key
+ * utilization and debugging session affinity issues.
+ */
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n/useTranslation';
 import { useNow } from '../hooks/useNow';

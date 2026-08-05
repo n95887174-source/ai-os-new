@@ -1,6 +1,7 @@
 # 🪪 SuperAgents OS — Digital System Passport
 
-> **"Identity + Architecture + Runtime Manifest"**
+> **Detailed Deep-Dive** — Identity, Architecture, Runtime Manifest  
+> _For the concise quick reference, see [SYSTEM_MANIFEST.md](./SYSTEM_MANIFEST.md)._
 
 ## 1. Identity Layer
 

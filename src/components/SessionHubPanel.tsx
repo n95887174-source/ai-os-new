@@ -1,3 +1,11 @@
+/**
+ * SessionHubPanel — Central hub for managing chat and debate sessions.
+ *
+ * Displays a searchable, filterable grid of all active and archived sessions.
+ * Supports opening, renaming, pinning, and deleting sessions via card clicks
+ * or right-click context menus. Shows linked session counts and metadata
+ * previews for quick navigation.
+ */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../stores/chat/store';

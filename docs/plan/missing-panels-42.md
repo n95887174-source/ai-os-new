@@ -1,3 +1,10 @@
+<!--
+  HISTORICAL REFERENCE — this plan is retained for context only.
+  Of the 32 panels listed below (16 P0 + 16 P1), all were built as demo
+  scaffolds during initial development, not as production-grade
+  implementations. The remaining 10 services were correctly skipped.
+-->
+
 # Missing UI Panels — 42 Services
 
 ## Legend

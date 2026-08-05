@@ -66,7 +66,7 @@ RUN VITE_BASE_PATH=$VITE_BASE_PATH \
 # nginx-unprivileged listens on 8080 by default; docker-compose maps
 # it to host ports 80/443.  Running as non-root avoids the bind-to-80
 # permission issue that broke the previous Dockerfile.
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.28-alpine
 
 ARG NGINX_CONFIG=nginx.conf
 COPY --from=build /app/dist /usr/share/nginx/html
