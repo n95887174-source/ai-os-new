@@ -30,7 +30,7 @@
 | A2  | Phase 3: eager singletons в "lazy" registration     | audit2/01      | `phase3-debate-runtime.ts` | M      | ✅ (10 services converted to lazy factories)                               |
 | A3  | lazyService: агрессивный throw при раннем bootstrap | audit2/01      | `instances.ts`             | M      | ⏭️ skip (by design)                                                        |
 | A4  | ServiceRegistryPanel 1391 строк — split             | audit2/main    | `ServiceRegistryPanel/`    | L      | ✅ (already split: 421 + 196 + 168 + 148 + 67 lines across sub-components) |
-| A5  | `noUncheckedIndexedAccess` missing from tsconfig    | audit2/03      | `tsconfig.app.json`        | S      | ✅ (documented)                                                            |
+| A5  | `noUncheckedIndexedAccess` missing from tsconfig    | audit2/03      | `tsconfig.app.json`        | S      | ✅ (enabled + fixed all 666 type errors across 282 files)                  |
 | A6  | 3 debate stores: нет документации разделения        | eng-handbook/B | stores/                    | S      | ✅                                                                         |
 | A7  | Debate templates: hardcoded, нет DB versioning      | eng-handbook/B | `debate-archetypes.ts`     | M      | ✅ (added version field + TEMPLATE_VERSION constant)                       |
 
@@ -88,4 +88,3 @@
 ### Skip reasons
 
 - A3 (lazyService throw): intentional design — services register before bootstrap
-- A5 (noUncheckedIndexedAccess): documented, would cause 200+ type errors — deferred to dedicated cleanup
