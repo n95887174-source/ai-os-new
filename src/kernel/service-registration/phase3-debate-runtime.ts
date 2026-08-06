@@ -264,6 +264,8 @@ export const registerPhase3: Phase = (helpers, ctx) => {
                 experimentEngine: c.get<ExperimentEngine>('experimentEngine'),
             }),
         );
+        // Wire DebateEngine → DebateSyncManager (lazy: resolved on first container.get)
+        syncManager.engine = c.get<DebateEngine>('debateEngine');
         return syncManager;
     });
 
