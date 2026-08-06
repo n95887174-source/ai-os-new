@@ -222,7 +222,7 @@ Focus on actionable, specific improvements.`;
                     ...PROVIDER_DEFAULT_MODELS,
                     gemini: 'gemini-3.1-flash-lite',
                     groq: 'llama-3.3-70b-versatile',
-                    openrouter: PROVIDER_DEFAULT_MODELS.openrouter,
+                    openrouter: PROVIDER_DEFAULT_MODELS.openrouter!,
                     nvidia: 'meta/llama-3.3-70b-instruct',
                     deepseek: 'deepseek-chat',
                     cohere: 'command-r-plus',

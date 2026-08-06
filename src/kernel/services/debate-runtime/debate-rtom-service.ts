@@ -92,10 +92,10 @@ export class RToMGraphService implements IRToMGraphService {
             );
             if (existingIdx >= 0) {
                 this.edges[existingIdx] = {
-                    ...this.edges[existingIdx],
+                    ...this.edges[existingIdx]!,
                     inferredStance: stance,
-                    confidence: Math.min(1, this.edges[existingIdx].confidence + confidence * 0.3),
-                    basedOnRounds: [...this.edges[existingIdx].basedOnRounds, round],
+                    confidence: Math.min(1, this.edges[existingIdx]!.confidence + confidence * 0.3),
+                    basedOnRounds: [...this.edges[existingIdx]!.basedOnRounds, round],
                 };
             } else {
                 this.edges.push({

@@ -178,7 +178,7 @@ export class StanceDriftTracker implements IStanceDriftTracker {
         const goalpostEvents = recentEvents.filter((e) => e.driftType === 'goalpost_shift');
         if (goalpostEvents.length === 0) return undefined;
 
-        const e = goalpostEvents[0];
+        const e = goalpostEvents[0]!;
         if (language.startsWith('ru')) {
             return `### Сдвиг позиции оппонента\n${e.agentName} значительно изменил свою позицию между раундом ${e.fromRound} и раундом ${e.round} без объяснения причин. Вы можете указать на это: "Ранее вы утверждали иное — почему вы изменили позицию?"`;
         }

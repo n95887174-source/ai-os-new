@@ -52,13 +52,13 @@ export class BeliefMiningService implements IBeliefMiningService {
         const agentIds = Array.from(byAgent.keys());
         for (let i = 0; i < agentIds.length; i++) {
             for (let j = i + 1; j < agentIds.length; j++) {
-                const aBeliefs = byAgent.get(agentIds[i])!;
-                const bBeliefs = byAgent.get(agentIds[j])!;
+                const aBeliefs = byAgent.get(agentIds[i]!)!;
+                const bBeliefs = byAgent.get(agentIds[j]!)!;
 
                 const pairConflicts = this._findConflictsBetween(
-                    agentIds[i],
+                    agentIds[i]!,
                     aBeliefs,
-                    agentIds[j],
+                    agentIds[j]!,
                     bBeliefs,
                 );
                 conflicts.push(...pairConflicts);

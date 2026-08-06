@@ -6,7 +6,7 @@ export function typeColor(type: string): string {
 
 export function groupByType(findings: ArchFinding[]): Record<string, ArchFinding[]> {
     const groups: Record<string, ArchFinding[]> = { error: [], warning: [], info: [] };
-    for (const f of findings) groups[f.type].push(f);
+    for (const f of findings) groups[f.type]!.push(f);
     return groups;
 }
 

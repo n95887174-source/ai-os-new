@@ -103,7 +103,7 @@ export class AdversarialSourceService implements IAdversarialSourceService {
 
     private _extractTextFromHtml(html: string): string {
         const body = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-        const content = body ? body[1] : html;
+        const content = body ? body[1]! : html;
         const stripped = content
             .replace(/<script[\s\S]*?<\/script>/gi, '')
             .replace(/<style[\s\S]*?<\/style>/gi, '')

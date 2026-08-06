@@ -199,7 +199,7 @@ export const DebatesManagerPanel: React.FC = () => {
             if (!map[g]) map[g] = [];
             map[g].push(s);
         }
-        for (const k of Object.keys(map)) map[k].sort((a, b) => b.updatedAt - a.updatedAt);
+        for (const k of Object.keys(map)) map[k]!.sort((a, b) => b.updatedAt - a.updatedAt);
         return map;
     }, [filtered]);
 
@@ -308,9 +308,9 @@ export const DebatesManagerPanel: React.FC = () => {
                                         fontWeight: 600,
                                     }}
                                 >
-                                    {group} ({grouped[group].length})
+                                    {group} ({grouped[group]!.length})
                                 </div>
-                                {grouped[group].map((s) => (
+                                {grouped[group]!.map((s) => (
                                     <div
                                         key={s.id}
                                         style={

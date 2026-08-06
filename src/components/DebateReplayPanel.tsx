@@ -97,7 +97,9 @@ const DebateReplayPanel: React.FC = () => {
     const totalEvents = timeline.length;
     const progress = totalEvents > 0 ? ((currentIndex + 1) / totalEvents) * 100 : 0;
     const currentEvent =
-        currentIndex >= 0 && currentIndex < timeline.length ? timeline[currentIndex] : null;
+        currentIndex >= 0 && currentIndex < timeline.length
+            ? (timeline[currentIndex] ?? null)
+            : null;
 
     const visibleEvents = useMemo(() => {
         if (!selectedId || currentIndex < 0) return [];
@@ -110,7 +112,7 @@ const DebateReplayPanel: React.FC = () => {
             ts: string;
         }> = [];
         for (let i = 0; i <= Math.min(currentIndex, timeline.length - 1); i++) {
-            const e = timeline[i];
+            const e = timeline[i]!;
             const ts = new Date(e.timestamp).toLocaleTimeString();
             if (e.type === 'round:start' && e.payload) {
                 const p = e.payload as { round: number };
@@ -189,8 +191,8 @@ const DebateReplayPanel: React.FC = () => {
     const currentRoundLabel = useMemo(() => {
         if (currentIndex < 0 || !currentEvent) return '—';
         for (let i = Math.min(currentIndex, timeline.length - 1); i >= 0; i--) {
-            if (timeline[i].type === 'round:start') {
-                const r = (timeline[i].payload as { round: number }).round ?? 1;
+            if (timeline[i]!.type === 'round:start') {
+                const r = (timeline[i]!.payload as { round: number }).round ?? 1;
                 return `Round ${r}`;
             }
         }

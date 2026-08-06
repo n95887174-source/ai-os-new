@@ -92,7 +92,7 @@ export class EvalDatasetService implements IEvalDatasetService {
                 const idx = datasets.findIndex((d) => d.id === id);
                 if (idx < 0) throw new Error(`Dataset ${id} not found`);
                 const updated = [...datasets];
-                updated[idx] = { ...updated[idx], ...updates, updatedAt: Date.now() };
+                updated[idx] = { ...updated[idx]!, ...updates, updatedAt: Date.now() };
                 return updated;
             });
         });
@@ -122,7 +122,7 @@ export class EvalDatasetService implements IEvalDatasetService {
 
             const results: EvalRunResult[] = [];
             for (let i = 0; i < dataset.prompts.length; i++) {
-                const prompt = dataset.prompts[i];
+                const prompt = dataset.prompts[i]!;
                 const start = Date.now();
                 try {
                     const response = await adapter.sendMessage(
@@ -189,11 +189,12 @@ export class EvalDatasetService implements IEvalDatasetService {
                 const idx = datasets.findIndex((d: EvalDataset) => d.id === datasetId);
                 if (idx < 0) return datasets;
                 const updated = [...datasets];
-                updated[idx] = { ...updated[idx], runs: [...updated[idx].runs, run] };
-                if (updated[idx].runs.length > 50) {
-                    updated[idx].runs = updated[idx].runs.slice(-50);
+                const existing = updated[idx]!;
+                updated[idx] = { ...existing, runs: [...existing.runs, run] };
+                if (updated[idx]!.runs.length > 50) {
+                    updated[idx]!.runs = updated[idx]!.runs.slice(-50);
                 }
-                updated[idx].updatedAt = Date.now();
+                updated[idx]!.updatedAt = Date.now();
                 return updated;
             });
 

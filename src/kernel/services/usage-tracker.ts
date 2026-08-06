@@ -111,8 +111,8 @@ export class UsageTracker implements IUsageTracker {
             if (!byProvider[r.provider]) {
                 byProvider[r.provider] = { tokens: 0, cost: 0 };
             }
-            byProvider[r.provider].tokens += r.tokens;
-            byProvider[r.provider].cost += r.cost;
+            byProvider[r.provider]!.tokens += r.tokens;
+            byProvider[r.provider]!.cost += r.cost;
         }
 
         return { totalTokens, totalCost, byProvider };

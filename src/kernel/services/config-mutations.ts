@@ -54,11 +54,11 @@ export function setFeatureFlag(path: string, enabled: boolean): void {
     const parts = path.replace(/^featureFlags\./, '').split('.');
     let target: Record<string, unknown> = section as unknown as Record<string, unknown>;
     for (let i = 0; i < parts.length - 1; i++) {
-        const next = target[parts[i]];
+        const next = target[parts[i]!];
         if (!next || typeof next !== 'object') return;
         target = next as Record<string, unknown>;
     }
-    const flagKey = parts[parts.length - 1];
+    const flagKey = parts[parts.length - 1]!;
     if (target[flagKey] === enabled) return;
     target[flagKey] = enabled;
     setConfig('featureFlags', section);

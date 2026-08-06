@@ -180,7 +180,7 @@ const AquariumPanel: React.FC = () => {
                                 );
                                 aquariumScreenshotsService.exportAsFile(ss.id);
                             } catch (e) {
-                                LOGGER.warn('Screenshot failed', e);
+                                LOGGER.warn('Screenshot failed', String(e));
                             }
                         }}
                         className="aquarium-feed-btn"
@@ -555,7 +555,7 @@ const AquariumPanel: React.FC = () => {
                                                     selectedKeyData.status === 'active'
                                                         ? providerColors[
                                                               selectedKeyData.provider.toLowerCase()
-                                                          ]
+                                                          ]!
                                                         : '#64748b'
                                                 }
                                                 energy={

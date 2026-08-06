@@ -103,17 +103,20 @@ const CausalDebugger: React.FC = () => {
             const report = truthConsistencyMonitor?.check(kState.providers, keyMap);
             setConsistencyReport(report ?? null);
             if (report && (report.status === 'DRIFT' || report.status === 'CRITICAL')) {
-                LOGGER.warn('Consistency drift detected', {
-                    status: report.status,
-                    driftScore: report.driftScore,
-                    mismatchCount: report.mismatches.length,
-                    criticalCount: report.mismatches.filter((m) => m.severity === 'critical')
-                        .length,
-                });
+                LOGGER.warn(
+                    'Consistency drift detected',
+                    JSON.stringify({
+                        status: report.status,
+                        driftScore: report.driftScore,
+                        mismatchCount: report.mismatches.length,
+                        criticalCount: report.mismatches.filter((m) => m.severity === 'critical')
+                            .length,
+                    }),
+                );
             }
         } catch (e) {
             setConsistencyReport(null);
-            LOGGER.warn('Consistency check failed', e);
+            LOGGER.warn('Consistency check failed', String(e));
         }
     }, []);
 

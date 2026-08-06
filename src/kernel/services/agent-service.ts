@@ -674,7 +674,7 @@ export class AgentService {
                 ),
             );
             const results: string[] = outputs.map((r, i) =>
-                r.status === 'fulfilled' ? r.value : `[${nodes[i].label}] error`,
+                r.status === 'fulfilled' ? r.value : `[${nodes[i]!.label}] error`,
             );
             if (pattern === 'consensus') {
                 const threshold = group.consensusThreshold || 0.5;
@@ -691,7 +691,7 @@ export class AgentService {
             ),
         );
         return results.map((r, i) =>
-            r.status === 'fulfilled' ? r.value : `[${nodes[i].label}] error`,
+            r.status === 'fulfilled' ? r.value : `[${nodes[i]!.label}] error`,
         );
     }
 

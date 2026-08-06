@@ -64,7 +64,7 @@ export default function GroqSpeedDashboard() {
         const tpsValues = newRecords.map((r) => r.tokensPerSec);
         const ttftValues = newRecords.map((r) => r.ttft);
         if (tpsValues.length) {
-            setCurrentTps(tpsValues[tpsValues.length - 1]);
+            setCurrentTps(tpsValues[tpsValues.length - 1]!);
             setAvgTtft(ttftValues.reduce((a, b) => a + b, 0) / ttftValues.length);
         }
     }, []);
@@ -179,7 +179,7 @@ export default function GroqSpeedDashboard() {
                         groqAchievements: providerAchievementService
                             .getAwardedIds()
                             .filter(
-                                (id) => id.startsWith('pa-') && parseInt(id.split('-')[1]) <= 15,
+                                (id) => id.startsWith('pa-') && parseInt(id.split('-')[1]!) <= 15,
                             ).length,
                     })}
                 />

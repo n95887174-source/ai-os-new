@@ -99,7 +99,7 @@ const AgentConfigTab: React.FC<Props> = ({
                             );
                             if (idx > 0 && idx <= suggestions.length) {
                                 onUpdateAgent(agent.id, {
-                                    prompt: suggestions[idx - 1].apply(agent.systemPrompt),
+                                    prompt: suggestions[idx - 1]!.apply(agent.systemPrompt),
                                 });
                             }
                         }}

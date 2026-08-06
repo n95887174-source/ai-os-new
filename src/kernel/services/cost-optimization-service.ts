@@ -89,7 +89,8 @@ export async function getRecommendations(): Promise<CostRecommendation[]> {
     const allPrices = _pricing.getAllPrices();
     for (const [model, price] of Object.entries(allPrices)) {
         const cheaper = CHEAPER_MAP[model];
-        if (!cheaper) continue;
+        if (!cheaper || cheaper.length === 0) continue;
+        const alt = cheaper[0]!;
         const provider = (price.provider || '').toLowerCase();
         if (!provider || seenProvider.has(provider) || _dismissed.has(`alt-${provider}`)) continue;
         const ranking = rankings.find((r) => r.provider.toLowerCase() === provider);
@@ -98,14 +99,14 @@ export async function getRecommendations(): Promise<CostRecommendation[]> {
         recs.push({
             id: `cost-opt-${++id}`,
             type: 'cheaper_alternative',
-            title: `Switch from ${model} to ${cheaper[0].model}`,
-            description: `${provider} costs $${ranking.costPerRequest.toFixed(4)}/req via ${model}. ${cheaper[0].model} on ${cheaper[0].provider} costs significantly less (${cheaper[0].savings}).`,
+            title: `Switch from ${model} to ${alt.model}`,
+            description: `${provider} costs $${ranking.costPerRequest.toFixed(4)}/req via ${model}. ${alt.model} on ${alt.provider} costs significantly less (${alt.savings}).`,
             potentialSavings: ranking.costPerRequest * ranking.requests * 0.8,
             provider,
-            suggestedModel: cheaper[0].model,
-            suggestedProvider: cheaper[0].provider,
+            suggestedModel: alt.model,
+            suggestedProvider: alt.provider,
             severity: ranking.costPerRequest > 0.01 ? 'high' : 'medium',
-            action: `Consider switching from ${model} to ${cheaper[0].model} on ${cheaper[0].provider}.`,
+            action: `Consider switching from ${model} to ${alt.model} on ${alt.provider}.`,
         });
     }
 
@@ -114,8 +115,8 @@ export async function getRecommendations(): Promise<CostRecommendation[]> {
         .filter((r) => r.requests > 5)
         .sort((a, b) => b.costPerRequest - a.costPerRequest);
     if (sorted.length >= 2) {
-        const expensive = sorted[0];
-        const cheap = sorted[sorted.length - 1];
+        const expensive = sorted[0]!;
+        const cheap = sorted[sorted.length - 1]!;
         if (
             expensive.costPerRequest > cheap.costPerRequest * 3 &&
             !_dismissed.has(`over-${expensive.provider}`)

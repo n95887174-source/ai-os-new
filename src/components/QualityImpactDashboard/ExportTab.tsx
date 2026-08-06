@@ -26,7 +26,7 @@ const ExportTab: React.FC = () => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) {
-            LOGGER.warn('Export JSON failed', e);
+            LOGGER.warn('Export JSON failed', String(e));
         }
         setExporting(null);
     }, []);
@@ -51,7 +51,7 @@ const ExportTab: React.FC = () => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) {
-            LOGGER.warn('Export CSV failed', e);
+            LOGGER.warn('Export CSV failed', String(e));
         }
         setExporting(null);
     }, []);

@@ -286,7 +286,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, t
                         {grouped ? (
                             <div>
                                 <SectionHeader label={t('palette.recent')} />
-                                {grouped[0].items.map((item, idx) => (
+                                {grouped[0]!.items.map((item, idx) => (
                                     <PaletteRow
                                         key={item.id}
                                         item={item}

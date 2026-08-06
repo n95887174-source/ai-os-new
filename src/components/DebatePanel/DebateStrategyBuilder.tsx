@@ -43,8 +43,8 @@ const DebateStrategyBuilder: React.FC = () => {
     const duplicatePrimitive = useCallback((index: number) => {
         setPrimitives((prev) => {
             const c = {
-                ...clonePrimitive(prev[index]),
-                id: `${prev[index].type}-${Date.now()}`,
+                ...clonePrimitive(prev[index]!),
+                id: `${prev[index]!.type}-${Date.now()}`,
             } as StrategyPrimitive;
             return [...prev.slice(0, index + 1), c, ...prev.slice(index + 1)];
         });
@@ -56,7 +56,7 @@ const DebateStrategyBuilder: React.FC = () => {
             if (target < 0 || target >= primitives.length) return;
             setPrimitives((prev) => {
                 const c = [...prev];
-                [c[index], c[target]] = [c[target], c[index]];
+                [c[index]!, c[target]!] = [c[target]!, c[index]!];
                 return c;
             });
             setSelectedIndex(target);
@@ -79,7 +79,7 @@ const DebateStrategyBuilder: React.FC = () => {
     const buildStrategy = useCallback((): StrategyDefinition => {
         const root =
             primitives.length === 1
-                ? primitives[0]
+                ? primitives[0]!
                 : {
                       type: 'sequence' as const,
                       id: 'custom-root',

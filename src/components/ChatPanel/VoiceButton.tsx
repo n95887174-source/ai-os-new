@@ -82,7 +82,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
             };
             let finalTranscript = '';
             for (let i = e.resultIndex; i < e.results.length; i++) {
-                if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+                if (e.results[i]!.isFinal) finalTranscript += e.results[i]![0]!.transcript;
             }
             if (finalTranscript) onTranscriptRef.current(finalTranscript.trim());
         };
@@ -109,7 +109,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
                 'audio-capture': 'Microphone not found or busy.',
             };
             if (messages[err.error] && onErrorRef.current) {
-                onErrorRef.current(messages[err.error]);
+                onErrorRef.current(messages[err.error]!);
             }
         };
 

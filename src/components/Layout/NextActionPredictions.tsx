@@ -158,7 +158,7 @@ export const NextActionPredictions: React.FC = () => {
         setVisible(true);
     }, [routeSegment]);
 
-    const filtered = predictions.filter((p) => !dismissed.has(p.id));
+    const filtered = predictions!.filter((p) => !dismissed.has(p.id));
     if (!visible || filtered.length === 0) return null;
 
     return (

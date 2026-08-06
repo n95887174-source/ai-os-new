@@ -306,7 +306,7 @@ export class DeployService implements IDeployService {
                 return;
             }
 
-            const stage = stages[stageIndex];
+            const stage = stages[stageIndex]!;
             dep.status = stage.status;
             dep.progress = stage.progress;
             dep.logs.push({ timestamp: Date.now(), level: 'info', message: stage.msg });

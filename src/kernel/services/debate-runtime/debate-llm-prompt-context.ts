@@ -212,7 +212,7 @@ export async function buildDebateSystemContent(
                 LOGGER.debug('DebateLlmCaller', 'Belief conflicts found', {
                     count: beliefConflicts.length,
                     sessionId,
-                    topSeverity: beliefConflicts[0].severity.toFixed(2),
+                    topSeverity: beliefConflicts[0]!.severity.toFixed(2),
                 });
             }
         } catch (e) {
@@ -328,8 +328,8 @@ export async function buildDebateSystemContent(
                     const result = deps.consistencyService.checkConsistency(
                         participant.agentId,
                         currentName,
-                        ownArgs[i + 1].content,
-                        ownArgs[i + 1].round,
+                        ownArgs[i + 1]!.content,
+                        ownArgs[i + 1]!.round,
                         sub.map((a) => ({
                             id: a.id,
                             agentId: a.agentId,
@@ -864,7 +864,7 @@ export async function buildDebateSystemContent(
               const idx = Math.abs(
                   (participant.agentId.length + session.round * 11) % others.length,
               );
-              return others[idx % others.length].name;
+              return others[idx % others.length]!.name;
           })()
         : undefined;
 
@@ -898,7 +898,7 @@ export async function buildDebateSystemContent(
             const allyIdx = Math.abs(
                 (participant.agentId.charCodeAt(1) + session.round) % allies.length,
             );
-            const ally = allies[allyIdx % allies.length];
+            const ally = allies[allyIdx % allies.length]!;
             whisperText = `Your ally ${ally.name} shares your position and is preparing to reinforce your arguments. Coordinate your approach: let them handle the evidentiary support while you focus on the principled case. Trust their judgment on factual matters.`;
         }
     }
@@ -1098,7 +1098,7 @@ export async function buildDebateSystemContent(
     let hiddenIncentivesText: string | undefined;
     if (isQ('hidden-incentives') && deps.incentiveDetector && previousArguments.length > 0) {
         try {
-            const lastArg = previousArguments[previousArguments.length - 1];
+            const lastArg = previousArguments[previousArguments.length - 1]!;
             const analysis = deps.incentiveDetector.analyze(
                 lastArg.agentId,
                 lastArg.agentName,

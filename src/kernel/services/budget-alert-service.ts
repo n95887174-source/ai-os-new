@@ -127,7 +127,7 @@ export class BudgetAlertService implements IBudgetAlertService {
             if (rule.condition === 'trending_up' || rule.condition === 'trending_down') {
                 const isUp = costTrend.direction === 'up';
                 const isDown = costTrend.direction === 'down';
-                const anomalyLevel = anomalies.length > 0 ? anomalies[0].deviation : 0;
+                const anomalyLevel = anomalies.length > 0 ? anomalies[0]!.deviation : 0;
 
                 if (rule.condition === 'trending_up') {
                     triggered = isUp && anomalyLevel > rule.threshold / 20;

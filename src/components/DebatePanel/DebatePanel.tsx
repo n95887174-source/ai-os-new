@@ -186,7 +186,7 @@ const DebatePanel: React.FC = () => {
                 if (Object.keys(prev).length > 0) return prev;
                 const next: Record<string, string> = {};
                 for (let i = 0; i < agents.length; i++) {
-                    next[agents[i]] = recommended[i % recommended.length];
+                    next[agents[i]!] = recommended[i % recommended.length]!;
                 }
                 return next;
             });
@@ -233,7 +233,7 @@ const DebatePanel: React.FC = () => {
                 const nodeModel = (node?.config?.model as string) || 'auto';
                 const provider = nodeProvider;
                 const nodeStrategy = node?.config?.strategy as string | undefined;
-                const role = roleOrder[i % roleOrder.length];
+                const role = roleOrder[i % roleOrder.length]!;
                 const archetypeId = agentArchetypes[id];
                 const archetypePrompt = archetypeId ? getArchetypePrompt(archetypeId) : undefined;
                 const archetypeName = archetypeId ? getArchetypeName(archetypeId) : undefined;

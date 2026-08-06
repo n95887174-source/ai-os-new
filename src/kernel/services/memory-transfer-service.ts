@@ -220,8 +220,8 @@ export class MemoryTransferService implements IMemoryTransferService {
                             .replace(/""/g, '"')
                             .replace(/\\n/g, '\n')
                             .slice(1, -1);
-                        const source = parts[1].slice(1, -1);
-                        const type = parts[2].slice(1, -1);
+                        const source = parts[1]!.slice(1, -1);
+                        const type = parts[2]!.slice(1, -1);
                         const timestamp = parts[3]
                             ? Number(parts[3].replace(/"/g, ''))
                             : Date.now();

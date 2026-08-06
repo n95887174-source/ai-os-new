@@ -178,7 +178,7 @@ export const registerPhase1: Phase = (helpers, ctx) => {
             },
         );
         // Store unsubs on the registry for cleanup in destroy()
-        (registry as { _unsubs?: Array<() => void> })._unsubs = [unsubCb, unsubRl];
+        (registry as unknown as { _unsubs?: Array<() => void> })._unsubs = [unsubCb, unsubRl];
         return registry;
     });
 

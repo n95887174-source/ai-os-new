@@ -203,7 +203,7 @@ export class FactCheckService {
                         content: `${VERIFICATION_PROMPT}\n\n- ${sanitizePromptVar(claim)}`,
                     },
                 ],
-                model,
+                model!,
                 apiKey,
                 signal,
             );

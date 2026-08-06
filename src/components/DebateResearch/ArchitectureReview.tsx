@@ -153,9 +153,9 @@ const ArchitectureReview: React.FC = () => {
 
                     {findings.length > 0 && (
                         <StatsDashboard
-                            errorCount={grouped.error.length}
-                            warningCount={grouped.warning.length}
-                            infoCount={grouped.info.length}
+                            errorCount={grouped.error!.length}
+                            warningCount={grouped.warning!.length}
+                            infoCount={grouped.info!.length}
                             categoryCount={categoryCount}
                         />
                     )}
@@ -214,7 +214,7 @@ const ArchitectureReview: React.FC = () => {
                                 <FindingCategory
                                     key={type}
                                     type={type}
-                                    items={grouped[type]}
+                                    items={grouped[type]!}
                                     expanded={expandedCategories.has(type)}
                                     onToggle={() => toggleCategory(type)}
                                     onNavigateFile={navigateFile}

@@ -12,7 +12,7 @@ const SEARCH_TOOLS = ['web_search', 'summarize', 'document_query'];
 const PROVIDER_MODEL_MAP: Record<string, string[]> = {
     gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
     groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
-    openrouter: [PROVIDER_DEFAULT_MODELS.openrouter, 'openrouter/free'],
+    openrouter: [PROVIDER_DEFAULT_MODELS.openrouter!, 'openrouter/free'],
     nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],
 };
 
@@ -27,12 +27,12 @@ function assignModelsToAgents(nodes: ISNode[], autoCount = 3): ISNode[] {
         if (node.type !== 'agent') return node;
         agentIdx++;
         if (agentIdx <= autoCount) return node;
-        const provider = providers[pIdx % providers.length];
-        const models = PROVIDER_MODEL_MAP[provider];
-        const modelIdx = assignCount[provider] % models.length;
-        assignCount[provider]++;
+        const provider = providers[pIdx % providers.length]!;
+        const models = PROVIDER_MODEL_MAP[provider]!;
+        const modelIdx = assignCount[provider]! % models.length;
+        assignCount[provider] = assignCount[provider]! + 1;
         pIdx++;
-        return { ...node, config: { ...node.config, provider, model: models[modelIdx] } };
+        return { ...node, config: { ...node.config, provider, model: models[modelIdx]! } };
     });
 }
 
@@ -63,7 +63,7 @@ function assignArgumentStrategies(nodes: ISNode[]): ISNode[] {
         if (group.length < 2) continue;
         for (const node of group) {
             const key = node.id;
-            strategyMap.set(key, STRATEGIES[globalIdx % STRATEGIES.length]);
+            strategyMap.set(key, STRATEGIES[globalIdx % STRATEGIES.length]!);
             globalIdx++;
         }
     }

@@ -97,7 +97,7 @@ const GroupsPanel: React.FC = () => {
             await groupManager.assignKeyToGroup(keyId, targetGroup);
             await refresh();
         } catch (e) {
-            LOGGER.error('Failed to move key', e);
+            LOGGER.error('Failed to move key', String(e));
             setError('Failed to move key to group');
         }
     };

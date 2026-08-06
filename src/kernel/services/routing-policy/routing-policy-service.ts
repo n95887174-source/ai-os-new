@@ -175,14 +175,14 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
 
     getDowngradedModel(model: string): string | null {
         const chain = this.getDowngradeChain(model);
-        return chain.length > 0 ? chain[0] : null;
+        return chain.length > 0 ? chain[0]! : null;
     }
 
     getDeepDowngradedModel(model: string, steps: number): string | null {
         const chain = this.getDowngradeChain(model);
         if (chain.length === 0) return null;
         const idx = Math.min(steps - 1, chain.length - 1);
-        return chain[idx];
+        return chain[idx]!;
     }
 
     calculateLatencyPenalty(
@@ -284,7 +284,7 @@ export class RoutingPolicyService implements ILifecycle, IRoutingPolicy {
             PERFORMANCE: 'performance',
         };
         const key = mapping[slaMode] || 'default';
-        return w[key] || w.default;
+        return (w[key] ?? w.default)!;
     }
 
     smartDowngrade(model: string, metrics: ProviderMetrics) {

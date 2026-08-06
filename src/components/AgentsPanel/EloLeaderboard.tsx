@@ -8,8 +8,8 @@ const MEDAL_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
 
 const EloTrend: React.FC<{ history: AgentElo['history'] }> = ({ history }) => {
     if (history.length < 2) return <Minus size={14} color="#64748b" />;
-    const last = history[history.length - 1].elo;
-    const prev = history[history.length - 2].elo;
+    const last = history[history.length - 1]!.elo;
+    const prev = history[history.length - 2]!.elo;
     if (last > prev) return <TrendingUp size={14} color="#10b981" />;
     if (last < prev) return <TrendingDown size={14} color="#ef4444" />;
     return <Minus size={14} color="#64748b" />;
@@ -55,7 +55,7 @@ const MiniLineChart: React.FC<{ data: number[]; width?: number; height?: number 
                 (() => {
                     const lastX = width;
                     const lastY =
-                        height - 4 - ((data[data.length - 1] - min) / range) * (height - 8);
+                        height - 4 - ((data[data.length - 1]! - min) / range) * (height - 8);
                     return <circle cx={lastX} cy={lastY} r="3" fill="#3b82f6" />;
                 })()}
         </svg>

@@ -221,7 +221,7 @@ export class DebateApiService {
 
         const streamMatch = path.match(/^\/api\/debates\/([^/]+)\/stream$/);
         if (request.method === 'GET' && streamMatch) {
-            const sessionId = streamMatch[1];
+            const sessionId = streamMatch[1]!;
             if (!this.getSession(sessionId)) {
                 return Response.json({ error: 'Debate not found' }, { status: 404 });
             }
@@ -230,7 +230,7 @@ export class DebateApiService {
 
         const getMatch = path.match(/^\/api\/debates\/([^/]+)$/);
         if (request.method === 'GET' && getMatch) {
-            const session = this.getSession(getMatch[1]);
+            const session = this.getSession(getMatch[1]!);
             if (!session) return Response.json({ error: 'Debate not found' }, { status: 404 });
             return Response.json(session);
         }
@@ -308,7 +308,7 @@ export class DebateApiService {
         return selected.map((node, i) => ({
             id: node.id,
             name: node.label || node.id,
-            role: roleOrder[i % roleOrder.length],
+            role: roleOrder[i % roleOrder.length]!,
             systemPrompt:
                 (node.config?.prompt as string) ||
                 `You are ${node.label}. Debate from your expertise.`,

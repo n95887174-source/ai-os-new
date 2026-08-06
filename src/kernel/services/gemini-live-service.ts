@@ -84,9 +84,9 @@ export class GeminiLiveService implements IGeminiLiveService {
         this.recognition.lang = navigator.language?.startsWith('ru') ? 'ru-RU' : 'en-US';
 
         this.recognition.onresult = (event: SpeechRecognitionEvent) => {
-            const last = event.results[event.results.length - 1];
+            const last = event.results[event.results.length - 1]!;
             if (last.isFinal) {
-                const t = last[0].transcript.trim();
+                const t = last[0]!.transcript.trim();
                 if (t) this.handleUserInput(t);
             }
         };

@@ -11,7 +11,7 @@
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
-    // Recommended: add "noUncheckedIndexedAccess": true (causes ~200+ new errors, defer to dedicated cleanup)
+    "noUncheckedIndexedAccess": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",

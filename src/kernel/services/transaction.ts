@@ -62,7 +62,7 @@ export class TransactionContext implements ITransaction {
         const completed: number[] = [];
         try {
             for (let i = 0; i < this.pendingPersists.length; i++) {
-                await this.pendingPersists[i].persist();
+                await this.pendingPersists[i]!.persist();
                 completed.push(i);
             }
         } catch (e) {
@@ -72,7 +72,7 @@ export class TransactionContext implements ITransaction {
                 { error: e },
             );
             for (let i = completed.length - 1; i >= 0; i--) {
-                const compensate = this.pendingPersists[completed[i]]?.compensate;
+                const compensate = this.pendingPersists[completed[i]!]?.compensate;
                 if (compensate) {
                     try {
                         await compensate();

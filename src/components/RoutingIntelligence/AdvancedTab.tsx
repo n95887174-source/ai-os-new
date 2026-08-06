@@ -71,7 +71,7 @@ function AdvancedTab({
                 </h3>
                 {config?.weightProfiles?.[config?.activeProfile || 'default'] ? (
                     <WeightTunerInner
-                        profile={config.weightProfiles[config.activeProfile]}
+                        profile={config.weightProfiles[config.activeProfile!]!}
                         actions={actions}
                     />
                 ) : (

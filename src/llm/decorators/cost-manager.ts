@@ -151,10 +151,10 @@ export class CostManagerDecorator extends BaseDecorator {
             totalOutputTokens += r.outputTokens;
             if (!byModel[r.model])
                 byModel[r.model] = { cost: 0, requests: 0, inputTokens: 0, outputTokens: 0 };
-            byModel[r.model].cost += r.cost;
-            byModel[r.model].requests++;
-            byModel[r.model].inputTokens += r.inputTokens;
-            byModel[r.model].outputTokens += r.outputTokens;
+            byModel[r.model]!.cost += r.cost;
+            byModel[r.model]!.requests++;
+            byModel[r.model]!.inputTokens += r.inputTokens;
+            byModel[r.model]!.outputTokens += r.outputTokens;
         }
 
         return {

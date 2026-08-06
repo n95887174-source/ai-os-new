@@ -113,11 +113,11 @@ function selectDevices(role: string, round: number, usedIds: Set<string>): Rheto
     // Select 1-2 devices deterministically based on round
     const count = round >= 4 ? 2 : 1;
     const index = (round * 7 + roleLower.length) % available.length;
-    const selected = [available[index]];
+    const selected = [available[index]!];
     if (count === 2 && available.length > 1) {
         const secondIndex = (index + 3 + round) % available.length;
         if (secondIndex !== index) {
-            selected.push(available[secondIndex]);
+            selected.push(available[secondIndex]!);
         }
     }
     return selected;

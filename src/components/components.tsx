@@ -158,8 +158,8 @@ export const ToneChart: React.FC<{ points: TonePoint[] }> = ({ points }) => {
                     fontSize: '0.7rem',
                 }}
             >
-                <span>R{points[0].round}</span>
-                <span>R{points[points.length - 1].round}</span>
+                <span>R{points[0]!.round}</span>
+                <span>R{points[points.length - 1]!.round}</span>
             </div>
         </div>
     );

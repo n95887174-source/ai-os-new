@@ -75,7 +75,7 @@ export function getPolicyDimensionColor(dim: string): string {
 }
 
 export function getStatusColor(status: string): string {
-    return STATUS_COLORS[status.toLowerCase()] ?? STATUS_COLORS.default;
+    return STATUS_COLORS[status.toLowerCase()] ?? STATUS_COLORS.default!;
 }
 
 // ── Threshold-based colors (3-tier: healthy / warning / critical) ─
@@ -190,7 +190,7 @@ const TAG_COLORS: Record<string, string> = {
 };
 
 export function TagPill({ tag }: { tag: string }) {
-    const prefix = tag.split(':')[0];
+    const prefix = tag.split(':')[0]!;
     const color = TAG_COLORS[prefix] ?? '#a855f7';
     const label = tag.replace(/^(env|tier):/, '');
     return (
@@ -234,7 +234,7 @@ export const PROVIDER_COLORS: Record<string, string> = {
 };
 
 export function getProviderColor(provider: string): string {
-    return PROVIDER_COLORS[provider.toLowerCase()] ?? PROVIDER_COLORS.default;
+    return PROVIDER_COLORS[provider.toLowerCase()] ?? PROVIDER_COLORS.default!;
 }
 
 // ── Active Toggle style helper ───────────────────────────────────

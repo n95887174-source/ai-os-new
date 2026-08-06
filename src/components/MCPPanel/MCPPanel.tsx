@@ -127,7 +127,7 @@ const MCPPanel: React.FC = () => {
                         setServerResources((prev) => ({ ...prev, [id]: resources }));
                     }
                 } catch (err) {
-                    LOGGER.warn('Failed to fetch tools/resources', err);
+                    LOGGER.warn('Failed to fetch tools/resources', String(err));
                     if (isMountedRef.current) {
                         setError(t('mcp.error_list'));
                         clearError();

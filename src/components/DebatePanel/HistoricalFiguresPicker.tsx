@@ -78,8 +78,8 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                     'button, [tabindex]:not([tabindex="-1"])',
                 );
                 if (all.length === 0) return;
-                const first = all[0];
-                const last = all[all.length - 1];
+                const first = all[0]!;
+                const last = all[all.length - 1]!;
                 if (e.shiftKey && document.activeElement === first) {
                     e.preventDefault();
                     last.focus();

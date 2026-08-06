@@ -81,13 +81,13 @@ function findContradictions(
         for (let i = 0; i < texts.length - 1; i++) {
             for (let j = i + 1; j < texts.length; j++) {
                 for (const [leftPat, rightPat] of OPPOSITION_PAIRS) {
-                    const hasLeft = leftPat.test(texts[i]) || leftPat.test(texts[j]);
-                    const hasRight = rightPat.test(texts[i]) || rightPat.test(texts[j]);
+                    const hasLeft = leftPat!.test(texts[i]!) || leftPat!.test(texts[j]!);
+                    const hasRight = rightPat!.test(texts[i]!) || rightPat!.test(texts[j]!);
                     if (hasLeft && hasRight) {
                         contradictions.push({
                             agentName: name,
-                            point1: texts[i].slice(0, 120),
-                            point2: texts[j].slice(0, 120),
+                            point1: texts[i]!.slice(0, 120),
+                            point2: texts[j]!.slice(0, 120),
                         });
                         break;
                     }

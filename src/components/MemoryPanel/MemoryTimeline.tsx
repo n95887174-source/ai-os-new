@@ -36,7 +36,7 @@ function groupByDate(entries: MemoryEntry[], now: number): DayGroup[] {
         if (!groups[label]) {
             groups[label] = { label, date: ts, entries: [] };
         }
-        groups[label].entries.push(entry);
+        groups[label]!.entries.push(entry);
     }
 
     const order = ['Today', 'Yesterday', 'days ago', 'This Month', 'Older'];

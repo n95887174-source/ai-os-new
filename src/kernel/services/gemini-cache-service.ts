@@ -204,8 +204,8 @@ export class GeminiCacheService implements IGeminiCacheService {
 function parseTTL(ttl: string): number {
     const match = ttl.match(/^(\d+)([smhd])$/);
     if (!match) return 3600000;
-    const num = parseInt(match[1], 10);
-    const unit = match[2];
+    const num = parseInt(match[1]!, 10);
+    const unit = match[2]!;
     const multipliers: Record<string, number> = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
-    return num * (multipliers[unit] ?? 3600000);
+    return num * (multipliers[unit]! ?? 3600000);
 }

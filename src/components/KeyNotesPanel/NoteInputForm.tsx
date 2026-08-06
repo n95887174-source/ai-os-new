@@ -36,7 +36,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
         const next: AttachedFile[] = [];
         let total = attachments.reduce((s, f) => s + f.size, 0);
         for (let i = 0; i < files.length; i++) {
-            const file = files[i];
+            const file = files[i]!;
             if (file.size > 1024 * 1024) {
                 onFileError?.(file.name, new Error('File exceeds 1MB limit, skipped'));
                 continue;
@@ -44,7 +44,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
             if (total + file.size > 3 * 1024 * 1024) break;
             const reader = new FileReader();
             reader.onerror = () => {
-                LOGGER.error('FileReader failed', file.name, reader.error);
+                LOGGER.error('FileReader failed', file.name, undefined, reader.error);
                 onFileError?.(file.name, reader.error);
             };
             reader.onload = () => {

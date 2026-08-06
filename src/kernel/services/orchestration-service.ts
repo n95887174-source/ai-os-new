@@ -380,9 +380,9 @@ export class OrchestrationService {
         if (!this.executionStats.nodeStats[node.id]) {
             this.executionStats.nodeStats[node.id] = { count: 0, errors: 0, totalDuration: 0 };
         }
-        this.executionStats.nodeStats[node.id].count++;
-        if (status === 'error') this.executionStats.nodeStats[node.id].errors++;
-        this.executionStats.nodeStats[node.id].totalDuration += duration;
+        this.executionStats.nodeStats[node.id]!.count++;
+        if (status === 'error') this.executionStats.nodeStats[node.id]!.errors++;
+        this.executionStats.nodeStats[node.id]!.totalDuration += duration;
         this.executionStats.avgNodeDuration =
             this.executionStats.completedNodes > 0
                 ? Object.values(this.executionStats.nodeStats).reduce(
@@ -456,7 +456,7 @@ export class OrchestrationService {
                 }
                 heapLog(`batches:start total=${parallelEdges.length} batches=${batches.length}`);
                 for (let bi = 0; bi < batches.length; bi++) {
-                    const batch = batches[bi];
+                    const batch = batches[bi]!;
                     heapLog(`batch:before idx=${bi} nodes=${batch.length}`);
                     await Promise.allSettled(
                         batch.map(async (edge) => {
@@ -521,7 +521,7 @@ export class OrchestrationService {
                 if (!isNaN(idx) && idx >= 0 && idx < destinations.length) {
                     return JSON.stringify({
                         traceId: data.traceId,
-                        output: `${input}\n[Routed to: ${destinations[idx].label}]`,
+                        output: `${input}\n[Routed to: ${destinations[idx]!.label}]`,
                     });
                 }
             } catch (e) {
@@ -535,7 +535,7 @@ export class OrchestrationService {
         );
         return JSON.stringify({
             traceId: data.traceId,
-            output: `${input}\n[Routed to: ${sorted[0].label}]`,
+            output: `${input}\n[Routed to: ${sorted[0]!.label}]`,
         });
     }
 

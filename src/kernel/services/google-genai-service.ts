@@ -369,10 +369,10 @@ export class GoogleGenAIService {
         if (embeddings.some((e) => e.length === 0)) {
             return texts.map((text) => ({ cluster: 0, text }));
         }
-        const dim = embeddings[0].length;
+        const dim = embeddings[0]!.length;
         const centroids: number[][] = [];
         for (let i = 0; i < numClusters; i++) {
-            centroids.push(embeddings[Math.floor((i * embeddings.length) / numClusters)].slice());
+            centroids.push(embeddings[Math.floor((i * embeddings.length) / numClusters)]!.slice());
         }
         const assignments: number[] = new Array(texts.length).fill(0);
         for (let iter = 0; iter < 20; iter++) {
@@ -383,7 +383,7 @@ export class GoogleGenAIService {
                 for (let c = 0; c < numClusters; c++) {
                     let dist = 0;
                     for (let d = 0; d < dim; d++) {
-                        dist += (embeddings[i][d] - centroids[c][d]) ** 2;
+                        dist += (embeddings[i]![d]! - centroids[c]![d]!) ** 2;
                     }
                     if (dist < bestDist) {
                         bestDist = dist;
@@ -400,13 +400,13 @@ export class GoogleGenAIService {
                 const members = embeddings.filter((_, i) => assignments[i] === c);
                 if (members.length > 0) {
                     for (let d = 0; d < dim; d++) {
-                        centroids[c][d] =
-                            members.reduce((sum, m) => sum + m[d], 0) / members.length;
+                        centroids[c]![d] =
+                            members.reduce((sum, m) => sum + m[d]!, 0) / members.length;
                     }
                 }
             }
         }
-        return texts.map((text, i) => ({ cluster: assignments[i], text }));
+        return texts.map((text, i) => ({ cluster: assignments[i]!, text }));
     }
 
     async getModels(): Promise<string[]> {

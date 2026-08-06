@@ -40,7 +40,7 @@ const SWITCH_INSTRUCTIONS: Record<string, string> = {
 
 export class LevelTracker implements ILevelTracker {
     analyze(_agentId: string, recentClaims: string[], _round: number): LevelAnalysis {
-        const lastText = recentClaims.length > 0 ? recentClaims[recentClaims.length - 1] : '';
+        const lastText = recentClaims.length > 0 ? recentClaims[recentClaims.length - 1]! : '';
         const currentLevel = classifyLevel(lastText);
 
         // Decide whether to switch: 60% chance of forcing a switch for variety
@@ -59,9 +59,9 @@ export class LevelTracker implements ILevelTracker {
         const allLevels: AbstractionLevel[] = ['concrete', 'moderate', 'abstract'];
         const alternatives: AbstractionLevel[] = allLevels.filter((l) => l !== currentLevel);
         const pickIdx = Math.abs(hash * 7) % alternatives.length;
-        const recommendedLevel = alternatives[pickIdx];
+        const recommendedLevel = alternatives[pickIdx]!;
         const key = `${currentLevel}_to_${recommendedLevel}`;
-        const instruction = SWITCH_INSTRUCTIONS[key] ?? '';
+        const instruction = SWITCH_INSTRUCTIONS[key]! ?? '';
 
         return { currentLevel, recommendedLevel, instruction };
     }

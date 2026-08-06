@@ -17,7 +17,7 @@ function trimMessagesForGroq(messages: ChatMessage[]): ChatMessage[] {
 
     const firstMsg = messages[0];
     const recentMsgs = messages.slice(-2);
-    const trimmed: ChatMessage[] = [firstMsg];
+    const trimmed: ChatMessage[] = [firstMsg!];
 
     if (messages.length > 3) {
         trimmed.push({

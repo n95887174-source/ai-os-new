@@ -439,7 +439,7 @@ export class ObsGapsService implements IObsGapsService {
                 (s) => content.indexOf(s) < match!.index && content.indexOf(s) > match!.index - 200,
             );
             const source = section ? section.replace('### ', '').trim() : 'unknown';
-            events.push({ name: match[1], source });
+            events.push({ name: match[1]!, source });
         }
         return Array.from(new Map(events.map((e) => [e.name, e])).values());
     }

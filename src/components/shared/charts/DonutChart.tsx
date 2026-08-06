@@ -40,9 +40,9 @@ export function DonutChart({
     }
 
     const segments = data.map((d, i) => {
-        const ratio = ratios[i];
+        const ratio = ratios[i]!;
         const length = ratio * circumference;
-        const offset = cumulativeOffsets[i];
+        const offset = cumulativeOffsets[i]!;
         const gap = 3;
         return (
             <circle

@@ -864,7 +864,7 @@ export async function debateCallLlm(
                         );
                         for (const c of wildcards) {
                             const model = c.split('|')[1];
-                            triedModels.delete(model);
+                            triedModels.delete(model!);
                             rejectedCombos.delete(c);
                         }
                         // Also clear triedKeys — all provider keys were added above

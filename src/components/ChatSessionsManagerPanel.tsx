@@ -171,7 +171,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
             map[g].push(s);
         }
         for (const k of Object.keys(map))
-            map[k].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+            map[k]!.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
         return map;
     }, [filtered]);
 
@@ -214,7 +214,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
             );
             setLinks(await sm.getLinked(active.id));
         } catch (e) {
-            LOGGER.warn('Link failed', e);
+            LOGGER.warn('Link failed', String(e));
         }
         setLinkInput('');
     }, [active, linkInput]);

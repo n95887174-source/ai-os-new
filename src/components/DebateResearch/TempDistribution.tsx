@@ -15,7 +15,7 @@ const TempDistribution: React.FC<Props> = ({ agents }) => {
     for (const a of agents) {
         const b =
             buckets.find((b) => a.temperature >= b.min && a.temperature < b.max) ||
-            buckets[buckets.length - 1];
+            buckets[buckets.length - 1]!;
         b.agents.push(a.name);
     }
 

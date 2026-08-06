@@ -40,7 +40,7 @@ function getCrumbs(
             }
         }
     }
-    return [{ label: id, path: `/${id}` }];
+    return [{ label: id!, path: `/${id}` }];
 }
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ path, t }) => {

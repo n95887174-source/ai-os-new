@@ -143,19 +143,19 @@ export class DebateConsensusEngine implements IConsensusEngine {
 
         for (let i = 0; i < claims.length; i++) {
             if (grouped.has(i)) continue;
-            const group: Claim[] = [claims[i]];
+            const group: Claim[] = [claims[i]!];
             grouped.add(i);
             for (let j = i + 1; j < claims.length; j++) {
                 if (grouped.has(j)) continue;
-                const similarity = cosineSimilarity(embeddings[i], embeddings[j]);
+                const similarity = cosineSimilarity(embeddings[i]!, embeddings[j]!);
                 if (similarity >= agreementThreshold) {
-                    group.push(claims[j]);
+                    group.push(claims[j]!);
                     grouped.add(j);
                 }
             }
             if (group.length >= 2) {
                 const avgConfidence = group.reduce((s, c) => s + c.confidence, 0) / group.length;
-                agreements.push({ ...group[0], confidence: avgConfidence });
+                agreements.push({ ...group[0]!, confidence: avgConfidence });
             }
         }
         return agreements;
@@ -165,8 +165,8 @@ export class DebateConsensusEngine implements IConsensusEngine {
         const conflicts: Conflict[] = [];
         for (let i = 0; i < claims.length; i++) {
             for (let j = i + 1; j < claims.length; j++) {
-                const a = claims[i];
-                const b = claims[j];
+                const a = claims[i]!;
+                const b = claims[j]!;
                 if (a.agentId !== b.agentId && this.isContradictory(a, b)) {
                     conflicts.push({
                         id: `conflict-${a.id}-${b.id}`,
@@ -284,7 +284,9 @@ export class DebateConsensusEngine implements IConsensusEngine {
             ['верно', 'неверно'],
         ];
         let antonymCount = 0;
-        for (const [aWord, bWord] of antonymPairs) {
+        for (const pair of antonymPairs) {
+            const aWord = pair[0]!;
+            const bWord = pair[1]!;
             if (tokensA.has(aWord) && tokensB.has(bWord)) antonymCount++;
             if (tokensB.has(aWord) && tokensA.has(bWord)) antonymCount++;
         }
@@ -293,11 +295,11 @@ export class DebateConsensusEngine implements IConsensusEngine {
         const numRegex =
             /(\d+(?:\.\d+)?)\s*(dollars|percent|degrees|ms|mb|gb|s|h|kg|miles|km|руб|доллар|процент)?\b/g;
         const aNums = [...a.text.toLowerCase().matchAll(numRegex)].map((m) => ({
-            val: parseFloat(m[1]),
+            val: parseFloat(m[1]!),
             unit: m[2] || '',
         }));
         const bNums = [...b.text.toLowerCase().matchAll(numRegex)].map((m) => ({
-            val: parseFloat(m[1]),
+            val: parseFloat(m[1]!),
             unit: m[2] || '',
         }));
         for (const an of aNums) {

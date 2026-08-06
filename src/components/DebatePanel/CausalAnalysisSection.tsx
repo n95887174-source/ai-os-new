@@ -51,9 +51,9 @@ function computeCausalMetrics(args: DebateArgument[]) {
         Record<string, { claims: number; loops: number; cascades: number }>
     >((acc, a) => {
         if (!acc[a.agentId]) acc[a.agentId] = { claims: 0, loops: 0, cascades: 0 };
-        if (CAUSAL_REGEX.test(a.content)) acc[a.agentId].claims++;
-        if (LOOP_REGEX.test(a.content)) acc[a.agentId].loops++;
-        if (CASCADE_REGEX.test(a.content)) acc[a.agentId].cascades++;
+        if (CAUSAL_REGEX.test(a.content)) acc[a.agentId]!.claims++;
+        if (LOOP_REGEX.test(a.content)) acc[a.agentId]!.loops++;
+        if (CASCADE_REGEX.test(a.content)) acc[a.agentId]!.cascades++;
         return acc;
     }, {});
 

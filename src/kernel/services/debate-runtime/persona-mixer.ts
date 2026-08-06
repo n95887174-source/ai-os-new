@@ -87,7 +87,7 @@ export class PersonaMixer implements IPersonaMixer {
             const available = PERSONA_VARIATIONS.filter((v) => !activeKeySet.has(v.id));
             const pool = available.length > 0 ? available : PERSONA_VARIATIONS;
             const idx = deterministicIndex(`${agentId}-round-${round}`, pool.length);
-            const chosen = pool[idx];
+            const chosen = pool[idx]!;
             activeKeySet.add(chosen.id);
             this.usedKeys.set(agentId, activeKeySet);
             return {
@@ -102,7 +102,7 @@ export class PersonaMixer implements IPersonaMixer {
         let blendText = '';
         if (others.length > 0) {
             const srcIdx = deterministicIndex(`${agentId}-blend-${round}`, others.length);
-            const source = others[srcIdx];
+            const source = others[srcIdx]!;
             const srcTraits = extractTraits(source.persona);
             if (srcTraits.length > 0) {
                 blendedFrom = source.name;
@@ -117,7 +117,7 @@ export class PersonaMixer implements IPersonaMixer {
         const available = PERSONA_VARIATIONS.filter((v) => !activeKeySet.has(v.id));
         const pool = available.length > 0 ? available : PERSONA_VARIATIONS;
         const idx = deterministicIndex(`${agentId}-round-${round}`, pool.length);
-        const chosen = pool[idx];
+        const chosen = pool[idx]!;
         activeKeySet.add(chosen.id);
         this.usedKeys.set(agentId, activeKeySet);
 

@@ -51,7 +51,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
 
         const resolvedModel = testModel || apiKey.availableModels?.[0] || defaultModel;
 
-        LOGGER.debug(`SEND_MESSAGE to ${p}/${resolvedModel} (reqId=${reqId})`);
+        LOGGER.debug('QuickTestSection', `SEND_MESSAGE to ${p}/${resolvedModel} (reqId=${reqId})`);
         eventBus.emit(EVENTS.SEND_MESSAGE, {
             provider: p,
             model: resolvedModel,
@@ -94,7 +94,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
                 isDone = true;
                 cleanup();
                 clearTimeout(timeout);
-                LOGGER.debug(`STREAM_END received in ${Date.now() - start}ms`);
+                LOGGER.debug('QuickTestSection', `STREAM_END received in ${Date.now() - start}ms`);
                 setTestStatus('success');
                 setTestResult({
                     content: fullContent,
@@ -121,7 +121,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
             isDone = true;
             cleanup();
             eventBus.emit(EVENTS.CANCEL_MESSAGE, { requestId: reqId });
-            LOGGER.warn(`TIMEOUT after 60000ms (reqId=${reqId})`);
+            LOGGER.warn('QuickTestSection', `TIMEOUT after 60000ms (reqId=${reqId})`);
             setTestStatus('error');
             setTestError('Request timed out');
         }, 60000);

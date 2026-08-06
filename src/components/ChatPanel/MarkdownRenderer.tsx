@@ -35,6 +35,7 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content, isStre
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
+        if (!line) continue;
 
         if (line.startsWith('```')) {
             if (inCodeBlock) {
@@ -115,8 +116,8 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content, isStre
         if (line.startsWith('|')) {
             const tableLines: string[] = [line];
             let j = i + 1;
-            while (j < lines.length && lines[j].startsWith('|')) {
-                tableLines.push(lines[j]);
+            while (j < lines.length && lines[j]!.startsWith('|')) {
+                tableLines.push(lines[j]!);
                 j++;
             }
             i = j - 1;
@@ -126,7 +127,7 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content, isStre
 
         const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
         if (headerMatch) {
-            const level = headerMatch[1].length;
+            const level = headerMatch[1]!.length;
             const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
             elements.push(
                 <Tag
@@ -137,7 +138,7 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content, isStre
                         fontSize: `${1.6 - level * 0.15}rem`,
                     }}
                 >
-                    {inlineMarkdown(headerMatch[2])}
+                    {inlineMarkdown(headerMatch[2]!)}
                 </Tag>,
             );
             continue;
@@ -150,10 +151,10 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content, isStre
                 </li>,
             ];
             let j = i + 1;
-            while (j < lines.length && (lines[j].startsWith('- ') || lines[j].startsWith('* '))) {
+            while (j < lines.length && (lines[j]!.startsWith('- ') || lines[j]!.startsWith('* '))) {
                 items.push(
                     <li key={`li-${j}`} style={{ lineHeight: 1.7 }}>
-                        {inlineMarkdown(lines[j].slice(2))}
+                        {inlineMarkdown(lines[j]!.slice(2))}
                     </li>,
                 );
                 j++;
@@ -174,10 +175,10 @@ const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content, isStre
                 </li>,
             ];
             let j = i + 1;
-            while (j < lines.length && /^\d+\.\s/.test(lines[j])) {
+            while (j < lines.length && /^\d+\.\s/.test(lines[j]!)) {
                 items.push(
                     <li key={`li-${j}`} style={{ lineHeight: 1.7 }}>
-                        {inlineMarkdown(lines[j].replace(/^\d+\.\s/, ''))}
+                        {inlineMarkdown(lines[j]!.replace(/^\d+\.\s/, ''))}
                     </li>,
                 );
                 j++;

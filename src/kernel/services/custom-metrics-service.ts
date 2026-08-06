@@ -57,7 +57,7 @@ export class CustomMetricsService implements ICustomMetricsService {
         const all = await this.listMetrics();
         const idx = all.findIndex((m) => m.id === id);
         if (idx < 0) throw new Error(`Metric ${id} not found`);
-        all[idx] = { ...all[idx], ...updates };
+        all[idx] = { ...all[idx]!, ...updates };
         await writeJSON(METRICS_KEY, all);
     }
 
@@ -109,9 +109,9 @@ export class CustomMetricsService implements ICustomMetricsService {
                     if (typeof v === 'number') values.push(v);
                 }
             } else if (parts.length === 2) {
-                const storeStats = numericStats[parts[0]];
+                const storeStats = numericStats[parts[0]!];
                 if (storeStats) {
-                    const v = (storeStats as unknown as Record<string, unknown>)[parts[1]];
+                    const v = (storeStats as unknown as Record<string, unknown>)[parts[1]!];
                     if (typeof v === 'number') values.push(v);
                 }
             }
@@ -199,17 +199,17 @@ function aggregate(values: number[], aggregation: MetricAggregation): number {
         case 'sum':
             return values.reduce((s, v) => s + v, 0);
         case 'max':
-            return sorted[sorted.length - 1];
+            return sorted[sorted.length - 1]!;
         case 'min':
-            return sorted[0];
+            return sorted[0]!;
         case 'count':
             return values.length;
         case 'p50':
-            return sorted[Math.floor(sorted.length * 0.5)];
+            return sorted[Math.floor(sorted.length * 0.5)]!;
         case 'p95':
-            return sorted[Math.floor(sorted.length * 0.95)];
+            return sorted[Math.floor(sorted.length * 0.95)]!;
         case 'p99':
-            return sorted[Math.floor(sorted.length * 0.99)];
+            return sorted[Math.floor(sorted.length * 0.99)]!;
         default:
             return values.reduce((s, v) => s + v, 0) / values.length;
     }

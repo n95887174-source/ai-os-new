@@ -95,7 +95,7 @@ const RoleLibrary: React.FC = () => {
                 type: 'success',
             });
         } catch (err) {
-            LOGGER.warn('Failed to install role', err);
+            LOGGER.warn('Failed to install role', String(err));
             eventBus.emit(EVENTS.NOTIFICATION, {
                 message: `Failed to install ${role.name}`,
                 type: 'error',

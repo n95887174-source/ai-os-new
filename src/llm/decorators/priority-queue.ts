@@ -91,8 +91,8 @@ export class PriorityQueueDecorator extends BaseDecorator {
             // The path always throws, causing all queued items to reject with a confusing error.
 
             // Single item sending
-            const idx = this.sendQueue.indexOf(availableItems[0]);
-            const item = this.sendQueue.splice(idx, 1)[0];
+            const idx = this.sendQueue.indexOf(availableItems[0]!);
+            const item = this.sendQueue.splice(idx, 1)[0]!;
             item.cleanup?.();
             this.activeSends++;
             this.sendProcessed++;
@@ -141,8 +141,8 @@ export class PriorityQueueDecorator extends BaseDecorator {
             // Batch path disabled: same reason as send batch path above.
 
             // Single item stream
-            const idx = this.streamQueue.indexOf(availableItems[0]);
-            const item = this.streamQueue.splice(idx, 1)[0];
+            const idx = this.streamQueue.indexOf(availableItems[0]!);
+            const item = this.streamQueue.splice(idx, 1)[0]!;
             item.cleanup?.();
             this.activeStreams++;
             this.streamProcessed++;

@@ -91,7 +91,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                 <ProviderIcon provider={key.provider} size={14} />
                                 <span style={textWeight700Capitalize}>{key.provider}</span>
                                 {alerts.length > 0 && (
-                                    <span style={{ marginLeft: 'auto' }} title={alerts[0].message}>
+                                    <span style={{ marginLeft: 'auto' }} title={alerts[0]!.message}>
                                         <AlertTriangle size={12} color="#ef4444" />
                                     </span>
                                 )}
@@ -191,7 +191,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                 </span>
                             </div>
                             {introspectionResults[key.id] &&
-                                !introspectionResults[key.id].error && (
+                                !introspectionResults[key.id]!.error && (
                                     <div
                                         style={{
                                             marginTop: '0.4rem',
@@ -207,7 +207,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                         }}
                                     >
                                         {(() => {
-                                            const r = introspectionResults[key.id];
+                                            const r = introspectionResults[key.id]!;
                                             const parts: string[] = [];
                                             if (r.credits !== undefined)
                                                 parts.push(`credits: ${r.credits}`);
@@ -237,7 +237,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                         color: '#ef4444',
                                     }}
                                 >
-                                    introspection: {String(introspectionResults[key.id].error)}
+                                    introspection: {String(introspectionResults[key.id]!.error)}
                                 </div>
                             )}
                             {introspectingKeys && !introspectionResults[key.id] && (

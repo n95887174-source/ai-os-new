@@ -36,7 +36,7 @@ const maskWebhookUrl = (url: string): string => {
         }
         const pathParts = u.pathname.split('/');
         for (let i = 0; i < pathParts.length; i++) {
-            if (pathParts[i].startsWith('bot')) pathParts[i] = 'bot****';
+            if (pathParts[i]!.startsWith('bot')) pathParts[i] = 'bot****';
         }
         u.pathname = pathParts.join('/');
         return u.toString().replace(/([?&](?:api_key|token|secret)=)[^&]+/gi, '$1***');

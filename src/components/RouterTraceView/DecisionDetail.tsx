@@ -511,15 +511,15 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                 </div>
             </div>
 
-            {decision.scores.length >= 2 && decision.scores[0].c && decision.scores[1].c && (
+            {decision.scores.length >= 2 && decision.scores[0]!.c && decision.scores[1]!.c && (
                 <div className="glass-panel" style={panelRounded16}>
                     <div style={scoreHeader}>
                         <GitBranch size={16} style={{ color: '#10b981' }} />{' '}
                         {t('router_trace.winner_vs_runner')}
                     </div>
                     {(() => {
-                        const w = decision.scores[0];
-                        const r = decision.scores[1];
+                        const w = decision.scores[0]!;
+                        const r = decision.scores[1]!;
                         const wScore = parseFloat(w.s);
                         const rScore = parseFloat(r.s);
                         if (!w.c || !r.c) return null;

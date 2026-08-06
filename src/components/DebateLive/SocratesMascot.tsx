@@ -44,8 +44,8 @@ const SPEECH_BUBBLES: Record<SocratesEmotion, string[]> = {
 };
 
 function pickQuote(emotion: SocratesEmotion): string {
-    const quotes = SPEECH_BUBBLES[emotion];
-    return quotes[Math.floor(Math.random() * quotes.length)];
+    const quotes = SPEECH_BUBBLES[emotion]!;
+    return quotes[Math.floor(Math.random() * quotes.length)]!;
 }
 
 interface Props {

@@ -40,11 +40,11 @@ export class SteelmanService implements ISteelmanService {
         const best = scored[0];
 
         return {
-            opponentId: best.arg.agentId,
-            opponentName: best.arg.agentName,
-            claimText: best.arg.content.slice(0, 400),
-            claimId: best.arg.id,
-            round: best.arg.round,
+            opponentId: best!.arg.agentId,
+            opponentName: best!.arg.agentName,
+            claimText: best!.arg.content.slice(0, 400),
+            claimId: best!.arg.id,
+            round: best!.arg.round,
         };
     }
 }

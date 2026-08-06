@@ -56,8 +56,8 @@ export class DebateTopologyService implements ITopologyService {
                 adj.get(edge.to)?.push(edge.from);
             }
             // BFS from first node
-            const queue = [topology.nodes[0].id];
-            reachable.add(topology.nodes[0].id);
+            const queue = [topology.nodes[0]!.id];
+            reachable.add(topology.nodes[0]!.id);
             while (queue.length > 0) {
                 const current = queue.shift()!;
                 for (const next of adj.get(current) || []) {

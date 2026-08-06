@@ -31,8 +31,8 @@ export function detectChallenges(graph: ClaimGraph): ClaimEdge[] {
     const claimList = Object.values(graph.claims);
     for (let i = 0; i < claimList.length; i++) {
         for (let j = i + 1; j < claimList.length; j++) {
-            const a = claimList[i];
-            const b = claimList[j];
+            const a = claimList[i]!;
+            const b = claimList[j]!;
             if (a.speaker === b.speaker) continue;
             if (a.round === b.round && a.speaker === b.speaker) continue;
             const overlap = jaccardSimilarity(a.text, b.text);

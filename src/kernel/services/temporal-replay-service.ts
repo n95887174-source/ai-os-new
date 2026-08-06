@@ -291,7 +291,7 @@ export class TemporalReplayService implements ITemporalReplayService {
         let decisionFrameIndex = -1;
 
         for (let i = 0; i < relevantEvents.length; i++) {
-            const evt = relevantEvents[i];
+            const evt = relevantEvents[i]!;
             const eventRef: EventRef = {
                 eventName: evt.event as EventName,
                 timestamp: evt.timestamp,
@@ -325,7 +325,7 @@ export class TemporalReplayService implements ITemporalReplayService {
 
             // Capture initial leader from first rescored frame
             if (!initialLeader && scoreState && scoreState.ranking.length > 0) {
-                initialLeader = scoreState.ranking[0];
+                initialLeader = scoreState.ranking[0]!;
             }
 
             frames.push({
@@ -343,7 +343,7 @@ export class TemporalReplayService implements ITemporalReplayService {
         if (decisionWinner && decisionFrameIndex >= 0) {
             // Walk backwards from decision frame, find first where decisionWinner leads
             for (let i = decisionFrameIndex; i >= 0; i--) {
-                const f = frames[i];
+                const f = frames[i]!;
                 if (f.scoreState && f.scoreState.ranking[0] === decisionWinner) {
                     flipFrame = f.index;
                     break;

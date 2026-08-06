@@ -198,9 +198,9 @@ export class RaceExecutor {
                     const error = err instanceof Error ? err : new Error(String(err));
                     results[i] = error;
                     if (winnerFound) {
-                        aborted.push(candidates[i]);
+                        aborted.push(candidates[i]!);
                     } else {
-                        failures.push({ candidate: candidates[i], error: error.message });
+                        failures.push({ candidate: candidates[i]!, error: error.message });
                     }
                 },
             );

@@ -11,12 +11,12 @@ function updateEntryInSession(
 ): ChatSession[] {
     const sessIdx = sessions.findIndex((s) => s.id === sessionId);
     if (sessIdx === -1) return sessions;
-    const session = sessions[sessIdx];
+    const session = sessions[sessIdx]!;
     const entryIdx = session.history.findIndex((e) => e.id === entryId);
     if (entryIdx === -1) return sessions;
     const next = [...sessions];
     const nextHistory = [...session.history];
-    nextHistory[entryIdx] = entryUpdater(nextHistory[entryIdx]);
+    nextHistory[entryIdx] = entryUpdater(nextHistory[entryIdx]!);
     next[sessIdx] = { ...session, history: nextHistory, updatedAt: Date.now() };
     return next;
 }

@@ -74,7 +74,7 @@ const AnalyticsPanel: React.FC = () => {
                     return next.length > 24 ? next.slice(-24) : next;
                 });
             } catch (e) {
-                LOGGER.warn('Failed to process telemetry update', e);
+                LOGGER.warn('Failed to process telemetry update', String(e));
                 if (isMountedRef.current) {
                     setError('Failed to process telemetry update');
                     clearError();

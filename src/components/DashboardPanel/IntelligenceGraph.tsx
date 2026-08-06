@@ -40,18 +40,18 @@ function layoutTopology(topo: ISTopology): { nodes: GraphNode[]; edges: GraphEdg
         inDeg[n.id] = 0;
     });
     edges.forEach((e) => {
-        if (adj[e.from]) adj[e.from].push(e.to);
-        if (inDeg[e.to] !== undefined) inDeg[e.to]++;
+        if (adj[e.from]) adj[e.from]!.push(e.to);
+        if (inDeg[e.to] !== undefined) inDeg[e.to]!++;
     });
 
     const layer: Record<string, number> = {};
     let queue = nodes.filter((n) => inDeg[n.id] === 0).map((n) => n.id);
-    if (queue.length === 0 && nodes.length > 0) queue = [nodes[0].id];
+    if (queue.length === 0 && nodes.length > 0) queue = [nodes[0]!.id];
 
     const visited = new Set(queue);
     let ptr = 0;
     while (ptr < queue.length) {
-        const cur = queue[ptr++];
+        const cur = queue[ptr++]!;
         const cl = layer[cur] ?? 0;
         for (const next of adj[cur] || []) {
             if (!visited.has(next)) {

@@ -99,7 +99,7 @@ const SYNONYM_GROUPS: string[][] = [
 
 export function normalizeSynonyms(word: string): string {
     for (const group of SYNONYM_GROUPS) {
-        if (group.includes(word)) return group[0];
+        if (group.includes(word)) return group[0]!;
     }
     return word;
 }

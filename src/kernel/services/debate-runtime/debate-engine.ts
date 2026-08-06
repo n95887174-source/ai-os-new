@@ -569,7 +569,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
             }
             if (candidates.length > 0) {
                 candidates.sort((a, b) => b.score - a.score);
-                return candidates[0].content;
+                return candidates[0]!.content;
             }
             // Fallthrough: if Best-of-N produced no valid candidates, return the
             // single-call result below

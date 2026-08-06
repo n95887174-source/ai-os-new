@@ -418,7 +418,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         if (requests.length === 0) return [];
         return this.callWithCircuit(
             () => this.inner.batchSendMessage!(requests),
-            requests[0].apiKey,
+            requests[0]!.apiKey,
         );
     }
 
@@ -435,7 +435,7 @@ export class CircuitBreakerDecorator extends BaseDecorator {
         if (requests.length === 0) return;
         return this.callWithCircuit(
             () => this.inner.batchStreamMessage!(requests),
-            requests[0].apiKey,
+            requests[0]!.apiKey,
         );
     }
 

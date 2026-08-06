@@ -11,7 +11,6 @@
 import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService, IProviderTracker } from '../types/interfaces';
 import type { ICostCalculator } from '../contracts/pricing';
-import type { IExecutionGovernor } from '../contracts/execution-governor';
 import type { IMemoryEngine } from '../contracts/memory';
 import type { IResearchEngine } from '../contracts/research-engine';
 import type { LoggerService } from '../services/logger-service';
@@ -123,15 +122,8 @@ export const registerPhase6: Phase = (helpers, ctx) => {
                         return state.providers[provider] ?? state.providers[provider.toLowerCase()];
                     },
                     logger: c.get<LoggerService>('logger'),
-                    llmClient: c.get<LLMClientService>('llmClientService'),
-                    executionGovernor: (() => {
-                        try {
-                            return ctx.container.get<IExecutionGovernor>('executionGovernor');
-                        } catch {
-                            return undefined;
-                        }
-                    })(),
                 }),
+                c.get<LLMClientService>('llmClientService'),
             ),
     );
 

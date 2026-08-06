@@ -56,12 +56,12 @@ export class EcosystemEngine implements IEcosystemEngine {
 
         if (this.creatures.length === 0) {
             this.creatures = CREATURES.map((c) => ({ ...c }));
-            this.creatures[0].isUnlocked = true;
+            this.creatures[0]!.isUnlocked = true;
         }
         if (this.achievements.length === 0) this.achievements = ACHIEVEMENTS.map((a) => ({ ...a }));
         if (this.themes.length === 0) {
             this.themes = THEMES.map((t) => ({ ...t }));
-            this.themes[0].isUnlocked = true;
+            this.themes[0]!.isUnlocked = true;
         }
 
         LOGGER.info('EcosystemEngine', 'Aquarium ecosystem initialized', {
@@ -166,8 +166,8 @@ export class EcosystemEngine implements IEcosystemEngine {
         this.creatures = CREATURES.map((c) => ({ ...c }));
         this.achievements = ACHIEVEMENTS.map((a) => ({ ...a }));
         this.themes = THEMES.map((t) => ({ ...t }));
-        this.creatures[0].isUnlocked = true;
-        this.themes[0].isUnlocked = true;
+        this.creatures[0]!.isUnlocked = true;
+        this.themes[0]!.isUnlocked = true;
         this.totalFeedings = 0;
         this.totalUnlocks = 0;
         this.lastTick = Date.now();

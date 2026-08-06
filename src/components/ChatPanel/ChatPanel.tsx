@@ -39,7 +39,7 @@ const ChatPanel: React.FC = () => {
     const activeSessionHistory = useActiveSessionHistory();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
-        activeKeys.length > 0 ? [activeKeys[0].id] : [],
+        activeKeys.length > 0 ? [activeKeys[0]!.id] : [],
     );
     const lastAutoSelectRef = useRef<string[]>([]);
     const [selectedModel, setSelectedModel] = useState<string>(
@@ -57,7 +57,7 @@ const ChatPanel: React.FC = () => {
         ) {
             return;
         }
-        lastAutoSelectRef.current = [activeKeys[0].id];
+        lastAutoSelectRef.current = [activeKeys[0]!.id];
         if (selectedKeys.length > 0) return;
         setSelectedKeys(lastAutoSelectRef.current);
         const firstModel =
@@ -123,7 +123,7 @@ const ChatPanel: React.FC = () => {
     const historyLen = activeSessionHistory?.length;
     const lastContentLen =
         activeSessionHistory && activeSessionHistory.length > 0
-            ? (activeSessionHistory[activeSessionHistory.length - 1].responses?.reduce(
+            ? (activeSessionHistory[activeSessionHistory.length - 1]!.responses?.reduce(
                   (sum, r) => sum + (r.content?.length ?? 0),
                   0,
               ) ?? 0)

@@ -35,7 +35,7 @@ function pickTarget(targets: CanaryTarget[]): CanaryTarget {
         roll -= t.weight;
         if (roll <= 0) return t;
     }
-    return targets[targets.length - 1];
+    return targets[targets.length - 1]!;
 }
 
 function simpleHash(s: string): string {
@@ -56,7 +56,7 @@ export class CanaryRouterDecorator extends BaseDecorator {
 
     constructor(config: CanaryRouterConfig, options?: { maxResults?: number }) {
         if (config.targets.length < 2) throw new Error('CanaryRouter requires at least 2 targets');
-        super(config.targets[0].adapter);
+        super(config.targets[0]!.adapter);
         this.#config = config;
         this.maxResults = options?.maxResults ?? 1000;
     }
@@ -66,11 +66,11 @@ export class CanaryRouterDecorator extends BaseDecorator {
     }
 
     getControl(): CanaryTarget {
-        return this.#config.targets[0];
+        return this.#config.targets[0]!;
     }
 
     getCandidate(): CanaryTarget {
-        return this.#config.targets[1];
+        return this.#config.targets[1]!;
     }
 
     private selectTarget(messages: ChatMessage[], model: string): CanaryTarget {
@@ -85,7 +85,7 @@ export class CanaryRouterDecorator extends BaseDecorator {
                 cached.targetIndex < this.#config.targets.length &&
                 now - cached.timestamp < CanaryRouterDecorator.SESSION_TTL
             ) {
-                return this.#config.targets[cached.targetIndex];
+                return this.#config.targets[cached.targetIndex]!;
             }
             const chosen = pickTarget(this.#config.targets);
             this.sessionMap.set(sessionKey, {
@@ -229,9 +229,9 @@ export class CanaryRouterDecorator extends BaseDecorator {
     }
 
     async checkHealth(apiKey: string): Promise<HealthCheckResult> {
-        const primary = await this.#config.targets[0].adapter.checkHealth(apiKey);
+        const primary = await this.#config.targets[0]!.adapter.checkHealth(apiKey);
         if (primary.status === 'active') return primary;
-        return this.#config.targets[1].adapter.checkHealth(apiKey);
+        return this.#config.targets[1]!.adapter.checkHealth(apiKey);
     }
 
     async getAvailableModels(apiKey: string, signal?: AbortSignal): Promise<string[]> {

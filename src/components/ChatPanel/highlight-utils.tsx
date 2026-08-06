@@ -245,7 +245,7 @@ export function highlightCode(code: string, lang: string): React.ReactNode {
         .replace(/^node/i, 'js')
         .replace(/^javascript/i, 'js')
         .replace(/^typescript/i, 'ts');
-    const kw = HIGHLIGHT_KEYWORDS[langLower] || HIGHLIGHT_KEYWORDS['ts'];
+    const kw = HIGHLIGHT_KEYWORDS[langLower] || HIGHLIGHT_KEYWORDS['ts']!;
     const parts: React.ReactNode[] = [];
 
     const tokenize = (str: string): string => {
@@ -271,7 +271,7 @@ export function highlightCode(code: string, lang: string): React.ReactNode {
                 );
             } else if (m[1]) {
                 chunks.push(`<span style="color:#fbbf24">${escapeHtml(matched)}</span>`);
-            } else if (m[2] && kw.includes(m[2])) {
+            } else if (m[2] && kw!.includes(m[2])) {
                 chunks.push(
                     `<span style="color:#c084fc;font-weight:600">${escapeHtml(matched)}</span>`,
                 );

@@ -220,7 +220,7 @@ export class SnapshotService {
     async capture(traceId: string, stepId: string, label?: string): Promise<SystemSnapshot> {
         // C-94: Throttle — skip duplicate events within 1s
         if (this.shouldThrottleStep(traceId, stepId)) {
-            return this.snapshots[this.snapshots.length - 1];
+            return this.snapshots[this.snapshots.length - 1]!;
         }
 
         const top = this.deps.orchestrator.getActiveTopology();
@@ -412,7 +412,7 @@ export class SnapshotService {
     }
 
     getLatest(): SystemSnapshot | null {
-        return this.snapshots.length > 0 ? this.snapshots[this.snapshots.length - 1] : null;
+        return this.snapshots.length > 0 ? this.snapshots[this.snapshots.length - 1]! : null;
     }
 
     getRecent(count = 10): SystemSnapshot[] {
@@ -430,7 +430,7 @@ export class SnapshotService {
         if (this._replaying || this.snapshots.length === 0) return false;
         this._replaying = true;
         this.replayIndex = 0;
-        const ok = this.restore(this.snapshots[0]);
+        const ok = this.restore(this.snapshots[0]!);
         if (!ok) this._replaying = false;
         return ok;
     }
@@ -444,14 +444,14 @@ export class SnapshotService {
         )
             return false;
         this.replayIndex++;
-        return this.restore(this.snapshots[this.replayIndex]);
+        return this.restore(this.snapshots[this.replayIndex]!);
     }
 
     replayPrev(): boolean {
         // B10-40: Use <= comparison, not = assignment; decrement index; call restore()
         if (!this._replaying || this.replayIndex <= 0) return false;
         this.replayIndex--;
-        return this.restore(this.snapshots[this.replayIndex]);
+        return this.restore(this.snapshots[this.replayIndex]!);
     }
 
     stopReplay(): void {
@@ -465,7 +465,7 @@ export class SnapshotService {
 
     getReplaySnapshot(): SystemSnapshot | null {
         if (this.replayIndex < 0 || this.replayIndex >= this.snapshots.length) return null;
-        return this.snapshots[this.replayIndex];
+        return this.snapshots[this.replayIndex]!;
     }
 
     removeSnapshot(id: string) {

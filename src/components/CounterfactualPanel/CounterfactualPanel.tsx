@@ -68,9 +68,10 @@ const CounterfactualPanel: React.FC = () => {
         setActivePreset(presetIndex);
         try {
             const overrides =
-                presetIndex !== null ? RATE_PRESETS[presetIndex] : { keys: {}, global: {} };
+                presetIndex !== null ? RATE_PRESETS[presetIndex]! : { keys: {}, global: {} };
             setResult(
-                counterfactualEngine?.run({ baseTrace: trace, overrides, prompt: '' }) ?? null,
+                (counterfactualEngine?.run({ baseTrace: trace, overrides, prompt: '' }) ??
+                    null) as CounterfactualResult | null,
             );
         } catch {
             setResult(null);

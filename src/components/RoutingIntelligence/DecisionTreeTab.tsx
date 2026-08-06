@@ -111,7 +111,7 @@ function DecisionTreeTab({ decisions }: Props) {
             {decisions.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                     {(() => {
-                        const d = decisions[0];
+                        const d = decisions[0]!;
                         const classification =
                             d.promptLength > 2000
                                 ? 'Long'

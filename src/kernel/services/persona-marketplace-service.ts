@@ -275,7 +275,7 @@ export class PersonaMarketplaceService implements IPersonaMarketplaceService {
                 filtered[key] = value;
             }
         }
-        Object.assign(this.listings[idx], filtered);
+        Object.assign(this.listings[idx]!, filtered);
         this.#persist();
     }
 

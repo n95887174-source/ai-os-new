@@ -253,13 +253,13 @@ export class EventRecorder {
     }
 
     getSince(sequence: number): RecordedEvent[] {
-        if (this.events.length > 0 && sequence < this.events[0].sequence) {
+        if (this.events.length > 0 && sequence < this.events[0]!.sequence) {
             LOGGER.warn(
                 'EventRecorder',
                 'getSince: requested sequence predates earliest available event',
                 {
                     requested: sequence,
-                    earliestAvailable: this.events[0].sequence,
+                    earliestAvailable: this.events[0]!.sequence,
                 },
             );
             return [];
@@ -282,8 +282,8 @@ export class EventRecorder {
     getSequenceRange(): { first: number; last: number } {
         if (this.events.length === 0) return { first: -1, last: -1 };
         return {
-            first: this.events[0].sequence,
-            last: this.events[this.events.length - 1].sequence,
+            first: this.events[0]!.sequence,
+            last: this.events[this.events.length - 1]!.sequence,
         };
     }
 

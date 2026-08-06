@@ -245,11 +245,11 @@ export class AgentHealthMonitor implements ILifecycle {
         const avgLatency = totalCalls > 0 ? totalDuration / totalCalls : 0;
         const sorted = agentRecords.map((r) => r.duration).sort((a, b) => a - b);
         const p95Idx = Math.ceil(sorted.length * 0.95) - 1;
-        const p95Latency = p95Idx >= 0 ? sorted[p95Idx] : 0;
+        const p95Latency = p95Idx >= 0 ? sorted[p95Idx]! : 0;
 
         let consecutiveErrors = 0;
         for (let i = agentRecords.length - 1; i >= 0; i--) {
-            if (!agentRecords[i].success) consecutiveErrors++;
+            if (!agentRecords[i]!.success) consecutiveErrors++;
             else break;
         }
 

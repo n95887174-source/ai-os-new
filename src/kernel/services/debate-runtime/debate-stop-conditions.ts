@@ -79,7 +79,7 @@ export function isConvergencePlateau(
         if (roundArgs.length < 2) continue;
         let total = 0;
         for (let i = 1; i < roundArgs.length; i++) {
-            total += jaccardSim(roundArgs[i - 1].content, roundArgs[i].content);
+            total += jaccardSim(roundArgs[i - 1]!.content, roundArgs[i]!.content);
         }
         roundScores.push((total / (roundArgs.length - 1)) * 100);
     }
@@ -101,8 +101,8 @@ export function updateConvergenceScore(
     let pairs = 0;
     for (let i = 0; i < recentArgs.length; i++) {
         for (let j = i + 1; j < recentArgs.length; j++) {
-            if (recentArgs[i].round === recentArgs[j].round) {
-                totalOverlap += jaccardSim(recentArgs[i].content, recentArgs[j].content);
+            if (recentArgs[i]!.round === recentArgs[j]!.round) {
+                totalOverlap += jaccardSim(recentArgs[i]!.content, recentArgs[j]!.content);
                 pairs++;
             }
         }

@@ -218,7 +218,7 @@ export class LogicalFormExtractor implements ILogicalFormExtractor {
         const conclusion =
             conclusionSentences.length > 0
                 ? conclusionSentences.join(' ')
-                : sentences[sentences.length - 1];
+                : sentences[sentences.length - 1]!;
 
         const premises =
             premiseSentences.length > 0
@@ -226,9 +226,11 @@ export class LogicalFormExtractor implements ILogicalFormExtractor {
                 : sentences.slice(0, Math.min(2, sentences.length - 1));
 
         const majorPremiseText =
-            premises.length > 0 ? premises[0] : 'All observed cases follow this pattern (implicit)';
+            premises.length > 0
+                ? premises[0]!
+                : 'All observed cases follow this pattern (implicit)';
         const minorPremiseText =
-            premises.length > 1 ? premises[1] : 'This case follows the same pattern (implicit)';
+            premises.length > 1 ? premises[1]! : 'This case follows the same pattern (implicit)';
 
         const hasEnthymemeMajor = !premises.length;
         const hasEnthymemeMinor = premises.length < 2 && premises.length > 0;
@@ -244,7 +246,7 @@ export class LogicalFormExtractor implements ILogicalFormExtractor {
                 isExplicit: !hasEnthymemeMinor,
                 confidence: hasEnthymemeMinor ? 0.5 : 0.8,
             },
-            conclusion,
+            conclusion: conclusion!,
         };
     }
 

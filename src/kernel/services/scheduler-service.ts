@@ -401,13 +401,13 @@ export class SchedulerService {
         for (const part of pattern.split(',')) {
             const rangeMatch = part.match(/^(\d+)-(\d+)$/);
             if (rangeMatch) {
-                if (value >= parseInt(rangeMatch[1], 10) && value <= parseInt(rangeMatch[2], 10))
+                if (value >= parseInt(rangeMatch[1]!, 10) && value <= parseInt(rangeMatch[2]!, 10))
                     return true;
                 continue;
             }
             const stepMatch = part.match(/^\*\/(\d+)$/);
             if (stepMatch) {
-                if (value % parseInt(stepMatch[1], 10) === 0) return true;
+                if (value % parseInt(stepMatch[1]!, 10) === 0) return true;
                 continue;
             }
             if (parseInt(part, 10) === value) return true;
@@ -431,7 +431,7 @@ export class SchedulerService {
         ];
 
         for (let i = 0; i < 5; i++) {
-            const part = parts[i];
+            const part = parts[i]!;
             if (part === '*') continue;
             const validPart = /^[\d,\-/]+$/;
             if (!validPart.test(part)) return false;
@@ -439,26 +439,26 @@ export class SchedulerService {
             for (const v of values) {
                 if (v.includes('/')) {
                     const [, step] = v.split('/');
-                    if (!/^\d+$/.test(step) || parseInt(step) < 1) return false;
+                    if (!/^\d+$/.test(step!) || parseInt(step!) < 1) return false;
                     if (v.startsWith('/')) return false;
                 }
                 if (v.includes('-')) {
                     const [lo, hi] = v.split('-');
-                    if (!/^\d+$/.test(lo) || !/^\d+$/.test(hi)) return false;
-                    const nlo = parseInt(lo);
-                    const nhi = parseInt(hi);
-                    if (nlo < ranges[i].min || nhi > ranges[i].max || nlo > nhi) return false;
+                    if (!/^\d+$/.test(lo!) || !/^\d+$/.test(hi!)) return false;
+                    const nlo = parseInt(lo!);
+                    const nhi = parseInt(hi!);
+                    if (nlo < ranges[i]!.min || nhi > ranges[i]!.max || nlo > nhi) return false;
                 }
                 if (/^\d+$/.test(v)) {
                     const n = parseInt(v);
-                    if (n < ranges[i].min || n > ranges[i].max) return false;
+                    if (n < ranges[i]!.min || n > ranges[i]!.max) return false;
                 }
             }
         }
 
         // Allow 6th field (year) if present
         if (parts.length > 5) {
-            const yearPart = parts[5];
+            const yearPart = parts[5]!;
             if (yearPart !== '*') {
                 const validYear = /^[\d,\-/]+$/;
                 if (!validYear.test(yearPart)) return false;

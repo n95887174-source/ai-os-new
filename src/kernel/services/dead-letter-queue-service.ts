@@ -58,8 +58,8 @@ export class DeadLetterQueueService implements IDeadLetterQueue {
     async retry(id: string): Promise<boolean> {
         const idx = this.entries.findIndex((e) => e.id === id);
         if (idx === -1) return false;
-        this.entries[idx].retryCount++;
-        this.entries[idx].lastError = undefined;
+        this.entries[idx]!.retryCount++;
+        this.entries[idx]!.lastError = undefined;
         await this.persist();
         return true;
     }

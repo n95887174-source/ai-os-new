@@ -76,8 +76,8 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                 key={output.roleId}
                 style={{
                     ...card,
-                    borderLeft: `3px solid ${cfg.color}`,
-                    background: cfg.bg,
+                    borderLeft: `3px solid ${cfg!.color}`,
+                    background: cfg!.bg,
                     marginBottom: 6,
                 }}
             >
@@ -95,14 +95,14 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                             width: 24,
                             height: 24,
                             borderRadius: 6,
-                            background: cfg.color + '20',
+                            background: cfg!.color + '20',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
                         }}
                     >
-                        {cfg.icon}
+                        {cfg!.icon}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div
@@ -117,7 +117,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                         <div
                             style={{
                                 fontSize: '0.65rem',
-                                color: cfg.color,
+                                color: cfg!.color,
                                 fontWeight: 500,
                                 textTransform: 'capitalize',
                             }}
@@ -279,7 +279,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                 return (
                     <div>
                         <div style={{ marginBottom: 4 }}>
-                            {leaderId && roleNode(execution.roleOutputs[leaderId], 0)}
+                            {leaderId && roleNode(execution.roleOutputs[leaderId]!, 0)}
                         </div>
                         <div
                             style={{

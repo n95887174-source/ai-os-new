@@ -82,7 +82,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                             setSettings((prev) => ({ ...prev, themeConfig: next }));
                             settingsService.updateSettings({ themeConfig: next });
                         } catch (e) {
-                            LOGGER.warn('Failed to update highContrast', e);
+                            LOGGER.warn('Failed to update highContrast', e as string);
                         }
                     }}
                     accent="#f97316"
@@ -164,7 +164,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    LOGGER.warn('Failed to update autoSaveInterval', e);
+                                    LOGGER.warn('Failed to update autoSaveInterval', e as string);
                                 }
                             }}
                             style={settingSelect}
@@ -195,7 +195,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    LOGGER.warn('Failed to update maxHistoryEntries', e);
+                                    LOGGER.warn('Failed to update maxHistoryEntries', e as string);
                                 }
                             }}
                             style={settingSelect}
@@ -226,7 +226,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    LOGGER.warn('Failed to update maxTraceEntries', e);
+                                    LOGGER.warn('Failed to update maxTraceEntries', e as string);
                                 }
                             }}
                             style={settingSelect}
@@ -257,7 +257,10 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    LOGGER.warn('Failed to update pruneMemoriesAfterDays', e);
+                                    LOGGER.warn(
+                                        'Failed to update pruneMemoriesAfterDays',
+                                        e as string,
+                                    );
                                 }
                             }}
                             style={settingSelect}
@@ -289,7 +292,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                                     }));
                                     settingsService.updateSettings({ dataManagement: next });
                                 } catch (e) {
-                                    LOGGER.warn('Failed to update exportOnShutdown', e);
+                                    LOGGER.warn('Failed to update exportOnShutdown', e as string);
                                 }
                             }}
                             accent="#3b82f6"

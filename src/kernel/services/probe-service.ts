@@ -203,7 +203,7 @@ export class ProbeService implements IProbeService, ILifecycle {
         const modelHealth: Record<string, 'ok' | 'failed'> = {};
 
         for (let attemptIdx = 0; attemptIdx < modelsToTry.length; attemptIdx++) {
-            const currentModel = modelsToTry[attemptIdx];
+            const currentModel = modelsToTry[attemptIdx]!;
 
             const controller = new AbortController();
             const timeout = setTimeout(
@@ -500,13 +500,14 @@ export class ProbeService implements IProbeService, ILifecycle {
                 });
                 continue;
             }
-            const kss = this.deps.keyStateStore?.get(keys[0].id);
+            const firstKey = keys[0]!;
+            const kss = this.deps.keyStateStore?.get(firstKey.id);
             if (kss?.flags.authFailed) {
                 map.set(p.id, {
                     status: 'broken',
-                    provider: keys[0].provider,
-                    keyId: keys[0].id,
-                    keyLabel: keys[0].label || keys[0].provider,
+                    provider: firstKey.provider,
+                    keyId: firstKey.id,
+                    keyLabel: firstKey.label || firstKey.provider,
                     model: p.modelId || 'auto',
                     latency: 0,
                     rateLimited: false,
@@ -516,7 +517,7 @@ export class ProbeService implements IProbeService, ILifecycle {
                 });
                 continue;
             }
-            const result = await this.probeKey(keys[0].id, p.modelId);
+            const result = await this.probeKey(firstKey.id, p.modelId);
             map.set(p.id, result);
         }
         return map;

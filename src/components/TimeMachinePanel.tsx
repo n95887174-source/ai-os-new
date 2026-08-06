@@ -48,13 +48,13 @@ const TimeMachinePanelContent: React.FC = () => {
                 ? prev.filter((x) => x !== id)
                 : prev.length < 2
                   ? [...prev, id]
-                  : [prev[1], id],
+                  : ([prev[1]!, id] as string[]),
         );
     };
 
     const handleCompare = () => {
         if (compare.length !== 2) return;
-        setDiff(timeMachineService.compareSnapshots(compare[0], compare[1]));
+        setDiff(timeMachineService.compareSnapshots(compare[0]!, compare[1]!));
     };
 
     return (

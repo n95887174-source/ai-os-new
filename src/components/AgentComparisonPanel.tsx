@@ -96,7 +96,7 @@ const AgentComparisonPanelContent: React.FC = () => {
             prev.includes(id)
                 ? prev.filter((x) => x !== id)
                 : prev.length >= 2
-                  ? [prev[1], id]
+                  ? [prev[1]!, id]
                   : [...prev, id],
         );
     };

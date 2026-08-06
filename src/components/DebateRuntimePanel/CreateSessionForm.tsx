@@ -54,7 +54,7 @@ function buildPreviewTopology(
             topologyType === 'linear'
                 ? participants.slice(0, -1).map((n, i) => ({
                       from: n.id,
-                      to: participants[i + 1].id,
+                      to: participants[i + 1]!.id,
                       type: 'sequential' as const,
                   }))
                 : topologyType === 'judge' && participants.length >= 2
@@ -66,8 +66,8 @@ function buildPreviewTopology(
                                 participants.find(
                                     (q) =>
                                         (agentRoles[q.id] || '') === 'judge' ||
-                                        q.id === participants[participants.length - 1].id,
-                                )?.id || participants[participants.length - 1].id,
+                                        q.id === participants[participants.length - 1]!.id,
+                                )?.id || participants[participants.length - 1]!.id,
                             type: 'sequential' as const,
                         }))
                   : topologyType === 'red-blue'

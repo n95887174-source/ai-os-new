@@ -159,11 +159,11 @@ export class PromptAuditService implements IPromptAuditService {
         const pairs: PromptCollision[] = [];
         for (let i = 0; i < agents.length; i++) {
             for (let j = i + 1; j < agents.length; j++) {
-                const sim = jaccardSimilarity(agents[i].prompt, agents[j].prompt);
+                const sim = jaccardSimilarity(agents[i]!.prompt, agents[j]!.prompt);
                 if (sim > threshold) {
                     pairs.push({
-                        a: agents[i].name,
-                        b: agents[j].name,
+                        a: agents[i]!.name,
+                        b: agents[j]!.name,
                         similarity: Math.round(sim * 100),
                     });
                 }

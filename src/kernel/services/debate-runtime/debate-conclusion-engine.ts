@@ -232,7 +232,7 @@ export class DebateConclusionEngine {
         if (keyArguments.length > 0) {
             const strongest = keyArguments.reduce(
                 (best, a) => (a.strength > best.strength ? a : best),
-                keyArguments[0],
+                keyArguments[0]!,
             );
             lines.push(
                 `Самый сильный аргумент: "${strongest.content.slice(0, 100)}..." (${strongest.agentName}).`,
@@ -364,7 +364,7 @@ export class DebateConclusionEngine {
     private mergeJudgeSummaries(results: JudgeResult[], base: DebateVerdict): string {
         const nonEmpty = results.filter((r) => r.summary && !r.summary.includes('failed'));
         if (nonEmpty.length === 0) return base.summary;
-        if (nonEmpty.length === 1) return nonEmpty[0].summary;
+        if (nonEmpty.length === 1) return nonEmpty[0]!.summary;
 
         const neutral = nonEmpty.find((r) => r.label === 'Neutral-Judge');
         if (neutral) return neutral.summary;

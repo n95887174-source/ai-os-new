@@ -17,7 +17,7 @@ export function computeAgentPairSimilarity(claimsA: Claim[], claimsB: Claim[]): 
 
     for (let i = 0; i < claimsA.length; i += step) {
         for (let j = 0; j < claimsB.length; j += step) {
-            totalSim += jaccardSimilarity(claimsA[i].text, claimsB[j].text);
+            totalSim += jaccardSimilarity(claimsA[i]!.text, claimsB[j]!.text);
             comparisons++;
         }
     }
@@ -44,11 +44,11 @@ export function pairwiseAgentSimilarities(
     for (let i = 0; i < agents.length; i++) {
         for (let j = i + 1; j < agents.length; j++) {
             const sim = computeAgentPairSimilarity(
-                claimsByAgent.get(agents[i])!,
-                claimsByAgent.get(agents[j])!,
+                claimsByAgent.get(agents[i]!)!,
+                claimsByAgent.get(agents[j]!)!,
             );
-            result.get(agents[i])!.set(agents[j], sim);
-            result.get(agents[j])!.set(agents[i], sim);
+            result.get(agents[i]!)!.set(agents[j]!, sim);
+            result.get(agents[j]!)!.set(agents[i]!, sim);
         }
     }
 
@@ -64,9 +64,9 @@ export function findRedundantPairs(
 
     for (let i = 0; i < agents.length; i++) {
         for (let j = i + 1; j < agents.length; j++) {
-            const sim = similarities.get(agents[i])!.get(agents[j]) ?? 0;
+            const sim = similarities.get(agents[i]!)!.get(agents[j]!) ?? 0;
             if (sim > threshold) {
-                pairs.push({ agentA: agents[i], agentB: agents[j], similarity: sim });
+                pairs.push({ agentA: agents[i]!, agentB: agents[j]!, similarity: sim });
             }
         }
     }

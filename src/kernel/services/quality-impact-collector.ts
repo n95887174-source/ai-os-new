@@ -47,8 +47,8 @@ function gamma(z: number): number {
     ];
     if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
     z -= 1;
-    let x = c[0];
-    for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+    let x = c[0]!;
+    for (let i = 1; i < g + 2; i++) x += c[i]! / (z + i);
     const tt = z + g + 0.5;
     return Math.sqrt(2 * Math.PI) * Math.pow(tt, z + 0.5) * Math.exp(-tt) * x;
 }
@@ -94,8 +94,8 @@ function findBestRoundRange(scores: number[], rounds: number[]): [number, number
             const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
             if (avg > bestAvg) {
                 bestAvg = avg;
-                bestStart = rounds[i];
-                bestEnd = rounds[j];
+                bestStart = rounds[i]!;
+                bestEnd = rounds[j]!;
             }
         }
     }
@@ -445,7 +445,7 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
 
     private computeLastTouch(events: QualityImpactEvent[]): string | null {
         for (let i = events.length - 1; i >= 0; i--) {
-            const e = events[i];
+            const e = events[i]!;
             if (e.eventType === 'SCORE_CHANGED' || e.eventType === 'FINAL_IMPACT') {
                 return e.techniqueId;
             }

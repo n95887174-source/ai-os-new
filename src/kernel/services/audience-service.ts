@@ -167,7 +167,7 @@ export class AudienceService implements IAudienceService {
         const shuffled = [...AUDIENCE_ARCHETYPES].sort(() => _rng.next() - 0.5);
         const actualSize = Math.min(size, this.MAX_MEMBERS);
         for (let i = 0; i < actualSize; i++) {
-            const arch = shuffled[i % shuffled.length];
+            const arch = shuffled[i % shuffled.length]!;
             const id = `audience-${++_counter}`;
             const nameSuffix = _rng.chance(0.5) ? _rng.nextInt(0, 9998).toString() : '';
             this.members.push({
@@ -215,8 +215,8 @@ export class AudienceService implements IAudienceService {
         const counts: Record<string, { count: number; totalIntensity: number }> = {};
         for (const r of recent) {
             if (!counts[r.reaction]) counts[r.reaction] = { count: 0, totalIntensity: 0 };
-            counts[r.reaction].count++;
-            counts[r.reaction].totalIntensity += r.intensity;
+            counts[r.reaction]!.count++;
+            counts[r.reaction]!.totalIntensity += r.intensity;
         }
         let best = '';
         let bestScore = 0;

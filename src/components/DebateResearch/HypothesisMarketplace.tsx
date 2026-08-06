@@ -17,6 +17,12 @@ const LOGGER = rootLogger.child('HypothesisMarketplace');
 import { glassPanel } from '../../styles/common';
 import { StorageAdapter } from '../../kernel/services/storage-adapter';
 import { useConfirm } from '../../hooks/useConfirm';
+import type {
+    ResearchHypothesis,
+    HypothesisCategory,
+    HypothesisStatus,
+} from '../../kernel/types/research-types';
+import { HYPOTHESIS_CATEGORIES, HYPOTHESIS_STATUSES } from '../../kernel/types/research-types';
 
 const categoryColors: Record<HypothesisCategory, string> = {
     arch: '#3b82f6',
@@ -498,7 +504,7 @@ export const HypothesisMarketplace: React.FC = () => {
                         const v = votes[h.id] || { up: 0, down: 0 };
                         const score = v.up - v.down;
                         const isExpanded = expandedId === h.id;
-                        const StatusIcon = statusIcons[h.status];
+                        const StatusIcon = statusIcons[h.status]!;
                         return (
                             <motion.div
                                 key={h.id}

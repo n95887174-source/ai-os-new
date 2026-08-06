@@ -77,7 +77,7 @@ const DonutChart: React.FC<{
             {segments.map((seg, i) => {
                 const pct = seg.value / total;
                 const dash = pct * circumference;
-                const dashOffset = -cumulativeOffsets[i];
+                const dashOffset = -cumulativeOffsets[i]!;
                 return (
                     <circle
                         key={seg.color}

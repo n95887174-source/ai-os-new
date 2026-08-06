@@ -50,8 +50,8 @@ export function buildDebateState(args: DebateArgument[], currentAgentId: string)
         byRound.set(a.round, r);
     }
     const roundNumbers = [...byRound.keys()].sort((a, b) => a - b);
-    const currentRound = roundNumbers[roundNumbers.length - 1];
-    const previousRound = roundNumbers.length >= 2 ? roundNumbers[roundNumbers.length - 2] : -1;
+    const currentRound = roundNumbers[roundNumbers.length - 1]!;
+    const previousRound = roundNumbers.length >= 2 ? roundNumbers[roundNumbers.length - 2]! : -1;
 
     // Only include the last MAX_CONTEXT_ROUNDS rounds to limit token burst
     const recentRoundNumbers = roundNumbers.slice(-MAX_CONTEXT_ROUNDS);
@@ -101,8 +101,8 @@ export function buildDebateState(args: DebateArgument[], currentAgentId: string)
     // Detect resolved claims: a claim is resolved when addressed by the other side in a subsequent round
     const resolvedClaims: ClaimEntry[] = [];
     for (let i = 0; i < roundNumbers.length - 1; i++) {
-        const roundClaims = rounds[i].claims;
-        const nextRoundClaims = rounds[i + 1].claims;
+        const roundClaims = rounds[i]!.claims;
+        const nextRoundClaims = rounds[i + 1]!.claims;
         for (const claim of roundClaims) {
             const addressed = nextRoundClaims.some(
                 (c) =>
@@ -233,7 +233,7 @@ export function buildDebateStatePrompt(
     }
 
     parts.push(`\n### Current Strategy`);
-    parts.push(strategy);
+    parts.push(strategy!);
 
     parts.push(`\n### Your Task (Round ${round})`);
     parts.push(

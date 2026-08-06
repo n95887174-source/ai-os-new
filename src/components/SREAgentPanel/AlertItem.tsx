@@ -6,7 +6,7 @@ interface Props {
 }
 
 const AlertItem: React.FC<Props> = ({ alert: a }) => {
-    const cfg = SEVERITY_CONFIG[a.severity];
+    const cfg = SEVERITY_CONFIG[a.severity]!;
     return (
         <div
             style={{

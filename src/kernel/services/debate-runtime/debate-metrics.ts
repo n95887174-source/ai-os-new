@@ -251,7 +251,7 @@ export function computeQualityMetrics(
     let selfSimCount = 0;
     for (const [, texts] of agentArgMap) {
         for (let i = 1; i < texts.length; i++) {
-            selfSimTotal += jaccardSimilarity(texts[i - 1], texts[i]);
+            selfSimTotal += jaccardSimilarity(texts[i - 1]!, texts[i]!);
             selfSimCount++;
         }
     }
@@ -262,8 +262,8 @@ export function computeQualityMetrics(
     const agentIds = [...agentArgMap.keys()];
     for (let i = 0; i < agentIds.length; i++) {
         for (let j = i + 1; j < agentIds.length; j++) {
-            const textsA = agentArgMap.get(agentIds[i]) || [];
-            const textsB = agentArgMap.get(agentIds[j]) || [];
+            const textsA = agentArgMap.get(agentIds[i]!) || [];
+            const textsB = agentArgMap.get(agentIds[j]!) || [];
             const sampleA = textsA.slice(-3);
             const sampleB = textsB.slice(-3);
             for (const ta of sampleA) {

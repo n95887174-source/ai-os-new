@@ -69,7 +69,7 @@ function walkAst(node: AstNodeLike | null | undefined): string | null {
     for (const key of Object.keys(node)) {
         if (['type', 'start', 'end', 'range', 'loc', 'optional', 'computed'].includes(key))
             continue;
-        const v = node[key];
+        const v = node[key as keyof AstNodeLike];
         if (Array.isArray(v)) {
             for (const item of v) {
                 if (item && typeof item === 'object' && 'type' in item) {
@@ -651,8 +651,8 @@ export class ToolService {
         for (const exec of this.executionHistory) {
             if (!byTool[exec.toolId])
                 byTool[exec.toolId] = { total: 0, success: 0, avgDuration: 0 };
-            byTool[exec.toolId].total++;
-            if (exec.status === 'success') byTool[exec.toolId].success++;
+            byTool[exec.toolId]!.total++;
+            if (exec.status === 'success') byTool[exec.toolId]!.success++;
         }
         for (const [id, stats] of Object.entries(byTool)) {
             const execs = this.executionHistory.filter((e) => e.toolId === id && e.duration);

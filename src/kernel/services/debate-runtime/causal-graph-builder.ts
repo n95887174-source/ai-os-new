@@ -98,8 +98,8 @@ export class CausalGraphBuilder implements ICausalGraphBuilder {
 
         const sessionLinks = this.links.get(sessionId) ?? [];
         sessionLinks.push({
-            cause: pairs[0],
-            effect: pairs.length > 1 ? pairs[1] : pairs[0],
+            cause: pairs[0]!,
+            effect: pairs.length > 1 ? pairs[1]! : pairs[0]!,
             agentId,
             round,
             order,

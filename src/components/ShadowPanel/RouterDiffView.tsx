@@ -102,7 +102,7 @@ const RouterDiffView: React.FC<Props> = ({ report }) => {
             {report.mismatches.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {report.mismatches.map((m) => {
-                        const sc = SEVERITY_COLORS[m.severity] || SEVERITY_COLORS.medium;
+                        const sc = (SEVERITY_COLORS[m.severity!] ?? SEVERITY_COLORS.medium)!;
                         return (
                             <div
                                 key={m.requestId}

@@ -143,8 +143,8 @@ export class BudgetService implements IBudgetService {
             if (saved) {
                 this.costHistory = saved.map((c) => ({
                     model: c.model,
-                    provider:
-                        c.provider || (c.model.includes('/') ? c.model.split('/')[0] : c.model),
+                    provider: (c.provider ||
+                        (c.model.includes('/') ? c.model.split('/')[0] : c.model))!,
                     inputTokens: c.inputTokens,
                     outputTokens: c.outputTokens,
                     inputCost: c.inputCost,
@@ -195,7 +195,7 @@ export class BudgetService implements IBudgetService {
                 const output = d.outputTokens ?? Math.round((d.tokens || 0) * 0.7);
                 const cost = cc.calculateCost(d.model, input, output);
                 const provider = (
-                    d.provider || (d.model.includes('/') ? d.model.split('/')[0] : d.model)
+                    d.provider || (d.model.includes('/') ? d.model.split('/')[0]! : d.model)
                 ).toLowerCase();
                 const now = Date.now();
                 // C-67: use requestId for dedup key (stable, not time-based) — prevents silent cost duplication
@@ -317,7 +317,7 @@ export class BudgetService implements IBudgetService {
         for (const key of this.sentAlerts) {
             const parts = key.split(':');
             if (parts[0] === type && parts[1] === entity) {
-                const thresholdLevel = parseInt(parts[2], 10);
+                const thresholdLevel = parseInt(parts[2]!, 10);
                 if (pct < thresholdLevel) this.sentAlerts.delete(key);
             }
         }

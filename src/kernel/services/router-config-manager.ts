@@ -169,7 +169,7 @@ export class RouterConfigManager {
     }
 
     getActiveProfile(): WeightProfile {
-        const profile = this.config.weightProfiles[this.config.activeProfile];
+        const profile = this.config.weightProfiles[this.config.activeProfile]!;
         return profile ?? this.config.weightProfiles[DEFAULT_PROFILE_NAME];
     }
 

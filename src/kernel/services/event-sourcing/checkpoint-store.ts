@@ -85,7 +85,7 @@ export class CheckpointStore {
 
     getLatest(): Checkpoint | null {
         if (this.checkpoints.length === 0) return null;
-        return this.checkpoints[this.checkpoints.length - 1];
+        return this.checkpoints[this.checkpoints.length - 1]!;
     }
 
     getBySequence(sequence: number): Checkpoint | undefined {

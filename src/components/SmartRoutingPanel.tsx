@@ -613,8 +613,8 @@ export default function SmartRoutingPanel() {
                             .filter(
                                 (id) =>
                                     id.startsWith('pa-') &&
-                                    parseInt(id.split('-')[1]) > 15 &&
-                                    parseInt(id.split('-')[1]) <= 30,
+                                    parseInt(id.split('-')[1]!) > 15 &&
+                                    parseInt(id.split('-')[1]!) <= 30,
                             ).length,
                     })}
                 />

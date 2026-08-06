@@ -67,7 +67,7 @@ export const STATUS_CONFIG: Record<
 };
 
 export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-    const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.idle;
+    const cfg = (STATUS_CONFIG[status] || STATUS_CONFIG.idle)!;
     return (
         <span
             style={{

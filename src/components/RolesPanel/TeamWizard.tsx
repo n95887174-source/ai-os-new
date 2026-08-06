@@ -190,7 +190,7 @@ const TeamWizard: React.FC<TeamWizardProps> = ({ templates, roles, onSave, onCan
                 ))}
             </div>
 
-            {stepContent[step]()}
+            {(stepContent[step] as () => React.ReactNode)()}
 
             <div
                 style={{

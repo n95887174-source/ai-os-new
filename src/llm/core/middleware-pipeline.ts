@@ -33,7 +33,7 @@ export class MiddlewarePipeline {
             currentCtx: MiddlewareContext,
         ): Promise<ProviderResponse> => {
             if (index < this.middlewares.length) {
-                const middleware = this.middlewares[index];
+                const middleware = this.middlewares[index]!;
                 let nextCalled = false;
                 return middleware.process(currentCtx, async (nextCtx) => {
                     if (nextCalled)

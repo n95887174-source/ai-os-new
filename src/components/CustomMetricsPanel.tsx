@@ -321,7 +321,7 @@ const CustomMetricsPanel: React.FC = () => {
                                     marginTop: 8,
                                 }}
                             >
-                                {values[m.id] !== undefined ? values[m.id].toFixed(2) : '—'}
+                                {values[m.id] !== undefined ? values[m.id]!.toFixed(2) : '—'}
                             </div>
                         </div>
                     ))}

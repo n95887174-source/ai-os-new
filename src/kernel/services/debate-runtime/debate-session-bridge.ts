@@ -48,7 +48,7 @@ export function buildRoundtableTopology(
         participants.length > 1
             ? participants.map((p, i) => ({
                   from: p.id,
-                  to: participants[(i + 1) % participants.length].id,
+                  to: participants[(i + 1) % participants.length]!.id,
                   type: 'sequential' as const,
               }))
             : [];

@@ -39,7 +39,7 @@ export const PersonaSelector: React.FC = () => {
             const all = ps.getAll ? ps.getAll() : [];
             const personas = Array.isArray(all) ? all : [];
             const active = ps.getActive ? ps.getActive() : null;
-            setActivePersona(active ?? (personas.length > 0 ? personas[0] : null));
+            setActivePersona(active ?? (personas.length > 0 ? personas[0]! : null));
             return true;
         };
 

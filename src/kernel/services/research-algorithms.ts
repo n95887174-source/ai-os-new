@@ -34,9 +34,9 @@ import type { ISourceAdapter, SourceAdapterConfig } from '../contracts/research-
 
 export function getNextQuestion(session: ResearchSession): string {
     if (session.loops.length === 0) return session.initialQuestion;
-    const last = session.loops[session.loops.length - 1];
+    const last = session.loops[session.loops.length - 1]!;
     if (last.synthesis?.newQuestions.length) {
-        return last.synthesis.newQuestions[0];
+        return last.synthesis.newQuestions[0]!;
     }
     return `${session.initialQuestion} (deeper analysis, iteration ${session.loops.length + 1})`;
 }
@@ -95,14 +95,14 @@ export function extractClaims(sources: ResearchSource[], _question: string): Res
 export function detectContradictions(claims: ResearchClaim[]): void {
     for (let i = 0; i < claims.length; i++) {
         for (let j = i + 1; j < claims.length; j++) {
-            const wordsA = new Set(claims[i].text.toLowerCase().split(/\s+/));
-            const wordsB = new Set(claims[j].text.toLowerCase().split(/\s+/));
+            const wordsA = new Set(claims[i]!.text.toLowerCase().split(/\s+/));
+            const wordsB = new Set(claims[j]!.text.toLowerCase().split(/\s+/));
             const overlap = [...wordsA].filter((w) => wordsB.has(w)).length;
             const total = new Set([...wordsA, ...wordsB]).size;
             const jaccard = total > 0 ? overlap / total : 0;
             if (jaccard > 0.6 && jaccard < 0.95) {
-                claims[i].contradictions.push(claims[j].id);
-                claims[j].contradictions.push(claims[i].id);
+                claims[i]!.contradictions.push(claims[j]!.id);
+                claims[j]!.contradictions.push(claims[i]!.id);
             }
         }
     }
@@ -125,7 +125,7 @@ export function synthesize(claims: ResearchClaim[], question: string): ResearchS
     const newQuestions =
         keyFindings.length > 0
             ? [
-                  `What are the implications of: ${keyFindings[0].slice(0, 80)}?`,
+                  `What are the implications of: ${keyFindings[0]!.slice(0, 80)}?`,
                   `How does ${question} compare with alternative approaches?`,
                   `What evidence contradicts the finding that ${keyFindings[0]?.slice(0, 60) || question}?`,
               ]
@@ -233,8 +233,8 @@ export function computeKnowledgeGraph(session: ResearchSession): KnowledgeGraph 
     const eArr = Array.from(entityMap.keys());
     for (let i = 0; i < eArr.length && i < 10; i++) {
         for (let j = i + 1; j < eArr.length && j < 10; j++) {
-            const entI = entityMap.get(eArr[i])!;
-            const entJ = entityMap.get(eArr[j])!;
+            const entI = entityMap.get(eArr[i]!)!;
+            const entJ = entityMap.get(eArr[j]!)!;
             relations.push({
                 id: genId('kr'),
                 source: entI.id,

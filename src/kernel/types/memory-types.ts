@@ -129,10 +129,10 @@ export function computeMemoryStats(entries: MemoryEntry[]): MemoryStats {
         const imp = e.metadata.importance || 0;
         importanceSum += imp;
         importanceCount++;
-        if (imp >= 8) byImportance.critical++;
-        else if (imp >= 5) byImportance.high++;
-        else if (imp >= 3) byImportance.medium++;
-        else byImportance.low++;
+        if (imp >= 8) byImportance.critical!++;
+        else if (imp >= 5) byImportance.high!++;
+        else if (imp >= 3) byImportance.medium!++;
+        else byImportance.low!++;
 
         const ts = e.metadata.timestamp || 0;
         if (ts > 0) {

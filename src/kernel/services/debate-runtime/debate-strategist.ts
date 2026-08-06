@@ -84,14 +84,14 @@ function planDirective(
                 (unused.length > 0 ? unused.length : available.length),
         );
         directive =
-            unused.length > 0 ? unused[idx % unused.length] : available[idx % available.length];
+            unused.length > 0 ? unused[idx % unused.length]! : available[idx % available.length]!;
     }
 
     // Pick a target opponent for attack/defend
     let targetAgentId: string | undefined;
     if ((directive === 'attack' || directive === 'defend') && recentOpponents.length > 0) {
         const tgtIdx = Math.abs((agentId.charCodeAt(2) * 7 + round) % recentOpponents.length);
-        targetAgentId = recentOpponents[tgtIdx % recentOpponents.length].agentId;
+        targetAgentId = recentOpponents[tgtIdx % recentOpponents.length]!.agentId;
     }
 
     const reasoning = `Round ${round}: ${agentId} is assigned "${directive}" (agent has spoken ${myTurns} times, opponents ${opponentTurns} times)`;

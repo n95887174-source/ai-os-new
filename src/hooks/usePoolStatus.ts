@@ -49,8 +49,8 @@ export function usePoolStatus(): UsePoolStatusResult {
                     qKeys.every(
                         (k) =>
                             k in newQ &&
-                            newQ[k].requestsPerDay === prevQ[k].requestsPerDay &&
-                            newQ[k].tokensPerDay === prevQ[k].tokensPerDay,
+                            newQ[k]!.requestsPerDay === prevQ[k]!.requestsPerDay &&
+                            newQ[k]!.tokensPerDay === prevQ[k]!.tokensPerDay,
                     );
                 if (prev.keys.length === newKeys.length && quotasEqual) return prev;
                 return { keys: newKeys, quotas: newQuotas };

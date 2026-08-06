@@ -412,10 +412,10 @@ export class MetricsService {
         if (buf.length === 0) return { p50: 0, p90: 0, p95: 0, p99: 0 };
         const len = buf.length;
         return {
-            p50: buf[Math.floor(len * 0.5)],
-            p90: buf[Math.floor(len * 0.9)],
-            p95: buf[Math.floor(len * 0.95)],
-            p99: buf[Math.floor(len * 0.99)],
+            p50: buf[Math.floor(len * 0.5)]!,
+            p90: buf[Math.floor(len * 0.9)]!,
+            p95: buf[Math.floor(len * 0.95)]!,
+            p99: buf[Math.floor(len * 0.99)]!,
         };
     }
 

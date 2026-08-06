@@ -15,8 +15,8 @@ export function generateBracket(topics: string[], participantPool: string[]): To
         i < shuffledParticipants.length && firstRoundMatches.length < totalSlots / 2;
         i += 2
     ) {
-        const a = shuffledParticipants[i];
-        const b = shuffledParticipants[i + 1];
+        const a = shuffledParticipants[i]!;
+        const b = shuffledParticipants[i + 1]!;
         if (a === b) continue;
         if (paired.has(a) || paired.has(b)) continue;
         paired.add(a);
@@ -25,7 +25,7 @@ export function generateBracket(topics: string[], participantPool: string[]): To
         const isBye = topicIdx >= paddedTopics.length || paddedTopics[topicIdx] === '(bye)';
         firstRoundMatches.push({
             id: `r0-m${firstRoundMatches.length}`,
-            topic: paddedTopics[topicIdx % paddedTopics.length],
+            topic: paddedTopics[topicIdx % paddedTopics.length]!,
             participantA: { name: a, role: 'pro' },
             participantB: { name: b, role: 'con' },
             status: isBye ? 'completed' : 'pending',

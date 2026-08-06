@@ -106,14 +106,14 @@ const MAX_INSTALLED_PLUGINS = 200;
 export class PluginSdkService implements IPluginSdkService {
     private installed: PluginInstance[] = [
         {
-            manifest: { ...AVAILABLE_PLUGINS[0] },
+            manifest: { ...AVAILABLE_PLUGINS[0]! },
             status: 'enabled',
             installedAt: genTs(),
             lastActivated: Date.now() - 86400000 * 2,
             config: { maxPages: 10, userAgent: 'AI-OS-Bot' },
         },
         {
-            manifest: { ...AVAILABLE_PLUGINS[3] },
+            manifest: { ...AVAILABLE_PLUGINS[3]! },
             status: 'enabled',
             installedAt: genTs(),
             lastActivated: Date.now() - 86400000 * 5,

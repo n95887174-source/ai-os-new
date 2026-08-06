@@ -150,7 +150,7 @@ export async function loadActiveSession(debateStore: DebateStore): Promise<Debat
             records = await debateStore.listSessions({ status: 'paused', limit: 1 });
         }
         if (records.length === 0) return null;
-        const record = records[0];
+        const record = records[0]!;
         const session = recordToSession(record);
         const zombieThreshold = 5 * 60 * 1000;
         if (session.status === 'active') {

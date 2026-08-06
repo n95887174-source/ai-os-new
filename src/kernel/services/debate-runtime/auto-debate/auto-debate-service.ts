@@ -45,7 +45,7 @@ export function pickBestModelForDebate(
     const priorities = DEBATE_MODEL_PRIORITY[p];
     if (priorities) {
         for (let i = 0; i < priorities.length; i++) {
-            const model = priorities[(i + offset) % priorities.length];
+            const model = priorities[(i + offset) % priorities.length]!;
             if (availableModels.includes(model)) return model;
         }
     }
@@ -205,7 +205,7 @@ export class AutoDebateService implements IAutoDebateService {
         const selected = max && max < keys.length ? keys.slice(0, max) : keys;
         const providerOffsets: Record<string, number> = {};
         const participants: DebateParticipant[] = selected.map((key, i) => {
-            const role = ROLES[i % ROLES.length];
+            const role = ROLES[i % ROLES.length]!;
             const systemPrompts: Partial<Record<DebateRole, string>> = {
                 pro: `You are "Pro-${key.label ?? key.provider}". Argue in favour of the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
                 con: `You are "Con-${key.label ?? key.provider}". Argue against the topic. Use evidence, logic, and persuasive rhetoric. Be concise but thorough.`,
@@ -438,17 +438,17 @@ export class AutoDebateService implements IAutoDebateService {
         const matches: TournamentMatch[] = [];
 
         for (let m = 0; m < pairs.length; m++) {
-            const { a, b } = pairs[m];
-            const pA = allParticipants[a];
-            const pB = allParticipants[b];
+            const { a, b } = pairs[m]!;
+            const pA = allParticipants[a]!;
+            const pB = allParticipants[b]!;
             const pairStart = Date.now();
 
-            const pro = {
+            const pro: DebateParticipant = {
                 ...pA,
                 role: 'pro' as const,
                 systemPrompt: `You are "Pro-${pA.name}". Argue FOR the topic. Use evidence and logic.`,
             };
-            const con = {
+            const con: DebateParticipant = {
                 ...pB,
                 role: 'con' as const,
                 systemPrompt: `You are "Con-${pB.name}". Argue AGAINST the topic. Use evidence and logic.`,

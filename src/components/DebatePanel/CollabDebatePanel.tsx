@@ -10,6 +10,8 @@ import {
     Scale,
 } from 'lucide-react';
 import { collaborativeService, eventBus, rootLogger } from '../../kernel/instances';
+import type { DebateSession } from '../../kernel/contracts/debate-types';
+import type { CollabRole, HumanParticipant } from '../../kernel/services/collaborative-service';
 const LOGGER = rootLogger.child('CollabDebatePanel');
 
 const ROLE_ICONS: Record<CollabRole, React.ReactNode> = {

@@ -71,7 +71,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
             const constraint = problem.constraints.find((c) => c.variable === name);
             current[name] = constraint
                 ? this.randomInRange(constraint.min, constraint.max)
-                : problem.variables[name][0];
+                : problem.variables[name]![0]!;
         }
 
         let currentCost = getCost(current);
@@ -153,7 +153,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
                 const constraint = problem.constraints.find((c) => c.variable === name);
                 p[name] = constraint
                     ? this.randomInRange(constraint.min, constraint.max)
-                    : problem.variables[name][0];
+                    : problem.variables[name]![0]!;
             }
             particles.push(p);
         }
@@ -184,7 +184,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
                 }
 
                 const candidateCost = getCost(candidate);
-                const currentCost = getCost(particles[i]);
+                const currentCost = getCost(particles[i]!);
                 if (candidateCost < currentCost) {
                     particles[i] = candidate;
                     if (candidateCost < globalBestCost) {
@@ -240,7 +240,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
                 const constraint = problem.constraints.find((c) => c.variable === name);
                 vars[name] = constraint
                     ? this.randomInRange(constraint.min, constraint.max)
-                    : problem.variables[name][0];
+                    : problem.variables[name]![0]!;
             }
             const cost = getCost(vars);
             samples.push({ vars, cost });
@@ -255,7 +255,7 @@ export class QuantumInspirationService implements IQuantumInspirationService {
         for (let round = 0; round < 3; round++) {
             for (let t = 0; t < topK; t++) {
                 if (t >= samples.length) break;
-                const base = samples[t].vars;
+                const base = samples[t]!.vars;
                 for (let i = 0; i < 10; i++) {
                     const vars: Record<string, number> = {};
                     for (const name of varNames) {

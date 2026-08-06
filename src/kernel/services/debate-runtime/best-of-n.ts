@@ -30,7 +30,7 @@ export class BestOfNSelector implements IBestOfNSelector {
                 const rebuttalScore = this.scoreRebuttalStrength(content);
                 variants.push({
                     variantIndex: i,
-                    temperature: TEMPERATURES[i],
+                    temperature: TEMPERATURES[i]!,
                     content,
                     noveltyScore,
                     rebuttalStrength: rebuttalScore,
@@ -51,7 +51,7 @@ export class BestOfNSelector implements IBestOfNSelector {
         }
 
         variants.sort((a, b) => b.overallScore - a.overallScore);
-        const best = variants[0];
+        const best = variants[0]!;
         const avgScore = variants.reduce((s, v) => s + v.overallScore, 0) / variants.length;
 
         return {

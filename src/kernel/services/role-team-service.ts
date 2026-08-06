@@ -400,8 +400,8 @@ export class RoleTeamService implements IRoleTeamService {
         const allTeams = Array.from(this.teams.values());
         for (let i = 0; i < allTeams.length; i++) {
             for (let j = i + 1; j < allTeams.length; j++) {
-                const teamA = allTeams[i];
-                const teamB = allTeams[j];
+                const teamA = allTeams[i]!;
+                const teamB = allTeams[j]!;
                 const commonRoles = teamA.roleIds.filter((r) => teamB.roleIds.includes(r));
                 const overlapRatio =
                     commonRoles.length / Math.max(teamA.roleIds.length, teamB.roleIds.length);
@@ -434,7 +434,7 @@ export class RoleTeamService implements IRoleTeamService {
             (o) => o.status === 'completed' && o.output,
         );
         if (completed.length === 0) return 'No outputs to synthesize.';
-        if (completed.length === 1) return completed[0].output || '';
+        if (completed.length === 1) return completed[0]!.output || '';
 
         const team = this.teams.get(execution.teamId);
         const strategy = team?.coordinationStrategy || 'unknown';
@@ -460,7 +460,7 @@ export class RoleTeamService implements IRoleTeamService {
     private pickProviderAndKey(): { provider: string; key: string; model: string } | undefined {
         const keys = this.deps.keyService.getKeys().filter((k) => k.status === 'active');
         if (keys.length === 0) return undefined;
-        const key = keys[_rng.nextInt(0, keys.length - 1)];
+        const key = keys[_rng.nextInt(0, keys.length - 1)]!;
         const adapter = this.deps.adapterRegistry.getAdapter(key.provider);
         if (!adapter) return undefined;
         const providerDefaults: Record<string, string> = {
@@ -574,14 +574,14 @@ export class RoleTeamService implements IRoleTeamService {
         );
         for (let i = 0; i < roles.length; i++) {
             if (this.checkAborted(execution.id)) return;
-            const settled = results[i];
+            const settled = results[i]!;
             if (settled.status === 'fulfilled') {
-                execution.roleOutputs[roles[i]] = (
+                execution.roleOutputs[roles[i]!] = (
                     settled as PromiseFulfilledResult<RoleOutput>
                 ).value;
             } else {
-                execution.roleOutputs[roles[i]] = {
-                    roleId: roles[i],
+                execution.roleOutputs[roles[i]!] = {
+                    roleId: roles[i]!,
                     status: 'failed',
                     error:
                         ((settled as PromiseRejectedResult).reason as Error)?.message ||
@@ -671,7 +671,7 @@ export class RoleTeamService implements IRoleTeamService {
     }
 
     private async executeHierarchical(execution: TeamExecution, team: RoleTeam): Promise<void> {
-        const leaderId = team.leaderRoleId || team.roleIds[0];
+        const leaderId = team.leaderRoleId || team.roleIds[0]!;
         const subRoles = team.roleIds.filter((r) => r !== leaderId);
         execution.currentRoleId = leaderId;
         execution.roleOutputs[leaderId] = await this.callRoleWithId(
@@ -731,11 +731,11 @@ export class RoleTeamService implements IRoleTeamService {
             const nextBracket: Array<{ id: string }> = [];
             for (let i = 0; i < bracket.length; i += 2) {
                 if (i + 1 >= bracket.length) {
-                    nextBracket.push(bracket[i]);
+                    nextBracket.push(bracket[i]!);
                     break;
                 }
-                const a = bracket[i];
-                const b = bracket[i + 1];
+                const a = bracket[i]!;
+                const b = bracket[i + 1]!;
                 execution.roleOutputs[a.id] = await this.callRoleWithId(
                     a.id,
                     `Tournament Round ${round}: You are competing against ${b.id}. Make your best case.`,
@@ -748,8 +748,8 @@ export class RoleTeamService implements IRoleTeamService {
                     execution.task,
                     execution.id,
                 );
-                const outputA = execution.roleOutputs[a.id].output || '';
-                const outputB = execution.roleOutputs[b.id].output || '';
+                const outputA = execution.roleOutputs[a.id]!.output || '';
+                const outputB = execution.roleOutputs[b.id]!.output || '';
                 const winner = outputA.length >= outputB.length ? a : b;
                 scores.set(winner.id, (scores.get(winner.id) || 0) + 1);
                 nextBracket.push(winner);
@@ -758,7 +758,7 @@ export class RoleTeamService implements IRoleTeamService {
             round++;
         }
         if (bracket.length === 1) {
-            execution.synthesis = `🏆 Tournament winner: ${bracket[0].id} (${scores.get(bracket[0].id) || 0} wins)`;
+            execution.synthesis = `🏆 Tournament winner: ${bracket[0]!.id} (${scores.get(bracket[0]!.id) || 0} wins)`;
         }
     }
 
@@ -781,15 +781,15 @@ export class RoleTeamService implements IRoleTeamService {
 
     private async executeReview(execution: TeamExecution, team: RoleTeam): Promise<void> {
         if (team.roleIds.length < 2) {
-            execution.roleOutputs[team.roleIds[0]] = await this.callRoleWithId(
-                team.roleIds[0],
+            execution.roleOutputs[team.roleIds[0]!] = await this.callRoleWithId(
+                team.roleIds[0]!,
                 `You are ${team.roleIds[0]}. Produce a thorough analysis.`,
                 execution.task,
                 execution.id,
             );
             return;
         }
-        const authorId = team.roleIds[0];
+        const authorId = team.roleIds[0]!;
         const reviewerIds = team.roleIds.slice(1);
         execution.currentRoleId = authorId;
         execution.roleOutputs[authorId] = await this.callRoleWithId(

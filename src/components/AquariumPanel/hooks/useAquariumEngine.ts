@@ -54,7 +54,7 @@ export const useAquariumEngine = (
                         ...existing,
                         status: newStatus,
                         energy: newEnergy,
-                        color: providerColors[k.provider.toLowerCase()] || providerColors.default,
+                        color: providerColors[k.provider.toLowerCase()] || providerColors.default!,
                     };
                 }
                 return {
@@ -65,12 +65,12 @@ export const useAquariumEngine = (
                     scale: 0.8 + Math.random() * 0.5,
                     speed: 2 + Math.random() * 3,
                     direction: Math.random() > 0.5 ? 1 : -1,
-                    color: providerColors[k.provider.toLowerCase()] || providerColors.default,
+                    color: providerColors[k.provider.toLowerCase()]! || providerColors.default!,
                     energy: 100,
                     status: k.status,
                     personality: (['brave', 'shy', 'lazy', 'hyper'] as const)[
                         Math.floor(Math.random() * 4)
-                    ],
+                    ]!,
                     wagDuration: 0.5 + Math.random() * 0.5,
                 };
             }),
@@ -154,7 +154,7 @@ export const useAquariumEngine = (
                     }, 3000),
                 );
             } catch (e) {
-                LOGGER.warn('Error processing message event', e);
+                LOGGER.warn('Error processing message event', String(e));
                 if (isMountedRef.current) {
                     setError(t('aquarium.error_message'));
                     clearError();

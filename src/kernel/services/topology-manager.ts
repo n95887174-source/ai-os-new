@@ -131,15 +131,16 @@ export class TopologyManager implements ILifecycle {
                 (p) => !usedProviders.has(p),
             );
             if (!fallbackProvider) return false;
-            const template = agents[0];
+            const template = agents[0] as ISNode;
             alt = {
                 ...template,
                 id: `diversity-${fallbackProvider}-${Date.now()}`,
                 label: `${fallbackProvider} (Diversity)`,
+                type: template.type,
                 dynamic: true,
                 config: { ...template.config, provider: fallbackProvider, model: 'auto' },
-            };
-            topology.nodes.push(alt);
+            } as ISNode;
+            topology.nodes.push(alt!);
         }
 
         const router = topology.nodes.find((n) => n.type === 'router' || n.id === 'entry');
@@ -186,7 +187,7 @@ export class TopologyManager implements ILifecycle {
             const nodeIndex = newTopology.nodes.findIndex((n) => n.id === health.agentId);
             if (nodeIndex === -1) continue;
 
-            const originalNode = newTopology.nodes[nodeIndex];
+            const originalNode = newTopology.nodes[nodeIndex] as ISNode;
             this.cloneNode(newTopology, originalNode, 'clone', '(Failover)');
             modified = true;
             this.deps.eventBus.emit(EVENTS.NOTIFICATION, {

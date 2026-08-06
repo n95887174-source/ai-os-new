@@ -142,7 +142,7 @@ export class BatchProcessorService implements ILifecycle {
                         throw new Error(`No key found for provider: ${task.provider}`);
                     const idx = (keyRotationIndex[task.provider] ?? 0) % providerKeys.length;
                     keyRotationIndex[task.provider] = idx + 1;
-                    const key = providerKeys[idx];
+                    const key = providerKeys[idx]!;
 
                     const response = await adapter.sendMessage(
                         [{ role: 'user', content: task.prompt }],

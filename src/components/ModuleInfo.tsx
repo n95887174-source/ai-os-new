@@ -260,7 +260,7 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
             >
                 {lines.map((line, i) => {
                     const emojiMatch = line.match(/^(:[\w_]+:)\s*/);
-                    const emojiCode = emojiMatch ? emojiMatch[1].replace(/:/g, '') : '';
+                    const emojiCode = emojiMatch ? emojiMatch[1]!.replace(/:/g, '') : '';
                     const displayLine = emojiMatch ? line.slice(emojiMatch[0].length) : line;
                     const emojiChar = EMOJI_MAP[emojiCode] || emojiCode;
                     return (

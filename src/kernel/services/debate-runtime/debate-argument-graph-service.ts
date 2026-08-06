@@ -189,9 +189,9 @@ export class ArgumentGraphService implements IArgumentGraphService {
         // Detect edges
         let comparisons = 0;
         for (let i = 0; i < args.length && comparisons < MAX_COMPARISONS; i++) {
-            const current = args[i];
+            const current = args[i]!;
             for (let j = i - 1; j >= 0 && comparisons < MAX_COMPARISONS; j--) {
-                const earlier = args[j];
+                const earlier = args[j]!;
 
                 // Only compare across different agents (same agent doesn't attack itself)
                 if (current.agentId === earlier.agentId) continue;

@@ -195,7 +195,7 @@ const CognitiveBuilder: React.FC = () => {
             });
             setError(null);
         } catch (err) {
-            LOGGER.error('Deploy failed', err);
+            LOGGER.error('Deploy failed', String(err));
             if (isMountedRef.current) {
                 setError(t('builder.error_deploy'));
                 clearError();

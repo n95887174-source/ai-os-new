@@ -463,7 +463,7 @@ export class CognitiveService {
     }
 
     private makeDecision(alts: DecisionAlternative[]): DecisionAlternative {
-        return alts[0];
+        return alts[0]!;
     }
 
     // P0-4: hard timeout for any single adapter call (30s)

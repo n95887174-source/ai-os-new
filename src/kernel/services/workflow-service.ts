@@ -25,14 +25,14 @@ function resolveVariable(
     if (varKey === 'input') return input;
     const match = varKey.match(/^steps\.(\d+)\.output$/);
     if (match) {
-        const idx = parseInt(match[1], 10);
-        const sr = stepResults[idx];
+        const idx = parseInt(match[1]!, 10);
+        const sr = stepResults[idx]!;
         return sr?.status === 'success' ? sr.output : '';
     }
     const namedMatch = varKey.match(/^STEP_(\d+)_OUTPUT$/);
     if (namedMatch) {
-        const idx = parseInt(namedMatch[1], 10);
-        const sr = stepResults[idx];
+        const idx = parseInt(namedMatch[1]!, 10);
+        const sr = stepResults[idx]!;
         return sr?.status === 'success' ? sr.output : '';
     }
     return '';
@@ -44,7 +44,7 @@ function interpolatePrompt(
     stepResults: WorkflowStepResult[],
 ): string {
     return template.replace(/\{\{(\w+)\}\}/g, (_, name) => {
-        return resolveVariable(name, input, stepResults) || `{{${name}}}`;
+        return resolveVariable(name!, input, stepResults) || `{{${name}}}`;
     });
 }
 
@@ -187,7 +187,7 @@ export class WorkflowService implements ILifecycle {
                     break;
                 }
 
-                const step = wf.steps[i];
+                const step = wf.steps[i]!;
                 run.currentStepIndex = i;
                 const prompt = interpolatePrompt(step.promptTemplate, input, run.stepResults);
                 const startTime = Date.now();

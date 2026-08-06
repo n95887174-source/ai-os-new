@@ -38,13 +38,13 @@ export class CognitiveDiagnosticsEngine implements ICognitiveDiagnosticsEngine {
         if (history.length >= 2) {
             for (let i = 1; i < history.length; i++) {
                 const delta = Math.abs(
-                    history[i].contradictionDensity - history[i - 1].contradictionDensity,
+                    history[i]!.contradictionDensity - history[i - 1]!.contradictionDensity,
                 );
                 coherenceTrend.push(1 - Math.min(1, delta));
             }
 
-            const last = history[history.length - 1];
-            const prev = history[history.length - 2];
+            const last = history[history.length - 1]!;
+            const prev = history[history.length - 2]!;
 
             if (last.contradictionDensity - prev.contradictionDensity > 0.3) {
                 issues.push({

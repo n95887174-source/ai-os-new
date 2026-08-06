@@ -102,11 +102,11 @@ export class KeyFingerprints {
         switch (provider.toLowerCase()) {
             case 'cloudflare': {
                 const parts = key.split(':');
-                return parts.length >= 2 ? `cf-${parts[0].slice(0, 12)}` : 'cloudflare-default';
+                return parts.length >= 2 ? `cf-${parts[0]!.slice(0, 12)}` : 'cloudflare-default';
             }
             case 'openai': {
                 const projMatch = key.match(/^sk-proj-([A-Za-z0-9]+)/);
-                if (projMatch) return `openai-proj-${projMatch[1].toLowerCase()}`;
+                if (projMatch) return `openai-proj-${projMatch[1]!.toLowerCase()}`;
                 return 'openai-default';
             }
             case 'openrouter': {
@@ -153,12 +153,12 @@ export class KeyFingerprints {
             case 'cloudflare': {
                 const parts = key.split(':');
                 return parts.length >= 2
-                    ? `Cloudflare Account ${parts[0].slice(0, 12)}...`
+                    ? `Cloudflare Account ${parts[0]!.slice(0, 12)}...`
                     : 'Cloudflare (default)';
             }
             case 'openai': {
                 const projMatch = key.match(/^sk-proj-([A-Za-z0-9]+)/);
-                if (projMatch) return `Project ${projMatch[1].slice(0, 8)}...`;
+                if (projMatch) return `Project ${projMatch[1]!.slice(0, 8)}...`;
                 return 'OpenAI Personal Account';
             }
             case 'gemini':

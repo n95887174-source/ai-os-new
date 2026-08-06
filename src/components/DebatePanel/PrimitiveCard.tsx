@@ -31,7 +31,7 @@ export const PrimitiveCard: React.FC<PrimitiveCardProps> = ({
     onDuplicate,
     onRemove,
 }) => {
-    const meta = PRIMITIVE_META[p.type];
+    const meta = PRIMITIVE_META[p.type]!;
     return (
         <div
             key={p.id}

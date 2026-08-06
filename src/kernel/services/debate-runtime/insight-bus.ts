@@ -138,16 +138,16 @@ export class InsightBus implements IInsightBus {
         // 1. Contradiction detection: pairwise comparison of same-round arguments
         for (let i = 0; i < allArguments.length; i++) {
             for (let j = i + 1; j < allArguments.length; j++) {
-                if (allArguments[i].agentId === allArguments[j].agentId) continue;
-                const cs = contrastScore(allArguments[i].content, allArguments[j].content);
+                if (allArguments[i]!.agentId === allArguments[j]!.agentId) continue;
+                const cs = contrastScore(allArguments[i]!.content, allArguments[j]!.content);
                 if (cs >= 0.4) {
                     const quote =
                         cs >= 0.6
-                            ? allArguments[i].content.slice(0, 120)
-                            : allArguments[j].content.slice(0, 120);
+                            ? allArguments[i]!.content.slice(0, 120)
+                            : allArguments[j]!.content.slice(0, 120);
                     candidates.push({
                         type: 'contradiction',
-                        text: `Contradiction between ${allArguments[i].agentName || allArguments[i].agentId} and ${allArguments[j].agentName || allArguments[j].agentId}`,
+                        text: `Contradiction between ${allArguments[i]!.agentName || allArguments[i]!.agentId} and ${allArguments[j]!.agentName || allArguments[j]!.agentId}`,
                         quote: quote.trim(),
                         round,
                         significance: Math.min(1, cs * 1.2),

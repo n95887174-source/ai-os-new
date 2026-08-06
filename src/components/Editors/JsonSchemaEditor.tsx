@@ -173,10 +173,10 @@ export const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
         const result = { ...obj };
         let current = result;
         for (let i = 0; i < path.length - 1; i++) {
-            current[path[i]] = { ...((current[path[i]] as Record<string, unknown>) || {}) };
-            current = current[path[i]] as Record<string, unknown>;
+            current[path[i]!] = { ...((current[path[i]!] as Record<string, unknown>) || {}) };
+            current = current[path[i]!] as Record<string, unknown>;
         }
-        current[path[path.length - 1]] = val;
+        current[path[path.length - 1]!] = val;
         return result;
     };
 

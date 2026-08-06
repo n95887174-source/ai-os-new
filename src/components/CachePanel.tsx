@@ -57,7 +57,7 @@ const CachePanel: React.FC = () => {
             if (isMountedRef.current) {
                 setStats(s);
                 setCacheConfig(
-                    (cacheService as unknown as Record<string, () => unknown>).getConfig() as {
+                    (cacheService as unknown as Record<string, () => unknown>).getConfig!() as {
                         level: string;
                         ttl: number;
                         maxEntries: number;

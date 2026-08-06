@@ -196,8 +196,8 @@ export function detectContradictions(graph: ClaimGraph): Contradiction[] {
 
     for (let i = 0; i < recent.length; i++) {
         for (let j = i + 1; j < recent.length; j++) {
-            const a = recent[i];
-            const b = recent[j];
+            const a = recent[i]!;
+            const b = recent[j]!;
             if (a.speaker === b.speaker) continue;
 
             const aLower = a.text.toLowerCase();

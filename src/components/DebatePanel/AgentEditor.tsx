@@ -21,7 +21,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agents, onChange }) =>
                     value={a.nodeId}
                     onChange={(e) => {
                         const c = [...agents];
-                        c[i] = { ...c[i], nodeId: e.target.value };
+                        c[i] = { ...(c[i] as GraphAgentConfig), nodeId: e.target.value };
                         onChange(c);
                     }}
                     style={{ ...s.input, width: 60 }}
@@ -31,7 +31,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agents, onChange }) =>
                     value={a.label || ''}
                     onChange={(e) => {
                         const c = [...agents];
-                        c[i] = { ...c[i], label: e.target.value };
+                        c[i] = { ...(c[i] as GraphAgentConfig), label: e.target.value };
                         onChange(c);
                     }}
                     style={{ ...s.input, width: 70 }}
@@ -41,7 +41,10 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agents, onChange }) =>
                     value={a.role}
                     onChange={(e) => {
                         const c = [...agents];
-                        c[i] = { ...c[i], role: e.target.value as GraphAgentConfig['role'] };
+                        c[i] = {
+                            ...(c[i] as GraphAgentConfig),
+                            role: e.target.value as GraphAgentConfig['role'],
+                        } as GraphAgentConfig;
                         onChange(c);
                     }}
                     style={{ ...s.select, width: 65, fontSize: 9 }}
@@ -94,7 +97,7 @@ export const EdgeEditor: React.FC<EdgeEditorProps> = ({ edges, agents, onChange 
                     value={e.from}
                     onChange={(v) => {
                         const c = [...edges];
-                        c[i] = { ...c[i], from: v.target.value };
+                        c[i] = { ...(c[i] as GraphEdge), from: v.target.value };
                         onChange(c);
                     }}
                     style={{ ...s.select, width: 60, fontSize: 9 }}
@@ -110,7 +113,7 @@ export const EdgeEditor: React.FC<EdgeEditorProps> = ({ edges, agents, onChange 
                     value={e.to}
                     onChange={(v) => {
                         const c = [...edges];
-                        c[i] = { ...c[i], to: v.target.value };
+                        c[i] = { ...(c[i] as GraphEdge), to: v.target.value };
                         onChange(c);
                     }}
                     style={{ ...s.select, width: 60, fontSize: 9 }}
@@ -125,7 +128,7 @@ export const EdgeEditor: React.FC<EdgeEditorProps> = ({ edges, agents, onChange 
                     value={e.type}
                     onChange={(v) => {
                         const c = [...edges];
-                        c[i] = { ...c[i], type: v.target.value as GraphEdgeType };
+                        c[i] = { ...(c[i] as GraphEdge), type: v.target.value as GraphEdgeType };
                         onChange(c);
                     }}
                     style={{ ...s.select, width: 70, fontSize: 9 }}
@@ -146,7 +149,7 @@ export const EdgeEditor: React.FC<EdgeEditorProps> = ({ edges, agents, onChange 
                 onClick={() =>
                     onChange([
                         ...edges,
-                        { from: agents[0].nodeId, to: agents[1].nodeId, type: 'sequential' },
+                        { from: agents[0]!.nodeId, to: agents[1]!.nodeId, type: 'sequential' },
                     ])
                 }
                 style={s.addBtn}

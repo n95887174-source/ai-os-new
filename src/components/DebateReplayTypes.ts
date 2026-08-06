@@ -101,7 +101,7 @@ export class TimelinePlayer {
     stepForward(): TimelineEvent | null {
         if (this.currentIndex >= this.events.length - 1) return null;
         this.currentIndex++;
-        const event = this.events[this.currentIndex];
+        const event = this.events[this.currentIndex]!;
         this._onEvent?.(event, this.currentIndex);
         if (this.currentIndex >= this.events.length - 1) {
             this.status = 'completed';
@@ -114,7 +114,7 @@ export class TimelinePlayer {
         if (this.currentIndex <= 0) return null;
         const oldIndex = this.currentIndex;
         this.currentIndex--;
-        const event = this.events[this.currentIndex];
+        const event = this.events[this.currentIndex]!;
         if (this.status === 'completed') {
             this.status = 'playing';
             this._onStatusChange?.(this.status);
@@ -130,7 +130,7 @@ export class TimelinePlayer {
         const oldIndex = this.currentIndex;
         this.currentIndex = index;
         if (this.currentIndex < oldIndex) this._onRewind?.(oldIndex, this.currentIndex);
-        const event = this.events[this.currentIndex];
+        const event = this.events[this.currentIndex]!;
         this._onEvent?.(event, this.currentIndex);
         return event;
     }

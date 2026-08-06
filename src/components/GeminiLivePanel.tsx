@@ -103,13 +103,13 @@ const GeminiLivePanelContent: React.FC = () => {
                             width: 10,
                             height: 10,
                             borderRadius: '50%',
-                            background: status.color,
-                            boxShadow: isLive ? `0 0 8px ${status.color}` : 'none',
+                            background: status!.color,
+                            boxShadow: isLive ? `0 0 8px ${status!.color}` : 'none',
                             transition: 'all 0.3s',
                         }}
                     />
-                    <span style={{ fontSize: 13, color: status.color, fontWeight: 600 }}>
-                        {status.label}
+                    <span style={{ fontSize: 13, color: status!.color, fontWeight: 600 }}>
+                        {status!.label}
                     </span>
                 </div>
             </div>

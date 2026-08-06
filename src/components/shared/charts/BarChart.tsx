@@ -33,7 +33,7 @@ export function BarChart({
         <div style={{ width: '100%', overflowX: 'auto' }}>
             <svg width="100%" height={height} viewBox={`0 0 ${w} ${height}`}>
                 {data.map((d, i) => {
-                    const v = values[i];
+                    const v = values[i]!;
                     const barH = (v / max) * plotH;
                     const x = i * (barWidth + gap);
                     const y = padding.top + plotH - barH;

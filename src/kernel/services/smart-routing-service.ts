@@ -63,8 +63,8 @@ export class SmartRoutingService implements ISmartRoutingService {
     updateRule(id: string, updates: Partial<RoutingRule>): RoutingRule | null {
         const idx = this.rules.findIndex((r) => r.id === id);
         if (idx === -1) return null;
-        this.rules[idx] = { ...this.rules[idx], ...updates, updatedAt: Date.now() };
-        return this.rules[idx];
+        this.rules[idx] = { ...this.rules[idx]!, ...updates, updatedAt: Date.now() };
+        return this.rules[idx]!;
     }
 
     deleteRule(id: string): boolean {
@@ -77,7 +77,7 @@ export class SmartRoutingService implements ISmartRoutingService {
     reorderRules(fromIndex: number, toIndex: number): void {
         const sorted = this.getRules();
         const [moved] = sorted.splice(fromIndex, 1);
-        sorted.splice(toIndex, 0, moved);
+        sorted.splice(toIndex, 0, moved!);
         sorted.forEach((r, i) => {
             const found = this.rules.find((x) => x.id === r.id);
             if (found) found.priority = i;

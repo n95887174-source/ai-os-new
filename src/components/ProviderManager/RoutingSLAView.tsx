@@ -45,7 +45,7 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys, onAddProvider }) 
         try {
             keyService.setGlobalSLA(next ? 'BALANCED' : 'HIGH_QUALITY');
         } catch (e) {
-            LOGGER.warn('setGlobalSLA error', e);
+            LOGGER.warn('RoutingSLAView', 'setGlobalSLA error', { error: e });
         }
     };
 

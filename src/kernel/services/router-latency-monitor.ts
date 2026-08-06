@@ -69,7 +69,7 @@ export class RouterLatencyMonitor {
         const sorted = [...entries].sort((a, b) => a.avg - b.avg);
         const median =
             sorted.length % 2 === 0
-                ? (sorted[sorted.length / 2 - 1].avg + sorted[sorted.length / 2].avg) / 2
+                ? (sorted[sorted.length / 2 - 1]!.avg + sorted[sorted.length / 2]!.avg) / 2
                 : sorted[Math.floor(sorted.length / 2)]?.avg || 0;
         if (median === 0) return;
 
@@ -131,7 +131,7 @@ export class RouterLatencyMonitor {
         const sorted = [...allLats].sort((a, b) => a - b);
         const median =
             sorted.length % 2 === 0
-                ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+                ? (sorted[sorted.length / 2 - 1]! + sorted[sorted.length / 2]!) / 2
                 : sorted[Math.floor(sorted.length / 2)] || 0;
         const max = sorted[sorted.length - 1] || 0;
         if (median === 0) return state.weights.effective;

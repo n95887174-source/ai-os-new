@@ -24,7 +24,7 @@ const AVATAR_PALETTES: [string, string, string][] = [
 ];
 
 function getColors(seed: number): [string, string, string] {
-    return AVATAR_PALETTES[seed % AVATAR_PALETTES.length];
+    return AVATAR_PALETTES[seed % AVATAR_PALETTES.length]!;
 }
 
 function generateGrid(seed: number): boolean[][] {
@@ -61,7 +61,7 @@ export const ProceduralAvatar: React.FC<ProceduralAvatarProps> = ({
 
         for (let y = 0; y < 5; y++) {
             for (let x = 0; x < 3; x++) {
-                if (grid[y][x]) {
+                if (grid[y]![x]) {
                     const cx = x * cellSize + halfCell;
                     const cy = y * cellSize + halfCell;
                     const fill = (x + y) % 3 === 0 ? c1 : (x + y) % 3 === 1 ? c2 : c3;

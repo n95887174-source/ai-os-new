@@ -217,7 +217,7 @@ export class ChatExecutor {
                         sessionId,
                     );
                     if (ranked.length > 0) {
-                        resolvedProvider = ranked[0].provider;
+                        resolvedProvider = ranked[0]!.provider;
                         this.deps.logger.info(
                             'ChatExecutor',
                             `Auto-routed to ${resolvedProvider}`,

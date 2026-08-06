@@ -160,7 +160,7 @@ const ModelComparePanel: React.FC = () => {
             }),
         );
 
-        setResults(newResults);
+        setResults(newResults as CompareResult[]);
         setRunning(false);
         abortRef.current = null;
     }, [prompt, selected]);

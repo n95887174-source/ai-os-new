@@ -153,7 +153,7 @@ export class DebatePolicyEngine {
             if (rule.cooldownMs) {
                 const lastFiring = this.firings.get(rule.id);
                 if (lastFiring && lastFiring.length > 0) {
-                    const last = lastFiring[lastFiring.length - 1];
+                    const last = lastFiring[lastFiring.length - 1]!;
                     if (now - last < rule.cooldownMs) continue;
                 }
             }

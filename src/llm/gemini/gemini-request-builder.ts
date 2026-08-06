@@ -58,7 +58,7 @@ function transformOpenAiSchemaToGemini(schema: OpenAISchema): GeminiSchema {
     if (schema.properties) {
         result.properties = {};
         for (const key of Object.keys(schema.properties)) {
-            result.properties[key] = transformOpenAiSchemaToGemini(schema.properties[key]);
+            result.properties[key] = transformOpenAiSchemaToGemini(schema.properties[key]!);
         }
     }
     if (schema.items) {

@@ -87,7 +87,7 @@ export async function runProviderPreflight(
             session.markProviderFailed(provider);
             continue;
         }
-        const key = keys[0];
+        const key = keys[0]!;
         const adapter = adapterRegistry.getAdapter(provider);
         if (!adapter) {
             session.markProviderFailed(provider);

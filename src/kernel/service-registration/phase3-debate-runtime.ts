@@ -134,7 +134,7 @@ function simpleEmbedText(text: string): Promise<Float32Array> {
     const dim = 64;
     const vec = new Float32Array(dim);
     for (let i = 0; i < vocab.length && i < dim; i++) {
-        vec[i] = (freq.get(vocab[i]) || 0) / words.length;
+        vec[i] = (freq.get(vocab[i]!)! || 0) / words.length;
     }
     return Promise.resolve(vec);
 }

@@ -537,7 +537,7 @@ export class PolicyService {
             activeViolations: this.violations.filter((v) => !v.resolved).length,
             byType,
             bySeverity,
-            lastViolation: this.violations.length > 0 ? this.violations[0].timestamp : null,
+            lastViolation: this.violations.length > 0 ? this.violations[0]!.timestamp : null,
         };
     }
 

@@ -77,10 +77,10 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                             marginBottom: 8,
                         }}
                     >
-                        {String(explanation.decisiveComponents[0].component)} (
-                        {explanation.decisiveComponents[0].provider}):{' '}
-                        {explanation.decisiveComponents[0].contribution > 0 ? '+' : ''}
-                        {explanation.decisiveComponents[0].contribution.toFixed(3)}
+                        {String(explanation.decisiveComponents[0]!.component)} (
+                        {explanation.decisiveComponents[0]!.provider}):{' '}
+                        {explanation.decisiveComponents[0]!.contribution > 0 ? '+' : ''}
+                        {explanation.decisiveComponents[0]!.contribution.toFixed(3)}
                     </div>
                 </>
             )}

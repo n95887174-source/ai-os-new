@@ -538,14 +538,18 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                         >
                                             Task: {exec.task}
                                         </div>
-                                        {executionMap[exec.id] && (
-                                            <div style={{ marginTop: 8 }}>
-                                                <TeamPipeline
-                                                    execution={executionMap[exec.id]}
-                                                    strategy={team.coordinationStrategy}
-                                                />
-                                            </div>
-                                        )}
+                                        {executionMap[exec.id] &&
+                                            (() => {
+                                                const execData = executionMap[exec.id]!;
+                                                return (
+                                                    <div style={{ marginTop: 8 }}>
+                                                        <TeamPipeline
+                                                            execution={execData}
+                                                            strategy={team.coordinationStrategy}
+                                                        />
+                                                    </div>
+                                                );
+                                            })()}
                                     </div>
                                 ))}
                             </div>

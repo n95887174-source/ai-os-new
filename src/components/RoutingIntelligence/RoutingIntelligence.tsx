@@ -76,7 +76,10 @@ const RoutingIntelligence: React.FC = () => {
             const chain = [...(current.fallbackChains[strategy] || [])];
             const nextIdx = idx + direction;
             if (nextIdx < 0 || nextIdx >= chain.length) return current;
-            [chain[idx], chain[nextIdx]] = [chain[nextIdx], chain[idx]];
+            const a = chain[idx]!;
+            const b = chain[nextIdx]!;
+            chain[idx] = b;
+            chain[nextIdx] = a;
             return {
                 ...current,
                 fallbackChains: {

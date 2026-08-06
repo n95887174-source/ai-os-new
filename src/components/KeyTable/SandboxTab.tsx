@@ -62,7 +62,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
             (selectedModel === 'auto' || !apiKey.availableModels.includes(selectedModel))
         ) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
-            setSelectedModel(apiKey.availableModels[0]);
+            setSelectedModel(apiKey.availableModels[0]!);
         }
     }, [apiKey.availableModels, selectedModel]);
 

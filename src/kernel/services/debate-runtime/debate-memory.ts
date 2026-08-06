@@ -166,7 +166,7 @@ export class DebateMemory implements IDebateMemory {
         if (keepCount <= 0 || this.steps.length <= keepCount) return;
         const keepFrom = this.steps.length - keepCount;
         for (let i = 0; i < keepFrom; i++) {
-            this.steps[i] = { ...this.steps[i], content: '' };
+            this.steps[i] = { ...this.steps[i]!, content: '' };
         }
     }
 
@@ -229,7 +229,7 @@ export class DebateMemory implements IDebateMemory {
         if (steps.length < 2) return 1.0;
         let consistent = 0;
         for (let i = 1; i < steps.length; i++) {
-            if (steps[i].confidence >= steps[i - 1].confidence * 0.5) consistent++;
+            if (steps[i]!.confidence >= steps[i - 1]!.confidence * 0.5) consistent++;
         }
         return consistent / (steps.length - 1);
     }

@@ -17,7 +17,7 @@ export interface KeyModelsDeps {
 
 const FALLBACK_MODELS: Record<string, string[]> = {
     OpenRouter: [
-        PROVIDER_DEFAULT_MODELS.openrouter,
+        PROVIDER_DEFAULT_MODELS.openrouter!,
         'openrouter/free',
         'anthropic/claude-3-haiku-20240307',
     ],

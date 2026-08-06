@@ -321,7 +321,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
 
             <div className="agents-obs-entry">
                 <span className="agents-obs-entry-time">
-                    [{new Date().toISOString().split('T')[1].slice(0, -1)}]
+                    [{new Date().toISOString().split('T')[1]!.slice(0, -1)}]
                 </span>
                 <span> ROUTER_REQ: {agent.id} - </span>
                 <span className="agents-obs-entry-ok">200 OK</span>

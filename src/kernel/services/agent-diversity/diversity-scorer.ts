@@ -136,8 +136,10 @@ export class DiversityScorer {
 
         const clusterGroups: ClusterGroup[] = clusters.map((c) => ({
             ...c,
-            members: c.agentIds.map((id) => profileMap[id]).filter(Boolean),
-        }));
+            members: c.agentIds
+                .map((id) => profileMap[id]!)
+                .filter(Boolean) as AgentDiversityProfile[],
+        })) as ClusterGroup[];
 
         this.state = {
             profiles: profileMap,

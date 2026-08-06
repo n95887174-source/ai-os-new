@@ -1,4 +1,3 @@
-
 export function inlineMarkdown(text: string): React.ReactNode {
     const parts: React.ReactNode[] = [];
     let idx = 0;
@@ -28,7 +27,7 @@ export function inlineMarkdown(text: string): React.ReactNode {
                 </code>,
             );
         } else if (match[3]) {
-            const imgSrc = match[4];
+            const imgSrc = match[4]!;
             try {
                 const parsed = new URL(imgSrc);
                 if (parsed.protocol === 'https:') {

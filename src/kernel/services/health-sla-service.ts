@@ -117,8 +117,12 @@ export class HealthSlaService implements IHealthSlaService {
     updateProfile(id: string, updates: Partial<SlaProfile>): SlaProfile {
         const idx = this.profiles.findIndex((p) => p.id === id);
         if (idx === -1) throw new Error(`Profile ${id} not found`);
-        this.profiles[idx] = { ...this.profiles[idx], ...updates, updatedAt: Date.now() };
-        return { ...this.profiles[idx] };
+        this.profiles[idx] = {
+            ...this.profiles[idx]!,
+            ...updates,
+            updatedAt: Date.now(),
+        } as SlaProfile;
+        return { ...this.profiles[idx]! };
     }
 
     deleteProfile(id: string): void {

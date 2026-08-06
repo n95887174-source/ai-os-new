@@ -237,7 +237,7 @@ const PressureMap: React.FC = () => {
         try {
             setSnapshot(pressureMapService.getSnapshot());
         } catch (e) {
-            LOGGER.warn('Failed to get snapshot', e);
+            LOGGER.warn('Failed to get snapshot', String(e));
         }
     };
 

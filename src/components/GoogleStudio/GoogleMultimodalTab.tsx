@@ -26,7 +26,7 @@ export function GoogleMultimodalTab({ model }: GoogleMultimodalTabProps) {
         reader.onload = () => {
             const result = reader.result as string;
             const base64 = result.split(',')[1];
-            setImageBase64(base64);
+            setImageBase64(base64!);
             setImageMime(file.type);
         };
         reader.readAsDataURL(file);

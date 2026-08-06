@@ -287,7 +287,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                             flexShrink: 0,
                                         }}
                                     >
-                                        {msg.roleId[0].toUpperCase()}
+                                        {msg.roleId[0]!.toUpperCase()}
                                     </div>
                                 )}
                                 <div>
@@ -404,7 +404,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                     }}
                 >
                     <button
-                        onClick={() => setPassTarget(passTarget ? null : team.roleIds[0])}
+                        onClick={() => setPassTarget(passTarget ? null : team.roleIds[0]!)}
                         style={{
                             padding: '6px',
                             borderRadius: 8,
@@ -475,7 +475,7 @@ function simulateRoleResponse(roleId: string, userInput: string, strategy: strin
         `Critical perspective from ${roleId}: I see potential blind spots. The question assumes X, but what if not-X is true? We should test this assumption before proceeding. I recommend a quick sensitivity analysis.`,
         `Building on the previous point, ${roleId} would like to add that the ${strategy} framework gives us a unique advantage here. By leveraging our team's diverse expertise, we can address this from multiple angles simultaneously.`,
     ];
-    return templates[Math.floor(Math.random() * templates.length)];
+    return templates[Math.floor(Math.random() * templates.length)]!;
 }
 
 export default TeamChat;

@@ -65,7 +65,7 @@ export class PromptLibraryService {
             const saved = value ?? [];
             const idx = saved.findIndex((p) => p.id === id);
             if (idx === -1) return undefined;
-            saved[idx] = { ...saved[idx], ...data, updatedAt: Date.now() };
+            saved[idx] = { ...saved[idx]!, ...data, updatedAt: Date.now() };
             if (await d.setKvCas(STORAGE_KEY, saved, version)) break;
         }
         this.cache = null;
@@ -94,7 +94,7 @@ export class PromptLibraryService {
             const saved = value ?? [];
             const idx = saved.findIndex((p) => p.id === id);
             if (idx === -1) return;
-            saved[idx].usageCount++;
+            saved[idx]!.usageCount++;
             if (await d.setKvCas(STORAGE_KEY, saved, version)) break;
         }
         this.cache = null;

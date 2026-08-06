@@ -281,7 +281,7 @@ export class ResearchEngineService implements IResearchEngine {
             text: questionText,
             parentId:
                 session.loops.length > 0
-                    ? session.loops[session.loops.length - 1].question.id
+                    ? session.loops[session.loops.length - 1]!.question.id
                     : null,
             depth: session.loops.length,
             timestamp: Date.now(),

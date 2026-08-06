@@ -120,7 +120,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                 setSystemState(state as unknown as SystemState);
                 setError(null);
             } catch (e) {
-                LOGGER.warn('Failed to update system state', e);
+                LOGGER.warn('DashboardPanel', 'Failed to update system state', { error: e });
                 if (isMountedRef.current) {
                     setError('Failed to update system state');
                     clearError();
@@ -143,7 +143,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                     setTraces([...newTraces]);
                     setError(null);
                 } catch (e) {
-                    LOGGER.warn('Failed to update traces', e);
+                    LOGGER.warn('DashboardPanel', 'Failed to update traces', { error: e });
                     if (isMountedRef.current) {
                         setError('Failed to update traces');
                         clearError();
@@ -157,7 +157,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             try {
                 setHealthIndicators(monitoringService?.getSystemHealthIndicators?.());
             } catch {
-                LOGGER.warn('Health indicator refresh failed');
+                LOGGER.warn('DashboardPanel', 'Health indicator refresh failed');
             }
         });
 
@@ -201,7 +201,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
                     ].slice(0, 10),
                 );
             } catch (e) {
-                LOGGER.warn('Failed to process event', e);
+                LOGGER.warn('DashboardPanel', 'Failed to process event', { error: e });
                 if (isMountedRef.current) {
                     setError('Failed to process event');
                     clearError();
@@ -214,6 +214,7 @@ const DashboardPanel: React.FC<DashboardPanelProps> = ({ onNavigate }) => {
             unsubscribeAll = maybeUnsubscribe;
         } else {
             LOGGER.warn(
+                'DashboardPanel',
                 'eventBus.subscribeAll does not return an unsubscribe function; event bus may leak',
             );
         }

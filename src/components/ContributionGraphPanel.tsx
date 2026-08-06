@@ -29,7 +29,7 @@ const ContributionGraphPanelContent: React.FC = () => {
         const result: { label: string; index: number }[] = [];
         for (let i = 0; i < 12; i++) {
             const idx = (now.getMonth() - 11 + i + 12) % 12;
-            if (i % 2 === 0 || i === 11) result.push({ label: m[idx], index: i });
+            if (i % 2 === 0 || i === 11) result.push({ label: m[idx]!, index: i });
         }
         return result;
     });

@@ -36,7 +36,7 @@ const RoundTimeline: React.FC<RoundTimelineProps> = ({ session, args, t }) => {
                     const timelinePoint = session.interpretation?.disagreementTimeline?.find(
                         (point) => point.round === r,
                     );
-                    const intensity = timelinePoint?.intensity ?? roundCounts[ri] / maxRoundCount;
+                    const intensity = timelinePoint?.intensity ?? roundCounts[ri]! / maxRoundCount;
                     const isPeak = session.interpretation?.disagreementPeak?.round === r;
                     const intensityPct = Math.round(Math.min(intensity, 1) * 100);
 

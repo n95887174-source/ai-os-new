@@ -31,10 +31,10 @@ const TopologyTraceView: React.FC = () => {
 
     const nodes = [...nodeMap.entries()].reverse().map(([nodeId, entries]) => ({
         nodeId,
-        status: entries[entries.length - 1].status,
+        status: entries[entries.length - 1]!.status,
         history: entries.slice(-3).reverse(),
-        duration: entries[entries.length - 1].duration,
-        timestamp: entries[entries.length - 1].timestamp,
+        duration: entries[entries.length - 1]!.duration,
+        timestamp: entries[entries.length - 1]!.timestamp,
     }));
 
     if (nodes.length === 0) {
@@ -83,7 +83,7 @@ const TopologyTraceView: React.FC = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 {nodes.map((n) => {
-                    const type = n.nodeId.includes(':') ? n.nodeId.split(':')[0] : 'agent';
+                    const type = n.nodeId.includes(':') ? n.nodeId.split(':')[0]! : 'agent';
                     const color = NODE_COLORS[type] || '#64748b';
                     const isActive = n.status === 'active';
                     const isError = n.status === 'error';

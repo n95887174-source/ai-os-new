@@ -38,7 +38,7 @@ export const Sparkline: React.FC<{ data: number[]; color: string; height?: numbe
             const y = height - ((d - min) / range) * height;
             if (i === 0) return `M ${x},${y}`;
             const prevX = ((i - 1) / (data.length - 1)) * width;
-            const prevY = height - ((data[i - 1] - min) / range) * height;
+            const prevY = height - ((data[i - 1]! - min) / range) * height;
             const cpX = prevX + (x - prevX) / 2;
             return `C ${cpX},${prevY} ${cpX},${y} ${x},${y}`;
         })

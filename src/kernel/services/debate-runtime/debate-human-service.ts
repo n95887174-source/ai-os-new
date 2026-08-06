@@ -114,8 +114,8 @@ export class DebateHumanService implements IDebateHumanService {
         if (args.length === 0) return null;
         let best = args[0];
         for (const arg of args) {
-            if (arg.confidence > best.confidence) best = arg;
+            if (arg.confidence > best!.confidence) best = arg;
         }
-        return best.agentId;
+        return best!.agentId;
     }
 }

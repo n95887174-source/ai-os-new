@@ -254,7 +254,7 @@ const DebateRuntimePanel: React.FC = () => {
                     topologyType === 'linear'
                         ? selected.slice(0, -1).map((n, i) => ({
                               from: n.id,
-                              to: selected[i + 1].id,
+                              to: selected[i + 1]!.id,
                               type: 'sequential' as const,
                           }))
                         : topologyType === 'judge'
@@ -264,14 +264,14 @@ const DebateRuntimePanel: React.FC = () => {
                                     from: p.id,
                                     to:
                                         selected.find((q) => (agentRoles[q.id] || '') === 'judge')
-                                            ?.id || selected[selected.length - 1].id,
+                                            ?.id || selected[selected.length - 1]!.id,
                                     type: 'sequential' as const,
                                 }))
                           : topologyType === 'red-blue'
                             ? [
                                   {
-                                      from: selected[0].id,
-                                      to: selected[selected.length - 1].id,
+                                      from: selected[0]!.id,
+                                      to: selected[selected.length - 1]!.id,
                                       type: 'sequential' as const,
                                   },
                               ]

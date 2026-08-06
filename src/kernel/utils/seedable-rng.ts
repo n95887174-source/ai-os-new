@@ -21,7 +21,7 @@ export class SeededRng {
 
     /** Picks a random element from an array. */
     pick<T>(arr: T[]): T {
-        return arr[Math.floor(this.next() * arr.length)];
+        return arr[Math.floor(this.next() * arr.length)]!;
     }
 
     /** Returns true with given probability (0..1). */

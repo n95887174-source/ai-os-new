@@ -334,7 +334,7 @@ UNRESOLVED: [questions or topics that remain open]`;
         }
 
         if (summaries.length === 1) {
-            return summaries[0];
+            return summaries[0]!;
         }
 
         // Merge key points and decisions, deduplicate

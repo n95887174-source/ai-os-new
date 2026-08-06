@@ -41,7 +41,7 @@ const LiveWorkspace: React.FC = () => {
                 setHealth(adminService.getSystemHealth());
                 setError(null);
             } catch (e) {
-                LOGGER.warn('Failed to update health', e);
+                LOGGER.warn('Failed to update health', String(e));
                 if (isMountedRef.current) {
                     setError('Failed to update system health');
                     clearErrorAfterDelay();
@@ -68,7 +68,7 @@ const LiveWorkspace: React.FC = () => {
                 );
                 setError(null);
             } catch (e) {
-                LOGGER.warn('Failed to process event', e);
+                LOGGER.warn('Failed to process event', String(e));
                 if (isMountedRef.current) {
                     setError('Failed to process event');
                     clearErrorAfterDelay();
@@ -77,7 +77,11 @@ const LiveWorkspace: React.FC = () => {
         };
         const maybeUnsubscribe = eventBus.subscribeAll(eventHandler);
         if (typeof maybeUnsubscribe === 'function') unsubscribeAll = maybeUnsubscribe;
-        else LOGGER.warn('eventBus.subscribeAll does not return an unsubscribe function');
+        else
+            LOGGER.warn(
+                'LiveWorkspace',
+                'eventBus.subscribeAll does not return an unsubscribe function',
+            );
         const savedIntervalRef = intervalRef;
         const savedTimeoutRef = errorTimeoutRef;
         return () => {

@@ -141,7 +141,7 @@ const HealthPanel: React.FC = () => {
                 setHealthEvents(kernel.getHealthEvents());
                 setError(null);
             } catch (e) {
-                LOGGER.warn('Failed to refresh system health', e);
+                LOGGER.warn('Failed to refresh system health', String(e));
                 if (isMountedRef.current) {
                     setError(t('health.error_refresh'));
                     clearError();

@@ -127,7 +127,7 @@ const AppearanceTab: React.FC = () => {
         const style = getComputedStyle(root);
         const allTokens: Record<string, string> = {};
         for (let i = 0; i < style.length; i++) {
-            const prop = style[i];
+            const prop = style[i]!;
             if (prop.startsWith('--')) {
                 allTokens[prop] = style.getPropertyValue(prop).trim();
             }

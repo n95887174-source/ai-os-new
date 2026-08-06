@@ -48,8 +48,8 @@ export class InterruptQueue implements IInterruptQueue {
         );
         if (idx === -1) return null;
 
-        this.requests[idx].status = 'approved';
-        return this.requests[idx];
+        this.requests[idx]!.status = 'approved';
+        return this.requests[idx]!;
     }
 
     recordResponse(requestId: string, response: string): void {

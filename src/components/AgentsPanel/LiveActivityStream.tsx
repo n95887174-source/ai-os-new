@@ -67,7 +67,7 @@ const lifecycleColors: Record<string, string> = {
 const getAgentName = (id: string): string => {
     try {
         const agents = agentService.getAgents();
-        return agents.find((a) => a.id === id)?.name || id.split('-').slice(-1)[0];
+        return (agents.find((a) => a.id === id)?.name || id.split('-').slice(-1)[0]!) as string;
     } catch {
         return id;
     }

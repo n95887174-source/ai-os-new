@@ -170,7 +170,7 @@ const MemoryPanel: React.FC = () => {
                 setError(null);
             }
         } catch (err) {
-            LOGGER.warn('Failed to wipe memory index', err);
+            LOGGER.warn('Failed to wipe memory index', String(err));
             if (isMountedRef.current) {
                 setError(t('memory.error_wipe'));
                 clearError();
@@ -195,7 +195,7 @@ const MemoryPanel: React.FC = () => {
                     setError(null);
                 }
             } catch (err) {
-                LOGGER.warn('Failed to delete memory entry', err);
+                LOGGER.warn('Failed to delete memory entry', String(err));
                 if (isMountedRef.current) {
                     setError(t('memory.error_delete'));
                     clearError();
@@ -220,7 +220,7 @@ const MemoryPanel: React.FC = () => {
                 type: 'success',
             });
         } catch (err) {
-            LOGGER.warn('Export failed', err);
+            LOGGER.warn('Export failed', String(err));
             if (isMountedRef.current) {
                 setError(t('memory.error_export'));
                 clearError();

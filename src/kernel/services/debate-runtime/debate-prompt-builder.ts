@@ -307,7 +307,7 @@ export function buildArgumentPrompt(
         if (prevRoots.length > 0) {
             const target =
                 prevRoots[stableSelectIndex(`${participant.id}-round-${round}`, prevRoots.length)];
-            treePrompt = `\n\n### Argument Tree Context\nYou are responding to this argument from the previous round:\n"${target.content.slice(0, 300)}"\n\nYou can SUPPORT it (add evidence, strengthen), CHALLENGE it (find flaws, counter-argue), or REFINE it (clarify, qualify). End your response with "[parent:${target.id}]" to link to the argument you are building on.`;
+            treePrompt = `\n\n### Argument Tree Context\nYou are responding to this argument from the previous round:\n"${target!.content.slice(0, 300)}"\n\nYou can SUPPORT it (add evidence, strengthen), CHALLENGE it (find flaws, counter-argue), or REFINE it (clarify, qualify). End your response with "[parent:${target!.id}]" to link to the argument you are building on.`;
         } else {
             treePrompt =
                 '\n\n### Argument Tree Context\nThis is the first round. State your main argument — this will be a root node in the argument tree.';

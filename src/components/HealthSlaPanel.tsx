@@ -69,7 +69,7 @@ const HealthSlaPanelContent: React.FC = () => {
             metric,
             operator: 'lt',
             threshold: metric === 'uptime' ? 99 : metric === 'latency' ? 2000 : 1,
-            unit: METRIC_UNITS[metric],
+            unit: METRIC_UNITS[metric]!,
             severity: 'warning',
             enabled: true,
         });

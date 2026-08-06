@@ -46,7 +46,7 @@ export class EventLogRepository implements EventRecorderStore {
             const rows = await this.db.eventLog.orderBy('sequence').reverse().limit(keep).toArray();
             rows.reverse();
 
-            const seq = rows[rows.length - 1].sequence;
+            const seq = rows[rows.length - 1]!.sequence;
             if (seq > this.lastPersistedSeq) this.lastPersistedSeq = seq;
             const events: RecordedEvent[] = rows.map((row) => ({
                 sequence: row.sequence,

@@ -87,9 +87,9 @@ export function buildEdges(nodes: GraphNodeData[]): EdgeData[] {
     for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < Math.min(i + 4, nodes.length); j++) {
             e.push({
-                id: `${nodes[i].id}-${nodes[j].id}`,
-                source: nodes[i],
-                target: nodes[j],
+                id: `${nodes[i]!.id}-${nodes[j]!.id}`,
+                source: nodes[i]!,
+                target: nodes[j]!,
                 strength: 1 - (j - i) * 0.2,
             });
         }

@@ -59,7 +59,7 @@ export class DebateInterpreter {
         if (peak.intensity < 0.3) return null;
 
         const peakArgs = session.arguments.filter((a) => a.round === peak.round);
-        const trigger = peakArgs.length > 0 ? peakArgs[0].content.slice(0, 120) : 'no trigger';
+        const trigger = peakArgs.length > 0 ? peakArgs[0]!.content.slice(0, 120) : 'no trigger';
         const participants = [...new Set(peakArgs.map((a) => a.agentName))];
 
         return { round: peak.round, intensity: peak.intensity, trigger, participants };
@@ -73,11 +73,11 @@ export class DebateInterpreter {
 
         // 1. Arguments that preceded a sharp intensity shift
         for (let i = 1; i < timeline.length; i++) {
-            const prev = timeline[i - 1].intensity;
-            const curr = timeline[i].intensity;
+            const prev = timeline[i - 1]!.intensity;
+            const curr = timeline[i]!.intensity;
             const shift = Math.abs(curr - prev);
             if (shift >= 0.4) {
-                const roundArgs = session.arguments.filter((a) => a.round === timeline[i].round);
+                const roundArgs = session.arguments.filter((a) => a.round === timeline[i]!.round);
                 for (const a of roundArgs) {
                     const rising = curr > prev;
                     changers.push({

@@ -659,8 +659,9 @@ export default function NvidiaEnterprisePanel() {
                         modelsUsed: costs.length,
                         nvidiaAchievements: providerAchievementService
                             .getAwardedIds()
-                            .filter((id) => id.startsWith('pa-') && parseInt(id.split('-')[1]) > 30)
-                            .length,
+                            .filter(
+                                (id) => id.startsWith('pa-') && parseInt(id.split('-')[1]!) > 30,
+                            ).length,
                     })}
                 />
             )}

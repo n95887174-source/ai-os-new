@@ -378,7 +378,7 @@ const DiagnosticPanel: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {issues.map((issue, _i) => {
-                            const sc = SEVERITY_COLORS[issue.severity] || SEVERITY_COLORS.medium;
+                            const sc = (SEVERITY_COLORS[issue.severity] || SEVERITY_COLORS.medium)!;
                             return (
                                 <div
                                     key={`${issue.severity}-${issue.message?.substring(0, 20)}`}
@@ -456,7 +456,7 @@ const DiagnosticPanel: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {sessionIssues.map((issue, _i) => {
-                            const sc = SEVERITY_COLORS[issue.severity] || SEVERITY_COLORS.medium;
+                            const sc = (SEVERITY_COLORS[issue.severity] || SEVERITY_COLORS.medium)!;
                             return (
                                 <div
                                     key={`${issue.severity}-${issue.message?.substring(0, 20)}`}

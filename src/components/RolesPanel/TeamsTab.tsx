@@ -507,12 +507,16 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                             <Play size={12} /> Run
                                         </button>
                                     </div>
-                                    {execResults[tm.id] && (
-                                        <TeamPipeline
-                                            execution={execResults[tm.id]}
-                                            strategy={tm.coordinationStrategy}
-                                        />
-                                    )}
+                                    {execResults[tm.id] &&
+                                        (() => {
+                                            const execData = execResults[tm.id]!;
+                                            return (
+                                                <TeamPipeline
+                                                    execution={execData}
+                                                    strategy={tm.coordinationStrategy}
+                                                />
+                                            );
+                                        })()}
                                 </div>
                             ))}
                         </div>

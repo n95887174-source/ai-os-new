@@ -102,8 +102,8 @@ export class DebateGovernor {
         let pairs = 0;
         for (let i = 0; i < speakers.length; i++) {
             for (let j = i + 1; j < speakers.length; j++) {
-                const claimsA = bySpeaker.get(speakers[i])!;
-                const claimsB = bySpeaker.get(speakers[j])!;
+                const claimsA = bySpeaker.get(speakers[i]!)!;
+                const claimsB = bySpeaker.get(speakers[j]!)!;
                 for (const a of claimsA) {
                     for (const b of claimsB) {
                         const overlap = this.jaccard(a.text, b.text);

@@ -326,7 +326,7 @@ export const useChatStore = create<ChatStoreShape>((set, get) => {
                 if (s.activeSessionId === id) {
                     return {
                         sessions: filtered,
-                        activeSessionId: filtered[0].id,
+                        activeSessionId: filtered[0]!.id,
                         deletedIds: updated,
                         deletedAtTimestamps: timestamps,
                     };

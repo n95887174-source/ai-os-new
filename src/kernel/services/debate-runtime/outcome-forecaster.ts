@@ -62,7 +62,7 @@ export class OutcomeForecaster implements IOutcomeForecaster {
 
         const trend =
             previousScores.length >= 3
-                ? previousScores[previousScores.length - 1] - previousScores[0]
+                ? previousScores[previousScores.length - 1]! - previousScores[0]!
                 : 0;
 
         const variants: ArgumentVariant[] = ANGLES.map((a, i) => {
@@ -86,9 +86,9 @@ export class OutcomeForecaster implements IOutcomeForecaster {
 
         return {
             variants,
-            recommendedLabel: best.label,
-            recommendedAngle: best.angle,
-            expectedScoreGain: Math.max(0, best.expectedScore - avgScore),
+            recommendedLabel: best!.label,
+            recommendedAngle: best!.angle,
+            expectedScoreGain: Math.max(0, best!.expectedScore - avgScore),
         };
     }
 

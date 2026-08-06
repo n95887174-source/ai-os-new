@@ -15,12 +15,12 @@ function computeDecayCurve(memories: MemoryEntry[]): { day: number; retention: n
     const perDay: number[] = new Array(CURVE_POINTS).fill(0);
     for (const m of memories) {
         const age = Math.floor((now - m.metadata.timestamp) / msPerDay);
-        if (age >= 0 && age < CURVE_POINTS) perDay[age]++;
+        if (age >= 0 && age < CURVE_POINTS) perDay[age]!++;
     }
     const curve: { day: number; retention: number }[] = [];
     let cumulative = 0;
     for (let d = 0; d < CURVE_POINTS; d++) {
-        cumulative += perDay[d];
+        cumulative += perDay[d]!;
         const retention = Math.max(0, 1 - cumulative / (memories.length || 1));
         if (d % 3 === 0 || d === CURVE_POINTS - 1) curve.push({ day: d, retention });
     }
@@ -72,7 +72,7 @@ const ForgettingCurvePanel: React.FC<ForgettingCurvePanelProps> = ({ memories })
                 <polyline fill="none" stroke="#8b5cf6" strokeWidth={1.5} points={pts} />
                 <circle
                     cx={w - pad}
-                    cy={h - pad - (curve[curve.length - 1].retention / maxRet) * (h - pad * 2)}
+                    cy={h - pad - (curve[curve.length - 1]!.retention / maxRet) * (h - pad * 2)}
                     r={2.5}
                     fill="#8b5cf6"
                 />
@@ -88,8 +88,8 @@ const ForgettingCurvePanel: React.FC<ForgettingCurvePanelProps> = ({ memories })
             >
                 <span>Day 0</span>
                 <span>
-                    {Math.round(curve[curve.length - 1].retention * 100)}% retained at day{' '}
-                    {curve[curve.length - 1].day}
+                    {Math.round(curve[curve.length - 1]!.retention * 100)}% retained at day{' '}
+                    {curve[curve.length - 1]!.day}
                 </span>
             </div>
         </div>

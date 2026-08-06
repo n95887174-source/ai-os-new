@@ -125,7 +125,9 @@ const ProviderManagerContainer: React.FC = () => {
                     }
                 } catch (e) {
                     const msg = e instanceof Error ? e.message : 'Unknown error';
-                    LOGGER.warn('Failed to import providers', e);
+                    LOGGER.warn('ProviderManagerContainer', 'Failed to import providers', {
+                        error: e,
+                    });
                     eventBus.emit(EVENTS.NOTIFICATION, {
                         message: `Import failed: ${msg}`,
                         type: 'error',
@@ -150,7 +152,7 @@ const ProviderManagerContainer: React.FC = () => {
             else if (e.key === 'End') nextIdx = TABS.length - 1;
             else return;
             e.preventDefault();
-            setActiveTab(TABS[nextIdx]);
+            setActiveTab(TABS[nextIdx]!);
         },
         [activeTab],
     );
@@ -180,8 +182,8 @@ const ProviderManagerContainer: React.FC = () => {
             for (let i = 0; i < providers.length; i++) {
                 const result = await groupManager.createKey(
                     {
-                        provider: providers[i],
-                        label: labels[i],
+                        provider: providers[i]!,
+                        label: labels[i]!,
                         key: '',
                         status: 'pending',
                         group: addAccountGroup.trim() || undefined,
@@ -209,7 +211,7 @@ const ProviderManagerContainer: React.FC = () => {
             if (fromIdx === -1) return;
             const reordered = [...currentKeys];
             const [moved] = reordered.splice(fromIdx, 1);
-            reordered.splice(targetIndex, 0, moved);
+            reordered.splice(targetIndex, 0, moved!);
             reordered.forEach((k, i) => {
                 if (k.priority !== i) updateKey(k.id, { priority: i });
             });

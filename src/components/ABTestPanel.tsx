@@ -91,7 +91,7 @@ const ABTestPanel: React.FC = () => {
             loadHistory();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'AB test failed');
-            LOGGER.warn('AB test failed', e);
+            LOGGER.warn('AB test failed', String(e));
         } finally {
             setRunning(false);
         }

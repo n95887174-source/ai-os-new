@@ -123,7 +123,7 @@ export class ConceptBlender implements IConceptBlender {
                 b.toLowerCase().includes(conceptB.toLowerCase()),
         );
 
-        const selected = candidates.length > 0 ? candidates.slice(0, 2) : [CONCEPT_PAIRS[0]];
+        const selected = candidates.length > 0 ? candidates.slice(0, 2) : [CONCEPT_PAIRS[0]!];
 
         for (const [parentA, parentB, name, synthesis] of selected) {
             blends.push({
@@ -141,7 +141,7 @@ export class ConceptBlender implements IConceptBlender {
             blends,
             bestBlendText:
                 blends.length > 0
-                    ? `Rather than persisting in the ${conceptA.toLowerCase()} vs ${conceptB.toLowerCase()} dichotomy, consider: "${blends[0].name}" — ${blends[0].synthesis}`
+                    ? `Rather than persisting in the ${conceptA.toLowerCase()} vs ${conceptB.toLowerCase()} dichotomy, consider: "${blends[0]!.name}" — ${blends[0]!.synthesis}`
                     : '',
         };
     }
@@ -164,7 +164,7 @@ export class ConceptBlender implements IConceptBlender {
             if (count > bestCount) {
                 bestCount = count;
                 const [a, b] = key.split('|');
-                best = [a, b];
+                best = [a!, b!];
             }
         }
         return best;

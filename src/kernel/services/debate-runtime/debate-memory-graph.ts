@@ -187,8 +187,8 @@ export class DebateMemoryGraph {
         if (!this.edgeKeys) this.edgeKeys = new Set();
         for (let i = 0; i < arguments_.length; i++) {
             for (let j = i + 1; j < arguments_.length; j++) {
-                const a = arguments_[i];
-                const b = arguments_[j];
+                const a = arguments_[i]!;
+                const b = arguments_[j]!;
                 const overlap = this.semanticOverlap(a.content, b.content);
                 if (overlap < 0.3) continue;
 

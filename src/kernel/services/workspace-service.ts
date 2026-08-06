@@ -444,8 +444,12 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
                     const text = await file.text();
                     const lines = text.split('\n');
                     for (let i = 0; i < lines.length && results.length < MAX_GREP_RESULTS; i++) {
-                        if (lines[i].toLowerCase().includes(pattern)) {
-                            results.push({ path: fullPath, line: i + 1, content: lines[i].trim() });
+                        if (lines[i]!.toLowerCase().includes(pattern)) {
+                            results.push({
+                                path: fullPath,
+                                line: i + 1,
+                                content: lines[i]!.trim(),
+                            });
                         }
                     }
                 } catch (e) {
@@ -461,7 +465,7 @@ export class WorkspaceService implements IWorkspaceService, ILifecycle {
     private formatTree(nodes: FileNode[], indent: string): string {
         let out = '';
         for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
+            const node = nodes[i]!;
             const isLast = i === nodes.length - 1;
             const connector = isLast ? '└── ' : '├── ';
             const sizeInfo =

@@ -25,8 +25,8 @@ export class FallbackDecorator extends BaseDecorator {
         return id
             .replace(/\[(rl|cb|pq|rt|log|metrics|cache|fb|sr|cr|cm)\]/g, '')
             .replace(/\[.*\]/, '')
-            .split('-')[0]
-            .split('/')[0];
+            .split('-')[0]!
+            .split('/')[0]!;
     }
 
     private isSameProvider(): boolean {

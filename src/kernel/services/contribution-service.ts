@@ -149,7 +149,7 @@ export class ContributionService implements IContributionService, ILifecycle {
 
     private computeStreaks(): { current: number; longest: number } {
         const activeDays = Object.keys(this.days)
-            .filter((d) => this.days[d] > 0)
+            .filter((d) => this.days[d]! > 0)
             .sort()
             .reverse();
 
@@ -176,8 +176,8 @@ export class ContributionService implements IContributionService, ILifecycle {
             if (i === 0) {
                 streak = 1;
             } else {
-                const prev = new Date(asc[i - 1]);
-                const curr = new Date(asc[i]);
+                const prev = new Date(asc[i - 1]!);
+                const curr = new Date(asc[i]!);
                 const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
                 if (Math.abs(diffDays - 1) < 0.01) {
                     streak++;

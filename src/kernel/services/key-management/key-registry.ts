@@ -816,9 +816,9 @@ export class KeyRegistry {
     modifyKey(id: string, fn: (key: ApiKey) => void): ApiKey | undefined {
         const idx = this.#keyMap.get(id);
         if (idx === undefined) return undefined;
-        const clone = structuredClone(this.keys[idx]);
+        const clone = structuredClone(this.keys[idx]!);
         fn(clone);
-        this.keys[idx] = clone;
+        this.keys[idx] = clone!;
         this.setKeysInternal('modifyKey', [...this.keys]);
         return clone;
     }
@@ -907,7 +907,7 @@ export class KeyRegistry {
         this.keys = keys;
         this.#keyMap.clear();
         for (let i = 0; i < keys.length; i++) {
-            this.#keyMap.set(keys[i].id, i);
+            this.#keyMap.set(keys[i]!.id, i);
         }
         this.#frozenSnapshot = null;
         this.setKeysInternal('replaceAll', [...this.keys]);

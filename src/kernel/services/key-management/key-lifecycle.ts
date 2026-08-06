@@ -142,8 +142,8 @@ export class KeyLifecycle {
         ext.activeSLA = mode as NonNullable<ApiKey['stats']['extended']>['activeSLA'];
 
         const profile = CONFIG.keys.slaProfiles[mode] ?? CONFIG.keys.slaProfiles.DEFAULT;
-        ext.rules.timeoutMs = profile.timeoutMs;
-        ext.rules.slaThresholds.latencyP95 = profile.latencyP95;
+        ext.rules!.timeoutMs = profile!.timeoutMs;
+        ext.rules!.slaThresholds.latencyP95 = profile!.latencyP95;
     }
 
     async setGlobalSLA(

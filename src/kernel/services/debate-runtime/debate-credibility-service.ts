@@ -96,7 +96,7 @@ export class CredibilityScorer implements ICredibilityScorer {
         // Recency bonus: if source mentions a year
         const yearMatch = source.match(YEAR_PATTERN);
         if (yearMatch) {
-            const year = parseInt(yearMatch[1], 10);
+            const year = parseInt(yearMatch[1]!, 10);
             const currentYear = 2026;
             const age = currentYear - year;
             if (age <= 2)

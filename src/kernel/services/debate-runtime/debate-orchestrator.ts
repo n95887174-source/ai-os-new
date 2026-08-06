@@ -94,7 +94,7 @@ export class DebateOrchestrator implements IDebateOrchestrator {
         for (let r = startRound; r < rounds.length; r++) {
             if (this.aborted.has(sessionId)) return;
 
-            const nodeGroup = rounds[r];
+            const nodeGroup = rounds[r]!;
             const roundNum = r + 1;
             const nodeIds = nodeGroup.map((n) => n.id);
             const roundHeapMB = getHeapMB();
@@ -143,17 +143,17 @@ export class DebateOrchestrator implements IDebateOrchestrator {
             const remainingNodes = [...orderedNodes];
             for (let i = 0; i < remainingNodes.length; i++) {
                 const bid = this.computeBid(
-                    remainingNodes[i].id,
-                    remainingNodes[i].label,
+                    remainingNodes[i]!.id,
+                    remainingNodes[i]!.label,
                     undefined,
                     '',
                     roundNum,
                 );
-                this.bidScores.set(remainingNodes[i].id, bid);
+                this.bidScores.set(remainingNodes[i]!.id, bid);
             }
 
             for (let ni = 0; ni < remainingNodes.length; ni++) {
-                const node = remainingNodes[ni];
+                const node = remainingNodes[ni]!;
                 if (this.aborted.has(sessionId)) return;
 
                 // On resume, skip agents that already produced an argument in this round
@@ -202,7 +202,7 @@ export class DebateOrchestrator implements IDebateOrchestrator {
                         // Recompute bids for remaining agents based on new last argument
                         if (roundNum >= 2) {
                             for (let ri = ni + 1; ri < remainingNodes.length; ri++) {
-                                const rem = remainingNodes[ri];
+                                const rem = remainingNodes[ri]!;
                                 const bid = this.computeBid(
                                     rem.id,
                                     rem.label,

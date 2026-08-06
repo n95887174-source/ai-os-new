@@ -140,7 +140,7 @@ export class GroupManagerService implements IGroupManager {
         if (id === DEFAULT_GROUP_ID) throw new Error('Cannot delete default group');
         const idx = this.groups.findIndex((g) => g.id === id);
         if (idx === -1) return;
-        const group = this.groups[idx];
+        const group = this.groups[idx]!;
         this.groups.splice(idx, 1);
         // Move keys to default group
         const def = this.getDefaultGroup();

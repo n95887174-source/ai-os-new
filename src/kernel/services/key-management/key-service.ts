@@ -955,8 +955,8 @@ export class KeyService implements IKeyRotationManager {
                     ApiKey['stats']['extended']
                 >['activeSLA'];
                 const profile = CONFIG.keys.slaProfiles[mode] ?? CONFIG.keys.slaProfiles.DEFAULT;
-                key.stats.extended.rules.timeoutMs = profile.timeoutMs;
-                key.stats.extended.rules.slaThresholds.latencyP95 = profile.latencyP95;
+                key.stats.extended.rules!.timeoutMs = profile!.timeoutMs;
+                key.stats.extended.rules!.slaThresholds.latencyP95 = profile!.latencyP95;
             });
         }
         this._globalSLAMode = mode;
@@ -978,8 +978,8 @@ export class KeyService implements IKeyRotationManager {
                 ApiKey['stats']['extended']
             >['activeSLA'];
             const profile = CONFIG.keys.slaProfiles[mode] ?? CONFIG.keys.slaProfiles.DEFAULT;
-            key.stats.extended.rules.timeoutMs = profile.timeoutMs;
-            key.stats.extended.rules.slaThresholds.latencyP95 = profile.latencyP95;
+            key.stats.extended.rules!.timeoutMs = profile!.timeoutMs;
+            key.stats.extended.rules!.slaThresholds.latencyP95 = profile!.latencyP95;
         });
         if (!provider) return;
         await this.registry.saveKeys();

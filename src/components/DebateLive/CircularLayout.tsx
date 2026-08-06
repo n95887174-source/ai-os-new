@@ -235,10 +235,10 @@ export const CircularLayout: React.FC<Props> = ({
                     return (
                         <line
                             key={`edge-${i}`}
-                            x1={positions[i].x + 60}
-                            y1={positions[i].y + 60}
-                            x2={positions[next].x + 60}
-                            y2={positions[next].y + 60}
+                            x1={positions[i]!.x + 60}
+                            y1={positions[i]!.y + 60}
+                            x2={positions[next]!.x + 60}
+                            y2={positions[next]!.y + 60}
                             stroke="rgba(255,255,255,0.06)"
                             strokeWidth={1}
                         />
@@ -258,7 +258,7 @@ export const CircularLayout: React.FC<Props> = ({
             {activePos &&
                 participants.map((p, i) => {
                     if (p.id === activeSpeakerId) return null;
-                    const toPos = positions[i];
+                    const toPos = positions[i]!;
                     const fromX = activePos.x + 60;
                     const fromY = activePos.y + 60;
                     const toX = toPos.x + 60;
@@ -284,8 +284,8 @@ export const CircularLayout: React.FC<Props> = ({
                         animate={{
                             opacity: activeSpeakerId === p.id ? 1 : 0.5,
                             scale: activeSpeakerId === p.id ? 1.2 : 1,
-                            x: positions[i].x,
-                            y: positions[i].y,
+                            x: positions[i]!.x,
+                            y: positions[i]!.y,
                         }}
                         transition={{ type: 'spring', damping: 20, stiffness: 200 }}
                         style={{

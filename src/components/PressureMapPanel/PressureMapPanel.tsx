@@ -47,7 +47,7 @@ const PressureMapPanel: React.FC = () => {
             setAlerts(pressureMapService.getAlerts() ?? []);
             setTrends(pressureMapService.getPressureHistory('global') ?? []);
         } catch {
-            LOGGER.warn('Failed to load pressure data');
+            LOGGER.warn('PressureMapPanel', 'Failed to load pressure data');
         }
     }, []);
 

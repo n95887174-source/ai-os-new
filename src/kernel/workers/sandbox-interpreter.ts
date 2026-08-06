@@ -183,7 +183,7 @@ export function validateSandboxCode(code: string): string | null {
             walkAndValidate(stmt, errors);
         }
         if (errors.length > 0) {
-            return `Code validation failed: Use of '${errors[0].keyword}' is forbidden in sandbox`;
+            return `Code validation failed: Use of '${errors[0]!.keyword}' is forbidden in sandbox`;
         }
         return null;
     } catch {
@@ -1117,7 +1117,7 @@ function runQueue<T>(
     let idx = 0;
     function next(): MaybeAsync<T> {
         if (idx >= queue.length) return done(vals);
-        const res = queue[idx]();
+        const res = queue[idx]!();
         idx += 1;
         if (isThenable(res)) {
             return Promise.resolve(res).then((v) => {
@@ -1366,7 +1366,7 @@ const EXPRESSION_NODE_TYPES = new Set([
 function evalStmts(interp: Interp, env: Env, stmts: ESTree.Node[]): MaybeAsync<Control> {
     for (let i = 0; i < stmts.length; i++) {
         tick(interp.ctx);
-        const res = evalStmt(interp, env, stmts[i]);
+        const res = evalStmt(interp, env, stmts[i]!);
         if (isThenable(res)) {
             return Promise.resolve(res).then((r) =>
                 r.type === 'normal' ? evalStmts(interp, env, stmts.slice(i + 1)) : r,
@@ -1769,7 +1769,7 @@ function evalSwitch(interp: Interp, env: Env, node: ESTree.SwitchStatement): May
         const checks: Array<MaybeAsync<boolean>> = [];
         let defaultIdx = -1;
         for (let i = 0; i < cases.length; i++) {
-            const c = cases[i];
+            const c = cases[i]!;
             if (!c.test) {
                 if (defaultIdx === -1) defaultIdx = i;
                 checks.push(false);
@@ -1798,7 +1798,7 @@ function evalSwitchCases(
 ): MaybeAsync<Control> {
     const stmts: ESTree.Node[] = [];
     for (let i = startIdx; i < cases.length; i++) {
-        for (const c of cases[i].consequent) stmts.push(c);
+        for (const c of cases[i]!.consequent) stmts.push(c);
     }
     const res = evalStmts(interp, env, stmts);
     return Promise.resolve(res).then((r) =>

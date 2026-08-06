@@ -38,7 +38,7 @@ export const DebateLivePanel: React.FC = () => {
 
     const sessions = debateEngine.getAllSessions();
     const [activeSessionId, setActiveSessionId] = React.useState<string | null>(() =>
-        sessions.length > 0 ? sessions[sessions.length - 1].id : null,
+        sessions.length > 0 ? sessions[sessions.length - 1]!.id : null,
     );
     const [layout, setLayout] = React.useState<ArenaLayout>('circle');
     const [metricsByCategory, setMetricsByCategory] = useState<Record<string, number>>({});
@@ -68,7 +68,7 @@ export const DebateLivePanel: React.FC = () => {
 
     React.useEffect(() => {
         if (activeSessionId === null && sessions.length > 0) {
-            setActiveSessionId(sessions[sessions.length - 1].id);
+            setActiveSessionId(sessions[sessions.length - 1]!.id);
         }
     }, [activeSessionId, sessions]);
 

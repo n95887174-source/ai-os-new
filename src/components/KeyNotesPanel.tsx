@@ -40,7 +40,7 @@ const KeyNotesPanel: React.FC = () => {
             }));
             if (isMountedRef.current) {
                 setKeys(list);
-                if (!selectedKeyId && list.length > 0) setSelectedKeyId(list[0].id);
+                if (!selectedKeyId && list.length > 0) setSelectedKeyId(list[0]!.id);
             }
         } catch (err) {
             if (isMountedRef.current) setError(String(err));

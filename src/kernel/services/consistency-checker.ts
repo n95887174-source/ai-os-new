@@ -120,7 +120,7 @@ function extractTypeNames(
         .filter((n) => {
             if (skip.has(n)) return false;
             if (seen.has(n)) return false;
-            if (n.startsWith('I') && n.length > 1 && n[1] === n[1].toUpperCase()) return true; // interface
+            if (n.startsWith('I') && n.length > 1 && n[1] === n[1]!.toUpperCase()) return true; // interface
             if (
                 n.endsWith('Service') ||
                 n.endsWith('Engine') ||
@@ -558,7 +558,7 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
             // Extract and check type names
             const typeRefs = extractTypeNames(content, shortName);
             for (const ref of typeRefs) {
-                if (ref.name.startsWith('I') && ref.name[1] === ref.name[1].toUpperCase()) {
+                if (ref.name.startsWith('I') && ref.name[1] === ref.name[1]!.toUpperCase()) {
                     // Interface name
                     const match = findInManifest(ref.name, 'interface_name', this.manifest);
                     items.push({
@@ -604,11 +604,11 @@ export class ConsistencyChecker implements IConsistencyChecker, IConsistencyHeal
             if (!byCategory[item.type]) {
                 byCategory[item.type] = { total: 0, passed: 0, failed: 0 };
             }
-            byCategory[item.type].total++;
+            byCategory[item.type]!.total++;
             if (item.found) {
-                byCategory[item.type].passed++;
+                byCategory[item.type]!.passed++;
             } else {
-                byCategory[item.type].failed++;
+                byCategory[item.type]!.failed++;
             }
         }
 

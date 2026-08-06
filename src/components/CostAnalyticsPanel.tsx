@@ -77,7 +77,7 @@ const CostAnalyticsPanel: React.FC = () => {
                 <polyline points={pts} fill="none" stroke="#10b981" strokeWidth="1.5" />
                 <circle
                     cx={w}
-                    cy={h - (data[data.length - 1].cost / max) * h}
+                    cy={h - (data[data.length - 1]!.cost / max) * h}
                     r="2.5"
                     fill="#10b981"
                 />

@@ -124,7 +124,7 @@ function detectPattern(text: string): { pattern: ReasoningPattern; score: number
     ];
 
     scores.sort((a, b) => b.score - a.score);
-    return scores[0];
+    return scores[0]!;
 }
 
 function countMatches(text: string, indicators: string[]): number {
@@ -186,8 +186,8 @@ export function extractReasoningSignature(
     }
 
     entries.sort((a, b) => b[1] - a[1]);
-    const top = entries[0];
-    const runnerUp = entries.length > 1 ? entries[1][1] : 0;
+    const top = entries[0]!;
+    const runnerUp = entries.length > 1 ? entries[1]![1] : 0;
     const confidence = Math.min(1, top[1] - runnerUp + 0.3);
 
     return { pattern: top[0], confidence };

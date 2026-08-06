@@ -94,7 +94,7 @@ const ChatSidebar: React.FC<Props> = ({
         try {
             useChatStore.getState().clearHistory();
         } catch {
-            LOGGER.error('Failed to clear chat history');
+            LOGGER.error('Failed to clear chat history', '');
         }
     }, [confirmClear, t]);
 

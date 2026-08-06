@@ -19,6 +19,6 @@ export function updateSessionInList(
     const idx = sessions.findIndex((s) => s.id === id);
     if (idx === -1) return sessions;
     const next = [...sessions];
-    next[idx] = { ...next[idx], ...patch, updatedAt: Date.now() };
+    next[idx] = { ...next[idx]!, ...patch, updatedAt: Date.now() } as ChatSession;
     return next;
 }

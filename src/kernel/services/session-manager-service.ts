@@ -438,12 +438,12 @@ export class SessionManagerService implements ISessionManager {
     restoreDebateSession(id: string): DebateSession | null {
         const idx = this.completedSessions.findIndex((s) => s.id === id);
         if (idx === -1) return null;
-        const restored = structuredClone(this.completedSessions[idx]);
+        const restored = structuredClone(this.completedSessions[idx]!);
         restored.status = 'active';
         restored.currentRound = 1;
         this.completedSessions.splice(idx, 1);
         this.persistDebateHistory();
-        return restored;
+        return restored as DebateSession;
     }
 
     archiveDebateSession(id: string): boolean {

@@ -134,10 +134,10 @@ export class HypothesisService implements IHypothesisService {
         }
 
         const allowed = parsed.data as Partial<ResearchHypothesis>;
-        this.hypotheses[idx] = { ...this.hypotheses[idx], ...allowed };
+        this.hypotheses[idx] = { ...this.hypotheses[idx]!, ...allowed };
         await this.persist();
         this.deps.eventBus.emit(EVENTS.HYPOTHESES_UPDATED, { hypotheses: this.hypotheses });
-        return this.hypotheses[idx];
+        return this.hypotheses[idx]!;
     }
 
     async remove(id: string): Promise<void> {

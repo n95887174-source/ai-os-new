@@ -129,14 +129,14 @@ export class ProviderInstance implements IProviderInstance {
 
     private pruneSlidingErrors(): void {
         const cutoff = Date.now() - ProviderInstance.ERROR_WINDOW_MS;
-        while (this.slidingErrors.length > 0 && this.slidingErrors[0] < cutoff) {
+        while (this.slidingErrors.length > 0 && this.slidingErrors[0]! < cutoff) {
             this.slidingErrors.shift();
         }
     }
 
     private pruneSlidingSuccesses(): void {
         const cutoff = Date.now() - ProviderInstance.ERROR_WINDOW_MS;
-        while (this.slidingSuccesses.length > 0 && this.slidingSuccesses[0] < cutoff) {
+        while (this.slidingSuccesses.length > 0 && this.slidingSuccesses[0]! < cutoff) {
             this.slidingSuccesses.shift();
         }
     }

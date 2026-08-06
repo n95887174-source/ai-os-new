@@ -134,10 +134,10 @@ export class RouterRankingService {
                 if (sameProvider.length > 0) {
                     this.deps.sessionAffinityStore.bind(
                         sessionId,
-                        sameProvider[0].id,
-                        sameProvider[0].provider,
+                        sameProvider[0]!.id,
+                        sameProvider[0]!.provider,
                     );
-                    return [sameProvider[0]];
+                    return [sameProvider[0]!];
                 }
                 // No same-provider key available — evict and fall through to normal routing
                 this.deps.sessionAffinityStore.unbind(sessionId);
@@ -312,7 +312,7 @@ export class RouterRankingService {
                 this.deps.decisionRecorder.recordDecision({
                     strategy,
                     skipped,
-                    selected: usableFree[0].provider,
+                    selected: usableFree[0]!.provider,
                     prompt,
                 });
                 return usableFree;
@@ -353,7 +353,7 @@ export class RouterRankingService {
         const latValues = [...providerLats.values()].sort((a, b) => a - b);
         const medianLat =
             latValues.length % 2 === 0
-                ? (latValues[latValues.length / 2 - 1] + latValues[latValues.length / 2]) / 2
+                ? (latValues[latValues.length / 2 - 1]! + latValues[latValues.length / 2]!) / 2
                 : latValues[Math.floor(latValues.length / 2)] || 0;
 
         const sc = profile.scoring;
@@ -487,8 +487,8 @@ export class RouterRankingService {
                 {
                     name: 'selection',
                     status: 'passed',
-                    provider: rankedItems[0].key.provider,
-                    detail: `Score: ${rankedItems[0].score.toFixed(3)}`,
+                    provider: rankedItems[0]!.key.provider,
+                    detail: `Score: ${rankedItems[0]!.score.toFixed(3)}`,
                 },
             ];
 
@@ -497,7 +497,7 @@ export class RouterRankingService {
                 strategy,
                 classification: cls,
                 weights,
-                selected: rankedItems[0].key.provider,
+                selected: rankedItems[0]!.key.provider,
                 secondBest: rankedItems[1]?.key.provider || null,
                 scores: rankedItems.slice(0, 3).map((i) => ({
                     provider: i.key.provider,
@@ -508,7 +508,7 @@ export class RouterRankingService {
                 steps,
                 timestamp: Date.now(),
                 promptLength: prompt.length,
-                estimatedCost: estimateRequestCost(rankedItems[0].key, prompt, (model) =>
+                estimatedCost: estimateRequestCost(rankedItems[0]!.key, prompt, (model) =>
                     this.deps.pricingService.getPricingForModel(model),
                 ),
                 origin: decisionOrigin,
@@ -553,7 +553,7 @@ export class RouterRankingService {
 
         // Shadow mode: compare with KeyStateStore routing (live only)
         if (decisionOrigin === 'live' && this.deps.keyStateStore && rankedItems.length > 0) {
-            const selectedKey = rankedItems[0].key;
+            const selectedKey = rankedItems[0]!.key;
             const shadow = this.deps.keyStateStore.getForRouting();
             const shadowTop = shadow[0];
             if (
@@ -575,7 +575,7 @@ export class RouterRankingService {
             !hadExistingBinding &&
             rankedItems.length > 0
         ) {
-            const topKey = rankedItems[0].key;
+            const topKey = rankedItems[0]!.key;
             this.deps.sessionAffinityStore.bind(sessionId, topKey.id, topKey.provider);
         }
 

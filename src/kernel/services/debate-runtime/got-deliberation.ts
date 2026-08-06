@@ -53,7 +53,7 @@ export class GoTDeliberation implements IGoTDeliberation {
         const seed = _topic.length + _perspective.length;
         for (let i = 0; i < 3 && available.length > 0; i++) {
             const idx = (seed + i * 7) % available.length;
-            selected.push(available[idx]);
+            selected.push(available[idx]!);
             available.splice(idx, 1);
         }
         return selected;
@@ -103,14 +103,14 @@ export class GoTDeliberation implements IGoTDeliberation {
                 'Unintended consequences regularly overwhelm intended outcomes.',
             ],
         };
-        const list = premises[type] || premises.deductive;
-        return list[hash % list.length];
+        const list = premises[type]! || premises.deductive!;
+        return list![hash % list!.length]!;
     }
 
     private buildReasoning(type: GoTBranchType, premise: string, opposingClaims: string[]): string {
         const counter =
             opposingClaims.length > 0
-                ? `This counters the view that "${opposingClaims[0].slice(0, 80)}" by showing that ${premise.toLowerCase()}`
+                ? `This counters the view that "${opposingClaims[0]!.slice(0, 80)}" by showing that ${premise.toLowerCase()}`
                 : premise;
         return `${BRANCH_PROMPTS[type]} ${counter}. Therefore: ${premise}`;
     }

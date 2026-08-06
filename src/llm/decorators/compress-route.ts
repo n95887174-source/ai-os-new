@@ -78,9 +78,9 @@ export class CompressRouteDecorator extends BaseDecorator {
             return {
                 role: m.role as ChatMessage['role'],
                 content: m.content,
-                ...(orig.name ? { name: orig.name } : {}),
-                ...(orig.toolCallId ? { toolCallId: orig.toolCallId } : {}),
-                ...(orig.toolCalls ? { toolCalls: orig.toolCalls } : {}),
+                ...(orig!.name ? { name: orig!.name } : {}),
+                ...(orig!.toolCallId ? { toolCallId: orig!.toolCallId } : {}),
+                ...(orig!.toolCalls ? { toolCalls: orig!.toolCalls } : {}),
             };
         });
     }

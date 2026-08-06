@@ -27,7 +27,7 @@ function pickArc(agentId: string, round: number, _totalRounds: number): Narrativ
     if (progress < 0.3) {
         const earlyArcs: NarrativeArcType[] = ['setup_conflict_resolution', 'mystery_unraveling'];
         const idx = (agentId.charCodeAt(0) + round) % earlyArcs.length;
-        arc = earlyArcs[Math.abs(idx)];
+        arc = earlyArcs[Math.abs(idx)]!;
     } else if (progress < 0.6) {
         const midArcs: NarrativeArcType[] = [
             'hero_journey',
@@ -36,11 +36,11 @@ function pickArc(agentId: string, round: number, _totalRounds: number): Narrativ
             'visionary_forecast',
         ];
         const idx = (agentId.charCodeAt(agentId.length - 1) + round * 7) % midArcs.length;
-        arc = midArcs[Math.abs(idx)];
+        arc = midArcs[Math.abs(idx)]!;
     } else {
         const lateArcs: NarrativeArcType[] = ['cautionary_tale', 'visionary_forecast'];
         const idx = (round * 13 + agentId.length) % lateArcs.length;
-        arc = lateArcs[Math.abs(idx)];
+        arc = lateArcs[Math.abs(idx)]!;
     }
     return { arc, instruction: ARC_INSTRUCTIONS[arc] };
 }

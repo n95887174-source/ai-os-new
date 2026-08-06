@@ -94,7 +94,8 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                     p.description.toLowerCase().includes(q) ||
                     p.field.toLowerCase().includes(q) ||
                     p.nationality.toLowerCase().includes(q) ||
-                    (p.famousWorks && p.famousWorks.some((w) => w.toLowerCase().includes(q))),
+                    (p.famousWorks &&
+                        p.famousWorks.some((w: string) => w.toLowerCase().includes(q))),
             );
         }
         if (categoryFilter) result = result.filter((p) => p.category === categoryFilter);
@@ -107,7 +108,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
 
     const handleRandom = useCallback(() => {
         const idx = Math.floor(Math.random() * PERSONA_DEFINITIONS.length);
-        setSelected(PERSONA_DEFINITIONS[idx]);
+        setSelected(PERSONA_DEFINITIONS[idx]!);
     }, []);
 
     const chip = (color: string, bg?: string): React.CSSProperties => ({
@@ -262,7 +263,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                 }}
             >
                 {pageItems.map((p) => {
-                    const catColor = CATEGORY_COLORS[p.category] || '#64748b';
+                    const catColor = CATEGORY_COLORS[p.category as PersonaCategory] || '#64748b';
                     return (
                         <div
                             key={p.id}
@@ -323,7 +324,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                 style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 8 }}
                             >
                                 <span style={chip('#64748b')}>
-                                    <Calendar size={10} /> {ERA_LABELS[p.era]}
+                                    <Calendar size={10} /> {ERA_LABELS[p.era as PersonaEra]}
                                 </span>
                                 <span style={chip('#64748b')}>
                                     <Globe size={10} /> {p.nationality}

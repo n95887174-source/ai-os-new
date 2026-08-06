@@ -33,7 +33,7 @@ const RoutingExperiments: React.FC = () => {
 
     useEffect(() => {
         setSelectedProviders([providers[0] || 'Groq']);
-        setSelectedModels([MODELS[0]]);
+        setSelectedModels([MODELS[0]!]);
     }, [providers]);
 
     useEffect(() => {

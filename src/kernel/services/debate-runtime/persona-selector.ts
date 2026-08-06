@@ -282,7 +282,7 @@ function selectVariant(
     });
 
     // Return highest-scoring variant, or a random eligible one if no keywords matched
-    if (scored[0].score > 0) return scored[0].variant;
+    if (scored[0]!.score > 0) return scored[0]!.variant;
 
     // No keyword match — pick deterministically from eligible
     const idx = Math.abs((agentId.charCodeAt(0) + round * 7) % eligible.length);

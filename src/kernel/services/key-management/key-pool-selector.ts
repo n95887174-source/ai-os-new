@@ -74,16 +74,16 @@ export class KeyPoolSelector implements IPoolSelectorService {
                 const key = provider.toLowerCase();
                 const startIdx = (this.index[key] ?? 0) % pool.length;
                 this.index[key] = (startIdx + 1) % pool.length;
-                return pool[startIdx];
+                return pool[startIdx]!;
             }
             case 'least-usage':
                 return pool.reduce(
                     (min, k) =>
                         (k.stats?.extended?.usageToday?.requests || 0) <
-                        (min.stats?.extended?.usageToday?.requests || 0)
+                        (min!.stats?.extended?.usageToday?.requests || 0)
                             ? k
                             : min,
-                    pool[0],
+                    pool[0]!,
                 );
             case 'random':
                 return this._rng.pick(pool);

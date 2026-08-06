@@ -72,7 +72,7 @@ const ChatMessagesSection: React.FC<Props> = ({
     const historyLen = count;
     const lastContentLen =
         historyEntries && historyEntries.length > 0
-            ? (historyEntries[historyEntries.length - 1].responses?.reduce(
+            ? (historyEntries[historyEntries.length - 1]!.responses?.reduce(
                   (sum, r) => sum + (r.content?.length ?? 0),
                   0,
               ) ?? 0)
@@ -95,7 +95,7 @@ const ChatMessagesSection: React.FC<Props> = ({
                     style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
                 >
                     {items.map((virtualItem) => {
-                        const entry = historyEntries[virtualItem.index];
+                        const entry = historyEntries[virtualItem.index]!;
                         const entryIdx = virtualItem.index;
                         const isEditing = editingEntryId === entry.id;
                         const isSearchMatch = searchWithinResults.includes(entryIdx);

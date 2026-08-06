@@ -75,7 +75,7 @@ export class AgentGenerator {
                     content: `${GENERATION_PROMPT}\n\nDescription: ${sanitizePromptVar(description)}`,
                 },
             ],
-            model,
+            model!,
             apiKey,
         );
 
@@ -140,7 +140,7 @@ Respond with ONLY the updated JSON object (same format as before, no markdown, n
 
         const response = await this.deps.sendMessage(
             [{ role: 'user', content: prompt }],
-            model,
+            model!,
             apiKey,
         );
 

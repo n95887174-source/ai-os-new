@@ -109,7 +109,7 @@ function stripHtml(text: string): string {
 
 function extractXml(xml: string, tag: string): string {
     const m = xml.match(new RegExp(`<${tag}[^>]*>(.*?)</${tag}>`, 's'));
-    return m ? stripHtml(m[1]) : '';
+    return m ? stripHtml(m[1]!) : '';
 }
 
 // ── 1. DuckDuckGo (web, no key) ────────────────────────────────────────
@@ -155,7 +155,7 @@ class DuckDuckGoAdapter implements ISourceAdapter {
                 const text = String(topic.Text);
                 sources.push(
                     mkSource(
-                        text.split(' - ')[0].slice(0, 120),
+                        text.split(' - ')[0]!.slice(0, 120),
                         typeof topic.FirstURL === 'string' ? topic.FirstURL : '',
                         text.slice(0, 300),
                         'web',
@@ -457,7 +457,7 @@ class SemanticScholarAdapter implements ISourceAdapter {
                     0.75,
                     {
                         authors: ((p.authors as Array<Record<string, string>>) || []).map(
-                            (a) => a.name,
+                            (a) => a.name ?? '',
                         ),
                         year: p.year ? Number(p.year) : undefined,
                         citationCount: p.citationCount ? Number(p.citationCount) : undefined,

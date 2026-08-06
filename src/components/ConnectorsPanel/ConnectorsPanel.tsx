@@ -48,7 +48,7 @@ const ConnectorsPanel: React.FC = () => {
                     setConnectors(allConns);
                 }
             } catch (e) {
-                LOGGER.warn('Failed to load connectors', e);
+                LOGGER.warn('Failed to load connectors', String(e));
                 if (isMountedRef.current) {
                     setErrorMsg('Could not load connectors. Using default configuration.');
                     clearErrorAfterDelay();
@@ -71,7 +71,7 @@ const ConnectorsPanel: React.FC = () => {
             try {
                 await connectorService.saveAll(updated);
             } catch (e) {
-                LOGGER.warn('Failed to save', e);
+                LOGGER.warn('Failed to save', String(e));
                 if (isMountedRef.current) {
                     setErrorMsg('Could not save connector changes.');
                     clearErrorAfterDelay();

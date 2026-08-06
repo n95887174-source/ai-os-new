@@ -32,7 +32,7 @@ export class CloudflareAdapter extends BaseLLMAdapter {
             if (accountId && !/^[a-zA-Z0-9-]+$/.test(accountId)) {
                 throw new LLMError('Invalid Cloudflare account ID format', this.id, 400);
             }
-            return { accountId, token };
+            return { accountId: accountId!, token };
         }
         return { accountId: '', token: apiKey };
     }

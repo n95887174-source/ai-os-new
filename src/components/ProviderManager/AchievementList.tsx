@@ -60,7 +60,7 @@ export const AchievementList: React.FC<AchievementListProps> = ({ achievements, 
         const g: Record<string, ProviderAchievement[]> = {};
         for (const a of filtered) {
             if (!g[a.category]) g[a.category] = [];
-            g[a.category].push(a);
+            g[a.category]!.push(a);
         }
         return g;
     })();

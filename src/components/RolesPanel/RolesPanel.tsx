@@ -97,7 +97,7 @@ const RolesPanel: React.FC = () => {
             roleService.deleteRole(id);
             if (isMountedRef.current) setError(null);
         } catch (err) {
-            LOGGER.warn('Failed to delete role', err);
+            LOGGER.warn('Failed to delete role', String(err));
             if (isMountedRef.current) {
                 setError(t('roles.error_delete'));
                 clearError();
@@ -129,7 +129,7 @@ const RolesPanel: React.FC = () => {
                 setError(null);
             }
         } catch (err) {
-            LOGGER.warn('Failed to save role', err);
+            LOGGER.warn('Failed to save role', String(err));
             if (isMountedRef.current) {
                 setError(t('roles.error_save'));
                 clearError();
@@ -178,7 +178,7 @@ const RolesPanel: React.FC = () => {
                     type: 'success',
                 });
             } catch (err) {
-                LOGGER.warn('Failed to duplicate role', err);
+                LOGGER.warn('Failed to duplicate role', String(err));
                 if (isMountedRef.current) {
                     setError(t('roles.error_duplicate'));
                     clearError();
@@ -208,7 +208,7 @@ const RolesPanel: React.FC = () => {
         const vars: string[] = [];
         let match;
         while ((match = regex.exec(prompt)) !== null) {
-            if (!vars.includes(match[1])) vars.push(match[1]);
+            if (!vars.includes(match[1]!)) vars.push(match[1]!);
         }
         return vars;
     };
@@ -582,7 +582,7 @@ const RolesPanel: React.FC = () => {
                                             validation={validation}
                                             vars={vars}
                                             catColor={catColor}
-                                            shortId={shortId}
+                                            shortId={shortId!}
                                             onEdit={() =>
                                                 setEditingRole({
                                                     ...role,

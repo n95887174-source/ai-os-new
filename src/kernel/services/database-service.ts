@@ -424,7 +424,7 @@ export class DatabaseService implements IDatabaseService {
         for (const [tableName, schema] of Object.entries(TABLE_SCHEMA_MAP)) {
             const rows = await (
                 dexie as unknown as Record<string, { toArray(): Promise<unknown[]> }>
-            )[tableName].toArray();
+            )[tableName]!.toArray();
             const errors: string[] = [];
             let valid = 0;
             for (const row of rows) {

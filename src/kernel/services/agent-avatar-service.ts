@@ -90,8 +90,8 @@ export class AgentAvatarService {
         const emojiIndex = hash % this.config.emojiPool.length;
         const colorIndex = (hash >> 4) % this.config.colorPool.length;
 
-        const emoji = this.config.emojiPool[emojiIndex];
-        const color = this.config.colorPool[colorIndex];
+        const emoji = this.config.emojiPool[emojiIndex]!;
+        const color = this.config.colorPool[colorIndex]!;
         const initials = this.getInitials(agentId);
 
         return {
@@ -175,8 +175,8 @@ export class AgentAvatarService {
         const colorIndex = (hash >> 4) % this.config.colorPool.length;
 
         return {
-            emoji: this.config.emojiPool[emojiIndex],
-            color: this.config.colorPool[colorIndex],
+            emoji: this.config.emojiPool[emojiIndex]!,
+            color: this.config.colorPool[colorIndex]!,
             initials: this.getInitials(seed),
             seed,
         };
@@ -191,11 +191,11 @@ export class AgentAvatarService {
             .slice(0, 2);
 
         if (words.length >= 2) {
-            return (words[0][0] + words[1][0]).toUpperCase();
+            return (words[0]![0]! + words[1]![0]!).toUpperCase();
         }
 
-        if (words.length === 1 && words[0].length >= 2) {
-            return words[0].substring(0, 2).toUpperCase();
+        if (words.length === 1 && words[0]!.length >= 2) {
+            return words[0]!.substring(0, 2).toUpperCase();
         }
 
         // Fallback: first 2 chars of hash

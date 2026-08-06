@@ -122,7 +122,7 @@ const KnowledgePanel: React.FC = () => {
                 setError(null);
             }
         } catch (e) {
-            LOGGER.warn('Failed to delete memory node', e);
+            LOGGER.warn('Failed to delete memory node', String(e));
             if (isMountedRef.current) {
                 setError(t('knowledge.error_delete'));
                 clearErrorAfterDelay();
@@ -161,7 +161,7 @@ const KnowledgePanel: React.FC = () => {
                 setError(null);
             }
         } catch (e) {
-            LOGGER.warn('Failed to update memory node', e);
+            LOGGER.warn('Failed to update memory node', String(e));
             if (isMountedRef.current) {
                 setError(t('knowledge.error_update'));
                 clearErrorAfterDelay();

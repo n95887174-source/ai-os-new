@@ -721,8 +721,8 @@ export class SuperAgentsDB extends Dexie {
         ];
 
         for (let i = 1; i < versionDefs.length; i++) {
-            const prev = versionDefs[i - 1];
-            const curr = versionDefs[i];
+            const prev = versionDefs[i - 1]!;
+            const curr = versionDefs[i]!;
             for (const table of Object.keys(prev.tables)) {
                 if (!curr.tables[table]) {
                     LOGGER.warn(
@@ -730,8 +730,8 @@ export class SuperAgentsDB extends Dexie {
                         `Migration v${prev.v}→v${curr.v}: table '${table}' dropped. Data loss possible if upgrade handler missing.`,
                     );
                 } else if (prev.tables[table] !== curr.tables[table]) {
-                    const prevIdxs = prev.tables[table].split(', ').sort().join(', ');
-                    const currIdxs = curr.tables[table].split(', ').sort().join(', ');
+                    const prevIdxs = prev.tables[table]!.split(', ').sort().join(', ');
+                    const currIdxs = curr.tables[table]!.split(', ').sort().join(', ');
                     if (prevIdxs !== currIdxs) {
                         LOGGER.info(
                             'DatabaseService',

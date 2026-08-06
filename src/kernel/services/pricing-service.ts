@@ -153,7 +153,7 @@ export class PricingService implements ICostCalculator {
             .filter((k) => key.startsWith(k))
             .sort((a, b) => b.length - a.length);
         const result =
-            prefix.length > 0 ? this.pricingData[prefix[0]] : { input: 0.15, output: 0.6 };
+            prefix.length > 0 ? this.pricingData[prefix[0]!] : { input: 0.15, output: 0.6 };
         if (prefix.length === 0) {
             LOGGER.warn('PricingService', `Unknown model "${model}" — using fallback pricing`);
         }
@@ -161,8 +161,8 @@ export class PricingService implements ICostCalculator {
             const oldest = this.prefixCache.keys().next().value;
             if (oldest !== undefined) this.prefixCache.delete(oldest);
         }
-        this.prefixCache.set(key, result);
-        return result;
+        this.prefixCache.set(key, result!);
+        return result!;
     }
 
     calculateCost(model: string, inputTokens: number, outputTokens: number): number {
@@ -220,7 +220,7 @@ export class PricingService implements ICostCalculator {
         const pricing = this.lookup(model);
         const estimatedInputCost = (inputTokens / 1_000_000) * pricing.input;
         const estimatedOutputCost = (estimatedOutputTokens / 1_000_000) * pricing.output;
-        const provider = pricing.provider || (model.includes('/') ? model.split('/')[0] : model);
+        const provider = pricing.provider! || (model.includes('/') ? model.split('/')[0]! : model);
 
         return {
             estimatedInputTokens: inputTokens,

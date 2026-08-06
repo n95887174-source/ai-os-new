@@ -67,7 +67,7 @@ export class CognitiveMetricsEngine {
             let stable = 0;
             for (let i = 1; i < history.length; i++) {
                 const delta = Math.abs(
-                    history[i].contradictionDensity - history[i - 1].contradictionDensity,
+                    history[i]!.contradictionDensity - history[i - 1]!.contradictionDensity,
                 );
                 if (delta < 0.2) stable++;
             }
