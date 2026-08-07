@@ -63,6 +63,9 @@ import type { BatchProcessorService as BatchProcessorServiceType } from '../serv
 import type { AgentAvatarService } from '../services/agent-avatar-service';
 import type { ConnectorService } from '../services/connector-service';
 import type { IQualityImpactCollector, IExperimentEngine } from '../contracts/quality-impact';
+import type { ILensEngineService } from '../contracts/lens-engine';
+
+export const lensEngine = lazyService<ILensEngineService>('lensEngine');
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',

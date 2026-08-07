@@ -210,6 +210,8 @@ export const SERVICE_PHASE: Record<string, string> = {
     counterfactualNarrativeService: 'phase11',
     temporalReplayService: 'phase11',
     truthConsistencyMonitor: 'phase11',
+
+    lensEngine: 'phase13',
 };
 
 // All registered route IDs from PANEL_COMPONENTS
@@ -317,6 +319,7 @@ export const VALID_ROUTE_IDS: string[] = [
     'decision-log',
     'project-os',
     'hypothesis-gen',
+    'lenses',
     'research-engine',
     'research-advanced',
     'research-gemini',
@@ -491,6 +494,7 @@ export const ROUTE_PATH: Record<string, string> = {
     'decision-log': '/decision-log',
     'project-os': '/project-os',
     'hypothesis-gen': '/hypothesis-gen',
+    lenses: '/lenses',
     'research-engine': '/research-engine',
     'research-advanced': '/research-advanced',
     'research-gemini': '/research-gemini',
@@ -606,6 +610,7 @@ export const SERVICE_ROUTE_MAP: Record<string, string> = {
     whatIfService: 'what-if',
     diagnosticService: 'diagnostics',
     hypothesisService: 'hypothesis-gen',
+    lensEngine: 'lenses',
     architectureReviewService: 'arch-review',
     promptAuditService: 'prompt-audit',
     routingExperimentsService: 'routing-experiments',
