@@ -64,8 +64,10 @@ import type { AgentAvatarService } from '../services/agent-avatar-service';
 import type { ConnectorService } from '../services/connector-service';
 import type { IQualityImpactCollector, IExperimentEngine } from '../contracts/quality-impact';
 import type { ILensEngineService } from '../contracts/lens-engine';
+import type { ICrystalVaultService } from '../contracts/knowledge-crystal';
 
 export const lensEngine = lazyService<ILensEngineService>('lensEngine');
+export const crystalVault = lazyService<ICrystalVaultService>('crystalVault');
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',

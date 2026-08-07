@@ -98,6 +98,7 @@ const nav: Record<string, string> = {
     'nav.project_os_explorer': 'проводник Project OS',
     'nav.hypothesis_generator': 'Генератор гипотез',
     'nav.lenses': 'Когнитивные линзы',
+    'nav.crystals': 'Хранилище кристаллов',
     'nav.architecture_review': 'Ревью архитектуры',
     'nav.prompt_strategy_audit': 'Аудит стратегии промпта',
     'nav.model_routing_experiments': 'Эксперименты маршрутизации моделей',

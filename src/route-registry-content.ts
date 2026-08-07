@@ -63,6 +63,14 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 experimental: true,
             },
             {
+                id: 'crystals',
+                labelKey: 'nav.crystals',
+                icon: Icons.gem,
+                color: '#10b981',
+                lazy: true,
+                experimental: true,
+            },
+            {
                 id: 'research-engine',
                 labelKey: 'nav.research_engine',
                 icon: Icons.layers,

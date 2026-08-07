@@ -66,6 +66,7 @@ import {
     Atom,
     Route as RouteIcon,
     Container as ContainerIcon,
+    Gem,
 } from 'lucide-react';
 
 const s = 18;
@@ -138,5 +139,6 @@ export const Icons = {
     atom: <Atom size={s} />,
     route: <RouteIcon size={s} />,
     container: <ContainerIcon size={s} />,
+    gem: <Gem size={s} />,
     settings: <Settings size={s} />,
 } as const;

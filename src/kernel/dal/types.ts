@@ -16,6 +16,7 @@ import type { ExecutionTrace } from '../contracts/observability';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 import type { EventLogRepository } from './event-log-repository';
 import type { MemoryRepository } from './repository-types';
+import type { CrystalRepository } from './crystal-repository';
 
 // =============================================================================
 // Repository Interfaces (see repository-types.ts for MemoryRepository)
@@ -118,6 +119,7 @@ export interface DataAccessLayer {
     cognitive: CognitiveRepository;
     workspace: WorkspaceRepository;
     eventLog: EventLogRepository;
+    crystal: CrystalRepository;
     kv: KvRepository;
 }
 

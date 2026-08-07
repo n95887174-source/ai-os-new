@@ -247,6 +247,12 @@ export class DatabaseService implements IDatabaseService {
     get eventLog() {
         return getDexieDb().eventLog;
     }
+    get crystals() {
+        return getDexieDb().crystals;
+    }
+    get crystalVersions() {
+        return getDexieDb().crystalVersions;
+    }
     get db() {
         return getDexieDb();
     }

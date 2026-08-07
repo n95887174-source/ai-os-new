@@ -1233,6 +1233,49 @@ export const EVENT_REGISTRY = {
             timestamp: z.number(),
         }),
     ),
+
+    // ── Crystal Vault (knowledge) ──────────────────────────────────────────
+    CRYSTAL_PROPOSED: event(
+        'knowledge:crystal:proposed',
+        z.object({
+            crystalId: z.string(),
+            statement: z.string(),
+            originKind: z.string(),
+            status: z.string(),
+        }),
+    ),
+    CRYSTAL_FORMED: event(
+        'knowledge:crystal:formed',
+        z.object({
+            crystalId: z.string(),
+            version: z.number(),
+            statement: z.string(),
+            confidence: z.number(),
+        }),
+    ),
+    CRYSTAL_SUPERSEDED: event(
+        'knowledge:crystal:superseded',
+        z.object({
+            crystalId: z.string(),
+            oldVersion: z.number(),
+            newVersion: z.number(),
+            reason: z.string(),
+        }),
+    ),
+    CRYSTAL_REFUTED: event(
+        'knowledge:crystal:refuted',
+        z.object({
+            crystalId: z.string(),
+            reason: z.string(),
+        }),
+    ),
+    CRYSTAL_CONTRADICTION_DETECTED: event(
+        'knowledge:crystal:contradiction:detected',
+        z.object({
+            crystalId: z.string(),
+            contradictingCrystalIds: z.array(z.string()),
+        }),
+    ),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

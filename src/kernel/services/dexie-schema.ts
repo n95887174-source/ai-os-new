@@ -5,6 +5,7 @@ import type { ChatSession } from '../contracts/storage/session-store';
 import type { CognitiveTrace, CognitiveSkill, Connector } from '../types/domain-types';
 import type { ExecutionTrace } from '../contracts/observability';
 import type { Role } from '../types/role-types';
+import type { Crystal } from '../types/crystal-types';
 import {
     MemoryEntrySchema,
     CognitiveTraceSchema,
@@ -73,6 +74,9 @@ export class SuperAgentsDB extends Dexie {
     sessionLinks!: Table<SessionLink>;
 
     eventLog!: Table<RecordedEventRow>;
+
+    crystals!: Table<Crystal>;
+    crystalVersions!: Table<Crystal>;
 
     constructor() {
         super('super_agents_os_v4');
@@ -372,6 +376,28 @@ export class SuperAgentsDB extends Dexie {
                     );
                 }
             });
+
+        this.version(13).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id, createdAt',
+            debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+            debateVerdicts: 'sessionId',
+            debateTimeline: 'id, sessionId, timestamp, type',
+            debateOverrides: 'id, sessionId, appliedAt',
+            sessionLinks: 'id, fromId, toId, linkType',
+            eventLog: '++id, sequence, event, timestamp',
+            crystals:
+                'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+            crystalVersions: '[crystalId+version], crystalId',
+        });
 
         const rejectHook =
             (schema: { parse: (data: unknown) => unknown }, label: string) =>
@@ -716,6 +742,53 @@ export class SuperAgentsDB extends Dexie {
                     debateOverrides: 'id, sessionId, appliedAt',
                     sessionLinks: 'id, fromId, toId, linkType',
                     eventLog: '++id, sequence, event, timestamp',
+                },
+            },
+            {
+                v: 12,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                    debateVerdicts: 'sessionId',
+                    debateTimeline: 'id, sessionId, timestamp, type',
+                    debateOverrides: 'id, sessionId, appliedAt',
+                    sessionLinks: 'id, fromId, toId, linkType',
+                    eventLog: '++id, sequence, event, timestamp',
+                },
+            },
+            {
+                v: 13,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                    debateVerdicts: 'sessionId',
+                    debateTimeline: 'id, sessionId, timestamp, type',
+                    debateOverrides: 'id, sessionId, appliedAt',
+                    sessionLinks: 'id, fromId, toId, linkType',
+                    eventLog: '++id, sequence, event, timestamp',
+                    crystals:
+                        'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+                    crystalVersions: '[crystalId+version], crystalId',
                 },
             },
         ];

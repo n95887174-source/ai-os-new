@@ -25,3 +25,4 @@ export { EventLogRepository } from './event-log-repository';
 export { SessionLinkRepository } from './session-link-repository';
 export { DebateTimelineRepository } from './debate-timeline-repository';
 export { DebateOverrideRepository } from './debate-override-repository';
+export { CrystalRepository } from './crystal-repository';

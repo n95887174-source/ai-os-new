@@ -78,6 +78,12 @@ export async function createTestDb(): Promise<TestDb> {
         get eventLog() {
             return dexie!.eventLog;
         },
+        get crystals() {
+            return dexie!.crystals;
+        },
+        get crystalVersions() {
+            return dexie!.crystalVersions;
+        },
         get db() {
             return dexie!;
         },
@@ -116,6 +122,8 @@ export async function createTestDb(): Promise<TestDb> {
             dexie!.debateOverrides.clear(),
             dexie!.sessionLinks.clear(),
             dexie!.eventLog.clear(),
+            dexie!.crystals.clear(),
+            dexie!.crystalVersions.clear(),
         ]);
     };
 

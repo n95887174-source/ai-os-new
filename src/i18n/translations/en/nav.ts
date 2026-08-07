@@ -98,6 +98,7 @@ const nav: Record<string, string> = {
     'nav.project_os_explorer': 'Project OS Explorer',
     'nav.hypothesis_generator': 'Hypothesis Generator',
     'nav.lenses': 'Cognitive Lenses',
+    'nav.crystals': 'Crystal Vault',
     'nav.architecture_review': 'Architecture Review',
     'nav.prompt_strategy_audit': 'Prompt & Strategy Audit',
     'nav.model_routing_experiments': 'Model Routing Experiments',

@@ -20,6 +20,7 @@ import { DebateRepository } from './debate-repository';
 import { TraceRepository } from './trace-repository';
 import { CognitiveRepository } from './cognitive-repository';
 import { EventLogRepository } from './event-log-repository';
+import { CrystalRepository } from './crystal-repository';
 
 export class DataAccessLayerImpl implements DataAccessLayer {
     readonly memory: MemoryRepository;
@@ -31,6 +32,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
     readonly cognitive: CognitiveRepository;
     readonly workspace: WorkspaceRepository;
     readonly eventLog: EventLogRepository;
+    readonly crystal: CrystalRepository;
     readonly kv: KvRepository;
 
     constructor(db: DatabaseService) {
@@ -42,6 +44,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
         this.trace = new TraceRepository(db);
         this.cognitive = new CognitiveRepository(db);
         this.eventLog = new EventLogRepository(db);
+        this.crystal = new CrystalRepository(db);
         this.kv = new KvRepositoryImpl(db);
         this.workspace = new WorkspaceRepository(this.kv);
     }

@@ -32,6 +32,7 @@ import { registerPhase9 } from './phase9-research-engine';
 import { registerPhase10 } from './phase10-ecosystem';
 import { registerPhase11 } from './phase11-causal-debugger';
 import { registerPhase13 } from './phase13-lenses';
+import { registerPhase14 } from './phase14-crystals';
 import type { IContainer } from '../container';
 import type { IEventBus } from '../types/interfaces';
 
@@ -56,6 +57,7 @@ export function registerServices(
     registerPhase10(helpers, ctx);
     registerPhase11(helpers, ctx);
     registerPhase13(helpers, ctx);
+    registerPhase14(helpers, ctx);
 }
 
 export type { PhaseContext, Phase } from './helpers';
