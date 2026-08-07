@@ -67,9 +67,15 @@ Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis
 - UI: `components/LensesPanel/` (LensesPanel, LensSelector, LensStackVisualizer, LensEditorModal)
 - Route `lenses` registered (KNOWLEDGE section), i18n en/ru, lensEngine lazyService exposed
 
-### NEXT: Module 2 — Crystal Vault (see plan §2.1–2.6)
+### Module 2 — Crystal Vault ✅ DONE (commit 5ecf56d6)
 
-- Contract `knowledge-crystal.ts`, Dexie v13 `crystals`+`crystalVersions`, DAL, events, UI `CrystalVaultPanel`
+- Backend: `crystal-types.ts`, `contracts/knowledge-crystal.ts`, Dexie v13 `crystals`+`crystalVersions`, `CrystalRepository` in DAL, `crystal-vault-service` (propose/validate/crystallize/supersede/refute/query/search + 11 tests), `crystal-debate-bridge` (auto-propose from verdicts), 5 crystal events, phase14 registration
+- UI: `components/CrystalVaultPanel/` (CrystalVaultPanel, CrystalCard, CrystalProposeModal, CrystalLifecycleBadge)
+- Route `crystals` registered (KNOWLEDGE section), i18n en/ru, crystalVault lazyService exposed
+
+### NEXT: Module 3 — Junction Engine (see plan §3.1–3.6)
+
+- Contract `junction-engine.ts`, service (JunctionDetector + JunctionValidator: dormant thread revival, debate deadlock, cross-domain), Dexie table `junctions`, events `knowledge:junction:*`, UI `JunctionPanel`
 
 ## Session History
 
