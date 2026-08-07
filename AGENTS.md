@@ -57,6 +57,20 @@ npm run check:circular-kernel  # circular deps check
 
 All P0/P1/P2 tasks are complete. Next tasks: P2.25+ (Documentation) in CONSOLIDATED_PLAN.md.
 
+## Current Work — Cognitive Modules (docs/road/IMPLEMENTATION_PLAN.md)
+
+Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis → Generator → Forum → Builder.
+
+### Module 1 — Lenses ✅ DONE (commit 1177264c)
+
+- Backend: `lens-types.ts`, `contracts/lens-engine.ts`, `services/lens-engine/` (engine + library + 15 tests), phase13 registration
+- UI: `components/LensesPanel/` (LensesPanel, LensSelector, LensStackVisualizer, LensEditorModal)
+- Route `lenses` registered (KNOWLEDGE section), i18n en/ru, lensEngine lazyService exposed
+
+### NEXT: Module 2 — Crystal Vault (see plan §2.1–2.6)
+
+- Contract `knowledge-crystal.ts`, Dexie v13 `crystals`+`crystalVersions`, DAL, events, UI `CrystalVaultPanel`
+
 ## Session History
 
 Full session log: `docs/SESSION_LOG.md`
