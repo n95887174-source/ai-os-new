@@ -30,3 +30,4 @@ export { JunctionRepository } from './junction-repository';
 export { SynthesisRepository } from './synthesis-repository';
 export { GeneratorRepository } from './generator-repository';
 export { ForumRepository } from './forum-repository';
+export { WorkflowRepository } from './workflow-repository';

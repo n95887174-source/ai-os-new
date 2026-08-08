@@ -21,6 +21,7 @@ import type { JunctionRepository } from './junction-repository';
 import type { SynthesisRepository } from './synthesis-repository';
 import type { GeneratorRepository } from './generator-repository';
 import type { ForumRepository } from './forum-repository';
+import type { WorkflowRepository } from './workflow-repository';
 
 // =============================================================================
 // Repository Interfaces (see repository-types.ts for MemoryRepository)
@@ -128,6 +129,7 @@ export interface DataAccessLayer {
     synthesis: SynthesisRepository;
     generator: GeneratorRepository;
     forum: ForumRepository;
+    builder: WorkflowRepository;
     kv: KvRepository;
 }
 

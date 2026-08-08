@@ -15,6 +15,7 @@ import type {
     ForumTopicRecord,
     ForumVoteRecord,
 } from '../types/forum-types';
+import type { WorkflowRecord } from '../types/builder-types';
 import {
     MemoryEntrySchema,
     CognitiveTraceSchema,
@@ -98,6 +99,8 @@ export class SuperAgentsDB extends Dexie {
     forumPosts!: Table<ForumPostRecord>;
     forumVotes!: Table<ForumVoteRecord>;
     forumSubs!: Table<ForumSubRecord>;
+
+    workflows!: Table<WorkflowRecord>;
 
     constructor() {
         super('super_agents_os_v4');
@@ -522,6 +525,37 @@ export class SuperAgentsDB extends Dexie {
             forumPosts: 'id, topicId, authorId, createdAt, score, parentId',
             forumVotes: 'id, postId, voterId, [postId+voterId]',
             forumSubs: 'id, topicId, subscriberId, [topicId+subscriberId]',
+        });
+
+        this.version(18).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id, createdAt',
+            debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+            debateVerdicts: 'sessionId',
+            debateTimeline: 'id, sessionId, timestamp, type',
+            debateOverrides: 'id, sessionId, appliedAt',
+            sessionLinks: 'id, fromId, toId, linkType',
+            eventLog: '++id, sequence, event, timestamp',
+            crystals:
+                'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+            crystalVersions: '[crystalId+version], crystalId',
+            junctions: 'id, status, synthesisType, createdAt',
+            synthSessions: 'id, status, createdAt',
+            synthPerspectives: 'id, synthesisId, roleId, lensId',
+            genJobs: 'id, status, trigger.kind, createdAt',
+            forumTopics: 'id, category, authorId, lastActivityAt, pinned, *tags',
+            forumPosts: 'id, topicId, authorId, createdAt, score, parentId',
+            forumVotes: 'id, postId, voterId, [postId+voterId]',
+            forumSubs: 'id, topicId, subscriberId, [topicId+subscriberId]',
+            workflows: 'id, status, version, createdAt',
         });
 
         const rejectHook =
@@ -1030,6 +1064,40 @@ export class SuperAgentsDB extends Dexie {
                     forumPosts: 'id, topicId, authorId, createdAt, score, parentId',
                     forumVotes: 'id, postId, voterId, [postId+voterId]',
                     forumSubs: 'id, topicId, subscriberId, [topicId+subscriberId]',
+                },
+            },
+            {
+                v: 18,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                    debateVerdicts: 'sessionId',
+                    debateTimeline: 'id, sessionId, timestamp, type',
+                    debateOverrides: 'id, sessionId, appliedAt',
+                    sessionLinks: 'id, fromId, toId, linkType',
+                    eventLog: '++id, sequence, event, timestamp',
+                    crystals:
+                        'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+                    crystalVersions: '[crystalId+version], crystalId',
+                    junctions: 'id, status, synthesisType, createdAt',
+                    synthSessions: 'id, status, createdAt',
+                    synthPerspectives: 'id, synthesisId, roleId, lensId',
+                    genJobs: 'id, status, trigger.kind, createdAt',
+                    forumTopics: 'id, category, authorId, lastActivityAt, pinned, *tags',
+                    forumPosts: 'id, topicId, authorId, createdAt, score, parentId',
+                    forumVotes: 'id, postId, voterId, [postId+voterId]',
+                    forumSubs: 'id, topicId, subscriberId, [topicId+subscriberId]',
+                    workflows: 'id, status, version, createdAt',
                 },
             },
         ];

@@ -217,6 +217,7 @@ export const SERVICE_PHASE: Record<string, string> = {
     synthesisEngine: 'phase16',
     knowledgeGenerator: 'phase17',
     forumService: 'phase18',
+    builderAgent: 'phase19',
 };
 
 // All registered route IDs from PANEL_COMPONENTS
@@ -631,6 +632,7 @@ export const SERVICE_ROUTE_MAP: Record<string, string> = {
     synthesisEngine: 'synthesis',
     knowledgeGenerator: 'knowledge-generator',
     forumService: 'forum',
+    builderAgent: 'builder',
     architectureReviewService: 'arch-review',
     promptAuditService: 'prompt-audit',
     routingExperimentsService: 'routing-experiments',

@@ -108,6 +108,9 @@ export async function createTestDb(): Promise<TestDb> {
         get forumSubs() {
             return dexie!.forumSubs;
         },
+        get workflows() {
+            return dexie!.workflows;
+        },
         get db() {
             return dexie!;
         },
@@ -156,6 +159,7 @@ export async function createTestDb(): Promise<TestDb> {
             dexie!.forumPosts.clear(),
             dexie!.forumVotes.clear(),
             dexie!.forumSubs.clear(),
+            dexie!.workflows.clear(),
         ]);
     };
 

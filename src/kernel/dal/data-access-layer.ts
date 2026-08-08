@@ -25,6 +25,7 @@ import { JunctionRepository } from './junction-repository';
 import { SynthesisRepository } from './synthesis-repository';
 import { GeneratorRepository } from './generator-repository';
 import { ForumRepository } from './forum-repository';
+import { WorkflowRepository } from './workflow-repository';
 
 export class DataAccessLayerImpl implements DataAccessLayer {
     readonly memory: MemoryRepository;
@@ -41,6 +42,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
     readonly synthesis: SynthesisRepository;
     readonly generator: GeneratorRepository;
     readonly forum: ForumRepository;
+    readonly builder: WorkflowRepository;
     readonly kv: KvRepository;
 
     constructor(db: DatabaseService) {
@@ -57,6 +59,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
         this.synthesis = new SynthesisRepository(db);
         this.generator = new GeneratorRepository(db);
         this.forum = new ForumRepository(db);
+        this.builder = new WorkflowRepository(db);
         this.kv = new KvRepositoryImpl(db);
         this.workspace = new WorkspaceRepository(this.kv);
     }

@@ -277,6 +277,9 @@ export class DatabaseService implements IDatabaseService {
     get forumSubs() {
         return getDexieDb().forumSubs;
     }
+    get workflows() {
+        return getDexieDb().workflows;
+    }
     get db() {
         return getDexieDb();
     }
