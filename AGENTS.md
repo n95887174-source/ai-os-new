@@ -97,9 +97,11 @@ Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis
 - UI: `components/ForumPanel/` (ForumPanel, TopicList, TopicView, PostComposer, AuthorBadge, ModerationQueue, ForumHeatmap)
 - Route `forum` registered (KNOWLEDGE section), i18n en/ru, forumService lazyService exposed
 
-### NEXT: Module 7 — Builder Agent (see plan §7.1–7.5)
+### Module 7 — Builder Agent ✅ DONE (commit 846e12ea)
 
-- Contract `builder.ts`, builder service (`generate`, `validate`, `compile`, `deploy`, `listFlows`), Dexie v18 `workflows`, `phase19-builder`, UI extension for `CognitiveBuilderPanel`, route `builder`
+- Backend: `builder-types.ts`, `contracts/builder.ts`, Dexie v18 `workflows`, `WorkflowRepository` in DAL, `builder-agent-service` (generate prompt→topology, validate DAG+orphans+gates, compile manifest→CompiledFlow, deploy, listFlows, getFlow + 17 tests), phase19-builder registration, `builder:flow:deployed` event
+- UI: `components/BuilderPanel/` (BuilderAISidebar prompt-to-topology generator, WorkflowListPanel saved workflows with load/deploy)
+- Route `builder` registered (KNOWLEDGE section), i18n en/ru, builderAgent lazyService exposed
 
 ## Session History
 
