@@ -73,9 +73,15 @@ Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis
 - UI: `components/CrystalVaultPanel/` (CrystalVaultPanel, CrystalCard, CrystalProposeModal, CrystalLifecycleBadge)
 - Route `crystals` registered (KNOWLEDGE section), i18n en/ru, crystalVault lazyService exposed
 
-### NEXT: Module 3 — Junction Engine (see plan §3.1–3.6)
+### Module 3 — Junction Engine ✅ DONE (commit 91312699)
 
-- Contract `junction-engine.ts`, service (JunctionDetector + JunctionValidator: dormant thread revival, debate deadlock, cross-domain), Dexie table `junctions`, events `knowledge:junction:*`, UI `JunctionPanel`
+- Backend: `junction-types.ts`, `contracts/junction-engine.ts`, Dexie v14 `junctions`, `JunctionRepository` in DAL, `junction-engine-service` (JunctionDetector: trigram+stem+embedding heuristic; JunctionValidator; triplet BridgeBuilder/ContradictionMiner/AbstractionElevator; detect/validate/submitCounterargument/reject + 11 tests), phase15 registration
+- UI: `components/JunctionPanel/` (JunctionPanel, JunctionList, JunctionCard, JunctionGraph)
+- Route `junctions` registered (KNOWLEDGE section), i18n en/ru, junctionEngine lazyService exposed
+
+### NEXT: Module 4 — Synthesis Engine (see plan §4.1–4.6)
+
+- Contract `synthesis-engine.ts`, orchestrator service (decomposition → parallel perspectives → cross-perspective debate → zones), exports to crystals/forum, UI `SynthesisPanel`
 
 ## Session History
 
