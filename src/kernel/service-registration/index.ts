@@ -35,6 +35,7 @@ import { registerPhase13 } from './phase13-lenses';
 import { registerPhase14 } from './phase14-crystals';
 import { registerPhase15 } from './phase15-junction';
 import { registerPhase16 } from './phase16-synthesis';
+import { registerPhase17 } from './phase17-knowledge-generator';
 import type { IContainer } from '../container';
 import type { IEventBus } from '../types/interfaces';
 
@@ -62,6 +63,7 @@ export function registerServices(
     registerPhase14(helpers, ctx);
     registerPhase15(helpers, ctx);
     registerPhase16(helpers, ctx);
+    registerPhase17(helpers, ctx);
 }
 
 export type { PhaseContext, Phase } from './helpers';

@@ -1349,6 +1349,44 @@ export const EVENT_REGISTRY = {
             statement: z.string(),
         }),
     ),
+
+    // ── Knowledge Generator (autonomous research cycle) ─────────────────────
+    GENERATOR_STARTED: event(
+        'generator:started',
+        z.object({
+            jobId: z.string(),
+            triggerKind: z.string(),
+            topic: z.string(),
+        }),
+    ),
+    GENERATOR_STAGE: event(
+        'generator:stage',
+        z.object({
+            jobId: z.string(),
+            stage: z.string(),
+        }),
+    ),
+    GENERATOR_COMPLETED: event(
+        'generator:completed',
+        z.object({
+            jobId: z.string(),
+            crystalId: z.string().nullable(),
+            confidence: z.number(),
+        }),
+    ),
+    GENERATOR_FAILED: event(
+        'generator:failed',
+        z.object({
+            jobId: z.string(),
+            error: z.string(),
+        }),
+    ),
+    GENERATOR_CANCELLED: event(
+        'generator:cancelled',
+        z.object({
+            jobId: z.string(),
+        }),
+    ),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

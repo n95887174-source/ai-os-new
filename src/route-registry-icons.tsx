@@ -69,6 +69,7 @@ import {
     Gem,
     Waypoints,
     BrainCircuit,
+    Lightbulb,
 } from 'lucide-react';
 
 const s = 18;
@@ -144,5 +145,6 @@ export const Icons = {
     gem: <Gem size={s} />,
     waypoints: <Waypoints size={s} />,
     combine: <BrainCircuit size={s} />,
+    lightbulb: <Lightbulb size={s} />,
     settings: <Settings size={s} />,
 } as const;

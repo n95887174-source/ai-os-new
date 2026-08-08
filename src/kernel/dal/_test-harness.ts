@@ -93,6 +93,9 @@ export async function createTestDb(): Promise<TestDb> {
         get synthPerspectives() {
             return dexie!.synthPerspectives;
         },
+        get genJobs() {
+            return dexie!.genJobs;
+        },
         get db() {
             return dexie!;
         },
@@ -136,6 +139,7 @@ export async function createTestDb(): Promise<TestDb> {
             dexie!.junctions.clear(),
             dexie!.synthSessions.clear(),
             dexie!.synthPerspectives.clear(),
+            dexie!.genJobs.clear(),
         ]);
     };
 

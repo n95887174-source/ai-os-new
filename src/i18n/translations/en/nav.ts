@@ -101,6 +101,7 @@ const nav: Record<string, string> = {
     'nav.crystals': 'Crystal Vault',
     'nav.junctions': 'Junction Engine',
     'nav.synthesis': 'Synthesis Engine',
+    'nav.knowledge_generator': 'Knowledge Generator',
     'nav.architecture_review': 'Architecture Review',
     'nav.prompt_strategy_audit': 'Prompt & Strategy Audit',
     'nav.model_routing_experiments': 'Model Routing Experiments',

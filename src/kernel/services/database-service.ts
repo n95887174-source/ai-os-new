@@ -262,6 +262,9 @@ export class DatabaseService implements IDatabaseService {
     get synthPerspectives() {
         return getDexieDb().synthPerspectives;
     }
+    get genJobs() {
+        return getDexieDb().genJobs;
+    }
     get db() {
         return getDexieDb();
     }

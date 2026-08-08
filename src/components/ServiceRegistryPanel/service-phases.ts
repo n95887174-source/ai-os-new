@@ -215,6 +215,7 @@ export const SERVICE_PHASE: Record<string, string> = {
     crystalVault: 'phase14',
     junctionEngine: 'phase15',
     synthesisEngine: 'phase16',
+    knowledgeGenerator: 'phase17',
 };
 
 // All registered route IDs from PANEL_COMPONENTS
@@ -326,6 +327,7 @@ export const VALID_ROUTE_IDS: string[] = [
     'crystals',
     'junctions',
     'synthesis',
+    'knowledge-generator',
     'research-engine',
     'research-advanced',
     'research-gemini',
@@ -504,6 +506,7 @@ export const ROUTE_PATH: Record<string, string> = {
     crystals: '/crystals',
     junctions: '/junctions',
     synthesis: '/synthesis',
+    'knowledge-generator': '/knowledge-generator',
     'research-engine': '/research-engine',
     'research-advanced': '/research-advanced',
     'research-gemini': '/research-gemini',
@@ -623,6 +626,7 @@ export const SERVICE_ROUTE_MAP: Record<string, string> = {
     crystalVault: 'crystals',
     junctionEngine: 'junctions',
     synthesisEngine: 'synthesis',
+    knowledgeGenerator: 'knowledge-generator',
     architectureReviewService: 'arch-review',
     promptAuditService: 'prompt-audit',
     routingExperimentsService: 'routing-experiments',

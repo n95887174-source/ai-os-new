@@ -23,6 +23,7 @@ import { EventLogRepository } from './event-log-repository';
 import { CrystalRepository } from './crystal-repository';
 import { JunctionRepository } from './junction-repository';
 import { SynthesisRepository } from './synthesis-repository';
+import { GeneratorRepository } from './generator-repository';
 
 export class DataAccessLayerImpl implements DataAccessLayer {
     readonly memory: MemoryRepository;
@@ -37,6 +38,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
     readonly crystal: CrystalRepository;
     readonly junction: JunctionRepository;
     readonly synthesis: SynthesisRepository;
+    readonly generator: GeneratorRepository;
     readonly kv: KvRepository;
 
     constructor(db: DatabaseService) {
@@ -51,6 +53,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
         this.crystal = new CrystalRepository(db);
         this.junction = new JunctionRepository(db);
         this.synthesis = new SynthesisRepository(db);
+        this.generator = new GeneratorRepository(db);
         this.kv = new KvRepositoryImpl(db);
         this.workspace = new WorkspaceRepository(this.kv);
     }

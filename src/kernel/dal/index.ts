@@ -28,3 +28,4 @@ export { DebateOverrideRepository } from './debate-override-repository';
 export { CrystalRepository } from './crystal-repository';
 export { JunctionRepository } from './junction-repository';
 export { SynthesisRepository } from './synthesis-repository';
+export { GeneratorRepository } from './generator-repository';

@@ -67,11 +67,13 @@ import type { ILensEngineService } from '../contracts/lens-engine';
 import type { ICrystalVaultService } from '../contracts/knowledge-crystal';
 import type { IJunctionEngineService } from '../contracts/junction-engine';
 import type { ISynthesisEngineService } from '../contracts/synthesis-engine';
+import type { IKnowledgeGeneratorService } from '../contracts/knowledge-generator';
 
 export const lensEngine = lazyService<ILensEngineService>('lensEngine');
 export const crystalVault = lazyService<ICrystalVaultService>('crystalVault');
 export const junctionEngine = lazyService<IJunctionEngineService>('junctionEngine');
 export const synthesisEngine = lazyService<ISynthesisEngineService>('synthesisEngine');
+export const knowledgeGenerator = lazyService<IKnowledgeGeneratorService>('knowledgeGenerator');
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',

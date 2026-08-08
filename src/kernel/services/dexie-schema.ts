@@ -8,6 +8,7 @@ import type { Role } from '../types/role-types';
 import type { Crystal } from '../types/crystal-types';
 import type { Junction } from '../types/junction-types';
 import type { SynthesisSessionRecord, SynthesisPerspectiveRecord } from '../types/synthesis-types';
+import type { GenerationJobRecord } from '../types/generator-types';
 import {
     MemoryEntrySchema,
     CognitiveTraceSchema,
@@ -84,6 +85,8 @@ export class SuperAgentsDB extends Dexie {
 
     synthSessions!: Table<SynthesisSessionRecord>;
     synthPerspectives!: Table<SynthesisPerspectiveRecord>;
+
+    genJobs!: Table<GenerationJobRecord>;
 
     constructor() {
         super('super_agents_os_v4');
@@ -452,6 +455,32 @@ export class SuperAgentsDB extends Dexie {
             junctions: 'id, status, synthesisType, createdAt',
             synthSessions: 'id, status, createdAt',
             synthPerspectives: 'id, synthesisId, roleId, lensId',
+        });
+
+        this.version(16).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id, createdAt',
+            debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+            debateVerdicts: 'sessionId',
+            debateTimeline: 'id, sessionId, timestamp, type',
+            debateOverrides: 'id, sessionId, appliedAt',
+            sessionLinks: 'id, fromId, toId, linkType',
+            eventLog: '++id, sequence, event, timestamp',
+            crystals:
+                'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+            crystalVersions: '[crystalId+version], crystalId',
+            junctions: 'id, status, synthesisType, createdAt',
+            synthSessions: 'id, status, createdAt',
+            synthPerspectives: 'id, synthesisId, roleId, lensId',
+            genJobs: 'id, status, trigger.kind, createdAt',
         });
 
         const rejectHook =
@@ -898,6 +927,35 @@ export class SuperAgentsDB extends Dexie {
                     junctions: 'id, status, synthesisType, createdAt',
                     synthSessions: 'id, status, createdAt',
                     synthPerspectives: 'id, synthesisId, roleId, lensId',
+                },
+            },
+            {
+                v: 16,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                    debateVerdicts: 'sessionId',
+                    debateTimeline: 'id, sessionId, timestamp, type',
+                    debateOverrides: 'id, sessionId, appliedAt',
+                    sessionLinks: 'id, fromId, toId, linkType',
+                    eventLog: '++id, sequence, event, timestamp',
+                    crystals:
+                        'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+                    crystalVersions: '[crystalId+version], crystalId',
+                    junctions: 'id, status, synthesisType, createdAt',
+                    synthSessions: 'id, status, createdAt',
+                    synthPerspectives: 'id, synthesisId, roleId, lensId',
+                    genJobs: 'id, status, trigger.kind, createdAt',
                 },
             },
         ];
