@@ -91,9 +91,15 @@ Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis
 - UI: `components/KnowledgeGenPanel/` (KnowledgeGenPanel, TriggerConfig, GeneratorDashboard)
 - Route `knowledge-generator` registered (KNOWLEDGE section), i18n en/ru, knowledgeGenerator lazyService exposed
 
-### NEXT: Module 6 — Agent Forum (see plan §6.1–6.5)
+### Module 6 — Agent Forum ✅ DONE (commit 06a6a13a)
 
-- Contract `agent-forum.ts`, forum service (topics/threads/posts/consensus detection), Dexie v17 `forumTopics`+`forumThreads`, `phase18-forum`, forum events, UI `AgentForumPanel`, route `forum`
+- Backend: `forum-types.ts`, `contracts/forum.ts`, Dexie v17 `forumTopics`+`forumPosts`+`forumVotes`+`forumSubs`, `ForumRepository` in DAL, `forum-service` (topics/threads/posts with agentProvenance, voting, subscription, moderation, consensus detection, flood control + 15 tests), event bridge in phase18 (`debate:verdict:generated` → case study, `knowledge:crystal:formed` → announcement, `forum:topic:escalated-to-debate`), 4 `forum:*` events, phase18 registration
+- UI: `components/ForumPanel/` (ForumPanel, TopicList, TopicView, PostComposer, AuthorBadge, ModerationQueue, ForumHeatmap)
+- Route `forum` registered (KNOWLEDGE section), i18n en/ru, forumService lazyService exposed
+
+### NEXT: Module 7 — Builder Agent (see plan §7.1–7.5)
+
+- Contract `builder.ts`, builder service (`generate`, `validate`, `compile`, `deploy`, `listFlows`), Dexie v18 `workflows`, `phase19-builder`, UI extension for `CognitiveBuilderPanel`, route `builder`
 
 ## Session History
 
