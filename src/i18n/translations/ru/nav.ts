@@ -100,6 +100,7 @@ const nav: Record<string, string> = {
     'nav.lenses': 'Когнитивные линзы',
     'nav.crystals': 'Хранилище кристаллов',
     'nav.junctions': 'Движок связей',
+    'nav.synthesis': 'Движок синтеза',
     'nav.architecture_review': 'Ревью архитектуры',
     'nav.prompt_strategy_audit': 'Аудит стратегии промпта',
     'nav.model_routing_experiments': 'Эксперименты маршрутизации моделей',

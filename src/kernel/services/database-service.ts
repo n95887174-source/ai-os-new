@@ -256,6 +256,12 @@ export class DatabaseService implements IDatabaseService {
     get junctions() {
         return getDexieDb().junctions;
     }
+    get synthSessions() {
+        return getDexieDb().synthSessions;
+    }
+    get synthPerspectives() {
+        return getDexieDb().synthPerspectives;
+    }
     get db() {
         return getDexieDb();
     }

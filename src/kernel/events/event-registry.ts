@@ -1303,6 +1303,52 @@ export const EVENT_REGISTRY = {
             agentId: z.string().nullable(),
         }),
     ),
+
+    // ── Synthesis Engine (multi-perspective consensus) ─────────────────────
+    SYNTHESIS_STARTED: event(
+        'synthesis:started',
+        z.object({
+            synthesisId: z.string(),
+            question: z.string(),
+            roleCount: z.number(),
+            lensCount: z.number(),
+            depth: z.string(),
+        }),
+    ),
+    SYNTHESIS_COMPLETED: event(
+        'synthesis:completed',
+        z.object({
+            synthesisId: z.string(),
+            statement: z.string(),
+            consensusZones: z.number(),
+            dissentZones: z.number(),
+            uncertaintyZones: z.number(),
+            confidence: z.number(),
+        }),
+    ),
+    SYNTHESIS_REFINED: event(
+        'synthesis:refined',
+        z.object({
+            synthesisId: z.string(),
+            refinedFrom: z.string(),
+            focusAreas: z.array(z.string()).optional(),
+        }),
+    ),
+    SYNTHESIS_EXPORTED_TO_CRYSTAL: event(
+        'synthesis:exported-to-crystal',
+        z.object({
+            synthesisId: z.string(),
+            crystalId: z.string(),
+        }),
+    ),
+    SYNTHESIS_EXPORTED_TO_FORUM: event(
+        'synthesis:exported-to-forum',
+        z.object({
+            synthesisId: z.string(),
+            topicId: z.string(),
+            statement: z.string(),
+        }),
+    ),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

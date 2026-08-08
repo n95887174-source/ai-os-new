@@ -68,6 +68,7 @@ import {
     Container as ContainerIcon,
     Gem,
     Waypoints,
+    BrainCircuit,
 } from 'lucide-react';
 
 const s = 18;
@@ -142,5 +143,6 @@ export const Icons = {
     container: <ContainerIcon size={s} />,
     gem: <Gem size={s} />,
     waypoints: <Waypoints size={s} />,
+    combine: <BrainCircuit size={s} />,
     settings: <Settings size={s} />,
 } as const;

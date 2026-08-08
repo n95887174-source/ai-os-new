@@ -160,6 +160,7 @@ const CrystalVaultPanelLazy = React.lazy(
     () => import('./components/CrystalVaultPanel/CrystalVaultPanel'),
 );
 const JunctionPanelLazy = React.lazy(() => import('./components/JunctionPanel/JunctionPanel'));
+const SynthesisPanelLazy = React.lazy(() => import('./components/SynthesisPanel/SynthesisPanel'));
 
 // ── Section 11 P2+P3 Lazy Imports ─────────────────────────────────────────────
 const FederatedMemoryPanelLazy = React.lazy(() => import('./components/FederatedMemoryPanel'));
@@ -337,6 +338,7 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     lenses: LensesPanelLazy,
     crystals: CrystalVaultPanelLazy,
     junctions: JunctionPanelLazy,
+    synthesis: SynthesisPanelLazy,
     'federated-memory': FederatedMemoryPanelLazy,
     'plugin-sdk': PluginSdkPanelLazy,
     'persona-marketplace': PersonaMarketplacePanelLazy,

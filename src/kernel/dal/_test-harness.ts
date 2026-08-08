@@ -87,6 +87,12 @@ export async function createTestDb(): Promise<TestDb> {
         get junctions() {
             return dexie!.junctions;
         },
+        get synthSessions() {
+            return dexie!.synthSessions;
+        },
+        get synthPerspectives() {
+            return dexie!.synthPerspectives;
+        },
         get db() {
             return dexie!;
         },
@@ -128,6 +134,8 @@ export async function createTestDb(): Promise<TestDb> {
             dexie!.crystals.clear(),
             dexie!.crystalVersions.clear(),
             dexie!.junctions.clear(),
+            dexie!.synthSessions.clear(),
+            dexie!.synthPerspectives.clear(),
         ]);
     };
 

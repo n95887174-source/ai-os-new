@@ -18,6 +18,7 @@ import type { EventLogRepository } from './event-log-repository';
 import type { MemoryRepository } from './repository-types';
 import type { CrystalRepository } from './crystal-repository';
 import type { JunctionRepository } from './junction-repository';
+import type { SynthesisRepository } from './synthesis-repository';
 
 // =============================================================================
 // Repository Interfaces (see repository-types.ts for MemoryRepository)
@@ -122,6 +123,7 @@ export interface DataAccessLayer {
     eventLog: EventLogRepository;
     crystal: CrystalRepository;
     junction: JunctionRepository;
+    synthesis: SynthesisRepository;
     kv: KvRepository;
 }
 

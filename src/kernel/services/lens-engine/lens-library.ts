@@ -279,4 +279,35 @@ export const LENS_LIBRARY: Lens[] = [
             maturity: 'stable',
         },
     },
+    {
+        id: 'lens:meta-meta',
+        name: 'Meta-Meta',
+        description:
+            'Наблюдает за самим процессом синтеза: не искажает ли консенсус, не сместился ли фокус, полнота зон.',
+        category: 'analytical',
+        transform: {
+            kind: 'perspective-inject',
+            questions: [
+                'Не приписывает ли процесс слишком много веса одной перспективе?',
+                'Какие перспективы не были рассмотрены вовсе?',
+                'Является ли итоговая квалификация уверенности честной относительно данных?',
+            ],
+        },
+        applicability: { taskTypes: ['synthesis', 'meta'], domains: ['*'] },
+        compositionRules: {
+            stackable: true,
+            maxStackSize: 5,
+            orderMatters: true,
+            allowedWith: '*',
+        },
+        conflictWith: [],
+        priority: 5,
+        isBuiltin: true,
+        metadata: {
+            version: 1,
+            author: 'system',
+            tags: ['meta', 'self-reflection'],
+            maturity: 'stable',
+        },
+    },
 ];
