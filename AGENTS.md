@@ -79,9 +79,15 @@ Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis
 - UI: `components/JunctionPanel/` (JunctionPanel, JunctionList, JunctionCard, JunctionGraph)
 - Route `junctions` registered (KNOWLEDGE section), i18n en/ru, junctionEngine lazyService exposed
 
-### NEXT: Module 4 — Synthesis Engine (see plan §4.1–4.6)
+### Module 4 — Synthesis Engine ✅ DONE (commit b125d408)
 
-- Contract `synthesis-engine.ts`, orchestrator service (decomposition → parallel perspectives → cross-perspective debate → zones), exports to crystals/forum, UI `SynthesisPanel`
+- Backend: `synthesis-types.ts`, `contracts/synthesis-engine.ts`, Dexie v15 `synthSessions`+`synthPerspectives`, `SynthesisRepository` in DAL, `synthesis-engine-service` (deterministic orchestrator: decompose → generatePerspectives → identifyZones via union-find consensus/dissent/uncertainty → refine/exportToCrystal/exportToForum + 15 tests), `lens:meta-meta` added to lens-library, 5 synthesis events, phase16 registration
+- UI: `components/SynthesisPanel/` (SynthesisPanel, SynthesisComposer, SynthesisZonesView, PerspectiveGrid)
+- Route `synthesis` registered (KNOWLEDGE section), i18n en/ru, synthesisEngine lazyService exposed
+
+### NEXT: Module 5 — Knowledge Generator (see plan §5.1–5.5)
+
+- Contract `knowledge-generator.ts`, orchestrator service (trigger → hypothesis → evidence → peer review → crystal), Dexie v16 `generatorRuns`, `phase17-kg`, 5 `generator:*` events, UI `KnowledgeGeneratorPanel`, route `generator`
 
 ## Session History
 
