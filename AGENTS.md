@@ -85,9 +85,15 @@ Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis
 - UI: `components/SynthesisPanel/` (SynthesisPanel, SynthesisComposer, SynthesisZonesView, PerspectiveGrid)
 - Route `synthesis` registered (KNOWLEDGE section), i18n en/ru, synthesisEngine lazyService exposed
 
-### NEXT: Module 5 — Knowledge Generator (see plan §5.1–5.5)
+### Module 5 — Knowledge Generator ✅ DONE (commit c221d147)
 
-- Contract `knowledge-generator.ts`, orchestrator service (trigger → hypothesis → evidence → peer review → crystal), Dexie v16 `generatorRuns`, `phase17-kg`, 5 `generator:*` events, UI `KnowledgeGeneratorPanel`, route `generator`
+- Backend: `generator-types.ts`, `contracts/knowledge-generator.ts`, Dexie v16 `genJobs` (`id, status, trigger.kind, createdAt`), `GeneratorRepository` in DAL, `knowledge-generator-service` (deterministic orchestrator: trigger → contrastive hypothesis → evidence (crystal vault + counter-examples) → peer review (advocate/skeptic/synthesizer/metanavigator) → crystallization via crystalVault.propose+crystallize at confidence ≥ threshold + 13 tests), cost control (maxTokensPerJob/maxConcurrentJobs/crystallizationThreshold), 5 `generator:*` events, phase17 registration
+- UI: `components/KnowledgeGenPanel/` (KnowledgeGenPanel, TriggerConfig, GeneratorDashboard)
+- Route `knowledge-generator` registered (KNOWLEDGE section), i18n en/ru, knowledgeGenerator lazyService exposed
+
+### NEXT: Module 6 — Agent Forum (see plan §6.1–6.5)
+
+- Contract `agent-forum.ts`, forum service (topics/threads/posts/consensus detection), Dexie v17 `forumTopics`+`forumThreads`, `phase18-forum`, forum events, UI `AgentForumPanel`, route `forum`
 
 ## Session History
 
