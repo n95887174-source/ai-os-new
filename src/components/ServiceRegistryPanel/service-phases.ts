@@ -213,6 +213,7 @@ export const SERVICE_PHASE: Record<string, string> = {
 
     lensEngine: 'phase13',
     crystalVault: 'phase14',
+    junctionEngine: 'phase15',
 };
 
 // All registered route IDs from PANEL_COMPONENTS
@@ -322,6 +323,7 @@ export const VALID_ROUTE_IDS: string[] = [
     'hypothesis-gen',
     'lenses',
     'crystals',
+    'junctions',
     'research-engine',
     'research-advanced',
     'research-gemini',
@@ -498,6 +500,7 @@ export const ROUTE_PATH: Record<string, string> = {
     'hypothesis-gen': '/hypothesis-gen',
     lenses: '/lenses',
     crystals: '/crystals',
+    junctions: '/junctions',
     'research-engine': '/research-engine',
     'research-advanced': '/research-advanced',
     'research-gemini': '/research-gemini',
@@ -615,6 +618,7 @@ export const SERVICE_ROUTE_MAP: Record<string, string> = {
     hypothesisService: 'hypothesis-gen',
     lensEngine: 'lenses',
     crystalVault: 'crystals',
+    junctionEngine: 'junctions',
     architectureReviewService: 'arch-review',
     promptAuditService: 'prompt-audit',
     routingExperimentsService: 'routing-experiments',

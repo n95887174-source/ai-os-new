@@ -26,3 +26,4 @@ export { SessionLinkRepository } from './session-link-repository';
 export { DebateTimelineRepository } from './debate-timeline-repository';
 export { DebateOverrideRepository } from './debate-override-repository';
 export { CrystalRepository } from './crystal-repository';
+export { JunctionRepository } from './junction-repository';

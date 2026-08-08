@@ -84,6 +84,9 @@ export async function createTestDb(): Promise<TestDb> {
         get crystalVersions() {
             return dexie!.crystalVersions;
         },
+        get junctions() {
+            return dexie!.junctions;
+        },
         get db() {
             return dexie!;
         },
@@ -124,6 +127,7 @@ export async function createTestDb(): Promise<TestDb> {
             dexie!.eventLog.clear(),
             dexie!.crystals.clear(),
             dexie!.crystalVersions.clear(),
+            dexie!.junctions.clear(),
         ]);
     };
 

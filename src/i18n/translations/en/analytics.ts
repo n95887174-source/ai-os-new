@@ -244,6 +244,14 @@ const analytics: Record<string, string> = {
     'lenses_crystal.refute_confirm_title': 'Refute crystal',
     'lenses_crystal.refute_confirm_message': 'Mark this crystal as refuted?',
     'lenses_crystal.supersede_hint': 'New statement replacing the current one...',
+    'junctions.title': 'Junction Engine',
+    'junctions.total': 'junctions',
+    'junctions.refresh': 'Refresh',
+    'junctions.detect': 'Detect',
+    'junctions.detected_suffix': 'candidates detected',
+    'junctions.verified': 'Junction verified',
+    'junctions.sources_crystals': 'crystal sources',
+    'junctions.sources_debates': 'debate sources',
 };
 
 export { analytics };

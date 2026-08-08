@@ -1276,6 +1276,33 @@ export const EVENT_REGISTRY = {
             contradictingCrystalIds: z.array(z.string()),
         }),
     ),
+
+    // ── Junction Engine (cross-domain synthesis) ─────────────────────────────
+    JUNCTION_DETECTED: event(
+        'knowledge:junction:detected',
+        z.object({
+            junctionId: z.string(),
+            inputs: z.array(z.string()),
+            synthesisType: z.string(),
+            confidence: z.number(),
+        }),
+    ),
+    JUNCTION_VALIDATED: event(
+        'knowledge:junction:validated',
+        z.object({
+            junctionId: z.string(),
+            confidence: z.number(),
+            content: z.string(),
+        }),
+    ),
+    JUNCTION_REJECTED: event(
+        'knowledge:junction:rejected',
+        z.object({
+            junctionId: z.string(),
+            reason: z.string(),
+            agentId: z.string().nullable(),
+        }),
+    ),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

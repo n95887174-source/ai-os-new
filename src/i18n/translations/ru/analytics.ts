@@ -243,6 +243,14 @@ const analytics: Record<string, string> = {
     'lenses_crystal.refute_confirm_title': 'Опровергнуть кристалл',
     'lenses_crystal.refute_confirm_message': 'Пометить этот кристалл как опровергнутый?',
     'lenses_crystal.supersede_hint': 'Новое утверждение, заменяющее текущее...',
+    'junctions.title': 'Движок связей',
+    'junctions.total': 'связей',
+    'junctions.refresh': 'Обновить',
+    'junctions.detect': 'Детект',
+    'junctions.detected_suffix': 'кандидатов обнаружено',
+    'junctions.verified': 'Связь подтверждена',
+    'junctions.sources_crystals': 'источников-кристаллов',
+    'junctions.sources_debates': 'источников-дебатов',
 };
 
 export { analytics };

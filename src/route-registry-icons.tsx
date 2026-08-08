@@ -67,6 +67,7 @@ import {
     Route as RouteIcon,
     Container as ContainerIcon,
     Gem,
+    Waypoints,
 } from 'lucide-react';
 
 const s = 18;
@@ -140,5 +141,6 @@ export const Icons = {
     route: <RouteIcon size={s} />,
     container: <ContainerIcon size={s} />,
     gem: <Gem size={s} />,
+    waypoints: <Waypoints size={s} />,
     settings: <Settings size={s} />,
 } as const;

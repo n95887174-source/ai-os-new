@@ -65,9 +65,11 @@ import type { ConnectorService } from '../services/connector-service';
 import type { IQualityImpactCollector, IExperimentEngine } from '../contracts/quality-impact';
 import type { ILensEngineService } from '../contracts/lens-engine';
 import type { ICrystalVaultService } from '../contracts/knowledge-crystal';
+import type { IJunctionEngineService } from '../contracts/junction-engine';
 
 export const lensEngine = lazyService<ILensEngineService>('lensEngine');
 export const crystalVault = lazyService<ICrystalVaultService>('crystalVault');
+export const junctionEngine = lazyService<IJunctionEngineService>('junctionEngine');
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',

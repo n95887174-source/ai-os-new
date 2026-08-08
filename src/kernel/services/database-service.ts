@@ -253,6 +253,9 @@ export class DatabaseService implements IDatabaseService {
     get crystalVersions() {
         return getDexieDb().crystalVersions;
     }
+    get junctions() {
+        return getDexieDb().junctions;
+    }
     get db() {
         return getDexieDb();
     }

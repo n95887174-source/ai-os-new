@@ -17,6 +17,7 @@ import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/stor
 import type { EventLogRepository } from './event-log-repository';
 import type { MemoryRepository } from './repository-types';
 import type { CrystalRepository } from './crystal-repository';
+import type { JunctionRepository } from './junction-repository';
 
 // =============================================================================
 // Repository Interfaces (see repository-types.ts for MemoryRepository)
@@ -120,6 +121,7 @@ export interface DataAccessLayer {
     workspace: WorkspaceRepository;
     eventLog: EventLogRepository;
     crystal: CrystalRepository;
+    junction: JunctionRepository;
     kv: KvRepository;
 }
 
