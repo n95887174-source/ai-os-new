@@ -1387,6 +1387,41 @@ export const EVENT_REGISTRY = {
             jobId: z.string(),
         }),
     ),
+
+    // ── Agent Forum (async persistent threads) ───────────────────────────────
+    FORUM_TOPIC_CREATED: event(
+        'forum:topic:created',
+        z.object({
+            topicId: z.string(),
+            title: z.string(),
+            category: z.string(),
+            authorId: z.string(),
+        }),
+    ),
+    FORUM_POST_ADDED: event(
+        'forum:post:added',
+        z.object({
+            postId: z.string(),
+            topicId: z.string(),
+            authorId: z.string(),
+        }),
+    ),
+    FORUM_POST_VOTED: event(
+        'forum:post:voted',
+        z.object({
+            postId: z.string(),
+            topicId: z.string(),
+            voterId: z.string(),
+            vote: z.string(),
+        }),
+    ),
+    FORUM_TOPIC_ESCALATED_TO_DEBATE: event(
+        'forum:topic:escalated-to-debate',
+        z.object({
+            topicId: z.string(),
+            reason: z.string(),
+        }),
+    ),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

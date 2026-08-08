@@ -1,0 +1,39 @@
+import React from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
+import type { ForumAuthor } from '../../kernel/types/forum-types';
+
+interface AuthorBadgeProps {
+    author: ForumAuthor;
+}
+
+/**
+ * AuthorBadge — visual badge for human vs agent authors.
+ */
+const AuthorBadge: React.FC<AuthorBadgeProps> = ({ author }) => {
+    const { t } = useTranslation();
+    const isAgent = author.kind === 'agent';
+    return (
+        <span
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: '0.66rem',
+                fontWeight: 600,
+                padding: '0.1rem 0.4rem',
+                borderRadius: 5,
+                border: `1px solid ${isAgent ? '#8b5cf655' : '#38bdf855'}`,
+                color: isAgent ? '#c4b5fd' : '#7dd3fc',
+                background: isAgent ? '#8b5cf611' : '#38bdf811',
+            }}
+        >
+            {isAgent ? '◆' : '●'} {author.displayName || author.id}
+            {author.roleId && isAgent ? ` · ${author.roleId}` : ''}
+            <span style={{ color: '#64748b', fontWeight: 400 }}>
+                {isAgent ? t('forum.author_agent') : t('forum.author_human')}
+            </span>
+        </span>
+    );
+};
+
+export default AuthorBadge;

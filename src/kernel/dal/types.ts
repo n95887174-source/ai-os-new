@@ -20,6 +20,7 @@ import type { CrystalRepository } from './crystal-repository';
 import type { JunctionRepository } from './junction-repository';
 import type { SynthesisRepository } from './synthesis-repository';
 import type { GeneratorRepository } from './generator-repository';
+import type { ForumRepository } from './forum-repository';
 
 // =============================================================================
 // Repository Interfaces (see repository-types.ts for MemoryRepository)
@@ -126,6 +127,7 @@ export interface DataAccessLayer {
     junction: JunctionRepository;
     synthesis: SynthesisRepository;
     generator: GeneratorRepository;
+    forum: ForumRepository;
     kv: KvRepository;
 }
 

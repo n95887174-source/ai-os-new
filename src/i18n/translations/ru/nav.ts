@@ -102,6 +102,7 @@ const nav: Record<string, string> = {
     'nav.junctions': 'Движок связей',
     'nav.synthesis': 'Движок синтеза',
     'nav.knowledge_generator': 'Генератор знаний',
+    'nav.forum': 'Форум агентов',
     'nav.architecture_review': 'Ревью архитектуры',
     'nav.prompt_strategy_audit': 'Аудит стратегии промпта',
     'nav.model_routing_experiments': 'Эксперименты маршрутизации моделей',

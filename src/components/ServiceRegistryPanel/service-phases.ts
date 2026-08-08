@@ -216,6 +216,7 @@ export const SERVICE_PHASE: Record<string, string> = {
     junctionEngine: 'phase15',
     synthesisEngine: 'phase16',
     knowledgeGenerator: 'phase17',
+    forumService: 'phase18',
 };
 
 // All registered route IDs from PANEL_COMPONENTS
@@ -328,6 +329,7 @@ export const VALID_ROUTE_IDS: string[] = [
     'junctions',
     'synthesis',
     'knowledge-generator',
+    'forum',
     'research-engine',
     'research-advanced',
     'research-gemini',
@@ -507,6 +509,7 @@ export const ROUTE_PATH: Record<string, string> = {
     junctions: '/junctions',
     synthesis: '/synthesis',
     'knowledge-generator': '/knowledge-generator',
+    forum: '/forum',
     'research-engine': '/research-engine',
     'research-advanced': '/research-advanced',
     'research-gemini': '/research-gemini',
@@ -627,6 +630,7 @@ export const SERVICE_ROUTE_MAP: Record<string, string> = {
     junctionEngine: 'junctions',
     synthesisEngine: 'synthesis',
     knowledgeGenerator: 'knowledge-generator',
+    forumService: 'forum',
     architectureReviewService: 'arch-review',
     promptAuditService: 'prompt-audit',
     routingExperimentsService: 'routing-experiments',

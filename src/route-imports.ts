@@ -164,6 +164,7 @@ const SynthesisPanelLazy = React.lazy(() => import('./components/SynthesisPanel/
 const KnowledgeGenPanelLazy = React.lazy(
     () => import('./components/KnowledgeGenPanel/KnowledgeGenPanel'),
 );
+const ForumPanelLazy = React.lazy(() => import('./components/ForumPanel/ForumPanel'));
 
 // ── Section 11 P2+P3 Lazy Imports ─────────────────────────────────────────────
 const FederatedMemoryPanelLazy = React.lazy(() => import('./components/FederatedMemoryPanel'));
@@ -343,6 +344,7 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     junctions: JunctionPanelLazy,
     synthesis: SynthesisPanelLazy,
     'knowledge-generator': KnowledgeGenPanelLazy,
+    forum: ForumPanelLazy,
     'federated-memory': FederatedMemoryPanelLazy,
     'plugin-sdk': PluginSdkPanelLazy,
     'persona-marketplace': PersonaMarketplacePanelLazy,

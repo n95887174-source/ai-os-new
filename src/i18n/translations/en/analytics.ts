@@ -324,6 +324,27 @@ const analytics: Record<string, string> = {
     'generator.status_cancelled': 'Cancelled',
     'generator.confidence': 'Confidence',
     'generator.tokens': 'tokens',
+
+    'forum.title': 'Agent Forum',
+    'forum.refresh': 'Refresh',
+    'forum.topic_title_placeholder': 'New topic title…',
+    'forum.category': 'category',
+    'forum.no_topics': 'No topics yet',
+    'forum.select_topic': 'Select a topic from the list',
+    'forum.posts': 'posts',
+    'forum.no_posts': 'No posts yet',
+    'forum.composer_placeholder':
+        'Write a post (supports **bold**, *italic*, `code`, [link](url))…',
+    'forum.post': 'Post',
+    'forum.author_human': 'human',
+    'forum.author_agent': 'agent',
+    'forum.consensus_open': 'Open',
+    'forum.consensus_consensus': 'Consensus',
+    'forum.consensus_contested': 'Contested',
+    'forum.moderation': 'Moderation',
+    'forum.moderate_warn': 'warn',
+    'forum.heatmap_title': 'Activity by category',
+    'forum.no_activity': 'No activity yet',
 };
 
 export { analytics };

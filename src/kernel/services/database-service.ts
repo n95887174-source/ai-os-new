@@ -265,6 +265,18 @@ export class DatabaseService implements IDatabaseService {
     get genJobs() {
         return getDexieDb().genJobs;
     }
+    get forumTopics() {
+        return getDexieDb().forumTopics;
+    }
+    get forumPosts() {
+        return getDexieDb().forumPosts;
+    }
+    get forumVotes() {
+        return getDexieDb().forumVotes;
+    }
+    get forumSubs() {
+        return getDexieDb().forumSubs;
+    }
     get db() {
         return getDexieDb();
     }

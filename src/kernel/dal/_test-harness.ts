@@ -96,6 +96,18 @@ export async function createTestDb(): Promise<TestDb> {
         get genJobs() {
             return dexie!.genJobs;
         },
+        get forumTopics() {
+            return dexie!.forumTopics;
+        },
+        get forumPosts() {
+            return dexie!.forumPosts;
+        },
+        get forumVotes() {
+            return dexie!.forumVotes;
+        },
+        get forumSubs() {
+            return dexie!.forumSubs;
+        },
         get db() {
             return dexie!;
         },
@@ -140,6 +152,10 @@ export async function createTestDb(): Promise<TestDb> {
             dexie!.synthSessions.clear(),
             dexie!.synthPerspectives.clear(),
             dexie!.genJobs.clear(),
+            dexie!.forumTopics.clear(),
+            dexie!.forumPosts.clear(),
+            dexie!.forumVotes.clear(),
+            dexie!.forumSubs.clear(),
         ]);
     };
 

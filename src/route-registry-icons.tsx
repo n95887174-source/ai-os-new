@@ -70,6 +70,7 @@ import {
     Waypoints,
     BrainCircuit,
     Lightbulb,
+    MessagesSquare,
 } from 'lucide-react';
 
 const s = 18;
@@ -146,5 +147,6 @@ export const Icons = {
     waypoints: <Waypoints size={s} />,
     combine: <BrainCircuit size={s} />,
     lightbulb: <Lightbulb size={s} />,
+    messagesSquare: <MessagesSquare size={s} />,
     settings: <Settings size={s} />,
 } as const;

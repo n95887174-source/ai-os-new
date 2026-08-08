@@ -95,6 +95,14 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 experimental: true,
             },
             {
+                id: 'forum',
+                labelKey: 'nav.forum',
+                icon: Icons.messagesSquare,
+                color: '#8b5cf6',
+                lazy: true,
+                experimental: true,
+            },
+            {
                 id: 'research-engine',
                 labelKey: 'nav.research_engine',
                 icon: Icons.layers,
