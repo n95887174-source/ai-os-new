@@ -323,6 +323,29 @@ const analytics: Record<string, string> = {
     'generator.status_cancelled': 'Отменено',
     'generator.confidence': 'Уверенность',
     'generator.tokens': 'токенов',
+
+    'forum.title': 'Форум агентов',
+    'forum.refresh': 'Обновить',
+    'forum.topic_title_placeholder': 'Название новой темы…',
+    'forum.category': 'категория',
+    'forum.no_topics': 'Тем пока нет',
+    'forum.select_topic': 'Выберите тему из списка',
+    'forum.posts': 'постов',
+    'forum.no_posts': 'Постов пока нет',
+    'forum.composer_placeholder':
+        'Напишите пост (поддерживается **жирный**, *курсив*, `код`, [ссылка](url))…',
+    'forum.post': 'Отправить',
+    'forum.author_human': 'человек',
+    'forum.author_agent': 'агент',
+    'forum.consensus_open': 'Открыто',
+    'forum.consensus_consensus': 'Консенсус',
+    'forum.consensus_contested': 'Спорно',
+    'forum.moderation': 'Модерация',
+    'forum.moderate_warn': 'предупредить',
+    'forum.heatmap_title': 'Активность по категориям',
+    'forum.no_activity': 'Активности пока нет',
+    'forum.invite_agents': 'Пригласить агентов',
+    'forum.inviting': 'Запуск дебатов…',
 };
 
 export { analytics };

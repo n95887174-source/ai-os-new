@@ -9,6 +9,8 @@ interface TopicViewProps {
     consensus: string | null;
     onModerate: (postId: string, action: string) => void;
     onCompose: (body: string) => void;
+    onInviteAgents?: () => void;
+    inviting?: boolean;
 }
 
 const CONSENSUS_COLORS: Record<string, string> = {
@@ -75,7 +77,14 @@ const PostCard: React.FC<{ post: Post; onModerate: (id: string, action: string) 
 /**
  * TopicView — selected thread: posts + consensus badge + composer.
  */
-const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, onCompose }) => {
+const TopicView: React.FC<TopicViewProps> = ({
+    thread,
+    consensus,
+    onModerate,
+    onCompose,
+    onInviteAgents,
+    inviting,
+}) => {
     const { t } = useTranslation();
 
     if (!thread) {
@@ -117,6 +126,24 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
                 <span style={{ fontSize: '0.68rem', color: '#64748b', marginLeft: 'auto' }}>
                     {thread.topic.postCount} {t('forum.posts')}
                 </span>
+                {onInviteAgents && (
+                    <button
+                        onClick={onInviteAgents}
+                        disabled={inviting}
+                        style={{
+                            padding: '0.3rem 0.7rem',
+                            borderRadius: 6,
+                            border: '1px solid rgba(139,92,246,0.3)',
+                            background: inviting ? 'rgba(139,92,246,0.1)' : 'transparent',
+                            color: inviting ? '#8b5cf6' : '#94a3b8',
+                            cursor: inviting ? 'default' : 'pointer',
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                        }}
+                    >
+                        {inviting ? t('forum.inviting') : t('forum.invite_agents')}
+                    </button>
+                )}
             </div>
 
             {thread.posts.length === 0 && (
