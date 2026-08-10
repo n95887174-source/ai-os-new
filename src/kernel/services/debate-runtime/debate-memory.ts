@@ -10,6 +10,7 @@ import type {
 const MAX_STEPS = 5000;
 const MAX_CLAIMS = 1000;
 const MAX_CHAINS_PER_AGENT = 100;
+const MAX_STEPS_PER_CHAIN = 50;
 
 const STOP_WORDS = new Set([
     'this',
@@ -119,7 +120,7 @@ export class DebateMemory implements IDebateMemory {
 
         const existing = this.chains.get(step.agentId) || [];
         const lastChain = existing[existing.length - 1];
-        if (lastChain && !lastChain.conclusion) {
+        if (lastChain && !lastChain.conclusion && lastChain.steps.length < MAX_STEPS_PER_CHAIN) {
             const newSteps = [...lastChain.steps, step];
             existing[existing.length - 1] = {
                 ...lastChain,
@@ -167,6 +168,17 @@ export class DebateMemory implements IDebateMemory {
         const keepFrom = this.steps.length - keepCount;
         for (let i = 0; i < keepFrom; i++) {
             this.steps[i] = { ...this.steps[i]!, content: '' };
+        }
+        for (const chainArr of this.chains.values()) {
+            for (const chain of chainArr) {
+                const trimLimit = Math.max(0, chain.steps.length - keepCount);
+                for (let i = 0; i < trimLimit; i++) {
+                    const s = chain.steps[i];
+                    if (s?.content) {
+                        chain.steps[i] = { ...s, content: '' } as ReasoningStep;
+                    }
+                }
+            }
         }
     }
 

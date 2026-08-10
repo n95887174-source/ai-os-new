@@ -11,6 +11,7 @@ import type {
 
 export const DEFAULT_DRIFT_THRESHOLD = 0.55;
 export const MIN_CONTENT_LENGTH = 30;
+const MAX_ACCUMULATED_CONTENT = 20;
 
 // ── Role vocabulary markers ──────────────────────────────────────
 // Each role has characteristic stance-indicating phrases.
@@ -236,8 +237,14 @@ export class PersonaDriftDetector implements IPersonaDriftDetector {
             historyScore = sim < 0.05 ? 0 : sim > 0.7 ? 1 - (sim - 0.7) / 0.3 : 1;
         }
 
-        // Accumulate content for future checks
+        // Accumulate content for future checks (cap to prevent unbounded growth)
         profile.accumulatedContent.push(content.slice(0, 1000));
+        if (profile.accumulatedContent.length > MAX_ACCUMULATED_CONTENT) {
+            profile.accumulatedContent.splice(
+                0,
+                profile.accumulatedContent.length - MAX_ACCUMULATED_CONTENT,
+            );
+        }
 
         // Combine: role (0.4), keywords (0.3), history (0.3)
         const combined = roleScore * 0.4 + keywordScore * 0.3 + historyScore * 0.3;

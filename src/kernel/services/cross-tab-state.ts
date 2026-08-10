@@ -308,13 +308,21 @@ class CrossTabStateSync implements ICrossTabStateSync {
                 break;
             case 'key-update': {
                 LOGGER.debug('CrossTabStateSync', 'Cross-tab key update, refreshing local state');
-                const keyPayload = z.array(ApiKeySchema).safeParse(message.payload);
-                if (keyPayload.success)
-                    eventBus.emitOnce(EVENTS.KEY_UPDATED, 'cross-tab:key-update', keyPayload.data);
-                else
-                    LOGGER.warn('CrossTabStateSync', 'malformed key-update payload', {
-                        issues: keyPayload.error.issues,
-                    });
+                if (message.payload == null) {
+                    eventBus.emitOnce(EVENTS.KEY_UPDATED, 'cross-tab:key-update', []);
+                } else {
+                    const keyPayload = z.array(ApiKeySchema).safeParse(message.payload);
+                    if (keyPayload.success)
+                        eventBus.emitOnce(
+                            EVENTS.KEY_UPDATED,
+                            'cross-tab:key-update',
+                            keyPayload.data,
+                        );
+                    else
+                        LOGGER.warn('CrossTabStateSync', 'malformed key-update payload', {
+                            issues: keyPayload.error.issues,
+                        });
+                }
                 break;
             }
             case 'kernel-state-update': {
@@ -322,17 +330,21 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     'CrossTabStateSync',
                     'Cross-tab kernel update, refreshing local state',
                 );
-                const kernelPayload = SystemStateSchema.safeParse(message.payload);
-                if (kernelPayload.success)
-                    eventBus.emitOnce(
-                        EVENTS.KERNEL_UPDATED,
-                        'cross-tab:kernel-update',
-                        kernelPayload.data,
-                    );
-                else
-                    LOGGER.warn('CrossTabStateSync', 'malformed kernel-state-update payload', {
-                        issues: kernelPayload.error.issues,
-                    });
+                if (message.payload == null) {
+                    eventBus.emitOnce(EVENTS.KERNEL_UPDATED, 'cross-tab:kernel-update', {});
+                } else {
+                    const kernelPayload = SystemStateSchema.safeParse(message.payload);
+                    if (kernelPayload.success)
+                        eventBus.emitOnce(
+                            EVENTS.KERNEL_UPDATED,
+                            'cross-tab:kernel-update',
+                            kernelPayload.data,
+                        );
+                    else
+                        LOGGER.warn('CrossTabStateSync', 'malformed kernel-state-update payload', {
+                            issues: kernelPayload.error.issues,
+                        });
+                }
                 break;
             }
             case 'chat-session-update':
@@ -347,18 +359,25 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     'CrossTabStateSync',
                     'Cross-tab settings update, refreshing local state',
                 );
-                const settingsSchema = EVENT_REGISTRY.SETTINGS_UPDATED.schema;
-                const settingsPayload = settingsSchema.safeParse(message.payload);
-                if (settingsPayload.success)
-                    eventBus.emitOnce(
-                        EVENTS.SETTINGS_UPDATED,
-                        'cross-tab:settings-update',
-                        settingsPayload.data,
-                    );
-                else
-                    LOGGER.warn('CrossTabStateSync', 'malformed settings-update payload', {
-                        issues: settingsPayload.error.issues,
+                if (message.payload == null) {
+                    eventBus.emitOnce(EVENTS.SETTINGS_UPDATED, 'cross-tab:settings-update', {
+                        settings: {},
+                        changes: {},
                     });
+                } else {
+                    const settingsSchema = EVENT_REGISTRY.SETTINGS_UPDATED.schema;
+                    const settingsPayload = settingsSchema.safeParse(message.payload);
+                    if (settingsPayload.success)
+                        eventBus.emitOnce(
+                            EVENTS.SETTINGS_UPDATED,
+                            'cross-tab:settings-update',
+                            settingsPayload.data,
+                        );
+                    else
+                        LOGGER.warn('CrossTabStateSync', 'malformed settings-update payload', {
+                            issues: settingsPayload.error.issues,
+                        });
+                }
                 break;
             }
         }
@@ -370,6 +389,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
     }
 
     private handleDebateUpdate(payload: DebateSyncPayload): void {
+        if (!payload?.sessionId) return;
         const existing = this.localDebateVersions.get(payload.sessionId);
         if (existing && existing.seq >= payload.seq) return;
         if (existing && existing.seq < payload.seq) {
@@ -378,11 +398,13 @@ class CrossTabStateSync implements ICrossTabStateSync {
                 local: existing,
                 remote: payload,
             });
-            eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
-                sessionId: payload.sessionId,
-                currentVersion: existing.round,
-                attemptedVersion: payload.round,
-            });
+            if (typeof existing.round === 'number' && typeof payload.round === 'number') {
+                eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
+                    sessionId: payload.sessionId,
+                    currentVersion: existing.round,
+                    attemptedVersion: payload.round,
+                });
+            }
         }
         this.localDebateVersions.set(payload.sessionId, {
             updatedAt: payload.updatedAt,

@@ -24,9 +24,9 @@ import type { IDebateEvaluator } from '../../contracts/debate-runtime';
 
 const LOGGER = rootLogger.child('DebatePersistence');
 
-const HEAP_HIGH_MB = 700;
-const HEAP_CRITICAL_MB = 900;
-const PRUNE_KEEP_ROUNDS = 3;
+const HEAP_HIGH_MB = 300;
+const HEAP_CRITICAL_MB = 500;
+const PRUNE_KEEP_ROUNDS = 5;
 const MINIMAL_MEMORY_ITEMS = 50;
 
 export interface PersistenceEngineState {
