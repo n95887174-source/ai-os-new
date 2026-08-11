@@ -221,7 +221,7 @@ export class DebateSession implements IDebateSession {
         return {
             id: this.id,
             topic: this.topic,
-            topology: structuredClone(this.topology),
+            topology: { ...this.topology },
             phase: this._sm.current,
             round: this._round,
             version: this._version,

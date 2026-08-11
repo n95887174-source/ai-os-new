@@ -860,9 +860,12 @@ export class DebateSyncManager {
         // Update Zustand store with a DEEP COPY of the completed session so the
         // UI displays argument content (what each agent said). Then strip content
         // from the original session for memory-efficient history persistence.
-        // structuredClone ensures the store copy is independent — mutating the
-        // original session later won't empty the store's argument content.
-        const storeSession = structuredClone(session);
+        // Create an independent copy of arguments for the store BEFORE stripping
+        // content from the session for memory-efficient history persistence.
+        const storeArgs = session.arguments ? session.arguments.map((a) => ({ ...a })) : [];
+        const storeSession = Object.assign(Object.create(Object.getPrototypeOf(session)), session, {
+            arguments: storeArgs,
+        }) as typeof session;
         this.deps!.debateLiveStore.clearSession(session.id);
         this.deps!.activeDebateStore.setSession(storeSession);
         // Final governor state at completion — same fix as in _syncSessionImpl().
