@@ -303,6 +303,7 @@ export interface ServicesConfigSection {
     memory: {
         semanticEnabled: boolean;
         autoEmbedOnStore: boolean;
+        maxEntries: number;
     };
 }
 

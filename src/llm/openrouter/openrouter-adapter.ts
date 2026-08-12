@@ -64,7 +64,10 @@ export class OpenRouterAdapter extends BaseLLMAdapter {
             },
             'authorization',
             'openrouter',
-            60000,
+            // Must exceed the debate caller's large-model timeout (90s), otherwise
+            // the HTTP-layer timer aborts first with a bare AbortError that the
+            // caller classifies as a user-abort → no retry, agent loses its turn.
+            120000,
         );
     }
 

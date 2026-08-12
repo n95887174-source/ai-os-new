@@ -10,7 +10,9 @@ const SEARCH_TOOLS = ['web_search', 'summarize', 'document_query'];
 // ── Model distribution ──
 
 const PROVIDER_MODEL_MAP: Record<string, string[]> = {
-    gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
+    // gemini-3.1-flash returns 404 via the v1beta generateContent API — only
+    // flash-lite is confirmed available (see live 404s in debate logs).
+    gemini: ['gemini-3.1-flash-lite'],
     groq: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'],
     openrouter: [PROVIDER_DEFAULT_MODELS.openrouter!, 'openrouter/free'],
     nvidia: ['meta/llama-3.3-70b-instruct', 'meta/llama-3.1-8b-instruct'],

@@ -182,7 +182,7 @@ export function GoogleStudioPanel() {
                         }}
                     >
                         <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                        <option value="gemini-3.1-flash">Gemini 3.1 Flash</option>
                         <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
                     </select>
                     <button

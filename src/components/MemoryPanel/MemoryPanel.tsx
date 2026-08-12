@@ -243,7 +243,9 @@ const MemoryPanel: React.FC = () => {
         const next = !semanticMode;
         setSemanticMode(next);
         configService
-            .updateServices({ memory: { semanticEnabled: next, autoEmbedOnStore: true } })
+            .updateServices({
+                memory: { semanticEnabled: next, autoEmbedOnStore: true, maxEntries: 1000 },
+            })
             .catch((e) => LOGGER.warn('Config update failed', e));
         if (next) void Promise.resolve();
     };

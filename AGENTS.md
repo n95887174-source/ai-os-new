@@ -55,7 +55,69 @@ npm run check:circular-kernel  # circular deps check
 
 ## Current Session — Consolidated Plan (docs/new/CONSOLIDATED_PLAN.md)
 
-All P0/P1/P2 tasks are complete. Next tasks: P2.25+ (Documentation) in CONSOLIDATED_PLAN.md.
+All P0/P1/P2 tasks except P2.16–P2.19 are complete. Remaining: P2.16 drag-and-drop+undo/redo (Cognitive Builder), P2.17 smoke tests, P2.18 CSS, P2.19 Dexie schema versioning check. Runtime-hardening session validated in live 10-agent debate: heap stable 70–113MB (was 1.2GB OOM), `saveSnapshot version=1` WARN once, no EventRecorder streaming spam.
+
+## Changes — Runtime Hardening + P2.20–P2.22 (2026-08-11)
+
+### Runtime fixes (from console-log triage: OOM, spam, 402)
+
+- `event-recorder.ts`: filter noisy streaming events (`debate:runtime:agent:chunk`, `agent:thinking`, `stream:*`, `chat:stream:*`) from WAL/Dexie; 1000ms debounced persistence; WAL tail capped at 300 events → fixes ~1.2GB heap OOM during 10-agent debates (root cause: per-chunk JSON.stringify + bulkAdd + sha256 saturating event loop, which also caused LLM aborts via MemoryWatchdog cancelAll)
+- `gemini-adapter.ts`: DEV response body logging WARN→DEBUG
+- `session-manager-service.ts`: `updateMeta()` best-effort (WARN instead of throw) for missing/virtual `'default'` session
+- `debate-sync-manager.ts`: skip link/updateMeta when `chatSessionId === 'default'`
+- `debate-persistence-manager.ts`: dedupe `saveSnapshot version=1` WARN per session
+- `debateLiveStore.ts`: cap `agentEvents[].content` to 2000 chars
+
+### P2 tasks
+
+- P2.20 ✅ `MAX_MEMORY_ENTRIES` → `CONFIG.services.memory.maxEntries` (contract + registry + memory-engine + MemoryPanel)
+- P2.21 ✅ HEALTHCHECK added to Dockerfile (image self-describing; compose still overrides)
+- P2.22 ✅ `isPrivateIP` unified with `cors-proxy.mjs`: CGNAT `100.64/10`, IPv6 ULA `fc00::/7`, `0.0.0.0`; new `src/kernel/utils/network.test.ts` (10 tests)
+- `pricing-service.ts`: skip `Unknown model "auto"` WARN for sentinel/empty model (noise during routing/advisor)
+
+### Provider timeout fixes (NVIDIA "BodyStreamBuffer was aborted" root cause)
+
+- Root cause: debate-caller uses `getLargeModelTimeoutMs` = **90s**, but nvidia adapter built `LLMHttpClient` without the 5th `timeoutMs` arg → 60s default. The HTTP client's 60s timer fired first with a bare `AbortError` (`BodyStreamBuffer was aborted`), which `debate-llm-caller.ts:641-680` classifies as a **non-timeout user abort** → surfaces as `Debate LLM call Aborted` with **no retry** → agent lost its turn.
+- Fix pattern: HTTP/SDK timeout must exceed the caller's 90s window so the caller's own `RequestTimedOut` (retried) wins over the HTTP layer's bare AbortError.
+- `nvidia-nim-adapter.ts`: `LLMHttpClient` now gets `options?.timeout ?? 120000`
+- `openrouter-adapter.ts`: `60000` → `120000`
+- `cloudflare-adapter.ts`: `60000` → `120000`
+- `groq-adapter.ts`: SDK `timeout: 60000` → `120000` (was non-critical — SDK throws normal `APIConnectionTimeoutError`/408 which already hit the retry/failover path, not the no-retry AbortError path — but raised for consistency)
+- Verified: `typecheck:fast` clean (only 2 pre-existing `debate-pipeline-builder.ts:318-319` errors), ESLint clean on all 4 adapters
+
+### Model retirement + 402 misclassification fixes (from 18:55 debate log triage)
+
+- `llm-http-client.ts`: **402 bug** — `new AuthError(this.#provider, 'Payment Required...')` passed the provider id as the _message_ and the message as the _provider_, and `AuthError` defaulted `statusCode` to **401** (not 402). Result: the error surfaced as message `'openrouter'` with code 401, so `probe-service.isCreditError` (`sc===402`), `debate-llm-caller.isPaymentRequired`, and key-state-store's `402` detection never fired → dead (no-balance) key was re-probed every 5 min and re-tried in debates forever. Fixed to `new AuthError('Payment Required — add funds or check key', provider, 402)` in all 3 call sites (post/GET/streamPost). Now a 402 key gets marked `authFailed` and dropped from routing.
+- **gemini-2.0-flash retired** (Google returns 404 "no longer available") but still in candidate pools → every selection wasted a turn (`ExecutionGovernor` fail → `Step 4: no available provider`). Replaced with `gemini-3.1-flash` in: `provider-default-models.ts`, `topology-defaults.ts`, `key-models.ts`, `debate-query-engine.ts`, `google-genai-service.ts`, `probe-service.ts`, plus the GoogleStudio/GoogleCache UI model pickers.
+- `gemini-adapter.test.ts`: fixed stale assertion (expected `gemini-2.0-flash` in path but test passes `gemini-3.1-flash-lite`) — was already failing before this session.
+- Verified: `typecheck:fast` clean (only 2 pre-existing pipeline-builder errors), ESLint clean on all touched files, gemini-adapter 3/3 + pricing/config-registry/memory-engine/network 41/41 tests pass.
+
+### Governor timeout = silent turn-loss fix (from 19:43 debate log triage)
+
+- **Root cause**: `debate-llm-caller.ts:292` starts a gov op with `timeoutMs: getModelTimeout(modelId) + 5000` (35s for a 30s model). When the op budget expires, `execution-governor.ts` aborts with `Error('OperationTimedOut')`, but `onGovAbort` **hardcoded** `controller.abort(new Error('CancelledByGovernor'))`, discarding the gov's reason. `CancelledByGovernor` is **not** in the caller's `isTimeout` set → classified as a non-timeout user abort → `Debate LLM call CancelledByGovernor` thrown with **no retry** → agent silently lost its turn. Also the 5s gov margin was too tight: in the 19:43 log the caller's own 30s `RequestTimedOut` abort hadn't settled the adapter promise within 5s (no "Request timed out" WARN before the gov's 35s WARN), so the gov's backstop won the race.
+- Fix:
+  - `debate-llm-caller.ts` `onGovAbort` now forwards the gov op's actual `signal.reason` (so a budget expiry surfaces as `OperationTimedOut`, which `isTimeout` matches via `includes('TimedOut')`), falling back to `CancelledByGovernor` for genuine gov cancels (drain/cancelTree).
+  - `isTimeout` now also explicitly matches `abortReason.includes('OperationTimedOut')` (redundant with `TimedOut` but self-documenting).
+  - Gov budget widened `+5000` → `+15000` so the caller's own retried `RequestTimedOut` normally wins the race — same "backstop must exceed the primary timeout" pattern as the HTTP-layer fix.
+  - `execution-governor.ts` `timeout()` WARN now logs `metadata` (provider/model/sessionId/agentId) so future triage shows which call actually hung.
+- Verified: `typecheck:fast` clean (only 2 pre-existing pipeline-builder errors), ESLint clean, execution-governor 30/30 tests pass.
+
+### Follow-up — SSE idle timeout = silent turn-loss fix (G-02, same failure mode as G-01)
+
+- **Root cause**: streaming adapters pass `idleTimeoutMs` to `parseSSEStream` (openrouter/cloudflare/openai-compatible = **30000**, gemini = **15000**, nvidia = **90000**) — for openrouter/cloudflare/openai-compatible this **equals** the debate caller's normal-model window (`getModelTimeout` = 30s), so on a slow/silent provider the SSE idle timer and the caller's own 30s `RequestTimedOut` timer race. If the SSE idle fires first it throws `DOMException('SSE idle timeout', 'AbortError')` **independently of the caller's controller.signal** — `controller.signal.reason` is not set, `abortReason` falls back to `'Aborted'`, `isTimeout` missed it, and the error was thrown as a no-retry user abort (`Debate LLM call Aborted`) → agent silently lost its turn. For large models (90s window) the 30s idle fired long before the caller's timer, killing healthy-but-slow generations.
+- Fix: `debate-llm-caller.ts` `isTimeout` adds a `(isAbortError && error.includes('SSE idle timeout'))` clause so the SSE idle is classified as a retryable timeout (the retry loop then fails over to another model/key/provider). Surgical — no adapter-wide idle bump, since `LLMClientService.chat()` applies no own timeout and signal-less streaming consumers rely on the SSE idle as their de-facto deadline. Retry-decorator rethrows AbortError as-is, so the raw DOMException reaches the caller's classification. Gemini shares the same `parseSSEStream` message, so it's covered too.
+- Verified: `typecheck:fast` clean (only 2 pre-existing pipeline-builder errors), ESLint clean, debate-runtime + execution-governor 116/116 tests pass.
+
+### Follow-up — abort must settle the SSE stream (G-03, root cause of the 4-min debate hang)
+
+- **Root cause** (from 02:24-02:28 log triage: `ExecutionGovernor` WARN `timeoutMs=45012` on `gemini/gemini-3.1-flash-lite` → **4 minutes of pure silence**, only heap snapshots; even the caller's own 30s `RequestTimedOut` abort did not settle `streamMessage`): `parseSSEStream` (`src/llm/http/sse-parser.ts`) relied **solely** on `bodyReader.cancel()` to propagate an abort into the wrapper ReadableStream. In the `pull()` catch block, `await bodyReader.cancel('idle timeout')` ran **before** `controller.error(e)`. When the underlying fetch body was in a race, that `cancel()` promise **never settled** → `controller.error` never ran → the wrapper stream never errored → the outer `reader.read()` loop (which has no abort-signal race of its own) stayed pending **forever**, and neither the caller's `RequestTimedOut` nor the gov's `OperationTimedOut` abort could break it.
+- Fix (`sse-parser.ts`):
+  - `pull()` now captures the stream controller in a closure (`streamController`).
+  - `onAbort` errors the wrapper controller **synchronously** (`streamController.error(new DOMException('Aborted','AbortError'))`) in addition to the best-effort `bodyReader.cancel()` — so an abort settles the stream immediately regardless of cancel()'s fate.
+  - The `pull()` catch block now calls `controller.error(e)` **first** (synchronously) and only then fire-and-forgets `bodyReader.cancel('idle timeout')` (no more `await` before erroring).
+- `EventsTimeline.tsx`: fixed React "Encountered two children with the same key, `4`" spam — `eventIdCounter` is module-level and resets to 0 on reload, but events persist to localStorage; loaded ids 1..7 collided with fresh ids. `loadEvents()` now advances `eventIdCounter` past the max loaded id.
+- New test `src/llm/http/sse-parser.test.ts` (3 tests): normal SSE parse, abort-while-body-hung settles with AbortError, already-aborted signal settles.
+- Verified: `typecheck:fast` clean (only 2 pre-existing pipeline-builder errors), ESLint clean, sse-parser 3/3 + gemini-adapter 3/3 + execution-governor 30/30 + debate-runtime 86/86 (116 total) tests pass. Idle timeouts intentionally unchanged (G-02: signal-less consumers rely on them as their deadline).
 
 ## Current Work — Cognitive Modules (docs/road/IMPLEMENTATION_PLAN.md)
 

@@ -31,7 +31,7 @@ const PROVDER_DEFAULTS: Record<string, string> = {
 /** Models to try as fallback when primary probe model fails with a retryable error */
 const PROBE_FALLBACKS: Record<string, string[]> = {
     groq: ['llama-3.1-8b-instant'],
-    gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
+    gemini: ['gemini-3.1-flash-lite'],
     openrouter: ['openrouter/free', 'meta-llama/llama-3.1-8b-instruct'],
     nvidia: ['meta/llama-3.3-70b-instruct'],
 };
@@ -304,7 +304,18 @@ export class ProbeService implements IProbeService, ILifecycle {
                 }
 
                 if (isCreditError(e)) {
-                    // Credit error (402) — key is valid but low balance. Try next model (may be free)
+                    // Credit error (402) — key is valid but has no balance, so it can't
+                    // serve paid models. Mark authFailed immediately (like the debate
+                    // caller does) so routing excludes it and probeAll skips it on the
+                    // next cycle instead of re-probing a dead key every interval.
+                    try {
+                        this.deps.keyStateStore?.update(key.id, {
+                            flags: { circuitOpen: false, rateLimited: false, authFailed: true },
+                        });
+                    } catch {
+                        /* best-effort */
+                    }
+                    // Try next model (may be free)
                     const r = this.makeResult(
                         key,
                         currentModel,

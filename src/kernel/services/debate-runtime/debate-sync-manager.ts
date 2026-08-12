@@ -391,7 +391,10 @@ export class DebateSyncManager {
             type: 'info',
         });
         this.deps.eventBus.emit(EVENTS.DEBATE_STARTED, session);
-        if (chatSessionId && session?.id) {
+        // 'default' is the chat store's virtual in-memory session (never persisted to
+        // the session DB). Linking to it would create orphan link rows and fail
+        // updateMeta with "Session default not found" — skip both.
+        if (chatSessionId && chatSessionId !== 'default' && session?.id) {
             this.deps.sessionManager
                 .link(chatSessionId, session.id, 'chat_to_debate', `Debate: ${topic}`)
                 .catch((err) =>

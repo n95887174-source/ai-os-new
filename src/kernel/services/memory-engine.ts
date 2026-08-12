@@ -21,7 +21,9 @@ import { passesMemoryQualityGate } from './memory/memory-quality-gate';
 import { keywordFilterSearch, recallRank, computeEngineStats } from './memory/memory-search-utils';
 const LOGGER = rootLogger.child('MemoryEngine');
 
-const MAX_MEMORY_ENTRIES = 1000;
+function getMaxMemoryEntries(): number {
+    return CONFIG?.services?.memory?.maxEntries ?? 1000;
+}
 function getMemoryTtlMs(): number {
     return CONFIG?.services?.cache?.defaultTTLMs ?? 30 * 24 * 60 * 60 * 1000;
 }
@@ -78,7 +80,7 @@ export class MemoryService implements IMemoryEngine {
 
     constructor(deps: MemoryServiceDeps) {
         this.deps = deps;
-        this.cache = new MemoryCache(MAX_MEMORY_ENTRIES);
+        this.cache = new MemoryCache(getMaxMemoryEntries());
         this.memoryRepo = new MemoryRepository(deps.database);
         this.workerClient = new MemoryWorkerClient({
             onBackfill: (id, vector) => void this.backfillVector(id, vector),
@@ -158,7 +160,7 @@ export class MemoryService implements IMemoryEngine {
     private async load() {
         try {
             if ((await this.memoryRepo.getCount()) > 0) {
-                const loaded = (await this.memoryRepo.getAll()).slice(0, MAX_MEMORY_ENTRIES);
+                const loaded = (await this.memoryRepo.getAll()).slice(0, getMaxMemoryEntries());
                 await this.cache.withLock(async () => {
                     this.cache.setAll(loaded);
                 });
@@ -778,7 +780,7 @@ export class MemoryService implements IMemoryEngine {
 
     getCapabilities(): MemoryCapability {
         return {
-            maxEntries: MAX_MEMORY_ENTRIES,
+            maxEntries: getMaxMemoryEntries(),
             maxStorageBytes: 50 * 1024 * 1024,
             supportedSearchModes: ['auto', 'semantic', 'fulltext'],
             supportsBatchOperations: true,

@@ -260,9 +260,17 @@ export class KeyStateStore implements IKeyStateStore, ILifecycle {
                                     : key.status === 'error'
                                       ? 'broken'
                                       : 'unknown';
+                            // PRESERVE authFailed across KEY_UPDATED: a key marked authFailed
+                            // by a 402/401 probe must stay excluded until a real success
+                            // clears it — otherwise dead keys get re-probed and re-tried
+                            // every cycle (openrouter 402 spam in debate logs).
                             const flags =
                                 status === 'ready'
-                                    ? { circuitOpen: false, rateLimited: false, authFailed: false }
+                                    ? {
+                                          circuitOpen: false,
+                                          rateLimited: false,
+                                          authFailed: s.flags.authFailed,
+                                      }
                                     : s.flags;
                             this.update(key.id, {
                                 status,

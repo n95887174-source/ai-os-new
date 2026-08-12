@@ -27,7 +27,8 @@ export function isLargeModel(model: string): boolean {
 }
 
 export const DEBATE_MODEL_PRIORITY: Record<string, string[]> = {
-    gemini: ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
+    // gemini-3.1-flash 404s via the v1beta generateContent API — flash-lite only.
+    gemini: ['gemini-3.1-flash-lite'],
     groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
     openrouter: [PROVIDER_DEFAULT_MODELS.openrouter!, 'openrouter/free'],
     // Fast model first; 70B+ models are fallback due to cold-start latency on NIM

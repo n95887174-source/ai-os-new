@@ -21,7 +21,11 @@ export class CloudflareAdapter extends BaseLLMAdapter {
         super();
         this.baseUrl = baseUrl || DEFAULT_BASE_URL;
         this.useProxy = useProxy;
-        this.httpClient = new LLMHttpClient('', {}, 'authorization', 'cloudflare', 60000);
+        // HTTP-client timeout must exceed the debate-caller's large-model timeout
+        // (getLargeModelTimeoutMs = 90s). Otherwise the HTTP layer's 60s timer fires
+        // first with a bare AbortError, which debate-llm-caller treats as a user abort
+        // (no retry) instead of its own RequestTimedOut (retried).
+        this.httpClient = new LLMHttpClient('', {}, 'authorization', 'cloudflare', 120000);
     }
 
     private parseAuth(apiKey: string): { accountId: string; token: string } {

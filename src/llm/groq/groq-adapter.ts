@@ -38,7 +38,10 @@ export class GroqAdapter extends BaseLLMAdapter {
     id = 'groq';
 
     private getClient(apiKey: string): Groq {
-        return new Groq({ apiKey, timeout: 60000, maxRetries: 2, dangerouslyAllowBrowser: true });
+        // SDK timeout must exceed the debate-caller's large-model timeout
+        // (getLargeModelTimeoutMs = 90s) so the caller's own RequestTimedOut fires
+        // first and triggers retry/failover instead of a premature SDK abort.
+        return new Groq({ apiKey, timeout: 120000, maxRetries: 2, dangerouslyAllowBrowser: true });
     }
 
     async doSendMessage(

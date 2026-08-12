@@ -80,8 +80,8 @@ export class GeminiAdapter extends BaseLLMAdapter {
                 ),
             );
             if (import.meta.env.DEV) {
-                LOGGER.warn('GeminiAdapter', `response for ${safeModel}`, {
-                    response: JSON.stringify(data).slice(0, 1000),
+                LOGGER.debug('GeminiAdapter', `response for ${safeModel}`, {
+                    response: JSON.stringify(data).slice(0, 500),
                 });
             }
             const raw = data as GeminiResponse;

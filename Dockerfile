@@ -73,6 +73,9 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY --chown=nginx:nginx docker/${NGINX_CONFIG} /etc/nginx/conf.d/default.conf.template
 
 # Healthcheck defined in docker-compose.yml (overrides this) — keep single source of truth
+# Image-level HEALTHCHECK so the image is self-describing even without compose.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8080/ || exit 1
 COPY --chmod=755 docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 8080

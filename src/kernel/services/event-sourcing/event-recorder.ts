@@ -30,6 +30,29 @@ const DEFAULT_CONFIG: RecorderConfig = {
     enabled: true,
 };
 
+/**
+ * High-frequency / streaming events that must NOT be recorded. During a debate
+ * each LLM chunk emits `debate:runtime:agent:chunk`; recording these floods the
+ * event array with thousands of entries, triggers a full-array JSON.stringify +
+ * localStorage WAL write + Dexie bulkAdd on EVERY event (observed: heap grew to
+ * ~1.2GB and LLM calls timed out because the event loop was saturated). These
+ * events carry no durable value — skip them entirely.
+ */
+const NOISY_EVENTS = new Set<string>([
+    'debate:runtime:agent:chunk',
+    'debate:runtime:agent:thinking',
+    'chat:stream:chunk',
+    'chat:stream:start',
+    'chat:stream:end',
+    'stream:chunk',
+    'stream:start',
+    'stream:end',
+]);
+
+function isNoisyEvent(event: string): boolean {
+    return NOISY_EVENTS.has(event);
+}
+
 export class EventRecorder {
     private events: RecordedEvent[] = [];
     private sequence = 0;
@@ -44,6 +67,10 @@ export class EventRecorder {
     private pendingChecksums = new Map<number, () => void>();
     private checksumSeq = 0;
     private _pendingPersistData: { events: RecordedEvent[]; sequence: number } | null = null;
+    /** P1-15.4: debounce timer for coalescing high-frequency persistence bursts */
+    private _persistTimer: ReturnType<typeof setTimeout> | null = null;
+    private static readonly PERSIST_DEBOUNCE_MS = 1000;
+    private static readonly WAL_TAIL_EVENTS = 300;
     private unsubCallbacks: Array<() => void> = [];
     /** P1-15.2: prevents new work after destroy() */
     private _destroyed = false;
@@ -174,9 +201,15 @@ export class EventRecorder {
         const beforeUnloadHandler = () => {
             if (this._pendingPersistData) {
                 try {
+                    const walData = {
+                        events: this._pendingPersistData.events.slice(
+                            -EventRecorder.WAL_TAIL_EVENTS,
+                        ),
+                        sequence: this._pendingPersistData.sequence,
+                    };
                     ssrSafeStorage.setItem(
                         walKey,
-                        JSON.stringify(this.sanitizePayloadForWal(this._pendingPersistData)),
+                        JSON.stringify(this.sanitizePayloadForWal(walData)),
                     );
                 } catch {
                     // localStorage full — non-critical
@@ -192,6 +225,7 @@ export class EventRecorder {
 
         this.unsub = subscribeAll(async (payload) => {
             if (!this.config.enabled || this._destroyed) return;
+            if (isNoisyEvent(payload.event)) return;
             if (payload.event === 'cognitive:trace:updated') return;
             if (payload.event === 'cognitive:step:active') return;
             if (payload.event === 'cognitive:step:completed') return;
@@ -220,6 +254,7 @@ export class EventRecorder {
 
     async record(event: string, data?: unknown): Promise<void> {
         if (!this.config.enabled || this._destroyed) return;
+        if (isNoisyEvent(event)) return;
         if (event === 'cognitive:trace:updated') return;
         if (event === 'cognitive:step:active') return;
         if (event === 'cognitive:step:completed') return;
@@ -354,7 +389,11 @@ export class EventRecorder {
         this.events = [];
         this.sequence = 0;
         this._lastSeq = -1;
-        this._persistGen++; // P1-15.3: invalidate any queued microtask
+        this._persistGen++; // P1-15.3: invalidate any queued timer/microtask
+        if (this._persistTimer) {
+            clearTimeout(this._persistTimer);
+            this._persistTimer = null;
+        }
         this._pendingPersistData = null;
         this.persistQueued = false;
         // H-9: resolve all pending checksum waiters — they can't complete after clear
@@ -443,6 +482,10 @@ export class EventRecorder {
     destroy(): void {
         this._destroyed = true;
         this._pendingPersistData = null;
+        if (this._persistTimer) {
+            clearTimeout(this._persistTimer);
+            this._persistTimer = null;
+        }
         this.unsub?.();
         this.unsub = null;
         for (const cb of this.unsubCallbacks) cb();
@@ -503,25 +546,39 @@ export class EventRecorder {
         this.persistQueued = true;
         const gen = this._persistGen;
         this._pendingPersistData = { events: [...this.events], sequence: this.sequence };
-        // Synchronous WAL write — survives tab close
-        try {
-            ssrSafeStorage.setItem(
-                'event-recorder:wal',
-                JSON.stringify(this.sanitizePayloadForWal(this._pendingPersistData)),
-            );
-        } catch {
-            // silently ignore — ssrSafeStorage.setItem can fail in restricted environments
-        }
-        queueMicrotask(() => {
+        // P1-15.4: Debounce persistence — coalesce bursts (LLM streaming emits
+        // thousands of events/sec) into a single Dexie write + WAL flush instead
+        // of a full-array JSON.stringify + bulkAdd per event. Previously every
+        // event did O(events) work: JSON.stringify(up to 10k events) → WAL
+        // localStorage.setItem → Dexie transaction. During debates this saturated
+        // the event loop (LLM timeouts) and churned large transient strings
+        // (heap to ~1.2GB). 1000ms debounce is a safe middle ground.
+        if (this._persistTimer) clearTimeout(this._persistTimer);
+        this._persistTimer = setTimeout(() => {
+            this._persistTimer = null;
             this.persistQueued = false;
-            // P1-15.3: discard if clear() was called while microtask was queued
+            // P1-15.3: discard if clear() was called while timer was pending
             if (gen !== this._persistGen) return;
             const data = this._pendingPersistData;
             this._pendingPersistData = null;
             if (!data) return;
+            // Synchronous WAL write — survives tab close. Cap to the tail so a
+            // large event array doesn't blow the localStorage quota or stringify cost.
+            try {
+                const walData = {
+                    events: data.events.slice(-EventRecorder.WAL_TAIL_EVENTS),
+                    sequence: data.sequence,
+                };
+                ssrSafeStorage.setItem(
+                    'event-recorder:wal',
+                    JSON.stringify(this.sanitizePayloadForWal(walData)),
+                );
+            } catch {
+                // silently ignore — ssrSafeStorage.setItem can fail in restricted environments
+            }
             this.store
                 ?.save(data)
                 .catch((e) => LOGGER.warn('EventRecorder', 'Failed to persist log', { error: e }));
-        });
+        }, EventRecorder.PERSIST_DEBOUNCE_MS);
     }
 }

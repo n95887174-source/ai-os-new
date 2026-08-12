@@ -291,7 +291,13 @@ export async function debateCallLlm(
                 if (gov && resolvedKey) {
                     govOp = gov.start({
                         type: 'debate',
-                        timeoutMs: getModelTimeout(modelId) + 5000,
+                        // Gov budget must exceed the caller's own timeout (getModelTimeout)
+                        // by a generous margin so the caller's RequestTimedOut (retried)
+                        // normally wins the race — mirroring the HTTP-layer timeout fix.
+                        // The gov op is a backstop only for abort propagation failures;
+                        // and since onGovAbort now forwards OperationTimedOut, even a gov
+                        // win is classified as a retryable timeout, not a turn loss.
+                        timeoutMs: getModelTimeout(modelId) + 15000,
                         metadata: {
                             provider: resolvedKey.provider,
                             model: modelId,
@@ -300,8 +306,18 @@ export async function debateCallLlm(
                         },
                     });
                     const onGovAbort = () => {
-                        if (!controller.signal.aborted)
-                            controller.abort(new Error('CancelledByGovernor'));
+                        if (controller.signal.aborted) return;
+                        // Propagate the governor's actual reason (OperationTimedOut when
+                        // the op budget expired) instead of hardcoding CancelledByGovernor.
+                        // This lets the caller's isTimeout classification (includes
+                        // 'TimedOut') treat a governor budget expiry as a retryable timeout
+                        // instead of a no-retry user abort — otherwise the agent silently
+                        // loses its turn.
+                        controller.abort(
+                            govOp!.signal.reason instanceof Error
+                                ? govOp!.signal.reason
+                                : new Error('CancelledByGovernor'),
+                        );
                     };
                     govOp.signal.addEventListener('abort', onGovAbort, { once: true });
                     cleanupGov = () => govOp!.signal.removeEventListener('abort', onGovAbort);
@@ -644,11 +660,27 @@ export async function debateCallLlm(
                         ? controller.signal.reason.message
                         : 'Aborted'
                     : '';
+                // G-01: The ExecutionGovernor aborts its op with Error('OperationTimedOut')
+                // when the op's budget expires. onGovAbort now forwards that exact reason
+                // onto the caller's controller, so the caller can classify a governor
+                // budget expiry as a RETRYABLE timeout instead of a no-retry user abort.
+                // (Previously onGovAbort hardcoded 'CancelledByGovernor', which made the
+                // agent silently lose its turn — the op below kept the gov op 'running'
+                // until the governor's own 35s timer fired with no chance to failover.)
                 const isTimeout =
-                    isAbortError &&
-                    (abortReason.includes('RequestTimedOut') ||
-                        abortReason.includes('TimedOut') ||
-                        abortReason.includes('PreflightTimedOut'));
+                    (isAbortError &&
+                        (abortReason.includes('RequestTimedOut') ||
+                            abortReason.includes('TimedOut') ||
+                            abortReason.includes('PreflightTimedOut'))) ||
+                    (isAbortError && abortReason.includes('OperationTimedOut')) ||
+                    // G-02: The streaming adapters' SSE idle timer (~30s of no data chunks
+                    // in openrouter/cloudflare/openai-compatible) fires INDEPENDENTLY of the
+                    // caller's controller.signal — so controller.signal.reason is not set,
+                    // abortReason falls back to 'Aborted', isTimeout misses it, and the
+                    // error is thrown as a no-retry user abort (agent silently loses its
+                    // turn — same failure mode as G-01). The SSE idle IS a genuine timeout,
+                    // so classify it as retryable by matching the error message.
+                    (isAbortError && error.includes('SSE idle timeout'));
                 // Fast-fail: if all providers are dead, skip retry loop entirely
                 if (error.includes('All LLM providers unavailable')) {
                     deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
@@ -717,8 +749,56 @@ export async function debateCallLlm(
                     // level so ALL agents skip it, but DON'T mark the provider as failed
                     // (different models on the same provider may work fine).
                     if (errSc === 413) {
+                        // Groq returns 413 for TPM rate limits ("rate_limit_exceeded",
+                        // "tokens per minute") IN ADDITION to context overflow. TPM is
+                        // transient (refills ~60s) — don't permanently kill a good model;
+                        // context overflow is permanent → mark the model failed so ALL
+                        // agents skip it.
+                        const isTpmRateLimit =
+                            errStr.includes('rate_limit_exceeded') ||
+                            errStr.includes('tokens per minute');
+                        if (isTpmRateLimit) {
+                            LOGGER.warn(
+                                'DebateLlmCaller',
+                                `Model 413 TPM rate limited (transient): ${modelId}`,
+                                {
+                                    agentId: participant.agentId,
+                                    provider: resolvedKey.provider,
+                                    sessionId,
+                                },
+                            );
+                            // Fall through to the transient rate-limit backoff below —
+                            // the model stays available for later rounds.
+                        } else {
+                            session.markModelFailed(modelId);
+                            LOGGER.warn(
+                                'DebateLlmCaller',
+                                `Model 413 (context exceeded): ${modelId}`,
+                                {
+                                    agentId: participant.agentId,
+                                    provider: resolvedKey.provider,
+                                    sessionId,
+                                },
+                            );
+                            deps.sessionAbortControllers
+                                .get(sessionId)
+                                ?.delete(participant.agentId);
+                            continue;
+                        }
+                    }
+
+                    // 404 model_not_found — the model doesn't exist on this provider/API
+                    // (e.g. gemini-3.1-flash 404s via the v1beta generateContent API).
+                    // Mark the model failed at session level so ALL agents skip it instead
+                    // of burning a turn on it every round.
+                    if (
+                        errSc === 404 ||
+                        errStr.includes('model_not_found') ||
+                        errStr.includes('is not found for API version') ||
+                        errStr.includes('not supported for generateContent')
+                    ) {
                         session.markModelFailed(modelId);
-                        LOGGER.warn('DebateLlmCaller', `Model 413 (context exceeded): ${modelId}`, {
+                        LOGGER.warn('DebateLlmCaller', `Model 404 (not found): ${modelId}`, {
                             agentId: participant.agentId,
                             provider: resolvedKey.provider,
                             sessionId,

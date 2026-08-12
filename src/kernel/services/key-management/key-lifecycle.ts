@@ -184,6 +184,12 @@ export class KeyLifecycle {
         else if (errors >= this.config.degradedErrorThreshold) next = 'degraded';
         else if (errors >= this.config.probationErrorThreshold) next = 'probation';
 
+        // Guard: never propose a transition the state machine forbids (e.g. a key
+        // already quarantined can only go to 'recovering', not back down to
+        // 'degraded'/'probation'). Otherwise we spam "Invalid transition" WARNs
+        // every error event for quarantined keys.
+        if (!LIFECYCLE_TRANSITIONS[current].includes(next)) next = current;
+
         if (next !== current) {
             this.transition(
                 id,

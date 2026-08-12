@@ -370,7 +370,12 @@ export class SessionManagerService implements ISessionManager {
             await this.sessionStore.updateSession(id, patch);
             return;
         }
-        throw new Error(`Session ${id} not found`);
+        // Best-effort metadata update: the session may be a virtual/placeholder id
+        // (e.g. the chat store's in-memory 'default' session that is never persisted).
+        // Don't throw — this is an optional metadata write, and the error only produces
+        // noisy "Session X not found" ERROR logs (e.g. DebateSyncManager linking a debate
+        // started from the default chat session).
+        LOGGER.warn('SessionManager', 'updateMeta: session not found — skipping', { id });
     }
 
     private async ensureHistoryLoaded(): Promise<void> {

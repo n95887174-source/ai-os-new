@@ -51,12 +51,16 @@ export class DebatePersistenceManager {
         private deps: PersistenceDeps,
     ) {}
 
+    /** Sessions whose version=1 checkpoint warning has already been logged. */
+    private readonly _versionWarnedSessions = new Set<string>();
+
     destroy(): void {
         this.state.sessions.clear();
         this.state.budgets.clear();
         this.state.memories.clear();
         this.state.contexts.clear();
         this.state.preflightDone.clear();
+        this._versionWarnedSessions.clear();
     }
 
     private getMemory(sessionId: string): DebateMemory {
@@ -235,7 +239,8 @@ export class DebatePersistenceManager {
                 ),
                 failedModels: JSON.stringify(snap.failedModels ? [...snap.failedModels] : []),
             };
-            if (snap.version === 1) {
+            if (snap.version === 1 && !this._versionWarnedSessions.has(sessionId)) {
+                this._versionWarnedSessions.add(sessionId);
                 LOGGER.warn(
                     'DebatePersistence',
                     `saveSnapshot version=1 for ${sessionId} phase=${snap.phase} round=${snap.round}`,

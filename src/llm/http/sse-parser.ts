@@ -26,8 +26,21 @@ export async function parseSSEStream(
     const idleTimeout = options?.idleTimeoutMs ?? 0;
 
     const abortSignal = options?.signal;
+    // G-03: Error the wrapper stream controller DIRECTLY on abort, synchronously,
+    // so the outer reader.read() loop settles immediately. Previously we relied
+    // solely on bodyReader.cancel() to propagate the abort — but a cancel() that
+    // never settles (fetch body race) would leave the stream pending forever
+    // (the 4-minute hang after the governor's OperationTimedOut).
+    let streamController: ReadableStreamDefaultController<string> | undefined;
     // M10-04 (SSE): cancel() may throw during abort — expected, swallow it
-    const onAbort = () => bodyReader.cancel('aborted').catch(() => {});
+    const onAbort = () => {
+        bodyReader.cancel('aborted').catch(() => {});
+        try {
+            streamController?.error(new DOMException('Aborted', 'AbortError'));
+        } catch {
+            /* already errored */
+        }
+    };
     abortSignal?.addEventListener('abort', onAbort, { once: true });
 
     // SSE-01: dataAccumulator in closure scope (not local to pull()) so
@@ -36,6 +49,7 @@ export async function parseSSEStream(
 
     const stream = new ReadableStream<string>({
         async pull(controller) {
+            streamController = controller;
             if (abortSignal?.aborted) {
                 controller.close();
                 return;
@@ -172,11 +186,19 @@ export async function parseSSEStream(
                 // or when the stream ends (done branch). Flushing here destroys SSE events
                 // that cross read() boundaries.
             } catch (e) {
-                // H-112: Idle timeout throws AbortError; cancel bodyReader so stream doesn't hang
-                if (e instanceof DOMException && e.name === 'AbortError') {
-                    await bodyReader.cancel('idle timeout').catch(() => {});
+                // G-03: Error the wrapper stream FIRST and synchronously — do NOT
+                // await bodyReader.cancel() before controller.error(). A cancel()
+                // that never settles (fetch body race) would block controller.error
+                // and leave the outer reader.read() loop pending forever (the 4-min
+                // hang). Cancel is best-effort and fire-and-forget.
+                try {
+                    controller.error(e);
+                } catch {
+                    /* already errored */
                 }
-                controller.error(e);
+                if (e instanceof DOMException && e.name === 'AbortError') {
+                    bodyReader.cancel('idle timeout').catch(() => {});
+                }
             }
         },
         async cancel() {

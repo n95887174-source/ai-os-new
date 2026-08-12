@@ -149,9 +149,9 @@
 | P2.17 | Smoke test для каждой из 165 панелей без тестов                            | `[E]`  | XL (2w)  |
 | P2.18 | Адоптировать CSS-решение (CSS Modules или Tailwind) — план миграции        | `[A]`  | XL (2w+) |
 | P2.19 | Проверить Dexie schema versioning и миграции                               | `[E]`  | S (1d)   |
-| P2.20 | `MAX_MEMORY_ENTRIES = 1000` hard-coded → вынести в CONFIG                  | `[E]`  | S (2h)   |
-| P2.21 | Добавить HEALTHCHECK в Dockerfile                                          | `[E]`  | S (30m)  |
-| P2.22 | `isPrivateIP` не ловит IPv6 ULA и CGNAT — унифицировать с `cors-proxy.mjs` | `[A]`  | S (2h)   |
+| P2.20 | `MAX_MEMORY_ENTRIES = 1000` hard-coded → вынести в CONFIG                  | `[E]`  | S (2h)   | ✅  |
+| P2.21 | Добавить HEALTHCHECK в Dockerfile                                          | `[E]`  | S (30m)  | ✅  |
+| P2.22 | `isPrivateIP` не ловит IPv6 ULA и CGNAT — унифицировать с `cors-proxy.mjs` | `[A]`  | S (2h)   | ✅  |
 
 ### Documentation
 

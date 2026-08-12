@@ -216,7 +216,11 @@ export class LLMHttpClient {
             }
             if (res.status === 402) {
                 res.body?.cancel()?.catch(() => {});
-                throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
+                throw new AuthError(
+                    `Payment Required — add funds or check key`,
+                    this.#provider,
+                    402,
+                );
             }
             if (res.status === 429) {
                 res.body?.cancel()?.catch(() => {});
@@ -308,7 +312,11 @@ export class LLMHttpClient {
             }
             if (res.status === 402) {
                 res.body?.cancel()?.catch(() => {});
-                throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
+                throw new AuthError(
+                    `Payment Required — add funds or check key`,
+                    this.#provider,
+                    402,
+                );
             }
             if (res.status === 429) {
                 res.body?.cancel()?.catch(() => {});
@@ -395,7 +403,11 @@ export class LLMHttpClient {
             }
             if (res.status === 402) {
                 res.body?.cancel()?.catch(() => {});
-                throw new AuthError(this.#provider, `Payment Required — add funds or check key`);
+                throw new AuthError(
+                    `Payment Required — add funds or check key`,
+                    this.#provider,
+                    402,
+                );
             }
             if (res.status === 429) {
                 res.body?.cancel()?.catch(() => {});

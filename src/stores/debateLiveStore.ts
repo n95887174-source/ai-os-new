@@ -214,7 +214,11 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     agentId: d.agentId,
                     status: 'responded',
                     timestamp: Date.now(),
-                    content: d.content,
+                    // Cap stored content — agentEvents[].content is not rendered anywhere
+                    // (DebateLivePanel only reads the array length), and full LLM responses
+                    // retained in up to MAX_AGENT_EVENTS events would waste memory during
+                    // long multi-round debates.
+                    content: d.content.length > 2000 ? d.content.slice(0, 2000) : d.content,
                 };
                 set((s) => {
                     const m = new Map(s.currentThinking);

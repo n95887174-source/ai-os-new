@@ -154,7 +154,7 @@ export class PricingService implements ICostCalculator {
             .sort((a, b) => b.length - a.length);
         const result =
             prefix.length > 0 ? this.pricingData[prefix[0]!] : { input: 0.15, output: 0.6 };
-        if (prefix.length === 0) {
+        if (prefix.length === 0 && key !== 'auto' && key !== '') {
             LOGGER.warn('PricingService', `Unknown model "${model}" — using fallback pricing`);
         }
         if (this.prefixCache.size >= CONFIG.pricing.prefixCacheMaxSize) {

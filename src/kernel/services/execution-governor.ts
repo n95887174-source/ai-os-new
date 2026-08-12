@@ -105,6 +105,7 @@ class ManagedOperationImpl implements ManagedOperation {
         LOGGER.warn('ExecutionGovernor', `Operation ${this.id} timed out`, {
             type: this.type,
             timeoutMs: Date.now() - this.startedAt,
+            metadata: this.metadata,
         });
     }
 

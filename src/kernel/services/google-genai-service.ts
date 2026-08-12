@@ -412,7 +412,7 @@ export class GoogleGenAIService {
     async getModels(): Promise<string[]> {
         await this.ensureConfigured();
         const apiKey = this.#apiKey;
-        if (!apiKey) return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
+        if (!apiKey) return ['gemini-3.1-flash-lite', 'gemini-3.1-pro'];
         try {
             const res = await fetch('https://generativelanguage.googleapis.com/v1/models', {
                 headers: { 'x-goog-api-key': apiKey },
@@ -420,11 +420,19 @@ export class GoogleGenAIService {
             });
             if (!res.ok) {
                 res.body?.cancel()?.catch(() => {});
-                return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
+                return ['gemini-3.1-flash-lite', 'gemini-3.1-pro'];
             }
-            return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
+            const data = (await res.json()) as {
+                models?: Array<{ name?: string }>;
+            };
+            const models = (data.models ?? [])
+                .map((m) => (m.name ?? '').replace(/^models\//, ''))
+                .filter((m) => m.length > 0);
+            // gemini-3.1-flash is NOT available via the v1beta generateContent API
+            // (live 404s) — keep only models actually returned by the API.
+            return models.length > 0 ? models : ['gemini-3.1-flash-lite', 'gemini-3.1-pro'];
         } catch {
-            return ['gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-3.1-pro'];
+            return ['gemini-3.1-flash-lite', 'gemini-3.1-pro'];
         }
     }
 }

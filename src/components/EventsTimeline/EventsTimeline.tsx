@@ -56,7 +56,14 @@ const MAX_EVENTS = 500;
 const loadEvents = (): TimelineEvent[] => {
     try {
         const raw = storageAdapter.getItem(STORAGE_KEY);
-        return raw ? (safeJsonParse(raw) as TimelineEvent[]) : [];
+        const events = raw ? (safeJsonParse(raw) as TimelineEvent[]) : [];
+        // G-03: eventIdCounter is module-level and resets to 0 on reload, but events
+        // are persisted to localStorage. Without advancing the counter past the max
+        // loaded id, new events collide with persisted ids (e.g. keys `4` duplicated)
+        // — React "Encountered two children with the same key" console spam.
+        const maxId = events.reduce((m, e) => Math.max(m, e.id), 0);
+        if (maxId >= eventIdCounter) eventIdCounter = maxId + 1;
+        return events;
     } catch {
         return [];
     }

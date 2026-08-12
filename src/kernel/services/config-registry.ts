@@ -268,7 +268,7 @@ export const rawConfig: ConfigRegistry = {
         whatif: { maxHistory: 100 },
         keyService: { introspectionTimeoutMs: 10000 },
         providerInstance: { healthCheckIntervalMs: 30000 },
-        memory: { semanticEnabled: true, autoEmbedOnStore: true },
+        memory: { semanticEnabled: true, autoEmbedOnStore: true, maxEntries: 1000 },
     },
 
     featureFlags: {
