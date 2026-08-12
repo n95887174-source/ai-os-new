@@ -1,7 +1,8 @@
 import { DebateConsensusEngine } from './debate-consensus';
 import { DebateTimeline } from './debate-timeline';
 import { DebateConclusionEngine } from './debate-conclusion-engine';
-import { DebateOrchestrator } from './debate-orchestrator';
+import { createDebateOrchestrator } from './index';
+import type { IDebateOrchestrator } from '../../contracts/debate-runtime';
 import { DebateTopologyService } from './debate-topology';
 
 /**
@@ -10,18 +11,18 @@ import { DebateTopologyService } from './debate-topology';
 export class DebateSessionContext {
     readonly consensus: DebateConsensusEngine;
     readonly timeline: DebateTimeline;
-    readonly orchestrator: DebateOrchestrator;
+    readonly orchestrator: IDebateOrchestrator;
     readonly conclusionEngine: DebateConclusionEngine;
 
     constructor(
         llmCall: (prompt: string) => Promise<string>,
         consensus?: DebateConsensusEngine,
         timeline?: DebateTimeline,
-        orchestrator?: DebateOrchestrator,
+        orchestrator?: IDebateOrchestrator,
     ) {
         this.consensus = consensus ?? new DebateConsensusEngine();
         this.timeline = timeline ?? new DebateTimeline();
-        this.orchestrator = orchestrator ?? new DebateOrchestrator(new DebateTopologyService());
+        this.orchestrator = orchestrator ?? createDebateOrchestrator(new DebateTopologyService());
         this.conclusionEngine = new DebateConclusionEngine(llmCall);
     }
 

@@ -1422,6 +1422,24 @@ export const EVENT_REGISTRY = {
             reason: z.string(),
         }),
     ),
+
+    // ── Conversation Core lifecycle (generic; independent of Debate/Forum/Chat) ──
+    CONVERSATION_TURN_START: event(
+        'conversation:turn:start',
+        z.object({ sessionId: z.string(), participantId: z.string() }),
+    ),
+    CONVERSATION_TURN_COMPLETE: event(
+        'conversation:turn:complete',
+        z.object({ sessionId: z.string(), participantId: z.string(), success: z.boolean() }),
+    ),
+    CONVERSATION_TURN_ERROR: event(
+        'conversation:turn:error',
+        z.object({ sessionId: z.string(), participantId: z.string(), error: z.string() }),
+    ),
+    CONVERSATION_PAUSED: event('conversation:paused', z.object({ sessionId: z.string() })),
+    CONVERSATION_RESUMED: event('conversation:resumed', z.object({ sessionId: z.string() })),
+    CONVERSATION_ABORTED: event('conversation:aborted', z.object({ sessionId: z.string() })),
+    CONVERSATION_COMPLETED: event('conversation:completed', z.object({ sessionId: z.string() })),
 } as const;
 
 type Registry = typeof EVENT_REGISTRY;

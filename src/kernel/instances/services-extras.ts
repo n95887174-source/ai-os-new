@@ -57,6 +57,7 @@ import type { IGeminiCacheService } from '../contracts/gemini-cache';
 import type { IProviderAchievementService } from '../contracts/provider-achievements';
 import type { GoogleGenAIService as GoogleGenAIServiceType } from '../services/google-genai-service';
 import type { WorkflowService as WorkflowServiceType } from '../services/workflow-service';
+import type { ConversationDirectorService as ConversationDirectorServiceType } from '../services/conversation-director-service';
 import type { SourceAdapterRegistry as SourceAdapterRegistryType } from '../services/research-adapters/source-adapter-registry';
 import type { PromptLibraryService as PromptLibraryServiceType } from '../services/prompt-library-service';
 import type { BatchProcessorService as BatchProcessorServiceType } from '../services/batch-processor-service';
@@ -70,6 +71,7 @@ import type { ISynthesisEngineService } from '../contracts/synthesis-engine';
 import type { IKnowledgeGeneratorService } from '../contracts/knowledge-generator';
 import type { IForumService } from '../contracts/forum';
 import type { IBuilderAgentService } from '../contracts/builder';
+import type { ScenarioRepository } from '../dal/scenario-repository';
 
 export const lensEngine = lazyService<ILensEngineService>('lensEngine');
 export const crystalVault = lazyService<ICrystalVaultService>('crystalVault');
@@ -78,6 +80,7 @@ export const synthesisEngine = lazyService<ISynthesisEngineService>('synthesisEn
 export const knowledgeGenerator = lazyService<IKnowledgeGeneratorService>('knowledgeGenerator');
 export const forumService = lazyService<IForumService>('forumService');
 export const builderAgent = lazyService<IBuilderAgentService>('builderAgent');
+export const scenarioRepository = lazyService<ScenarioRepository>('scenarioRepository');
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',
@@ -178,6 +181,9 @@ export const googleGenAIService = lazyService<GoogleGenAIServiceType>('googleGen
 export const workflowService = lazyService<WorkflowServiceType>('workflowService');
 export const sourceAdapterRegistry =
     lazyService<SourceAdapterRegistryType>('sourceAdapterRegistry');
+export const conversationDirector = lazyService<ConversationDirectorServiceType>(
+    'conversationDirectorService',
+);
 export const promptLibraryService = lazyService<PromptLibraryServiceType>('promptLibraryService');
 export const batchProcessorService =
     lazyService<BatchProcessorServiceType>('batchProcessorService');

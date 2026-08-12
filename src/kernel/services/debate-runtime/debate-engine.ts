@@ -2,7 +2,7 @@ import { genId } from '../../../utils/gen-id';
 import { DebateProviderResolver } from './debate-query-engine';
 import { buildConclusionLlmCall } from './debate-conclusion-engine';
 import { DebateTopologyService } from './debate-topology';
-import { DebateOrchestrator } from './debate-orchestrator';
+import { createDebateOrchestrator } from './index';
 import { buildPipeline } from './debate-pipeline-builder';
 import type { PipelineEngine, PipelineEngineDeps } from './debate-pipeline-builder';
 import { debateCallLlm, debateGetDefaultPrompt, type LlmCallerDeps } from './debate-llm-caller';
@@ -325,7 +325,7 @@ export class DebateEngine implements IDebateEngine, ILifecycle {
                 llmCall ?? (async () => ''),
                 undefined,
                 undefined,
-                new DebateOrchestrator(this.topologyService),
+                createDebateOrchestrator(this.topologyService),
             );
             // Don't persist orphan contexts in the map — the async pipeline
             // generator may still yield events after cleanupMaps, and each

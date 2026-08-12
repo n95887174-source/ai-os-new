@@ -57,6 +57,101 @@ npm run check:circular-kernel  # circular deps check
 
 All P0/P1/P2 tasks except P2.16–P2.19 are complete. Remaining: P2.16 drag-and-drop+undo/redo (Cognitive Builder), P2.17 smoke tests, P2.18 CSS, P2.19 Dexie schema versioning check. Runtime-hardening session validated in live 10-agent debate: heap stable 70–113MB (was 1.2GB OOM), `saveSnapshot version=1` WARN once, no EventRecorder streaming spam.
 
+## Changes — ConversationCore Step B (Conversation Director) B1/B2/B3 (2026-08-12)
+
+### B1 — Scenario contract
+
+- `contracts/conversation/scenario.ts`: `ConversationScenario` + `ScenarioStatus` (generic, reuses `TurnProposal`, `topic?` optional, no Debate/Forum deps); barrel exports `./scenario`.
+
+### B2 — Persistence
+
+- `schema-types.ts`: `ConversationScenarioSchema` (Zod) + Dexie v19 `conversationScenarios` table (`'id, status, version, createdAt'`), `creating`/`updating` hooks, `versionDefs` v19; `database-service.ts` + `_test-harness.ts` `scenarios` getter; DAL wires `ScenarioRepository` (`scenario-repository.ts` NEW). 11/11 tests pass. Additive 18→19, no `.upgrade()`, no Debate/Forum/Chat touched.
+
+### B3 — Director service
+
+- `contracts/conversation/director.ts`: `DirectorState` + `IConversationDirectorService`; barrel exports `./director`.
+- `conversation-director-service.ts` (NEW): `ConversationDirectorService` (`loadScenario/run/pause/resume/abort/skipNext/overrideTurn/getState/getResults/getScenario`) → `HybridPolicy` → `ConversationOrchestrator` → `IExecutionEngine`. `RecordingExecutionEngine` decorator records `TurnResult`s (records failure + rethrows → `error` state). NO React/UI/Dexie/Debate/Forum/`DEBATE_*` dependency. 9/9 tests pass (ordered run, pause→resume, skipNext, overrideTurn, abort, execution error, missing scenario, zero-`DEBATE_*` assertion).
+- **Verified:** `tsc -p tsconfig.json --noEmit` clean; B2 11/11 + B3 9/9. Full record: `docs/road/MIGRATION_MAP_CONVERSATION_CORE.md` §8.
+
+### B4 — Observability (generic events at Orchestrator boundary)
+
+- `event-registry.ts`: 6 `conversation:*` events (`turn:start/complete/error`, `paused`, `resumed`, `aborted`) + Zod payloads.
+- `conversation-orchestrator.ts`: emits the 6 events; `eventBus` added as optional 4th ctor param defaulting to singleton → Debate adapter call site untouched (no Debate modification). `turn:start`→`execute`→`turn:complete/error`(rethrow); `pause/resume/abortSession` emit.
+- `stores/directorStore.ts` (NEW, app layer): `useDirectorStore` (Zustand) subscribes via `onSafe`, tracks `status`/`currentParticipantId`/`turnLog`. Core only emits; store is the sole consumer so far.
+- Tests: `conversation-orchestrator-events.test.ts` (5) + `directorStore.test.ts` (6) → **11/11**. `tsc` clean; no regression to B3/orchestrator slice. Full record: `docs/road/MIGRATION_MAP_CONVERSATION_CORE.md` §8.
+
+### B5.1 — Admin UI skeleton (route + tab shell + i18n)
+
+- `route-registry-icons.tsx`: `director` icon (Clapperboard). `route-registry-content.ts`: `director` nav item in KNOWLEDGE section. `route-imports.ts`: `DirectorPanelLazy` + `director: DirectorPanelLazy`.
+- `components/DirectorPanel/`: `DirectorPanel.tsx` (shell: header + Configure/Library/Run tabs), `ConfigureTab.tsx`, `LibraryTab.tsx` (placeholders), `RunTab.tsx` (read-only `useDirectorStore` observer — no controls). Decomposed, no monolith.
+- i18n: `director.*` added to `translations/{en,ru}/analytics.ts` + `nav.director` to `{en,ru}/nav.ts`.
+- Test: `DirectorPanel.test.tsx` (2) → **2/2**. `tsc` clean. NO editor/CRUD/runtime controls/persistence. **STOPPED for review.** Full record: `docs/road/MIGRATION_MAP_CONVERSATION_CORE.md` §8.
+
+### B5.2 — Scenario Library CRUD (DONE 2026-08-12)
+
+- `scenario-repository.ts`: `duplicate(id)` (new id via `genId('scenario')`, name + " (copy)", status `draft`, version 1, fresh timestamps, put). 2/2 repo tests.
+- `services-extras.ts`: `scenarioRepository = lazyService<ScenarioRepository>('scenarioRepository')`. `phase20-director.ts`: registers `'scenarioRepository'` → `c.get<DataAccessLayer>('dal').scenarios`. `index.ts` loads phase20.
+- UI (decomposed): `LibraryTab.tsx` (list/filter/Load/Duplicate/Archive/Delete + loading/empty/error), `ScenarioCard.tsx`, `ScenarioStatusBadge.tsx`, `ScenarioLibraryFilters.tsx`. `DirectorPanel.tsx` owns `selectedScenario`, hands off to `RunTab`. `RunTab.tsx` shows read-only selected-scenario summary.
+- i18n: `director.library.*`, `director.scenario.status.*`, `director.run.selected*` in `{en,ru}/analytics.ts`.
+- Tests: `LibraryTab.test.tsx` (3) + existing `DirectorPanel.test.tsx` (2) + `scenario-repository.test.ts` (9) → all pass. `tsc` clean. B4/B3 kernel suites green (no regression). **Duplicate is repository-level (user-required) — LibraryTab calls exactly one `scenarioRepository.duplicate(id)`.** Load = select-only, no launch. **STOPPED for review.** Full record: `docs/road/MIGRATION_MAP_CONVERSATION_CORE.md` §8.
+
+### B5.3 — Scenario Editor (DONE 2026-08-12)
+
+- `scenario-repository.ts`: `create(input)` — repository-level factory that assigns `id` (`genId('scenario')`), `version: 1`, `status: 'draft'`, fresh `createdAt`/`updatedAt`, then `put`. Mirrors `duplicate` (boundary owns id/lifecycle, not the UI). 2/2 repo tests.
+- UI (decomposed): `ScenarioEditor.tsx` (orchestrates scenario-level fields: name / description / objective(topic) / participants / ordered turns + Save Draft), `ParticipantsField.tsx` (id+role rows, add/remove), `TurnsField.tsx` (per-turn participant select + objective type + instruction + constraints list + up/down reorder + remove + add), `ConfigureTab.tsx` (renders `ScenarioEditor`, passes `onSaved`).
+- `TurnProposal` reused directly: `participantId` + `objective { type, description, constraints[] }`. `constraints` live at turn level (per contract) — no scenario-contract change.
+- `DirectorPanel.tsx`: `ConfigureTab onSaved={() => setActiveTab('library')}` — after Save Draft the user lands on Library to see the new draft. **NO launch/run.**
+- i18n: `director.configure.*` (name/description/objective/participants/turns/constraint/move/remove/save/validation) in `{en,ru}/analytics.ts`.
+- Tests: `ScenarioEditor.test.tsx` (4) + repo `create` (2) + existing Library/Panel (5) + B4/B3 kernel suites → all green. `tsc` clean.
+  - **Scope discipline:** editor ONLY constructs + persists a `ConversationScenario` draft. NO Run/Pause/Resume/Skip/Override/Abort, NO `ConversationDirectorService` launch wiring, NO Debate/Forum/Chat changes. **STOPPED for review.** Full record: `docs/road/MIGRATION_MAP_CONVERSATION_CORE.md` §8.
+
+### B5.4a — DirectorService DI + runtime binding (DONE 2026-08-12)
+
+- `phase20-director.ts`: registers `'conversationDirectorService'` → `new ConversationDirectorService(dal.scenarios, new ChatExecutionEngine(c.get('chatService'), c.get('eventBus')))`. Generic path only — `ScenarioRepository → ConversationDirectorService → HybridPolicy → ConversationOrchestrator → ChatExecutionEngine → ChatExecutor(token \`chatService\`) + event bus`. No Debate/Forum/DEBATE_* dependency. `scenarioRepository` token retained.
+- `services-extras.ts`: `conversationDirector = lazyService<ConversationDirectorService>('conversationDirectorService')` (matches the established lazy-service pattern; used by Run UI in B5.4c).
+- `conversation-director-service.runtime.test.ts` (NEW, 2): builds a real `Container`, registers `eventBus`+`chatService`(fake `IChatExecutorAdapter` that echoes `MESSAGE_RESPONSE`)+`dal`(`scenarioRepository` over real Dexie test DB), runs `registerPhase20`, then resolves `conversationDirectorService` and (1) asserts it is a real `ConversationDirectorService` instance; (2) saves a real Scenario via `repo.create`, `loadScenario`+`run()` to `completed`, asserting 2 `TurnResult`s all `success` and content containing the authored objectives. **Proves real saved Scenario runs end-to-end through DI-wired service.**
+- Verified: `tsc -p tsconfig.json --noEmit` clean (exit 0); new test 2/2; regression B3/B4/DirectorPanel suites 45/45 green (director-service 9, orchestrator-events 5, directorStore 6, hybrid-policy 4, repo 11, DirectorPanel UI 9). No Debate/Forum/Chat touched. Full record: `docs/road/MIGRATION_MAP_CONVERSATION_CORE.md` §8.
+- **Scope discipline:** B5.4a is DI + runtime binding ONLY. NO Run controls (Pause/Resume/Skip/Override/Abort) — those are B5.4b. NO Run UI in DirectorPanel — B5.4c. ChatExecutor is the production LLM boundary; tests stub it (real LLM can't run in a unit test). **CLOSED.**
+
+### B5.4b — Run controls + DirectorStore binding (DONE 2026-08-12)
+
+- `stores/directorController.ts` (NEW): `createDirectorControls(service = conversationDirector)` — the single control surface binding Run/Pause/Resume/Skip/Override/Abort to `ConversationDirectorService`, with `load()` resetting the store and `reset()` clearing it. No UI, no React, no Debate/Forum/`DEBATE_*`. B5.4c's Run UI consumes this.
+- `stores/directorStore.ts`: hardened so a `paused`/`aborted` lifecycle status is NOT clobbered by a late in-flight turn. Root cause: `pause()`/`abort()` emit `CONVERSATION_PAUSED`/`ABORTED` **before** the in-flight turn's `CONVERSATION_TURN_START` (the orchestrator's pause/abort guard is at the top of `processNextStep`, but execution is already suspended at `await proposeNextTurn`). `TURN_START`/`TURN_COMPLETE`/`TURN_ERROR` now preserve `paused`/`aborted` when the store is already in that lifecycle state.
+- `stores/directorControls.test.ts` (NEW, 7): drives every control through the real runtime (real `ScenarioRepository` on Dexie + `ChatExecutionEngine` on the real singleton `eventBus`, stubbed `chatService` LLM) and asserts both `service.getState()` AND `useDirectorStore` state — `run()` → 2 completed turns; `pause()` → `paused` (service + store) mid-run; `resume()` → completes with both turns; `skip()` → dropped planned turn; `override()` → injected turn without consuming the plan; `abort()` → `aborted`; `reset()` → idle. Proves the controls manage the existing Director runtime + store.
+- Verified: `tsc -p tsconfig.json --noEmit` clean (exit 0); B5.4b suite 7/7; no regression to B4 (`directorStore` 6/6) / B3 / B5.2 / B5.3 / DirectorPanel — 43/43 green. No Debate/Forum/Chat touched.
+- **Scope discipline:** B5.4b is control + store-binding ONLY. NO Run UI in DirectorPanel (that's B5.4c). NO new runtime semantics beyond the store's lifecycle-status preservation. **STOPPED for review.** Next = B5.4c.
+
+### B5.4c — Full Run UI + regression (DONE 2026-08-12)
+
+- `RunTab.tsx` (REWRITE, app layer): full Run UI bound to `directorController` + `useDirectorStore`. Shows selected-scenario card, status badge (`director.run.status.${status}`), current participant + objective, progress bar (`done/total`), controls Run/Pause/Resume/Skip/Override/Abort wired to `createDirectorControls()`, Override form (participant `<select>` + instruction `<input>`) submitting a `TurnProposal` (`type:'CHALLENGE'`), and a turn log (`turnLog` entries with status + error). Buttons gated by `busy = running||paused`; Run enabled when idle, Pause/Resume/Skip/Override/Abort enabled when busy. **No direct `ConversationDirectorService` access** — commands go through `directorController`, state through `DirectorStore`. UI is NOT a second orchestrator.
+- i18n: `director.run.{noScenario,status.{idle,running,paused,aborted,completed,error},objective,progress,run,pause,resume,skip,override,abort,overrideParticipant,overrideObjective,overrideSubmit,log,logEmpty,turnStatus.{running,complete,error}}` added to `{en,ru}/analytics.ts` (note `director.run.current` already existed from B5.4; reused, NOT re-added).
+- `RunTab.test.tsx` (NEW, 7): mocks `directorController` via `createDirectorControls` → `controlsStub`, drives UI (render, click Run → `load('s1')`+`run()`, Override form → `override(TurnProposal)`, Pause/Abort delegate), simulates live store updates via `act(() => useDirectorStore.setState(...))` (running + progress + log + error entries), and no-scenario path. Async Run handler covered with `waitFor`.
+- `DirectorPanel.test.tsx`: Run tab assertion updated to the new `no scenario` read-only state.
+- `directorController.ts` (`createDirectorControls`) reused as-is from B5.4b — no change needed (proves the control surface is stable and the UI is purely a consumer).
+- Verified: `tsc -p tsconfig.json --noEmit` clean (exit 0); **RunTab 7/7**; **DirectorPanel 16/16** (RunTab 7 + DirectorPanel 2 + LibraryTab 3 + ScenarioEditor 4); **B3–B5 regression 41/41** (directorControls 7, directorStore 6, director-service 9, orchestrator-events 5, hybrid-policy 4, scenario-repository 11). No Debate/Forum/Chat touched. **First real version of Conversation Director achieved.**
+- **Scope discipline:** B5.4c is Run UI + controls binding ONLY. NO new runtime semantics, NO DirectorService API changes, NO Debate/Forum/`DEBATE_*` dependency. **STOPPED for review.** Next = B6.
+
+### B6.1 — E2E integration gate (DONE 2026-08-12)
+
+- `director-e2e.integration.test.tsx` (NEW, 2): one **full real path** driven entirely through the production UI + runtime — no module-mocked runtime, only `useTranslation` mocked (orthogonal to the runtime chain):
+  1. `create → load → run → events → store → RunTab`: a scenario is **persisted through the real `ScenarioRepository`** (the same DAL behind Configure/Library), then the real `RunTab` Run button drives `createDirectorControls()` → real `conversationDirector` lazyService → real `ConversationDirectorService` (B3) → `HybridPolicy` → `ConversationOrchestrator` (B4) → `ChatExecutionEngine` (B3) → stubbed `chatService` → real `coreEventBus` → `CONVERSATION_*` events → real `DirectorStore` (B4) → `RunTab` re-render. Asserts: service reaches `completed`; store observed 2 `complete` turns; RunTab rendered live participant ids; real engine executed the AUTHORED objectives (results contain `propose plan` / `audit plan`).
+  2. **Generic guard:** subscribes to `coreEventBus.subscribeAll` during the run and asserts **no `debate`-prefixed event** fires, while `CONVERSATION_TURN_START`/`CONVERSATION_TURN_COMPLETE` do. Proves the runtime is generic (no Debate/Forum/`DEBATE_*`).
+- Wiring trick (reused, no new infra): `conversationDirector` lazyService resolves from `defaultContainer`, so the test registers the real `ConversationDirectorService` on `defaultContainer` (`clearResolvedServices()` first) — the real `directorController` then resolves to it. The orchestrator defaults its `eventBus` to the real `coreEventBus` singleton (same one `DirectorStore` subscribes to), so the chain is native.
+- Stubbed LLM echoes a **valid `ChatResponseSchema`** payload (`id/requestId/provider/model/content/latency/status:'done'`) on the real `coreEventBus` so `ChatExecutionEngine` resolves the turn.
+- Verified: **B6.1 E2E 2/2**; **DirectorPanel + B3–B5 regression 59/59**; `tsc -p tsconfig.json --noEmit` clean (exit 0). No Debate/Forum/Chat touched; legacy `DebateOrchestrator` left untouched.
+- **Known gap (deferred to B6.2):** the store status stays `running` after a successful run — there is no `CONVERSATION_COMPLETED` event, so `DirectorStore` never transitions to `completed` via events (the _service_ state does reach `completed`). UI shows progress `2/2` + both turns `complete` but the badge remains `Running`. B6.1 proves the path works; the completion transition is a B6.2 polish item.
+- **Scope discipline:** B6.1 is the integration GATE ONLY (one full path + generic guard). No runtime API changes, no new events, no Debate/Forum/`DEBATE_*` dependency. **STOPPED for review.** Next = B6.2/B6.3 (edge cases, lifecycle, the completion-transition polish above).
+
+### B6.2 — completion lifecycle event (DONE 2026-08-12)
+
+- `event-registry.ts`: added **`CONVERSATION_COMPLETED`** (`conversation:completed`, `z.object({ sessionId })`) — the neutral completion event B6.1 found missing. `event-names.ts` re-exports `EVENTS` from `event-registry`, so the orchestrator + `DirectorStore` share it (no second definition).
+- `conversation-orchestrator.ts`: when `processNextStep` gets a `null` proposal (policy exhausted) **and** not paused/aborted, emits `CONVERSATION_COMPLETED`. Error path still throws (no completion); abort/pause still emit their own lifecycle events first.
+- `directorStore.ts`: new `onSafe(CONVERSATION_COMPLETED)` handler → `set({ status: 'completed', sessionId })`. Closes the B6.1 gap: badge now transitions `running → completed`.
+- `director.run.status.completed` already existed (B5.4c) in `{en,ru}/analytics.ts`, so `RunTab` shows **Completed** automatically with no UI change.
+- Tests: `conversation-orchestrator-events.test.ts` +1 (emits `conversation:completed` once policy exhausted, appended after the two `turn:complete`s); `directorStore.test.ts` +1 (`completed → status completed` after final turn); B6.1 E2E strengthened — full-path test now asserts store `status === 'completed'` + `RunTab` renders `Completed` badge, and the generic guard asserts `CONVERSATION_COMPLETED` fired while still **no `debate`-prefixed** event.
+- Verified: **B6.1 E2E 2/2**; **DirectorPanel + B3–B5 regression 61/61** (orchestrator-events 6, directorStore 7, directorControls 7, director-service 9, hybrid-policy 4, scenario-repository 11, DirectorPanel UI 16); `tsc -p tsconfig.json --noEmit` clean (exit 0). No Debate/Forum/Chat touched; legacy `DebateOrchestrator` untouched.
+- **Scope discipline:** B6.2 is the completion-gap fix ONLY. No new runtime semantics beyond the `CONVERSATION_COMPLETED` emit + store transition, no DirectorService/UI API changes, no Debate/Forum/`DEBATE_*` dependency. **STOPPED for review.** Next = B6.3 (only if a concrete polish item remains).
+
 ## Changes — Runtime Hardening + P2.20–P2.22 (2026-08-11)
 
 ### Runtime fixes (from console-log triage: OOM, spam, 402)

@@ -636,3 +636,34 @@ export const SystemSnapshotSchema = z.object({
     runtime: RuntimeStateSchema,
     metadata: z.record(z.string(), z.unknown()).optional(),
 });
+
+export const ConversationScenarioSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    topic: z.string().optional(),
+    version: z.number().int().min(1),
+    status: z.enum(['draft', 'active', 'archived']),
+    participants: z.array(z.object({ id: z.string(), role: z.string() })),
+    turns: z.array(
+        z.object({
+            participantId: z.string(),
+            objective: z.object({
+                type: z.enum([
+                    'INTRODUCE',
+                    'CRITIQUE',
+                    'RESPOND',
+                    'ANALYZE',
+                    'SUMMARIZE',
+                    'CHALLENGE',
+                    'CUSTOM',
+                ]),
+                description: z.string(),
+                constraints: z.array(z.string()),
+            }),
+            targetTurnId: z.string().optional(),
+        }),
+    ),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+});

@@ -71,6 +71,7 @@ import {
     BrainCircuit,
     Lightbulb,
     MessagesSquare,
+    Clapperboard,
 } from 'lucide-react';
 
 const s = 18;
@@ -149,4 +150,5 @@ export const Icons = {
     lightbulb: <Lightbulb size={s} />,
     messagesSquare: <MessagesSquare size={s} />,
     settings: <Settings size={s} />,
+    director: <Clapperboard size={s} />,
 } as const;

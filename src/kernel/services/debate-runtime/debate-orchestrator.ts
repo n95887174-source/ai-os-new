@@ -4,6 +4,7 @@ import type {
     IDebateOrchestrator,
     AgentExecutor,
 } from '../../contracts/debate-runtime';
+import { ConversationOrchestrator } from '../conversation-orchestrator';
 import { DebateTopologyService } from './debate-topology';
 import { rootLogger } from '../logger-service';
 const ORC_LOGGER = rootLogger.child('DebateOrchestrator');
@@ -23,6 +24,7 @@ function getHeapMB(): number {
 // user code without --expose-gc flag.
 
 export class DebateOrchestrator implements IDebateOrchestrator {
+    private conversationOrchestrator?: ConversationOrchestrator;
     private aborted = new Set<string>();
     private abortControllers = new Map<string, AbortController>();
     private executor: AgentExecutor | undefined;
@@ -72,14 +74,41 @@ export class DebateOrchestrator implements IDebateOrchestrator {
         this.executor = executor;
     }
 
+    private isSessionAborted(sessionId: string): boolean {
+        if (this.conversationOrchestrator) {
+            return this.conversationOrchestrator.isAborted(sessionId);
+        }
+        return this.aborted.has(sessionId);
+    }
+
+    private getSessionSignal(sessionId: string): AbortSignal {
+        if (this.conversationOrchestrator) {
+            return this.conversationOrchestrator.getAbortSignal(sessionId);
+        }
+        let ac = this.abortControllers.get(sessionId);
+        if (!ac) {
+            ac = new AbortController();
+            this.abortControllers.set(sessionId, ac);
+        }
+        return ac.signal;
+    }
+
     abort(sessionId: string): void {
-        this.aborted.add(sessionId);
-        this.abortControllers.get(sessionId)?.abort();
+        if (this.conversationOrchestrator) {
+            this.conversationOrchestrator.abortSession(sessionId);
+        } else {
+            this.aborted.add(sessionId);
+            this.abortControllers.get(sessionId)?.abort();
+        }
     }
 
     clearAbort(sessionId: string): void {
-        this.aborted.delete(sessionId);
-        this.abortControllers.delete(sessionId);
+        if (this.conversationOrchestrator) {
+            this.conversationOrchestrator.clearAbort(sessionId);
+        } else {
+            this.aborted.delete(sessionId);
+            this.abortControllers.delete(sessionId);
+        }
     }
 
     async *generateRoundEvents(
@@ -92,7 +121,7 @@ export class DebateOrchestrator implements IDebateOrchestrator {
         const startHeap = getHeapMB();
 
         for (let r = startRound; r < rounds.length; r++) {
-            if (this.aborted.has(sessionId)) return;
+            if (this.isSessionAborted(sessionId)) return;
 
             const nodeGroup = rounds[r]!;
             const roundNum = r + 1;
@@ -154,7 +183,7 @@ export class DebateOrchestrator implements IDebateOrchestrator {
 
             for (let ni = 0; ni < remainingNodes.length; ni++) {
                 const node = remainingNodes[ni]!;
-                if (this.aborted.has(sessionId)) return;
+                if (this.isSessionAborted(sessionId)) return;
 
                 // On resume, skip agents that already produced an argument in this round
                 if (skipAgents?.has(node.id)) {
@@ -173,16 +202,12 @@ export class DebateOrchestrator implements IDebateOrchestrator {
                 yield { type: 'agent:thinking', agentId: node.id };
 
                 try {
-                    let ac = this.abortControllers.get(sessionId);
-                    if (!ac) {
-                        ac = new AbortController();
-                        this.abortControllers.set(sessionId, ac);
-                    }
+                    const signal = this.getSessionSignal(sessionId);
                     const result = await this.executor({
                         sessionId,
                         agentId: node.id,
                         nodeId: node.id,
-                        signal: ac.signal,
+                        signal,
                     });
 
                     if (result.budgetSkipped) {
@@ -276,11 +301,18 @@ export class DebateOrchestrator implements IDebateOrchestrator {
 
     destroy(sessionId?: string): void {
         if (sessionId) {
-            this.aborted.delete(sessionId);
+            if (this.conversationOrchestrator) {
+                this.conversationOrchestrator.clearAbort(sessionId);
+            } else {
+                this.aborted.delete(sessionId);
+            }
             this.participationCount.delete(sessionId);
             this.lastInteraction.delete(sessionId);
             this.bidScores.delete(sessionId);
         } else {
+            if (this.conversationOrchestrator) {
+                this.conversationOrchestrator.clearAbortAll();
+            }
             this.aborted.clear();
             this.participationCount.clear();
             this.lastInteraction.clear();

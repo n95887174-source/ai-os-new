@@ -130,6 +130,7 @@ export interface DataAccessLayer {
     generator: GeneratorRepository;
     forum: ForumRepository;
     builder: WorkflowRepository;
+    scenarios: ScenarioRepository;
     kv: KvRepository;
 }
 

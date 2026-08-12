@@ -16,6 +16,7 @@ import type {
     ForumVoteRecord,
 } from '../types/forum-types';
 import type { WorkflowRecord } from '../types/builder-types';
+import type { ConversationScenario } from '../contracts/conversation';
 import {
     MemoryEntrySchema,
     CognitiveTraceSchema,
@@ -35,6 +36,7 @@ import {
     DebateOverrideSchema,
     SessionLinkSchema,
     EventLogEntrySchema,
+    ConversationScenarioSchema,
 } from '../types/schema-types';
 import type { DebateSessionRecord, DebateVerdictRecord } from '../contracts/storage/debate-store';
 import type {
@@ -101,6 +103,8 @@ export class SuperAgentsDB extends Dexie {
     forumSubs!: Table<ForumSubRecord>;
 
     workflows!: Table<WorkflowRecord>;
+
+    scenarios!: Table<ConversationScenario>;
 
     constructor() {
         super('super_agents_os_v4');
@@ -558,6 +562,38 @@ export class SuperAgentsDB extends Dexie {
             workflows: 'id, status, version, createdAt',
         });
 
+        this.version(19).stores({
+            notes: 'id, keyId, type, timestamp',
+            memories: 'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+            apiKeys: 'id, provider, status',
+            sessions: 'id, title, updatedAt',
+            roles: 'id, name, metadata.category',
+            cognitiveTraces: 'id, traceId, startTime, status',
+            traces: 'id, startTime, status',
+            skills: 'id, name, category, status',
+            connectors: 'id, name, type, status',
+            keyValue: 'id, createdAt',
+            debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+            debateVerdicts: 'sessionId',
+            debateTimeline: 'id, sessionId, timestamp, type',
+            debateOverrides: 'id, sessionId, appliedAt',
+            sessionLinks: 'id, fromId, toId, linkType',
+            eventLog: '++id, sequence, event, timestamp',
+            crystals:
+                'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+            crystalVersions: '[crystalId+version], crystalId',
+            junctions: 'id, status, synthesisType, createdAt',
+            synthSessions: 'id, status, createdAt',
+            synthPerspectives: 'id, synthesisId, roleId, lensId',
+            genJobs: 'id, status, trigger.kind, createdAt',
+            forumTopics: 'id, category, authorId, lastActivityAt, pinned, *tags',
+            forumPosts: 'id, topicId, authorId, createdAt, score, parentId',
+            forumVotes: 'id, postId, voterId, [postId+voterId]',
+            forumSubs: 'id, topicId, subscriberId, [topicId+subscriberId]',
+            workflows: 'id, status, version, createdAt',
+            scenarios: 'id, status, version, createdAt',
+        });
+
         const rejectHook =
             (schema: { parse: (data: unknown) => unknown }, label: string) =>
             (_primKey: unknown, obj: unknown): boolean | undefined => {
@@ -771,6 +807,22 @@ export class SuperAgentsDB extends Dexie {
                 return undefined;
             } catch (e) {
                 LOGGER.error('DatabaseService', 'EventLog update validation FAILED', { error: e });
+                return false;
+            }
+        });
+
+        this.scenarios.hook(
+            'creating',
+            rejectHook(ConversationScenarioSchema, 'ConversationScenario'),
+        );
+        this.scenarios.hook('updating', (mods, _primKey, obj) => {
+            try {
+                ConversationScenarioSchema.parse({ ...obj, ...mods });
+                return undefined;
+            } catch (e) {
+                LOGGER.error('DatabaseService', 'ConversationScenario update validation FAILED', {
+                    error: e,
+                });
                 return false;
             }
         });
@@ -1098,6 +1150,41 @@ export class SuperAgentsDB extends Dexie {
                     forumVotes: 'id, postId, voterId, [postId+voterId]',
                     forumSubs: 'id, topicId, subscriberId, [topicId+subscriberId]',
                     workflows: 'id, status, version, createdAt',
+                },
+            },
+            {
+                v: 19,
+                tables: {
+                    notes: 'id, keyId, type, timestamp',
+                    memories:
+                        'id, content, [metadata.source], [metadata.type], [metadata.timestamp]',
+                    apiKeys: 'id, provider, status',
+                    sessions: 'id, title, updatedAt',
+                    roles: 'id, name, metadata.category',
+                    cognitiveTraces: 'id, traceId, startTime, status',
+                    traces: 'id, startTime, status',
+                    skills: 'id, name, category, status',
+                    connectors: 'id, name, type, status',
+                    keyValue: 'id, createdAt',
+                    debateSessions: 'id, phase, updatedAt, topic, folder, isArchived',
+                    debateVerdicts: 'sessionId',
+                    debateTimeline: 'id, sessionId, timestamp, type',
+                    debateOverrides: 'id, sessionId, appliedAt',
+                    sessionLinks: 'id, fromId, toId, linkType',
+                    eventLog: '++id, sequence, event, timestamp',
+                    crystals:
+                        'crystalId, version, status, confidence, *linkedLensIds, *linkedRoleIds, originId, crystallizedAt',
+                    crystalVersions: '[crystalId+version], crystalId',
+                    junctions: 'id, status, synthesisType, createdAt',
+                    synthSessions: 'id, status, createdAt',
+                    synthPerspectives: 'id, synthesisId, roleId, lensId',
+                    genJobs: 'id, status, trigger.kind, createdAt',
+                    forumTopics: 'id, category, authorId, lastActivityAt, pinned, *tags',
+                    forumPosts: 'id, topicId, authorId, createdAt, score, parentId',
+                    forumVotes: 'id, postId, voterId, [postId+voterId]',
+                    forumSubs: 'id, topicId, subscriberId, [topicId+subscriberId]',
+                    workflows: 'id, status, version, createdAt',
+                    scenarios: 'id, status, version, createdAt',
                 },
             },
         ];

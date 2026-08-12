@@ -111,6 +111,9 @@ export async function createTestDb(): Promise<TestDb> {
         get workflows() {
             return dexie!.workflows;
         },
+        get scenarios() {
+            return dexie!.scenarios;
+        },
         get db() {
             return dexie!;
         },
@@ -160,6 +163,7 @@ export async function createTestDb(): Promise<TestDb> {
             dexie!.forumVotes.clear(),
             dexie!.forumSubs.clear(),
             dexie!.workflows.clear(),
+            dexie!.scenarios.clear(),
         ]);
     };
 

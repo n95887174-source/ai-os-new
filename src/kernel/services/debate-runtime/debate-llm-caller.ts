@@ -717,6 +717,16 @@ export async function debateCallLlm(
                     const errStr = String(e);
                     const isRateLimit = errSc === 429 || /[^\d]413[^\d]/.test(errStr); // 413 from Groq = TPM exceeded
                     const isPaymentRequired = errSc === 402;
+                    // Gemini returns HTTP 400 INVALID_ARGUMENT "API key not valid" for bad
+                    // keys (not 401/403 like most providers) — classify as auth failure so
+                    // the key is dropped from routing instead of re-tried every turn.
+                    const isAuthError =
+                        errSc === 401 ||
+                        errSc === 403 ||
+                        errStr.includes('API key not valid') ||
+                        errStr.includes('INVALID_ARGUMENT') ||
+                        errStr.includes('Authentication failed') ||
+                        errStr.includes('Invalid API Key');
 
                     triedModels.add(modelId);
                     triedKeys.add(resolvedKey.id);
@@ -729,6 +739,33 @@ export async function debateCallLlm(
                             {
                                 agentId: participant.agentId,
                                 model: modelId,
+                            },
+                        );
+                        const kss = deps.getKeyStateStore?.();
+                        if (kss) {
+                            try {
+                                kss.update(resolvedKey.id, { flags: { authFailed: true } });
+                            } catch {
+                                /* best-effort */
+                            }
+                        }
+                        session.markProviderFailed(resolvedKey.provider);
+                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
+                        continue;
+                    }
+
+                    if (isAuthError) {
+                        // Auth failure (401/403/400-API-key-not-valid) is permanent for the
+                        // key — mark authFailed so routing excludes it, and mark the provider
+                        // failed for this session. Otherwise the same bad key is re-picked and
+                        // re-fails every turn.
+                        LOGGER.warn(
+                            'DebateLlmCaller',
+                            `Provider auth error: ${resolvedKey.provider}`,
+                            {
+                                agentId: participant.agentId,
+                                model: modelId,
+                                errSc,
                             },
                         );
                         const kss = deps.getKeyStateStore?.();

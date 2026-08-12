@@ -63,6 +63,7 @@ function isKeyLevelError(e: unknown): boolean {
     )
         return true;
     if (errMsg.includes('Invalid API Key') || errMsg.includes('Authentication failed')) return true;
+    if (errMsg.includes('API key not valid') || errMsg.includes('INVALID_ARGUMENT')) return true;
     if (errMsg.includes('No adapter') || errMsg.includes('Key not found')) return true;
     return false;
 }
