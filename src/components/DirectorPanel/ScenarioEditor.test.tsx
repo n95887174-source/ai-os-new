@@ -22,6 +22,28 @@ vi.mock('../../kernel/instances/services-extras', () => ({
     },
 }));
 
+vi.mock('../../kernel/instances/services-core', () => ({
+    agentService: {
+        getAgents: () => [
+            {
+                id: 'p1',
+                name: 'Agent P1',
+                role: 'Architect',
+                status: 'active',
+                stats: {
+                    calls: 0,
+                    tokens: 0,
+                    latency: 0,
+                    errors: 0,
+                    avgTokensPerCall: 0,
+                    lastActive: 0,
+                    estimatedCost: 0,
+                },
+            },
+        ],
+    },
+}));
+
 beforeAll(() => {
     Object.defineProperty(window, 'matchMedia', {
         writable: true,
@@ -51,6 +73,8 @@ vi.mock('../../i18n/useTranslation', () => ({
                 'director.configure.objective_placeholder': 'Optional guiding topic',
                 'director.configure.participants': 'Participants',
                 'director.configure.add_participant': 'Add participant',
+                'director.configure.select_agent': 'Select agent',
+                'director.configure.no_agents': 'No agents available',
                 'director.configure.participant_id': 'ID',
                 'director.configure.participant_role': 'Role',
                 'director.configure.turns': 'Turns (ordered)',
@@ -108,9 +132,8 @@ describe('ScenarioEditor (B5.3)', () => {
             target: { value: 'review architecture' },
         });
 
+        fireEvent.change(screen.getByLabelText('Select agent'), { target: { value: 'p1' } });
         fireEvent.click(screen.getByText('Add participant'));
-        fireEvent.change(screen.getAllByLabelText('ID')[0]!, { target: { value: 'p1' } });
-        fireEvent.change(screen.getAllByLabelText('Role')[0]!, { target: { value: 'Architect' } });
 
         fireEvent.click(screen.getByText('Add turn'));
         fireEvent.change(screen.getByLabelText('Instruction'), {
@@ -149,8 +172,8 @@ describe('ScenarioEditor (B5.3)', () => {
         render(<ScenarioEditor />);
 
         fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Reorder' } });
+        fireEvent.change(screen.getByLabelText('Select agent'), { target: { value: 'p1' } });
         fireEvent.click(screen.getByText('Add participant'));
-        fireEvent.change(screen.getAllByLabelText('ID')[0]!, { target: { value: 'p1' } });
 
         fireEvent.click(screen.getByText('Add turn'));
         fireEvent.change(screen.getAllByLabelText('Instruction')[0]!, {

@@ -16,6 +16,7 @@ import type { IEventBus } from '../types/interfaces';
 import { ConversationDirectorService } from '../services/conversation-director-service';
 import { ChatExecutionEngine } from '../services/conversation-execution-engine';
 import type { IChatExecutorAdapter } from '../services/conversation-execution-engine';
+import type { IAgentResolver } from '../contracts/conversation/agent-resolver';
 
 export const registerPhase20: Phase = ({ register }) => {
     register('scenarioRepository', (c: IContainer) => c.get<DataAccessLayer>('dal').scenarios);
@@ -32,6 +33,7 @@ export const registerPhase20: Phase = ({ register }) => {
                 new ChatExecutionEngine(
                     c.get<IChatExecutorAdapter>('chatService'),
                     c.get<IEventBus>('eventBus'),
+                    c.get<IAgentResolver>('agentService'),
                 ),
             ),
     );

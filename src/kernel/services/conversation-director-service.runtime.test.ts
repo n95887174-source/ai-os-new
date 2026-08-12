@@ -7,6 +7,7 @@ import { ScenarioRepository } from '../dal/scenario-repository';
 import { createTestDb, type TestDb } from '../dal/_test-harness';
 import { ConversationDirectorService } from './conversation-director-service';
 import type { IChatExecutorAdapter } from './conversation-execution-engine';
+import type { IAgentResolver } from '../contracts/conversation/agent-resolver';
 import { EVENTS } from '../events/event-registry';
 
 interface FakeBus {
@@ -62,6 +63,15 @@ describe('ConversationDirectorService — DI + runtime binding (B5.4a)', () => {
         container.register('dal', {
             scenarios: new ScenarioRepository(tdb.db),
         } as unknown as import('../dal').DataAccessLayer);
+        container.register('agentService', {
+            resolveAgent: (id: string) => ({
+                id,
+                name: id,
+                role: id,
+                systemPrompt: `Persona of ${id}.`,
+                model: undefined,
+            }),
+        } as unknown as IAgentResolver);
         const ctx: PhaseContext = {
             container,
             eventBus: bus as never,

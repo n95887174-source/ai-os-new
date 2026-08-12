@@ -364,6 +364,8 @@ const analytics: Record<string, string> = {
     'director.configure.objective_placeholder': 'Optional guiding topic',
     'director.configure.participants': 'Participants',
     'director.configure.add_participant': 'Add participant',
+    'director.configure.select_agent': 'Select agent',
+    'director.configure.no_agents': 'No agents available — mount a topology first.',
     'director.configure.participant_id': 'ID',
     'director.configure.participant_role': 'Role',
     'director.configure.turns': 'Turns (ordered)',

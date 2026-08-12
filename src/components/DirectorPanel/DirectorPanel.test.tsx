@@ -27,6 +27,10 @@ vi.mock('../../stores/directorStore', () => ({
     }),
 }));
 
+vi.mock('../../kernel/instances/services-core', () => ({
+    agentService: { getAgents: () => [] },
+}));
+
 vi.mock('../../i18n/useTranslation', () => ({
     useTranslation: () => ({
         t: (key: string) => {

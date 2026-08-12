@@ -105,6 +105,75 @@ test('ChatExecutionEngine resolves as failure on chat error', async () => {
     expect(result.error).toBe('boom');
 });
 
+test('ChatExecutionEngine injects resolved agent persona as system message', async () => {
+    const bus = makeEventBus();
+    const captured: any[] = [];
+    const adapter: IChatExecutorAdapter = {
+        handleMessage: vi.fn((req: any) => captured.push(req)),
+        cancelRequest: vi.fn(),
+    };
+    const resolver = {
+        resolveAgent: (id: string) =>
+            id === 'architect'
+                ? {
+                      id,
+                      name: 'Architect',
+                      role: 'Architect',
+                      systemPrompt: 'You are a systems architect.',
+                      model: 'gpt-4o',
+                  }
+                : null,
+    };
+    const engine = new ChatExecutionEngine(adapter, bus, resolver);
+
+    engine.execute(
+        {
+            participantId: 'architect',
+            objective: { type: 'INTRODUCE', description: 'Introduce design', constraints: [] },
+        } as any,
+        {
+            topic: 'Ashdod',
+            participants: [{ id: 'architect', role: 'Architect' }],
+            history: [],
+            metadata: {},
+        } as any,
+        new AbortController().signal,
+    );
+
+    expect(captured.length).toBe(1);
+    const messages = captured[0].messages;
+    expect(messages[0].role).toBe('system');
+    expect(messages[0].content).toBe('You are a systems architect.');
+    expect(captured[0].model).toBe('gpt-4o');
+    expect(captured[0].options.metadata.agentId).toBe('architect');
+    expect(captured[0].options.metadata.participantName).toBe('Architect');
+    // user prompt is still the last message
+    expect(messages[messages.length - 1].role).toBe('user');
+});
+
+test('ChatExecutionEngine leaves request unchanged when resolver is absent', async () => {
+    const bus = makeEventBus();
+    const captured: any[] = [];
+    const adapter: IChatExecutorAdapter = {
+        handleMessage: vi.fn((req: any) => captured.push(req)),
+        cancelRequest: vi.fn(),
+    };
+    const engine = new ChatExecutionEngine(adapter, bus);
+
+    engine.execute(
+        {
+            participantId: 'p1',
+            objective: { type: 'CUSTOM', description: 'x', constraints: [] },
+        } as any,
+        { topic: 't', participants: [], history: [], metadata: {} } as any,
+        new AbortController().signal,
+    );
+
+    expect(captured.length).toBe(1);
+    expect(captured[0].messages[0].role).toBe('user');
+    expect(captured[0].model).toBe('default');
+});
+
 test('ChatExecutionEngine honours session abort signal', async () => {
     const bus = makeEventBus();
     const adapter: IChatExecutorAdapter = { handleMessage: vi.fn(), cancelRequest: vi.fn() };

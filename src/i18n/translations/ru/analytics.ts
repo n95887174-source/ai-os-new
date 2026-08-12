@@ -363,6 +363,8 @@ const analytics: Record<string, string> = {
     'director.configure.objective_placeholder': 'Необязательная направляющая тема',
     'director.configure.participants': 'Участники',
     'director.configure.add_participant': 'Добавить участника',
+    'director.configure.select_agent': 'Выбрать агента',
+    'director.configure.no_agents': 'Нет доступных агентов — сначала смонтируйте топологию.',
     'director.configure.participant_id': 'ID',
     'director.configure.participant_role': 'Роль',
     'director.configure.turns': 'Ходы (по порядку)',

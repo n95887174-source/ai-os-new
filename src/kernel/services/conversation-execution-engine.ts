@@ -1,6 +1,7 @@
 import type { IExecutionEngine, TurnResult } from '../contracts/conversation/execution';
 import type { TurnProposal } from '../contracts/conversation/turn';
 import type { ConversationContext } from '../contracts/conversation/context';
+import type { IAgentResolver } from '../contracts/conversation/agent-resolver';
 import type { QueuedRequest } from '../types/chat-types';
 import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-registry';
@@ -23,6 +24,7 @@ export class ChatExecutionEngine implements IExecutionEngine {
     constructor(
         private readonly chatExecutor: IChatExecutorAdapter,
         private readonly eventBus: IEventBus,
+        private readonly agentResolver?: IAgentResolver,
     ) {}
 
     async execute(
@@ -33,6 +35,14 @@ export class ChatExecutionEngine implements IExecutionEngine {
         const requestId = crypto.randomUUID();
 
         const historyMessages = context.history.map((h) => ({ role: h.role, content: h.content }));
+
+        // B-seam: resolve the participant to a real agent so the turn is
+        // actually spoken by that agent (persona + pinned model), not just
+        // stamped into metadata.agentId.
+        const agent = this.agentResolver?.resolveAgent(proposal.participantId) ?? null;
+        const personaMessage = agent?.systemPrompt
+            ? { role: 'system' as const, content: agent.systemPrompt }
+            : null;
 
         const promptContent = [
             `${proposal.objective.type}: ${proposal.objective.description}`,
@@ -47,17 +57,19 @@ export class ChatExecutionEngine implements IExecutionEngine {
         const req: QueuedRequest = {
             requestId,
             provider: 'auto',
-            model: 'default',
+            model: agent?.model ?? 'default',
             messages: [
+                ...(personaMessage ? [personaMessage] : []),
                 ...historyMessages,
                 { role: 'user', content: promptContent },
             ] as QueuedRequest['messages'],
             options: {
                 metadata: {
                     agentId: proposal.participantId,
-                    participantRole: context.participants.find(
-                        (p) => p.id === proposal.participantId,
-                    )?.role,
+                    participantName: agent?.name,
+                    participantRole:
+                        agent?.role ??
+                        context.participants.find((p) => p.id === proposal.participantId)?.role,
                     objective: proposal.objective.type,
                 },
                 sessionId: (context.metadata['sessionId'] as string) ?? requestId,

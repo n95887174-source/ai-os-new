@@ -1,4 +1,5 @@
 import type { ISTopology, AgentLifecycleState, ISNode } from '../contracts/topology';
+import type { IAgentResolver, ResolvedAgent } from '../contracts/conversation/agent-resolver';
 import type { NodeContext } from '../types/domain-types';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
@@ -63,7 +64,7 @@ export interface AgentServiceDeps {
 const STATS_KEY = 'super_agents_agent_stats';
 const GROUPS_KEY = 'super_agents_agent_groups';
 
-export class AgentService {
+export class AgentService implements IAgentResolver {
     private readonly MAX_AGENT_STATS = 500;
     private readonly MAX_CLONE_IDS = 200;
     private deps: AgentServiceDeps;
@@ -321,6 +322,41 @@ export class AgentService {
                     : this.getLifecycleState(n.id),
                 stats: this.getStats(n.id),
             }));
+    }
+
+    /**
+     * Resolve a participantId to a real agent from the active topology.
+     * Used by the Conversation Director's execution engine so a turn is
+     * actually spoken by the named agent (persona + pinned model) rather than
+     * just carrying its id as metadata.
+     */
+    resolveAgent(id: string): ResolvedAgent | null {
+        const top = this.deps.orchestrator.getActiveTopology();
+        if (!top) return null;
+        const node = top.nodes.find(
+            (n) => n.id === id && (n.type === 'agent' || n.type === 'router'),
+        );
+        if (!node) return null;
+        const cfg = (node.config ?? {}) as Record<string, unknown>;
+        const systemPrompt =
+            typeof cfg.systemPrompt === 'string' && cfg.systemPrompt.trim().length > 0
+                ? cfg.systemPrompt
+                : typeof cfg.prompt === 'string'
+                  ? cfg.prompt
+                  : undefined;
+        const rawModel = typeof cfg.model === 'string' ? cfg.model : '';
+        const model =
+            rawModel && rawModel !== 'auto' && rawModel !== 'default' ? rawModel : undefined;
+        return {
+            id: node.id,
+            name: node.label,
+            role:
+                node.type === 'router'
+                    ? 'Semantic Router'
+                    : (cfg.roleName as string) || 'Autonomous Agent',
+            systemPrompt,
+            model,
+        };
     }
 
     spawnAgent(name: string, roleId?: string, config?: Record<string, unknown>) {

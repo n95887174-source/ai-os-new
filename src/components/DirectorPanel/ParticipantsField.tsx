@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
+import { agentService } from '../../kernel/instances/services-core';
 
 export interface ParticipantInput {
     id: string;
@@ -30,11 +31,20 @@ const ParticipantsField: React.FC<{
     onChange: (next: ParticipantInput[]) => void;
 }> = ({ value, onChange }) => {
     const { t } = useTranslation();
+    const [selected, setSelected] = useState('');
+
+    const agents = agentService.getAgents();
+    const available = agents.filter((a) => !value.some((p) => p.id === a.id));
 
     const update = (cb: (p: ParticipantInput, i: number) => ParticipantInput) =>
         onChange(value.map((p, i) => cb(p, i)));
     const remove = (idx: number) => onChange(value.filter((_, i) => i !== idx));
-    const add = () => onChange([...value, { id: `p${value.length + 1}`, role: '' }]);
+    const addSelected = () => {
+        const agent = agents.find((a) => a.id === selected);
+        if (!agent) return;
+        onChange([...value, { id: agent.id, role: agent.role }]);
+        setSelected('');
+    };
 
     return (
         <div>
@@ -54,10 +64,7 @@ const ParticipantsField: React.FC<{
                     <input
                         aria-label={t('director.configure.participant_id')}
                         value={p.id}
-                        onChange={(e) =>
-                            update((cur, i) => (i === idx ? { ...cur, id: e.target.value } : cur))
-                        }
-                        placeholder={t('director.configure.participant_id')}
+                        readOnly
                         style={{ ...inputStyle, width: 120 }}
                     />
                     <input
@@ -78,9 +85,29 @@ const ParticipantsField: React.FC<{
                     </button>
                 </div>
             ))}
-            <button onClick={add} style={btnStyle('#3b82f6')}>
-                {t('director.configure.add_participant')}
-            </button>
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
+                <select
+                    aria-label={t('director.configure.select_agent')}
+                    value={selected}
+                    onChange={(e) => setSelected(e.target.value)}
+                    style={{ ...inputStyle, flex: 1 }}
+                >
+                    <option value="">{t('director.configure.select_agent')}</option>
+                    {available.map((a) => (
+                        <option key={a.id} value={a.id}>
+                            {a.name} — {a.role}
+                        </option>
+                    ))}
+                </select>
+                <button onClick={addSelected} disabled={!selected} style={btnStyle('#3b82f6')}>
+                    {t('director.configure.add_participant')}
+                </button>
+            </div>
+            {agents.length === 0 && (
+                <p style={{ color: '#f59e0b', fontSize: '0.75rem', margin: '0.4rem 0 0' }}>
+                    {t('director.configure.no_agents')}
+                </p>
+            )}
         </div>
     );
 };
