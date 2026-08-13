@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventBus, EVENTS } from '../../kernel/instances';
-import { agentService } from '../../kernel/instances';
 import { glassPanel } from '../../styles/common';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 export interface ActivityEvent {
     id: string;
@@ -65,12 +65,8 @@ const lifecycleColors: Record<string, string> = {
 };
 
 const getAgentName = (id: string): string => {
-    try {
-        const agents = agentService.getAgents();
-        return (agents.find((a) => a.id === id)?.name || id.split('-').slice(-1)[0]!) as string;
-    } catch {
-        return id;
-    }
+    const identity = resolveAgentIdentity(id);
+    return identity.displayName || id;
 };
 
 export const LiveActivityStream: React.FC = () => {

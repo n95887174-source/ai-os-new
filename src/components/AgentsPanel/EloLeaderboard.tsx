@@ -3,6 +3,7 @@ import { Trophy, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from 
 import { eloService } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import type { AgentElo } from '../../kernel/services/elo/elo-service';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 const MEDAL_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
 
@@ -149,6 +150,7 @@ export const EloLeaderboard: React.FC = () => {
                     {entries.map((entry, idx) => {
                         const isTop3 = idx < 3;
                         const isExpanded = expandedId === entry.agentId;
+                        const identity = resolveAgentIdentity(entry.agentId);
                         return (
                             <React.Fragment key={entry.agentId}>
                                 <div
@@ -204,7 +206,7 @@ export const EloLeaderboard: React.FC = () => {
                                                 flexShrink: 0,
                                             }}
                                         >
-                                            {entry.agentName.charAt(0).toUpperCase()}
+                                            {identity.avatar.emoji}
                                         </div>
                                         <span
                                             style={{
@@ -216,7 +218,7 @@ export const EloLeaderboard: React.FC = () => {
                                                 whiteSpace: 'nowrap',
                                             }}
                                         >
-                                            {entry.agentName}
+                                            {identity.displayName}
                                         </span>
                                     </div>
                                     <div
