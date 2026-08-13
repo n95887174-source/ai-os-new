@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Pause, Play, Wrench } from 'lucide-react';
 import { memo } from 'react';
 import { AgentAvatar } from './AgentAvatar';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 import type { AgentWithStats } from './AgentsPanelContext';
 
 interface AgentCardProps {
@@ -19,6 +20,7 @@ export const AgentCard: React.FC<AgentCardProps> = memo(
         const successRate =
             stats && stats.calls > 0 ? (stats.calls - (stats.errors ?? 0)) / stats.calls : null;
         const latency = stats?.latency || 0;
+        const identity = resolveAgentIdentity(agent.id);
 
         return (
             <motion.div
@@ -51,11 +53,30 @@ export const AgentCard: React.FC<AgentCardProps> = memo(
                         <div
                             className={`agents-card-avatar agents-card-avatar--${agent.status === 'active' ? 'active' : 'paused'}`}
                         >
-                            <AgentAvatar agentId={agent.id} name={agent.name} size={36} />
+                            <AgentAvatar
+                                agentId={agent.id}
+                                name={agent.name}
+                                size={36}
+                                emoji={identity.avatar.emoji}
+                                color={identity.avatar.color}
+                                url={identity.avatar.url}
+                            />
                         </div>
                         <div className="agents-card-info">
                             <h3 className="agents-card-name">{agent.name}</h3>
                             <p className="agents-card-role">{agent.role}</p>
+                            {identity.specializations.length > 0 && (
+                                <p
+                                    style={{
+                                        margin: '0.1rem 0 0',
+                                        fontSize: '0.68rem',
+                                        opacity: 0.6,
+                                        lineHeight: 1.2,
+                                    }}
+                                >
+                                    {identity.specializations.join(' · ')}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <button

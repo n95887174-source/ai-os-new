@@ -57,6 +57,11 @@ interface AgentAvatarProps {
     name?: string;
     size?: number;
     ring?: boolean;
+    /** Optional canonical avatar override (emoji/color) from identity. */
+    emoji?: string;
+    color?: string;
+    /** Optional persistent image; when present the avatar renders an <img>. */
+    url?: string;
 }
 
 export const AgentAvatar: React.FC<AgentAvatarProps> = ({
@@ -64,8 +69,32 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
     name,
     size = 40,
     ring = false,
+    emoji,
+    color,
+    url,
 }) => {
-    const { color, emoji } = getAgentAvatar(agentId);
+    const fallback = getAgentAvatar(agentId);
+    const resolvedEmoji = emoji ?? fallback.emoji;
+    const resolvedColor = color ?? fallback.color;
+
+    if (url) {
+        return (
+            <img
+                src={url}
+                alt={name || agentId}
+                title={name || agentId}
+                width={size}
+                height={size}
+                style={{
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: ring ? `2px solid ${resolvedColor}` : '2px solid transparent',
+                    flexShrink: 0,
+                    userSelect: 'none',
+                }}
+            />
+        );
+    }
 
     return (
         <div
@@ -74,8 +103,8 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
                 width: size,
                 height: size,
                 borderRadius: '50%',
-                background: `${color}20`,
-                border: ring ? `2px solid ${color}` : '2px solid transparent',
+                background: `${resolvedColor}20`,
+                border: ring ? `2px solid ${resolvedColor}` : '2px solid transparent',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -85,7 +114,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
                 userSelect: 'none',
             }}
         >
-            {emoji}
+            {resolvedEmoji}
         </div>
     );
 };

@@ -60,6 +60,58 @@ export interface Avatar {
     seed: string;
 }
 
+/**
+ * Pure deterministic avatar generator (no instance state). Uses the same
+ * emoji/color pools as `AgentAvatar.tsx` so a seeded `config.avatar` matches
+ * the avatar that component renders for the same agent id.
+ */
+const SEED_EMOJI_POOL = [
+    '🤖',
+    '🧠',
+    '⚡',
+    '🔧',
+    '📊',
+    '🛡️',
+    '🎯',
+    '💡',
+    '🔬',
+    '🎨',
+    '📝',
+    '🚀',
+    '🧪',
+    '🏗️',
+    '🔍',
+    '⚙️',
+    '🌐',
+    '🧩',
+    '💻',
+    '🎪',
+];
+const SEED_COLOR_POOL = [
+    '#3b82f6',
+    '#10b981',
+    '#a855f7',
+    '#f59e0b',
+    '#ef4444',
+    '#06b6d4',
+    '#ec4899',
+    '#8b5cf6',
+    '#14b8a6',
+    '#f97316',
+    '#6366f1',
+    '#84cc16',
+];
+
+export function generateDeterministicAvatar(agentId: string): { emoji: string; color: string } {
+    const hash = hashString(agentId);
+    const emojiIndex = hash % SEED_EMOJI_POOL.length;
+    const colorIndex = (hash >> 4) % SEED_COLOR_POOL.length;
+    return {
+        emoji: SEED_EMOJI_POOL[emojiIndex]!,
+        color: SEED_COLOR_POOL[colorIndex]!,
+    };
+}
+
 const MAX_AVATARS = 200;
 
 export class AgentAvatarService {
@@ -203,13 +255,7 @@ export class AgentAvatarService {
     }
 
     private hashString(str: string): number {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = (hash << 5) - hash + char;
-            hash = hash & hash;
-        }
-        return Math.abs(hash);
+        return hashString(str);
     }
 
     /**
@@ -219,4 +265,14 @@ export class AgentAvatarService {
         this.customAvatars.clear();
         LOGGER.info('AgentAvatar', 'All custom avatars cleared');
     }
+}
+
+function hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash);
 }

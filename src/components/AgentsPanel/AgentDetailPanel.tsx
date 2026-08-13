@@ -1,4 +1,4 @@
-import { Bot, Copy, BookOpen, RefreshCw, Trash2, Pause, Play, X } from 'lucide-react';
+import { Copy, BookOpen, RefreshCw, Trash2, Pause, Play, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { templateService } from '../../kernel/instances';
 import type { ISNode } from '../../kernel/contracts/topology';
@@ -11,7 +11,25 @@ import AgentInfraTab from './AgentInfraTab';
 import AgentObservabilityTab from './AgentObservabilityTab';
 import AgentHandoffsTab from './AgentHandoffsTab';
 import AgentIdentityEditor from './AgentIdentityEditor';
+import { AgentAvatar } from './AgentAvatar';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 import type { AgentDetailPanelProps } from './AgentDetailPanelProps';
+
+const AgentAvatarHeader: React.FC<{ agent: AgentDetailPanelProps['agent'] }> = ({ agent }) => {
+    const identity = resolveAgentIdentity(agent.id);
+    return (
+        <div className="agents-modal-header-icon">
+            <AgentAvatar
+                agentId={agent.id}
+                name={agent.name}
+                size={36}
+                emoji={identity.avatar.emoji}
+                color={identity.avatar.color}
+                url={identity.avatar.url}
+            />
+        </div>
+    );
+};
 
 export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
     agent,
@@ -34,9 +52,7 @@ export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
         <div className="agents-modal glass-panel">
             <div className="agents-modal-header">
                 <div className="agents-modal-header-left">
-                    <div className="agents-modal-header-icon">
-                        <Bot size={28} color="#3b82f6" />
-                    </div>
+                    <AgentAvatarHeader agent={agent} />
                     <div className="agents-modal-header-info">
                         <h2 className="agents-modal-header-name">{agent.name}</h2>
                         <div className="agents-modal-header-meta">
