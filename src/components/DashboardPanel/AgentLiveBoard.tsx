@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Zap, Wrench, Brain, Terminal, Share2 } from 'lucide-react';
+import { Zap, Wrench, Brain, Terminal, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { eventBus } from '../../kernel/instances';
 import { estimateTokens } from '../../kernel/utils/tokenEstimate';
@@ -8,6 +8,8 @@ import { orchestrator } from '../../kernel/instances';
 import { getStatusColor } from '../Common/status-vocabulary';
 import { EVENTS } from '../../kernel/events/event-names';
 import type { AgentHealth } from '../../kernel/contracts/agent-health';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import { AgentAvatar } from '../AgentsPanel/AgentAvatar';
 
 interface AgentLiveState {
     id: string;
@@ -20,6 +22,8 @@ interface AgentLiveState {
     tokens: number;
     lastStep?: string;
     toolsInUse: string[];
+    avatar: { emoji: string; color: string; url?: string };
+    baseRole?: string;
 }
 
 const healthColor: Record<AgentHealth, string> = {
@@ -32,16 +36,28 @@ const healthColor: Record<AgentHealth, string> = {
 const getAgentsFromTopology = (): AgentLiveState[] => {
     const top = orchestrator.getActiveTopology();
     if (!top) return [];
-    return top.nodes.map((n) => ({
-        id: n.id,
-        name: n.label,
-        status: orchestrator.isNodeDisabled?.(n.id) ? 'paused' : 'idle',
-        health: 'healthy',
-        model: n.config?.model || 'auto',
-        latency: 0,
-        tokens: 0,
-        toolsInUse: n.config?.tools || [],
-    }));
+    return top.nodes.map((n) => {
+        const identity = resolveAgentIdentity(n.id);
+        return {
+            id: n.id,
+            name:
+                identity.displayName && identity.displayName !== n.id
+                    ? identity.displayName
+                    : n.label || n.id,
+            status: orchestrator.isNodeDisabled?.(n.id) ? 'paused' : 'idle',
+            health: 'healthy',
+            model: n.config?.model || 'auto',
+            latency: 0,
+            tokens: 0,
+            toolsInUse: n.config?.tools || [],
+            avatar: {
+                emoji: identity.avatar.emoji,
+                color: identity.avatar.color,
+                url: identity.avatar.url,
+            },
+            baseRole: identity.baseRole || undefined,
+        };
+    });
 };
 
 const AgentLiveBoard: React.FC = () => {
@@ -164,13 +180,13 @@ const AgentLiveBoard: React.FC = () => {
                                     position: 'relative',
                                 }}
                             >
-                                <Bot
-                                    size={28}
-                                    color={
-                                        agent.status === 'idle'
-                                            ? 'var(--text-muted)'
-                                            : getStatusColor(agent.status)
-                                    }
+                                <AgentAvatar
+                                    agentId={agent.id}
+                                    name={agent.name}
+                                    size={44}
+                                    emoji={agent.avatar.emoji}
+                                    color={agent.avatar.color}
+                                    url={agent.avatar.url}
                                 />
                                 {agent.status !== 'idle' && (
                                     <motion.div
@@ -193,6 +209,17 @@ const AgentLiveBoard: React.FC = () => {
                                 <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>
                                     {agent.name}
                                 </h3>
+                                {agent.baseRole && (
+                                    <div
+                                        style={{
+                                            fontSize: '0.72rem',
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {agent.baseRole}
+                                    </div>
+                                )}
                                 <div
                                     style={{
                                         display: 'flex',
