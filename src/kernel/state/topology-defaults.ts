@@ -2,6 +2,7 @@ import type { ISTopology, ISNode } from '../contracts/topology';
 import type { ArgumentStrategy } from '../contracts/debate-types';
 import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
 import { generateDeterministicAvatar } from '../services/agent-avatar-service';
+import { AGENT_PROFILES } from './agent-profiles';
 
 const CODER_TOOLS = ['code_interpreter', 'code_review', 'sandbox_exec'];
 const ANALYTICS_TOOLS = ['data_analysis', 'visualization', 'web_search'];
@@ -82,22 +83,36 @@ function assignArgumentStrategies(nodes: ISNode[]): ISNode[] {
 
 /**
  * Ensure every agent node carries a complete canonical identity so it renders
- * nicely everywhere without relying on runtime fallbacks. Identity is derived
- * from the node itself (no fabricated personal names): displayName ← label,
- * baseRole ← roleName, avatar ← deterministic id hash. Existing fields win.
+ * nicely everywhere. Curated personas (first/last name, base role, avatar,
+ * model, specializations) come from `AGENT_PROFILES` keyed by node id; any
+ * agent without a curated profile falls back to derived values (displayName ←
+ * label, baseRole ← roleName, avatar ← deterministic id hash).
  */
 function normalizeAgentIdentity(nodes: ISNode[]): ISNode[] {
     return nodes.map((node) => {
         if (node.type !== 'agent') return node;
         const cfg = node.config as Record<string, unknown>;
         const next: Record<string, unknown> = { ...cfg };
-        if (next.displayName === undefined) next.displayName = node.label;
-        if (next.baseRole === undefined) next.baseRole = (cfg.roleName as string) ?? node.label;
-        if (next.specializations === undefined) next.specializations = [];
-        if (next.lensIds === undefined) next.lensIds = [];
-        if (next.avatar === undefined) {
-            const { emoji, color } = generateDeterministicAvatar(node.id);
-            next.avatar = { emoji, color };
+        const profile = AGENT_PROFILES[node.id];
+        if (profile) {
+            next.displayName = profile.displayName;
+            next.firstName = profile.firstName;
+            next.lastName = profile.lastName;
+            next.baseRole = profile.baseRole;
+            next.specializations = profile.specializations;
+            next.avatar = profile.avatar;
+            next.provider = profile.provider;
+            next.model = profile.model;
+            if (next.lensIds === undefined) next.lensIds = [];
+        } else {
+            if (next.displayName === undefined) next.displayName = node.label;
+            if (next.baseRole === undefined) next.baseRole = (cfg.roleName as string) ?? node.label;
+            if (next.specializations === undefined) next.specializations = [];
+            if (next.lensIds === undefined) next.lensIds = [];
+            if (next.avatar === undefined) {
+                const { emoji, color } = generateDeterministicAvatar(node.id);
+                next.avatar = { emoji, color };
+            }
         }
         return { ...node, config: next as ISNode['config'] };
     });

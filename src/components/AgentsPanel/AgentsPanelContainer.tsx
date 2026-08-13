@@ -5,6 +5,7 @@ import { toolService } from '../../kernel/instances';
 import { roleService } from '../../kernel/instances';
 import { useKeyStore } from '../../stores/useKeyStore';
 import { eventBus, EVENTS } from '../../kernel/instances';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 import { rootLogger } from '../../kernel/instances';
 const LOGGER = rootLogger.child('AgentsPanel');
 import AgentsPanelView from './AgentsPanelView';
@@ -44,26 +45,34 @@ const getAgentsFromTopology = (): Agent[] => {
     if (!top) return [];
     return top.nodes
         .filter((n) => n.type === 'agent' || n.type === 'router')
-        .map((n) => ({
-            id: n.id,
-            name: n.label,
-            role:
+        .map((n) => {
+            const identity = resolveAgentIdentity(n.id);
+            const name =
+                identity.displayName && identity.displayName !== n.id
+                    ? identity.displayName
+                    : n.label;
+            const role =
                 n.type === 'router'
                     ? 'Semantic Router'
-                    : String(n.config.roleName ?? '') || 'Autonomous Agent',
-            roleId: n.config.roleId ? String(n.config.roleId) : undefined,
-            description: n.config.prompt || 'No specific description.',
-            providerId: n.config.provider || 'Auto',
-            model: n.config.model || 'auto',
-            status: getAgentStatus(n.id),
-            temperature: n.config.temperature ?? 0.7,
-            tools: Array.isArray(n.config.tools) ? n.config.tools : [],
-            skills: Array.isArray(n.config.skills) ? n.config.skills : [],
-            systemPrompt: n.config.prompt || '',
-            hilEnabled: Boolean(n.config.hilEnabled ?? false),
-            vpcEnabled: Boolean(n.config.vpcEnabled ?? true),
-            stats: { calls: 0, tokens: 0, latency: 0 },
-        }));
+                    : identity.baseRole || String(n.config.roleName ?? '') || 'Autonomous Agent';
+            return {
+                id: n.id,
+                name,
+                role,
+                roleId: n.config.roleId ? String(n.config.roleId) : undefined,
+                description: n.config.prompt || 'No specific description.',
+                providerId: n.config.provider || 'Auto',
+                model: n.config.model || 'auto',
+                status: getAgentStatus(n.id),
+                temperature: n.config.temperature ?? 0.7,
+                tools: Array.isArray(n.config.tools) ? n.config.tools : [],
+                skills: Array.isArray(n.config.skills) ? n.config.skills : [],
+                systemPrompt: n.config.prompt || '',
+                hilEnabled: Boolean(n.config.hilEnabled ?? false),
+                vpcEnabled: Boolean(n.config.vpcEnabled ?? true),
+                stats: { calls: 0, tokens: 0, latency: 0 },
+            };
+        });
 };
 
 const AgentsPanelContainer: React.FC = () => {
