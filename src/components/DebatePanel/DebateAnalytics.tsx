@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Target, Shield, TrendingUp, Zap, Users, Bot } from 'lucide-react';
+import { BarChart3, Target, Shield, TrendingUp, Zap, Users } from 'lucide-react';
 import type { DebateSession } from '../../kernel/instances';
 import {
     glassPanelRounded24,
@@ -16,6 +16,8 @@ import CausalAnalysisSection from './CausalAnalysisSection';
 import QualityMetricsSection from './QualityMetricsSection';
 import ActivitySection from './ActivitySection';
 import RoundTimeline from './RoundTimeline';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import { AgentAvatar } from '../AgentsPanel/AgentAvatar';
 
 interface DebateAnalyticsProps {
     session: DebateSession;
@@ -370,6 +372,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                         }, [])
                         .map((p, idx) => {
                             const agentCount = args.filter((a) => a.agentId === p.id).length;
+                            const identity = resolveAgentIdentity(p.id);
                             return (
                                 <motion.div
                                     key={`${p.id}-${idx}`}
@@ -379,28 +382,23 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                     transition={{ type: 'spring', delay: idx * 0.1 }}
                                     className="debate-participant"
                                 >
-                                    <div
-                                        style={{
-                                            width: 44,
-                                            height: 44,
-                                            borderRadius: 12,
-                                            background: 'rgba(59,130,246,0.15)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            border: '1px solid rgba(59,130,246,0.3)',
-                                        }}
-                                    >
-                                        <Bot size={22} color="#3b82f6" />
-                                    </div>
+                                    <AgentAvatar
+                                        agentId={p.id}
+                                        name={identity.displayName}
+                                        size={44}
+                                        emoji={identity.avatar.emoji}
+                                        color={identity.avatar.color}
+                                        url={identity.avatar.url}
+                                    />
                                     <div style={{ flex: 1 }}>
                                         <div
                                             className="debate-agent-name"
                                             style={{ fontSize: '0.95rem' }}
                                         >
-                                            {getAgentLabel(p.id)}
+                                            {identity.displayName || getAgentLabel(p.id)}
                                         </div>
                                         <div className="debate-secondary-text">
+                                            {identity.baseRole ? `${identity.baseRole} · ` : ''}
                                             {agentCount} {t('debate.total_arguments').toLowerCase()}
                                         </div>
                                     </div>
