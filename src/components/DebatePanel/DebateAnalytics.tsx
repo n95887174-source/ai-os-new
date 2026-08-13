@@ -178,7 +178,13 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                 >
                                     You:{' '}
                                     {row.humanPicks.length > 0
-                                        ? row.humanPicks.map(getAgentLabel).join(', ')
+                                        ? row.humanPicks
+                                              .map(
+                                                  (p) =>
+                                                      resolveAgentIdentity(p).displayName ||
+                                                      getAgentLabel(p),
+                                              )
+                                              .join(', ')
                                         : '\u2014'}
                                 </div>
                                 <div
@@ -189,7 +195,10 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                     }}
                                 >
                                     AI (top confidence):{' '}
-                                    {row.aiPick ? getAgentLabel(row.aiPick) : '\u2014'}
+                                    {row.aiPick
+                                        ? resolveAgentIdentity(row.aiPick).displayName ||
+                                          getAgentLabel(row.aiPick)
+                                        : '\u2014'}
                                 </div>
                             </div>
                         ))}

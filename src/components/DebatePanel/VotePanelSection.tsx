@@ -9,6 +9,7 @@ import {
     debateVoteStatusRow,
     debateVoteDismissBtn,
 } from '../../styles/common';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 interface Props {
     showVotePanel: number | null;
@@ -98,7 +99,8 @@ const VotePanelSection: React.FC<Props> = ({
                                 color: isBest ? '#facc15' : '#cbd5e1',
                             }}
                         >
-                            {isBest ? '★' : '☆'} {getAgentLabel(agentId)}
+                            {isBest ? '★' : '☆'}{' '}
+                            {resolveAgentIdentity(agentId).displayName || getAgentLabel(agentId)}
                         </button>
                     );
                 })}

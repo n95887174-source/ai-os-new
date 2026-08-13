@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Target, Brain, AlertTriangle, Check, X, Clock } from 'lucide-react';
+import { Target, Brain, AlertTriangle, Check, X, Clock } from 'lucide-react';
 import type { DebateArgument } from '../../kernel/instances';
 import { flexCenterGap6px, textMutedSm } from '../../styles/common';
 import { FactCheckBadge } from './FactCheckBadge';
 import { MarkdownRenderer } from '../ChatPanel/MarkdownRenderer';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 interface AgentErrorEntry {
     agentId: string;
@@ -26,7 +27,6 @@ interface DebateChatProps {
 const DebateChat: React.FC<DebateChatProps> = ({
     arguments: args,
     t,
-    agentLabel,
     streamingArgIds,
     agentErrors,
 }) => {
@@ -39,10 +39,6 @@ const DebateChat: React.FC<DebateChatProps> = ({
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [lastArgId, lastArgContentLen]);
-    const getAgentLabel = (agentId: string): string => {
-        if (agentLabel) return agentLabel(agentId);
-        return agentId;
-    };
     const errors = agentErrors ?? [];
     const hasErrors = errors.length > 0;
     const allFailed = hasErrors && args.length === 0;
@@ -102,6 +98,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                     const positionColor = isPro ? '#3b82f6' : isCon ? '#ef4444' : '#94a3b8';
                     const positionLabel = isPro ? 'PRO' : isCon ? 'CON' : 'NEU';
                     const color = isUser ? '#10b981' : positionColor;
+                    const identity = resolveAgentIdentity(arg.agentId);
 
                     const bg = isUser
                         ? 'linear-gradient(145deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 100%)'
@@ -144,8 +141,18 @@ const DebateChat: React.FC<DebateChatProps> = ({
                             >
                                 {isUser ? (
                                     <Target size={22} color="white" />
+                                ) : identity.avatar.url ? (
+                                    <img
+                                        src={identity.avatar.url}
+                                        alt={identity.displayName}
+                                        width={30}
+                                        height={30}
+                                        style={{ borderRadius: '50%', objectFit: 'cover' }}
+                                    />
                                 ) : (
-                                    <Bot size={22} color="white" />
+                                    <span style={{ fontSize: 22, lineHeight: 1 }}>
+                                        {identity.avatar.emoji}
+                                    </span>
                                 )}
                             </div>
                             <div
@@ -169,7 +176,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                                         className="debate-agent-name"
                                         style={{ fontWeight: 700, fontSize: '0.85rem', color }}
                                     >
-                                        {getAgentLabel(arg.agentId)}
+                                        {identity.displayName}
                                     </span>
                                     <span className="debate-badge" style={flexCenterGap6px}>
                                         {arg.provider && (
@@ -419,7 +426,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                                                 marginBottom: '0.25rem',
                                             }}
                                         >
-                                            {getAgentLabel(err.agentId)}
+                                            {resolveAgentIdentity(err.agentId).displayName}
                                             <span
                                                 style={{
                                                     marginLeft: '0.5rem',
