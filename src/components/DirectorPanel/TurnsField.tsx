@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { TurnProposal } from '../../kernel/contracts/conversation/turn';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 const TURN_TYPES: TurnProposal['objective']['type'][] = [
     'INTRODUCE',
@@ -11,6 +12,16 @@ const TURN_TYPES: TurnProposal['objective']['type'][] = [
     'CHALLENGE',
     'CUSTOM',
 ];
+
+const OBJECTIVE_KEY: Record<TurnProposal['objective']['type'], string> = {
+    INTRODUCE: 'director.objective.introduce',
+    CRITIQUE: 'director.objective.critique',
+    RESPOND: 'director.objective.respond',
+    ANALYZE: 'director.objective.analyze',
+    SUMMARIZE: 'director.objective.summarize',
+    CHALLENGE: 'director.objective.challenge',
+    CUSTOM: 'director.objective.custom',
+};
 
 const inputStyle: React.CSSProperties = {
     background: 'rgba(0,0,0,0.25)',
@@ -122,7 +133,7 @@ const TurnsField: React.FC<{
                             ) : (
                                 participantIds.map((pid) => (
                                     <option key={pid} value={pid}>
-                                        {pid}
+                                        {resolveAgentIdentity(pid).displayName}
                                     </option>
                                 ))
                             )}
@@ -139,7 +150,7 @@ const TurnsField: React.FC<{
                         >
                             {TURN_TYPES.map((ty) => (
                                 <option key={ty} value={ty}>
-                                    {ty}
+                                    {t(OBJECTIVE_KEY[ty])}
                                 </option>
                             ))}
                         </select>

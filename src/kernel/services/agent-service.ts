@@ -1,5 +1,9 @@
 import type { ISTopology, AgentLifecycleState, ISNode } from '../contracts/topology';
-import type { IAgentResolver, ResolvedAgent } from '../contracts/conversation/agent-resolver';
+import type {
+    IAgentResolver,
+    ResolvedAgent,
+    ResolvedAgentAvatar,
+} from '../contracts/conversation/agent-resolver';
 import type { NodeContext } from '../types/domain-types';
 import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
@@ -347,15 +351,41 @@ export class AgentService implements IAgentResolver {
         const rawModel = typeof cfg.model === 'string' ? cfg.model : '';
         const model =
             rawModel && rawModel !== 'auto' && rawModel !== 'default' ? rawModel : undefined;
+        const baseRoleName =
+            node.type === 'router'
+                ? 'Semantic Router'
+                : (cfg.roleName as string) || 'Autonomous Agent';
+        const asStringArray = (v: unknown): string[] =>
+            Array.isArray(v) ? v.map((x) => String(x)).filter((s) => s.length > 0) : [];
+        const avatarCfg = (cfg.avatar ?? cfg.avatarOverride) as ResolvedAgentAvatar | undefined;
+        const avatar: ResolvedAgentAvatar | undefined =
+            avatarCfg && typeof avatarCfg === 'object'
+                ? {
+                      emoji: typeof avatarCfg.emoji === 'string' ? avatarCfg.emoji : undefined,
+                      color: typeof avatarCfg.color === 'string' ? avatarCfg.color : undefined,
+                      url: typeof avatarCfg.url === 'string' ? avatarCfg.url : undefined,
+                  }
+                : undefined;
         return {
             id: node.id,
             name: node.label,
-            role:
-                node.type === 'router'
-                    ? 'Semantic Router'
-                    : (cfg.roleName as string) || 'Autonomous Agent',
+            role: baseRoleName,
             systemPrompt,
             model,
+            displayName:
+                typeof cfg.displayName === 'string' && cfg.displayName.trim().length > 0
+                    ? cfg.displayName
+                    : node.label,
+            firstName: typeof cfg.firstName === 'string' ? cfg.firstName : undefined,
+            lastName: typeof cfg.lastName === 'string' ? cfg.lastName : undefined,
+            baseRole:
+                typeof cfg.baseRole === 'string' && cfg.baseRole.trim().length > 0
+                    ? cfg.baseRole
+                    : baseRoleName,
+            specializations: asStringArray(cfg.specializations),
+            lensIds: asStringArray(cfg.lensIds),
+            provider: typeof cfg.provider === 'string' && cfg.provider ? cfg.provider : undefined,
+            avatar,
         };
     }
 

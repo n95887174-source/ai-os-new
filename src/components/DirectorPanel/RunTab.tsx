@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ConversationScenario } from '../../kernel/contracts/conversation/scenario';
 import type { TurnProposal } from '../../kernel/contracts/conversation/turn';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import AgentIdentityChip from './AgentIdentityChip';
 import { createDirectorControls } from '../../stores/directorController';
 import { useDirectorStore } from '../../stores/directorStore';
 
@@ -58,6 +60,13 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
     const done = turnLog.filter((e) => e.status === 'complete').length;
     const progress = total > 0 ? Math.round((done / total) * 100) : 0;
 
+    const conversationRoleOf = (pid?: string | null) =>
+        pid ? scenario.participants.find((p) => p.id === pid)?.role : undefined;
+    const currentIdentity = useMemo(
+        () => resolveAgentIdentity(currentParticipantId ?? ''),
+        [currentParticipantId],
+    );
+
     const handleRun = async () => {
         await controls.load(scenario.id);
         await controls.run();
@@ -95,9 +104,18 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                 <span className={`badge status-${status}`}>
                     {t(`director.run.status.${status}`)}
                 </span>
-                <span style={{ fontSize: '0.8rem' }}>
-                    {t('director.run.current')}: {currentParticipantId ?? '—'}
-                </span>
+                {currentParticipantId && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.72rem', opacity: 0.6 }}>
+                            {t('director.run.current')}:
+                        </span>
+                        <AgentIdentityChip
+                            identity={currentIdentity}
+                            conversationRole={conversationRoleOf(currentParticipantId)}
+                            size={28}
+                        />
+                    </div>
+                )}
                 {currentTurn && (
                     <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
                         {t('director.run.objective')}: {currentTurn.objective.description}
@@ -152,7 +170,7 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                             <option value="">{t('director.run.overrideParticipant')}</option>
                             {scenario.participants.map((p) => (
                                 <option key={p.id} value={p.id}>
-                                    {p.id}
+                                    {resolveAgentIdentity(p.id).displayName} · {p.role}
                                 </option>
                             ))}
                         </select>
@@ -173,20 +191,35 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
 
             <h4 style={{ margin: '1rem 0 0.5rem' }}>{t('director.run.log')}</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {turnLog.map((e, i) => (
-                    <li key={i} style={{ ...LOG_ROW, opacity: e.status === 'running' ? 1 : 0.8 }}>
-                        <span style={{ fontWeight: 600 }}>{e.participantId}</span>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                            {t(`director.run.turnStatus.${e.status}`)}
-                        </span>
-                        {e.content && (
-                            <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>{e.content}</span>
-                        )}
-                        {e.success === false && (
-                            <span style={{ color: '#f87171', fontSize: '0.75rem' }}>{e.error}</span>
-                        )}
-                    </li>
-                ))}
+                {turnLog.map((e, i) => {
+                    const identity = resolveAgentIdentity(e.participantId);
+                    const convRole = conversationRoleOf(e.participantId);
+                    return (
+                        <li
+                            key={i}
+                            style={{ ...LOG_ROW, opacity: e.status === 'running' ? 1 : 0.8 }}
+                        >
+                            <AgentIdentityChip
+                                identity={identity}
+                                conversationRole={convRole}
+                                size={28}
+                            />
+                            <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                                {t(`director.run.turnStatus.${e.status}`)}
+                            </span>
+                            {e.content && (
+                                <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                                    {e.content}
+                                </span>
+                            )}
+                            {e.success === false && (
+                                <span style={{ color: '#f87171', fontSize: '0.75rem' }}>
+                                    {e.error}
+                                </span>
+                            )}
+                        </li>
+                    );
+                })}
                 {turnLog.length === 0 && (
                     <li style={{ opacity: 0.5, fontSize: '0.8rem' }}>
                         {t('director.run.logEmpty')}

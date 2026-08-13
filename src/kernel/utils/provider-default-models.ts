@@ -21,3 +21,20 @@ export const PROVIDER_PREFERRED_MODELS: Record<string, string[]> = {
     nvidia: ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct', 'mistral-7b-instruct'],
     'nvidia-nim': ['meta/llama-3.1-8b-instruct', 'meta/llama-3.3-70b-instruct'],
 };
+
+/** Human-readable provider names keyed by the canonical provider slug.
+ *  Reused by the Agent Identity view so "Groq" / "Meta" is shown instead of
+ *  an inferred model prefix. */
+export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+    groq: 'Groq',
+    gemini: 'Google',
+    gemini_flash: 'Google',
+    gemini_pro: 'Google',
+    anthropic: 'Anthropic',
+    openrouter: 'OpenRouter',
+    nvidia: 'NVIDIA',
+    'nvidia-nim': 'NVIDIA',
+    openai: 'OpenAI',
+    cerebras: 'Cerebras',
+    cloudflare: 'Cloudflare',
+};

@@ -432,6 +432,17 @@ const analytics: Record<string, string> = {
     'director.run.turnStatus.running': 'running',
     'director.run.turnStatus.complete': 'complete',
     'director.run.turnStatus.error': 'error',
+
+    // Agent identity (separate from the per-conversation role)
+    'director.configure.agent': 'Agent',
+    'director.configure.conversation_role': 'Conversation role',
+    'director.objective.introduce': 'Introduce',
+    'director.objective.critique': 'Critique',
+    'director.objective.respond': 'Respond',
+    'director.objective.analyze': 'Analyze',
+    'director.objective.summarize': 'Summarize',
+    'director.objective.challenge': 'Challenge',
+    'director.objective.custom': 'Custom',
 };
 
 export { analytics };

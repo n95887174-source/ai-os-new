@@ -431,6 +431,17 @@ const analytics: Record<string, string> = {
     'director.run.turnStatus.running': 'выполняется',
     'director.run.turnStatus.complete': 'завершён',
     'director.run.turnStatus.error': 'ошибка',
+
+    // Agent identity (separate from the per-conversation role)
+    'director.configure.agent': 'Агент',
+    'director.configure.conversation_role': 'Роль в беседе',
+    'director.objective.introduce': 'Представление',
+    'director.objective.critique': 'Критика',
+    'director.objective.respond': 'Ответ',
+    'director.objective.analyze': 'Анализ',
+    'director.objective.summarize': 'Резюме',
+    'director.objective.challenge': 'Возражение',
+    'director.objective.custom': 'Произвольно',
 };
 
 export { analytics };
