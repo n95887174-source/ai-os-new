@@ -45,7 +45,9 @@ const AgentIdentityChip: React.FC<{
             <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.2 }}>
                     {identity.displayName}
-                    {identity.firstName && identity.lastName ? (
+                    {identity.firstName &&
+                    identity.lastName &&
+                    identity.displayName !== `${identity.firstName} ${identity.lastName}` ? (
                         <span style={{ opacity: 0.6, fontWeight: 400 }}>
                             {' '}
                             · {identity.firstName} {identity.lastName}
