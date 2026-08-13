@@ -18,4 +18,12 @@ export interface ITurnPolicy {
 export interface IOverrideCapablePolicy extends ITurnPolicy {
     queueOverride(proposal: TurnProposal): void;
     skipNextTurn(): void;
+    /**
+     * Observability only — describes the origin of the proposal returned by the
+     * most recent `proposeNextTurn` so the orchestrator/UI can distinguish a
+     * scripted (planned) turn from an operator-injected override and bind it to
+     * its index in the scenario's turn list. Optional: absent on policies that
+     * do not track provenance.
+     */
+    describeLastProposal?(): { index: number; injected: boolean } | null;
 }

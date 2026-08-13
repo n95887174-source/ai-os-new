@@ -9,6 +9,10 @@ export interface DirectorTurnLogEntry {
     success?: boolean;
     error?: string;
     content?: string;
+    /** Index of this turn in the scenario's planned turn list (-1 / absent for operator-injected overrides). */
+    turnIndex?: number;
+    /** True when this turn was injected by an operator override rather than from the scripted plan. */
+    injected?: boolean;
 }
 
 export interface DirectorStoreState {
@@ -28,30 +32,40 @@ export interface DirectorStoreState {
  */
 export const useDirectorStore = create<DirectorStoreState>((set) => {
     const subs = [
-        eventBus.onSafe<{ sessionId: string; participantId: string }>(
-            EVENTS.CONVERSATION_TURN_START,
-            (d) =>
-                set((s) => {
-                    // A turn starting while paused/aborted (an in-flight turn resuming)
-                    // must not resurrect `running` — the lifecycle status wins.
-                    const status =
-                        s.status === 'paused' || s.status === 'aborted' ? s.status : 'running';
-                    return {
-                        sessionId: d.sessionId,
-                        status,
-                        currentParticipantId: d.participantId,
-                        turnLog: [
-                            ...s.turnLog,
-                            { participantId: d.participantId, status: 'running' },
-                        ],
-                    };
-                }),
+        eventBus.onSafe<{
+            sessionId: string;
+            participantId: string;
+            turnIndex?: number;
+            injected?: boolean;
+        }>(EVENTS.CONVERSATION_TURN_START, (d) =>
+            set((s) => {
+                // A turn starting while paused/aborted (an in-flight turn resuming)
+                // must not resurrect `running` — the lifecycle status wins.
+                const status =
+                    s.status === 'paused' || s.status === 'aborted' ? s.status : 'running';
+                return {
+                    sessionId: d.sessionId,
+                    status,
+                    currentParticipantId: d.participantId,
+                    turnLog: [
+                        ...s.turnLog,
+                        {
+                            participantId: d.participantId,
+                            status: 'running',
+                            turnIndex: d.turnIndex,
+                            injected: d.injected,
+                        },
+                    ],
+                };
+            }),
         ),
         eventBus.onSafe<{
             sessionId: string;
             participantId: string;
             success: boolean;
             content?: string;
+            turnIndex?: number;
+            injected?: boolean;
         }>(EVENTS.CONVERSATION_TURN_COMPLETE, (d) =>
             set((s) => {
                 const log = [...s.turnLog];
@@ -65,6 +79,8 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
                         status: 'complete',
                         success: d.success,
                         content: d.content,
+                        turnIndex: d.turnIndex,
+                        injected: d.injected,
                     };
                 }
                 // A turn completing after a pause/abort must not resurrect `running`.
@@ -73,22 +89,32 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
                 return { status, currentParticipantId: null, turnLog: log };
             }),
         ),
-        eventBus.onSafe<{ sessionId: string; participantId: string; error: string }>(
-            EVENTS.CONVERSATION_TURN_ERROR,
-            (d) =>
-                set((s) => {
-                    const log = [...s.turnLog];
-                    const idx = log.findIndex(
-                        (e) => e.participantId === d.participantId && e.status === 'running',
-                    );
-                    if (idx >= 0) {
-                        const entry = log[idx]!;
-                        log[idx] = { ...entry, status: 'error', error: d.error };
-                    }
-                    const status =
-                        s.status === 'paused' || s.status === 'aborted' ? s.status : 'error';
-                    return { status, currentParticipantId: null, turnLog: log };
-                }),
+        eventBus.onSafe<{
+            sessionId: string;
+            participantId: string;
+            error: string;
+            turnIndex?: number;
+            injected?: boolean;
+        }>(EVENTS.CONVERSATION_TURN_ERROR, (d) =>
+            set((s) => {
+                const log = [...s.turnLog];
+                const idx = log.findIndex(
+                    (e) => e.participantId === d.participantId && e.status === 'running',
+                );
+                if (idx >= 0) {
+                    const entry = log[idx]!;
+                    log[idx] = {
+                        ...entry,
+                        status: 'error',
+                        success: false,
+                        error: d.error,
+                        turnIndex: d.turnIndex,
+                        injected: d.injected,
+                    };
+                }
+                const status = s.status === 'paused' || s.status === 'aborted' ? s.status : 'error';
+                return { status, currentParticipantId: null, turnLog: log };
+            }),
         ),
         eventBus.onSafe<{ sessionId: string }>(EVENTS.CONVERSATION_PAUSED, (d) =>
             set({ status: 'paused', sessionId: d.sessionId }),

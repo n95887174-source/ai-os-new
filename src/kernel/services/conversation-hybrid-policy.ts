@@ -19,6 +19,8 @@ export class HybridPolicy implements IOverrideCapablePolicy {
     private cursor = 0;
     private overrideQueue: TurnProposal[] = [];
     private skipNext = false;
+    private lastIndex = -1;
+    private lastInjected = false;
 
     constructor(private readonly script: TurnProposal[]) {}
 
@@ -27,6 +29,8 @@ export class HybridPolicy implements IOverrideCapablePolicy {
         _state: PolicyState,
     ): Promise<TurnProposal | null> {
         if (this.overrideQueue.length > 0) {
+            this.lastInjected = true;
+            this.lastIndex = -1;
             return this.overrideQueue.shift()!;
         }
 
@@ -37,6 +41,8 @@ export class HybridPolicy implements IOverrideCapablePolicy {
 
         if (this.cursor >= this.script.length) return null;
         const proposal = this.script[this.cursor]!;
+        this.lastInjected = false;
+        this.lastIndex = this.cursor;
         this.cursor++;
         return proposal;
     }
@@ -49,9 +55,16 @@ export class HybridPolicy implements IOverrideCapablePolicy {
         this.skipNext = true;
     }
 
+    describeLastProposal(): { index: number; injected: boolean } | null {
+        if (this.lastIndex < 0 && !this.lastInjected) return null;
+        return { index: this.lastIndex, injected: this.lastInjected };
+    }
+
     reset(): void {
         this.cursor = 0;
         this.overrideQueue = [];
         this.skipNext = false;
+        this.lastIndex = -1;
+        this.lastInjected = false;
     }
 }

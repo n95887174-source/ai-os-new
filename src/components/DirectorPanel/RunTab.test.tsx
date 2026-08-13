@@ -46,6 +46,9 @@ vi.mock('../../i18n/useTranslation', () => ({
                 'director.run.current': 'Current',
                 'director.run.objective': 'Objective',
                 'director.run.progress': 'Progress',
+                'director.run.progress.planned': 'planned',
+                'director.run.progress.injected': 'injected',
+                'director.run.progress.failed': 'failed',
                 'director.run.run': 'Run',
                 'director.run.pause': 'Pause',
                 'director.run.resume': 'Resume',
@@ -138,7 +141,7 @@ describe('RunTab (B5.4c Run UI)', () => {
             });
         });
         expect(screen.getByText('Running')).toBeDefined();
-        expect(screen.getByText('Progress: 0/2')).toBeDefined();
+        expect(screen.getByText('Progress: 0/2 planned')).toBeDefined();
         expect(
             screen.getByText((_, el) => (el?.textContent ?? '') === 'Objective: plan A'),
         ).toBeDefined(); // current turn objective

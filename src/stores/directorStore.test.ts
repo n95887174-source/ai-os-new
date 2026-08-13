@@ -45,7 +45,9 @@ describe('DirectorStore (B4) — observes conversation:* events', () => {
         });
         const s = useDirectorStore.getState();
         expect(s.status).toBe('error');
-        expect(s.turnLog).toEqual([{ participantId: 'a', status: 'error', error: 'boom' }]);
+        expect(s.turnLog).toEqual([
+            { participantId: 'a', status: 'error', success: false, error: 'boom' },
+        ]);
     });
 
     it('paused / resumed / aborted update status', () => {

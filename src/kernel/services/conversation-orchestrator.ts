@@ -5,7 +5,7 @@ import type {
     IOverrideCapablePolicy,
     PolicyState,
 } from '../contracts/conversation/policy';
-import type { IExecutionEngine } from '../contracts/conversation/execution';
+import type { IExecutionEngine, TurnResult } from '../contracts/conversation/execution';
 import type { ConversationContext } from '../contracts/conversation/context';
 import type { IEventBus } from '../types/interfaces';
 import { eventBus as coreEventBus, EVENTS } from '../events/event-bus';
@@ -67,35 +67,65 @@ export class ConversationOrchestrator implements IConversationOrchestrator {
             return;
         }
 
+        // Provenance of this turn (planned scripted index vs operator-injected
+        // override) for correct step binding and progress accounting in the UI.
+        const info = (this.policy as IOverrideCapablePolicy).describeLastProposal?.() ?? null;
+        const turnIndex = info ? info.index : -1;
+        const injected = info ? info.injected : false;
+
         this.activeSessionId = sessionId;
         this.eventBus.emit(EVENTS.CONVERSATION_TURN_START, {
             sessionId,
             participantId: proposal.participantId,
+            turnIndex,
+            injected,
         });
+
+        let result: TurnResult;
         try {
-            const result = await this.executionEngine.execute(
+            result = await this.executionEngine.execute(
                 proposal,
                 this.context,
                 this.getAbortSignal(sessionId),
             );
-            this.context.history.push({
-                role: proposal.participantId,
-                content: result.content ?? '',
-            });
-            this.eventBus.emit(EVENTS.CONVERSATION_TURN_COMPLETE, {
-                sessionId,
-                participantId: proposal.participantId,
-                success: true,
-                content: result.content,
-            });
         } catch (e) {
             this.eventBus.emit(EVENTS.CONVERSATION_TURN_ERROR, {
                 sessionId,
                 participantId: proposal.participantId,
+                turnIndex,
+                injected,
                 error: e instanceof Error ? e.message : String(e),
             });
             throw e;
         }
+
+        // A turn that executed but reported failure must be surfaced as FAILED,
+        // never as a successful completion. Previously `success` was hardcoded to
+        // true, so a failed LLM call still showed COMPLETE to the operator.
+        if (!result.success) {
+            const reason = result.error ?? 'turn execution failed';
+            this.eventBus.emit(EVENTS.CONVERSATION_TURN_ERROR, {
+                sessionId,
+                participantId: proposal.participantId,
+                turnIndex,
+                injected,
+                error: reason,
+            });
+            throw new Error(reason);
+        }
+
+        this.context.history.push({
+            role: proposal.participantId,
+            content: result.content ?? '',
+        });
+        this.eventBus.emit(EVENTS.CONVERSATION_TURN_COMPLETE, {
+            sessionId,
+            participantId: proposal.participantId,
+            turnIndex,
+            injected,
+            success: true,
+            content: result.content,
+        });
     }
 
     pause(): void {

@@ -139,4 +139,49 @@ describe('Director controls + DirectorStore binding (B5.4b)', () => {
         expect(s.turnLog).toEqual([]);
         expect(s.currentParticipantId).toBeNull();
     });
+
+    it('a failed turn moves the session to error instead of completed (truthfulness)', async () => {
+        const emit = eventBus.emit.bind(eventBus) as unknown as (e: string, d: unknown) => void;
+        const failingExecutor: IChatExecutorAdapter = {
+            handleMessage: (req: { requestId: string; messages: Array<{ content: string }> }) => {
+                Promise.resolve().then(() =>
+                    emit(EVENTS.MESSAGE_RESPONSE, {
+                        id: req.requestId,
+                        requestId: req.requestId,
+                        provider: 'test',
+                        model: 'test',
+                        content: '',
+                        latency: 1,
+                        status: 'error',
+                        error: 'llm down',
+                        tokens: 0,
+                    }),
+                );
+            },
+            cancelRequest: () => {},
+        };
+        const failingRepo = new ScenarioRepository(tdb.db);
+        const failingScenario = await failingRepo.create({
+            name: 'fail',
+            description: 'fail',
+            participants: [
+                { id: 'architect', role: 'Architect' },
+                { id: 'auditor', role: 'Auditor' },
+            ],
+            turns: PLAN,
+        });
+        const failingService = new ConversationDirectorService(
+            failingRepo,
+            new ChatExecutionEngine(failingExecutor, eventBus),
+        );
+        const failingControls = createDirectorControls(failingService);
+        await failingControls.load(failingScenario.id);
+        // A failed turn must surface as error, not be swallowed as a completion.
+        await expect(failingControls.run()).rejects.toThrow('llm down');
+        expect(failingService.getState()).toBe('error');
+        const { turnLog, status } = useDirectorStore.getState();
+        expect(status).toBe('error');
+        expect(turnLog[0]?.status).toBe('error');
+        expect(turnLog[0]?.success).toBe(false);
+    });
 });

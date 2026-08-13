@@ -1426,7 +1426,12 @@ export const EVENT_REGISTRY = {
     // ── Conversation Core lifecycle (generic; independent of Debate/Forum/Chat) ──
     CONVERSATION_TURN_START: event(
         'conversation:turn:start',
-        z.object({ sessionId: z.string(), participantId: z.string() }),
+        z.object({
+            sessionId: z.string(),
+            participantId: z.string(),
+            turnIndex: z.number().optional(),
+            injected: z.boolean().optional(),
+        }),
     ),
     CONVERSATION_TURN_COMPLETE: event(
         'conversation:turn:complete',
@@ -1435,11 +1440,19 @@ export const EVENT_REGISTRY = {
             participantId: z.string(),
             success: z.boolean(),
             content: z.string().optional(),
+            turnIndex: z.number().optional(),
+            injected: z.boolean().optional(),
         }),
     ),
     CONVERSATION_TURN_ERROR: event(
         'conversation:turn:error',
-        z.object({ sessionId: z.string(), participantId: z.string(), error: z.string() }),
+        z.object({
+            sessionId: z.string(),
+            participantId: z.string(),
+            error: z.string(),
+            turnIndex: z.number().optional(),
+            injected: z.boolean().optional(),
+        }),
     ),
     CONVERSATION_PAUSED: event('conversation:paused', z.object({ sessionId: z.string() })),
     CONVERSATION_RESUMED: event('conversation:resumed', z.object({ sessionId: z.string() })),

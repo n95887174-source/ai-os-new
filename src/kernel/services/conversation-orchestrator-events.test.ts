@@ -151,6 +151,31 @@ describe('ConversationOrchestrator lifecycle events (B4)', () => {
         expect(events[0].payload).toEqual({ sessionId: 's9' });
     });
 
+    it('surfaces a non-thrown success:false turn as TURN_ERROR (not TURN_COMPLETE)', async () => {
+        const engine: IExecutionEngine = {
+            execute: vi.fn().mockResolvedValue({ success: false, error: 'nope', content: '' }),
+        };
+        const orch = new ConversationOrchestrator(
+            new HybridPolicy([turn('a')]),
+            engine,
+            makeContext(),
+        );
+
+        await expect(orch.processNextStep('s1')).rejects.toThrow('nope');
+
+        expect(events.map((e) => e.type)).toEqual([
+            EVENTS.CONVERSATION_TURN_START,
+            EVENTS.CONVERSATION_TURN_ERROR,
+        ]);
+        // Must NOT be reported as a successful completion.
+        expect(events.some((e) => e.type === EVENTS.CONVERSATION_TURN_COMPLETE)).toBe(false);
+        expect(events[1].payload).toMatchObject({
+            sessionId: 's1',
+            participantId: 'a',
+            error: 'nope',
+        });
+    });
+
     it('emits conversation:completed once the policy is exhausted (B6.2)', async () => {
         const engine: IExecutionEngine = {
             execute: vi.fn().mockResolvedValue({ success: true, content: 'ok' }),

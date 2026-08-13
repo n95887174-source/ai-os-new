@@ -55,10 +55,38 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
     const isPaused = status === 'paused';
     const busy = isRunning || isPaused;
     const canRun = !busy;
-    const currentTurn = scenario.turns.find((turn) => turn.participantId === currentParticipantId);
-    const total = scenario.turns.length;
-    const done = turnLog.filter((e) => e.status === 'complete').length;
-    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    // Bind the "current objective" to the specific executed step (by its planned
+    // turn index), not just the participant id — otherwise a participant that
+    // appears in multiple turns would show the wrong objective. Falls back to the
+    // Nth occurrence of that participant in the script when no step id is known.
+    const currentTurn = (() => {
+        if (currentParticipantId == null) return undefined;
+        const running = [...turnLog]
+            .reverse()
+            .find((e) => e.status === 'running' && e.participantId === currentParticipantId);
+        if (running && running.turnIndex != null && running.turnIndex >= 0) {
+            return scenario.turns[running.turnIndex];
+        }
+        const occ = turnLog.filter((e) => e.participantId === currentParticipantId).length;
+        const occIdxs = scenario.turns
+            .map((t, i) => (t.participantId === currentParticipantId ? i : -1))
+            .filter((i) => i >= 0);
+        const target = occIdxs[Math.min(occ, occIdxs.length) - 1] ?? occIdxs[occIdxs.length - 1];
+        return target != null ? scenario.turns[target] : undefined;
+    })();
+
+    // Progress accounting separates the scripted plan from operator-injected
+    // overrides and failures, so injected turns no longer skew the percentage.
+    const plannedTotal = scenario.turns.length;
+    const plannedDone = turnLog.filter(
+        (e) => e.injected !== true && e.status === 'complete',
+    ).length;
+    const injectedDone = turnLog.filter(
+        (e) => e.injected === true && e.status === 'complete',
+    ).length;
+    const failed = turnLog.filter((e) => e.status === 'error').length;
+    const progress = plannedTotal > 0 ? Math.round((plannedDone / plannedTotal) * 100) : 0;
 
     const conversationRoleOf = (pid?: string | null) =>
         pid ? scenario.participants.find((p) => p.id === pid)?.role : undefined;
@@ -135,7 +163,11 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                     <div style={{ height: '100%', width: `${progress}%`, background: '#3b82f6' }} />
                 </div>
                 <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: 4 }}>
-                    {t('director.run.progress')}: {done}/{total}
+                    {t('director.run.progress')}: {plannedDone}/{plannedTotal}{' '}
+                    {t('director.run.progress.planned')}
+                    {injectedDone > 0 &&
+                        ` · ${injectedDone} ${t('director.run.progress.injected')}`}
+                    {failed > 0 && ` · ${failed} ${t('director.run.progress.failed')}`}
                 </div>
             </div>
 
