@@ -5,6 +5,8 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { textMutedXs, textSecondaryXs, textWhiteXs } from '../../styles/common';
 import type { JournalEntry } from '../../kernel/services/agent-journal-service';
 import { OUTCOME_COLORS } from './journal-constants';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import { AgentAvatar } from '../AgentsPanel/AgentAvatar';
 
 interface JournalEntryCardProps {
     entry: JournalEntry;
@@ -16,6 +18,7 @@ interface JournalEntryCardProps {
 export const JournalEntryCard: React.FC<JournalEntryCardProps> = memo(
     ({ entry, totalTasks, onFilterByAgent, onDelete }) => {
         const { t } = useTranslation();
+        const identity = resolveAgentIdentity(entry.agentId);
         return (
             <motion.div
                 key={entry.id}
@@ -54,8 +57,16 @@ export const JournalEntryCard: React.FC<JournalEntryCardProps> = memo(
                         >
                             {entry.outcome}
                         </span>
+                        <AgentAvatar
+                            agentId={entry.agentId}
+                            name={identity.displayName}
+                            size={20}
+                            emoji={identity.avatar.emoji}
+                            color={identity.avatar.color}
+                            url={identity.avatar.url}
+                        />
                         <span style={{ ...textWhiteXs, fontSize: '0.85rem' }}>
-                            {entry.agentName}
+                            {identity.displayName}
                         </span>
                         <span style={{ ...textMutedXs, fontSize: '0.7rem' }}>
                             · {entry.taskType}
