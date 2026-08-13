@@ -8,6 +8,7 @@ export interface DirectorTurnLogEntry {
     status: 'running' | 'complete' | 'error';
     success?: boolean;
     error?: string;
+    content?: string;
 }
 
 export interface DirectorStoreState {
@@ -46,23 +47,31 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
                     };
                 }),
         ),
-        eventBus.onSafe<{ sessionId: string; participantId: string; success: boolean }>(
-            EVENTS.CONVERSATION_TURN_COMPLETE,
-            (d) =>
-                set((s) => {
-                    const log = [...s.turnLog];
-                    const idx = log.findIndex(
-                        (e) => e.participantId === d.participantId && e.status === 'running',
-                    );
-                    if (idx >= 0) {
-                        const entry = log[idx]!;
-                        log[idx] = { ...entry, status: 'complete', success: d.success };
-                    }
-                    // A turn completing after a pause/abort must not resurrect `running`.
-                    const status =
-                        s.status === 'paused' || s.status === 'aborted' ? s.status : 'running';
-                    return { status, currentParticipantId: null, turnLog: log };
-                }),
+        eventBus.onSafe<{
+            sessionId: string;
+            participantId: string;
+            success: boolean;
+            content?: string;
+        }>(EVENTS.CONVERSATION_TURN_COMPLETE, (d) =>
+            set((s) => {
+                const log = [...s.turnLog];
+                const idx = log.findIndex(
+                    (e) => e.participantId === d.participantId && e.status === 'running',
+                );
+                if (idx >= 0) {
+                    const entry = log[idx]!;
+                    log[idx] = {
+                        ...entry,
+                        status: 'complete',
+                        success: d.success,
+                        content: d.content,
+                    };
+                }
+                // A turn completing after a pause/abort must not resurrect `running`.
+                const status =
+                    s.status === 'paused' || s.status === 'aborted' ? s.status : 'running';
+                return { status, currentParticipantId: null, turnLog: log };
+            }),
         ),
         eventBus.onSafe<{ sessionId: string; participantId: string; error: string }>(
             EVENTS.CONVERSATION_TURN_ERROR,

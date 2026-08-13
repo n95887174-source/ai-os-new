@@ -1430,7 +1430,12 @@ export const EVENT_REGISTRY = {
     ),
     CONVERSATION_TURN_COMPLETE: event(
         'conversation:turn:complete',
-        z.object({ sessionId: z.string(), participantId: z.string(), success: z.boolean() }),
+        z.object({
+            sessionId: z.string(),
+            participantId: z.string(),
+            success: z.boolean(),
+            content: z.string().optional(),
+        }),
     ),
     CONVERSATION_TURN_ERROR: event(
         'conversation:turn:error',

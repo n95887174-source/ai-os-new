@@ -179,6 +179,9 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                         <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
                             {t(`director.run.turnStatus.${e.status}`)}
                         </span>
+                        {e.content && (
+                            <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>{e.content}</span>
+                        )}
                         {e.success === false && (
                             <span style={{ color: '#f87171', fontSize: '0.75rem' }}>{e.error}</span>
                         )}

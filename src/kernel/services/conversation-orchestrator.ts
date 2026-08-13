@@ -73,7 +73,7 @@ export class ConversationOrchestrator implements IConversationOrchestrator {
             participantId: proposal.participantId,
         });
         try {
-            await this.executionEngine.execute(
+            const result = await this.executionEngine.execute(
                 proposal,
                 this.context,
                 this.getAbortSignal(sessionId),
@@ -82,6 +82,7 @@ export class ConversationOrchestrator implements IConversationOrchestrator {
                 sessionId,
                 participantId: proposal.participantId,
                 success: true,
+                content: result.content,
             });
         } catch (e) {
             this.eventBus.emit(EVENTS.CONVERSATION_TURN_ERROR, {

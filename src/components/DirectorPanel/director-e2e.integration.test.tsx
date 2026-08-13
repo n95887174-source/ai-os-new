@@ -185,6 +185,13 @@ describe('Conversation Director — B6.1 E2E integration gate', () => {
         expect(results.every((r) => r.success)).toBe(true);
         expect(results[0]!.content).toContain('propose plan');
         expect(results[1]!.content).toContain('audit plan');
+
+        // 7) OUTPUT PLUMBING: TurnResult.content propagates
+        //    orchestrator → CONVERSATION_TURN_COMPLETE → DirectorStore → RunTab DOM.
+        const storeLog = useDirectorStore.getState().turnLog;
+        expect(storeLog[0]!.content).toContain('propose plan');
+        expect(storeLog[1]!.content).toContain('audit plan');
+        expect(document.body.textContent).toContain('reply:INTRODUCE');
     });
 
     it('stays generic — no Debate-specific events fire during the run', async () => {
