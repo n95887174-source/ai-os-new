@@ -41,6 +41,7 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
     const [overrideOpen, setOverrideOpen] = useState(false);
     const [overrideParticipant, setOverrideParticipant] = useState('');
     const [overrideObjective, setOverrideObjective] = useState('');
+    const [checkpointLabel, setCheckpointLabel] = useState('');
 
     if (!scenario) {
         return (
@@ -55,6 +56,12 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
     const isPaused = status === 'paused';
     const busy = isRunning || isPaused;
     const canRun = !busy;
+
+    // Live Session (blueprint separation) — distinct id per run, checkpoints
+    // captured during the run. Read on every render so the card + list stay
+    // in sync with the DirectorStore-driven re-renders.
+    const session = controls.getSession();
+    const checkpoints = controls.getCheckpoints();
 
     // Bind the "current objective" to the specific executed step (by its planned
     // turn index), not just the participant id — otherwise a participant that
@@ -124,6 +131,11 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                 <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>
                     {scenario.participants.length} · {scenario.turns.length} · v{scenario.version}
                 </div>
+                {session && (
+                    <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>
+                        {t('director.run.session')}: {session.id.slice(0, 8)}
+                    </div>
+                )}
             </div>
 
             <div
@@ -190,6 +202,21 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                 <button onClick={() => controls.abort()} disabled={!busy}>
                     {t('director.run.abort')}
                 </button>
+                <input
+                    value={checkpointLabel}
+                    onChange={(e) => setCheckpointLabel(e.target.value)}
+                    placeholder={t('director.run.checkpoint.label')}
+                    style={{ width: 140 }}
+                />
+                <button
+                    onClick={() => {
+                        controls.checkpoint(checkpointLabel || undefined);
+                        setCheckpointLabel('');
+                    }}
+                    disabled={!session}
+                >
+                    {t('director.run.checkpoint')}
+                </button>
             </div>
 
             {overrideOpen && (
@@ -218,6 +245,31 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                             {t('director.run.overrideSubmit')}
                         </button>
                     </div>
+                </div>
+            )}
+
+            {checkpoints.length > 0 && (
+                <div style={{ margin: '0.5rem 0' }}>
+                    <div style={{ fontSize: '0.78rem', opacity: 0.7 }}>
+                        {t('director.run.checkpoints')}
+                    </div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        {checkpoints.map((c) => (
+                            <li
+                                key={c.id}
+                                style={{ ...LOG_ROW, fontSize: '0.75rem', opacity: 0.8 }}
+                            >
+                                <span style={{ fontWeight: 600 }}>{c.label || '—'}</span>
+                                <span style={{ opacity: 0.7 }}>
+                                    {t('director.run.checkpoint.cursor')}: {c.cursor} ·{' '}
+                                    {c.results.length}
+                                </span>
+                                <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>
+                                    {new Date(c.at).toLocaleTimeString()}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 

@@ -1,6 +1,7 @@
 import type { ConversationScenario } from './scenario';
 import type { TurnProposal } from './turn';
 import type { TurnResult } from './execution';
+import type { ConversationSession, SessionCheckpoint } from './session';
 
 /**
  * Runtime state of a managed conversation directed by
@@ -36,4 +37,14 @@ export interface IConversationDirectorService {
     getState(): DirectorState;
     getResults(): TurnResult[];
     getScenario(): ConversationScenario | undefined;
+    /**
+     * The live `ConversationSession` for the currently loaded run, or undefined
+     * if no scenario has been loaded. This is the run record — distinct from the
+     * static scenario blueprint — carrying events, checkpoints and progress.
+     */
+    getSession(): ConversationSession | undefined;
+    /** Capture a named snapshot of the live run into the session's checkpoints. */
+    checkpoint(label?: string): string;
+    /** List the checkpoints captured for the current session. */
+    getCheckpoints(): SessionCheckpoint[];
 }

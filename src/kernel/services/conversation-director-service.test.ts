@@ -182,6 +182,87 @@ describe('ConversationDirectorService (B3)', () => {
         expect(results[1]!.error).toContain('engine failure');
     });
 
+    it('creates a distinct Session entity separate from the Scenario blueprint', async () => {
+        const scenario = makeScenario([turn('a', 'one'), turn('b', 'two')]);
+        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        await director.loadScenario('s1');
+
+        const session = director.getSession();
+        expect(session).toBeDefined();
+        // Session id is a fresh run id, NOT the scenario id.
+        expect(session!.id).not.toBe('s1');
+        expect(session!.scenarioId).toBe('s1');
+        expect(session!.scenarioName).toBe('Test Scenario');
+        expect(session!.status).toBe('idle');
+        expect(session!.plannedTotal).toBe(2);
+        expect(session!.events).toEqual([]);
+        expect(session!.checkpoints).toEqual([]);
+    });
+
+    it('each loadScenario launches a new Session (blueprint reused, runs separated)', async () => {
+        const scenario = makeScenario([turn('a', 'one')]);
+        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        await director.loadScenario('s1');
+        const first = director.getSession()!.id;
+        await director.loadScenario('s1');
+        const second = director.getSession()!.id;
+        expect(first).not.toBe(second);
+        expect(director.getSession()!.scenarioId).toBe('s1');
+    });
+
+    it('the Session records the live run: events, results and progress', async () => {
+        const turns = [turn('a', 'one'), turn('b', 'two'), turn('c', 'three')];
+        const scenario = makeScenario(turns);
+        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        await director.loadScenario('s1');
+        await director.run();
+
+        const session = director.getSession()!;
+        expect(session.status).toBe('completed');
+        expect(session.plannedDone).toBe(3);
+        expect(session.injectedDone).toBe(0);
+        expect(session.failed).toBe(0);
+        expect(session.results).toHaveLength(3);
+        // turn:start ×3, turn:complete ×3, completed ×1 = 7 lifecycle events.
+        expect(session.events.filter((e) => e.type === 'conversation:turn:start')).toHaveLength(3);
+        expect(session.events.filter((e) => e.type === 'conversation:turn:complete')).toHaveLength(
+            3,
+        );
+        expect(session.events.some((e) => e.type === 'conversation:completed')).toBe(true);
+    });
+
+    it('a failed run is recorded as error in the Session (truthfulness)', async () => {
+        const turns = [turn('a', 'one'), turn('b', 'two')];
+        const scenario = makeScenario(turns);
+        const { engine } = makeEngine({ throwOnCall: 2 });
+        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        await director.loadScenario('s1');
+        await expect(director.run()).rejects.toThrow(/engine failure/);
+
+        const session = director.getSession()!;
+        expect(session.status).toBe('error');
+        expect(session.failed).toBe(1);
+        expect(session.events.some((e) => e.type === 'conversation:turn:error')).toBe(true);
+    });
+
+    it('checkpoint() captures a named snapshot of the live run', async () => {
+        const turns = [turn('a', 'one'), turn('b', 'two')];
+        const scenario = makeScenario(turns);
+        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        await director.loadScenario('s1');
+        await director.run();
+
+        const cpId = director.checkpoint('after-run');
+        const checkpoints = director.getCheckpoints();
+        expect(checkpoints).toHaveLength(1);
+        expect(checkpoints[0]!.id).toBe(cpId);
+        expect(checkpoints[0]!.label).toBe('after-run');
+        expect(checkpoints[0]!.cursor).toBe(2);
+        expect(checkpoints[0]!.status).toBe('completed');
+        expect(checkpoints[0]!.results).toHaveLength(2);
+        expect(checkpoints[0]!.history).toHaveLength(2);
+    });
+
     it('has no Debate/Forum dependency', () => {
         const file = readFileSync(join(__dirname, 'conversation-director-service.ts'), 'utf8');
         const forbidden = [

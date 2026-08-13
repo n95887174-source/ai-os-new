@@ -13,6 +13,9 @@ const { controlsStub } = vi.hoisted(() => ({
         override: vi.fn(),
         abort: vi.fn(),
         reset: vi.fn(),
+        getSession: vi.fn(() => undefined),
+        checkpoint: vi.fn(() => 'cp1'),
+        getCheckpoints: vi.fn(() => []),
     },
 }));
 
@@ -66,6 +69,11 @@ vi.mock('../../i18n/useTranslation', () => ({
                 'director.run.turnStatus.running': 'running',
                 'director.run.turnStatus.complete': 'complete',
                 'director.run.turnStatus.error': 'error',
+                'director.run.session': 'Session',
+                'director.run.checkpoint': 'Checkpoint',
+                'director.run.checkpoint.label': 'Label',
+                'director.run.checkpoints': 'Checkpoints',
+                'director.run.checkpoint.cursor': 'cursor',
             };
             return labels[key] || key;
         },
@@ -200,5 +208,37 @@ describe('RunTab (B5.4c Run UI)', () => {
         const RunTab = (await import('./RunTab')).default;
         render(<RunTab scenario={null} />);
         expect(screen.getByText('no scenario')).toBeDefined();
+    });
+
+    it('Checkpoint button is disabled without a session and calls the controller when a session exists', async () => {
+        const RunTab = (await import('./RunTab')).default;
+        render(<RunTab scenario={scenario} />);
+        expect((screen.getByText('Checkpoint') as HTMLButtonElement).disabled).toBe(true);
+        controlsStub.getSession.mockReturnValue({
+            id: 'sess-abc123',
+            scenarioId: 's1',
+            scenarioName: 'Test scenario',
+            status: 'running',
+            createdAt: 0,
+            updatedAt: 0,
+            events: [],
+            checkpoints: [],
+            results: [],
+            currentParticipantId: null,
+            currentTurnIndex: null,
+            plannedTotal: 2,
+            plannedDone: 0,
+            injectedDone: 0,
+            failed: 0,
+            // test stub object — type loosened to satisfy the vi.fn(() => undefined) inference
+        } as any);
+        act(() => {
+            useDirectorStore.setState({ status: 'running' });
+        });
+        await waitFor(() => {
+            expect((screen.getByText('Checkpoint') as HTMLButtonElement).disabled).toBe(false);
+        });
+        fireEvent.click(screen.getByText('Checkpoint'));
+        expect(controlsStub.checkpoint).toHaveBeenCalledTimes(1);
     });
 });

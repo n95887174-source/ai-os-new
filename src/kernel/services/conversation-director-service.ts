@@ -7,9 +7,11 @@ import type { TurnProposal } from '../contracts/conversation/turn';
 import type { TurnResult } from '../contracts/conversation/execution';
 import type { IExecutionEngine } from '../contracts/conversation/execution';
 import type { ConversationContext } from '../contracts/conversation/context';
+import type { ConversationSession, SessionCheckpoint } from '../contracts/conversation/session';
 import { HybridPolicy } from './conversation-hybrid-policy';
 import { ConversationOrchestrator } from './conversation-orchestrator';
 import type { ScenarioRepository } from '../dal/scenario-repository';
+import { eventBus, EVENTS } from '../events/event-bus';
 
 /**
  * Recording decorator over an `IExecutionEngine`. Delegates execution to the
@@ -56,6 +58,11 @@ export class ConversationDirectorService implements IConversationDirectorService
     private sessionId = '';
     private state: DirectorState = 'idle';
     private isRunning = false;
+    /** Live run record — distinct from the static scenario blueprint. */
+    private session: ConversationSession | undefined;
+    /** Kept so checkpoints can snapshot the orchestrator's running context. */
+    private context: ConversationContext | undefined;
+    private busUnsubs: Array<() => void> = [];
 
     /** Read state without TS control-flow narrowing (pause/abort mutate it externally). */
     private get phase(): DirectorState {
@@ -70,7 +77,22 @@ export class ConversationDirectorService implements IConversationDirectorService
     constructor(
         private readonly scenarioRepository: ScenarioRepository,
         private readonly executionEngine: IExecutionEngine,
-    ) {}
+    ) {
+        // Observe the conversation:* lifecycle for the active session so the
+        // `ConversationSession` run record stays in sync with what actually
+        // happened — independent of the UI/store, which have their own observer.
+        for (const name of [
+            EVENTS.CONVERSATION_TURN_START,
+            EVENTS.CONVERSATION_TURN_COMPLETE,
+            EVENTS.CONVERSATION_TURN_ERROR,
+            EVENTS.CONVERSATION_PAUSED,
+            EVENTS.CONVERSATION_RESUMED,
+            EVENTS.CONVERSATION_ABORTED,
+            EVENTS.CONVERSATION_COMPLETED,
+        ] as const) {
+            this.busUnsubs.push(eventBus.onSafe(name, (d) => this.applyConversationEvent(name, d)));
+        }
+    }
 
     async loadScenario(id: string): Promise<ConversationScenario> {
         const found = await this.scenarioRepository.get(id);
@@ -78,19 +100,46 @@ export class ConversationDirectorService implements IConversationDirectorService
             throw new Error(`ConversationDirectorService: scenario '${id}' not found`);
         }
         this.scenario = found;
-        this.sessionId = found.id;
+        // A session is a distinct live run — its id is NOT the scenario id, so
+        // the same blueprint can be launched many times and each run is tracked
+        // separately.
+        const sessionId = crypto.randomUUID();
+        this.sessionId = sessionId;
         this.recording = new RecordingExecutionEngine(this.executionEngine);
         const context: ConversationContext = {
             topic: found.topic ?? found.name,
             participants: found.participants,
             history: [],
-            metadata: { scenarioId: found.id, scenarioName: found.name },
+            metadata: {
+                scenarioId: found.id,
+                scenarioName: found.name,
+                sessionId,
+            },
         };
+        this.context = context;
         this.orchestrator = new ConversationOrchestrator(
             new HybridPolicy(found.turns),
             this.recording,
             context,
         );
+        const now = Date.now();
+        this.session = {
+            id: sessionId,
+            scenarioId: found.id,
+            scenarioName: found.name,
+            status: 'idle',
+            createdAt: now,
+            updatedAt: now,
+            events: [],
+            checkpoints: [],
+            results: [],
+            currentParticipantId: null,
+            currentTurnIndex: null,
+            plannedTotal: found.turns.length,
+            plannedDone: 0,
+            injectedDone: 0,
+            failed: 0,
+        };
         this.setState('idle');
         return found;
     }
@@ -158,5 +207,93 @@ export class ConversationDirectorService implements IConversationDirectorService
 
     getScenario(): ConversationScenario | undefined {
         return this.scenario;
+    }
+
+    getSession(): ConversationSession | undefined {
+        return this.session;
+    }
+
+    /**
+     * Capture a named snapshot of the live run into the session's checkpoints.
+     * Checkpoints make the run inspectable and are the foundation for later
+     * rewind/replay — without ever mutating the scenario blueprint.
+     */
+    checkpoint(label?: string): string {
+        if (!this.session) {
+            throw new Error('ConversationDirectorService: no session loaded');
+        }
+        const id = crypto.randomUUID();
+        const checkpoint: SessionCheckpoint = {
+            id,
+            at: Date.now(),
+            label,
+            cursor: this.session.results.length,
+            history: this.context ? [...this.context.history] : [],
+            results: [...this.session.results],
+            status: this.session.status,
+        };
+        this.session.checkpoints.push(checkpoint);
+        this.session.updatedAt = Date.now();
+        return id;
+    }
+
+    getCheckpoints(): SessionCheckpoint[] {
+        return this.session?.checkpoints ?? [];
+    }
+
+    /** Release bus subscriptions (call when the service is disposed). */
+    destroy(): void {
+        this.busUnsubs.forEach((u) => u());
+        this.busUnsubs = [];
+    }
+
+    /**
+     * Keep the `ConversationSession` run record in sync with the actual
+     * `conversation:*` events emitted during execution. Filtered by session id
+     * so only this run's events are recorded.
+     */
+    private applyConversationEvent(type: string, d: Record<string, unknown>): void {
+        const s = this.session;
+        if (!s || (d.sessionId as string | undefined) !== s.id) return;
+
+        s.events.push({ type, at: Date.now(), payload: d });
+
+        const lifecycleStable = s.status !== 'paused' && s.status !== 'aborted';
+
+        switch (type) {
+            case EVENTS.CONVERSATION_TURN_START:
+                s.currentParticipantId = d.participantId as string;
+                s.currentTurnIndex = (d.turnIndex as number | undefined) ?? null;
+                if (lifecycleStable) s.status = 'running';
+                break;
+            case EVENTS.CONVERSATION_TURN_COMPLETE:
+                s.currentParticipantId = null;
+                s.currentTurnIndex = null;
+                s.results.push({ success: true, content: d.content as string | undefined });
+                if (d.injected) s.injectedDone++;
+                else s.plannedDone++;
+                if (lifecycleStable) s.status = 'running';
+                break;
+            case EVENTS.CONVERSATION_TURN_ERROR:
+                s.currentParticipantId = null;
+                s.currentTurnIndex = null;
+                s.results.push({ success: false, error: d.error as string });
+                s.failed++;
+                if (lifecycleStable) s.status = 'error';
+                break;
+            case EVENTS.CONVERSATION_PAUSED:
+                s.status = 'paused';
+                break;
+            case EVENTS.CONVERSATION_RESUMED:
+                s.status = 'running';
+                break;
+            case EVENTS.CONVERSATION_ABORTED:
+                s.status = 'aborted';
+                break;
+            case EVENTS.CONVERSATION_COMPLETED:
+                s.status = 'completed';
+                break;
+        }
+        s.updatedAt = Date.now();
     }
 }

@@ -2,6 +2,10 @@ import { conversationDirector } from '../kernel/instances/services-extras';
 import { useDirectorStore } from './directorStore';
 import type { ConversationDirectorService } from '../kernel/services/conversation-director-service';
 import type { TurnProposal } from '../kernel/contracts/conversation/turn';
+import type {
+    ConversationSession,
+    SessionCheckpoint,
+} from '../kernel/contracts/conversation/session';
 
 export interface DirectorControls {
     /** Load a persisted scenario and reset the observer store. */
@@ -13,6 +17,12 @@ export interface DirectorControls {
     override(proposal: TurnProposal): void;
     abort(): void;
     reset(): void;
+    /** The live Session for the current run (blueprint separation). */
+    getSession(): ConversationSession | undefined;
+    /** Capture a named checkpoint of the live run. */
+    checkpoint(label?: string): string;
+    /** List checkpoints captured for the current session. */
+    getCheckpoints(): SessionCheckpoint[];
 }
 
 /**
@@ -39,5 +49,8 @@ export function createDirectorControls(
         override: (proposal: TurnProposal) => service.overrideTurn(proposal),
         abort: () => service.abort(),
         reset: () => useDirectorStore.getState().reset(),
+        getSession: () => service.getSession(),
+        checkpoint: (label?: string) => service.checkpoint(label),
+        getCheckpoints: () => service.getCheckpoints(),
     };
 }
