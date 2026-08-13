@@ -6,6 +6,7 @@ import {
 } from '../../kernel/contracts/debate-emotion';
 import type { TopologyNode } from '../../kernel/contracts/debate-runtime';
 import type { Avatar } from '../../kernel/services/agent-avatar-service';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 import { CountdownRing } from './CountdownRing';
 import { ThoughtBubble } from './ThoughtBubble';
 import { MemoryBubble } from './MemoryBubble';
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive, sessionId }) => {
+    const displayName = resolveAgentIdentity(node.id).displayName;
     const key = `${sessionId}:${node.id}`;
     const streamText = useDebateLiveStore((s) => s.streamingContent.get(key));
     const thinking = useDebateLiveStore((s) => s.currentThinking.get(key));
@@ -97,7 +99,7 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
 
                 {thinking && (
                     <ThoughtBubble
-                        draftPreview={node.label + ' is formulating...'}
+                        draftPreview={displayName + ' is formulating...'}
                         progress={countdown ? countdown.secondsLeft / countdown.secondsTotal : 0.5}
                     />
                 )}
@@ -148,7 +150,7 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
                     transition: 'color 0.3s, font-weight 0.3s',
                 }}
             >
-                {node.label}
+                {displayName}
             </div>
 
             <div style={{ fontSize: '0.6rem', color: '#475569', textTransform: 'capitalize' }}>

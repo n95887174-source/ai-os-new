@@ -4,6 +4,8 @@ import { SpeakerNode } from './SpeakerNode';
 import { agentAvatarService } from '../../kernel/instances';
 import type { TopologyNode } from '../../kernel/contracts/debate-runtime';
 import type { ArenaLayout } from '../../kernel/contracts/debate-emotion';
+import type { Avatar } from '../../kernel/services/agent-avatar-service';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 import { EyeLine } from './EyeLine';
 
 interface Props {
@@ -274,7 +276,12 @@ export const CircularLayout: React.FC<Props> = ({
                 })}
 
             {participants.map((p, i) => {
-                const avatar = agentAvatarService.generate(p.id);
+                const identity = resolveAgentIdentity(p.id);
+                const avatar: Avatar = {
+                    ...agentAvatarService.generate(p.id),
+                    emoji: identity.avatar.emoji,
+                    color: identity.avatar.color,
+                };
                 const css = agentAvatarService.getAvatarCSS(avatar);
                 return (
                     <motion.div

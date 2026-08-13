@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useDebateLiveStore } from '../../stores/debateLiveStore';
 import type { TopologyNode } from '../../kernel/contracts/debate-runtime';
 import { JudgeScales } from './JudgeScales';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 interface Props {
     judge: TopologyNode;
@@ -56,7 +57,7 @@ export const JudgeCenter: React.FC<Props> = ({ judge, phase }) => {
                     lineHeight: 1.2,
                 }}
             >
-                {judge.label}
+                {resolveAgentIdentity(judge.id).displayName}
             </span>
         </motion.div>
     );
