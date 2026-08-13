@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-    BarChart3,
-    Search,
-    Bot,
-    Users,
-    Activity,
-    Zap,
-    Clock,
-    AlertCircle,
-    Loader2,
-} from 'lucide-react';
+import { BarChart3, Search, Users, Activity, Zap, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import PanelLoader from './PanelLoader';
 import { AgentComparison } from './AgentsPanel/AgentComparison';
+import { resolveAgentIdentity } from '../kernel/services/agent-identity';
+import { AgentAvatar } from './AgentsPanel/AgentAvatar';
 
 interface AgentEntry {
     id: string;
@@ -48,26 +40,29 @@ const AgentComparisonPanelContent: React.FC = () => {
                 const agentList = m.agentService.getAgents();
                 const leaderboard = m.eloService.getLeaderboard(100);
                 const eloMap = new Map(leaderboard.map((e) => [e.agentId, e.elo]));
-                const merged: AgentEntry[] = agentList.map((a) => ({
-                    id: a.id,
-                    name: a.name,
-                    role: a.role || 'General',
-                    status: a.status || 'ready',
-                    model: '—',
-                    providerId: '—',
-                    temperature: 0.5,
-                    tools: [],
-                    systemPrompt: '',
-                    stats: {
-                        calls: a.stats.calls || 0,
-                        tokens: a.stats.tokens || 0,
-                        latency: a.stats.latency || 0,
-                        errors: a.stats.errors || 0,
-                        avgTokensPerCall: a.stats.avgTokensPerCall || 0,
-                        lastActive: a.stats.lastActive || Date.now(),
-                    },
-                    elo: eloMap.get(a.id) || 1000,
-                }));
+                const merged: AgentEntry[] = agentList.map((a) => {
+                    const identity = resolveAgentIdentity(a.id);
+                    return {
+                        id: a.id,
+                        name: identity.displayName || a.name,
+                        role: a.role || 'General',
+                        status: a.status || 'ready',
+                        model: '—',
+                        providerId: '—',
+                        temperature: 0.5,
+                        tools: [],
+                        systemPrompt: '',
+                        stats: {
+                            calls: a.stats.calls || 0,
+                            tokens: a.stats.tokens || 0,
+                            latency: a.stats.latency || 0,
+                            errors: a.stats.errors || 0,
+                            avgTokensPerCall: a.stats.avgTokensPerCall || 0,
+                            lastActive: a.stats.lastActive || Date.now(),
+                        },
+                        elo: eloMap.get(a.id) || 1000,
+                    };
+                });
                 if (!cancelled) setAgents(merged);
             } catch {
                 if (!cancelled) setAgents([]);
@@ -191,6 +186,7 @@ const AgentComparisonPanelContent: React.FC = () => {
             >
                 {filtered.map((agent) => {
                     const isSelected = selected.includes(agent.id);
+                    const identity = resolveAgentIdentity(agent.id);
                     return (
                         <div
                             key={agent.id}
@@ -215,7 +211,14 @@ const AgentComparisonPanelContent: React.FC = () => {
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Bot size={18} color="#a855f7" />
+                                    <AgentAvatar
+                                        agentId={agent.id}
+                                        name={agent.name}
+                                        size={18}
+                                        emoji={identity.avatar.emoji}
+                                        color={identity.avatar.color}
+                                        url={identity.avatar.url}
+                                    />
                                     <span
                                         style={{ fontWeight: 700, fontSize: 14, color: '#e2e8f0' }}
                                     >
