@@ -34,8 +34,6 @@ export class ChatExecutionEngine implements IExecutionEngine {
     ): Promise<TurnResult> {
         const requestId = crypto.randomUUID();
 
-        const historyMessages = context.history.map((h) => ({ role: h.role, content: h.content }));
-
         // B-seam: resolve the participant to a real agent so the turn is
         // actually spoken by that agent (persona + pinned model), not just
         // stamped into metadata.agentId.
@@ -44,15 +42,30 @@ export class ChatExecutionEngine implements IExecutionEngine {
             ? { role: 'system' as const, content: agent.systemPrompt }
             : null;
 
-        const promptContent = [
-            `${proposal.objective.type}: ${proposal.objective.description}`,
+        // Context propagation: every turn carries the shared Topic, and the
+        // running conversation (prior turns) so each agent speaks with full
+        // context instead of an isolated monologue.
+        const blocks: string[] = [];
+        if (context.topic) {
+            blocks.push(`Topic: ${context.topic}`);
+        }
+        if (context.history.length > 0) {
+            const historyBlock = context.history
+                .map((h) => `${h.role}:\n${h.content}`)
+                .join('\n\n');
+            blocks.push(`Conversation so far:\n${historyBlock}`);
+        }
+        const objectiveLines = [
+            `Objective (${proposal.objective.type}):`,
+            proposal.objective.description,
             proposal.objective.constraints.length
                 ? `Constraints: ${proposal.objective.constraints.join('; ')}`
                 : '',
             proposal.targetTurnId ? `Target: ${proposal.targetTurnId}` : '',
-        ]
-            .filter(Boolean)
-            .join('\n');
+        ].filter(Boolean);
+        blocks.push(objectiveLines.join('\n'));
+
+        const promptContent = blocks.join('\n\n');
 
         const req: QueuedRequest = {
             requestId,
@@ -60,7 +73,6 @@ export class ChatExecutionEngine implements IExecutionEngine {
             model: agent?.model ?? 'default',
             messages: [
                 ...(personaMessage ? [personaMessage] : []),
-                ...historyMessages,
                 { role: 'user', content: promptContent },
             ] as QueuedRequest['messages'],
             options: {

@@ -191,7 +191,8 @@ describe('Conversation Director — B6.1 E2E integration gate', () => {
         const storeLog = useDirectorStore.getState().turnLog;
         expect(storeLog[0]!.content).toContain('propose plan');
         expect(storeLog[1]!.content).toContain('audit plan');
-        expect(document.body.textContent).toContain('reply:INTRODUCE');
+        // TurnResult content (now carrying the propagated Topic) is rendered in RunTab.
+        expect(document.body.textContent).toContain('reply:Topic:');
     });
 
     it('stays generic — no Debate-specific events fire during the run', async () => {

@@ -78,6 +78,10 @@ export class ConversationOrchestrator implements IConversationOrchestrator {
                 this.context,
                 this.getAbortSignal(sessionId),
             );
+            this.context.history.push({
+                role: proposal.participantId,
+                content: result.content ?? '',
+            });
             this.eventBus.emit(EVENTS.CONVERSATION_TURN_COMPLETE, {
                 sessionId,
                 participantId: proposal.participantId,
