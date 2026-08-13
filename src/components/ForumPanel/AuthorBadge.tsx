@@ -1,17 +1,22 @@
 import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ForumAuthor } from '../../kernel/types/forum-types';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import { AgentAvatar } from '../AgentsPanel/AgentAvatar';
 
 interface AuthorBadgeProps {
     author: ForumAuthor;
 }
 
 /**
- * AuthorBadge — visual badge for human vs agent authors.
+ * AuthorBadge — visual badge for human vs agent authors. Agent authors resolve
+ * their canonical identity (avatar + display name) when the id maps to a
+ * topology agent; otherwise the supplied display name / id is used.
  */
 const AuthorBadge: React.FC<AuthorBadgeProps> = ({ author }) => {
     const { t } = useTranslation();
     const isAgent = author.kind === 'agent';
+    const identity = isAgent ? resolveAgentIdentity(author.id) : null;
     return (
         <span
             style={{
@@ -27,6 +32,16 @@ const AuthorBadge: React.FC<AuthorBadgeProps> = ({ author }) => {
                 background: isAgent ? '#8b5cf611' : '#38bdf811',
             }}
         >
+            {isAgent && (
+                <AgentAvatar
+                    agentId={author.id}
+                    name={author.displayName || identity?.displayName}
+                    size={16}
+                    emoji={identity?.avatar.emoji}
+                    color={identity?.avatar.color}
+                    url={identity?.avatar.url}
+                />
+            )}
             {isAgent ? '◆' : '●'} {author.displayName || author.id}
             {author.roleId && isAgent ? ` · ${author.roleId}` : ''}
             <span style={{ color: '#64748b', fontWeight: 400 }}>

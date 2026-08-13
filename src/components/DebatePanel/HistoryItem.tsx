@@ -12,6 +12,7 @@ import {
 import { flex1Min0 } from '../../styles/common';
 import { ROLE_ICONS } from './history-constants';
 import HistoryArgumentRow from './HistoryArgumentRow';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 interface Participant {
     id: string;
@@ -328,7 +329,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                             >
                                 {(ROLE_ICONS as Record<string, React.ReactNode>)[p.role ?? ''] ||
                                     null}{' '}
-                                {p.name || p.id}
+                                {p.name || resolveAgentIdentity(p.id).displayName}
                             </span>
                         ))}
                     </div>

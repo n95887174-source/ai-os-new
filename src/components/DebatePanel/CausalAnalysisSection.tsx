@@ -2,6 +2,7 @@ import { GitFork } from 'lucide-react';
 import type { DebateArgument, DebateParticipant } from '../../kernel/contracts/debate-types';
 import { glassPanelRounded24 } from '../../styles/common';
 import { badgeGreen, badgeAmber, badgeRed } from './debate-analytics-badges';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 interface CausalAnalysisSectionProps {
     args: DebateArgument[];
@@ -204,7 +205,7 @@ const CausalAnalysisSection: React.FC<CausalAnalysisSectionProps> = ({ args, par
                             .slice(0, 8)
                             .map(([agentId, m]) => {
                                 const p = participants.find((p) => p.id === agentId);
-                                const label = p?.name || agentId.slice(0, 8);
+                                const label = p?.name || resolveAgentIdentity(agentId).displayName;
                                 const agentDepth =
                                     m.claims > 0
                                         ? Math.round(

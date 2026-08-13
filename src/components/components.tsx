@@ -1,6 +1,8 @@
 import { textWhiteXs } from '../styles/common';
 import type { TonePoint, PersuasionScore } from '../kernel/utils/debate-analysis';
 import { FALLACY_LABELS } from '../kernel/utils/debate-analysis';
+import { resolveAgentIdentity } from '../kernel/services/agent-identity';
+import { AgentAvatar } from './AgentsPanel/AgentAvatar';
 
 export const StatCard: React.FC<{
     icon: React.ReactNode;
@@ -85,6 +87,7 @@ export const FallacyCard: React.FC<{
 export const PersuasionCard: React.FC<{ p: PersuasionScore }> = ({ p }) => {
     const arrow = p.delta > 0.01 ? '↗' : p.delta < -0.01 ? '↘' : '→';
     const color = p.delta > 0.01 ? '#10b981' : p.delta < -0.01 ? '#ef4444' : '#94a3b8';
+    const identity = resolveAgentIdentity(p.agentId);
     return (
         <div
             style={{
@@ -94,7 +97,17 @@ export const PersuasionCard: React.FC<{ p: PersuasionScore }> = ({ p }) => {
                 border: '1px solid rgba(255,255,255,0.05)',
             }}
         >
-            <div style={{ ...textWhiteXs, fontSize: '0.8rem' }}>{p.agentId.slice(0, 12)}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AgentAvatar
+                    agentId={p.agentId}
+                    name={identity.displayName}
+                    size={20}
+                    emoji={identity.avatar.emoji}
+                    color={identity.avatar.color}
+                    url={identity.avatar.url}
+                />
+                <span style={{ ...textWhiteXs, fontSize: '0.8rem' }}>{identity.displayName}</span>
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
                 <span style={{ fontSize: '1.1rem', fontWeight: 700, color }}>
                     {arrow} {(p.delta * 100).toFixed(0)}%

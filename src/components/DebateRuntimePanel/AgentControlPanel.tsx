@@ -21,6 +21,8 @@ const LOGGER = rootLogger.child('AgentControlPanel');
 import { eventBus } from '../../kernel/instances';
 import { EVENTS } from '../../kernel/events/event-names';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
+import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import { AgentAvatar } from '../AgentsPanel/AgentAvatar';
 
 interface AgentControlPanelProps {
     session: DebateSessionSnapshot;
@@ -243,6 +245,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                     const isPaused = agent.status === 'paused';
                     const temp = localTemps[agent.id] ?? 0.7;
                     const maxTokens = localMaxTokens[agent.id] ?? 500;
+                    const identity = resolveAgentIdentity(agent.id);
                     return (
                         <div
                             key={agent.id}
@@ -280,6 +283,14 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                         flexShrink: 0,
                                     }}
                                 />
+                                <AgentAvatar
+                                    agentId={agent.id}
+                                    name={identity.displayName}
+                                    size={24}
+                                    emoji={identity.avatar.emoji}
+                                    color={identity.avatar.color}
+                                    url={identity.avatar.url}
+                                />
                                 <span
                                     style={{
                                         fontSize: '0.82rem',
@@ -288,7 +299,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                         flex: 1,
                                     }}
                                 >
-                                    {agent.name}
+                                    {identity.displayName || agent.name}
                                 </span>
                                 <span
                                     style={{
@@ -299,7 +310,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                         background: 'rgba(255,255,255,0.04)',
                                     }}
                                 >
-                                    {agent.role}
+                                    {identity.baseRole || agent.role}
                                 </span>
                                 <button
                                     onClick={() => handleToggle(agent.id)}
