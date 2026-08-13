@@ -136,6 +136,9 @@ vi.mock('../../stores/useKeyStore', () => {
 });
 
 vi.mock('../../kernel/instances', () => ({
+    rootLogger: {
+        child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
+    },
     toolService: { getTools: vi.fn(() => mockTools) },
     roleService: {
         getAllRoles: vi.fn(() => mockRoles),
@@ -350,7 +353,7 @@ describe('AgentsPanel', () => {
         await screen.findByRole('dialog');
         expect(screen.getByRole('tablist')).toBeDefined();
         const tabs = screen.getAllByRole('tab');
-        expect(tabs.length).toBe(7);
+        expect(tabs.length).toBe(8);
         expect(tabs[0].getAttribute('aria-selected')).toBe('true');
     });
 

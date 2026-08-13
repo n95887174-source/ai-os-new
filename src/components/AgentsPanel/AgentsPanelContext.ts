@@ -1,7 +1,14 @@
 import React, { createContext, useContext } from 'react';
 
 export type TabId =
-    'config' | 'capabilities' | 'infra' | 'observability' | 'permissions' | 'handoffs' | 'history';
+    | 'config'
+    | 'capabilities'
+    | 'infra'
+    | 'observability'
+    | 'permissions'
+    | 'handoffs'
+    | 'history'
+    | 'identity';
 export type ViewMode = 'grid' | 'list';
 export type StatusFilter = 'all' | 'active' | 'paused' | 'error';
 

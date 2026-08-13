@@ -10,6 +10,7 @@ import AgentCapabilitiesTab from './AgentCapabilitiesTab';
 import AgentInfraTab from './AgentInfraTab';
 import AgentObservabilityTab from './AgentObservabilityTab';
 import AgentHandoffsTab from './AgentHandoffsTab';
+import AgentIdentityEditor from './AgentIdentityEditor';
 import type { AgentDetailPanelProps } from './AgentDetailPanelProps';
 
 export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
@@ -181,6 +182,13 @@ export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
                                 <AgentObservabilityTab agent={agent} agentStats={agentStats} />
                             )}
                             {activeTab === 'handoffs' && <AgentHandoffsTab agent={agent} />}
+                            {activeTab === 'identity' && (
+                                <AgentIdentityEditor
+                                    agentId={agent.id}
+                                    onUpdateAgent={onUpdateAgent}
+                                    t={t}
+                                />
+                            )}
                             {activeTab === 'history' && (
                                 <div
                                     style={{
