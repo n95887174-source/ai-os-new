@@ -45,7 +45,8 @@ function hashString(str: string): number {
 }
 
 export function getAgentAvatar(agentId: string): { color: string; emoji: string } {
-    const h = hashString(agentId);
+    const safeId = agentId || 'unknown';
+    const h = hashString(safeId);
     return {
         color: COLORS[h % COLORS.length]!,
         emoji: EMOJIS[h % EMOJIS.length]!,
@@ -73,7 +74,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
     color,
     url,
 }) => {
-    const fallback = getAgentAvatar(agentId);
+    const fallback = getAgentAvatar(agentId || 'unknown');
     const resolvedEmoji = emoji ?? fallback.emoji;
     const resolvedColor = color ?? fallback.color;
 
