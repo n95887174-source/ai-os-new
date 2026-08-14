@@ -20,28 +20,23 @@ import type {
 } from '../../types/forum-types';
 import { EVENTS } from '../../events/event-names';
 import { genId } from '../../../utils/gen-id';
-import { rootLogger } from '../logger-service';
-
-const LOGGER = rootLogger.child('Forum');
 
 const DEFAULT_LIMITS = {
     maxPostsPerMinute: 10,
-    escalationPostThreshold: 6,
 };
 
 /**
  * Agent Forum — async persistent threads orchestrator (plan §6).
  *
  * Topics hold threaded posts from humans and agents. Votes drive scores,
- * moderation keeps threads healthy, a lightweight consensus check escalates
- * contested threads to a debate, and anti-flood budgeting limits posts per
- * author. Deterministic heuristics keep the pipeline unit-testable; production
+ * moderation keeps threads healthy, a lightweight consensus check reports
+ * thread status, and anti-flood budgeting limits posts per author.
+ * Deterministic heuristics keep the pipeline unit-testable; production
  * wiring can swap rendering/consensus for real model calls.
  */
 export class ForumService implements IForumService {
     private _initialized = false;
     private limits = { ...DEFAULT_LIMITS };
-    private escalatedTopics = new Set<TopicId>();
 
     constructor(
         private deps: {
@@ -148,7 +143,6 @@ export class ForumService implements IForumService {
             authorId: author.id,
         });
 
-        await this.maybeEscalate(topic, post);
         return id;
     }
 
@@ -326,21 +320,6 @@ export class ForumService implements IForumService {
                 `Forum: flood budget exceeded (${this.limits.maxPostsPerMinute} posts/min per author)`,
             );
         }
-    }
-
-    private async maybeEscalate(topic: Topic, _post: Post): Promise<void> {
-        if (this.escalatedTopics.has(topic.id)) return;
-        if (topic.postCount < this.limits.escalationPostThreshold) return;
-        const consensus = await this.getConsensus(topic.id);
-        if (!consensus || consensus.status !== 'contested') return;
-
-        this.escalatedTopics.add(topic.id);
-        const reason = `Тред «${topic.title}»: ${consensus.summary}`;
-        this.deps.eventBus.emit(EVENTS.FORUM_TOPIC_ESCALATED_TO_DEBATE, {
-            topicId: topic.id,
-            reason,
-        });
-        LOGGER.info('Forum', 'escalated topic to debate', { topicId: topic.id, reason });
     }
 
     private renderBody(text: string): string {

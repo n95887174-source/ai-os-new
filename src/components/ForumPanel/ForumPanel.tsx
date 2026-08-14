@@ -1,9 +1,8 @@
 import React from 'react';
 import { MessagesSquare } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
-import { forumService, debateService } from '../../kernel/instances';
+import { forumService } from '../../kernel/instances';
 import type { ForumAuthor, Post, Topic } from '../../kernel/types/forum-types';
-import type { DebateParticipant } from '../../kernel/contracts/debate-types';
 import TopicList from './TopicList';
 import TopicView from './TopicView';
 import ModerationQueue from './ModerationQueue';
@@ -26,7 +25,6 @@ const ForumPanel: React.FC = () => {
     const [thread, setThread] = React.useState<{ topic: Topic; posts: Post[] } | null>(null);
     const [consensus, setConsensus] = React.useState<string | null>(null);
     const [heatmap, setHeatmap] = React.useState<Array<{ category: string; count: number }>>([]);
-    const [inviting, setInviting] = React.useState(false);
 
     const refreshTopics = React.useCallback(async () => {
         const page = await forumService.listTopics({ page: 0, pageSize: 50 });
@@ -68,44 +66,6 @@ const ForumPanel: React.FC = () => {
         if (!selectedId) return;
         await forumService.moderatePost(postId, action as 'hide' | 'remove' | 'warn', 'модерация');
         await openThread(selectedId);
-    };
-
-    const handleInviteAgents = async (): Promise<void> => {
-        if (!selectedId || !thread || inviting) return;
-        setInviting(true);
-        try {
-            const participants: DebateParticipant[] = [
-                {
-                    id: 'forum-pro',
-                    name: 'Advocate',
-                    role: 'pro',
-                    systemPrompt: `You argue in favor of: "${thread.topic.title}". Present strong evidence.`,
-                },
-                {
-                    id: 'forum-con',
-                    name: 'Critic',
-                    role: 'con',
-                    systemPrompt: `You argue against: "${thread.topic.title}". Challenge assumptions.`,
-                },
-                {
-                    id: 'forum-analyst',
-                    name: 'Analyst',
-                    role: 'neutral',
-                    systemPrompt: `You provide balanced analysis of: "${thread.topic.title}". Weigh both sides.`,
-                },
-            ];
-            await debateService.startDebate(thread.topic.title, participants, 'round_robin', 3, {
-                language: 'ru',
-            });
-            await forumService.postMessage(
-                selectedId,
-                { kind: 'agent', id: 'system', displayName: 'Система' },
-                `Для темы "${thread.topic.title}" запущены агенты-участники (pro / con / neutral). Дебаты идут автоматически.`,
-            );
-            await openThread(selectedId);
-        } finally {
-            setInviting(false);
-        }
     };
 
     return (
@@ -175,8 +135,6 @@ const ForumPanel: React.FC = () => {
                         consensus={consensus}
                         onModerate={(id, action) => void handleModerate(id, action)}
                         onCompose={(body) => void handleCompose(body)}
-                        onInviteAgents={thread ? handleInviteAgents : undefined}
-                        inviting={inviting}
                     />
                     {thread && (
                         <ModerationQueue

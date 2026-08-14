@@ -1415,13 +1415,6 @@ export const EVENT_REGISTRY = {
             vote: z.string(),
         }),
     ),
-    FORUM_TOPIC_ESCALATED_TO_DEBATE: event(
-        'forum:topic:escalated-to-debate',
-        z.object({
-            topicId: z.string(),
-            reason: z.string(),
-        }),
-    ),
 
     // ── Conversation Core lifecycle (generic; independent of Debate/Forum/Chat) ──
     CONVERSATION_TURN_START: event(

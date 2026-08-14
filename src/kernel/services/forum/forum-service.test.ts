@@ -294,7 +294,7 @@ describe('ForumService', () => {
         expect(contested!.status).toBe('contested');
     });
 
-    it('escalates a contested thread to debate once', async () => {
+    it('does not escalate a contested thread to a debate', async () => {
         const topicId = await service.createTopic({
             title: 'Hot',
             category: 'general',
@@ -304,11 +304,7 @@ describe('ForumService', () => {
             const author = i % 2 === 0 ? human : human2;
             await service.postMessage(topicId, author, `post ${i}`);
         }
-        expect(events).toContain('forum:topic:escalated-to-debate');
-        // second threshold crossing does not re-emit
-        await service.postMessage(topicId, human, 'post 6');
-        const escalations = events.filter((e) => e === 'forum:topic:escalated-to-debate');
-        expect(escalations).toHaveLength(1);
+        expect(events).not.toContain('forum:topic:escalated-to-debate');
     });
 
     it('enforces flood budget per author', async () => {

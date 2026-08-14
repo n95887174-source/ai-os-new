@@ -344,8 +344,6 @@ const analytics: Record<string, string> = {
     'forum.moderate_warn': 'предупредить',
     'forum.heatmap_title': 'Активность по категориям',
     'forum.no_activity': 'Активности пока нет',
-    'forum.invite_agents': 'Пригласить агентов',
-    'forum.inviting': 'Запуск дебатов…',
 
     'director.title': 'Директор разговоров',
     'director.subtitle': 'Создавайте и запускайте управляемые наблюдаемые разговоры',

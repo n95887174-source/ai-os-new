@@ -345,8 +345,6 @@ const analytics: Record<string, string> = {
     'forum.moderate_warn': 'warn',
     'forum.heatmap_title': 'Activity by category',
     'forum.no_activity': 'No activity yet',
-    'forum.invite_agents': 'Invite Agents',
-    'forum.inviting': 'Starting debate…',
 
     'director.title': 'Conversation Director',
     'director.subtitle': 'Author and run managed, observable conversations',
