@@ -1,0 +1,362 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../i18n/useTranslation';
+import type {
+    ExecutionMode,
+    ExecutionTarget,
+    InvocationContext,
+    InvocationRequest,
+} from '../../kernel/contracts/invocation';
+import { invocationEngine } from '../../kernel/instances/services-extras';
+import { agentService } from '../../kernel/instances/services-core';
+import { useInvocationStore } from '../../stores/invocationStore';
+
+interface AgentOption {
+    id: string;
+    name: string;
+    role: string;
+}
+
+const WHERE_OPTIONS: { value: InvocationContext['type']; key: string }[] = [
+    { value: 'room', key: 'room' },
+    { value: 'forum-topic', key: 'forum' },
+    { value: 'conversation', key: 'conversation' },
+];
+
+const MODE_OPTIONS: { value: ExecutionMode; key: string }[] = [
+    { value: 'chat', key: 'chat' },
+    { value: 'debate', key: 'debate' },
+    { value: 'director-scenario', key: 'director-scenario' },
+];
+
+const CARD: React.CSSProperties = {
+    margin: '0.75rem 0',
+    padding: '0.6rem 0.75rem',
+    borderRadius: 8,
+    border: '1px solid rgba(34,211,238,0.3)',
+    background: 'rgba(34,211,238,0.08)',
+};
+
+const LOG_ROW: React.CSSProperties = {
+    display: 'flex',
+    gap: '0.5rem',
+    alignItems: 'center',
+    padding: '0.3rem 0.5rem',
+    borderRadius: 6,
+    border: '1px solid #2a2a35',
+    marginBottom: '0.35rem',
+    fontSize: '0.78rem',
+};
+
+const AVATAR: React.CSSProperties = {
+    width: 28,
+    height: 28,
+    borderRadius: '50%',
+    flex: '0 0 auto',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(34,211,238,0.25)',
+    fontWeight: 600,
+    fontSize: '0.8rem',
+};
+
+const FIELD: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    fontSize: '0.75rem',
+    opacity: 0.9,
+};
+
+/**
+ * Room Panel (Step 6, human-facing surface).
+ *
+ * The UI is a PURE consumer of the Invocation Engine:
+ *  - it raises an `InvocationRequest` via `invocationEngine.invoke` (the only
+ *    write path, a method call — never a bus event);
+ *  - it observes lifecycle + live output through `useInvocationStore`
+ *    (fed by `invocation:*` + `conversation:*` events).
+ * The human picks an Agent / Where / Mode / Task; the UI translates that into
+ * the technical `InvocationRequest` (target { agentId }, context, constraints).
+ * It does not own any `Invocation` state and never becomes an orchestrator.
+ */
+const RoomPanel: React.FC = () => {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
+    const { invocations, order, feed, clear } = useInvocationStore();
+
+    const [agents] = useState<AgentOption[]>(() => {
+        try {
+            return agentService.getAgents().map((a) => ({ id: a.id, name: a.name, role: a.role }));
+        } catch {
+            return [];
+        }
+    });
+    const [agentId, setAgentId] = useState('');
+    const [where, setWhere] = useState<InvocationContext['type']>('room');
+    const [mode, setMode] = useState<ExecutionMode>('chat');
+    const [task, setTask] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [meta, setMeta] = useState<Record<string, { task?: string }>>({});
+    const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
+
+    // Load persisted invocations (history survives page reload) and merge with
+    // live events by id — no duplicates because both key on the same id.
+    useEffect(() => {
+        void useInvocationStore.getState().loadHistory();
+    }, []);
+
+    const openSession = (ref: ExecutionTarget) => {
+        if (ref.kind === 'debate') navigate(`/debate?mode=runtime&sessionId=${ref.ref}`);
+        else if (ref.kind === 'conversation') navigate(`/director?session=${ref.ref}`);
+    };
+
+    const idToName = useMemo(() => {
+        const m: Record<string, string> = {};
+        for (const a of agents) m[a.id] = a.name;
+        return m;
+    }, [agents]);
+
+    const handleInvoke = async () => {
+        setError(null);
+        if (!agentId || !task.trim()) {
+            setError(t('room.invoke.validation'));
+            return;
+        }
+        const req: InvocationRequest = {
+            source: 'human-mention',
+            caller: { kind: 'human', id: 'room-ui' },
+            target: { agentId },
+            reason: task.trim(),
+            context: { type: where, ref: 'general' },
+            constraints: { mode },
+        };
+        try {
+            const inv = await invocationEngine.invoke(req);
+            setMeta((m) => ({ ...m, [inv.id]: { task: task.trim() } }));
+        } catch (e) {
+            setError(String(e));
+        }
+    };
+
+    const displayName = (id?: string): string => {
+        if (!id) return t('room.unknownAgent');
+        return idToName[id] ?? id;
+    };
+
+    const agentLabel = (v: (typeof invocations)[string]): string => {
+        const id =
+            v.agents?.[0]?.id ?? (v.target && 'agentId' in v.target ? v.target.agentId : undefined);
+        return displayName(id);
+    };
+
+    return (
+        <div>
+            <h2 style={{ marginTop: 0 }}>{t('room.title')}</h2>
+            <p style={{ opacity: 0.7 }}>{t('room.subtitle')}</p>
+
+            {/* ── Invoke form (the single write path) ── */}
+            <div style={CARD}>
+                <div style={{ fontWeight: 600, marginBottom: '0.6rem' }}>
+                    {t('room.invoke.heading')}
+                </div>
+
+                <div
+                    style={{
+                        display: 'flex',
+                        gap: '0.75rem',
+                        flexWrap: 'wrap',
+                        alignItems: 'flex-end',
+                    }}
+                >
+                    <label style={FIELD}>
+                        {t('room.invoke.agent')}
+                        <select
+                            value={agentId}
+                            onChange={(e) => setAgentId(e.target.value)}
+                            style={{ minWidth: 200 }}
+                        >
+                            <option value="">{t('room.invoke.agentPlaceholder')}</option>
+                            {agents.map((a) => (
+                                <option key={a.id} value={a.id}>
+                                    {a.name} — {a.role}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label style={FIELD}>
+                        {t('room.invoke.where')}
+                        <select
+                            value={where}
+                            onChange={(e) => setWhere(e.target.value as InvocationContext['type'])}
+                        >
+                            {WHERE_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {t(`room.invoke.where.${o.key}`)}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label style={FIELD}>
+                        {t('room.invoke.mode')}
+                        <select
+                            value={mode}
+                            onChange={(e) => setMode(e.target.value as ExecutionMode)}
+                        >
+                            {MODE_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {t(`room.invoke.mode.${o.key}`)}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+
+                <label style={{ ...FIELD, marginTop: 10 }}>
+                    {t('room.invoke.task')}
+                    <textarea
+                        value={task}
+                        onChange={(e) => setTask(e.target.value)}
+                        placeholder={t('room.invoke.taskPlaceholder')}
+                        rows={2}
+                        style={{ minWidth: 320, resize: 'vertical' }}
+                    />
+                </label>
+
+                <div style={{ marginTop: 10 }}>
+                    <button onClick={handleInvoke}>{t('room.invoke.submit')}</button>
+                </div>
+                {error && (
+                    <div style={{ color: '#f87171', fontSize: '0.78rem', marginTop: 8 }}>
+                        {error}
+                    </div>
+                )}
+            </div>
+
+            {/* ── Invocation lifecycle list (read-only observer) ── */}
+            <h3 style={{ margin: '1rem 0 0.5rem' }}>
+                {t('room.invocations.heading')}
+                <button onClick={clear} style={{ marginLeft: 12, fontSize: '0.7rem' }}>
+                    {t('room.clear')}
+                </button>
+            </h3>
+            {order.length === 0 && (
+                <div style={{ opacity: 0.5, fontSize: '0.8rem' }}>
+                    {t('room.invocations.empty')}
+                </div>
+            )}
+            {order.map((id) => {
+                const v = invocations[id]!;
+                const name = agentLabel(v);
+                const whereLabel = v.context ? t(`room.invoke.where.${v.context.type}`) : '';
+                const taskText = meta[id]?.task ?? v.reason;
+                const isOpen = !!openDetails[id];
+                return (
+                    <div
+                        key={id}
+                        style={{
+                            ...LOG_ROW,
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'flex-start',
+                        }}
+                    >
+                        <div style={AVATAR}>{name.charAt(0).toUpperCase()}</div>
+                        <div style={{ flex: 1, minWidth: 200 }}>
+                            <div style={{ fontWeight: 600 }}>{name}</div>
+                            <div style={{ opacity: 0.75, fontSize: '0.74rem' }}>
+                                {whereLabel}
+                                {v.sessionRef ? ` · ${v.sessionRef.kind}` : ''}
+                            </div>
+                            {taskText && (
+                                <div
+                                    style={{
+                                        opacity: 0.85,
+                                        fontSize: '0.74rem',
+                                        marginTop: 2,
+                                    }}
+                                >
+                                    “{taskText}”
+                                </div>
+                            )}
+                            {v.rejectionReason && (
+                                <div
+                                    style={{ color: '#f87171', fontSize: '0.74rem', marginTop: 2 }}
+                                >
+                                    {v.rejectionReason}
+                                </div>
+                            )}
+                            {isOpen && (
+                                <div
+                                    style={{
+                                        fontFamily: 'monospace',
+                                        opacity: 0.6,
+                                        fontSize: '0.7rem',
+                                        marginTop: 4,
+                                    }}
+                                >
+                                    <div>id: {id.slice(0, 8)}</div>
+                                    {v.policyRef && <div>policy: {v.policyRef.slice(0, 8)}</div>}
+                                    {v.sessionRef && (
+                                        <div>
+                                            session: {v.sessionRef.kind}/
+                                            {v.sessionRef.ref.slice(0, 8)}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <span className={`badge status-${v.status}`}>
+                            {t(`room.status.${v.status}`)}
+                        </span>
+                        {v.sessionRef &&
+                        (v.sessionRef.kind === 'conversation' || v.sessionRef.kind === 'debate') ? (
+                            <button
+                                onClick={() => openSession(v.sessionRef!)}
+                                style={{ fontSize: '0.68rem' }}
+                            >
+                                {t('room.invocation.openSession')}
+                            </button>
+                        ) : null}
+                        <button
+                            onClick={() => setOpenDetails((o) => ({ ...o, [id]: !o[id] }))}
+                            style={{ fontSize: '0.68rem' }}
+                        >
+                            {t('room.invocation.details')}
+                        </button>
+                    </div>
+                );
+            })}
+
+            {/* ── Live output from the execution subsystem ── */}
+            <h3 style={{ margin: '1rem 0 0.5rem' }}>{t('room.feed.heading')}</h3>
+            {feed.length === 0 && (
+                <div style={{ opacity: 0.5, fontSize: '0.8rem' }}>{t('room.feed.empty')}</div>
+            )}
+            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                {feed.map((e, i) => (
+                    <div key={i} style={LOG_ROW}>
+                        <span style={{ opacity: 0.6 }}>{new Date(e.at).toLocaleTimeString()}</span>
+                        <span
+                            style={{
+                                color:
+                                    e.kind === 'turn-error'
+                                        ? '#f87171'
+                                        : e.kind === 'turn-start'
+                                          ? '#fbbf24'
+                                          : '#86efac',
+                            }}
+                        >
+                            {e.text}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export default RoomPanel;

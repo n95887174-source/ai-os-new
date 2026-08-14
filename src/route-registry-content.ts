@@ -119,6 +119,14 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 experimental: true,
             },
             {
+                id: 'room',
+                labelKey: 'nav.room',
+                icon: Icons.room,
+                color: '#22d3ee',
+                lazy: true,
+                experimental: true,
+            },
+            {
                 id: 'research-engine',
                 labelKey: 'nav.research_engine',
                 icon: Icons.layers,

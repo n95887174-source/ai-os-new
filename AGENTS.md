@@ -260,6 +260,121 @@ Implementing 7 cognitive modules: Lenses → Crystals → Junction → Synthesis
 - UI: `components/BuilderPanel/` (BuilderAISidebar prompt-to-topology generator, WorkflowListPanel saved workflows with load/deploy)
 - Route `builder` registered (KNOWLEDGE section), i18n en/ru, builderAgent lazyService exposed
 
+## Pending Design — Invocation Engine / Agent Rooms (DESIGN ONLY, no code)
+
+Goal: mIRC-like live **rooms** for AI agents (`#medicine`, `#security`…) + forum where agents
+appear **only by invocation**, never spontaneously. Invocation Engine = thin dispatch layer
+over existing infra (`ConversationCore`/`Director`/`Debate`/`EventBus`/Forum), NOT a new
+conversation service.
+
+**Fixed decisions** (full record: `docs/road/INVOCATION_ENGINE.md`):
+
+- D1 Real-time + persistent log (Room live stream + ConversationCore events as history).
+- D2 Hybrid triggers: `@mention`, expert request, expertise-match, module event, consensus/debate, schedule.
+- D3 Managed call chains — agent may _request_ another agent, but only via the engine (no agent→agent).
+- D4 Room ≠ forum thread — two projections of one context: `Forum → Invocation → Room → ConversationCore`.
+- D5 Narrow responsibility: engine answers only **who / why / context / constraints**.
+- D6 Authority = human; agents never self-invoke.
+
+**Resolved (2026-08-14):** D2 = **B** — automatic invocations allowed only via human-predefined
+`invocationPolicies` (engine checks policy before every call). Added **D7**: Invocation is
+_intent_, not execution (requested→accepted→executing→done), enabling event-sourced audit
+trail. No code yet — path is contract → data model → event model → integration → impl.
+Full record: `docs/road/INVOCATION_ENGINE.md`.
+
+### Implementation — Steps 1–5 DONE (2026-08-14)
+
+- **Step 1 Contracts:** `contracts/invocation.ts` — `InvocationSource/Caller/Target/Context/ExecutionMode/Constraints/AgentRef/Status/Invocation/PolicyMatch/Policy/Evaluation/ExecutionTarget/Request/IInvocationEngineService`.
+- **Step 2 Persistence:** `types/invocation-types.ts` (`InvocationRecord`/`InvocationPolicyRecord`); Dexie v20 (`invocations`, `invocationPolicies`); `database-service.ts` getters; `interfaces.ts` `IDatabaseService` getters; `services/invocation/invocation-repository.ts` (record↔contract mapping, `put/get/listPolicies/createPolicy`).
+- **Step 3 Events:** 5 `invocation:*` events in `event-registry.ts` (`requested`/`accepted`/`rejected`/`executing`/`done`), exact payloads per §9.
+- **Step 4 Engine:** `services/invocation/invocation-engine-service.ts` — `InvocationEngineService` (`invoke` → requested→accepted→executing→done|rejected; `handleAgentRequest` D3; `getInvocation`/`listPolicies`/`createPolicy`). `AgentDirectory` + `IExecutionDelegate` seams (engine does NOT own execution — D5/D7). Typechecks clean.
+- **Step 5 Integration (DONE):** `service-registration/phase21-invocation.ts` registers `invocationEngineService` with `InvocationRepository`(over `database`) + `AgentResolverDirectory`(over `agentService`) + `InvocationExecutionDelegate`(hands off to `scenarioRepository`+`conversationDirectorService` for chat/director-scenario, `debateService` for debate). Wired into `service-registration/index.ts`; `lazyService` `invocationEngine` added to `instances/services-extras.ts`. `tsc` clean (no invocation errors).
+- **Scope discipline:** exactly 2 Dexie tables, exactly 5 events, lifecycle `requested→accepted→executing→done`/`rejected` only, no new buses/adapters/facades. Engine is the sole `Invocation` writer.
+
+### Step 6 — Room / live UI (MINIMAL first-end-to-end surface, DONE 2026-08-14)
+
+Built the smallest UI that proves the full chain: **button → Invoke → policy → agent → ConversationCore/Debate → live output**.
+
+- `stores/invocationStore.ts` (NEW, app layer): Zustand observer over `invocation:*` (intent lifecycle) + `conversation:*` (live execution output). Mirrors `directorStore` — pure consumer, never writes `Invocation`.
+- `components/RoomPanel/RoomPanel.tsx` (NEW): minimal surface — `Invoke Agent` form (target kind agentId/role/expertise + value, reason, context type/ref, mode) → `invocationEngine.invoke(req)` (the ONLY write path, a method call); read-only list of invocations (status badge / policyRef / agents / sessionRef / rejectionReason) + live-output feed. UI is NOT a second orchestrator; it never touches the Engine's aggregate.
+- Route wiring: `route-imports.ts` (`RoomPanelLazy` + `room: RoomPanelLazy`), `route-registry-content.ts` (`room` nav item in KNOWLEDGE section, `nav.room`), `route-registry-icons.tsx` (`Hash` icon → `Icons.room`).
+- i18n: `nav.room` + `room.*` (title/subtitle/invoke/form/status/invocations/feed/session/clear) added to `{en,ru}/nav.ts` + `{en,ru}/analytics.ts`.
+- Test: `RoomPanel.test.tsx` (2) → render + submit raises correct `InvocationRequest` through `invocationEngine`. **2/2 pass.**
+- Verified: `tsc -p tsconfig.json --noEmit` clean for invocation/room/route files; no new Dexie tables, no new events, Engine still the sole `Invocation` writer. **§9 doc updated** to match intent-first lifecycle (no `sessionRef` in `accepted`; it lives on `executing`).
+- **Scope discipline:** minimal first-e2e only. Full `#channel` feature set (mentions, threading, per-room history, schedule triggers, forum-bridge UI) deliberately deferred — this panel is the proof surface, not the product. No Step 1–5 changes touched.
+- **Note:** `sessionRef` rule per review — accepted = intent resolved+allowed; executing = execution started + session ref. Implementation unchanged; doc §9 aligned.
+
+### Step 6 — E2E closure (DONE 2026-08-14)
+
+Proved the **real** end-to-end chain, not a mock of the Engine:
+
+**RoomPanel → InvocationEngine → Policy → Agent Registry → ConversationCore → live events → Store → done**
+
+- `room-invocation-e2e.integration.test.tsx` (NEW, **2/2 pass**, `vitest run`): mirrors the B6.1 pattern — real `defaultContainer` + singleton `coreEventBus` + `clearResolvedServices()` + real `invocationEngineService` registered; stubbed `chatService` echoes a valid `MESSAGE_RESPONSE`; renders the **real** `RoomPanel`; asserts the **real** `useInvocationStore` (subscribed to `coreEventBus`).
+  1. **Full lifecycle:** `requested` → (smoke policy `match.source:'human-mention'` allows) → `accepted` → `ConversationCore` (chat mode via `ChatExecutor`) → `executing` → `conversation:*` live output observed in store → `done`. Aggregate persisted in `invocationRepository` with `INVOCATION_DONE` + `sessionRef`.
+  2. **Generic guard:** `coreEventBus.subscribeAll` during the run asserts **no `debate:`/`forum:`-prefixed event** fires while `INVOCATION_*` + `CONVERSATION_*` do — proves it didn't accidentally drag the old architecture along.
+- Smoke policy seeded in test: `{ id:'smoke-policy', enabled:true, match:{source:'human-mention'}, actions:{target:{agentId:SMOKE_AGENT}, mode:'chat'}, allowAgentInitiatedInvocation:false }`. Target `smoke-agent` supplied by `RoomPanel` as `req.target`, resolved by `InvocationEngineService.resolveTarget()` from the test `agentService`.
+- `src/kernel/dal/_test-harness.ts` extended (the only non-test production file touched): added v20 `invocations`/`invocationPolicies` getters + `clearAll()` entries (shim previously omitted v20 tables, so `new InvocationRepository(tdb.db)` would throw).
+- Verified: `tsc -p tsconfig.json --noEmit` **clean** for all `room/invocation/e2e` files; production architecture/contracts/schema/events/Room UI **untouched by test changes**.
+- **E2E — CLOSED ✅** | **Production architecture — untouched ✅** | **Invocation Engine — proven end-to-end ✅** | **Room proof surface — working ✅**.
+
+### Step 6 — Human-facing UI rework (DONE 2026-08-14)
+
+Turned the technical proof-panel into a user-facing UI. **No backend contracts changed** — the UI only translates human choices into the existing `InvocationRequest` (`target { agentId }`, `context`, `constraints.mode`).
+
+- `components/RoomPanel/RoomPanel.tsx` (REWRITE): replaced raw ID/type inputs with:
+  - **Agent picker** — `<select>` of `agentService.getAgents()` (name — role, no IDs shown); resolves to `target.agentId`.
+  - **Where picker** — friendly `💬 This room / 📋 Forum topic / 🗨️ Conversation` → `context.type` (ref `'general'`).
+  - **Mode picker** — `💬 Chat / ⚔️ Debate / 🎬 Scenario` → `constraints.mode`.
+  - **Task** textarea → `reason`.
+  - **Invocations list** — human cards: agent avatar+name (id→name map), Where label, live status badge, quoted task, rejection reason; technical `id/policyRef/sessionRef` behind a **Details** toggle (no IDs in the default view).
+- i18n: added `room.invoke.{agent,agentPlaceholder,where.*,mode.*,task,taskPlaceholder}` + `room.unknownAgent` + `room.invocation.details` to `{en,ru}/analytics.ts`; `room.invoke.submit` → "Invoke Agent", `room.invoke.validation` reworded. Old debug keys retained.
+- `services-core.ts` `agentService` (existing lazyService) reused for the agent list; no new container tokens.
+- Tests updated to the new controls: `RoomPanel.test.tsx` (2, mocks `agentService.getAgents`) + `room-invocation-e2e.integration.test.tsx` (2, drives the real Agent/Where/Mode/Task pickers through the real `agentService` mock + real engine). Both suites **4/4 green**; `tsc -p tsconfig.json --noEmit` clean for all changed files.
+- **Scope discipline:** UI only. No contract/event/schema/persistence change; the E2E generic guard (no debate/forum events) still holds.
+
+### Step 6 — Manual Room invocation policy (DONE 2026-08-14)
+
+The friendly UI rejected real agents (`System Architect`) because the only seeded
+policy was the E2E smoke policy pinned to `smoke-agent`. Verified the **policy model
+already supports "any human-selected registered agent"** without engine changes:
+
+- `InvocationEngineService.matches()` gates only on `match.source`/`event`/`expertise`
+  (never compares `policy.actions.target` to the request); `invoke()` resolves agents
+  from `req.target` (the human's pick). `resolveAgents` also rejects unknown ids, so
+  non-registered agents are still denied. → Policy gates the _type_ of call; human picks
+  the agent (matches the intended design — no policy-engine extension).
+
+- `phase21-invocation.ts`: seeds a default **`Manual Room Chat (human-selected agent)`**
+  policy on first service resolution — `match: { source: 'human-mention' }`,
+  `actions.target` placeholder, `mode:'chat'`, `allowAgentInitiatedInvocation:false`,
+  `priority:0`, idempotent by name (best-effort fire-and-forget, never throws during
+  lazy construction). No new table/event/contract.
+- E2E extended: `room-invocation-e2e.integration.test.tsx` now **3 tests** — adds one
+  that invokes **`system-architect`** (a different registered agent) through the real
+  RoomPanel + source-only policy and asserts `done` + live `conversation:*` output +
+  `resolvedAgents` contains `system-architect`. Proves the gate permits any registered
+  human-selected agent.
+- Verified: **5/5** RoomPanel tests pass (`tsc` clean for changed files). Room UI now
+  reaches `accepted → executing → live output → done` for real registered agents.
+
+### Step 6 — Invocation History + Open Session (DONE 2026-08-14)
+
+Turned the per-reload-vanishing proof panel into a working tool. No engine/contract/event
+change; only a DAL read + UI + route navigation.
+
+- `invocation-repository.ts`: added `list()` (read all `invocations` from Dexie).
+- `services-extras.ts`: added `invocationRepository = lazyService<InvocationRepository>('invocationRepository')`; `phase21-invocation.ts` registers the `invocationRepository` token (engine now reuses the same instance).
+- `stores/invocationStore.ts`: `InvocationView` gained `reason?`; new `loadHistory()` action loads persisted invocations via `invocationRepository.list()` and **merges by id** into the same `invocations`/`order` map (no dupes with live events; live events and history share the `Invocation` id). Order sorted by `updatedAt` desc.
+- `RoomPanel.tsx`: on mount calls `loadHistory()` → history survives page reload; cards now show the persisted `reason` (task) instead of only the local `meta`; added **Open session** button (`room.invocation.openSession`) shown only when `sessionRef` is `conversation`/`debate` (hidden for `room`/absent) → `useNavigate()` opens `/director?session=${ref}` (conversation) or `/debate?mode=runtime&sessionId=${ref}` (debate), reusing the existing `react-router-dom` navigation.
+- i18n: added `room.invocation.openSession` to `{en,ru}/analytics.ts`.
+- Tests: `RoomPanel.test.tsx` + `room-invocation-e2e.integration.test.tsx` → **7/7 pass** (2 unit + 5 E2E). New E2E tests: (4) Open session navigates to `/director?session=…`; (5) after `clear()` the store rehydrates from Dexie via `loadHistory()` and the persisted invocation reappears. `tsc` clean for changed files.
+- **Scope discipline:** History + Open Session ONLY. No Policies UI, Room registry, multi-agent UI, or Engine changes.
+
+### Pending Design Question (NOT a bug, NOT to fix now)
+
+**Policy `actions.target` vs `InvocationRequest.target` semantics.** `policy.actions.target` is a declarative part of the policy, but actual target resolution is performed from `req.target` (`InvocationEngineService.invoke()` resolves `req.target`, not `policy.actions.target`); `evaluate()`/`matches()` only gate on `match.source/event/expertise`. Open question: should the policy _define_ the target, or only _permit/constrain_ the invocation? Requires a separate decision; no code change made.
+
 ## Session History
 
 Full session log: `docs/SESSION_LOG.md`

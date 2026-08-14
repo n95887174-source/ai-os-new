@@ -64,23 +64,12 @@ import type { BatchProcessorService as BatchProcessorServiceType } from '../serv
 import type { AgentAvatarService } from '../services/agent-avatar-service';
 import type { ConnectorService } from '../services/connector-service';
 import type { IQualityImpactCollector, IExperimentEngine } from '../contracts/quality-impact';
-import type { ILensEngineService } from '../contracts/lens-engine';
-import type { ICrystalVaultService } from '../contracts/knowledge-crystal';
-import type { IJunctionEngineService } from '../contracts/junction-engine';
-import type { ISynthesisEngineService } from '../contracts/synthesis-engine';
-import type { IKnowledgeGeneratorService } from '../contracts/knowledge-generator';
-import type { IForumService } from '../contracts/forum';
-import type { IBuilderAgentService } from '../contracts/builder';
 import type { ScenarioRepository } from '../dal/scenario-repository';
-
-export const lensEngine = lazyService<ILensEngineService>('lensEngine');
-export const crystalVault = lazyService<ICrystalVaultService>('crystalVault');
-export const junctionEngine = lazyService<IJunctionEngineService>('junctionEngine');
-export const synthesisEngine = lazyService<ISynthesisEngineService>('synthesisEngine');
-export const knowledgeGenerator = lazyService<IKnowledgeGeneratorService>('knowledgeGenerator');
-export const forumService = lazyService<IForumService>('forumService');
-export const builderAgent = lazyService<IBuilderAgentService>('builderAgent');
+import type { InvocationRepository } from '../services/invocation/invocation-repository';
+import type { IInvocationEngineService } from '../contracts/invocation';
 export const scenarioRepository = lazyService<ScenarioRepository>('scenarioRepository');
+export const invocationEngine = lazyService<IInvocationEngineService>('invocationEngineService');
+export const invocationRepository = lazyService<InvocationRepository>('invocationRepository');
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',

@@ -1416,6 +1416,65 @@ export const EVENT_REGISTRY = {
         }),
     ),
 
+    // ── Invocation Engine (managed agent invocation; intent lifecycle only) ──
+    INVOCATION_REQUESTED: event(
+        'invocation:requested',
+        z.object({
+            invocationId: z.string(),
+            caller: z.object({ kind: z.enum(['human', 'event', 'schedule']), id: z.string() }),
+            target: z.union([
+                z.object({ agentId: z.string() }),
+                z.object({ role: z.string() }),
+                z.object({ expertise: z.array(z.string()) }),
+            ]),
+            context: z.union([
+                z.object({ type: z.literal('forum-topic'), ref: z.string() }),
+                z.object({ type: z.literal('room'), ref: z.string() }),
+                z.object({ type: z.literal('conversation'), ref: z.string() }),
+            ]),
+        }),
+    ),
+    INVOCATION_ACCEPTED: event(
+        'invocation:accepted',
+        z.object({
+            invocationId: z.string(),
+            policyRef: z.string(),
+            agents: z.array(
+                z.object({
+                    id: z.string(),
+                    role: z.string().optional(),
+                    expertise: z.array(z.string()).optional(),
+                }),
+            ),
+            sessionRef: z
+                .union([
+                    z.object({ kind: z.literal('conversation'), ref: z.string() }),
+                    z.object({ kind: z.literal('debate'), ref: z.string() }),
+                    z.object({ kind: z.literal('room'), ref: z.string() }),
+                ])
+                .optional(),
+        }),
+    ),
+    INVOCATION_REJECTED: event(
+        'invocation:rejected',
+        z.object({ invocationId: z.string(), reason: z.string() }),
+    ),
+    INVOCATION_EXECUTING: event(
+        'invocation:executing',
+        z.object({
+            invocationId: z.string(),
+            sessionRef: z.union([
+                z.object({ kind: z.literal('conversation'), ref: z.string() }),
+                z.object({ kind: z.literal('debate'), ref: z.string() }),
+                z.object({ kind: z.literal('room'), ref: z.string() }),
+            ]),
+        }),
+    ),
+    INVOCATION_DONE: event(
+        'invocation:done',
+        z.object({ invocationId: z.string(), resultRef: z.string().optional() }),
+    ),
+
     // ── Conversation Core lifecycle (generic; independent of Debate/Forum/Chat) ──
     CONVERSATION_TURN_START: event(
         'conversation:turn:start',

@@ -166,6 +166,7 @@ const KnowledgeGenPanelLazy = React.lazy(
 );
 const ForumPanelLazy = React.lazy(() => import('./components/ForumPanel/ForumPanel'));
 const DirectorPanelLazy = React.lazy(() => import('./components/DirectorPanel/DirectorPanel'));
+const RoomPanelLazy = React.lazy(() => import('./components/RoomPanel/RoomPanel'));
 
 // ── Section 11 P2+P3 Lazy Imports ─────────────────────────────────────────────
 const FederatedMemoryPanelLazy = React.lazy(() => import('./components/FederatedMemoryPanel'));
@@ -347,6 +348,7 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'knowledge-generator': KnowledgeGenPanelLazy,
     forum: ForumPanelLazy,
     director: DirectorPanelLazy,
+    room: RoomPanelLazy,
     'federated-memory': FederatedMemoryPanelLazy,
     'plugin-sdk': PluginSdkPanelLazy,
     'persona-marketplace': PersonaMarketplacePanelLazy,

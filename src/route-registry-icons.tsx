@@ -72,6 +72,7 @@ import {
     Lightbulb,
     MessagesSquare,
     Clapperboard,
+    Hash,
 } from 'lucide-react';
 
 const s = 18;
@@ -151,4 +152,5 @@ export const Icons = {
     messagesSquare: <MessagesSquare size={s} />,
     settings: <Settings size={s} />,
     director: <Clapperboard size={s} />,
+    room: <Hash size={s} />,
 } as const;

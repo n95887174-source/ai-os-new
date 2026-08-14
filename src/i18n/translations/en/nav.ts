@@ -104,6 +104,7 @@ const nav: Record<string, string> = {
     'nav.knowledge_generator': 'Knowledge Generator',
     'nav.forum': 'Agent Forum',
     'nav.director': 'Conversation Director',
+    'nav.room': 'Agent Rooms',
     'nav.architecture_review': 'Architecture Review',
     'nav.prompt_strategy_audit': 'Prompt & Strategy Audit',
     'nav.model_routing_experiments': 'Model Routing Experiments',
