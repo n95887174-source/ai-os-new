@@ -33,8 +33,9 @@ describe('BudgetAlertService', () => {
         it('should preset rules on first init', async () => {
             const rules = svc.getRules();
             expect(rules.length).toBeGreaterThanOrEqual(3);
-            expect(rules[0].name).toBe('Monthly budget 80%');
-            expect(rules[0].id).toBeTruthy();
+            expect(rules[0]).toBeDefined();
+            expect(rules[0]!.name).toBe('Monthly budget 80%');
+            expect(rules[0]!.id).toBeTruthy();
         });
     });
 
@@ -47,13 +48,26 @@ describe('BudgetAlertService', () => {
                 action: 'notification',
                 enabled: true,
             });
-            expect(rule.id).toBeTruthy();
+            const foundRule = svc.getRules().find((r) => r.id === rule.id);
+            expect(foundRule).toBeDefined();
+            expect(foundRule!.name).toBe('Custom');
             expect(svc.getRules().length).toBeGreaterThanOrEqual(4);
         });
 
         it('should update a rule', () => {
+            const rules = svc.getRules();
+            const originalRule = rules[0];
+            if (!originalRule) throw new Error('No rule found');
+
+            svc.updateRule(originalRule.id, { threshold: 95 });
+            const updated = svc.getRules().find((r) => r.id === originalRule.id);
+            expect(updated).toBeDefined();
+            expect(updated!.threshold).toBe(95);
+        });
+
+        it('should disable a rule', () => {
             const rule = svc.addRule({
-                name: 'Test',
+                name: 'Auto-disable',
                 condition: 'above_threshold',
                 threshold: 50,
                 action: 'notification',
@@ -61,8 +75,9 @@ describe('BudgetAlertService', () => {
             });
             svc.updateRule(rule.id, { threshold: 75, enabled: false });
             const updated = svc.getRules().find((r) => r.id === rule.id);
-            expect(updated?.threshold).toBe(75);
-            expect(updated?.enabled).toBe(false);
+            expect(updated).toBeDefined();
+            expect(updated!.threshold).toBe(75);
+            expect(updated!.enabled).toBe(false);
         });
 
         it('should remove a rule', () => {
@@ -98,7 +113,9 @@ describe('BudgetAlertService', () => {
             s.init();
             const events = s.evaluate();
             expect(events.length).toBeGreaterThanOrEqual(1);
-            expect(events[0].ruleName).toBe('Monthly budget 80%');
+            const event = events[0];
+            expect(event).toBeDefined();
+            expect(event!.ruleName).toBe('Monthly budget 80%');
         });
 
         it('should trigger trending_up rule', () => {
@@ -149,7 +166,9 @@ describe('BudgetAlertService', () => {
             s.setBudgetService(budget);
             const events = s.evaluate();
             expect(events.length).toBeGreaterThanOrEqual(1);
-            expect(events[0].ruleId).toBe(rule.id);
+            const event = events[0];
+            expect(event).toBeDefined();
+            expect(event!.ruleId).toBe(rule.id);
         });
 
         it('should not trigger disabled rules', () => {

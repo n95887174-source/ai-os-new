@@ -1,4 +1,5 @@
 import { lazyService } from '../service-helper';
+import type { IForumService } from '../contracts/forum';
 import type { IArchitectureReviewService } from '../contracts/architecture-review';
 import type { IPromptAuditService } from '../contracts/prompt-audit';
 import type { IRoutingExperimentsService } from '../contracts/routing-experiments';
@@ -68,6 +69,7 @@ import type { ScenarioRepository } from '../dal/scenario-repository';
 import type { InvocationRepository } from '../services/invocation/invocation-repository';
 import type { IInvocationEngineService } from '../contracts/invocation';
 export const scenarioRepository = lazyService<ScenarioRepository>('scenarioRepository');
+export const forumService = lazyService<IForumService>('forumService');
 export const invocationEngine = lazyService<IInvocationEngineService>('invocationEngineService');
 export const invocationRepository = lazyService<InvocationRepository>('invocationRepository');
 

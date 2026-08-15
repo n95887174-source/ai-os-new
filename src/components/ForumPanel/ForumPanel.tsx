@@ -1,7 +1,8 @@
 import React from 'react';
 import { MessagesSquare } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
-import { forumService } from '../../kernel/instances';
+import { forumService } from '../../kernel/instances/services-extras';
+import { eventBus, EVENTS } from '../../kernel/instances';
 import type { ForumAuthor, Post, Topic } from '../../kernel/types/forum-types';
 import TopicList from './TopicList';
 import TopicView from './TopicView';
@@ -26,15 +27,27 @@ const ForumPanel: React.FC = () => {
     const [consensus, setConsensus] = React.useState<string | null>(null);
     const [heatmap, setHeatmap] = React.useState<Array<{ category: string; count: number }>>([]);
 
+    const [page, setPage] = React.useState(0);
+
     const refreshTopics = React.useCallback(async () => {
-        const page = await forumService.listTopics({ page: 0, pageSize: 50 });
-        setTopics(page.items);
+        const pageData = await forumService.listTopics({ page, pageSize: 50 });
+        setTopics(pageData.items);
         const counts = new Map<string, number>();
-        for (const tp of page.items) {
+        for (const tp of pageData.items) {
             counts.set(tp.category, (counts.get(tp.category) ?? 0) + tp.postCount);
         }
         setHeatmap([...counts.entries()].map(([category, count]) => ({ category, count })));
-    }, []);
+    }, [page]);
+
+    // Combined Effect for lifecycle + real-time
+    React.useEffect(() => {
+        void refreshTopics();
+        const unsubs = [
+            eventBus.onSafe(EVENTS.FORUM_TOPIC_CREATED, () => void refreshTopics()),
+            eventBus.onSafe(EVENTS.FORUM_POST_ADDED, () => void refreshTopics()),
+        ];
+        return () => unsubs.forEach((u) => u());
+    }, [refreshTopics]);
 
     const openThread = async (id: string): Promise<void> => {
         setSelectedId(id);
@@ -46,6 +59,11 @@ const ForumPanel: React.FC = () => {
 
     React.useEffect(() => {
         void refreshTopics();
+        const unsubs = [
+            eventBus.onSafe(EVENTS.FORUM_TOPIC_CREATED, () => void refreshTopics()),
+            eventBus.onSafe(EVENTS.FORUM_POST_ADDED, () => void refreshTopics()),
+        ];
+        return () => unsubs.forEach((u) => u());
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -119,6 +137,8 @@ const ForumPanel: React.FC = () => {
                         selectedId={selectedId}
                         onSelect={(id) => void openThread(id)}
                         onCreate={(title, cat) => void handleCreate(title, cat)}
+                        page={page}
+                        onPageChange={setPage}
                     />
                     <div style={{ marginTop: 14 }}>
                         <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: 6 }}>

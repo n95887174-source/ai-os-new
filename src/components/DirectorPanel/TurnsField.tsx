@@ -72,7 +72,8 @@ const TurnsField: React.FC<{
         if (target < 0 || target >= value.length) return;
         const next = [...value];
         const tmp = next[idx];
-        next[idx] = next[target];
+        if (!next[target] || !tmp) return;
+        next[idx] = next[target]!;
         next[target] = tmp;
         onChange(next);
     };

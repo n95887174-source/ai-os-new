@@ -7,6 +7,8 @@ interface TopicListProps {
     selectedId: string | null;
     onSelect: (id: string) => void;
     onCreate: (title: string, category: string) => void;
+    page: number;
+    onPageChange: (page: number) => void;
 }
 
 const TopicRow: React.FC<{ topic: Topic; active: boolean; onClick: () => void }> = ({
@@ -47,13 +49,22 @@ const TopicRow: React.FC<{ topic: Topic; active: boolean; onClick: () => void }>
     </div>
 );
 
-/**
- * TopicList — sidebar with topic creation form + topic list.
- */
-const TopicList: React.FC<TopicListProps> = ({ topics, selectedId, onSelect, onCreate }) => {
+const TopicList: React.FC<TopicListProps> = ({
+    topics,
+    selectedId,
+    onSelect,
+    onCreate,
+    page,
+    onPageChange,
+}) => {
     const { t } = useTranslation();
     const [title, setTitle] = React.useState('');
     const [category, setCategory] = React.useState('general');
+    const [filter, setFilter] = React.useState('');
+
+    const filteredTopics = topics.filter((t) =>
+        t.title.toLowerCase().includes(filter.toLowerCase()),
+    );
 
     const submit = (): void => {
         if (!title.trim()) return;
@@ -63,6 +74,14 @@ const TopicList: React.FC<TopicListProps> = ({ topics, selectedId, onSelect, onC
 
     return (
         <div>
+            <div style={{ marginBottom: 8 }}>
+                <input
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder={t('common.search')}
+                    style={{ ...inputStyle, width: '100%' }}
+                />
+            </div>
             <div style={{ display: 'flex', gap: 4, marginBottom: 8, alignItems: 'center' }}>
                 <input
                     value={title}
@@ -84,7 +103,7 @@ const TopicList: React.FC<TopicListProps> = ({ topics, selectedId, onSelect, onC
                 </button>
             </div>
 
-            {topics.length === 0 && (
+            {filteredTopics.length === 0 && (
                 <div
                     style={{
                         fontSize: '0.72rem',
@@ -97,7 +116,7 @@ const TopicList: React.FC<TopicListProps> = ({ topics, selectedId, onSelect, onC
                 </div>
             )}
 
-            {topics.map((tp) => (
+            {filteredTopics.map((tp) => (
                 <TopicRow
                     key={tp.id}
                     topic={tp}
@@ -105,9 +124,41 @@ const TopicList: React.FC<TopicListProps> = ({ topics, selectedId, onSelect, onC
                     onClick={() => onSelect(tp.id)}
                 />
             ))}
+            {topics.length > 0 && (
+                <div
+                    style={{
+                        display: 'flex',
+                        gap: 10,
+                        justifyContent: 'center',
+                        marginTop: 10,
+                        alignItems: 'center',
+                    }}
+                >
+                    <button
+                        onClick={() => onPageChange(Math.max(0, page - 1))}
+                        style={btnStyle('#94a3b8')}
+                    >
+                        Prev
+                    </button>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Page {page + 1}</span>
+                    <button onClick={() => onPageChange(page + 1)} style={btnStyle('#94a3b8')}>
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
+
+const btnStyle = (color: string): React.CSSProperties => ({
+    background: 'none',
+    border: `1px solid ${color}`,
+    color,
+    cursor: 'pointer',
+    padding: '0.25rem 0.55rem',
+    borderRadius: 4,
+    fontSize: '0.72rem',
+});
 
 const inputStyle: React.CSSProperties = {
     flex: 1,
