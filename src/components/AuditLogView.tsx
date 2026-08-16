@@ -69,6 +69,25 @@ const AuditLogView: React.FC = () => {
         return result.reverse();
     }, [entries, severityFilter, searchQuery, period, fromDate, toDate]);
 
+    const handleExportCsv = useCallback(() => {
+        const cols = ['timestamp', 'severity', 'action', 'actor', 'target', 'details'];
+        const escape = (v: unknown): string => {
+            const s = String(v ?? '');
+            return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        };
+        const rows = filtered.map((e) =>
+            cols.map((c) => escape((e as unknown as Record<string, unknown>)[c])).join(','),
+        );
+        const csv = [cols.join(','), ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-log-${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [filtered]);
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
             <div
@@ -225,6 +244,25 @@ const AuditLogView: React.FC = () => {
                     >
                         <Download size={12} />
                         Export
+                    </button>
+                    <button
+                        onClick={handleExportCsv}
+                        title="Export as CSV"
+                        style={{
+                            padding: '0.4rem 0.6rem',
+                            borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            background: 'rgba(0,0,0,0.3)',
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: '0.65rem',
+                        }}
+                    >
+                        <Download size={12} />
+                        CSV
                     </button>
                 </div>
             </div>
