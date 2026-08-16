@@ -109,3 +109,15 @@ Autonomous read-only research of the **25 seeded system agents**. 25 per-agent f
   - **Invocation** works today (human picks any registered agent via RoomPanel; `phase21-invocation.ts` wraps agentService); expertise-match invocation exists but is UI-hidden.
 - **Unverified / deferred areas:** whether any agent has true agent-scoped memory (journal is generic by nodeId); whether a Research subsystem truly exists (UI-only scratchpad found); whether Scheduler/Workflow ever target agents (Workflow/Builder debate hook is BROKEN — `builder-agent-service.ts:40` non-existent `debate:start`). These remain open pending deeper scheduler/workflow review.
 - Metrics: 25 agents × 16 = 400 per-agent files + 7 synthesis = 407 md; predominantly VERIFIED citations with INFERRED/OPINION clearly flagged; dozens of opportunities catalogued per agent (5 quick + 5 medium + 3 big ideas each).
+
+## CYCLE 6 — OBSERVABILITY SUITE DEEP-DIVE (2026-08-15) — DONE
+
+Autonomous read-only research of the **Observability Suite** (Traces, Diagnostics, CausalDebugger, StateInspector). 5 markdown docs written to `docs/experementmdroadmaps/observability/` (no source changed).
+
+- **Deliverables:** `00_OBSERVABILITY_MASTER_MAP` (synthesis: architecture, silos, composition, roadmap), `01` (real architecture map), `02` (silo analysis), `03` (composition roadmap), `04` (UX improvements).
+- **Key VERIFIED findings:**
+  - **Telemetry Silos**: The system maintains high-fidelity telemetry (`TraceService`), reactive health monitoring (`DiagnosticService`), and high-overhead `CausalDebugger` analysis, but they operate as **decoupled consumers** of the `EventBus` without a shared correlation context.
+  - **Composition Gap**: No unified context anchor (correlation ID) spans these services; the UI consumer (`StateInspectorPanel`) relies on brittle, manual state snapshots rather than streamed context.
+  - **Observability fragmentation**: Diagnostic markers are not surfaced in trace views, and the Causal Debugger cannot be invoked from diagnostic events, limiting holistic debugging.
+- **Recommended direction**: Establish a unified context-correlation ID across `EventBus` payloads for all observability services; implement a "Context Overlay" UI pattern that allows tracing events to anchor to specific diagnostic or causal debugger sessions.
+- Metrics: 5 docs; 4 services audited (Trace, Diagnostic, Causal, Inspector); predominantly VERIFIED citations; 10+ opportunities for cross-service composition.
