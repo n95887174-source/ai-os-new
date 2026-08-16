@@ -297,6 +297,8 @@ export const EVENT_REGISTRY = {
             tps: z.number().optional(),
             status: z.enum(['timeout', 'done', 'cancelled', 'error']).optional(),
             finishReason: z.string().optional(),
+            agentId: z.string().optional(),
+            invocationId: z.string().optional(),
         }),
     ),
     CHAT_STREAM_END: event(
@@ -313,6 +315,8 @@ export const EVENT_REGISTRY = {
             tps: z.number().optional(),
             status: z.enum(['timeout', 'done', 'cancelled', 'error']).optional(),
             finishReason: z.string().optional(),
+            agentId: z.string().optional(),
+            invocationId: z.string().optional(),
         }),
     ),
     STREAM_ERROR: event(

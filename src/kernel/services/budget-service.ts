@@ -189,6 +189,7 @@ export class BudgetService implements IBudgetService {
                 inputTokens?: number;
                 outputTokens?: number;
                 agentId?: string;
+                invocationId?: string;
             }>(EVENTS.STREAM_END, (d) => {
                 if (!d.requestId || !d.model) return;
                 const input = d.inputTokens ?? Math.round((d.tokens || 0) * 0.3);
@@ -213,6 +214,7 @@ export class BudgetService implements IBudgetService {
                     totalCost: cost,
                     timestamp: now,
                     agentId: d.agentId,
+                    invocationId: d.invocationId,
                 });
                 this._invalidateMonthFiltered();
                 // Prune dedupSet when it exceeds costHistory or grows past 15000
@@ -620,6 +622,15 @@ export class BudgetService implements IBudgetService {
             if (c.agentId) byAgent[c.agentId] = (byAgent[c.agentId] || 0) + c.totalCost;
         }
         return byAgent;
+    }
+
+    getCostByInvocation(): Record<string, number> {
+        const byInvocation: Record<string, number> = {};
+        for (const c of this.costHistory) {
+            if (c.invocationId)
+                byInvocation[c.invocationId] = (byInvocation[c.invocationId] || 0) + c.totalCost;
+        }
+        return byInvocation;
     }
 
     clearHistory() {

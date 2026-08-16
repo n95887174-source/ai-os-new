@@ -517,6 +517,9 @@ export class ChatExecutor {
                                 model: effectiveModel,
                                 latency: latencyMs,
                                 tokens: result.tokens || 0,
+                                agentId,
+                                invocationId: req.options?.metadata?.invocationId as
+                                    string | undefined,
                             });
 
                             return;
