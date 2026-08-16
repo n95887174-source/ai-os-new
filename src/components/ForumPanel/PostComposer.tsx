@@ -4,6 +4,8 @@ import { useTranslation } from '../../i18n/useTranslation';
 interface PostComposerProps {
     onSubmit: (body: string) => void;
     draftKey?: string;
+    injectText?: string | null;
+    injectNonce?: number;
 }
 
 const DRAFT_PREFIX = 'forum:draft:';
@@ -11,8 +13,14 @@ const DRAFT_PREFIX = 'forum:draft:';
 /**
  * PostComposer — new post input for the selected topic.
  * Persists an unsent draft to localStorage, keyed by `draftKey` (topic id).
+ * `injectText`/`injectNonce` let a "quote" action append a quoted block.
  */
-const PostComposer: React.FC<PostComposerProps> = ({ onSubmit, draftKey }) => {
+const PostComposer: React.FC<PostComposerProps> = ({
+    onSubmit,
+    draftKey,
+    injectText,
+    injectNonce = 0,
+}) => {
     const { t } = useTranslation();
     const [body, setBody] = React.useState('');
 
@@ -27,6 +35,17 @@ const PostComposer: React.FC<PostComposerProps> = ({ onSubmit, draftKey }) => {
         if (body) localStorage.setItem(DRAFT_PREFIX + draftKey, body);
         else localStorage.removeItem(DRAFT_PREFIX + draftKey);
     }, [body, draftKey]);
+
+    React.useEffect(() => {
+        if (injectNonce > 0 && injectText) {
+            const quoted = injectText
+                .split('\n')
+                .map((l) => `> ${l}`)
+                .join('\n');
+            setBody((prev) => (prev.trim() ? `${prev}\n\n${quoted}` : quoted));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [injectNonce]);
 
     const submit = (): void => {
         if (!body.trim()) return;

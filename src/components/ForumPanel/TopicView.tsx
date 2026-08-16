@@ -50,10 +50,11 @@ function downloadMarkdown(filename: string, content: string): void {
     URL.revokeObjectURL(url);
 }
 
-const PostCard: React.FC<{ post: Post; onModerate: (id: string, action: string) => void }> = ({
-    post,
-    onModerate,
-}) => (
+const PostCard: React.FC<{
+    post: Post;
+    onModerate: (id: string, action: string) => void;
+    onQuote?: (post: Post) => void;
+}> = ({ post, onModerate, onQuote }) => (
     <div
         style={{
             border: '1px solid rgba(255,255,255,0.08)',
@@ -81,6 +82,11 @@ const PostCard: React.FC<{ post: Post; onModerate: (id: string, action: string) 
                 <span style={{ fontSize: '0.66rem', color: '#94a3b8', fontWeight: 700 }}>
                     {post.score}
                 </span>
+                {onQuote && typeof onQuote === 'function' && (
+                    <button onClick={() => onQuote(post)} style={iconBtnSmall} title="quote">
+                        ❝
+                    </button>
+                )}
                 <button
                     onClick={() => onModerate(post.id, 'hide')}
                     style={iconBtnSmall}
@@ -111,6 +117,7 @@ const PostCard: React.FC<{ post: Post; onModerate: (id: string, action: string) 
 const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, onCompose }) => {
     const { t } = useTranslation();
     const [postFilter, setPostFilter] = React.useState('');
+    const [quote, setQuote] = React.useState<{ text: string; n: number } | null>(null);
 
     React.useEffect(() => {
         setPostFilter('');
@@ -211,11 +218,22 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
                 .sort((a, b) => a.createdAt - b.createdAt) // Sort by time first
                 .map((p) => (
                     <div key={p.id} style={{ paddingLeft: p.parentId ? '1.5rem' : 0 }}>
-                        <PostCard post={p} onModerate={onModerate} />
+                        <PostCard
+                            post={p}
+                            onModerate={onModerate}
+                            onQuote={(post) =>
+                                setQuote({ text: post.body, n: (quote?.n ?? 0) + 1 })
+                            }
+                        />
                     </div>
                 ))}
 
-            <PostComposer onSubmit={onCompose} draftKey={thread?.topic.id} />
+            <PostComposer
+                onSubmit={onCompose}
+                draftKey={thread?.topic.id}
+                injectText={quote?.text ?? null}
+                injectNonce={quote?.n ?? 0}
+            />
         </div>
     );
 };
