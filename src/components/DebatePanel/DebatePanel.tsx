@@ -328,13 +328,11 @@ const DebatePanel: React.FC = () => {
     const handleReplay = () => {
         const s = lastSessionRef.current || session;
         if (!s) return;
-        setTopic(s.topic);
-        const agentIds = (s.participants ?? [])
-            .filter((p) => !p.id.startsWith('historical:'))
-            .map((p) => p.id)
-            .filter((id) => availableAgents.some((a) => a.id === id));
-        setSelectedAgents(agentIds);
-        queueMicrotask(() => handleStart());
+
+        // Use existing core capability to restore the session
+        sessionManager.restoreDebateSession(s.id);
+        refreshHistory();
+        notify(t('debate.restoring_session'), 'info');
     };
 
     const toggleAgent = (id: string) => {

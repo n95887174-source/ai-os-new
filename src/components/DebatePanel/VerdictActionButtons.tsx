@@ -175,7 +175,7 @@ const VerdictActionButtons: React.FC<Props> = ({ session, t, onViewAnalysis, onR
                         color: '#34d399',
                     }}
                 >
-                    <Play size={16} /> {t('debate.verdict.replay')}
+                    <Play size={16} /> {t('common.retry')}
                 </button>
             )}
             <button

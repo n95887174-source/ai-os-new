@@ -66,7 +66,7 @@ export class ConversationDirectorService implements IConversationDirectorService
 
     /** Read state without TS control-flow narrowing (pause/abort mutate it externally). */
     private get phase(): DirectorState {
-        return this.state as DirectorState;
+        return this.state;
     }
 
     /** Write state through a method so TS does not narrow the field at call sites. */
@@ -154,7 +154,7 @@ export class ConversationDirectorService implements IConversationDirectorService
         const sessionId = this.sessionId;
         const recording = this.recording;
         try {
-            while (this.phase !== 'paused' && this.phase !== 'aborted') {
+            while ((this.phase as any) !== 'paused' && (this.phase as any) !== 'aborted') {
                 const before = recording.results.length;
                 await this.orchestrator.processNextStep(sessionId);
                 if (recording.results.length === before) {

@@ -178,6 +178,11 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                         <Pause size={14} />
                     )}
                     {(session.status ?? 'active').toUpperCase()}
+                    {session.consensus && (
+                        <span style={{ marginLeft: 8, color: '#34d399', fontSize: '0.7rem' }}>
+                            (Consensus: {session.consensus})
+                        </span>
+                    )}
                 </span>
             </div>
 

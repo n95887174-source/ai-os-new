@@ -48,9 +48,12 @@ describe('DebateMemory', () => {
         mem.recordStep(makeStep({ content: 'old' }));
         mem.recordStep(makeStep({ content: 'mid' }));
         mem.recordStep(makeStep({ content: 'new' }));
-        expect(mem.getRecentSteps(2)).toHaveLength(2);
-        expect(mem.getRecentSteps(2)[0].content).toBe('mid');
-        expect(mem.getRecentSteps(2)[1].content).toBe('new');
+        const recent = mem.getRecentSteps(2);
+        expect(recent).toHaveLength(2);
+        expect(recent[0]).toBeDefined();
+        expect(recent[0]!.content).toBe('mid');
+        expect(recent[1]).toBeDefined();
+        expect(recent[1]!.content).toBe('new');
     });
 
     it('returns empty for non-positive count in getRecentSteps', () => {
@@ -63,7 +66,10 @@ describe('DebateMemory', () => {
     it('returns all steps when count exceeds total', () => {
         const mem = new DebateMemory();
         mem.recordStep(makeStep({ content: 'only' }));
-        expect(mem.getRecentSteps(10)).toHaveLength(1);
+        const recent = mem.getRecentSteps(10);
+        expect(recent).toHaveLength(1);
+        expect(recent[0]).toBeDefined();
+        expect(recent[0]!.content).toBe('only');
     });
 
     it('builds chains when recording steps', () => {
@@ -72,8 +78,10 @@ describe('DebateMemory', () => {
         mem.recordStep(makeStep({ agentId: 'agent-1', type: 'evidence', confidence: 0.8 }));
         const chain = mem.getChain('agent-1');
         expect(chain).toHaveLength(1);
-        expect(chain[0].steps).toHaveLength(2);
-        expect(chain[0].coherence).toBeGreaterThan(0);
+        const c = chain[0];
+        expect(c).toBeDefined();
+        expect(c!.steps).toHaveLength(2);
+        expect(c!.coherence).toBeGreaterThan(0);
     });
 
     it('starts new chain when previous has conclusion', () => {
@@ -81,8 +89,10 @@ describe('DebateMemory', () => {
         mem.recordStep(makeStep({ agentId: 'agent-1', type: 'claim', confidence: 0.9 }));
         mem.recordStep(makeStep({ agentId: 'agent-1', type: 'synthesis', confidence: 1.0 }));
 
-        const before = mem.getChain('agent-1')[0];
-        expect(before.steps).toHaveLength(2);
+        const chains = mem.getChain('agent-1');
+        const before = chains[0];
+        expect(before).toBeDefined();
+        expect(before!.steps).toHaveLength(2);
 
         mem.recordStep(makeStep({ agentId: 'agent-1', type: 'claim', confidence: 0.7 }));
         expect(mem.getChain('agent-1')).toHaveLength(1);
@@ -94,7 +104,23 @@ describe('DebateMemory', () => {
         mem.recordClaim(makeClaim({ id: 'c2', text: 'Economic growth is important' }));
         const found = mem.getClaimsForTopic('climate');
         expect(found).toHaveLength(1);
-        expect(found[0].id).toBe('c1');
+        const claim = found[0];
+        expect(claim).toBeDefined();
+        expect(claim!.id).toBe('c1');
+    });
+
+    it('trims content of older steps beyond keepCount', () => {
+        const mem = new DebateMemory();
+        mem.recordStep(makeStep({ content: '1' }));
+        mem.recordStep(makeStep({ content: '2' }));
+        mem.recordStep(makeStep({ content: '3' }));
+        mem.trimContent(2);
+        const recent = mem.getRecentSteps(3);
+        expect(recent).toHaveLength(2);
+        expect(recent[0]).toBeDefined();
+        expect(recent[0]!.content).toBe('2');
+        expect(recent[1]).toBeDefined();
+        expect(recent[1]!.content).toBe('3');
     });
 
     it('trims content of older steps beyond keepCount', () => {
@@ -104,16 +130,21 @@ describe('DebateMemory', () => {
         mem.recordStep(makeStep({ content: 'new' }));
         mem.trimContent(2);
         const steps = mem.getAllSteps();
-        expect(steps[0].content).toBe('');
-        expect(steps[1].content).toBe('mid');
-        expect(steps[2].content).toBe('new');
+        expect(steps[0]).toBeDefined();
+        expect(steps[0]!.content).toBe('');
+        expect(steps[1]).toBeDefined();
+        expect(steps[1]!.content).toBe('mid');
+        expect(steps[2]).toBeDefined();
+        expect(steps[2]!.content).toBe('new');
     });
 
     it('does not trim when keepCount >= total', () => {
         const mem = new DebateMemory();
         mem.recordStep(makeStep({ content: 'only' }));
         mem.trimContent(5);
-        expect(mem.getAllSteps()[0].content).toBe('only');
+        const only = mem.getAllSteps();
+        expect(only[0]).toBeDefined();
+        expect(only[0]!.content).toBe('only');
     });
 
     it('getWinningStrategies returns chains with high coherence and conclusion', () => {
@@ -139,8 +170,10 @@ describe('DebateMemory', () => {
         const mem2 = new DebateMemory();
         mem2.restoreFrom(json);
         expect(mem2.getAllSteps()).toHaveLength(1);
-        expect(mem2.getAllSteps()[0].content).toBe('step1');
-        expect(mem2.getAllSteps()[0].agentId).toBe('agent-1');
+        const restored = mem2.getAllSteps();
+        expect(restored[0]).toBeDefined();
+        expect(restored[0]!.content).toBe('step1');
+        expect(restored[0]!.agentId).toBe('agent-1');
     });
 
     it('restoreFrom handles empty data', () => {
