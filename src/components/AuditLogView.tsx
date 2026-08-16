@@ -300,10 +300,15 @@ const AuditLogView: React.FC = () => {
                                     color: '#64748b',
                                     fontFamily: 'monospace',
                                     flexShrink: 0,
-                                    width: 60,
+                                    width: 108,
                                 }}
                             >
-                                {new Date(e.timestamp).toLocaleTimeString()}
+                                {new Date(e.timestamp).toLocaleString(undefined, {
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                })}
                             </span>
                             <span
                                 style={{
