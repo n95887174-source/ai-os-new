@@ -333,6 +333,7 @@ const analytics: Record<string, string> = {
     'forum.system_topic': 'авто',
     'forum.select_topic': 'Выберите тему из списка',
     'forum.export_md': 'Экспорт .md',
+    'forum.escalate_debate': 'Поднять в дебаты',
     'forum.posts': 'постов',
     'forum.no_posts': 'Постов пока нет',
     'forum.composer_placeholder':

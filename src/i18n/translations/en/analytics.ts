@@ -334,6 +334,7 @@ const analytics: Record<string, string> = {
     'forum.system_topic': 'auto',
     'forum.select_topic': 'Select a topic from the list',
     'forum.export_md': 'Export .md',
+    'forum.escalate_debate': 'Escalate to debate',
     'forum.posts': 'posts',
     'forum.no_posts': 'No posts yet',
     'forum.composer_placeholder':

@@ -1,5 +1,7 @@
 import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
+import { eventBus, EVENTS } from '../../kernel/instances';
+import { useDebateSessionStore } from '../../stores/debate-session-store';
 import type { Post, Topic } from '../../kernel/types/forum-types';
 import AuthorBadge from './AuthorBadge';
 import PostComposer from './PostComposer';
@@ -140,6 +142,37 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
 
     const color = consensus ? (CONSENSUS_COLORS[consensus] ?? '#f59e0b') : '#f59e0b';
 
+    const handleEscalate = (topic: Topic): void => {
+        eventBus.emit(EVENTS.FORUM_TOPIC_ESCALATED_TO_DEBATE, {
+            topicId: topic.id,
+            title: topic.title,
+            category: topic.category,
+        });
+        void useDebateSessionStore
+            .getState()
+            .createSession(topic.title, 'round_robin', [], {
+                roundDelayMs: 2000,
+                maxTokens: 4096,
+                temperature: 0.7,
+                debateTemperature: 0.7,
+                useModerator: false,
+                timeoutMs: 30000,
+                language: 'ru',
+            })
+            .then(() => {
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: t('forum.escalate_debate') + ': ' + topic.title,
+                    type: 'success',
+                });
+            })
+            .catch((e) => {
+                eventBus.emit(EVENTS.NOTIFICATION, {
+                    message: String(e),
+                    type: 'error',
+                });
+            });
+    };
+
     return (
         <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -180,6 +213,13 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
                         style={exportBtn}
                     >
                         ⬇ {t('forum.export_md')}
+                    </button>
+                    <button
+                        onClick={() => handleEscalate(thread.topic)}
+                        title={t('forum.escalate_debate')}
+                        style={exportBtn}
+                    >
+                        ⚔ {t('forum.escalate_debate')}
                     </button>
                     {thread.topic.postCount} {t('forum.posts')}
                 </span>

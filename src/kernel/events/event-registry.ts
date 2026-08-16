@@ -1415,6 +1415,14 @@ export const EVENT_REGISTRY = {
             vote: z.string(),
         }),
     ),
+    FORUM_TOPIC_ESCALATED_TO_DEBATE: event(
+        'forum:topic:escalated-to-debate',
+        z.object({
+            topicId: z.string(),
+            title: z.string(),
+            category: z.string(),
+        }),
+    ),
 
     // ── Invocation Engine (managed agent invocation; intent lifecycle only) ──
     INVOCATION_REQUESTED: event(
