@@ -15,6 +15,9 @@ const AuditLogView: React.FC = () => {
     const [entries, setEntries] = useState<AdminAuditEntry[]>([]);
     const [severityFilter, setSeverityFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [period, setPeriod] = useState<string>('all');
 
     const refresh = useCallback(() => setEntries(adminService.getAuditLog(200) ?? []), []);
 
@@ -39,6 +42,20 @@ const AuditLogView: React.FC = () => {
     const filtered = useMemo(() => {
         let result = entries;
         if (severityFilter !== 'all') result = result.filter((e) => e.severity === severityFilter);
+        const now = Date.now();
+        const DAY = 86_400_000;
+        let fromMs = 0;
+        let toMs = Number.MAX_SAFE_INTEGER;
+        if (period === '24h') fromMs = now - DAY;
+        else if (period === '7d') fromMs = now - 7 * DAY;
+        else if (period === '30d') fromMs = now - 30 * DAY;
+        else if (period === 'custom') {
+            if (fromDate) fromMs = new Date(fromDate + 'T00:00:00').getTime() || 0;
+            if (toDate) toMs = new Date(toDate + 'T23:59:59').getTime() || Number.MAX_SAFE_INTEGER;
+        }
+        if (fromMs > 0 || toMs < Number.MAX_SAFE_INTEGER) {
+            result = result.filter((e) => e.timestamp >= fromMs && e.timestamp <= toMs);
+        }
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             result = result.filter(
@@ -50,7 +67,7 @@ const AuditLogView: React.FC = () => {
             );
         }
         return result.reverse();
-    }, [entries, severityFilter, searchQuery]);
+    }, [entries, severityFilter, searchQuery, period, fromDate, toDate]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
@@ -134,6 +151,62 @@ const AuditLogView: React.FC = () => {
                             </button>
                         ))}
                     </div>
+                    <select
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value)}
+                        title="Time range"
+                        style={{
+                            padding: '0.35rem 0.5rem',
+                            borderRadius: 8,
+                            background: 'rgba(0,0,0,0.3)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            color: '#a1a1aa',
+                            fontSize: '0.65rem',
+                            outline: 'none',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <option value="all">All time</option>
+                        <option value="24h">24h</option>
+                        <option value="7d">7d</option>
+                        <option value="30d">30d</option>
+                    </select>
+                    <input
+                        type="date"
+                        value={fromDate}
+                        onChange={(e) => {
+                            setFromDate(e.target.value);
+                            setPeriod('custom');
+                        }}
+                        title="From date"
+                        style={{
+                            padding: '0.3rem 0.5rem',
+                            borderRadius: 8,
+                            background: 'rgba(0,0,0,0.3)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            color: '#a1a1aa',
+                            fontSize: '0.65rem',
+                            outline: 'none',
+                        }}
+                    />
+                    <input
+                        type="date"
+                        value={toDate}
+                        onChange={(e) => {
+                            setToDate(e.target.value);
+                            setPeriod('custom');
+                        }}
+                        title="To date"
+                        style={{
+                            padding: '0.3rem 0.5rem',
+                            borderRadius: 8,
+                            background: 'rgba(0,0,0,0.3)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            color: '#a1a1aa',
+                            fontSize: '0.65rem',
+                            outline: 'none',
+                        }}
+                    />
                     <button
                         onClick={handleExport}
                         title="Export as JSON"
