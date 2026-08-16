@@ -110,6 +110,11 @@ const PostCard: React.FC<{ post: Post; onModerate: (id: string, action: string) 
  */
 const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, onCompose }) => {
     const { t } = useTranslation();
+    const [postFilter, setPostFilter] = React.useState('');
+
+    React.useEffect(() => {
+        setPostFilter('');
+    }, [thread?.topic.id]);
 
     if (!thread) {
         return (
@@ -186,7 +191,23 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
                 </div>
             )}
 
+            <div style={{ marginBottom: 8 }}>
+                <input
+                    value={postFilter}
+                    onChange={(e) => setPostFilter(e.target.value)}
+                    placeholder={t('common.search')}
+                    style={searchInput}
+                />
+            </div>
+
             {thread.posts
+                .filter((p) =>
+                    postFilter.trim() === ''
+                        ? true
+                        : (p.body + ' ' + (p.author?.displayName ?? ''))
+                              .toLowerCase()
+                              .includes(postFilter.toLowerCase()),
+                )
                 .sort((a, b) => a.createdAt - b.createdAt) // Sort by time first
                 .map((p) => (
                     <div key={p.id} style={{ paddingLeft: p.parentId ? '1.5rem' : 0 }}>
@@ -216,6 +237,16 @@ const exportBtn: React.CSSProperties = {
     fontSize: '0.66rem',
     borderRadius: 6,
     padding: '0.2rem 0.5rem',
+};
+
+const searchInput: React.CSSProperties = {
+    width: '100%',
+    background: '#0f172a',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 6,
+    color: '#e2e8f0',
+    fontSize: '0.7rem',
+    padding: '0.32rem 0.55rem',
 };
 
 export default TopicView;
