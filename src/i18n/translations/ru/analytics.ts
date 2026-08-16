@@ -332,6 +332,7 @@ const analytics: Record<string, string> = {
     'forum.filter_all': 'Все',
     'forum.system_topic': 'авто',
     'forum.select_topic': 'Выберите тему из списка',
+    'forum.export_md': 'Экспорт .md',
     'forum.posts': 'постов',
     'forum.no_posts': 'Постов пока нет',
     'forum.composer_placeholder':

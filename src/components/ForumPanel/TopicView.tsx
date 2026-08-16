@@ -17,6 +17,39 @@ const CONSENSUS_COLORS: Record<string, string> = {
     open: '#f59e0b',
 };
 
+function buildThreadMarkdown(thread: { topic: Topic; posts: Post[] }): string {
+    const lines: string[] = [];
+    lines.push(`# ${thread.topic.title}`);
+    lines.push('');
+    lines.push(`*Category: ${thread.topic.category} — ${thread.posts.length} posts*`);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    const sorted = [...thread.posts].sort((a, b) => a.createdAt - b.createdAt);
+    for (const p of sorted) {
+        const name = p.author?.displayName ?? p.author?.id ?? 'unknown';
+        const date = new Date(p.createdAt).toISOString();
+        if (p.parentId) lines.push(`> reply to ${p.parentId}`);
+        lines.push(`**${name}** — ${date}`);
+        lines.push('');
+        lines.push(p.body);
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+    }
+    return lines.join('\n');
+}
+
+function downloadMarkdown(filename: string, content: string): void {
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 const PostCard: React.FC<{ post: Post; onModerate: (id: string, action: string) => void }> = ({
     post,
     onModerate,
@@ -114,7 +147,28 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
                         {t(`forum.consensus_${consensus}`)}
                     </span>
                 )}
-                <span style={{ fontSize: '0.68rem', color: '#64748b', marginLeft: 'auto' }}>
+                <span
+                    style={{
+                        fontSize: '0.68rem',
+                        color: '#64748b',
+                        marginLeft: 'auto',
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'center',
+                    }}
+                >
+                    <button
+                        onClick={() =>
+                            downloadMarkdown(
+                                `forum-${(thread.topic.title ?? 'topic').slice(0, 50).replace(/[^a-z0-9]/gi, '_')}.md`,
+                                buildThreadMarkdown(thread),
+                            )
+                        }
+                        title={t('forum.export_md')}
+                        style={exportBtn}
+                    >
+                        ⬇ {t('forum.export_md')}
+                    </button>
                     {thread.topic.postCount} {t('forum.posts')}
                 </span>
             </div>
@@ -152,6 +206,16 @@ const iconBtnSmall: React.CSSProperties = {
     cursor: 'pointer',
     fontSize: '0.7rem',
     padding: '0 2px',
+};
+
+const exportBtn: React.CSSProperties = {
+    border: '1px solid rgba(139,92,246,0.3)',
+    background: 'rgba(139,92,246,0.1)',
+    color: '#c4b5fd',
+    cursor: 'pointer',
+    fontSize: '0.66rem',
+    borderRadius: 6,
+    padding: '0.2rem 0.5rem',
 };
 
 export default TopicView;

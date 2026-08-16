@@ -333,6 +333,7 @@ const analytics: Record<string, string> = {
     'forum.filter_all': 'All',
     'forum.system_topic': 'auto',
     'forum.select_topic': 'Select a topic from the list',
+    'forum.export_md': 'Export .md',
     'forum.posts': 'posts',
     'forum.no_posts': 'No posts yet',
     'forum.composer_placeholder':
