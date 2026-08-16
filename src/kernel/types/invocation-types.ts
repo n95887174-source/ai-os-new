@@ -45,3 +45,18 @@ export interface InvocationPolicyRecord {
 }
 
 export type { InvocationPolicy };
+
+/**
+ * Per-invocation cost accumulator (cost-attribution Phase 1).
+ *
+ * Keyed by `invocationId`; updated on every `chat:stream:end` that carries an
+ * `invocationId`. `accumulatedCost` is in USD; `turnCount` is the number of
+ * streamed turns attributed to the invocation.
+ */
+export interface InvocationCostRecord {
+    invocationId: string;
+    accumulatedCost: number;
+    turnCount: number;
+    firstSeenAt: number;
+    updatedAt: number;
+}

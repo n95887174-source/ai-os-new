@@ -23,6 +23,7 @@ export interface IExecutionDelegate {
         agents: AgentRef[],
         context: InvocationContext,
         mode: ExecutionMode,
+        invocationId?: string,
     ): Promise<ExecutionTarget>;
 }
 
@@ -99,7 +100,7 @@ export class InvocationEngineService implements IInvocationEngineService {
         });
 
         const mode = inv.constraints.mode ?? evaluation.policy.actions.mode ?? 'chat';
-        const sessionRef = await this.execution.start(agents, req.context, mode);
+        const sessionRef = await this.execution.start(agents, req.context, mode, inv.id);
 
         inv.sessionRef = sessionRef;
         inv.status = 'executing';

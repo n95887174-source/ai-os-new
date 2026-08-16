@@ -94,7 +94,7 @@ export class ConversationDirectorService implements IConversationDirectorService
         }
     }
 
-    async loadScenario(id: string): Promise<ConversationScenario> {
+    async loadScenario(id: string, invocationId?: string): Promise<ConversationScenario> {
         const found = await this.scenarioRepository.get(id);
         if (!found) {
             throw new Error(`ConversationDirectorService: scenario '${id}' not found`);
@@ -114,6 +114,7 @@ export class ConversationDirectorService implements IConversationDirectorService
                 scenarioId: found.id,
                 scenarioName: found.name,
                 sessionId,
+                ...(invocationId ? { invocationId } : {}),
             },
         };
         this.context = context;

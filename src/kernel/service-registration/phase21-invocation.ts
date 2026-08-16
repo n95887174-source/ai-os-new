@@ -69,6 +69,7 @@ class InvocationExecutionDelegate implements IExecutionDelegate {
         agents: AgentRef[],
         context: InvocationContext,
         mode: ExecutionMode,
+        invocationId?: string,
     ): Promise<ExecutionTarget> {
         const participants = agents.map((a) => ({ id: a.id, role: a.role ?? a.id }));
 
@@ -103,7 +104,7 @@ class InvocationExecutionDelegate implements IExecutionDelegate {
             participants,
             turns,
         });
-        await this.director.loadScenario(scenario.id);
+        await this.director.loadScenario(scenario.id, invocationId);
         await this.director.run();
         return { kind: 'conversation', ref: scenario.id };
     }

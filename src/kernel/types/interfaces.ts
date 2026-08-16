@@ -5,7 +5,11 @@ import type { ApiKey } from './metrics-types';
 import type { PoolStrategy } from '../contracts/pool-selector';
 import type { Result } from '../contracts/results';
 import type { Table } from 'dexie';
-import type { InvocationRecord, InvocationPolicyRecord } from './invocation-types';
+import type {
+    InvocationRecord,
+    InvocationPolicyRecord,
+    InvocationCostRecord,
+} from './invocation-types';
 
 export interface IEventBus {
     on<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): () => void;
@@ -44,6 +48,7 @@ export interface IDatabaseService {
     destroy(): void;
     get invocations(): Table<InvocationRecord>;
     get invocationPolicies(): Table<InvocationPolicyRecord>;
+    get invocationCosts(): Table<InvocationCostRecord>;
 }
 
 /** Data Access Layer — single entry point for all persistent data access */

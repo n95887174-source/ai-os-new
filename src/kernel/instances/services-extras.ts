@@ -67,11 +67,13 @@ import type { ConnectorService } from '../services/connector-service';
 import type { IQualityImpactCollector, IExperimentEngine } from '../contracts/quality-impact';
 import type { ScenarioRepository } from '../dal/scenario-repository';
 import type { InvocationRepository } from '../services/invocation/invocation-repository';
+import type { InvocationCostTracker } from '../services/invocation/invocation-cost-tracker';
 import type { IInvocationEngineService } from '../contracts/invocation';
 export const scenarioRepository = lazyService<ScenarioRepository>('scenarioRepository');
 export const forumService = lazyService<IForumService>('forumService');
 export const invocationEngine = lazyService<IInvocationEngineService>('invocationEngineService');
 export const invocationRepository = lazyService<InvocationRepository>('invocationRepository');
+export const invocationCostTracker = lazyService<InvocationCostTracker>('invocationCostTracker');
 
 export const architectureReviewService = lazyService<IArchitectureReviewService>(
     'architectureReviewService',

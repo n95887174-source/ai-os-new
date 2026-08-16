@@ -24,7 +24,7 @@ export type DirectorState = 'idle' | 'running' | 'paused' | 'aborted' | 'complet
  */
 export interface IConversationDirectorService {
     /** Load a scenario by id and (re)build the HybridPolicy + Orchestrator. Throws if not found. */
-    loadScenario(id: string): Promise<ConversationScenario>;
+    loadScenario(id: string, invocationId?: string): Promise<ConversationScenario>;
     /** Run the full scenario to completion (or until paused/aborted). */
     run(): Promise<void>;
     pause(): void;

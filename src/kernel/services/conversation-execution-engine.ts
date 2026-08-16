@@ -83,6 +83,8 @@ export class ChatExecutionEngine implements IExecutionEngine {
                         agent?.role ??
                         context.participants.find((p) => p.id === proposal.participantId)?.role,
                     objective: proposal.objective.type,
+                    invocationId:
+                        (context.metadata['invocationId'] as string | undefined) ?? undefined,
                 },
                 sessionId: (context.metadata['sessionId'] as string) ?? requestId,
             },

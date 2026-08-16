@@ -2,7 +2,11 @@ import { z } from 'zod';
 import type { Table } from 'dexie';
 import type { Connector } from '../types/domain-types';
 import type { ConversationScenario } from '../contracts/conversation';
-import type { InvocationRecord, InvocationPolicyRecord } from '../types/invocation-types';
+import type {
+    InvocationRecord,
+    InvocationPolicyRecord,
+    InvocationCostRecord,
+} from '../types/invocation-types';
 import type { IDatabaseService } from '../types/interfaces';
 import { REDACTED_MARKER, SuperAgentsDB } from './dexie-schema';
 import { rootLogger } from './logger-service';
@@ -290,6 +294,9 @@ export class DatabaseService implements IDatabaseService {
     }
     get invocationPolicies(): Table<InvocationPolicyRecord> {
         return getDexieDb().invocationPolicies;
+    }
+    get invocationCosts(): Table<InvocationCostRecord> {
+        return getDexieDb().invocationCosts;
     }
     get db() {
         return getDexieDb();
