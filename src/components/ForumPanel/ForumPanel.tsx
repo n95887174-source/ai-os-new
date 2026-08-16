@@ -57,16 +57,6 @@ const ForumPanel: React.FC = () => {
         setConsensus(cv?.status ?? null);
     };
 
-    React.useEffect(() => {
-        void refreshTopics();
-        const unsubs = [
-            eventBus.onSafe(EVENTS.FORUM_TOPIC_CREATED, () => void refreshTopics()),
-            eventBus.onSafe(EVENTS.FORUM_POST_ADDED, () => void refreshTopics()),
-        ];
-        return () => unsubs.forEach((u) => u());
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
     const handleCreate = async (title: string, category: string): Promise<void> => {
         const id = await forumService.createTopic({ title, category, author: currentAuthor });
         await refreshTopics();

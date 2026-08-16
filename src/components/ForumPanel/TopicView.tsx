@@ -133,7 +133,7 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
             )}
 
             {thread.posts
-                .sort((a, b) => a.timestamp - b.timestamp) // Sort by time first
+                .sort((a, b) => a.createdAt - b.createdAt) // Sort by time first
                 .map((p) => (
                     <div key={p.id} style={{ paddingLeft: p.parentId ? '1.5rem' : 0 }}>
                         <PostCard post={p} onModerate={onModerate} />

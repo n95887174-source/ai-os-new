@@ -329,6 +329,8 @@ const analytics: Record<string, string> = {
     'forum.topic_title_placeholder': 'Название новой темы…',
     'forum.category': 'категория',
     'forum.no_topics': 'Тем пока нет',
+    'forum.filter_all': 'Все',
+    'forum.system_topic': 'авто',
     'forum.select_topic': 'Выберите тему из списка',
     'forum.posts': 'постов',
     'forum.no_posts': 'Постов пока нет',

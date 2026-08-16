@@ -330,6 +330,8 @@ const analytics: Record<string, string> = {
     'forum.topic_title_placeholder': 'New topic title…',
     'forum.category': 'category',
     'forum.no_topics': 'No topics yet',
+    'forum.filter_all': 'All',
+    'forum.system_topic': 'auto',
     'forum.select_topic': 'Select a topic from the list',
     'forum.posts': 'posts',
     'forum.no_posts': 'No posts yet',

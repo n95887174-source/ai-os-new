@@ -11,11 +11,14 @@ interface TopicListProps {
     onPageChange: (page: number) => void;
 }
 
-const TopicRow: React.FC<{ topic: Topic; active: boolean; onClick: () => void }> = ({
-    topic,
-    active,
-    onClick,
-}) => (
+const SYSTEM_CATEGORIES = new Set(['case-study', 'announcements']);
+
+const TopicRow: React.FC<{
+    topic: Topic;
+    active: boolean;
+    onClick: () => void;
+    t: (k: string) => string;
+}> = ({ topic, active, onClick, t }) => (
     <div
         onClick={onClick}
         style={{
@@ -29,6 +32,20 @@ const TopicRow: React.FC<{ topic: Topic; active: boolean; onClick: () => void }>
     >
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             {topic.pinned && <span style={{ color: '#f59e0b', fontSize: '0.68rem' }}>📌</span>}
+            {SYSTEM_CATEGORIES.has(topic.category) && (
+                <span
+                    title={t('forum.system_topic')}
+                    style={{
+                        fontSize: '0.6rem',
+                        color: '#34d399',
+                        border: '1px solid rgba(52,211,153,0.4)',
+                        borderRadius: 4,
+                        padding: '0 3px',
+                    }}
+                >
+                    🤖 {t('forum.system_topic')}
+                </span>
+            )}
             <span style={{ fontSize: '0.76rem', color: '#e2e8f0', fontWeight: 600, flex: 1 }}>
                 {topic.title}
             </span>
@@ -61,9 +78,17 @@ const TopicList: React.FC<TopicListProps> = ({
     const [title, setTitle] = React.useState('');
     const [category, setCategory] = React.useState('general');
     const [filter, setFilter] = React.useState('');
+    const [catFilter, setCatFilter] = React.useState('');
 
-    const filteredTopics = topics.filter((t) =>
-        t.title.toLowerCase().includes(filter.toLowerCase()),
+    const categories = React.useMemo(
+        () => [...new Set(topics.map((tp) => tp.category))].sort(),
+        [topics],
+    );
+
+    const filteredTopics = topics.filter(
+        (tp) =>
+            (catFilter === '' || tp.category === catFilter) &&
+            tp.title.toLowerCase().includes(filter.toLowerCase()),
     );
 
     const submit = (): void => {
@@ -81,6 +106,23 @@ const TopicList: React.FC<TopicListProps> = ({
                     placeholder={t('common.search')}
                     style={{ ...inputStyle, width: '100%' }}
                 />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                <button
+                    onClick={() => setCatFilter('')}
+                    style={catFilter === '' ? chipStyleActive : chipStyle}
+                >
+                    {t('forum.filter_all')}
+                </button>
+                {categories.map((cat) => (
+                    <button
+                        key={cat}
+                        onClick={() => setCatFilter(cat)}
+                        style={catFilter === cat ? chipStyleActive : chipStyle}
+                    >
+                        {cat}
+                    </button>
+                ))}
             </div>
             <div style={{ display: 'flex', gap: 4, marginBottom: 8, alignItems: 'center' }}>
                 <input
@@ -122,6 +164,7 @@ const TopicList: React.FC<TopicListProps> = ({
                     topic={tp}
                     active={tp.id === selectedId}
                     onClick={() => onSelect(tp.id)}
+                    t={t}
                 />
             ))}
             {topics.length > 0 && (
@@ -159,6 +202,26 @@ const btnStyle = (color: string): React.CSSProperties => ({
     borderRadius: 4,
     fontSize: '0.72rem',
 });
+
+const chipStyle: React.CSSProperties = {
+    background: 'none',
+    border: '1px solid rgba(255,255,255,0.12)',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    padding: '0.2rem 0.5rem',
+    borderRadius: 999,
+    fontSize: '0.66rem',
+};
+
+const chipStyleActive: React.CSSProperties = {
+    background: 'rgba(139,92,246,0.15)',
+    border: '1px solid rgba(139,92,246,0.6)',
+    color: '#c4b5fd',
+    cursor: 'pointer',
+    padding: '0.2rem 0.5rem',
+    borderRadius: 999,
+    fontSize: '0.66rem',
+};
 
 const inputStyle: React.CSSProperties = {
     flex: 1,
