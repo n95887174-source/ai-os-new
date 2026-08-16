@@ -215,7 +215,7 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
                     </div>
                 ))}
 
-            <PostComposer onSubmit={onCompose} />
+            <PostComposer onSubmit={onCompose} draftKey={thread?.topic.id} />
         </div>
     );
 };

@@ -3,19 +3,36 @@ import { useTranslation } from '../../i18n/useTranslation';
 
 interface PostComposerProps {
     onSubmit: (body: string) => void;
+    draftKey?: string;
 }
+
+const DRAFT_PREFIX = 'forum:draft:';
 
 /**
  * PostComposer — new post input for the selected topic.
+ * Persists an unsent draft to localStorage, keyed by `draftKey` (topic id).
  */
-const PostComposer: React.FC<PostComposerProps> = ({ onSubmit }) => {
+const PostComposer: React.FC<PostComposerProps> = ({ onSubmit, draftKey }) => {
     const { t } = useTranslation();
     const [body, setBody] = React.useState('');
+
+    React.useEffect(() => {
+        if (!draftKey) return;
+        const saved = localStorage.getItem(DRAFT_PREFIX + draftKey);
+        if (saved) setBody(saved);
+    }, [draftKey]);
+
+    React.useEffect(() => {
+        if (!draftKey) return;
+        if (body) localStorage.setItem(DRAFT_PREFIX + draftKey, body);
+        else localStorage.removeItem(DRAFT_PREFIX + draftKey);
+    }, [body, draftKey]);
 
     const submit = (): void => {
         if (!body.trim()) return;
         onSubmit(body.trim());
         setBody('');
+        if (draftKey) localStorage.removeItem(DRAFT_PREFIX + draftKey);
     };
 
     return (
