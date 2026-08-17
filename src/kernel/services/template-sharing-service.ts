@@ -3,10 +3,18 @@ import type {
     SharedTemplate,
     TemplateCategory,
 } from '../contracts/template-sharing';
+import type { WorkflowStep } from '../contracts/workflow-types';
+import type { PromptLibraryService } from '../services/prompt-library-service';
+import type { WorkflowService } from '../services/workflow-service';
+import type { IEventBus } from '../types/interfaces';
+import { EVENTS } from '../events/event-registry';
+import { ssrSafeStorage } from '../utils/ssr-storage';
 
 const genId = () => crypto.randomUUID();
 
 const MAX_TEMPLATES = 1000;
+
+const STORAGE_KEY = 'template_sharing:templates';
 
 const SHARED_TEMPLATES: SharedTemplate[] = [
     {
@@ -83,8 +91,73 @@ const SHARED_TEMPLATES: SharedTemplate[] = [
     },
 ];
 
+export interface TemplateSharingDeps {
+    promptLibraryService?: () => Pick<PromptLibraryService, 'create'>;
+    workflowService?: () => Pick<WorkflowService, 'create'>;
+    eventBus?: IEventBus;
+}
+
+function extractVariables(content: string): string[] {
+    const vars = new Set<string>();
+    const re = /\{\{\s*([\w.-]+)\s*\}\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(content)) !== null) {
+        if (m[1]) vars.add(m[1]);
+    }
+    return [...vars];
+}
+
+function parseWorkflowSteps(content: string): Omit<WorkflowStep, 'id'>[] {
+    const steps: Omit<WorkflowStep, 'id'>[] = [];
+    let inSteps = false;
+    for (const raw of content.split('\n')) {
+        const line = raw.trim();
+        if (/^steps?:/i.test(line)) {
+            inSteps = true;
+            continue;
+        }
+        if (!inSteps) continue;
+        const m = line.match(/^\s*[-*]\s+(.+)$/);
+        if (m && m[1]?.trim()) {
+            steps.push({
+                label: m[1].trim(),
+                promptTemplate: '{{INPUT}}',
+                provider: 'groq',
+                model: 'llama-3.1-8b-instant',
+            });
+        } else if (line && !line.startsWith('#') && !/^[-*]/.test(line)) {
+            inSteps = false;
+        }
+    }
+    return steps;
+}
+
 export class TemplateSharingService implements ITemplateSharingService {
-    private templates: SharedTemplate[] = SHARED_TEMPLATES.map((t) => ({ ...t }));
+    private templates: SharedTemplate[];
+    private deps: TemplateSharingDeps;
+
+    constructor(deps: TemplateSharingDeps = {}) {
+        this.deps = deps;
+        const stored = ssrSafeStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored) as SharedTemplate[];
+                this.templates =
+                    Array.isArray(parsed) && parsed.length
+                        ? parsed
+                        : SHARED_TEMPLATES.map((t) => ({ ...t }));
+            } catch {
+                this.templates = SHARED_TEMPLATES.map((t) => ({ ...t }));
+            }
+        } else {
+            this.templates = SHARED_TEMPLATES.map((t) => ({ ...t }));
+            this.save();
+        }
+    }
+
+    private save(): void {
+        ssrSafeStorage.setItem(STORAGE_KEY, JSON.stringify(this.templates));
+    }
 
     getSharedTemplates(category?: TemplateCategory): SharedTemplate[] {
         let result = this.templates;
@@ -106,7 +179,47 @@ export class TemplateSharingService implements ITemplateSharingService {
 
     importTemplate(id: string): void {
         const t = this.templates.find((tmpl) => tmpl.id === id);
-        if (t) t.imported = true;
+        if (!t || t.imported) return;
+        t.imported = true;
+        this.save();
+        void this.pushToLibrary(t);
+    }
+
+    private async pushToLibrary(t: SharedTemplate): Promise<void> {
+        try {
+            if (t.category === 'prompt' && this.deps.promptLibraryService) {
+                await this.deps.promptLibraryService().create({
+                    title: t.name,
+                    content: t.content,
+                    category: t.tags[0] ?? 'general',
+                    tags: t.tags,
+                    variables: extractVariables(t.content),
+                });
+                this.notify(`Imported "${t.name}" to Prompt Library`, 'success');
+                return;
+            }
+            if (t.category === 'workflow' && this.deps.workflowService) {
+                await this.deps.workflowService().create({
+                    title: t.name,
+                    description: t.description,
+                    steps: parseWorkflowSteps(t.content),
+                    tags: t.tags,
+                });
+                this.notify(`Imported "${t.name}" to Workflow Library`, 'success');
+                return;
+            }
+            this.notify(`Imported "${t.name}"`, 'info');
+        } catch {
+            this.notify(`Failed to import "${t.name}" into library`, 'error');
+        }
+    }
+
+    private notify(message: string, type: 'success' | 'error' | 'info' | 'warning'): void {
+        this.deps.eventBus?.emit(EVENTS.NOTIFICATION, {
+            message,
+            type,
+            source: 'template-sharing',
+        });
     }
 
     exportTemplate(
@@ -123,6 +236,7 @@ export class TemplateSharingService implements ITemplateSharingService {
             this.templates.shift();
         }
         this.templates.push(t);
+        this.save();
         return { ...t };
     }
 
@@ -144,6 +258,7 @@ export class TemplateSharingService implements ITemplateSharingService {
             this.templates.shift();
         }
         this.templates.push(t);
+        this.save();
         return { ...t };
     }
 }

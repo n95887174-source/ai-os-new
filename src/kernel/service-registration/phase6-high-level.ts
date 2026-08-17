@@ -335,7 +335,15 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     // ── Persona Marketplace Service ───────────────────
     register('personaMarketplaceService', (_c) => new PersonaMarketplaceService());
     // ── Template Sharing Service ──────────────────────
-    register('templateSharingService', (_c) => new TemplateSharingService());
+    register(
+        'templateSharingService',
+        (c) =>
+            new TemplateSharingService({
+                promptLibraryService: () => c.get<PromptLibraryService>('promptLibraryService'),
+                workflowService: () => c.get<WorkflowService>('workflowService'),
+                eventBus: c.get('eventBus'),
+            }),
+    );
     // ── Memory Transfer Service ───────────────────────
     register(
         'memoryTransferService',
