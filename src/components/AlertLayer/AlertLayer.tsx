@@ -122,6 +122,14 @@ const AlertLayer: React.FC = () => {
                     `${getStr(d, 'provider')}: ${getStr(d, 'previousState')} → ${getStr(d, 'state')}`,
                 );
             }),
+            eventBus.onSafe<Record<string, unknown>>(EVENTS.KEY_COMPROMISED, (d) => {
+                addToast(
+                    'error',
+                    'Key Compromised',
+                    `${getStr(d, 'provider')}: key ${getStr(d, 'id')} marked compromised via ${getStr(d, 'source', 'unknown')} — revoked from all pools`,
+                );
+                refreshAlerts();
+            }),
             eventBus.onSafe<Record<string, unknown>>(EVENTS.METRICS_ALERT, (d) => {
                 const sev = getStr(d, 'severity') === 'critical' ? 'error' : 'warning';
                 const val = getNum(d, 'value');
