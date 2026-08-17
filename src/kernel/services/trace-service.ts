@@ -2,6 +2,7 @@ import { CONFIG } from './config-registry';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { TraceRepository } from '../dal/trace-repository';
+import type { IDiagnosticService } from '../contracts/diagnostic-service';
 import type { DatabaseService } from './database-service';
 import type {
     ExecutionTrace,
@@ -14,17 +15,6 @@ export type { TraceFilter, TraceExport };
 
 const LOGGER = rootLogger.child('TraceService');
 
-function heapLog(label: string): void {
-    const mem = (
-        performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }
-    )?.memory;
-    if (mem) {
-        const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
-        const limitMB = Math.round(mem.jsHeapSizeLimit / 1024 / 1024);
-        LOGGER.warn('Heap', label, { usedMB, limitMB });
-    }
-}
-
 export interface TraceServiceDeps {
     eventBus: {
         on: (event: string, cb: (...args: unknown[]) => void) => () => void;
@@ -32,6 +22,7 @@ export interface TraceServiceDeps {
         emit: (event: string, data?: unknown) => void;
     };
     database: DatabaseService;
+    diagnosticService?: IDiagnosticService;
 }
 
 export class TraceService {
@@ -53,10 +44,46 @@ export class TraceService {
     private static MAX_RETRY_ATTEMPTS = 3;
     private static RETRY_INTERVAL_MS = 30_000;
     private _persistTimer: ReturnType<typeof setInterval> | null = null;
+    private lastHeapSpikeAt = 0;
 
     constructor(deps: TraceServiceDeps) {
         this.deps = deps;
         this.traceRepo = new TraceRepository(deps.database);
+    }
+
+    private heapLog(label: string): void {
+        const mem = (
+            performance as unknown as {
+                memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
+            }
+        )?.memory;
+        if (mem) {
+            const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
+            const limitMB = Math.round(mem.jsHeapSizeLimit / 1024 / 1024);
+            LOGGER.warn('Heap', label, { usedMB, limitMB });
+            // Observability #8: surface sustained memory pressure as a system diagnostic
+            // finding. Throttled so a single spike does not flood the diagnostic store.
+            if (limitMB > 0) {
+                const ratio = usedMB / limitMB;
+                const now = Date.now();
+                if (
+                    ratio > 0.7 &&
+                    now - this.lastHeapSpikeAt > 30_000 &&
+                    this.deps.diagnosticService
+                ) {
+                    this.lastHeapSpikeAt = now;
+                    try {
+                        this.deps.diagnosticService.recordSystemIssue({
+                            type: 'memory_pressure',
+                            severity: ratio > 0.9 ? 'critical' : 'high',
+                            message: `Heap at ${usedMB}/${limitMB}MB (${Math.round(ratio * 100)}%) during ${label}`,
+                        });
+                    } catch {
+                        // diagnostic recording must never break trace persistence
+                    }
+                }
+            }
+        }
     }
 
     private getRetentionMetadata(evictedOlderEntries = false): TraceDataQuality['retention'] {
@@ -183,7 +210,7 @@ export class TraceService {
                 };
                 trace.steps.push(step);
                 this.persist(trace);
-                heapLog(`COGNITIVE_STEP_ACTIVE emit: ${d.nodeId}`);
+                this.heapLog(`COGNITIVE_STEP_ACTIVE emit: ${d.nodeId}`);
                 this.throttledEmit();
             }),
         );
@@ -220,7 +247,7 @@ export class TraceService {
                     this.markTraceFailed(trace, output || 'Cognitive step error');
                 }
                 this.persist(trace);
-                heapLog(`COGNITIVE_STEP_COMPLETED emit: ${d.nodeId}`);
+                this.heapLog(`COGNITIVE_STEP_COMPLETED emit: ${d.nodeId}`);
                 this.throttledEmit();
             }),
         );
@@ -256,7 +283,7 @@ export class TraceService {
                     };
                     this.activeTraces.delete(traceId);
                     this.persist(trace);
-                    heapLog(`REQUEST_COMPLETED emit: ${traceId}`);
+                    this.heapLog(`REQUEST_COMPLETED emit: ${traceId}`);
                     this.throttledEmit();
                 },
             ),

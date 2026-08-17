@@ -27,6 +27,7 @@ export interface DiagnosticServiceDeps {
 export class DiagnosticService implements ILifecycle, IDiagnosticService {
     private deps: DiagnosticServiceDeps;
     private diagnosticHistory: DiagnosticRunRecord[] = [];
+    private systemIssues: CognitiveIssue[] = [];
     private lastSystemDiagnostic: SystemDiagnostic | null = null;
     private providerDiagnostics = new Map<string, ProviderDiagnostic>();
     private sessionDiagnostics = new Map<string, SessionDiagnostic>();
@@ -50,9 +51,10 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
     async start() {}
 
     getSystemDiagnostic(): SystemDiagnostic {
-        if (this.lastSystemDiagnostic) return this.lastSystemDiagnostic;
-
-        const issues = this.deps.cognitiveIntelligenceService.getActiveIssues();
+        const base = this.lastSystemDiagnostic?.issues?.length
+            ? this.lastSystemDiagnostic.issues
+            : this.deps.cognitiveIntelligenceService.getActiveIssues();
+        const issues = [...base, ...this.systemIssues];
         const criticalCount = issues.filter((i) => i.severity === 'critical').length;
         const highCount = issues.filter((i) => i.severity === 'high').length;
 
@@ -67,8 +69,8 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
         const diagnostic: SystemDiagnostic = {
             health,
             score: Math.round(score * 100) / 100,
-            sessionCount: 0,
-            providerCount: 0,
+            sessionCount: this.sessionDiagnostics.size,
+            providerCount: this.providerDiagnostics.size,
             activeIssueCount: issues.length,
             issues,
             updatedAt: Date.now(),
@@ -126,12 +128,29 @@ export class DiagnosticService implements ILifecycle, IDiagnosticService {
     }
 
     getAllActiveIssues(): CognitiveIssue[] {
-        const systemIssues = this.lastSystemDiagnostic?.issues || [];
+        const cached = this.lastSystemDiagnostic?.issues || [];
         const sessionIssues = Array.from(this.sessionDiagnostics.values()).flatMap((d) => d.issues);
         const providerIssues = Array.from(this.providerDiagnostics.values()).flatMap(
             (d) => d.issues,
         );
-        return [...systemIssues, ...sessionIssues, ...providerIssues];
+        return [...this.systemIssues, ...cached, ...sessionIssues, ...providerIssues];
+    }
+
+    recordSystemIssue(issue: {
+        type: CognitiveIssue['type'];
+        severity: CognitiveIssue['severity'];
+        message: string;
+        details?: string;
+    }): void {
+        const entry: CognitiveIssue = {
+            type: issue.type,
+            severity: issue.severity,
+            message: issue.message,
+            timestamp: Date.now(),
+            details: issue.details,
+        };
+        this.systemIssues.push(entry);
+        if (this.systemIssues.length > 20) this.systemIssues.shift();
     }
 
     async runDiagnostic(scope: DiagnosticScope = 'system'): Promise<DiagnosticRunRecord> {

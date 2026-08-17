@@ -12,6 +12,7 @@ import type { Phase } from './helpers';
 import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import type { ILocalStorageAdapter } from '../contracts/storage-adapter';
 import type { StorageLayer, RolesStore, SkillsStore } from '../contracts/storage/storage-layer';
+import type { IDiagnosticService } from '../contracts/diagnostic-service';
 import type { PricingService } from '../services/pricing-service';
 import type { ToolService } from '../services/tool-executor';
 import type { PolicyService } from '../services/policy-service';
@@ -149,6 +150,9 @@ export const registerPhase4: Phase = (helpers, ctx) => {
                 asDeps<ConstructorParameters<typeof TraceService>[0]>({
                     eventBus: c.get<IEventBus>('eventBus'),
                     database: c.get<IDatabaseService>('database'),
+                    get diagnosticService() {
+                        return c.get<IDiagnosticService>('diagnosticService');
+                    },
                 }),
             ),
     );
