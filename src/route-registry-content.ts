@@ -220,6 +220,14 @@ export const CONTENT_SECTIONS: NavSection[] = [
                 color: '#10b981',
                 lazy: true,
             },
+            {
+                id: 'experimental',
+                labelKey: 'nav.experimental',
+                icon: Icons.flaskConical,
+                color: '#a855f7',
+                lazy: true,
+                experimental: true,
+            },
         ],
     },
     {

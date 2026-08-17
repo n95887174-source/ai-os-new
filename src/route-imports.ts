@@ -209,7 +209,7 @@ const MCPPanelLazy = React.lazy(() => import('./components/MCPPanel/MCPPanel'));
 const PatternsPanelLazy = React.lazy(() => import('./components/PatternsPanel/PatternsPanel'));
 
 const SchedulerPanelLazy = React.lazy(() => import('./components/SchedulerPanel'));
-const ComingSoonPanel = React.lazy(() => import('./components/ComingSoonPanel'));
+const ExperimentalPanelLazy = React.lazy(() => import('./components/ExperimentalPanel'));
 
 // Component map: nav id → React component (dashboard handled manually for onNavigate)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -358,39 +358,9 @@ export const PANEL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     'aquarium-trading': AquariumTradingPanelLazy,
     'time-machine': TimeMachinePanelLazy,
     'contribution-graph': ContributionGraphPanelLazy,
-    // Coming Soon panels (debate sub-service — not yet implemented)
-    steelman: ComingSoonPanel,
-    'bayesian-judge': ComingSoonPanel,
-    'blind-eval': ComingSoonPanel,
-    credibility: ComingSoonPanel,
-    calibration: ComingSoonPanel,
-    consistency: ComingSoonPanel,
-    'frame-tracker': ComingSoonPanel,
-    'stance-drift': ComingSoonPanel,
-    'insight-bus': ComingSoonPanel,
-    entanglement: ComingSoonPanel,
-    anchoring: ComingSoonPanel,
-    'meta-agent': ComingSoonPanel,
-    'outcome-forecaster': ComingSoonPanel,
-    'concept-blender': ComingSoonPanel,
-    'belief-mining': ComingSoonPanel,
-    'minimax-planner': ComingSoonPanel,
-    'expert-witness': ComingSoonPanel,
-    rhetoric: ComingSoonPanel,
-    'bias-profiler': ComingSoonPanel,
-    'incentive-detector': ComingSoonPanel,
-    stakeholder: ComingSoonPanel,
-    scratchpad: ComingSoonPanel,
-    'persona-mixer': ComingSoonPanel,
-    'bop-tracker': ComingSoonPanel,
-    'got-deliberation': ComingSoonPanel,
-    similarity: ComingSoonPanel,
-    'drift-detector': ComingSoonPanel,
-    'shadow-opponent': ComingSoonPanel,
-    'adversarial-source': ComingSoonPanel,
-    'vuln-targeting': ComingSoonPanel,
-    justification: ComingSoonPanel,
-    'logical-form': ComingSoonPanel,
+    // Collapsed ~33 orphaned ComingSoonPanel debate sub-service stubs (Q8) into
+    // a single discoverable Experimental hub.
+    experimental: ExperimentalPanelLazy,
     scheduler: SchedulerPanelLazy,
 };
 

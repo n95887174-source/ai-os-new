@@ -395,6 +395,10 @@ const analytics: Record<string, string> = {
     'room.clear': 'Clear',
     'room.clearView': 'Clear view',
     'room.clearHistory': 'Clear history',
+    'experimental.title': 'Experimental',
+    'experimental.subtitle':
+        'Planned debate sub-capabilities, collapsed from individual stubs into one hub.',
+    'experimental.planned': 'Planned',
     'director.configure.heading': 'Configure scenario',
     'director.configure.placeholder':
         'Scenario editor (participants and turn sequence) coming soon.',

@@ -394,6 +394,10 @@ const analytics: Record<string, string> = {
     'room.clear': 'Очистить',
     'room.clearView': 'Очистить вид',
     'room.clearHistory': 'Очистить историю',
+    'experimental.title': 'Эксперименты',
+    'experimental.subtitle':
+        'Запланированные субвозможности дебатов, свёрнутые из отдельных заглушек в один хаб.',
+    'experimental.planned': 'Запланировано',
     'director.configure.heading': 'Настройка сценария',
     'director.configure.placeholder':
         'Редактор сценариев (участники и последовательность ходов) скоро.',

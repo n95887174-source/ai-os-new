@@ -150,6 +150,7 @@ const nav: Record<string, string> = {
     'nav.persona_marketplace': 'Persona Marketplace',
     'nav.persona_picker': 'Persona Library',
     'nav.template_sharing': 'Template Sharing',
+    'nav.experimental': 'Experimental',
     'nav.memory_export_import': 'Memory Export/Import',
     'nav.aquarium_trading': 'Aquarium Trading',
     'nav.time_machine': 'Time Machine',

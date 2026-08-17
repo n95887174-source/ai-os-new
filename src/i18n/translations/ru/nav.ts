@@ -150,6 +150,7 @@ const nav: Record<string, string> = {
     'nav.persona_marketplace': 'маркетплейс персон',
     'nav.persona_picker': 'выбор персоны',
     'nav.template_sharing': 'Общий доступ к шаблону',
+    'nav.experimental': 'Эксперименты',
     'nav.memory_export_import': 'Память Экспорт Импорт',
     'nav.aquarium_trading': 'торговля в аквариуме',
     'nav.time_machine': 'машина времени',
