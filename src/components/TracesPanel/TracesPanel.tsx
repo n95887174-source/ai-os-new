@@ -12,6 +12,17 @@ import ModuleInfo from '../ModuleInfo';
 import { emptyStateFlex } from '../../styles/common';
 import { getStatusColor } from '../Common/status-vocabulary';
 
+function traceMatchesDiagnostic(trace: CognitiveTrace, q: string): boolean {
+    const diag = trace?.metadata?.diagnostics as
+        { issues?: Array<{ type?: string; message?: string }> } | undefined;
+    if (!diag?.issues?.length) return false;
+    return diag.issues.some(
+        (i) =>
+            (typeof i.type === 'string' && i.type.toLowerCase().includes(q)) ||
+            (typeof i.message === 'string' && i.message.toLowerCase().includes(q)),
+    );
+}
+
 const TracesPanel: React.FC = () => {
     const { t } = useTranslation();
     const [traces, setTraces] = useState<CognitiveTrace[]>(cognitiveService.getTraces());
@@ -81,12 +92,12 @@ const TracesPanel: React.FC = () => {
 
     const filteredTraces = traces.filter((t) => {
         if (filter !== 'all' && t.status !== filter) return false;
-        if (
-            searchQuery &&
-            !t.input.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !t.traceId.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-            return false;
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            const baseMatch =
+                t.input.toLowerCase().includes(q) || t.traceId.toLowerCase().includes(q);
+            if (!baseMatch && !traceMatchesDiagnostic(t, q)) return false;
+        }
         return true;
     });
 

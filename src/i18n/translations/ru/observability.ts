@@ -239,7 +239,7 @@ const observability: Record<string, string> = {
     'traces.header_confidence': 'Уверенность',
     'traces.header_input': 'Вход',
     'traces.inspect_aria': 'Просмотр',
-    'traces.search_placeholder': 'Поиск…',
+    'traces.search_placeholder': 'Поиск трасс или типа проблемы (напр. budget_pressure)...',
     'traces.step_analysis_desc': 'Описание анализа шага',
     'traces.subtitle': 'Подзаголовок',
     'traces.tab.audit': 'Аудит',

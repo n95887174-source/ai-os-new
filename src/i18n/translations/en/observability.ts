@@ -108,7 +108,7 @@ const observability: Record<string, string> = {
     'traces.select_provider': 'Select Provider',
     'traces.title': 'Traces',
     'traces.subtitle': 'Inspect routing decisions and provider interactions',
-    'traces.search_placeholder': 'Search traces...',
+    'traces.search_placeholder': 'Search traces or diagnostic type (e.g. budget_pressure)...',
     'traces.total': 'Total',
     'traces.completed': 'Completed',
     'traces.failed': 'Failed',
