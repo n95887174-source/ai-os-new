@@ -16,7 +16,8 @@ export type InvocationTarget = { agentId: string } | { role: string } | { expert
 export type InvocationContext =
     | { type: 'forum-topic'; ref: string }
     | { type: 'room'; ref: string }
-    | { type: 'conversation'; ref: string };
+    | { type: 'conversation'; ref: string }
+    | { type: 'scheduled'; ref: string };
 
 export type ExecutionMode = 'chat' | 'debate' | 'director-scenario';
 

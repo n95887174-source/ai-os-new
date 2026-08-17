@@ -34,6 +34,7 @@ import {
     type IExecutionDelegate,
 } from '../services/invocation/invocation-engine-service';
 import { InvocationRepository } from '../services/invocation/invocation-repository';
+import { EVENTS } from '../events/event-names';
 
 /** Minimal shape the engine's `AgentDirectory` needs from `agentService`. */
 interface AgentDirectorySource {
@@ -145,6 +146,61 @@ async function seedDefaultRoomPolicy(svc: InvocationEngineService): Promise<void
     }
 }
 
+const DEFAULT_SCHEDULE_POLICY_NAME = 'Scheduled Tasks (system-triggered)';
+
+async function seedDefaultSchedulePolicy(svc: InvocationEngineService): Promise<void> {
+    try {
+        const existing = await svc.listPolicies();
+        if (existing.some((p) => p.name === DEFAULT_SCHEDULE_POLICY_NAME)) return;
+        await svc.createPolicy({
+            name: DEFAULT_SCHEDULE_POLICY_NAME,
+            enabled: true,
+            createdBy: 'system',
+            match: { source: 'schedule' },
+            actions: { target: { agentId: '__scheduled__' }, mode: 'chat' },
+            allowAgentInitiatedInvocation: false,
+            priority: 0,
+        });
+    } catch {
+        // Non-fatal: a scheduled invocation is simply rejected until a policy exists.
+    }
+}
+
+/**
+ * Q1 — Scheduler → Invocation bridge.
+ *
+ * The SchedulerService emits `SCHEDULE_TRIGGERED` (scheduler-service.ts:300) but
+ * nothing consumed it. This subscriber turns each fired schedule into a real
+ * invocation: a registered `agentId` is dispatched via the Invocation Engine
+ * (policy-gated, budget-gated) to run `taskParams.prompt` as a chat turn. The
+ * scheduler stays decoupled — it only emits an event; the invocation phase owns
+ * the dispatch. Best-effort: a malformed payload or rejected invocation never
+ * breaks the scheduler.
+ */
+function bridgeSchedulerToInvocation(svc: InvocationEngineService, eventBus: IEventBus): void {
+    eventBus.on(EVENTS.SCHEDULE_TRIGGERED, (data: unknown) => {
+        try {
+            const d = data as {
+                scheduleId?: string;
+                agentId?: string;
+                taskParams?: { prompt?: string };
+                timestamp?: number;
+            };
+            if (!d?.agentId) return;
+            void svc.invoke({
+                source: 'schedule',
+                caller: { kind: 'schedule', id: d.scheduleId ?? 'scheduler' },
+                target: { agentId: d.agentId },
+                reason: d.taskParams?.prompt ?? 'Scheduled task',
+                context: { type: 'scheduled', ref: d.scheduleId ?? d.agentId },
+                constraints: { mode: 'chat' },
+            });
+        } catch {
+            // best-effort bridge — never break the scheduler on a bad payload
+        }
+    });
+}
+
 export const registerPhase21: Phase = ({ register }) => {
     register('invocationRepository', (c: IContainer) => {
         return new InvocationRepository(c.get<DatabaseService>('database'));
@@ -166,6 +222,9 @@ export const registerPhase21: Phase = ({ register }) => {
         );
         // Seed the default manual-Room policy once, on first resolution.
         void seedDefaultRoomPolicy(svc);
+        // Seed the default scheduled-tasks policy + bridge scheduler events in.
+        void seedDefaultSchedulePolicy(svc);
+        bridgeSchedulerToInvocation(svc, c.get<IEventBus>('eventBus'));
         return svc;
     });
 };
