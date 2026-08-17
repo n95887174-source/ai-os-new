@@ -84,6 +84,19 @@ export class InvocationCostTracker {
         return this.deps.database.invocationCosts.get(invocationId);
     }
 
+    /** All accumulated per-invocation costs keyed by invocationId (Phase 2 UX). */
+    async getAllCosts(): Promise<Record<string, number>> {
+        try {
+            const rows = await this.deps.database.invocationCosts.toArray();
+            const map: Record<string, number> = {};
+            for (const r of rows) map[r.invocationId] = r.accumulatedCost;
+            return map;
+        } catch (e) {
+            LOGGER.warn('InvocationCostTracker', 'Failed to read invocation costs', { error: e });
+            return {};
+        }
+    }
+
     destroy(): void {
         this.unsubs.forEach((u) => u());
         this.unsubs = [];

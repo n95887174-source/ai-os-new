@@ -380,6 +380,7 @@ const analytics: Record<string, string> = {
     'room.status.done': 'Done',
     'room.invocation.details': 'Details',
     'room.invocation.openSession': 'Open session',
+    'room.invocation.cost': 'Cost',
     'room.invocations.heading': 'Invocations',
     'room.invocations.empty': 'No invocations yet.',
     'room.feed.heading': 'Live output',

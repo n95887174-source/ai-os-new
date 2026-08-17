@@ -379,6 +379,7 @@ const analytics: Record<string, string> = {
     'room.status.done': 'Готов',
     'room.invocation.details': 'Подробности',
     'room.invocation.openSession': 'Открыть сессию',
+    'room.invocation.cost': 'Стоимость',
     'room.invocations.heading': 'Вызовы',
     'room.invocations.empty': 'Пока нет вызовов.',
     'room.feed.heading': 'Живой вывод',

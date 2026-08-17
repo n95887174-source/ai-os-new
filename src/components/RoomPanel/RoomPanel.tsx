@@ -84,7 +84,7 @@ const FIELD: React.CSSProperties = {
 const RoomPanel: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { invocations, order, feed, clear } = useInvocationStore();
+    const { invocations, order, feed, clear, costs } = useInvocationStore();
 
     const [agents] = useState<AgentOption[]>(() => {
         try {
@@ -105,6 +105,7 @@ const RoomPanel: React.FC = () => {
     // live events by id — no duplicates because both key on the same id.
     useEffect(() => {
         void useInvocationStore.getState().loadHistory();
+        void useInvocationStore.getState().loadCosts();
     }, []);
 
     const openSession = (ref: ExecutionTarget) => {
@@ -312,6 +313,15 @@ const RoomPanel: React.FC = () => {
                         <span className={`badge status-${v.status}`}>
                             {t(`room.status.${v.status}`)}
                         </span>
+                        {costs[id] != null && (
+                            <span
+                                className="badge"
+                                style={{ opacity: 0.8, fontSize: '0.68rem' }}
+                                title={`${t('room.invocation.cost')}`}
+                            >
+                                {t('room.invocation.cost')}: ${costs[id]!.toFixed(4)}
+                            </span>
+                        )}
                         {v.sessionRef &&
                         (v.sessionRef.kind === 'conversation' || v.sessionRef.kind === 'debate') ? (
                             <button

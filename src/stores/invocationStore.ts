@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
-import { invocationRepository } from '../kernel/instances/services-extras';
+import { invocationRepository, invocationCostTracker } from '../kernel/instances/services-extras';
 import type {
     AgentRef,
     ExecutionTarget,
@@ -43,7 +43,10 @@ export interface InvocationStoreState {
     order: string[];
     log: InvocationLogEntry[];
     feed: ExecutionFeedEntry[];
+    /** Per-invocation accumulated cost (USD) from the cost-attribution table. */
+    costs: Record<string, number>;
     loadHistory: () => Promise<void>;
+    loadCosts: () => Promise<void>;
     clear: () => void;
 }
 
@@ -154,6 +157,9 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
                         },
                     ],
                 }));
+                // Reload accumulated cost now that the invocation's turns have
+                // streamed and populated the cost-attribution table.
+                void useInvocationStore.getState().loadCosts();
             },
         ),
         // Live output from the execution subsystem (ConversationCore / Director).
@@ -203,6 +209,7 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
         order: [],
         log: [],
         feed: [],
+        costs: {},
         loadHistory: async () => {
             let all: Invocation[] = [];
             try {
@@ -233,6 +240,15 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
                 return { invocations, order };
             });
         },
-        clear: () => set({ invocations: {}, order: [], log: [], feed: [] }),
+        loadCosts: async () => {
+            let costs: Record<string, number> = {};
+            try {
+                costs = await invocationCostTracker.getAllCosts();
+            } catch {
+                return;
+            }
+            set({ costs });
+        },
+        clear: () => set({ invocations: {}, order: [], log: [], feed: [], costs: {} }),
     };
 });
