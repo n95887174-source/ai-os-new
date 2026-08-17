@@ -384,8 +384,11 @@ const analytics: Record<string, string> = {
     'room.invocations.empty': 'Пока нет вызовов.',
     'room.feed.heading': 'Живой вывод',
     'room.feed.empty': 'Пока нет активности.',
+    'room.feed.scoped': 'Вывод для сессии агента {name}',
     'room.session': 'Сессия',
     'room.clear': 'Очистить',
+    'room.clearView': 'Очистить вид',
+    'room.clearHistory': 'Очистить историю',
     'director.configure.heading': 'Настройка сценария',
     'director.configure.placeholder':
         'Редактор сценариев (участники и последовательность ходов) скоро.',

@@ -36,6 +36,8 @@ export interface ExecutionFeedEntry {
     at: number;
     kind: 'turn-start' | 'turn-complete' | 'turn-error';
     text: string;
+    /** Session the turn belongs to, so the UI can scope the feed per invocation. */
+    sessionId?: string;
 }
 
 export interface InvocationStoreState {
@@ -45,8 +47,16 @@ export interface InvocationStoreState {
     feed: ExecutionFeedEntry[];
     /** Per-invocation accumulated cost (USD) from the cost-attribution table. */
     costs: Record<string, number>;
+    /** Currently selected invocation whose session feed is shown (scoped view). */
+    selectedId: string | null;
     loadHistory: () => Promise<void>;
     loadCosts: () => Promise<void>;
+    select: (id: string | null) => void;
+    /** Clears only the live output view (feed + log), keeps history. */
+    clearView: () => void;
+    /** Clears the persisted invocation history (history list + view). */
+    clearHistory: () => void;
+    /** Full reset (retained for tests / emergency). */
     clear: () => void;
 }
 
@@ -169,7 +179,12 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
                 set((s) => ({
                     feed: [
                         ...s.feed,
-                        { at: Date.now(), kind: 'turn-start', text: `▶ ${d.participantId}` },
+                        {
+                            at: Date.now(),
+                            kind: 'turn-start',
+                            text: `▶ ${d.participantId}`,
+                            sessionId: d.sessionId,
+                        },
                     ],
                 })),
         ),
@@ -183,6 +198,7 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
                             at: Date.now(),
                             kind: 'turn-complete',
                             text: `${d.participantId}: ${d.content ?? ''}`,
+                            sessionId: d.sessionId,
                         },
                     ],
                 })),
@@ -197,6 +213,7 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
                             at: Date.now(),
                             kind: 'turn-error',
                             text: `✖ ${d.participantId}: ${d.error}`,
+                            sessionId: d.sessionId,
                         },
                     ],
                 })),
@@ -210,6 +227,7 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
         log: [],
         feed: [],
         costs: {},
+        selectedId: null,
         loadHistory: async () => {
             let all: Invocation[] = [];
             try {
@@ -250,5 +268,8 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
             set({ costs });
         },
         clear: () => set({ invocations: {}, order: [], log: [], feed: [], costs: {} }),
+        select: (id) => set({ selectedId: id }),
+        clearView: () => set({ feed: [], log: [] }),
+        clearHistory: () => set({ invocations: {}, order: [], costs: {}, feed: [], log: [] }),
     };
 });

@@ -84,7 +84,8 @@ const FIELD: React.CSSProperties = {
 const RoomPanel: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { invocations, order, feed, clear, costs } = useInvocationStore();
+    const { invocations, order, feed, costs, selectedId, select, clearView, clearHistory } =
+        useInvocationStore();
 
     const [agents] = useState<AgentOption[]>(() => {
         try {
@@ -118,6 +119,16 @@ const RoomPanel: React.FC = () => {
         for (const a of agents) m[a.id] = a.name;
         return m;
     }, [agents]);
+
+    // Scope the live feed to the selected invocation's session (honest, not a
+    // global mix). Fall back to the most recent invocation that has a session,
+    // otherwise show all feed while nothing is selected.
+    const activeId =
+        selectedId ?? order.find((id) => invocations[id]?.sessionRef) ?? order[0] ?? null;
+    const activeSessionRef = activeId ? invocations[activeId]?.sessionRef : undefined;
+    const scopedFeed = activeSessionRef
+        ? feed.filter((e) => e.sessionId === activeSessionRef.ref)
+        : feed;
 
     const handleInvoke = async () => {
         setError(null);
@@ -238,10 +249,10 @@ const RoomPanel: React.FC = () => {
             </div>
 
             {/* ── Invocation lifecycle list (read-only observer) ── */}
-            <h3 style={{ margin: '1rem 0 0.5rem' }}>
+            <h3 style={{ margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {t('room.invocations.heading')}
-                <button onClick={clear} style={{ marginLeft: 12, fontSize: '0.7rem' }}>
-                    {t('room.clear')}
+                <button onClick={() => clearHistory()} style={{ fontSize: '0.7rem' }}>
+                    {t('room.clearHistory')}
                 </button>
             </h3>
             {order.length === 0 && (
@@ -258,11 +269,15 @@ const RoomPanel: React.FC = () => {
                 return (
                     <div
                         key={id}
+                        onClick={() => select(id)}
                         style={{
                             ...LOG_ROW,
                             display: 'flex',
                             flexWrap: 'wrap',
                             alignItems: 'flex-start',
+                            cursor: 'pointer',
+                            borderColor: id === activeId ? 'rgba(34,211,238,0.7)' : undefined,
+                            background: id === activeId ? 'rgba(34,211,238,0.12)' : undefined,
                         }}
                     >
                         <div style={AVATAR}>{name.charAt(0).toUpperCase()}</div>
@@ -341,13 +356,31 @@ const RoomPanel: React.FC = () => {
                 );
             })}
 
-            {/* ── Live output from the execution subsystem ── */}
-            <h3 style={{ margin: '1rem 0 0.5rem' }}>{t('room.feed.heading')}</h3>
-            {feed.length === 0 && (
+            {/* ── Live output from the execution subsystem (scoped to session) ── */}
+            <h3 style={{ margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: 12 }}>
+                {t('room.feed.heading')}
+                <button onClick={() => clearView()} style={{ fontSize: '0.7rem' }}>
+                    {t('room.clearView')}
+                </button>
+            </h3>
+            {activeSessionRef && activeId && (
+                <div style={{ opacity: 0.6, fontSize: '0.72rem', marginBottom: 6 }}>
+                    {t('room.feed.scoped', {
+                        name: displayName(
+                            invocations[activeId]?.agents?.[0]?.id ??
+                                (invocations[activeId]?.target &&
+                                'agentId' in invocations[activeId]!.target!
+                                    ? invocations[activeId]!.target!.agentId
+                                    : undefined),
+                        ),
+                    })}
+                </div>
+            )}
+            {scopedFeed.length === 0 && (
                 <div style={{ opacity: 0.5, fontSize: '0.8rem' }}>{t('room.feed.empty')}</div>
             )}
             <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-                {feed.map((e, i) => (
+                {scopedFeed.map((e, i) => (
                     <div key={i} style={LOG_ROW}>
                         <span style={{ opacity: 0.6 }}>{new Date(e.at).toLocaleTimeString()}</span>
                         <span

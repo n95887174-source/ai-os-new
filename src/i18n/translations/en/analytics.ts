@@ -385,8 +385,11 @@ const analytics: Record<string, string> = {
     'room.invocations.empty': 'No invocations yet.',
     'room.feed.heading': 'Live output',
     'room.feed.empty': 'No activity yet.',
+    'room.feed.scoped': 'Showing live output for {name}’s session',
     'room.session': 'Session',
     'room.clear': 'Clear',
+    'room.clearView': 'Clear view',
+    'room.clearHistory': 'Clear history',
     'director.configure.heading': 'Configure scenario',
     'director.configure.placeholder':
         'Scenario editor (participants and turn sequence) coming soon.',
