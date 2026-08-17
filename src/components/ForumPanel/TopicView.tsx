@@ -10,6 +10,7 @@ interface TopicViewProps {
     thread: { topic: Topic; posts: Post[] } | null;
     consensus: string | null;
     onModerate: (postId: string, action: string) => void;
+    onVote: (postId: string, vote: 'up' | 'down') => void;
     onCompose: (body: string) => void;
 }
 
@@ -55,8 +56,9 @@ function downloadMarkdown(filename: string, content: string): void {
 const PostCard: React.FC<{
     post: Post;
     onModerate: (id: string, action: string) => void;
+    onVote: (id: string, vote: 'up' | 'down') => void;
     onQuote?: (post: Post) => void;
-}> = ({ post, onModerate, onQuote }) => (
+}> = ({ post, onModerate, onVote, onQuote }) => (
     <div
         style={{
             border: '1px solid rgba(255,255,255,0.08)',
@@ -84,6 +86,16 @@ const PostCard: React.FC<{
                 <span style={{ fontSize: '0.66rem', color: '#94a3b8', fontWeight: 700 }}>
                     {post.score}
                 </span>
+                <button onClick={() => onVote(post.id, 'up')} style={iconBtnSmall} title="upvote">
+                    ▲
+                </button>
+                <button
+                    onClick={() => onVote(post.id, 'down')}
+                    style={iconBtnSmall}
+                    title="downvote"
+                >
+                    ▼
+                </button>
                 {onQuote && typeof onQuote === 'function' && (
                     <button onClick={() => onQuote(post)} style={iconBtnSmall} title="quote">
                         ❝
@@ -116,7 +128,13 @@ const PostCard: React.FC<{
 /**
  * TopicView — selected thread: posts + consensus badge + composer.
  */
-const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, onCompose }) => {
+const TopicView: React.FC<TopicViewProps> = ({
+    thread,
+    consensus,
+    onModerate,
+    onVote,
+    onCompose,
+}) => {
     const { t } = useTranslation();
     const [postFilter, setPostFilter] = React.useState('');
     const [quote, setQuote] = React.useState<{ text: string; n: number } | null>(null);
@@ -142,7 +160,15 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
 
     const color = consensus ? (CONSENSUS_COLORS[consensus] ?? '#f59e0b') : '#f59e0b';
 
-    const handleEscalate = (topic: Topic): void => {
+    const handleEscalate = async (topic: Topic): Promise<void> => {
+        // Q3: only contested topics are escalated to a debate (cohesion gate).
+        if (consensus !== 'contested') {
+            eventBus.emit(EVENTS.NOTIFICATION, {
+                message: t('forum.escalate_only_contested'),
+                type: 'info',
+            });
+            return;
+        }
         eventBus.emit(EVENTS.FORUM_TOPIC_ESCALATED_TO_DEBATE, {
             topicId: topic.id,
             title: topic.title,
@@ -261,6 +287,7 @@ const TopicView: React.FC<TopicViewProps> = ({ thread, consensus, onModerate, on
                         <PostCard
                             post={p}
                             onModerate={onModerate}
+                            onVote={onVote}
                             onQuote={(post) =>
                                 setQuote({ text: post.body, n: (quote?.n ?? 0) + 1 })
                             }

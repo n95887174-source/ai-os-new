@@ -335,6 +335,11 @@ const analytics: Record<string, string> = {
     'forum.select_topic': 'Select a topic from the list',
     'forum.export_md': 'Export .md',
     'forum.escalate_debate': 'Escalate to debate',
+    'forum.escalate_only_contested': 'Only contested topics can be escalated to a debate',
+    'forum.vote_up': 'Upvote',
+    'forum.vote_down': 'Downvote',
+    'forum.pin': 'Pin',
+    'forum.unpin': 'Unpin',
     'forum.posts': 'posts',
     'forum.no_posts': 'No posts yet',
     'forum.composer_placeholder':

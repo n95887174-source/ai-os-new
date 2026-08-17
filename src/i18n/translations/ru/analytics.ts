@@ -334,6 +334,11 @@ const analytics: Record<string, string> = {
     'forum.select_topic': 'Выберите тему из списка',
     'forum.export_md': 'Экспорт .md',
     'forum.escalate_debate': 'Поднять в дебаты',
+    'forum.escalate_only_contested': 'В дебаты можно поднять только оспариваемые темы',
+    'forum.vote_up': 'За',
+    'forum.vote_down': 'Против',
+    'forum.pin': 'Закрепить',
+    'forum.unpin': 'Открепить',
     'forum.posts': 'постов',
     'forum.no_posts': 'Постов пока нет',
     'forum.composer_placeholder':

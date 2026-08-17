@@ -76,6 +76,17 @@ const ForumPanel: React.FC = () => {
         await openThread(selectedId);
     };
 
+    const handleVote = async (postId: string, vote: 'up' | 'down'): Promise<void> => {
+        if (!selectedId) return;
+        await forumService.votePost(postId, currentAuthor, vote);
+        await openThread(selectedId);
+    };
+
+    const handlePin = async (topicId: string, pinned: boolean): Promise<void> => {
+        await forumService.pinTopic(topicId, !pinned);
+        await refreshTopics();
+    };
+
     return (
         <div
             style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
@@ -127,6 +138,7 @@ const ForumPanel: React.FC = () => {
                         selectedId={selectedId}
                         onSelect={(id) => void openThread(id)}
                         onCreate={(title, cat) => void handleCreate(title, cat)}
+                        onPin={(id, pinned) => void handlePin(id, pinned)}
                         page={page}
                         onPageChange={setPage}
                     />
@@ -144,6 +156,7 @@ const ForumPanel: React.FC = () => {
                         thread={thread}
                         consensus={consensus}
                         onModerate={(id, action) => void handleModerate(id, action)}
+                        onVote={(id, vote) => void handleVote(id, vote)}
                         onCompose={(body) => void handleCompose(body)}
                     />
                     {thread && (

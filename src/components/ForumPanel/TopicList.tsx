@@ -7,6 +7,7 @@ interface TopicListProps {
     selectedId: string | null;
     onSelect: (id: string) => void;
     onCreate: (title: string, category: string) => void;
+    onPin: (topicId: string, pinned: boolean) => void;
     page: number;
     onPageChange: (page: number) => void;
 }
@@ -17,8 +18,9 @@ const TopicRow: React.FC<{
     topic: Topic;
     active: boolean;
     onClick: () => void;
+    onPin: (topicId: string, pinned: boolean) => void;
     t: (k: string) => string;
-}> = ({ topic, active, onClick, t }) => (
+}> = ({ topic, active, onClick, onPin, t }) => (
     <div
         onClick={onClick}
         style={{
@@ -32,6 +34,29 @@ const TopicRow: React.FC<{
     >
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             {topic.pinned && <span style={{ color: '#f59e0b', fontSize: '0.68rem' }}>📌</span>}
+            <span style={{ fontSize: '0.76rem', color: '#e2e8f0', fontWeight: 600, flex: 1 }}>
+                {topic.title}
+            </span>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onPin(topic.id, topic.pinned);
+                }}
+                title={topic.pinned ? t('forum.unpin') : t('forum.pin')}
+                style={{
+                    border: topic.pinned
+                        ? '1px solid rgba(245,158,11,0.6)'
+                        : '1px solid rgba(255,255,255,0.12)',
+                    background: topic.pinned ? 'rgba(245,158,11,0.15)' : 'transparent',
+                    color: topic.pinned ? '#fcd34d' : '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '0.7rem',
+                    borderRadius: 5,
+                    padding: '0 4px',
+                }}
+            >
+                📌
+            </button>
             {SYSTEM_CATEGORIES.has(topic.category) && (
                 <span
                     title={t('forum.system_topic')}
@@ -46,9 +71,6 @@ const TopicRow: React.FC<{
                     🤖 {t('forum.system_topic')}
                 </span>
             )}
-            <span style={{ fontSize: '0.76rem', color: '#e2e8f0', fontWeight: 600, flex: 1 }}>
-                {topic.title}
-            </span>
         </div>
         <div
             style={{
@@ -71,6 +93,7 @@ const TopicList: React.FC<TopicListProps> = ({
     selectedId,
     onSelect,
     onCreate,
+    onPin,
     page,
     onPageChange,
 }) => {
@@ -164,6 +187,7 @@ const TopicList: React.FC<TopicListProps> = ({
                     topic={tp}
                     active={tp.id === selectedId}
                     onClick={() => onSelect(tp.id)}
+                    onPin={onPin}
                     t={t}
                 />
             ))}
