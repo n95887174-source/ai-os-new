@@ -25,6 +25,7 @@ import type {
     ExecutionTarget,
     InvocationContext,
 } from '../contracts/invocation';
+import type { IBudgetService } from '../contracts/budget';
 import type { TurnProposal } from '../contracts/conversation/turn';
 import type { DebateParticipant, DebateRole } from '../contracts/debate-types';
 import {
@@ -161,6 +162,7 @@ export const registerPhase21: Phase = ({ register }) => {
             c.get<IEventBus>('eventBus'),
             directory,
             execution,
+            c.get<IBudgetService>('budgetService'),
         );
         // Seed the default manual-Room policy once, on first resolution.
         void seedDefaultRoomPolicy(svc);

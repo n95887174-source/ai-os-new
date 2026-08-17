@@ -11,6 +11,7 @@ import type {
     InvocationTarget,
     IInvocationEngineService,
 } from '../../contracts/invocation';
+import type { IBudgetService } from '../../contracts/budget';
 import { EVENTS } from '../../events/event-names';
 import { InvocationRepository } from './invocation-repository';
 
@@ -35,6 +36,7 @@ export class InvocationEngineService implements IInvocationEngineService {
         private eventBus: IEventBus,
         private directory: AgentDirectory,
         private execution: IExecutionDelegate,
+        private budgetService?: IBudgetService,
     ) {}
 
     async invoke(req: InvocationRequest): Promise<Invocation> {
@@ -98,6 +100,26 @@ export class InvocationEngineService implements IInvocationEngineService {
             policyRef: inv.policyRef,
             agents,
         });
+
+        // Phase 3: pre-execution budget gate. If any resolved agent is already
+        // at/over its configured budget, reject before any LLM spend occurs.
+        if (this.budgetService) {
+            const spentByAgent = this.budgetService.getCostByAgent();
+            for (const agent of agents) {
+                const budget = this.budgetService.getAgentBudget(agent.id);
+                if (budget != null && (spentByAgent[agent.id] ?? 0) >= budget) {
+                    inv.status = 'rejected';
+                    inv.rejectionReason = `agent ${agent.id} over budget (${(spentByAgent[agent.id] ?? 0).toFixed(4)}/${budget})`;
+                    inv.updatedAt = Date.now();
+                    await this.repository.put(inv);
+                    this.eventBus.emit(EVENTS.INVOCATION_REJECTED, {
+                        invocationId: inv.id,
+                        reason: inv.rejectionReason,
+                    });
+                    return inv;
+                }
+            }
+        }
 
         const mode = inv.constraints.mode ?? evaluation.policy.actions.mode ?? 'chat';
         const sessionRef = await this.execution.start(agents, req.context, mode, inv.id);
