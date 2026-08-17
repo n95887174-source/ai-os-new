@@ -523,6 +523,33 @@ const TracesPanel: React.FC = () => {
                                         <Cpu size={16} color="#64748b" aria-hidden="true" />{' '}
                                         {trace.steps.length}
                                     </div>
+                                    {(() => {
+                                        const diag = trace.metadata?.diagnostics as
+                                            { activeIssueCount: number } | undefined;
+                                        return diag?.activeIssueCount ? (
+                                            <div
+                                                title={t('traces.diagnostics')}
+                                                style={{
+                                                    background: 'rgba(239,68,68,0.12)',
+                                                    padding: '0.4rem 0.8rem',
+                                                    borderRadius: 8,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 8,
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 700,
+                                                    color: '#ef4444',
+                                                }}
+                                            >
+                                                <AlertTriangle
+                                                    size={16}
+                                                    color="#ef4444"
+                                                    aria-hidden="true"
+                                                />{' '}
+                                                {diag.activeIssueCount}
+                                            </div>
+                                        ) : null;
+                                    })()}
                                 </div>
 
                                 <div

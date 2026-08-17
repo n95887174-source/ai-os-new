@@ -12,6 +12,7 @@ import { EVENTS } from '../events/event-names';
 import { estimateTokens } from '../utils/tokenEstimate';
 import { rootLogger } from './logger-service';
 import { sanitizePromptVar } from '../utils/sanitize';
+import type { IDiagnosticService } from '../contracts/diagnostic-service';
 
 const LOGGER = rootLogger.child('CognitiveService');
 
@@ -75,6 +76,7 @@ export interface CognitiveServiceDeps {
         getAdapter: (provider: string) => IProviderAdapter | undefined;
     };
     blackboardService: Pick<BlackboardService, 'read'>;
+    diagnosticService?: IDiagnosticService;
 }
 
 export class CognitiveService {
@@ -185,6 +187,34 @@ export class CognitiveService {
         }, this.PERSIST_INTERVAL);
     }
 
+    // ================= DIAGNOSTIC INJECTION (observability Phase 2) =================
+    // Surface system health (active CognitiveIssues) into the trace at finalization,
+    // so the trace UI can show whether execution happened under degraded conditions.
+    private getDiagnosticService(): IDiagnosticService | undefined {
+        try {
+            return this.deps.diagnosticService;
+        } catch {
+            return undefined;
+        }
+    }
+
+    private attachDiagnostics(trace: CognitiveTrace): void {
+        const ds = this.getDiagnosticService();
+        if (!ds) return;
+        try {
+            const issues = ds
+                .getAllActiveIssues()
+                .slice(0, 5)
+                .map((i) => ({ type: i.type, severity: i.severity, message: i.message }));
+            trace.metadata = {
+                ...trace.metadata,
+                diagnostics: { activeIssueCount: issues.length, issues },
+            };
+        } catch (e) {
+            LOGGER.warn('CognitiveService', 'attachDiagnostics failed', { error: String(e) });
+        }
+    }
+
     // ================= LISTENERS =================
     private setupListeners() {
         this.unsubs.push(
@@ -243,6 +273,7 @@ export class CognitiveService {
                     trace.status = 'failed';
                     trace.endTime = Date.now();
                     trace.totalLatency = trace.endTime - trace.startTime;
+                    this.attachDiagnostics(trace);
                     this.activeTraces.delete(d.traceId || '');
                     this.updateStats(trace, true);
                     this.persist();
@@ -269,6 +300,8 @@ export class CognitiveService {
                     trace.output = data.final_data?.output?.slice(0, this.MAX_OUTPUT_LENGTH);
                     trace.endTime = Date.now();
                     trace.totalLatency = trace.endTime - trace.startTime;
+
+                    this.attachDiagnostics(trace);
 
                     const text = trace.output || '';
 

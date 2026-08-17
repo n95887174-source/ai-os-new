@@ -15,6 +15,7 @@ import type { KeyService } from '../services/key-management/key-service';
 import type { ProviderAdapterRegistry } from '../services/provider-adapter-registry';
 import type { GroupManagerService } from '../services/group-manager';
 import type { KeyStateStore } from '../services/key-state-store';
+import type { IDiagnosticService } from '../contracts/diagnostic-service';
 import { SessionAffinityStore } from '../services/session-affinity-store';
 import { ChatBookmarksService } from '../services/chat-bookmarks-service';
 import { AgentJournalService } from '../services/agent-journal-service';
@@ -166,6 +167,9 @@ export const registerPhase2: Phase = (helpers, ctx) => {
             },
             get adapterRegistry() {
                 return _c.get<CognitiveServiceDeps['adapterRegistry']>('providerAdapterRegistry');
+            },
+            get diagnosticService() {
+                return _c.get<IDiagnosticService>('diagnosticService');
             },
         });
     });

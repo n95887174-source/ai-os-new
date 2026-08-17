@@ -84,6 +84,7 @@ const observability: Record<string, string> = {
     'traces.alternatives_heading': 'заголовок альтернатив',
     'traces.avg_confidence': 'средняя уверенность',
     'traces.certainty_label': 'Метка достоверности',
+    'traces.diagnostics': 'Системные проблемы',
     'traces.cost': 'Стоимость',
     'traces.empty': 'Опустошить',
     'traces.fallback': 'Резервный',
