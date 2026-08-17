@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, RefreshCcw, Play, Pause, Code, Network } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    RefreshCcw,
+    Play,
+    Pause,
+    Code,
+    Network,
+    AlertTriangle,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { CognitiveTrace } from '../../kernel/instances';
 import CognitiveMicroscope from './CognitiveMicroscope';
@@ -281,6 +290,85 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                     </div>
                 </div>
             </div>
+
+            {trace.metadata?.diagnostics
+                ? (() => {
+                      const diag = trace.metadata.diagnostics as {
+                          activeIssueCount: number;
+                          issues: Array<{ type: string; severity: string; message: string }>;
+                      };
+                      if (!diag.issues?.length) return null;
+                      const sevColor = (s: string): string =>
+                          s === 'critical'
+                              ? '#dc2626'
+                              : s === 'high'
+                                ? '#ef4444'
+                                : s === 'medium'
+                                  ? '#f59e0b'
+                                  : '#64748b';
+                      return (
+                          <div
+                              style={{
+                                  padding: '0.75rem 1.25rem',
+                                  borderRadius: 16,
+                                  border: '1px solid rgba(239,68,68,0.25)',
+                                  background: 'rgba(239,68,68,0.06)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.5rem',
+                              }}
+                          >
+                              <div
+                                  style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 8,
+                                      fontSize: '0.8rem',
+                                      fontWeight: 800,
+                                      color: '#ef4444',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.05em',
+                                  }}
+                              >
+                                  <AlertTriangle size={16} aria-hidden="true" />{' '}
+                                  {t('traces.diagnostics')} ({diag.issues.length})
+                              </div>
+                              {diag.issues.map((iss, i) => (
+                                  <div
+                                      key={i}
+                                      style={{
+                                          display: 'flex',
+                                          gap: 8,
+                                          alignItems: 'baseline',
+                                          fontSize: '0.8rem',
+                                      }}
+                                  >
+                                      <span
+                                          style={{
+                                              fontWeight: 800,
+                                              color: sevColor(iss.severity),
+                                              textTransform: 'uppercase',
+                                              minWidth: 70,
+                                          }}
+                                      >
+                                          {iss.severity}
+                                      </span>
+                                      <span
+                                          style={{
+                                              color: '#94a3b8',
+                                              fontFamily: '"JetBrains Mono", monospace',
+                                              minWidth: 150,
+                                          }}
+                                      >
+                                          {iss.type}
+                                      </span>
+                                      <span style={{ color: '#e2e8f0' }}>{iss.message}</span>
+                                  </div>
+                              ))}
+                          </div>
+                      );
+                  })()
+                : null}
 
             <div
                 style={{
