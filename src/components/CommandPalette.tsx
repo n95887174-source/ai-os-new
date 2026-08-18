@@ -1,11 +1,24 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, ArrowRight, Clock, X } from 'lucide-react';
+import {
+    Search,
+    ArrowRight,
+    Clock,
+    X,
+    Plus,
+    MessageSquare,
+    Workflow,
+    Users,
+    Bookmark,
+    Hash,
+} from 'lucide-react';
 import { NAV_SECTIONS } from '../route-registry';
 import type { TranslationKey } from '../i18n/translations';
 import { safeJsonParse } from '../kernel/utils/safe-json';
 import { ssrSafeStorage } from '../kernel/utils/ssr-storage';
+import { agentService } from '../kernel/instances/services-core';
+import { forumService } from '../kernel/instances/services-extras';
 
 // ─── Fuzzy match helper ───────────────────────────────────────────────────────
 function fuzzyScore(pattern: string, text: string): number {
@@ -36,6 +49,8 @@ interface PaletteItem {
     color: string;
     icon: React.ReactNode;
     recent?: boolean;
+    /** Optional command to run on select (in addition to navigation). */
+    action?: () => void;
 }
 
 const RECENT_KEY = 'mavis:palette:recent';
@@ -58,9 +73,65 @@ function saveRecent(path: string) {
     }
 }
 
-// ─── Build flat list from NAV_SECTIONS ───────────────────────────────────────
+// ─── Build flat list from NAV_SECTIONS + common actions ───────────────────────
 function buildItems(t: (key: TranslationKey) => string): PaletteItem[] {
     const items: PaletteItem[] = [];
+
+    // Common actions — jump to a creation/entry surface quickly.
+    const actions: Array<{
+        id: string;
+        labelKey: string;
+        path: string;
+        icon: React.ReactNode;
+        color: string;
+    }> = [
+        {
+            id: 'action-new-scenario',
+            labelKey: 'palette.action.newScenario',
+            path: 'director',
+            icon: <Plus size={16} />,
+            color: '#10b981',
+        },
+        {
+            id: 'action-new-debate',
+            labelKey: 'palette.action.newDebate',
+            path: 'debate',
+            icon: <MessageSquare size={16} />,
+            color: '#f59e0b',
+        },
+        {
+            id: 'action-new-workflow',
+            labelKey: 'palette.action.newWorkflow',
+            path: 'builder',
+            icon: <Workflow size={16} />,
+            color: '#38bdf8',
+        },
+        {
+            id: 'action-open-forum',
+            labelKey: 'palette.action.openForum',
+            path: 'forum',
+            icon: <Users size={16} />,
+            color: '#a855f7',
+        },
+        {
+            id: 'action-open-room',
+            labelKey: 'palette.action.openRoom',
+            path: 'room',
+            icon: <Hash size={16} />,
+            color: '#22d3ee',
+        },
+    ];
+    for (const a of actions) {
+        items.push({
+            id: a.id,
+            label: t(a.labelKey as TranslationKey),
+            path: a.path,
+            section: t('palette.section.actions'),
+            color: a.color,
+            icon: a.icon,
+        });
+    }
+
     for (const section of NAV_SECTIONS) {
         for (const item of section.items) {
             items.push({
@@ -106,7 +177,49 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, t
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
-    const allItems = useMemo(() => buildItems(t), [t]);
+    const staticItems = useMemo(() => buildItems(t), [t]);
+    const agentItems = useMemo<PaletteItem[]>(() => {
+        try {
+            return agentService.getAgents().map((a) => ({
+                id: `agent-${a.id}`,
+                label: a.name,
+                path: `agents?agent=${encodeURIComponent(a.id)}`,
+                section: t('palette.section.agents'),
+                color: '#10b981',
+                icon: <Users size={16} />,
+            }));
+        } catch {
+            return [];
+        }
+    }, [t]);
+    const [topicItems, setTopicItems] = useState<PaletteItem[]>([]);
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        forumService
+            .listTopics({ pageSize: 30 })
+            .then((page) => {
+                if (cancelled) return;
+                setTopicItems(
+                    page.items.map((tp) => ({
+                        id: `topic-${tp.id}`,
+                        label: (tp as { title?: string; id: string }).title ?? tp.id,
+                        path: `forum?topic=${encodeURIComponent(tp.id)}`,
+                        section: t('palette.section.topics'),
+                        color: '#a855f7',
+                        icon: <Bookmark size={16} />,
+                    })),
+                );
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, [open, t]);
+    const allItems = useMemo(
+        () => [...staticItems, ...agentItems, ...topicItems],
+        [staticItems, agentItems, topicItems],
+    );
     const recentPaths = useMemo(() => getRecent(), []);
     const recentItems = useMemo(
         () =>
@@ -148,7 +261,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, t
     const handleSelect = useCallback(
         (item: PaletteItem) => {
             saveRecent(item.path);
-            navigate(`/${item.path}`);
+            item.action?.();
+            if (item.path) navigate(`/${item.path}`);
             onClose();
             setQuery('');
         },
