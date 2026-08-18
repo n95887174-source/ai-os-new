@@ -27,6 +27,7 @@ import { GeneratorRepository } from './generator-repository';
 import { ForumRepository } from './forum-repository';
 import { WorkflowRepository } from './workflow-repository';
 import { ScenarioRepository } from './scenario-repository';
+import { DirectorRepository } from './director-repository';
 
 export class DataAccessLayerImpl implements DataAccessLayer {
     readonly memory: MemoryRepository;
@@ -45,6 +46,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
     readonly forum: ForumRepository;
     readonly builder: WorkflowRepository;
     readonly scenarios: ScenarioRepository;
+    readonly directorSessions: DirectorRepository;
     readonly kv: KvRepository;
 
     constructor(db: DatabaseService) {
@@ -63,6 +65,7 @@ export class DataAccessLayerImpl implements DataAccessLayer {
         this.forum = new ForumRepository(db);
         this.builder = new WorkflowRepository(db);
         this.scenarios = new ScenarioRepository(db);
+        this.directorSessions = new DirectorRepository(db);
         this.kv = new KvRepositoryImpl(db);
         this.workspace = new WorkspaceRepository(this.kv);
     }

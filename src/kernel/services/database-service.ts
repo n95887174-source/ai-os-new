@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Table } from 'dexie';
 import type { Connector } from '../types/domain-types';
 import type { ConversationScenario } from '../contracts/conversation';
+import type { ConversationSession } from '../contracts/conversation/session';
 import type {
     InvocationRecord,
     InvocationPolicyRecord,
@@ -297,6 +298,9 @@ export class DatabaseService implements IDatabaseService {
     }
     get invocationCosts(): Table<InvocationCostRecord> {
         return getDexieDb().invocationCosts;
+    }
+    get directorSessions(): Table<ConversationSession> {
+        return getDexieDb().directorSessions;
     }
     get db() {
         return getDexieDb();

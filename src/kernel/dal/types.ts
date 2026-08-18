@@ -22,6 +22,8 @@ import type { SynthesisRepository } from './synthesis-repository';
 import type { GeneratorRepository } from './generator-repository';
 import type { ForumRepository } from './forum-repository';
 import type { WorkflowRepository } from './workflow-repository';
+import type { ScenarioRepository } from './scenario-repository';
+import type { DirectorRepository } from './director-repository';
 
 // =============================================================================
 // Repository Interfaces (see repository-types.ts for MemoryRepository)
@@ -131,6 +133,7 @@ export interface DataAccessLayer {
     forum: ForumRepository;
     builder: WorkflowRepository;
     scenarios: ScenarioRepository;
+    directorSessions: DirectorRepository;
     kv: KvRepository;
 }
 

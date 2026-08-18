@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { eventBus, EVENTS } from '../kernel/events/event-bus';
+import { directorRepository } from '../kernel/instances/services-extras';
+import type { ConversationSession } from '../kernel/contracts/conversation/session';
 
 export type DirectorStatus = 'idle' | 'running' | 'paused' | 'aborted' | 'completed' | 'error';
 
@@ -20,6 +22,9 @@ export interface DirectorStoreState {
     status: DirectorStatus;
     currentParticipantId: string | null;
     turnLog: DirectorTurnLogEntry[];
+    /** Past Director runs (live ConversationSession records) persisted to Dexie. */
+    history: ConversationSession[];
+    loadHistory: () => Promise<void>;
     reset: () => void;
 }
 
@@ -137,6 +142,16 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
         status: 'idle',
         currentParticipantId: null,
         turnLog: [],
+        history: [],
+        loadHistory: async () => {
+            let all: ConversationSession[] = [];
+            try {
+                all = await directorRepository.list();
+            } catch {
+                return;
+            }
+            set({ history: all });
+        },
         reset: () =>
             set({
                 sessionId: '',

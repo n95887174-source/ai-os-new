@@ -17,9 +17,14 @@ import { ConversationDirectorService } from '../services/conversation-director-s
 import { ChatExecutionEngine } from '../services/conversation-execution-engine';
 import type { IChatExecutorAdapter } from '../services/conversation-execution-engine';
 import type { IAgentResolver } from '../contracts/conversation/agent-resolver';
+import type { DirectorRepository } from '../dal/director-repository';
 
 export const registerPhase20: Phase = ({ register }) => {
     register('scenarioRepository', (c: IContainer) => c.get<DataAccessLayer>('dal').scenarios);
+    register(
+        'directorRepository',
+        (c: IContainer) => c.get<DataAccessLayer>('dal').directorSessions,
+    );
 
     // B5.4a — wire the Director service. It binds the generic path
     //   ScenarioRepository → ConversationDirectorService → HybridPolicy
@@ -35,6 +40,7 @@ export const registerPhase20: Phase = ({ register }) => {
                     c.get<IEventBus>('eventBus'),
                     c.get<IAgentResolver>('agentService'),
                 ),
+                c.get<DirectorRepository>('directorRepository'),
             ),
     );
 };

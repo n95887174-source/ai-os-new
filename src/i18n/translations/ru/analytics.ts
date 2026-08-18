@@ -487,6 +487,12 @@ const analytics: Record<string, string> = {
     'director.run.turnStatus.running': 'выполняется',
     'director.run.turnStatus.complete': 'завершён',
     'director.run.turnStatus.error': 'ошибка',
+    'director.run.history': 'История запусков',
+    'director.run.history.empty': 'Прошлых запусков пока нет.',
+    'director.run.history.scenario': 'Сценарий',
+    'director.run.history.status': 'Статус',
+    'director.run.history.checkpoints': 'контрольных точек',
+    'director.run.history.openSession': 'Открыть сессию',
 
     // Agent identity (separate from the per-conversation role)
     'director.configure.agent': 'Агент',

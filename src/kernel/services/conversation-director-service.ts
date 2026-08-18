@@ -11,6 +11,7 @@ import type { ConversationSession, SessionCheckpoint } from '../contracts/conver
 import { HybridPolicy } from './conversation-hybrid-policy';
 import { ConversationOrchestrator } from './conversation-orchestrator';
 import type { ScenarioRepository } from '../dal/scenario-repository';
+import type { DirectorRepository } from '../dal/director-repository';
 import { eventBus, EVENTS } from '../events/event-bus';
 
 /**
@@ -77,6 +78,7 @@ export class ConversationDirectorService implements IConversationDirectorService
     constructor(
         private readonly scenarioRepository: ScenarioRepository,
         private readonly executionEngine: IExecutionEngine,
+        private readonly directorRepository?: DirectorRepository,
     ) {
         // Observe the conversation:* lifecycle for the active session so the
         // `ConversationSession` run record stays in sync with what actually
@@ -92,6 +94,16 @@ export class ConversationDirectorService implements IConversationDirectorService
         ] as const) {
             this.busUnsubs.push(eventBus.onSafe(name, (d) => this.applyConversationEvent(name, d)));
         }
+    }
+
+    /**
+     * Best-effort persistence of the live run record so the Director panel can
+     * show past runs (with their operator checkpoints) after reload (Q7).
+     * Fire-and-forget: a storage failure must never break the run.
+     */
+    private persist(): void {
+        if (!this.directorRepository || !this.session) return;
+        void this.directorRepository.put(this.session).catch(() => undefined);
     }
 
     async loadScenario(id: string, invocationId?: string): Promise<ConversationScenario> {
@@ -142,6 +154,7 @@ export class ConversationDirectorService implements IConversationDirectorService
             failed: 0,
         };
         this.setState('idle');
+        this.persist();
         return found;
     }
 
@@ -171,12 +184,14 @@ export class ConversationDirectorService implements IConversationDirectorService
             throw e;
         } finally {
             this.isRunning = false;
+            this.persist();
         }
     }
 
     pause(): void {
         this.orchestrator?.pause();
         this.state = 'paused';
+        this.persist();
     }
 
     async resume(): Promise<void> {
@@ -188,6 +203,7 @@ export class ConversationDirectorService implements IConversationDirectorService
     abort(): void {
         this.orchestrator?.abortSession(this.sessionId);
         this.state = 'aborted';
+        this.persist();
     }
 
     skipNext(): void {
@@ -235,6 +251,7 @@ export class ConversationDirectorService implements IConversationDirectorService
         };
         this.session.checkpoints.push(checkpoint);
         this.session.updatedAt = Date.now();
+        this.persist();
         return id;
     }
 

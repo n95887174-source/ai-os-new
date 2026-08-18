@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { ConversationScenario } from '../../kernel/contracts/conversation/scenario';
+import type { ConversationSession } from '../../kernel/contracts/conversation/session';
 import type { TurnProposal } from '../../kernel/contracts/conversation/turn';
 import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 import AgentIdentityChip from './AgentIdentityChip';
@@ -36,7 +37,12 @@ const LOG_ROW: React.CSSProperties = {
 const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario }) => {
     const { t } = useTranslation();
     const controls = useMemo(() => createDirectorControls(), []);
-    const { status, currentParticipantId, turnLog } = useDirectorStore();
+    const { status, currentParticipantId, turnLog, history } = useDirectorStore();
+
+    // Rehydrate persisted past runs (Q7) on first mount.
+    useEffect(() => {
+        void controls.loadHistory();
+    }, [controls]);
 
     const [overrideOpen, setOverrideOpen] = useState(false);
     const [overrideParticipant, setOverrideParticipant] = useState('');
@@ -307,6 +313,27 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                 {turnLog.length === 0 && (
                     <li style={{ opacity: 0.5, fontSize: '0.8rem' }}>
                         {t('director.run.logEmpty')}
+                    </li>
+                )}
+            </ul>
+
+            <h4 style={{ margin: '1rem 0 0.5rem' }}>{t('director.run.history')}</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {history.map((h: ConversationSession) => (
+                    <li key={h.id} style={{ ...LOG_ROW, fontSize: '0.75rem', opacity: 0.85 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span style={{ fontWeight: 600 }}>{h.scenarioName}</span>
+                            <span style={{ opacity: 0.7 }}>
+                                {t('director.run.history.status')}: {h.status} ·{' '}
+                                {t('director.run.history.checkpoints')}: {h.checkpoints.length} ·{' '}
+                                {new Date(h.updatedAt).toLocaleString()}
+                            </span>
+                        </div>
+                    </li>
+                ))}
+                {history.length === 0 && (
+                    <li style={{ opacity: 0.5, fontSize: '0.8rem' }}>
+                        {t('director.run.history.empty')}
                     </li>
                 )}
             </ul>
