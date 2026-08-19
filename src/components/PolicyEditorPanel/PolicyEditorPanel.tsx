@@ -8,6 +8,7 @@ import { BUILTIN_POLICY_RULES } from '../../kernel/services/debate-runtime/debat
 import { Plus, Save, Upload, Trash2, GitBranch, CheckCircle, AlertCircle } from 'lucide-react';
 import { useConfirm } from '../../hooks/useConfirm';
 import { s } from './policy-editor-styles';
+import { Button } from '../Common';
 import { genId, createEmptyRule, cloneRule, conditionCount } from './policy-utils';
 import ConditionEditor from './ConditionEditor';
 import ActionEditor from './ActionEditor';
@@ -156,21 +157,21 @@ const PolicyEditorPanel: React.FC = () => {
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--slate-200)' }}>
                     Debate Policy Rules Engine
                 </span>
-                <button style={s.btnSuccess} onClick={handleNew}>
+                <Button variant="success" size="sm" onClick={handleNew}>
                     <Plus size={12} /> New Rule
-                </button>
-                <button style={s.btn} onClick={loadPresets}>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={loadPresets}>
                     <GitBranch size={12} /> Load Built-ins
-                </button>
-                <button style={s.btn} onClick={handleExport}>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleExport}>
                     <Save size={12} /> Export
-                </button>
-                <button style={s.btn} onClick={handleImport}>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleImport}>
                     <Upload size={12} /> Import
-                </button>
-                <button style={s.btnDanger} onClick={handleReset}>
+                </Button>
+                <Button variant="danger" size="sm" onClick={handleReset}>
                     <Trash2 size={12} /> Reset
-                </button>
+                </Button>
                 <span style={{ fontSize: 10, color: 'var(--slate-500)', marginLeft: 'auto' }}>
                     {rules.length} rule{rules.length !== 1 ? 's' : ''} ·{' '}
                     {rules.filter((r) => r.enabled).length} active
@@ -227,7 +228,11 @@ const PolicyEditorPanel: React.FC = () => {
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <span
-                                        style={{ fontSize: 12, fontWeight: 700, color: 'var(--slate-200)' }}
+                                        style={{
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: 'var(--slate-200)',
+                                        }}
                                     >
                                         {editing.name || 'New Rule'}
                                     </span>
@@ -460,7 +465,9 @@ const PolicyEditorPanel: React.FC = () => {
                             {JSON.stringify(editing, null, 2)}
                         </div>
                     ) : (
-                        <div style={{ fontSize: 10, color: 'var(--slate-500)', fontStyle: 'italic' }}>
+                        <div
+                            style={{ fontSize: 10, color: 'var(--slate-500)', fontStyle: 'italic' }}
+                        >
                             Select or create a rule to preview
                         </div>
                     )}

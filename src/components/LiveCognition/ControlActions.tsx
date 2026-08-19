@@ -1,4 +1,5 @@
 import { Activity } from 'lucide-react';
+import { Button } from '../Common';
 
 interface Props {
     onInitializeRequest: () => void;
@@ -7,30 +8,6 @@ interface Props {
     onClearLogs: () => void;
     onCheckAllHealth: () => void;
 }
-
-const btnPrimary: React.CSSProperties = {
-    padding: '0.75rem',
-    fontSize: '0.8rem',
-    borderRadius: 10,
-    background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
-    border: 'none',
-    color: 'white',
-    fontWeight: 700,
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-};
-
-const btnSecondary: React.CSSProperties = {
-    padding: '0.75rem',
-    fontSize: '0.8rem',
-    borderRadius: 10,
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    color: 'var(--slate-200)',
-    fontWeight: 700,
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-};
 
 const ControlActions: React.FC<Props> = ({
     onInitializeRequest,
@@ -61,30 +38,30 @@ const ControlActions: React.FC<Props> = ({
             <Activity size={18} color="#3b82f6" aria-hidden="true" /> Control Plane Actions
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <button
+            <Button
+                variant="primary"
                 onClick={onInitializeRequest}
-                style={btnPrimary}
                 aria-label="Initialize a test request"
             >
                 Initialize Request
-            </button>
-            <button
+            </Button>
+            <Button
+                variant="secondary"
                 onClick={onReloadRuntime}
-                style={btnSecondary}
                 aria-label="Reload runtime configuration"
             >
                 Reload Runtime
-            </button>
-            <button
+            </Button>
+            <Button
+                variant="secondary"
                 onClick={onManualRoute}
-                style={btnSecondary}
                 aria-label="Manually trigger routing"
             >
                 Manual Routing
-            </button>
-            <button onClick={onClearLogs} style={btnSecondary} aria-label="Clear event logs">
+            </Button>
+            <Button variant="secondary" onClick={onClearLogs} aria-label="Clear event logs">
                 Clear Logs
-            </button>
+            </Button>
         </div>
         <div
             style={{
@@ -94,13 +71,13 @@ const ControlActions: React.FC<Props> = ({
                 marginTop: '0.75rem',
             }}
         >
-            <button
+            <Button
+                variant="secondary"
                 onClick={onCheckAllHealth}
-                style={btnSecondary}
                 aria-label="Check health of all providers"
             >
                 Check All Providers
-            </button>
+            </Button>
         </div>
     </div>
 );
