@@ -15,10 +15,10 @@ import { kernel } from '../../kernel/instances';
 import { eventBus, EVENTS } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
 import { errorContainer, dismissBtnRed } from '../../styles/common';
+import { Button } from '../Common';
 import type { SystemState } from '../../kernel/types/metrics-types';
 import { TreeNode } from './TreeNode';
 import { StatBox } from './StatBox';
-import { btnSecondary } from './state-inspector-constants';
 
 export const StateInspectorPanel: React.FC = () => {
     const { t } = useTranslation();
@@ -183,19 +183,19 @@ export const StateInspectorPanel: React.FC = () => {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button onClick={expandAll} style={btnSecondary}>
+                    <Button variant="ghost" size="sm" onClick={expandAll}>
                         <ChevronDown size={12} /> {t('state_inspector.expand_all')}
-                    </button>
-                    <button onClick={collapseAll} style={btnSecondary}>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={collapseAll}>
                         <ChevronRight size={12} /> {t('state_inspector.collapse_all')}
-                    </button>
-                    <button onClick={handleCopy} style={btnSecondary}>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleCopy}>
                         {copied ? <Check size={12} color="#10b981" /> : <Copy size={12} />}{' '}
                         {copied ? t('state_inspector.copied') : t('state_inspector.copy')}
-                    </button>
-                    <button onClick={handleDownload} style={btnSecondary}>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleDownload}>
                         <Download size={12} /> {t('state_inspector.download')}
-                    </button>
+                    </Button>
                 </div>
             </div>
 

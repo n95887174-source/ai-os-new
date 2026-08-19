@@ -20,16 +20,3 @@ export function valueColor(v: unknown): string {
     if (t.startsWith('object')) return '#c4b5fd';
     return '#e2e8f0';
 }
-
-export const btnSecondary: React.CSSProperties = {
-    padding: '0.35rem 0.7rem',
-    borderRadius: 6,
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'transparent',
-    color: 'var(--slate-400)',
-    cursor: 'pointer',
-    fontSize: '0.75rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-};
